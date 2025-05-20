@@ -28,7 +28,7 @@ from app.routes import auth, rbac, chat
 from app.database import engine, Base, init_db, get_db
 from app.utils.init_rbac import init_rbac
 from app.bmodels import SignUpRequest, LoginRequest, ChatRequest, ChatResponse, ModelName, addChat, UserIn, CollaboratorRequest
-from app.routes import organization
+from app.routes import organization, workspace
 from app.routes.user import router as user_router
 
 PLOT_DIR = "/tmp/ai_plots"  # Or any other path
@@ -64,6 +64,7 @@ app.include_router(team_router.router, prefix=settings.API_V1_STR)
 app.include_router(invite_router.router, prefix=settings.API_V1_STR)
 app.include_router(chat.router, prefix=settings.API_V1_STR)
 app.include_router(organization.router, prefix=settings.API_V1_STR)
+app.include_router(workspace.router, prefix=settings.API_V1_STR)
 app.include_router(user_router, prefix=settings.API_V1_STR)
 
 # Initialize RBAC system

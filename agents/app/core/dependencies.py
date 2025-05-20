@@ -2,7 +2,8 @@ from fastapi import Depends, Request
 from typing import Dict, Any
 from app.storage.sessionmanager import get_session_manager
 from app.settings import get_settings
-from genimel.services.documents import DocumentChromaStore, CHROMA_STORE_PATH
+from agents.app.storage.documents import DocumentChromaStore, CHROMA_STORE_PATH
+from langchain_openai import ChatOpenAI
 import chromadb
 
 def get_app_state(request: Request):
@@ -16,6 +17,14 @@ def get_analysis_agent(app_state=Depends(get_app_state)):
 def get_recommendation_system(app_state=Depends(get_app_state)):
     """Get the initialized recommendation system."""
     return app_state.recommendation_system
+
+# Configuration
+def get_llm(temperature: float = 0.0, model: str = "gpt-4o"):
+    """Get the LLM with specified temperature and model."""
+    return ChatOpenAI(
+        model=model,
+        temperature=temperature
+    )
 
 def get_dependencies():
     """Get all dependencies for the API."""
@@ -33,9 +42,7 @@ def get_dependencies():
     
     # Get or create session manager with the DB config
     session_manager = get_session_manager(db_config)
-    
-    
-    
+        
     # Initialize ChromaDB client
     client = chromadb.PersistentClient(path=CHROMA_STORE_PATH)
 

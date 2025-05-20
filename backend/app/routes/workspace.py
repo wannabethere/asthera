@@ -1,13 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models.workspace import Workspace, Project, Thread, WorkspaceAccess, ProjectAccess
-from app.models.team import Team, TeamMembership
+from app.models.workspace import Workspace, Project,  WorkspaceAccess, ProjectAccess
+from app.models.team import Team, team_memberships
 from app.models.user import User
 from app.auth.okta import get_current_user
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
+from sqlalchemy import select
 
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
 
@@ -161,9 +162,11 @@ async def create_workspace(
     current_user: User = Depends(get_current_user)
 ):
     # Check if user is team member
-    membership = db.query(TeamMembership).filter(
-        TeamMembership.team_id == req.team_id,
-        TeamMembership.user_id == str(current_user.id)
+    membership = db.execute(
+        select(team_memberships).where(
+            team_memberships.c.team_id == req.team_id,
+            team_memberships.c.user_id == str(current_user.id)
+        )
     ).first()
     if not membership:
         raise HTTPException(status_code=403, detail="Not a team member")
@@ -199,17 +202,21 @@ async def list_workspaces(
     query = db.query(Workspace)
     if team_id:
         # Check if user is team member
-        membership = db.query(TeamMembership).filter(
-            TeamMembership.team_id == team_id,
-            TeamMembership.user_id == str(current_user.id)
+        membership = db.execute(
+            select(team_memberships).where(
+                team_memberships.c.team_id == team_id,
+                team_memberships.c.user_id == str(current_user.id)
+            )
         ).first()
         if not membership:
             raise HTTPException(status_code=403, detail="Not a team member")
         query = query.filter(Workspace.team_id == team_id)
     else:
         # Get all teams where user is a member
-        memberships = db.query(TeamMembership).filter(
-            TeamMembership.user_id == str(current_user.id)
+        memberships = db.execute(
+            select(team_memberships).where(
+                team_memberships.c.user_id == str(current_user.id)
+            )
         ).all()
         team_ids = [m.team_id for m in memberships]
         query = query.filter(Workspace.team_id.in_(team_ids))
@@ -272,8 +279,10 @@ async def list_projects(
         query = query.filter(Project.workspace_id == workspace_id)
     else:
         # Get all workspaces where user has access
-        memberships = db.query(TeamMembership).filter(
-            TeamMembership.user_id == str(current_user.id)
+        memberships = db.execute(
+            select(team_memberships).where(
+                team_memberships.c.user_id == str(current_user.id)
+            )
         ).all()
         team_ids = [m.team_id for m in memberships]
         workspaces = db.query(Workspace).filter(Workspace.team_id.in_(team_ids)).all()
@@ -328,8 +337,10 @@ async def list_threads(
         query = query.filter(Thread.project_id == project_id)
     else:
         # Get all projects where user has access
-        memberships = db.query(TeamMembership).filter(
-            TeamMembership.user_id == str(current_user.id)
+        memberships = db.execute(
+            select(team_memberships).where(
+                team_memberships.c.user_id == str(current_user.id)
+            )
         ).all()
         team_ids = [m.team_id for m in memberships]
         workspaces = db.query(Workspace).filter(Workspace.team_id.in_(team_ids)).all()

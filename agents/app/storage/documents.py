@@ -252,7 +252,7 @@ persistent_client = chromadb.PersistentClient(path=CHROMA_STORE_PATH)
 class DocumentChromaStore:
     """Handle Chroma vectorstore operations."""
 
-    def __init__(self, persistent_client: chromadb.PersistentClient, collection_name: str, vectorstore_path: str = None, embeddings_model: OpenAIEmbeddings = embeddings_model):
+    def __init__(self, persistent_client: chromadb.PersistentClient, collection_name: str, vectorstore_path: str = None, embeddings_model: OpenAIEmbeddings = embeddings_model, tf_idf:bool = False):
         """Initialize the Chroma store.
         
         Args:
@@ -264,9 +264,12 @@ class DocumentChromaStore:
         self.vectorstore_path = vectorstore_path or CHROMA_STORE_PATH
         self.embeddings_model = embeddings_model or embeddings_model
         self.persistent_client = persistent_client
+        self.tf_idf = tf_idf
+        self.vectorizer = TfidfVectorizer()
         self.vectorstore = None
+        self.tfidf_vectorstore = None
         self.collection = None
-        
+        self.tfidf_collection_name = f"{self.collection_name}_tfidf"
         # Ensure the storage directory exists
         os.makedirs(self.vectorstore_path, exist_ok=True)
         self.initialize()
@@ -284,13 +287,23 @@ class DocumentChromaStore:
                 name=self.collection_name,
                 metadata={"description": f"Document collection for {self.collection_name}"}
             )
-            
+            if self.tf_idf:
+                self.tfidf_collection = self.persistent_client.get_or_create_collection(
+                    name=self.tfidf_collection_name,
+                    metadata={"hnsw:space": "cosine", "description": f"TF-IDF collection for {self.collection_name}"}
+                )
             # Initialize the Langchain Chroma wrapper
             self.vectorstore = Chroma(
                 client=self.persistent_client,
                 collection_name=self.collection_name,
                 embedding_function=self.embeddings_model,
             )
+            if self.tf_idf:
+                self.tfidf_vectorstore = Chroma(
+                    client=self.persistent_client,
+                    collection_name=self.tfidf_collection_name,
+                    embedding_function=self.embeddings_model,
+                )
             
             logger.info(f"Successfully initialized Chroma store with collection {self.collection_name}")
             
@@ -333,11 +346,35 @@ class DocumentChromaStore:
                     ids.append(document_id)
         
         if documents:
-            self.vectorstore.add_documents(documents=documents, ids=ids)    
+            self.vectorstore.add_documents(documents=documents, ids=ids)
+            self.add_tfidf_vectors(documents=documents, ids=ids)    
             logger.info(f"Added {len(documents)} documents to the vectorstore.")
             print("documents added to the vectorstore",len(documents))
         else:
             logger.warning("No valid documents were found to add to the vectorstore.")
+
+    def add_tfidf_vectors(self, documents: List[LangchainDocument], ids: List[str]):
+        if not self.tf_idf:
+            return
+        if documents:
+            # TF-IDF indexing
+            # Note: TfidfVectorizer().fit_transform(...) recomputes the TF-IDF each time. If your corpus grows dynamically, consider persisting the vectorizer using joblib or pickle.
+            
+            # Extract page contents
+            texts = [doc.page_content for doc in documents]
+            # Generate TF-IDF vectors
+            tfidf_matrix = self.vectorizer.fit_transform(texts)
+            metadata_list = [doc.metadata for doc in documents]
+            ids = [str(uuid.uuid4()) for _ in range(len(texts))]
+            self.tfidf_collection.add(
+                embeddings=tfidf_matrix.toarray(),
+                ids=ids,
+                metadatas=metadata_list
+            )
+            logger.info(f"Added {len(texts)} TF-IDF vectors to collection {self.tfidf_collection_name}")
+        else:
+            logger.warning("No documents provided to add to the vectorstore.")
+        return
 
     def semantic_searches(self, query_texts: List[str], n_results: int = 5, where: Dict = None) -> Dict[str, List]:
         """Perform semantic search on multiple queries.
@@ -495,6 +532,129 @@ class DocumentChromaStore:
             
         except Exception as e:
             logger.error(f"Error during semantic search with BM25: {str(e)}")
+            return []
+        
+    def semantic_search_with_tfidf(self, query: str, k: int = 5, where: Dict = None) -> List[Dict]:
+        """Perform semantic search combined with TF-IDF ranking.
+        If TF-IDF calculation fails, falls back to semantic search results.
+        
+        Args:
+            query: The search query string
+            k: Number of results to return (default: 5)
+            where: Optional metadata filter dictionary
+            
+        Returns:
+            List of dictionaries containing search results with combined scores
+        """
+        try:
+            # Semantic search
+            sem_results = self.vectorstore.similarity_search_with_score(query, k=k, filter=where)
+            sem_docs = [doc for doc, _ in sem_results]
+            sem_scores = [score for _, score in sem_results]
+            
+            # If we have no semantic results, return empty list
+            if not sem_docs:
+                logger.info(f"No semantic search results found for query: {query}")
+                return []
+
+            try:
+                # TF-IDF vector for query
+                all_docs = [doc.page_content for doc in sem_docs]
+                tfidf_vectorizer = TfidfVectorizer()
+                tfidf_matrix = tfidf_vectorizer.fit_transform(all_docs + [query])
+                query_vector = tfidf_matrix[-1].toarray()[0]
+
+                # TF-IDF similarity scores (cosine)
+                tfidf_doc_vectors = tfidf_matrix[:-1].toarray()
+                cosine_scores = np.dot(tfidf_doc_vectors, query_vector) / (
+                    np.linalg.norm(tfidf_doc_vectors, axis=1) * np.linalg.norm(query_vector) + 1e-10)
+
+                # Combine scores
+                results = []
+                for i, doc in enumerate(sem_docs):
+                    norm_sem = 1 / (1 + sem_scores[i])  # Chroma score is distance
+                    norm_tfidf = cosine_scores[i]
+                    combined_score = 0.7 * norm_sem + 0.3 * norm_tfidf
+                    results.append({
+                        "content": doc.page_content,
+                        "metadata": doc.metadata,
+                        "semantic_score": float(sem_scores[i]),
+                        "tfidf_score": float(norm_tfidf),
+                        "combined_score": float(combined_score),
+                        "id": doc.metadata.get("id", None)
+                    })
+
+                # Sort by combined score descending
+                results.sort(key=lambda x: x["combined_score"], reverse=True)
+                logger.info(f"Found {len(results)} combined semantic+TF-IDF results for query: {query}")
+                return results
+                
+            except Exception as e:
+                # TF-IDF calculation failed, fall back to semantic search results
+                logger.warning(f"TF-IDF calculation failed, falling back to semantic results: {str(e)}")
+                # Format semantic results only
+                results = []
+                for i, (doc, score) in enumerate(sem_results):
+                    results.append({
+                        "content": doc.page_content,
+                        "metadata": doc.metadata,
+                        "semantic_score": float(score),
+                        "tfidf_score": None,
+                        "combined_score": None,
+                        "id": doc.metadata.get("id", None)
+                    })
+                logger.info(f"Returning {len(results)} semantic-only results for query: {query}")
+                return results
+                
+        except Exception as e:
+            # If semantic search itself fails
+            logger.error(f"Error during semantic search with TF-IDF: {str(e)}")
+            return []
+    
+    def tfidf_search(self, query: str, k: int = 5, where: Dict = None) -> List[Dict]:
+        """Perform search using only TF-IDF vectors.
+        
+        Args:
+            query: The search query string
+            k: Number of results to return (default: 5)
+            where: Optional metadata filter dictionary
+            
+        Returns:
+            List of dictionaries containing search results with scores
+        """
+        if not self.tf_idf or not self.tfidf_collection:
+            logger.warning("TF-IDF search not enabled or collection not initialized.")
+            return []
+            
+        try:
+            # Convert query to TF-IDF vector
+            query_vector = self.vectorizer.transform([query]).toarray()[0]
+            
+            # Query the TF-IDF collection
+            results = self.tfidf_collection.query(
+                query_embeddings=query_vector.reshape(1, -1),
+                n_results=k,
+                where=where
+            )
+            
+            # Format results
+            formatted_results = []
+            for i in range(len(results['ids'][0])):
+                formatted_results.append({
+                    "content": results.get('documents', [[None]])[0][i],
+                    "metadata": results['metadatas'][0][i],
+                    "score": float(results['distances'][0][i]),
+                    "id": results['ids'][0][i]
+                })
+            
+            # Sort results by score (higher is better for cosine similarity)
+            formatted_results.sort(key=lambda x: x["score"], reverse=True)
+            
+            logger.info(f"Found {len(formatted_results)} TF-IDF results for query: {query}")
+            return formatted_results
+            
+        except Exception as e:
+            logger.error(f"Error during TF-IDF search: {str(e)}")
             return []
 
 def create_langchain_doc_util(metadata: Dict, data: Dict) -> tuple[str, LangchainDocument]:
