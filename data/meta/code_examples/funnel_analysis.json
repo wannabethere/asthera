@@ -1,0 +1,62 @@
+[
+    {
+      "page_content": "{\"Question\": \"How do I analyze a basic user conversion funnel?\", \"Context\": \"I have event data with user_id and event_name columns. I want to analyze how users move through a signup funnel with specific steps.\", \"Code_Example\": \"from chatbot.tools.mltools.funnelanalysis import CohortPipe, analyze_funnel\\n\\n# Create pipeline with your event data\\npipeline = CohortPipe.from_dataframe(event_df)\\n\\n# Define your funnel steps\\nfunnel_steps = ['view_product', 'add_to_cart', 'start_checkout', 'purchase']\\n\\n# Optional: Define friendly names for the steps\\nstep_names = ['Product View', 'Add to Cart', 'Start Checkout', 'Purchase']\\n\\n# Analyze the funnel\\nfunnel_results = pipeline | analyze_funnel(\\n    event_column='event_name',\\n    user_id_column='user_id',\\n    funnel_steps=funnel_steps,\\n    step_names=step_names\\n)\\n\\n# Get the funnel summary\\noverall_funnel = funnel_results.conversion_funnels['overall_funnel']\\nprint(overall_funnel)\", \"Usage\": \"analyze_funnel(event_column='event_name', user_id_column='user_id', funnel_steps=['view_product', 'add_to_cart', 'start_checkout', 'purchase'])\"}",
+      "metadata": {
+        "function_name": "analyze_funnel",
+        "src_type": "function",
+        "category": "funnel_analysis",
+        "example_id": 1,
+        "description": "Analyze a basic user conversion funnel"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I analyze funnel performance over time?\", \"Context\": \"I want to see how my conversion funnel performs across different time periods (e.g., months) to identify trends.\", \"Code_Example\": \"from chatbot.tools.mltools.funnelanalysis import CohortPipe, analyze_funnel_by_time\\n\\n# Create pipeline with your event data\\npipeline = CohortPipe.from_dataframe(event_df)\\n\\n# Define your funnel steps\\nfunnel_steps = ['view_product', 'add_to_cart', 'start_checkout', 'purchase']\\n\\n# Analyze the funnel by time periods (monthly)\\ntime_funnel = pipeline | analyze_funnel_by_time(\\n    event_column='event_name',\\n    user_id_column='user_id',\\n    date_column='event_timestamp',  # Column with event dates\\n    funnel_steps=funnel_steps,\\n    time_period='M',  # 'M' for monthly\\n    max_periods=6  # Show last 6 months\\n)\\n\\n# Get the time-based funnel summary\\ntime_results = time_funnel.conversion_funnels['time_funnel']\\nprint(time_results)\\n\\n# Analyze trends in the 'purchase' conversion rate over time\\npurchase_trends = time_results[['cohort', 'Purchase_rate']]\\nprint(purchase_trends)\", \"Usage\": \"analyze_funnel_by_time(event_column='event_name', user_id_column='user_id', date_column='event_timestamp', funnel_steps=funnel_steps, time_period='M', max_periods=6)\"}",
+      "metadata": {
+        "function_name": "analyze_funnel_by_time",
+        "src_type": "function",
+        "category": "funnel_analysis",
+        "example_id": 2,
+        "description": "Analyze funnel performance across different time periods"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I compare funnel performance across different user segments?\", \"Context\": \"I want to analyze how different user segments (e.g., by device_type or user_country) convert through my funnel.\", \"Code_Example\": \"from chatbot.tools.mltools.funnelanalysis import CohortPipe, analyze_funnel_by_segment\\n\\n# Create pipeline with your event data\\npipeline = CohortPipe.from_dataframe(event_df)\\n\\n# Define your funnel steps\\nfunnel_steps = ['view_product', 'add_to_cart', 'start_checkout', 'purchase']\\n\\n# Analyze the funnel by segment\\nsegment_funnel = pipeline | analyze_funnel_by_segment(\\n    event_column='event_name',\\n    user_id_column='user_id',\\n    segment_column='device_type',  # Column to segment by\\n    funnel_steps=funnel_steps,\\n    min_users=20  # Minimum users per segment\\n)\\n\\n# Get the segment-based funnel summary\\nsegment_results = segment_funnel.conversion_funnels['segment_funnel']\\n\\n# Compare purchase conversion rates across segments\\npurchase_by_segment = segment_results[['segment', 'purchase_rate']].sort_values('purchase_rate', ascending=False)\\nprint(purchase_by_segment)\", \"Usage\": \"analyze_funnel_by_segment(event_column='event_name', user_id_column='user_id', segment_column='device_type', funnel_steps=funnel_steps, min_users=20)\"}",
+      "metadata": {
+        "function_name": "analyze_funnel_by_segment",
+        "src_type": "function",
+        "category": "funnel_analysis",
+        "example_id": 3,
+        "description": "Compare funnel performance across different user segments"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I discover the actual paths users take through my product?\", \"Context\": \"I want to understand the common sequences of events users perform, not just the ideal funnel path.\", \"Code_Example\": \"from chatbot.tools.mltools.funnelanalysis import CohortPipe, analyze_user_paths\\n\\n# Create pipeline with your event data\\npipeline = CohortPipe.from_dataframe(event_df)\\n\\n# Define the key events you're interested in\\nkey_events = ['homepage_view', 'search', 'view_product', 'add_to_cart', 'start_checkout', 'purchase']\\n\\n# Analyze the actual paths users take\\nuser_path_analysis = pipeline | analyze_user_paths(\\n    event_column='event_name',\\n    user_id_column='user_id',\\n    timestamp_column='event_timestamp',\\n    funnel_steps=key_events,  # All events we want to track\\n    max_path_length=8,  # Limit path length for readability\\n    min_path_frequency=10  # Only show paths taken by at least 10 users\\n)\\n\\n# Get the common paths users take\\npath_results = user_path_analysis.conversion_funnels['user_paths']\\ncommon_paths = path_results['path_counts']\\n\\n# Display the most common user paths\\ntop_paths = common_paths.head(10)  # Top 10 most common paths\\nprint(top_paths[['path', 'frequency', 'percentage']])\", \"Usage\": \"analyze_user_paths(event_column='event_name', user_id_column='user_id', timestamp_column='event_timestamp', funnel_steps=key_events, max_path_length=8, min_path_frequency=10)\"}",
+      "metadata": {
+        "function_name": "analyze_user_paths",
+        "src_type": "function",
+        "category": "funnel_analysis",
+        "example_id": 4,
+        "description": "Discover common paths users take through your product"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I retrieve the results of my funnel analysis?\", \"Context\": \"I've run multiple funnel analyses and want to access the results for further processing or visualization.\", \"Code_Example\": \"from chatbot.tools.mltools.funnelanalysis import CohortPipe, analyze_funnel, analyze_funnel_by_time, get_funnel_summary\\n\\n# Create pipeline with your event data\\npipeline = CohortPipe.from_dataframe(event_df)\\n\\n# Define your funnel steps\\nfunnel_steps = ['view_product', 'add_to_cart', 'start_checkout', 'purchase']\\n\\n# Run multiple funnel analyses\\nfunnel_pipeline = (pipeline\\n    | analyze_funnel(event_column='event_name', user_id_column='user_id', funnel_steps=funnel_steps)\\n    | analyze_funnel_by_time(event_column='event_name', user_id_column='user_id', date_column='event_timestamp', funnel_steps=funnel_steps)\\n)\\n\\n# Retrieve all funnel summaries\\nall_funnel_data = funnel_pipeline | get_funnel_summary()\\n\\n# Access specific funnel results\\noverall_funnel = all_funnel_data['overall_funnel']\\ntime_funnel = all_funnel_data['time_funnel']\\n\\n# Now you can use these results for visualization or export\\nimport matplotlib.pyplot as plt\\n\\n# Plot overall funnel\\nplt.figure(figsize=(10, 6))\\nplt.bar(overall_funnel['step'], overall_funnel['count'])\\nplt.title('Conversion Funnel')\\nplt.ylabel('Number of Users')\\nplt.xticks(rotation=45)\\nplt.tight_layout()\\nplt.show()\", \"Usage\": \"get_funnel_summary()\"}",
+      "metadata": {
+        "function_name": "get_funnel_summary",
+        "src_type": "function",
+        "category": "funnel_analysis",
+        "example_id": 5,
+        "description": "Retrieve funnel analysis results for further processing"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I compare different segments against a baseline for a specific funnel metric?\", \"Context\": \"I want to see how different user segments perform compared to a baseline segment or the average for a specific conversion rate.\", \"Code_Example\": \"from chatbot.tools.mltools.funnelanalysis import CohortPipe, analyze_funnel_by_segment, compare_segments\\n\\n# Create pipeline with your event data\\npipeline = CohortPipe.from_dataframe(event_df)\\n\\n# Define your funnel steps\\nfunnel_steps = ['view_product', 'add_to_cart', 'start_checkout', 'purchase']\\n\\n# First run segment analysis\\nsegment_funnel = pipeline | analyze_funnel_by_segment(\\n    event_column='event_name',\\n    user_id_column='user_id',\\n    segment_column='country',  # Segment by country\\n    funnel_steps=funnel_steps\\n)\\n\\n# Compare purchase rate across countries against the US as baseline\\ncomparison_results = segment_funnel | compare_segments(\\n    metric_column='purchase_rate',  # The metric to compare\\n    baseline_segment='US'  # Use US as the baseline\\n)\\n\\n# Display comparison results\\nprint(comparison_results[['segment', 'purchase_rate', 'baseline', 'abs_diff', 'rel_diff']])\\n\\n# For comparison against the average (no baseline specified)\\navg_comparison = segment_funnel | compare_segments(\\n    metric_column='purchase_rate'  # Compare against average\\n)\\n\\nprint(avg_comparison[['segment', 'purchase_rate', 'baseline', 'rel_diff']])\", \"Usage\": \"compare_segments(metric_column='purchase_rate', baseline_segment='US')\"}",
+      "metadata": {
+        "function_name": "compare_segments",
+        "src_type": "function",
+        "category": "funnel_analysis",
+        "example_id": 6,
+        "description": "Compare segments against a baseline for funnel metrics"
+      }
+    }
+  ]

@@ -1,0 +1,103 @@
+{
+    "functions": {
+        "PercentChange": {
+            "required_params": ["condition_column", "baseline"],
+            "optional_params": ["output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates percent change from an OperationsPipe"
+            },
+            "description": "Compute the percent change (other - baseline) / baseline"
+        },
+        "AbsoluteChange": {
+            "required_params": ["condition_column", "baseline"],
+            "optional_params": ["output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates absolute change from an OperationsPipe"
+            },
+            "description": "Compute the absolute change (other - baseline)"
+        },
+        "MH": {
+            "required_params": ["condition_column", "baseline", "stratified_by"],
+            "optional_params": ["output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates Mantel-Haenszel estimate from an OperationsPipe"
+            },
+            "description": "Compute the Mantel-Haenszel estimator for ratio metrics stratified by specified columns"
+        },
+        "CUPED": {
+            "required_params": ["condition_column", "baseline", "covariates"],
+            "optional_params": ["stratified_by", "output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates CUPED adjustment from an OperationsPipe"
+            },
+            "description": "Compute the absolute change adjusted using the CUPED approach"
+        },
+        "PrePostChange": {
+            "required_params": ["condition_column", "baseline", "covariates"],
+            "optional_params": ["stratified_by", "output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates PrePost adjustment from an OperationsPipe"
+            },
+            "description": "Compute the percent change adjusted using the PrePost approach"
+        },
+        "FilterConditions": {
+            "required_params": ["conditions"],
+            "optional_params": ["output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that filters conditions from an OperationsPipe"
+            },
+            "description": "Filter the data to include only specified conditions"
+        },
+        "PowerAnalysis": {
+            "required_params": ["condition_column", "baseline", "metric_column"],
+            "optional_params": ["alpha", "power", "output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that performs power analysis from an OperationsPipe"
+            },
+            "description": "Perform power analysis to determine sample size requirements"
+        },
+        "StratifiedSummary": {
+            "required_params": ["condition_column", "stratified_by"],
+            "optional_params": ["metrics", "output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that creates a stratified summary from an OperationsPipe"
+            },
+            "description": "Create a summary of metrics stratified by specified columns"
+        },
+        "BootstrapCI": {
+            "required_params": ["condition_column", "baseline", "metric_column"],
+            "optional_params": ["confidence", "n_bootstraps", "stratified_by", "output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates bootstrap CIs from an OperationsPipe"
+            },
+            "description": "Calculate bootstrap confidence intervals for the difference in means"
+        },
+        "MultiComparisonAdjustment": {
+            "required_params": ["p_value_column"],
+            "optional_params": ["method", "output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that adjusts p-values from an OperationsPipe"
+            },
+            "description": "Apply multiple comparison adjustment to p-values"
+        },
+        "ExecuteOperations": {
+            "required_params": [],
+            "optional_params": [],
+            "outputs": {
+                "type": "Dict",
+                "description": "Dictionary of all calculated operations"
+            },
+            "description": "Execute the operations pipeline and return all calculated operations"
+        }
+    }
+}

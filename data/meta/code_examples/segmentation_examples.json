@@ -1,0 +1,122 @@
+[
+  {
+    "page_content": "{\"Question\": \"How do I create a segmentation pipeline from my existing customer dataframe?\", \"Context\": \"I have a pandas DataFrame with customer data and want to use it for segmentation analysis.\", \"Code_Example\": \"import pandas as pd\\nfrom segmentationtools import SegmentationPipe\\n\\n# Assuming customer_df is your pandas DataFrame\\ncustomer_df = pd.read_csv('customer_data.csv')\\n\\n# Create a segmentation pipeline using your DataFrame\\npipeline = SegmentationPipe.from_dataframe(customer_df)\\n\\n# Now you can use the pipeline for various segmentation analyses\\nprint(f'Pipeline created with {len(pipeline.data)} customer records')\", \"Usage\": \"SegmentationPipe.from_dataframe(dataframe)\"}",
+    "metadata": {
+      "function_name": "SegmentationPipe.from_dataframe",
+      "src_type": "class_method", 
+      "category": "pipeline_creation",
+      "example_id": 1,
+      "description": "Create a segmentation pipeline from an existing DataFrame"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I select and prepare features for customer segmentation?\", \"Context\": \"I want to segment my customers based on specific columns in my dataset while ensuring proper scaling and handling of missing values.\", \"Code_Example\": \"from segmentationtools import SegmentationPipe, get_features\\n\\n# Create pipeline with your data\\npipeline = SegmentationPipe.from_dataframe(customer_df)\\n\\n# Extract specific features for segmentation\\nprepped_pipeline = pipeline | get_features(\\n    columns=['purchase_frequency', 'avg_order_value', 'customer_lifetime_value'],\\n    id_column='customer_id',\\n    handle_missing=True,\\n    scale_features=True\\n)\\n\\nprint(f'Selected features: {prepped_pipeline.feature_columns}')\", \"Usage\": \"get_features(columns=['col1', 'col2'], id_column='id', handle_missing=True, scale_features=True)\"}",
+    "metadata": {
+      "function_name": "get_features",
+      "src_type": "function",
+      "category": "feature_preparation", 
+      "example_id": 2,
+      "description": "Select and prepare features for segmentation analysis"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I segment my customers using K-means clustering?\", \"Context\": \"I want to divide my customers into distinct groups based on their spending patterns and engagement metrics.\", \"Code_Example\": \"from segmentationtools import SegmentationPipe, get_features, run_kmeans\\n\\n# Create pipeline and prepare features\\npipeline = SegmentationPipe.from_dataframe(customer_df) | get_features(\\n    columns=['recency', 'frequency', 'monetary_value'],\\n    scale_features=True\\n)\\n\\n# Run K-means with automatic determination of optimal cluster count\\nsegmented_pipeline = pipeline | run_kmeans(\\n    n_clusters=5,  # Initial guess\\n    max_clusters=10,\\n    find_optimal=True,  # Use silhouette score to find optimal number\\n    random_state=42,\\n    segment_name='rfm_segments'  # Name of the segmentation in results\\n)\\n\\n# Show number of customers in each segment\\nprint(segmented_pipeline.data['segment_rfm_segments'].value_counts())\", \"Usage\": \"run_kmeans(n_clusters=5, max_clusters=10, find_optimal=True, random_state=42, segment_name='customer_segments')\"}",
+    "metadata": {
+      "function_name": "run_kmeans",
+      "src_type": "function",
+      "category": "segmentation_algorithm",
+      "example_id": 3,
+      "description": "Segment data using K-means clustering with optional optimization"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I use DBSCAN for identifying customer segments of varying shapes?\", \"Context\": \"I want to find natural clusters in my customer data without specifying the number of clusters in advance, and need to identify outliers.\", \"Code_Example\": \"from segmentationtools import SegmentationPipe, get_features, run_dbscan\\n\\n# Create pipeline and prepare features\\npipeline = SegmentationPipe.from_dataframe(customer_df) | get_features(\\n    columns=['engagement_score', 'satisfaction_score', 'total_spend'],\\n    scale_features=True  # Important for DBSCAN distance calculations\\n)\\n\\n# Run DBSCAN clustering\\nsegmented_pipeline = pipeline | run_dbscan(\\n    eps=0.5,  # Maximum distance between samples to be considered neighbors\\n    min_samples=5,  # Minimum number of samples in a neighborhood to form a cluster\\n    segment_name='density_segments'\\n)\\n\\n# Check how many customers were identified as noise (outliers)\\nnoise_count = sum(segmented_pipeline.data['segment_density_segments'] == -1)\\nprint(f'Identified {noise_count} outlier customers out of {len(customer_df)}')\", \"Usage\": \"run_dbscan(eps=0.5, min_samples=5, segment_name='density_segments')\"}",
+    "metadata": {
+      "function_name": "run_dbscan",
+      "src_type": "function",
+      "category": "segmentation_algorithm",
+      "example_id": 4,
+      "description": "Use density-based clustering to find natural segments and outliers"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I perform hierarchical clustering for customer segmentation?\", \"Context\": \"I want to create segments that have a hierarchical structure where similar customers are grouped together.\", \"Code_Example\": \"from segmentationtools import SegmentationPipe, get_features, run_hierarchical\\n\\n# Create pipeline and prepare features\\npipeline = SegmentationPipe.from_dataframe(customer_df) | get_features(\\n    columns=['loyalty_years', 'purchase_frequency', 'avg_basket_size'],\\n    scale_features=True\\n)\\n\\n# Run hierarchical clustering with Ward linkage (minimizes variance within clusters)\\nsegmented_pipeline = pipeline | run_hierarchical(\\n    n_clusters=4,\\n    linkage='ward',  # Other options: 'complete', 'average', 'single'\\n    segment_name='loyalty_segments'\\n)\\n\\n# View distribution of customers across segments\\nsegment_distribution = segmented_pipeline.data['segment_loyalty_segments'].value_counts(normalize=True) * 100\\nprint(f'Customer distribution across segments (%):\\n{segment_distribution}')\", \"Usage\": \"run_hierarchical(n_clusters=4, linkage='ward', segment_name='loyalty_segments')\"}",
+    "metadata": {
+      "function_name": "run_hierarchical",
+      "src_type": "function",
+      "category": "segmentation_algorithm",
+      "example_id": 5,
+      "description": "Create hierarchical clusters for segments with nested structure"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I create rule-based customer segments based on specific business criteria?\", \"Context\": \"I need to segment my customers using explicit business rules like spending thresholds and purchase frequency rather than algorithmic clustering.\", \"Code_Example\": \"from segmentationtools import SegmentationPipe, run_rule_based\\n\\n# Create pipeline with customer data\\npipeline = SegmentationPipe.from_dataframe(customer_df)\\n\\n# Define segmentation rules using different conditions\\nrules = {\\n    'premium': {\\n        'annual_spend': ('>', 1000),\\n        'purchase_frequency': ('>=', 12)  # At least monthly\\n    },\\n    'regular': {\\n        'annual_spend': ('between', 500, 1000),\\n        'purchase_frequency': ('>=', 6)  # At least bi-monthly\\n    },\\n    'occasional': {\\n        'annual_spend': ('between', 100, 500),\\n        'days_since_last_purchase': ('<', 180)  # Active in last 6 months\\n    },\\n    'at_risk': {\\n        'days_since_last_purchase': ('between', 180, 365)  # Inactive 6-12 months\\n    },\\n    'inactive': {\\n        'days_since_last_purchase': ('>', 365)  # Inactive over 12 months\\n    }\\n}\\n\\n# Apply rule-based segmentation\\nsegmented_pipeline = pipeline | run_rule_based(\\n    rules=rules,\\n    segment_name='customer_lifecycle'\\n)\\n\\n# Check the segments with both string labels and encoded numeric values\\nprint(segmented_pipeline.data[['segment_customer_lifecycle', 'segment_customer_lifecycle_encoded']].head())\", \"Usage\": \"run_rule_based(rules={'high_value': {'spend': ('>', 1000)}, 'medium_value': {'spend': ('between', 500, 1000)}}, segment_name='value_segments')\"}",
+    "metadata": {
+      "function_name": "run_rule_based",
+      "src_type": "function",
+      "category": "segmentation_algorithm",
+      "example_id": 6,
+      "description": "Create segments using explicit business rules and thresholds"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I get a statistical summary of my customer segments?\", \"Context\": \"I've created customer segments and want to understand the characteristics of each segment, including key metrics and what distinguishes them from one another.\", \"Code_Example\": \"from segmentationtools import SegmentationPipe, get_features, run_kmeans, generate_summary\\n\\n# Create and run a segmentation pipeline\\npipeline = (\\n    SegmentationPipe.from_dataframe(customer_df)\\n    | get_features(columns=['recency', 'frequency', 'monetary_value'])\\n    | run_kmeans(n_clusters=5, segment_name='rfm_segments')\\n)\\n\\n# Generate comprehensive summary of the segments\\nsegment_summary = pipeline | generate_summary(algorithm='rfm_segments')\\n\\n# Print key insights from the summary\\nprint('Segment Sizes:')\\nprint(segment_summary['segment_sizes'])\\nprint('\\nSegment Profiles (Key Distinguishing Features):')\\nfor segment, profile in segment_summary['segment_profiles'].items():\\n    print(profile)\\n    \\n# Get detailed statistics for a specific segment\\nsegment_2_stats = segment_summary['segment_stats'].xs(2, level=0)  # Get stats for segment 2\\nprint(f'\\nDetailed statistics for Segment 2:\\n{segment_2_stats}')\", \"Usage\": \"generate_summary(algorithm='rfm_segments')\"}",
+    "metadata": {
+      "function_name": "generate_summary",
+      "src_type": "function",
+      "category": "segment_analysis",
+      "example_id": 7,
+      "description": "Generate statistical summary and profiles of segments"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I extract data for a specific customer segment for further analysis?\", \"Context\": \"I've created customer segments and want to analyze one particular segment in detail, including exporting it for targeted marketing campaigns.\", \"Code_Example\": \"from segmentationtools import SegmentationPipe, get_features, run_kmeans, get_segment_data\\n\\n# Create and run a segmentation pipeline\\npipeline = (\\n    SegmentationPipe.from_dataframe(customer_df)\\n    | get_features(columns=['recency', 'frequency', 'monetary_value'])\\n    | run_kmeans(n_clusters=4, segment_name='value_segments')\\n)\\n\\n# Identify the high-value segment (let's say it's segment 3 based on previous analysis)\\nhigh_value_segment_id = 3\\n\\n# Extract all data for just the high-value segment\\nhigh_value_customers = pipeline | get_segment_data(\\n    segment_id=high_value_segment_id,\\n    algorithm='value_segments'\\n)\\n\\n# Now you can work directly with this subset of customers\\nprint(f'Extracted {len(high_value_customers)} high-value customers')\\n\\n# Export for marketing campaign\\nhigh_value_customers[['customer_id', 'email', 'phone']].to_csv('high_value_campaign.csv', index=False)\", \"Usage\": \"get_segment_data(segment_id=2, algorithm='value_segments')\"}",
+    "metadata": {
+      "function_name": "get_segment_data",
+      "src_type": "function",
+      "category": "segment_analysis",
+      "example_id": 8,
+      "description": "Extract data for a specific segment for detailed analysis"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I compare different segmentation approaches to choose the best one?\", \"Context\": \"I've tried several segmentation algorithms and want to compare their performance to decide which one to use for my customer segmentation strategy.\", \"Code_Example\": \"from segmentationtools import SegmentationPipe, get_features, run_kmeans, run_dbscan, run_hierarchical, compare_algorithms\\nimport matplotlib.pyplot as plt\\n\\n# Create a pipeline with prepared features\\npipeline = (\\n    SegmentationPipe.from_dataframe(customer_df)\\n    | get_features(columns=['recency', 'frequency', 'monetary_value'])\\n)\\n\\n# Run multiple segmentation algorithms\\nfull_pipeline = (\\n    pipeline\\n    | run_kmeans(n_clusters=5, segment_name='kmeans_segments')\\n    | run_dbscan(eps=0.5, min_samples=5, segment_name='dbscan_segments')\\n    | run_hierarchical(n_clusters=5, segment_name='hierarchical_segments')\\n)\\n\\n# Generate comparison of all algorithms\\ncomparison_df = full_pipeline | compare_algorithms()\\n\\n# Display the comparison results\\nprint(comparison_df)\\n\\n# Visualize silhouette scores (higher is better)\\nplt.figure(figsize=(10, 5))\\nplt.bar(comparison_df['algorithm'], comparison_df['silhouette_score'])\\nplt.ylabel('Silhouette Score')\\nplt.title('Segmentation Algorithm Comparison')\\nplt.xticks(rotation=45)\\nplt.show()\", \"Usage\": \"compare_algorithms()\"}",
+    "metadata": {
+      "function_name": "compare_algorithms",
+      "src_type": "function",
+      "category": "algorithm_evaluation",
+      "example_id": 9,
+      "description": "Compare performance metrics of different segmentation algorithms"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I add custom metrics or transformations to my segmentation pipeline?\", \"Context\": \"I need to add calculated fields like customer lifetime value or RFM scores before running segmentation algorithms.\", \"Code_Example\": \"from segmentationtools import SegmentationPipe, get_features, run_kmeans, custom_calculation\\n\\n# Define a custom function to calculate RFM scores\\ndef calculate_rfm_scores(df):\\n    # Make a copy to avoid modifying the original\\n    result_df = df.copy()\\n    \\n    # Calculate recency score (assuming days_since_purchase exists)\\n    result_df['recency_score'] = 5 - pd.qcut(result_df['days_since_purchase'], 5, labels=False, duplicates='drop')\\n    \\n    # Calculate frequency score\\n    result_df['frequency_score'] = pd.qcut(result_df['purchase_count'], 5, labels=False, duplicates='drop') + 1\\n    \\n    # Calculate monetary score\\n    result_df['monetary_score'] = pd.qcut(result_df['total_spend'], 5, labels=False, duplicates='drop') + 1\\n    \\n    # Calculate RFM score (weighted)\\n    result_df['rfm_score'] = (result_df['recency_score'] * 0.5 + \\n                            result_df['frequency_score'] * 0.3 + \\n                            result_df['monetary_score'] * 0.2)\\n    \\n    return result_df\\n\\n# Create pipeline and add custom calculations\\npipeline = (\\n    SegmentationPipe.from_dataframe(customer_df)\\n    | custom_calculation(calculate_rfm_scores)\\n)\\n\\n# Now we can use these calculated fields for segmentation\\nsegmented_pipeline = (\\n    pipeline\\n    | get_features(columns=['recency_score', 'frequency_score', 'monetary_score'])\\n    | run_kmeans(n_clusters=5, segment_name='rfm_segments')\\n)\\n\\nprint(segmented_pipeline.data[['rfm_score', 'segment_rfm_segments']].head())\", \"Usage\": \"custom_calculation(lambda df: df.assign(clv=df['avg_order_value'] * df['purchase_frequency'] * df['customer_age_years']))\"}",
+    "metadata": {
+      "function_name": "custom_calculation",
+      "src_type": "function",
+      "category": "data_transformation",
+      "example_id": 10,
+      "description": "Add custom calculations or transformations to the segmentation pipeline"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I chain multiple operations in a segmentation pipeline?\", \"Context\": \"I want to create a workflow that processes my data through multiple steps - feature preparation, segmentation, and analysis - in a clean, readable way.\", \"Code_Example\": \"from segmentationtools import SegmentationPipe, get_features, run_kmeans, generate_summary\\n\\n# Create a segmentation pipeline with chained operations using the pipe operator |\\n# This creates a readable data processing workflow\\npipeline = (\\n    SegmentationPipe.from_dataframe(customer_df)\\n    | get_features(  # Step 1: Prepare features\\n        columns=['recency', 'frequency', 'monetary_value'],\\n        scale_features=True\\n    )\\n    | run_kmeans(  # Step 2: Perform segmentation\\n        n_clusters=5,\\n        find_optimal=True,\\n        segment_name='customer_segments'\\n    )\\n    | generate_summary()  # Step 3: Generate segment summary\\n)\\n\\n# The pipe operator makes the code more readable compared to nested function calls:\\n# generate_summary()(run_kmeans(...)(get_features(...)(SegmentationPipe.from_dataframe(customer_df))))\\n\\n# Each step creates a new pipeline instance, preserving the original data\\nprint('Pipeline operations completed successfully')\\nprint(f'Segmentation produced {len(pipeline[\"segment_sizes\"])} segments')\", \"Usage\": \"pipeline = SegmentationPipe.from_dataframe(df) | get_features() | run_kmeans() | generate_summary()\"}",
+    "metadata": {
+      "function_name": "__or__",
+      "src_type": "class_method",
+      "category": "pipeline_operation",
+      "example_id": 11,
+      "description": "Chain segmentation operations using the pipe operator"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I create a duplicate of my segmentation pipeline to try different approaches?\", \"Context\": \"I want to experiment with different segmentation approaches while preserving my original pipeline.\", \"Code_Example\": \"from segmentationtools import SegmentationPipe, get_features, run_kmeans, run_hierarchical\\n\\n# Create and prepare initial pipeline\\nbase_pipeline = (\\n    SegmentationPipe.from_dataframe(customer_df)\\n    | get_features(columns=['recency', 'frequency', 'monetary_value'])\\n)\\n\\n# Create a copy for the first segmentation approach\\nkmeans_pipeline = base_pipeline.copy()\\nkmeans_pipeline = kmeans_pipeline | run_kmeans(n_clusters=5, segment_name='kmeans_segments')\\n\\n# Create another copy for a different approach\\nhierarchical_pipeline = base_pipeline.copy()\\nhierarchical_pipeline = hierarchical_pipeline | run_hierarchical(n_clusters=5, segment_name='hierarchical_segments')\\n\\n# Compare segment distribution between approaches\\nkmeans_distribution = kmeans_pipeline.data['segment_kmeans_segments'].value_counts()\\nhierarchical_distribution = hierarchical_pipeline.data['segment_hierarchical_segments'].value_counts()\\n\\nprint('K-means segment distribution:\\n', kmeans_distribution)\\nprint('\\nHierarchical segment distribution:\\n', hierarchical_distribution)\", \"Usage\": \"duplicate_pipeline = original_pipeline.copy()\"}",
+    "metadata": {
+      "function_name": "copy",
+      "src_type": "class_method",
+      "category": "pipeline_operation",
+      "example_id": 12,
+      "description": "Create a duplicate of a segmentation pipeline"
+    }
+  }
+]

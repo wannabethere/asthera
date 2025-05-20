@@ -1,0 +1,49 @@
+{
+    "functions": {
+        "form_time_cohorts": {
+            "required_params": ["date_column"],
+            "optional_params": ["cohort_column", "time_period", "format_cohorts", "datetime_format"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that forms time-based cohorts from a CohortPipe"
+            },
+            "description": "Form cohorts based on time periods"
+        },
+        "form_behavioral_cohorts": {
+            "required_params": ["behavior_column"],
+            "optional_params": ["cohort_column", "conditions", "custom_cohorts"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that forms behavior-based cohorts from a CohortPipe"
+            },
+            "description": "Form cohorts based on user behavior"
+        },
+        "calculate_retention": {
+            "required_params": ["cohort_column", "date_column", "user_id_column"],
+            "optional_params": ["time_period", "max_periods", "retention_type", "datetime_format"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates retention metrics from a CohortPipe"
+            },
+            "description": "Calculate retention metrics for cohorts"
+        },
+        "calculate_conversion": {
+            "required_params": ["cohort_column", "event_column", "user_id_column", "funnel_steps"],
+            "optional_params": ["step_names", "include_rates", "cumulative"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates conversion metrics from a CohortPipe"
+            },
+            "description": "Calculate conversion funnel metrics for cohorts"
+        },
+        "calculate_lifetime_value": {
+            "required_params": ["cohort_column", "date_column", "user_id_column", "value_column"],
+            "optional_params": ["time_period", "max_periods", "cumulative", "datetime_format"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates lifetime value metrics from a CohortPipe"
+            },
+            "description": "Calculate lifetime value metrics for cohorts"
+        }
+    }
+}

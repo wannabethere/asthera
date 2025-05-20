@@ -1,0 +1,566 @@
+[
+    {
+      "query": "Group users by their sign-up month to track retention",
+      "function": "form_time_cohorts",
+      "category": "cohort_analysis",
+      "inputs": {
+        "date_column": "signup_date",
+        "time_period": "month",
+        "format_cohorts": true,
+        "datetime_format": "%Y-%m-%d"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(retention|cohort)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (retention)"
+        ],
+        "time_patterns": [
+          "(monthly)"
+        ]
+      }
+    },
+    {
+      "query": "Segment users based on their registration quarter for annual analysis",
+      "function": "form_time_cohorts",
+      "category": "cohort_analysis",
+      "inputs": {
+        "date_column": "registration_date",
+        "cohort_column": "registration_quarter",
+        "time_period": "quarter",
+        "datetime_format": "%Y-%m-%d %H:%M:%S"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(segment|cluster|group) (users|customers)",
+          "(analyze|analysis|examine)"
+        ],
+        "time_patterns": [
+          "(quarterly)"
+        ]
+      }
+    },
+    {
+      "query": "Create weekly cohorts from user first purchase dates",
+      "function": "form_time_cohorts",
+      "category": "cohort_analysis",
+      "inputs": {
+        "date_column": "first_purchase_date",
+        "time_period": "week",
+        "format_cohorts": true,
+        "cohort_column": "purchase_week_cohort"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(retention|cohort)"
+        ],
+        "time_patterns": [
+          "(weekly)"
+        ]
+      }
+    },
+    {
+      "query": "Group customers by their joining year to analyze annual spending patterns",
+      "function": "form_time_cohorts",
+      "category": "cohort_analysis",
+      "inputs": {
+        "date_column": "customer_joined_date",
+        "time_period": "year",
+        "format_cohorts": false
+      },
+      "patterns": {
+        "function_patterns": [
+          "(segment|cluster|group) (users|customers)",
+          "(analyze|analysis|examine)"
+        ],
+        "time_patterns": [
+          "(yearly)"
+        ]
+      }
+    },
+    {
+      "query": "Create daily cohorts for detailed analysis of new user onboarding",
+      "function": "form_time_cohorts",
+      "category": "cohort_analysis",
+      "inputs": {
+        "date_column": "signup_timestamp",
+        "time_period": "day",
+        "format_cohorts": true,
+        "datetime_format": "%Y-%m-%dT%H:%M:%S"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(retention|cohort)",
+          "(analyze|analysis|examine)"
+        ],
+        "time_patterns": [
+          "(daily)"
+        ]
+      }
+    },
+    {
+      "query": "Create customer segments based on initial subscription plan",
+      "function": "form_behavioral_cohorts",
+      "category": "cohort_analysis",
+      "inputs": {
+        "behavior_column": "subscription_plan",
+        "cohort_column": "plan_cohort",
+        "custom_cohorts": {
+          "Premium": ["premium", "enterprise"],
+          "Basic": ["basic", "starter"],
+          "Free": ["free_trial"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(segment|cluster|group) (users|customers)"
+        ]
+      }
+    },
+    {
+      "query": "Group users by their preferred device type for behavioral analysis",
+      "function": "form_behavioral_cohorts",
+      "category": "cohort_analysis",
+      "inputs": {
+        "behavior_column": "device_type",
+        "conditions": {
+          "Mobile": "device_type in ['ios', 'android']",
+          "Desktop": "device_type in ['mac', 'windows', 'linux']",
+          "Tablet": "device_type == 'tablet'"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(segment|cluster|group) (users|customers)",
+          "(analyze|analysis|examine)"
+        ]
+      }
+    },
+    {
+      "query": "Segment customers by their purchase frequency into high, medium, and low value groups",
+      "function": "form_behavioral_cohorts",
+      "category": "cohort_analysis",
+      "inputs": {
+        "behavior_column": "purchases_count",
+        "cohort_column": "purchase_frequency_segment",
+        "conditions": {
+          "High Value": "purchases_count > 10",
+          "Medium Value": "purchases_count >= 3 and purchases_count <= 10",
+          "Low Value": "purchases_count < 3"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(segment|cluster|group) (users|customers)"
+        ]
+      }
+    },
+    {
+      "query": "Create age-based customer cohorts for demographic analysis",
+      "function": "form_behavioral_cohorts",
+      "category": "cohort_analysis",
+      "inputs": {
+        "behavior_column": "age",
+        "cohort_column": "age_group",
+        "conditions": {
+          "18-24": "age >= 18 and age <= 24",
+          "25-34": "age >= 25 and age <= 34",
+          "35-44": "age >= 35 and age <= 44",
+          "45-54": "age >= 45 and age <= 54",
+          "55+": "age >= 55"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(segment|cluster|group) (users|customers)",
+          "(analyze|analysis|examine)"
+        ]
+      }
+    },
+    {
+      "query": "Segment users based on their activity level last month",
+      "function": "form_behavioral_cohorts",
+      "category": "cohort_analysis",
+      "inputs": {
+        "behavior_column": "monthly_active_days",
+        "cohort_column": "engagement_level",
+        "conditions": {
+          "High Engagement": "monthly_active_days > 20",
+          "Medium Engagement": "monthly_active_days >= 5 and monthly_active_days <= 20",
+          "Low Engagement": "monthly_active_days < 5"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(segment|cluster|group) (users|customers)"
+        ],
+        "time_patterns": [
+          "(monthly)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate 3-month retention rates for each user acquisition channel",
+      "function": "calculate_retention",
+      "category": "cohort_analysis",
+      "inputs": {
+        "cohort_column": "acquisition_channel",
+        "date_column": "activity_date",
+        "user_id_column": "user_id",
+        "time_period": "month",
+        "max_periods": 3,
+        "retention_type": "rolling"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (retention)",
+          "(retention|cohort)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (retention)"
+        ],
+        "time_patterns": [
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(3) (months)"
+        ]
+      }
+    },
+    {
+      "query": "Measure weekly retention for new mobile app users over their first 8 weeks",
+      "function": "calculate_retention",
+      "category": "cohort_analysis",
+      "inputs": {
+        "cohort_column": "signup_week",
+        "date_column": "login_date",
+        "user_id_column": "app_user_id",
+        "time_period": "week",
+        "max_periods": 8,
+        "retention_type": "classic"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(retention|cohort)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (retention)"
+        ],
+        "time_patterns": [
+          "(weekly)"
+        ],
+        "num_patterns": [
+          "(8) (weeks)"
+        ]
+      }
+    },
+    {
+      "query": "Compare 30-day retention between iOS and Android users",
+      "function": "calculate_retention",
+      "category": "cohort_analysis",
+      "inputs": {
+        "cohort_column": "platform",
+        "date_column": "session_date",
+        "user_id_column": "device_id",
+        "time_period": "day",
+        "max_periods": 30,
+        "retention_type": "rolling"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(retention|cohort)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (retention)"
+        ],
+        "num_patterns": [
+          "(30) (days)"
+        ]
+      }
+    },
+    {
+      "query": "Analyze quarterly retention patterns for premium vs basic subscribers",
+      "function": "calculate_retention",
+      "category": "cohort_analysis",
+      "inputs": {
+        "cohort_column": "subscription_tier",
+        "date_column": "renewal_date",
+        "user_id_column": "subscriber_id",
+        "time_period": "quarter",
+        "max_periods": 4,
+        "retention_type": "classic"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(analyze|analysis|examine)",
+          "(retention|cohort)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (retention)"
+        ],
+        "time_patterns": [
+          "(quarterly)"
+        ],
+        "num_patterns": [
+          "(4)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate first-year retention rates by customer acquisition cost buckets",
+      "function": "calculate_retention",
+      "category": "cohort_analysis",
+      "inputs": {
+        "cohort_column": "cac_bucket",
+        "date_column": "account_activity_date",
+        "user_id_column": "customer_id",
+        "time_period": "month",
+        "max_periods": 12,
+        "retention_type": "classic"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (retention)",
+          "(retention|cohort)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (retention)"
+        ],
+        "time_patterns": [
+          "(yearly)"
+        ],
+        "num_patterns": [
+          "(12)"
+        ]
+      }
+    },
+    {
+      "query": "Analyze conversion from trial to paid subscription for each pricing tier",
+      "function": "calculate_conversion",
+      "category": "cohort_analysis",
+      "inputs": {
+        "cohort_column": "pricing_tier",
+        "event_column": "user_action",
+        "user_id_column": "user_id",
+        "funnel_steps": ["trial_started", "feature_used", "paywall_viewed", "subscription_purchased"],
+        "step_names": ["Trial", "Feature Usage", "Paywall", "Purchase"],
+        "include_rates": true
+      },
+      "patterns": {
+        "function_patterns": [
+          "(analyze|analysis|examine)",
+          "(funnel|conversion|step)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion)"
+        ]
+      }
+    },
+    {
+      "query": "Track funnel conversion from email signup to first order by marketing campaign",
+      "function": "calculate_conversion",
+      "category": "cohort_analysis",
+      "inputs": {
+        "cohort_column": "campaign_name",
+        "event_column": "event_type",
+        "user_id_column": "email_id",
+        "funnel_steps": ["email_signup", "site_visit", "product_view", "add_to_cart", "checkout", "purchase"],
+        "include_rates": true,
+        "cumulative": false
+      },
+      "patterns": {
+        "function_patterns": [
+          "(funnel|conversion|step)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion)"
+        ]
+      }
+    },
+    {
+      "query": "Compare onboarding conversion between different user segments",
+      "function": "calculate_conversion",
+      "category": "cohort_analysis",
+      "inputs": {
+        "cohort_column": "user_segment",
+        "event_column": "onboarding_step",
+        "user_id_column": "user_id",
+        "funnel_steps": ["account_created", "profile_completed", "tutorial_viewed", "first_task_completed"],
+        "step_names": ["Account", "Profile", "Tutorial", "First Task"],
+        "include_rates": true
+      },
+      "patterns": {
+        "function_patterns": [
+          "(funnel|conversion|step)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion)"
+        ]
+      }
+    },
+    {
+      "query": "Measure cumulative checkout conversion for new vs returning customers",
+      "function": "calculate_conversion",
+      "category": "cohort_analysis",
+      "inputs": {
+        "cohort_column": "customer_type",
+        "event_column": "shopping_action",
+        "user_id_column": "visitor_id",
+        "funnel_steps": ["product_page_view", "add_to_cart", "begin_checkout", "shipping_details", "payment_details", "order_confirm"],
+        "cumulative": true
+      },
+      "patterns": {
+        "function_patterns": [
+          "(funnel|conversion|step)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion)"
+        ]
+      }
+    },
+    {
+      "query": "Analyze feature adoption funnel by user role type",
+      "function": "calculate_conversion",
+      "category": "cohort_analysis",
+      "inputs": {
+        "cohort_column": "role_type",
+        "event_column": "feature_event",
+        "user_id_column": "user_id",
+        "funnel_steps": ["feature_discovered", "feature_clicked", "feature_configured", "feature_used_multiple_times"],
+        "step_names": ["Discovery", "First Click", "Configuration", "Adoption"],
+        "include_rates": true
+      },
+      "patterns": {
+        "function_patterns": [
+          "(analyze|analysis|examine)",
+          "(funnel|conversion|step)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion)"
+        ]
+      }
+    },
+    {
+      "query": "Track 6-month cumulative revenue for each geographical region",
+      "function": "calculate_lifetime_value",
+      "category": "cohort_analysis",
+      "inputs": {
+        "cohort_column": "region",
+        "date_column": "transaction_date",
+        "user_id_column": "customer_id",
+        "value_column": "revenue",
+        "time_period": "month",
+        "max_periods": 6,
+        "cumulative": true
+      },
+      "patterns": {
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (revenue)"
+        ],
+        "time_patterns": [
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(6) (months)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate customer lifetime value by acquisition source after 12 months",
+      "function": "calculate_lifetime_value",
+      "category": "cohort_analysis",
+      "inputs": {
+        "cohort_column": "acquisition_source",
+        "date_column": "purchase_date",
+        "user_id_column": "user_id",
+        "value_column": "purchase_amount",
+        "time_period": "month",
+        "max_periods": 12,
+        "cumulative": true
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (lifetime)"
+        ],
+        "time_patterns": [
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(12) (months)"
+        ]
+      }
+    },
+    {
+      "query": "Measure weekly subscription revenue per user for different subscription plans",
+      "function": "calculate_lifetime_value",
+      "category": "cohort_analysis",
+      "inputs": {
+        "cohort_column": "subscription_plan",
+        "date_column": "week_date",
+        "user_id_column": "subscriber_id",
+        "value_column": "subscription_revenue",
+        "time_period": "week",
+        "max_periods": 52,
+        "cumulative": false
+      },
+      "patterns": {
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (revenue)"
+        ],
+        "time_patterns": [
+          "(weekly)"
+        ],
+        "num_patterns": [
+          "(52)"
+        ]
+      }
+    },
+    {
+      "query": "Compare 90-day average order value trends between first-time and repeat customers",
+      "function": "calculate_lifetime_value",
+      "category": "cohort_analysis",
+      "inputs": {
+        "cohort_column": "customer_type",
+        "date_column": "order_date",
+        "user_id_column": "customer_id",
+        "value_column": "order_value",
+        "time_period": "day",
+        "max_periods": 90,
+        "cumulative": false
+      },
+      "patterns": {
+        "function_patterns": [
+          "(trend|growth|change) over time"
+        ],
+        "num_patterns": [
+          "(90) (days)"
+        ]
+      }
+    },
+    {
+      "query": "Analyze annual customer value by industry segment",
+      "function": "calculate_lifetime_value",
+      "category": "cohort_analysis",
+      "inputs": {
+        "cohort_column": "industry",
+        "date_column": "transaction_date",
+        "user_id_column": "account_id",
+        "value_column": "contract_value",
+        "time_period": "year",
+        "max_periods": 3,
+        "cumulative": false
+      },
+      "patterns": {
+        "function_patterns": [
+          "(analyze|analysis|examine)"
+        ],
+        "time_patterns": [
+          "(yearly)"
+        ],
+        "num_patterns": [
+          "(3)"
+        ]
+      }
+    }
+  ]

@@ -1,0 +1,76 @@
+{
+    "functions": {
+        "aggregate_by_time": {
+            "required_params": ["date_column", "metric_columns"],
+            "optional_params": ["time_period", "aggregation", "fill_missing", "include_current_period", "time_name", "datetime_format"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that aggregates data by time periods"
+            },
+            "description": "Aggregate data by time periods"
+        },
+        "calculate_growth_rates": {
+            "required_params": [],
+            "optional_params": ["window", "annualize", "method"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates growth rates"
+            },
+            "description": "Calculate growth rates for aggregated metrics"
+        },
+        "calculate_moving_average": {
+            "required_params": [],
+            "optional_params": ["window", "method", "center"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving averages"
+            },
+            "description": "Calculate moving averages for time series data"
+        },
+        "decompose_trend": {
+            "required_params": ["metric_column"],
+            "optional_params": ["model", "period", "extrapolate_trend"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that decomposes time series"
+            },
+            "description": "Decompose time series into trend, seasonal, and residual components"
+        },
+        "forecast_metric": {
+            "required_params": ["metric_column"],
+            "optional_params": ["fperiods", "fmethod", "seasonal_periods", "confidence_interval"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that generates forecasts"
+            },
+            "description": "Forecast future values of a metric"
+        },
+        "calculate_statistical_trend": {
+            "required_params": ["metric_column"],
+            "optional_params": ["test_method", "alpha", "window"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that performs statistical trend analysis"
+            },
+            "description": "Calculate statistical significance of trends"
+        },
+        "compare_periods": {
+            "required_params": ["metric_column"],
+            "optional_params": ["comparison_type", "n_periods", "aggregation"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that compares metrics across periods"
+            },
+            "description": "Compare metrics across different time periods"
+        },
+        "get_top_metrics": {
+            "required_params": [],
+            "optional_params": ["n", "metric_type", "ascending"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that returns top metrics"
+            },
+            "description": "Get top performing metrics based on specified criteria"
+        }
+    }
+}

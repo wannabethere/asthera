@@ -1,0 +1,76 @@
+{
+    "functions": {
+      "run_kmeans": {
+        "required_params": [],
+        "optional_params": ["n_clusters", "algorithm_name", "find_optimal", "max_clusters", "random_state"],
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that runs KMeans on features in a SegmentPipe"
+        },
+        "description": "Run KMeans clustering"
+      },
+      "run_dbscan": {
+        "required_params": [],
+        "optional_params": ["eps", "min_samples", "algorithm_name"],
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that runs DBSCAN on features in a SegmentPipe"
+        },
+        "description": "Run DBSCAN clustering"
+      },
+      "run_hdbscan": {
+        "required_params": [],
+        "optional_params": ["min_cluster_size", "min_samples", "algorithm_name"],
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that runs HDBSCAN on features in a SegmentPipe"
+        },
+        "description": "Run HDBSCAN clustering"
+      },
+      "run_agglomerative": {
+        "required_params": [],
+        "optional_params": ["n_clusters", "linkage", "algorithm_name"],
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that runs Agglomerative Clustering on features in a SegmentPipe"
+        },
+        "description": "Run Agglomerative Clustering"
+      },
+      "run_rule_based": {
+        "required_params": ["rules"],
+        "optional_params": ["default_segment", "algorithm_name"],
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that runs rule-based segmentation in a SegmentPipe"
+        },
+        "description": "Run rule-based segmentation"
+      },
+      "generate_summary": {
+        "required_params": [],
+        "optional_params": ["algorithm"],
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that generates segment summaries"
+        },
+        "description": "Generate summary statistics for segments"
+      },
+      "get_segment_data": {
+        "required_params": ["segment_id"],
+        "optional_params": ["algorithm"],
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that retrieves segment data"
+        },
+        "description": "Get data for a specific segment"
+      },
+      "compare_algorithms": {
+        "required_params": [],
+        "optional_params": [],
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that compares segmentation algorithms"
+        },
+        "description": "Compare results from different segmentation algorithms"
+      }
+    }
+  }

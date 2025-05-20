@@ -1,0 +1,58 @@
+{
+    "functions": {
+      "analyze_funnel": {
+        "required_params": ["event_column", "user_id_column", "funnel_steps"],
+        "optional_params": ["step_names", "max_step_time"],
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that analyzes a funnel in a CohortPipe"
+        },
+        "description": "Analyze a user funnel using the existing CohortPipe framework"
+      },
+      "analyze_funnel_by_time": {
+        "required_params": ["event_column", "user_id_column", "date_column", "funnel_steps"],
+        "optional_params": ["step_names", "time_period", "max_periods", "datetime_format"],
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that analyzes funnel by time periods in a CohortPipe"
+        },
+        "description": "Analyze funnel performance over time using the existing CohortPipe framework"
+      },
+      "analyze_funnel_by_segment": {
+        "required_params": ["event_column", "user_id_column", "segment_column", "funnel_steps"],
+        "optional_params": ["step_names", "min_users"],
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that analyzes funnel by segments in a CohortPipe"
+        },
+        "description": "Analyze funnel performance by user segments"
+      },
+      "analyze_user_paths": {
+        "required_params": ["event_column", "user_id_column", "timestamp_column", "funnel_steps"],
+        "optional_params": ["step_names", "max_path_length", "min_path_frequency"],
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that analyzes user paths through the funnel"
+        },
+        "description": "Analyze common user paths through the funnel"
+      },
+      "get_funnel_summary": {
+        "required_params": [],
+        "optional_params": [],
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that returns funnel analysis summary"
+        },
+        "description": "Get a summary of funnel analysis results"
+      },
+      "compare_segments": {
+        "required_params": ["metric_column"],
+        "optional_params": ["baseline_segment"],
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that compares funnel metrics across segments"
+        },
+        "description": "Compare funnel performance across different segments"
+      }
+    }
+  }

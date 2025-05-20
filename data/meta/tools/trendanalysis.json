@@ -1,0 +1,240 @@
+{
+    "functions": {
+      "aggregate_by_time": {
+        "description": "Aggregate data by time periods",
+        "inputs": {
+          "date_column": {
+            "type": "str",
+            "description": "Column containing the date to aggregate by"
+          },
+          "metric_columns": {
+            "type": "List[str]",
+            "description": "Columns containing metrics to analyze"
+          },
+          "time_period": {
+            "type": "str",
+            "description": "Time period for aggregation ('D', 'W', 'M', 'Q', 'Y')",
+            "default": "D"
+          },
+          "aggregation": {
+            "type": "Union[str, Dict[str, str]]",
+            "description": "Aggregation method or dict mapping columns to methods",
+            "default": "mean"
+          },
+          "fill_missing": {
+            "type": "bool",
+            "description": "Whether to fill in missing time periods with NaN",
+            "default": true
+          },
+          "include_current_period": {
+            "type": "bool",
+            "description": "Whether to include the current (potentially incomplete) time period",
+            "default": false
+          },
+          "time_name": {
+            "type": "str",
+            "description": "Name to use for the time column in the result",
+            "default": "time"
+          },
+          "datetime_format": {
+            "type": "Optional[str]",
+            "description": "Format string for parsing dates",
+            "default": null
+          }
+        },
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that aggregates data by time periods"
+        }
+      },
+      "calculate_growth_rates": {
+        "description": "Calculate growth rates for aggregated metrics",
+        "inputs": {
+          "window": {
+            "type": "Optional[int]",
+            "description": "Window size for growth rate calculation",
+            "default": null
+          },
+          "annualize": {
+            "type": "bool",
+            "description": "Whether to annualize growth rates",
+            "default": false
+          },
+          "method": {
+            "type": "str",
+            "description": "Method for calculating growth ('percentage', 'log', or 'cagr')",
+            "default": "percentage"
+          }
+        },
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that calculates growth rates"
+        }
+      },
+      "calculate_moving_average": {
+        "description": "Calculate moving averages for time series data",
+        "inputs": {
+          "window": {
+            "type": "int",
+            "description": "Window size for moving average",
+            "default": 7
+          },
+          "method": {
+            "type": "str",
+            "description": "Method for calculating moving average ('simple', 'exponential', etc.)",
+            "default": "simple"
+          },
+          "center": {
+            "type": "bool",
+            "description": "Whether to center the window",
+            "default": false
+          }
+        },
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that calculates moving averages"
+        }
+      },
+      "decompose_trend": {
+        "description": "Decompose time series into trend, seasonal, and residual components",
+        "inputs": {
+          "metric_column": {
+            "type": "str",
+            "description": "Column to decompose"
+          },
+          "model": {
+            "type": "str",
+            "description": "Decomposition model type ('additive' or 'multiplicative')",
+            "default": "additive"
+          },
+          "period": {
+            "type": "Optional[int]",
+            "description": "Number of periods in seasonal cycle",
+            "default": null
+          },
+          "extrapolate_trend": {
+            "type": "Optional[int]",
+            "description": "Number of periods to extrapolate trend",
+            "default": null
+          }
+        },
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that decomposes time series"
+        }
+      },
+      "forecast_metric": {
+        "description": "Forecast future values of a metric",
+        "inputs": {
+          "metric_column": {
+            "type": "str",
+            "description": "Column to forecast"
+          },
+          "fperiods": {
+            "type": "int",
+            "description": "Number of periods to forecast",
+            "default": 12
+          },
+          "fmethod": {
+            "type": "str",
+            "description": "Forecasting method to use",
+            "default": "holt_winters"
+          },
+          "seasonal_periods": {
+            "type": "Optional[int]",
+            "description": "Number of periods in seasonal cycle",
+            "default": null
+          },
+          "confidence_interval": {
+            "type": "float",
+            "description": "Confidence level for prediction intervals",
+            "default": 0.95
+          }
+        },
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that generates forecasts"
+        }
+      },
+      "calculate_statistical_trend": {
+        "description": "Calculate statistical significance of trends",
+        "inputs": {
+          "metric_column": {
+            "type": "str",
+            "description": "Column to analyze"
+          },
+          "test_method": {
+            "type": "str",
+            "description": "Statistical test to use",
+            "default": "mann_kendall"
+          },
+          "alpha": {
+            "type": "float",
+            "description": "Significance level",
+            "default": 0.05
+          },
+          "window": {
+            "type": "Optional[int]",
+            "description": "Window size for rolling analysis",
+            "default": null
+          }
+        },
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that performs statistical trend analysis"
+        }
+      },
+      "compare_periods": {
+        "description": "Compare metrics across different time periods",
+        "inputs": {
+          "metric_column": {
+            "type": "str",
+            "description": "Column to compare"
+          },
+          "comparison_type": {
+            "type": "str",
+            "description": "Type of comparison (e.g., 'year_over_year')",
+            "default": "year_over_year"
+          },
+          "n_periods": {
+            "type": "int",
+            "description": "Number of periods to compare",
+            "default": 1
+          },
+          "aggregation": {
+            "type": "str",
+            "description": "Method to aggregate data within periods",
+            "default": "mean"
+          }
+        },
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that compares metrics across periods"
+        }
+      },
+      "get_top_metrics": {
+        "description": "Get top performing metrics based on specified criteria",
+        "inputs": {
+          "n": {
+            "type": "int",
+            "description": "Number of top metrics to return",
+            "default": 5
+          },
+          "metric_type": {
+            "type": "str",
+            "description": "Type of metric to rank by",
+            "default": "growth"
+          },
+          "ascending": {
+            "type": "bool",
+            "description": "Whether to sort in ascending order",
+            "default": false
+          }
+        },
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that returns top metrics"
+        }
+      }
+    }
+  }

@@ -1,0 +1,177 @@
+{
+    "functions": {
+      "lead": {
+        "description": "Create lead (future) values for specified columns",
+        "inputs": {
+          "columns": {
+            "type": "Union[str, List[str]]",
+            "description": "Column(s) to create lead values for"
+          },
+          "periods": {
+            "type": "int",
+            "description": "Number of periods to lead",
+            "default": 1
+          },
+          "time_column": {
+            "type": "Optional[str]",
+            "description": "Time column to sort by before calculating lead values",
+            "default": null
+          },
+          "group_columns": {
+            "type": "Optional[List[str]]",
+            "description": "Columns to group by before calculating lead values (for panel data)",
+            "default": null
+          },
+          "suffix": {
+            "type": "str",
+            "description": "Suffix to add to the names of lead columns",
+            "default": "_lead"
+          }
+        },
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that creates lead values in a TimeSeriesPipe"
+        }
+      },
+      "lag": {
+        "description": "Create lag (past) values for specified columns",
+        "inputs": {
+          "columns": {
+            "type": "Union[str, List[str]]",
+            "description": "Column(s) to create lag values for"
+          },
+          "periods": {
+            "type": "int",
+            "description": "Number of periods to lag",
+            "default": 1
+          },
+          "time_column": {
+            "type": "Optional[str]",
+            "description": "Time column to sort by before calculating lag values",
+            "default": null
+          },
+          "group_columns": {
+            "type": "Optional[List[str]]",
+            "description": "Columns to group by before calculating lag values (for panel data)",
+            "default": null
+          },
+          "suffix": {
+            "type": "str",
+            "description": "Suffix to add to the names of lag columns",
+            "default": "_lag"
+          }
+        },
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that creates lag values in a TimeSeriesPipe"
+        }
+      },
+      "variance_analysis": {
+        "description": "Calculate variance and standard deviation for time series data",
+        "inputs": {
+          "columns": {
+            "type": "Union[str, List[str]]",
+            "description": "Column(s) to analyze"
+          },
+          "method": {
+            "type": "str",
+            "description": "Method to use: 'rolling', 'expanding', or 'ewm'",
+            "default": "rolling"
+          },
+          "window": {
+            "type": "int",
+            "description": "Window size for rolling calculations",
+            "default": 5
+          },
+          "time_column": {
+            "type": "Optional[str]",
+            "description": "Time column to sort by before calculations",
+            "default": null
+          },
+          "group_columns": {
+            "type": "Optional[List[str]]",
+            "description": "Columns to group by before calculations (for panel data)",
+            "default": null
+          },
+          "suffix": {
+            "type": "Optional[str]",
+            "description": "Suffix to add to column names",
+            "default": null
+          }
+        },
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that calculates variance in a TimeSeriesPipe"
+        }
+      },
+      "distribution_analysis": {
+        "description": "Analyze the distribution of values in specified columns",
+        "inputs": {
+          "columns": {
+            "type": "Union[str, List[str]]",
+            "description": "Column(s) to analyze"
+          },
+          "bins": {
+            "type": "int",
+            "description": "Number of bins for histogram",
+            "default": 10
+          },
+          "group_columns": {
+            "type": "Optional[List[str]]",
+            "description": "Columns to group by before analysis",
+            "default": null
+          },
+          "normalize": {
+            "type": "bool",
+            "description": "Whether to normalize the distribution",
+            "default": false
+          }
+        },
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that analyzes distributions in a TimeSeriesPipe"
+        }
+      },
+      "cumulative_distribution": {
+        "description": "Calculate cumulative distribution for specified columns",
+        "inputs": {
+          "columns": {
+            "type": "Union[str, List[str]]",
+            "description": "Column(s) to analyze"
+          },
+          "time_column": {
+            "type": "Optional[str]",
+            "description": "Time column to sort by",
+            "default": null
+          },
+          "group_columns": {
+            "type": "Optional[List[str]]",
+            "description": "Columns to group by before calculation",
+            "default": null
+          },
+          "suffix": {
+            "type": "str",
+            "description": "Suffix to add to column names",
+            "default": "_cdf"
+          }
+        },
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that calculates cumulative distributions in a TimeSeriesPipe"
+        }
+      },
+      "custom_calculation": {
+        "description": "Apply a custom calculation function to the time series data",
+        "inputs": {
+          "func": {
+            "type": "Callable",
+            "description": "Custom function to apply to the data"
+          }
+        },
+        "outputs": {
+          "type": "Callable",
+          "description": "Function that applies custom calculation in a TimeSeriesPipe"
+        }
+      }
+    }
+  }

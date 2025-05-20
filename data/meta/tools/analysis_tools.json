@@ -1,0 +1,179 @@
+{
+  "analysis_tools": [
+    {
+      "name": "form_time_cohorts",
+      "category": "cohort_analysis",
+      "description": "Form cohorts based on time periods"
+    },
+    {
+      "name": "form_behavioral_cohorts",
+      "category": "cohort_analysis",
+      "description": "Form cohorts based on user behavior"
+    },
+    {
+      "name": "calculate_retention",
+      "category": "cohort_analysis",
+      "description": "Calculate retention metrics for cohorts"
+    },
+    {
+      "name": "calculate_conversion",
+      "category": "cohort_analysis",
+      "description": "Calculate conversion funnel metrics for cohorts"
+    },
+    {
+      "name": "calculate_lifetime_value",
+      "category": "cohort_analysis",
+      "description": "Calculate lifetime value metrics for cohorts"
+    },
+    {
+      "name": "percentage_change",
+      "category": "time_series_analysis",
+      "description": "Calculate percentage change for a specified column"
+    },
+    {
+      "name": "moving_average",
+      "category": "time_series_analysis",
+      "description": "Calculate moving average for a specified column"
+    },
+    {
+      "name": "absolute_change",
+      "category": "time_series_analysis",
+      "description": "Calculate absolute change for a specified column or columns"
+    },
+    {
+      "name": "calculate_average_value",
+      "category": "time_series_analysis",
+      "description": "Calculate average value for a specified column or columns"
+    },
+    {
+      "name": "analyze_funnel",
+      "category": "funnel_analysis",
+      "description": "Analyze a user funnel using the existing CohortPipe framework"
+    },
+    {
+      "name": "analyze_funnel_by_time",
+      "category": "funnel_analysis",
+      "description": "Analyze funnel performance over time using the existing CohortPipe framework"
+    },
+    {
+      "name": "analyze_funnel_by_segment",
+      "category": "funnel_analysis",
+      "description": "Analyze funnel performance by user segments"
+    },
+    {
+      "name": "analyze_user_paths",
+      "category": "funnel_analysis",
+      "description": "Analyze common user paths through the funnel"
+    },
+    {
+      "name": "get_funnel_summary",
+      "category": "funnel_analysis",
+      "description": "Get a summary of funnel analysis results"
+    },
+    {
+      "name": "compare_segments",
+      "category": "funnel_analysis",
+      "description": "Compare funnel performance across different segments"
+    },
+    {
+      "name": "lead",
+      "category": "time_series_analysis",
+      "description": "Create lead (future) values for specified columns"
+    },
+    {
+      "name": "lag",
+      "category": "time_series_analysis",
+      "description": "Create lag (past) values for specified columns"
+    },
+    {
+      "name": "variance_analysis",
+      "category": "time_series_analysis",
+      "description": "Calculate variance and standard deviation for time series data"
+    },
+    {
+      "name": "distribution_analysis",
+      "category": "time_series_analysis",
+      "description": "Analyze the distribution of values in specified columns"
+    },
+    {
+      "name": "cumulative_distribution",
+      "category": "time_series_analysis",
+      "description": "Calculate cumulative distribution for specified columns"
+    },
+    {
+      "name": "custom_calculation",
+      "category": "time_series_analysis",
+      "description": "Apply a custom calculation function to the time series data"
+    },
+    {
+      "name": "dbscan",
+      "category": "segmentation",
+      "description": "DBSCAN Clustering for segmentation"
+    },
+    {
+      "name": "hierarchical",
+      "category": "segmentation",
+      "description": "Hierarchical Clustering for segmentation"
+    },
+    {
+      "name": "rule_based",
+      "category": "segmentation",
+      "description": "Rule-Based Segmentation"
+    },
+    {
+      "name": "generate_summary",
+      "category": "segmentation",
+      "description": "Segment Summary Generator"
+    },
+    {
+      "name": "get_segment_data",
+      "category": "segmentation",
+      "description": "Segment Data Extractor"
+    },
+    {
+      "name": "compare_algorithms",
+      "category": "segmentation",
+      "description": "Algorithm Comparison"
+    },
+    {
+      "name": "aggregate_by_time",
+      "category": "trend_analysis",
+      "description": "Aggregate data by time periods"
+    },
+    {
+      "name": "calculate_growth_rates",
+      "category": "trend_analysis",
+      "description": "Calculate growth rates for aggregated metrics"
+    },
+    {
+      "name": "calculate_moving_average",
+      "category": "trend_analysis",
+      "description": "Calculate moving averages for time series data"
+    },
+    {
+      "name": "decompose_trend",
+      "category": "trend_analysis",
+      "description": "Decompose time series into trend, seasonal, and residual components"
+    },
+    {
+      "name": "forecast_metric",
+      "category": "trend_analysis",
+      "description": "Forecast future values of a metric"
+    },
+    {
+      "name": "calculate_statistical_trend",
+      "category": "trend_analysis",
+      "description": "Calculate statistical significance of trends"
+    },
+    {
+      "name": "compare_periods",
+      "category": "trend_analysis",
+      "description": "Compare metrics across different time periods"
+    },
+    {
+      "name": "get_top_metrics",
+      "category": "trend_analysis",
+      "description": "Get top performing metrics based on specified criteria"
+    }
+  ]
+} 

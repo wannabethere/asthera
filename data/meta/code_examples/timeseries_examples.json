@@ -1,0 +1,153 @@
+
+[
+  {
+    "page_content": "{\"Question\": \"How do I initialize a time series pipeline with my data?\", \"Context\": \"I have a Pandas DataFrame with time series data and I want to use the TimeSeriesPipe class to analyze it.\", \"Code_Example\": \"import pandas as pd\\nfrom timeseriesanalysis import TimeSeriesPipe\\n\\n# Your existing DataFrame\\ndf = pd.read_csv('sales_data.csv')\\n\\n# Initialize the pipeline\\npipe = TimeSeriesPipe.from_dataframe(df)\\n\\n# Now you can chain operations\\nresult = pipe | operation1() | operation2()\\n\\n# Access the resulting DataFrame\\nfinal_df = result.data\", \"Usage\": \"TimeSeriesPipe.from_dataframe(dataframe)\"}",
+    "metadata": {
+      "function_name": "TimeSeriesPipe.from_dataframe",
+      "src_type": "class_method",
+      "category": "initialization",
+      "example_id": 1,
+      "description": "Initialize a time series pipeline from a DataFrame"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I create lead (future) values for a column in my time series data?\", \"Context\": \"I have sales data and I want to look at future values to analyze trends and patterns.\", \"Code_Example\": \"from timeseriesanalysis import TimeSeriesPipe, lead\\n\\n# Create pipeline with your data\\npipe = TimeSeriesPipe.from_dataframe(sales_df)\\n\\n# Create a 1-period lead for the 'sales' column\\nresult = pipe | lead(\\n    columns='sales',\\n    periods=1,\\n    time_column='date',  # Sort by this column before calculating lead\\n    suffix='_next_period'  # Custom suffix for the new column\\n)\\n\\n# Now result.data has a new column 'sales_next_period' with future values\\nprint(result.data[['date', 'sales', 'sales_next_period']].head())\", \"Usage\": \"lead(columns='column_name', periods=1, time_column='date', suffix='_lead')\"}",
+    "metadata": {
+      "function_name": "lead",
+      "src_type": "function",
+      "category": "time_shifting",
+      "example_id": 1,
+      "description": "Create lead (future) values for time series columns"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I create lead values for multiple columns in panel data with groups?\", \"Context\": \"I have sales data across multiple stores and I want to look at future values for each store separately.\", \"Code_Example\": \"from timeseriesanalysis import TimeSeriesPipe, lead\\n\\n# Create pipeline with your data\\npipe = TimeSeriesPipe.from_dataframe(sales_df)\\n\\n# Create leads for 'sales' and 'foot_traffic' columns, grouped by 'store_id'\\nresult = pipe | lead(\\n    columns=['sales', 'foot_traffic'],\\n    periods=1,\\n    time_column='date',\\n    group_columns=['store_id'],  # Calculate leads within each store group\\n    suffix='_next_day'\\n)\\n\\n# Now result.data has new columns with future values for each store\\nprint(result.data[['store_id', 'date', 'sales', 'sales_next_day']].head())\", \"Usage\": \"lead(columns=['sales', 'foot_traffic'], periods=1, time_column='date', group_columns=['store_id'], suffix='_next_day')\"}",
+    "metadata": {
+      "function_name": "lead",
+      "src_type": "function",
+      "category": "time_shifting",
+      "example_id": 2,
+      "description": "Create lead values for multiple columns with grouping"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I create lag (past) values for a time series column?\", \"Context\": \"I have stock price data and I want to compare current prices with previous day's prices to calculate daily returns.\", \"Code_Example\": \"from timeseriesanalysis import TimeSeriesPipe, lag\\n\\n# Create pipeline with your data\\npipe = TimeSeriesPipe.from_dataframe(stock_df)\\n\\n# Create a 1-period lag for the 'price' column\\nresult = pipe | lag(\\n    columns='price',\\n    periods=1,\\n    time_column='date',  # Sort by this column before calculating lag\\n    suffix='_previous'  # Custom suffix for the new column\\n)\\n\\n# Add a return calculation column\\ndef add_returns(df):\\n    df['daily_return'] = (df['price'] - df['price_previous']) / df['price_previous']\\n    return df\\n\\n# Use custom calculation to add returns\\nfrom timeseriesanalysis import custom_calculation\\nfinal = result | custom_calculation(add_returns)\\n\\nprint(final.data[['date', 'price', 'price_previous', 'daily_return']].head())\", \"Usage\": \"lag(columns='price', periods=1, time_column='date', suffix='_previous')\"}",
+    "metadata": {
+      "function_name": "lag",
+      "src_type": "function",
+      "category": "time_shifting",
+      "example_id": 1,
+      "description": "Create lag (past) values for time series columns"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I create multiple lag periods for panel data?\", \"Context\": \"I have sales data for multiple products and I want to include multiple lag periods (1-day, 7-day) for each product separately.\", \"Code_Example\": \"from timeseriesanalysis import TimeSeriesPipe, lag\\n\\n# Create pipeline with your data\\npipe = TimeSeriesPipe.from_dataframe(product_sales_df)\\n\\n# Create a 1-day lag for the 'sales' column by product\\nresult1 = pipe | lag(\\n    columns='sales',\\n    periods=1,\\n    time_column='date',\\n    group_columns=['product_id'],  # Calculate lags within each product group\\n    suffix='_prev_day'\\n)\\n\\n# Create a 7-day lag (previous week) for the 'sales' column by product\\nresult7 = result1 | lag(\\n    columns='sales',\\n    periods=7,\\n    time_column='date',\\n    group_columns=['product_id'],\\n    suffix='_prev_week'\\n)\\n\\n# Now result7.data has both previous day and previous week sales\\nprint(result7.data[['product_id', 'date', 'sales', 'sales_prev_day', 'sales_prev_week']].head())\", \"Usage\": \"lag(columns='sales', periods=7, time_column='date', group_columns=['product_id'], suffix='_prev_week')\"}",
+    "metadata": {
+      "function_name": "lag",
+      "src_type": "function",
+      "category": "time_shifting",
+      "example_id": 2,
+      "description": "Create multiple lag periods with grouping"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I calculate rolling variance and standard deviation for time series data?\", \"Context\": \"I want to measure the volatility of my financial time series data over a 30-day rolling window.\", \"Code_Example\": \"from timeseriesanalysis import TimeSeriesPipe, variance_analysis\\n\\n# Create pipeline with your data\\npipe = TimeSeriesPipe.from_dataframe(financial_df)\\n\\n# Calculate rolling variance and standard deviation with a 30-day window\\nresult = pipe | variance_analysis(\\n    columns='price',\\n    method='rolling',  # Use rolling window calculations\\n    window=30,  # 30-day window\\n    time_column='date',  # Sort by this column before calculations\\n    suffix='_30d'  # Custom suffix for the new columns\\n)\\n\\n# Now result.data has 'price_30d_var' and 'price_30d_std' columns\\nprint(result.data[['date', 'price', 'price_30d_var', 'price_30d_std']].head(50))\", \"Usage\": \"variance_analysis(columns='price', method='rolling', window=30, time_column='date', suffix='_30d')\"}",
+    "metadata": {
+      "function_name": "variance_analysis",
+      "src_type": "function",
+      "category": "volatility",
+      "example_id": 1,
+      "description": "Calculate rolling variance for financial data"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I calculate exponentially weighted volatility for multiple groups in my data?\", \"Context\": \"I have stock price data for multiple companies and I want to calculate exponentially weighted volatility for each stock separately.\", \"Code_Example\": \"from timeseriesanalysis import TimeSeriesPipe, variance_analysis\\n\\n# Create pipeline with your data\\npipe = TimeSeriesPipe.from_dataframe(stocks_df)\\n\\n# Calculate exponentially weighted variance and standard deviation by stock\\nresult = pipe | variance_analysis(\\n    columns='price',\\n    method='ewm',  # Use exponentially weighted moving calculations\\n    window=10,  # Window parameter determines alpha = 2/(window+1)\\n    time_column='date',\\n    group_columns=['ticker'],  # Calculate separately for each stock\\n    suffix='_ewm'  # Custom suffix for the new columns\\n)\\n\\n# Now result.data has 'price_ewm_var' and 'price_ewm_std' columns for each stock\\nprint(result.data[['ticker', 'date', 'price', 'price_ewm_var', 'price_ewm_std']].head())\", \"Usage\": \"variance_analysis(columns='price', method='ewm', window=10, time_column='date', group_columns=['ticker'], suffix='_ewm')\"}",
+    "metadata": {
+      "function_name": "variance_analysis",
+      "src_type": "function",
+      "category": "volatility",
+      "example_id": 2,
+      "description": "Calculate exponentially weighted variance with grouping"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I calculate expanding volatility as more data becomes available?\", \"Context\": \"I'm building a model that needs to calculate volatility based on all available past data as time progresses.\", \"Code_Example\": \"from timeseriesanalysis import TimeSeriesPipe, variance_analysis\\n\\n# Create pipeline with your data\\npipe = TimeSeriesPipe.from_dataframe(time_series_df)\\n\\n# Calculate expanding variance and standard deviation\\nresult = pipe | variance_analysis(\\n    columns=['price', 'volume'],  # Analyze multiple columns\\n    method='expanding',  # Use all available past data for each point\\n    time_column='date',\\n    suffix='_all'  # Custom suffix for the new columns\\n)\\n\\n# Now result.data has variance and std columns for both price and volume\\nprint(result.data[['date', 'price', 'price_all_var', 'price_all_std', 'volume', 'volume_all_var', 'volume_all_std']].head(30))\", \"Usage\": \"variance_analysis(columns=['price', 'volume'], method='expanding', time_column='date', suffix='_all')\"}",
+    "metadata": {
+      "function_name": "variance_analysis",
+      "src_type": "function",
+      "category": "volatility",
+      "example_id": 3,
+      "description": "Calculate expanding variance for multiple columns"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I analyze the distribution of values in my time series data?\", \"Context\": \"I want to understand the statistical properties and distribution of my website traffic data.\", \"Code_Example\": \"from timeseriesanalysis import TimeSeriesPipe, distribution_analysis, get_distribution_summary\\n\\n# Create pipeline with your data\\npipe = TimeSeriesPipe.from_dataframe(traffic_df)\\n\\n# Analyze distribution of daily visitors\\nresult = pipe | distribution_analysis(\\n    columns='daily_visitors',\\n    bins=20,  # Number of histogram bins\\n    normalize=True  # Get proportions instead of counts\\n)\\n\\n# Get summary statistics from the distribution analysis\\nsummaries = result | get_distribution_summary()\\n\\n# Print the summary statistics\\nprint(summaries['daily_visitors'])\\n\\n# Access histogram data from the pipe\\nhistogram = result.distribution_results['daily_visitors']['histogram']\\nbin_edges = result.distribution_results['daily_visitors']['bin_edges']\\n\\n# You can use this data to create visualizations\\nimport matplotlib.pyplot as plt\\nplt.bar(bin_edges[:-1], histogram, width=bin_edges[1]-bin_edges[0], alpha=0.7)\\nplt.xlabel('Daily Visitors')\\nplt.ylabel('Proportion')\\nplt.title('Distribution of Daily Website Visitors')\\nplt.show()\", \"Usage\": \"distribution_analysis(columns='daily_visitors', bins=20, normalize=True)\"}",
+    "metadata": {
+      "function_name": "distribution_analysis",
+      "src_type": "function",
+      "category": "distribution",
+      "example_id": 1,
+      "description": "Analyze distribution of time series values"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I analyze distributions across different groups in my data?\", \"Context\": \"I have sales data across multiple regions and I want to compare the distribution of sales across these different regions.\", \"Code_Example\": \"from timeseriesanalysis import TimeSeriesPipe, distribution_analysis, get_distribution_summary\\n\\n# Create pipeline with your data\\npipe = TimeSeriesPipe.from_dataframe(sales_by_region_df)\\n\\n# Analyze distribution of sales by region\\nresult = pipe | distribution_analysis(\\n    columns='sales_amount',\\n    bins=15,\\n    group_columns=['region'],  # Group by region to get separate distributions\\n    normalize=True  # Use proportions for easier comparison\\n)\\n\\n# Get summary statistics for each region\\nsummaries = result | get_distribution_summary()\\n\\n# Print the summary statistics for all regions\\nprint(summaries['sales_amount'])\\n\\n# Access histogram data for a specific region\\nregion_key = 'North America'  # Adjust based on your actual region names\\nif region_key in result.distribution_results['sales_amount']:\\n    hist = result.distribution_results['sales_amount'][region_key]['histogram']\\n    bins = result.distribution_results['sales_amount'][region_key]['bin_edges']\\n    print(f'Histogram for {region_key}:', hist)\\n\\n# Compare regions using boxplots (outside the pipe)\\nimport seaborn as sns\\nsns.boxplot(x='region', y='sales_amount', data=pipe.data)\\nplt.title('Sales Distribution by Region')\\nplt.show()\", \"Usage\": \"distribution_analysis(columns='sales_amount', bins=15, group_columns=['region'], normalize=True)\"}",
+    "metadata": {
+      "function_name": "distribution_analysis",
+      "src_type": "function",
+      "category": "distribution",
+      "example_id": 2,
+      "description": "Compare distributions across different groups"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I calculate cumulative distributions for my time series data?\", \"Context\": \"I want to understand the percentile ranking of each value in my dataset over time.\", \"Code_Example\": \"from timeseriesanalysis import TimeSeriesPipe, cumulative_distribution\\n\\n# Create pipeline with your data\\npipe = TimeSeriesPipe.from_dataframe(performance_df)\\n\\n# Calculate cumulative distribution for 'score' column\\nresult = pipe | cumulative_distribution(\\n    columns='score',\\n    time_column='date',  # Sort by this column before calculations\\n    suffix='_percentile'  # Custom suffix for the new column\\n)\\n\\n# Now result.data has a 'score_percentile' column with values between 0 and 1\\n# representing the percentile rank of each score\\nprint(result.data[['date', 'score', 'score_percentile']].head(20))\\n\\n# Visualize the cumulative distribution\\nplt.scatter(result.data['score'], result.data['score_percentile'])\\nplt.xlabel('Score')\\nplt.ylabel('Percentile (CDF)')\\nplt.title('Cumulative Distribution of Scores')\\nplt.grid(True)\\nplt.show()\", \"Usage\": \"cumulative_distribution(columns='score', time_column='date', suffix='_percentile')\"}",
+    "metadata": {
+      "function_name": "cumulative_distribution",
+      "src_type": "function",
+      "category": "distribution",
+      "example_id": 1,
+      "description": "Calculate cumulative distribution (empirical CDF)"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I calculate cumulative distributions for grouped data?\", \"Context\": \"I have test scores for multiple classes and I want to calculate percentile ranks within each class separately.\", \"Code_Example\": \"from timeseriesanalysis import TimeSeriesPipe, cumulative_distribution\\n\\n# Create pipeline with your data\\npipe = TimeSeriesPipe.from_dataframe(student_scores_df)\\n\\n# Calculate cumulative distribution for 'test_score' column within each class\\nresult = pipe | cumulative_distribution(\\n    columns='test_score',\\n    group_columns=['class_id'],  # Calculate percentiles within each class\\n    suffix='_class_percentile'  # Custom suffix for the new column\\n)\\n\\n# Now result.data has a 'test_score_class_percentile' column\\n# where percentiles are calculated separately within each class\\nprint(result.data[['student_id', 'class_id', 'test_score', 'test_score_class_percentile']].head(20))\\n\\n# Compare distributions across classes\\nfig, ax = plt.subplots(1, 1, figsize=(10, 6))\\nfor class_id, group in result.data.groupby('class_id'):\\n    ax.scatter(group['test_score'], group['test_score_class_percentile'], label=f'Class {class_id}')\\n    \\nax.set_xlabel('Test Score')\\nax.set_ylabel('Class Percentile')\\nax.set_title('Cumulative Distribution of Test Scores by Class')\\nax.legend()\\nax.grid(True)\\nplt.show()\", \"Usage\": \"cumulative_distribution(columns='test_score', group_columns=['class_id'], suffix='_class_percentile')\"}",
+    "metadata": {
+      "function_name": "cumulative_distribution",
+      "src_type": "function",
+      "category": "distribution",
+      "example_id": 2,
+      "description": "Calculate group-specific cumulative distributions"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I apply a custom calculation to my time series data?\", \"Context\": \"I want to apply a complex transformation to my data that isn't covered by the built-in functions.\", \"Code_Example\": \"from timeseriesanalysis import TimeSeriesPipe, custom_calculation\\n\\n# Create pipeline with your data\\npipe = TimeSeriesPipe.from_dataframe(sensor_data_df)\\n\\n# Define a custom calculation function\\ndef calculate_moving_z_scores(df, column='value', window=10):\\n    # Calculate rolling mean and std\\n    df[f'{column}_roll_mean'] = df[column].rolling(window=window, min_periods=1).mean()\\n    df[f'{column}_roll_std'] = df[column].rolling(window=window, min_periods=1).std()\\n    \\n    # Calculate z-scores: (value - rolling_mean) / rolling_std\\n    df[f'{column}_zscore'] = (df[column] - df[f'{column}_roll_mean']) / df[f'{column}_roll_std']\\n    \\n    # Replace infinities with NaN (happens when std is 0)\\n    import numpy as np\\n    df[f'{column}_zscore'].replace([np.inf, -np.inf], np.nan, inplace=True)\\n    \\n    return df\\n\\n# Apply the custom calculation\\nresult = pipe | custom_calculation(lambda df: calculate_moving_z_scores(df, column='sensor_reading', window=20))\\n\\n# Now result.data has new columns with rolling means, stds, and z-scores\\nprint(result.data[['timestamp', 'sensor_reading', 'sensor_reading_roll_mean', 'sensor_reading_roll_std', 'sensor_reading_zscore']].head(30))\\n\\n# Visualize the original values and z-scores\\nfig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), sharex=True)\\nax1.plot(result.data['timestamp'], result.data['sensor_reading'])\\nax1.set_title('Original Sensor Readings')\\nax1.grid(True)\\n\\nax2.plot(result.data['timestamp'], result.data['sensor_reading_zscore'])\\nax2.axhline(y=0, color='r', linestyle='-')\\nax2.axhline(y=2, color='r', linestyle='--')  # 2 std deviations above mean\\nax2.axhline(y=-2, color='r', linestyle='--')  # 2 std deviations below mean\\nax2.set_title('Z-Scores (Standardized Values)')\\nax2.grid(True)\\n\\nplt.tight_layout()\\nplt.show()\", \"Usage\": \"custom_calculation(lambda df: calculate_moving_z_scores(df, column='sensor_reading', window=20))\"}",
+    "metadata": {
+      "function_name": "custom_calculation",
+      "src_type": "function",
+      "category": "custom_transformations",
+      "example_id": 1,
+      "description": "Apply custom calculations to time series data"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I chain multiple operations in a time series pipeline?\", \"Context\": \"I want to apply several transformations to my time series data in sequence.\", \"Code_Example\": \"from timeseriesanalysis import TimeSeriesPipe, lag, lead, variance_analysis, custom_calculation\\n\\n# Create pipeline with your data\\npipe = TimeSeriesPipe.from_dataframe(market_data_df)\\n\\n# Chain multiple operations\\nresult = (pipe\\n    # Add previous day's price\\n    | lag(columns='price', periods=1, time_column='date', suffix='_prev')\\n    \\n    # Add next day's price\\n    | lead(columns='price', periods=1, time_column='date', suffix='_next')\\n    \\n    # Calculate rolling volatility\\n    | variance_analysis(columns='price', method='rolling', window=20, time_column='date')\\n    \\n    # Add custom calculations like returns\\n    | custom_calculation(lambda df: df.assign(\\n        daily_return=(df['price'] - df['price_prev']) / df['price_prev'],\\n        log_return=np.log(df['price'] / df['price_prev'])\\n    ))\\n)\\n\\n# Access the final transformed data\\nfinal_df = result.data\\n\\n# Now final_df has all the derived features\\nprint(final_df.columns)\\nprint(final_df.head())\", \"Usage\": \"pipe | operation1() | operation2() | operation3()\"}",
+    "metadata": {
+      "function_name": "pipe_chaining",
+      "src_type": "pattern",
+      "category": "workflow",
+      "example_id": 1,
+      "description": "Chain multiple operations in a pipeline"
+    }
+  },
+  {
+    "page_content": "{\"Question\": \"How do I create a more complex time series analysis workflow?\", \"Context\": \"I want to build a comprehensive analysis pipeline for financial time series that includes many derived features.\", \"Code_Example\": \"import pandas as pd\\nimport numpy as np\\nfrom timeseriesanalysis import (\\n    TimeSeriesPipe, lag, lead, variance_analysis,\\n    cumulative_distribution, distribution_analysis,\\n    get_distribution_summary, custom_calculation\\n)\\n\\n# Load your data\\ndf = pd.read_csv('stock_prices.csv')\\ndf['date'] = pd.to_datetime(df['date'])\\n\\n# Create base pipeline\\npipe = TimeSeriesPipe.from_dataframe(df)\\n\\n# Define a custom function for technical indicators\\ndef add_technical_indicators(df):\\n    # Calculate Moving Averages\\n    df['ma_5'] = df['close'].rolling(window=5).mean()\\n    df['ma_20'] = df['close'].rolling(window=20).mean()\\n    \\n    # MACD (Moving Average Convergence Divergence)\\n    df['ema_12'] = df['close'].ewm(span=12, adjust=False).mean()\\n    df['ema_26'] = df['close'].ewm(span=26, adjust=False).mean()\\n    df['macd'] = df['ema_12'] - df['ema_26']\\n    df['macd_signal'] = df['macd'].ewm(span=9, adjust=False).mean()\\n    df['macd_hist'] = df['macd'] - df['macd_signal']\\n    \\n    # RSI (Relative Strength Index)\\n    delta = df['close'].diff()\\n    gain = delta.where(delta > 0, 0)\\n    loss = -delta.where(delta < 0, 0)\\n    avg_gain = gain.rolling(window=14).mean()\\n    avg_loss = loss.rolling(window=14).mean()\\n    rs = avg_gain / avg_loss\\n    df['rsi'] = 100 - (100 / (1 + rs))\\n    \\n    return df\\n\\n# Build comprehensive analysis pipeline\\nresult = (pipe\\n    # Create lags for returns calculation\\n    | lag(columns='close', periods=1, time_column='date', suffix='_prev')\\n    | lag(columns='close', periods=5, time_column='date', suffix='_prev_week')\\n    \\n    # Calculate various return metrics\\n    | custom_calculation(lambda df: df.assign(\\n        daily_return=(df['close'] - df['close_prev']) / df['close_prev'],\\n        weekly_return=(df['close'] - df['close_prev_week']) / df['close_prev_week'],\\n        log_return=np.log(df['close'] / df['close_prev'])\\n    ))\\n    \\n    # Add volatility metrics\\n    | variance_analysis(\\n        columns=['daily_return', 'log_return'],\\n        method='rolling',\\n        window=20,\\n        time_column='date',\\n        suffix='_20d'\\n    )\\n    \\n    # Add technical indicators\\n    | custom_calculation(add_technical_indicators)\\n    \\n    # Calculate percentile ranks for various metrics\\n    | cumulative_distribution(\\n        columns=['daily_return', 'volume', 'rsi'],\\n        time_column='date',\\n        suffix='_percentile'\\n    )\\n)\\n\\n# Calculate distribution statistics for returns\\ndist_result = result | distribution_analysis(\\n    columns=['daily_return', 'log_return'],\\n    bins=30,\\n    normalize=True\\n)\\n\\n# Get distribution summaries\\nsummaries = dist_result | get_distribution_summary()\\nprint(\"\\nDistribution Statistics for Returns:\")\\nprint(summaries['daily_return'])\\n\\n# The final dataframe now has all the derived features\\nprint(\"\\nFinal DataFrame Shape:\", dist_result.data.shape)\\nprint(\"\\nColumns in the final DataFrame:\")\\nprint(dist_result.data.columns.tolist())\\n\\n# Example of accessing the final data for visualization or further analysis\\nfinal_df = dist_result.data.dropna()\\n\\n# Simple correlation analysis of features\\ncorr_matrix = final_df[[\\n    'close', 'volume', 'daily_return', 'log_return',\\n    'daily_return_20d_std', 'rsi', 'macd'\\n]].corr()\\n\\nprint(\"\\nCorrelation Matrix:\")\\nprint(corr_matrix)\", \"Usage\": \"Complex analysis pipeline with multiple steps\"}",
+    "metadata": {
+      "function_name": "complex_pipeline",
+      "src_type": "pattern",
+      "category": "workflow",
+      "example_id": 2,
+      "description": "Build a comprehensive time series analysis pipeline"
+    }
+  }
+]

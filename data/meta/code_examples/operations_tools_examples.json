@@ -1,0 +1,132 @@
+[
+    {
+      "page_content": "{\"Question\": \"How do I initialize an operations pipeline with my experiment data?\", \"Context\": \"I have a DataFrame with A/B test results and want to start analyzing it with OperationsPipe.\", \"Code_Example\": \"import pandas as pd\\nfrom operations_tools import OperationsPipe\\n\\n# Load your experiment data\\nexperiment_df = pd.read_csv('experiment_results.csv')\\n\\n# Initialize the pipeline with your data\\npipe = OperationsPipe.from_dataframe(experiment_df)\\n\\n# Now you can chain operations on this pipeline\\n# For example:\\n# pipe | PercentChange('variant', 'control')\", \"Usage\": \"OperationsPipe.from_dataframe(df)\"}",
+      "metadata": {
+        "function_name": "from_dataframe",
+        "src_type": "function",
+        "category": "initialization",
+        "example_id": 1,
+        "description": "Initialize an operations pipeline with a DataFrame"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate the percent change between treatment and control groups?\", \"Context\": \"I want to see how much my treatment group's conversion rate differs from the control group in percentage terms.\", \"Code_Example\": \"from operations_tools import OperationsPipe, PercentChange, ShowOperation\\n\\n# Initialize pipeline with experiment data\\npipe = OperationsPipe.from_dataframe(experiment_df)\\n\\n# Calculate percent change for all numeric metrics\\nresult_pipe = pipe | PercentChange('variant', 'control')\\n\\n# View the results\\npercent_changes = result_pipe | ShowOperation()\\nprint(percent_changes)  # Shows percent changes for all metrics\", \"Usage\": \"PercentChange('variant', 'control')\"}",
+      "metadata": {
+        "function_name": "PercentChange",
+        "src_type": "function",
+        "category": "basic_metrics",
+        "example_id": 2,
+        "description": "Calculate percent change between treatment and control"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate the absolute difference between test variants and control?\", \"Context\": \"I need to know the raw difference in revenue between my test groups and control group.\", \"Code_Example\": \"from operations_tools import OperationsPipe, AbsoluteChange, ShowOperation\\n\\n# Initialize pipeline with experiment data\\npipe = OperationsPipe.from_dataframe(experiment_df)\\n\\n# Calculate absolute change for all numeric metrics\\nresult_pipe = pipe | AbsoluteChange('variant', 'control')\\n\\n# View the results\\nabsolute_changes = result_pipe | ShowOperation()\\nprint(absolute_changes)  # Shows absolute changes for all metrics\", \"Usage\": \"AbsoluteChange('variant', 'control')\"}",
+      "metadata": {
+        "function_name": "AbsoluteChange",
+        "src_type": "function",
+        "category": "basic_metrics",
+        "example_id": 3,
+        "description": "Calculate absolute change between treatment and control"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I perform a stratified analysis using the Mantel-Haenszel estimator?\", \"Context\": \"I need to control for user segments in my A/B test analysis to account for confounding variables.\", \"Code_Example\": \"from operations_tools import OperationsPipe, MH, ShowOperation\\n\\n# Initialize pipeline with experiment data\\npipe = OperationsPipe.from_dataframe(experiment_df)\\n\\n# Apply Mantel-Haenszel estimator stratified by user segment\\nresult_pipe = pipe | MH('variant', 'control', 'user_segment')\\n\\n# View the results\\nmh_results = result_pipe | ShowOperation()\\nprint(mh_results)  # Shows MH estimates for all metrics stratified by user segment\", \"Usage\": \"MH('variant', 'control', 'user_segment')\"}",
+      "metadata": {
+        "function_name": "MH",
+        "src_type": "function",
+        "category": "advanced_metrics",
+        "example_id": 4,
+        "description": "Calculate Mantel-Haenszel estimator for stratified analysis"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I use CUPED variance reduction in my experiment analysis?\", \"Context\": \"I want to improve statistical power by using pre-experiment data as a covariate in my analysis.\", \"Code_Example\": \"from operations_tools import OperationsPipe, CUPED, ShowOperation\\n\\n# Initialize pipeline with experiment data (containing both pre and post metrics)\\npipe = OperationsPipe.from_dataframe(experiment_df)\\n\\n# Apply CUPED using pre-experiment revenue as covariate\\nresult_pipe = pipe | CUPED('variant', 'control', 'pre_revenue')\\n\\n# View the results\\ncuped_results = result_pipe | ShowOperation()\\nprint(cuped_results)  # Shows CUPED-adjusted metrics\", \"Usage\": \"CUPED('variant', 'control', 'pre_revenue')\"}",
+      "metadata": {
+        "function_name": "CUPED",
+        "src_type": "function",
+        "category": "variance_reduction",
+        "example_id": 5,
+        "description": "Apply CUPED variance reduction to experiment analysis"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I implement a pre-post analysis for my experiment?\", \"Context\": \"I want to compare metrics before and after the experiment to measure treatment effect.\", \"Code_Example\": \"from operations_tools import OperationsPipe, PrePostChange, ShowOperation\\n\\n# Initialize pipeline with experiment data (containing both pre and post metrics)\\npipe = OperationsPipe.from_dataframe(experiment_df)\\n\\n# Apply PrePost analysis comparing pre-usage and post-usage metrics\\nresult_pipe = pipe | PrePostChange('variant', 'control', 'pre_usage')\\n\\n# View the results\\nprepost_results = result_pipe | ShowOperation()\\nprint(prepost_results)  # Shows pre-post analysis results\", \"Usage\": \"PrePostChange('variant', 'control', 'pre_usage')\"}",
+      "metadata": {
+        "function_name": "PrePostChange",
+        "src_type": "function",
+        "category": "variance_reduction",
+        "example_id": 6,
+        "description": "Use PrePost approach for experiment analysis"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I filter data to focus on specific test variants?\", \"Context\": \"I want to analyze only certain variants from my multi-variant test.\", \"Code_Example\": \"from operations_tools import OperationsPipe, FilterConditions\\n\\n# Initialize pipeline with experiment data\\npipe = OperationsPipe.from_dataframe(experiment_df)\\n\\n# Filter to include only control and treatment_A variants\\nfiltered_pipe = pipe | FilterConditions(['control', 'treatment_A'])\\n\\n# Continue analysis with the filtered data\\n# For example: filtered_pipe | PercentChange('variant', 'control')\", \"Usage\": \"FilterConditions(['control', 'treatment_A'])\"}",
+      "metadata": {
+        "function_name": "FilterConditions",
+        "src_type": "function",
+        "category": "data_preparation",
+        "example_id": 7,
+        "description": "Filter data to focus on specific test variants"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I perform power analysis for my experiment?\", \"Context\": \"I need to determine if my sample size is sufficient to detect a meaningful effect.\", \"Code_Example\": \"from operations_tools import OperationsPipe, PowerAnalysis, ShowOperation\\n\\n# Initialize pipeline with experiment data\\npipe = OperationsPipe.from_dataframe(experiment_df)\\n\\n# Perform power analysis for conversion_rate metric\\nresult_pipe = pipe | PowerAnalysis('variant', 'control', 'conversion_rate', alpha=0.05, power=0.8)\\n\\n# View the results\\npower_results = result_pipe | ShowOperation()\\nprint(power_results)  # Shows required sample sizes and actual power\", \"Usage\": \"PowerAnalysis('variant', 'control', 'conversion_rate', alpha=0.05, power=0.8)\"}",
+      "metadata": {
+        "function_name": "PowerAnalysis",
+        "src_type": "function",
+        "category": "statistical_analysis",
+        "example_id": 8,
+        "description": "Perform power analysis for experiment sample size requirements"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I create a stratified summary of my experiment metrics?\", \"Context\": \"I want to analyze how my experiment performed across different user segments.\", \"Code_Example\": \"from operations_tools import OperationsPipe, StratifiedSummary, ShowOperation\\n\\n# Initialize pipeline with experiment data\\npipe = OperationsPipe.from_dataframe(experiment_df)\\n\\n# Create stratified summary by user segment\\nresult_pipe = pipe | StratifiedSummary('variant', 'user_segment', metrics=['conversion_rate', 'revenue'])\\n\\n# View the results\\nstratified_summary = result_pipe | ShowOperation()\\nprint(stratified_summary)  # Shows metrics summarized by user segment and variant\", \"Usage\": \"StratifiedSummary('variant', 'user_segment', metrics=['conversion_rate', 'revenue'])\"}",
+      "metadata": {
+        "function_name": "StratifiedSummary",
+        "src_type": "function",
+        "category": "summary_statistics",
+        "example_id": 9,
+        "description": "Create a stratified summary of experiment metrics"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate bootstrap confidence intervals for my experiment results?\", \"Context\": \"I want to get robust confidence intervals without assuming normal distribution.\", \"Code_Example\": \"from operations_tools import OperationsPipe, BootstrapCI, ShowOperation\\n\\n# Initialize pipeline with experiment data\\npipe = OperationsPipe.from_dataframe(experiment_df)\\n\\n# Calculate bootstrap confidence intervals for conversion_rate\\nresult_pipe = pipe | BootstrapCI('variant', 'control', 'conversion_rate', confidence=0.95, n_bootstraps=1000)\\n\\n# View the results\\nbootstrap_results = result_pipe | ShowOperation()\\nprint(bootstrap_results)  # Shows bootstrap CIs and p-values\", \"Usage\": \"BootstrapCI('variant', 'control', 'conversion_rate', confidence=0.95, n_bootstraps=1000)\"}",
+      "metadata": {
+        "function_name": "BootstrapCI",
+        "src_type": "function",
+        "category": "statistical_analysis",
+        "example_id": 10,
+        "description": "Calculate bootstrap confidence intervals for experiment metrics"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I adjust p-values for multiple comparisons?\", \"Context\": \"I'm testing multiple metrics and need to control the false discovery rate.\", \"Code_Example\": \"from operations_tools import OperationsPipe, MultiComparisonAdjustment, ShowOperation\\n\\n# Initialize pipeline with experiment data that includes p-values\\n# (e.g., after running BootstrapCI which adds p-values)\\npipe = OperationsPipe.from_dataframe(results_with_pvalues_df)\\n\\n# Adjust p-values using Benjamini-Hochberg method\\nresult_pipe = pipe | MultiComparisonAdjustment('p_value', method='fdr')\\n\\n# View the results\\nadjusted_results = result_pipe | ShowOperation()\\nprint(adjusted_results)  # Shows original and adjusted p-values\", \"Usage\": \"MultiComparisonAdjustment('p_value', method='fdr')\"}",
+      "metadata": {
+        "function_name": "MultiComparisonAdjustment",
+        "src_type": "function",
+        "category": "statistical_analysis",
+        "example_id": 11,
+        "description": "Adjust p-values for multiple comparisons"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I execute all operations in my pipeline?\", \"Context\": \"I've set up multiple operations and want to get all the results at once.\", \"Code_Example\": \"from operations_tools import OperationsPipe, PercentChange, AbsoluteChange, ExecuteOperations\\n\\n# Initialize pipeline with experiment data\\npipe = OperationsPipe.from_dataframe(experiment_df)\\n\\n# Add multiple operations to the pipeline\\npipe = (pipe\\n       | PercentChange('variant', 'control', output_name='pct_change')\\n       | AbsoluteChange('variant', 'control', output_name='abs_change'))\\n\\n# Execute all operations and get results\\nall_results = pipe | ExecuteOperations()\\n\\n# Access individual results\\nprint(all_results['pct_change'])\\nprint(all_results['abs_change'])\", \"Usage\": \"pipe | ExecuteOperations()\"}",
+      "metadata": {
+        "function_name": "ExecuteOperations",
+        "src_type": "function",
+        "category": "pipeline_execution",
+        "example_id": 12,
+        "description": "Execute the operations pipeline and get all results"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How can I create complex analysis pipelines for my experiment?\", \"Context\": \"I need to chain multiple operations to perform sophisticated analysis on my A/B test data.\", \"Code_Example\": \"from operations_tools import OperationsPipe, FilterConditions, PercentChange, BootstrapCI, ExecuteOperations\\n\\n# Initialize pipeline with experiment data\\npipe = OperationsPipe.from_dataframe(experiment_df)\\n\\n# Create a complex analysis pipeline\\nresults_pipe = (pipe\\n    # Filter to specific platforms\\n    | FilterConditions(['control', 'treatment_A', 'treatment_B'])\\n    \\n    # Calculate percent changes for all metrics\\n    | PercentChange('variant', 'control', output_name='pct_changes')\\n    \\n    # Calculate bootstrap confidence intervals for conversion rate\\n    | BootstrapCI('variant', 'control', 'conversion_rate', \\n                confidence=0.95, n_bootstraps=1000,\\n                output_name='conversion_bootstrap')\\n)\\n\\n# Execute all operations and get results\\nall_results = results_pipe | ExecuteOperations()\\n\\n# Access individual analyses\\nprint('Percent Changes:')\\nprint(all_results['pct_changes'])\\n\\nprint('\\nBootstrap Results for Conversion:')\\nprint(all_results['conversion_bootstrap'])\", \"Usage\": \"Chain multiple operations with the | operator to create complex analysis pipelines\"}",
+      "metadata": {
+        "function_name": "ChainedOperations",
+        "src_type": "concept",
+        "category": "pipeline_execution",
+        "example_id": 13,
+        "description": "Chain multiple operations to create complex analysis pipelines"
+      }
+    }
+  ]

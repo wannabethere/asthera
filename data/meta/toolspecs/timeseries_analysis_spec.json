@@ -1,0 +1,58 @@
+{
+    "functions": {
+        "lead": {
+            "required_params": ["columns"],
+            "optional_params": ["periods", "time_column", "group_columns", "suffix"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that creates lead values in a TimeSeriesPipe"
+            },
+            "description": "Create lead (future) values for specified columns"
+        },
+        "lag": {
+            "required_params": ["columns"],
+            "optional_params": ["periods", "time_column", "group_columns", "suffix"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that creates lag values in a TimeSeriesPipe"
+            },
+            "description": "Create lag (past) values for specified columns"
+        },
+        "variance_analysis": {
+            "required_params": ["columns"],
+            "optional_params": ["method", "window", "time_column", "group_columns", "suffix"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates variance in a TimeSeriesPipe"
+            },
+            "description": "Calculate variance and standard deviation for time series data"
+        },
+        "distribution_analysis": {
+            "required_params": ["columns"],
+            "optional_params": ["bins", "group_columns", "normalize"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that analyzes distributions in a TimeSeriesPipe"
+            },
+            "description": "Analyze the distribution of values in specified columns"
+        },
+        "cumulative_distribution": {
+            "required_params": ["columns"],
+            "optional_params": ["time_column", "group_columns", "suffix"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates cumulative distributions in a TimeSeriesPipe"
+            },
+            "description": "Calculate cumulative distribution for specified columns"
+        },
+        "custom_calculation": {
+            "required_params": ["func"],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that applies custom calculation in a TimeSeriesPipe"
+            },
+            "description": "Apply a custom calculation function to the time series data"
+        }
+    }
+}

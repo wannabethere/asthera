@@ -1,0 +1,152 @@
+[
+    {
+      "page_content": "{\"Question\": \"How do I initialize a cohort analysis pipeline with my pandas DataFrame?\", \"Context\": \"I have a pandas DataFrame with user activity data and I want to perform cohort analysis on it.\", \"Code_Example\": \"import pandas as pd\\nfrom cohortanalysistools import CohortPipe\\n\\n# Load your data\\nuser_data = pd.read_csv('user_activity.csv')\\n\\n# Initialize the cohort pipeline with your data\\ncohort_pipeline = CohortPipe.from_dataframe(user_data)\\n\\n# Now the pipeline is ready for cohort analysis\\nprint(\\\"Pipeline initialized with data shape:\\\", cohort_pipeline.data.shape)\", \"Usage\": \"CohortPipe.from_dataframe(df)\"}",
+      "metadata": {
+        "function_name": "CohortPipe.from_dataframe",
+        "src_type": "class_method",
+        "category": "initialization",
+        "example_id": 1,
+        "description": "Initialize a cohort pipeline with a DataFrame"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I create time-based cohorts using the registration date of users?\", \"Context\": \"I have user data with a registration_date column and I want to group users into monthly cohorts based on when they signed up.\", \"Code_Example\": \"from cohortanalysistools import CohortPipe, form_time_cohorts\\n\\n# Create pipeline with your data\\npipeline = CohortPipe.from_dataframe(user_df)\\n\\n# Form monthly cohorts based on registration date\\nmonthly_cohorts = pipeline | form_time_cohorts(\\n    date_column='registration_date',\\n    cohort_column='signup_cohort',\\n    time_period='M',  # 'M' for monthly\\n    format_cohorts=True  # Format as \\\"Jan 2023\\\" instead of timestamps\\n)\\n\\n# Now your dataframe has a new column 'signup_cohort' with values like \\\"Jan 2023\\\"\\nprint(monthly_cohorts.data['signup_cohort'].unique())\", \"Usage\": \"form_time_cohorts(date_column='registration_date', cohort_column='signup_cohort', time_period='M', format_cohorts=True)\"}",
+      "metadata": {
+        "function_name": "form_time_cohorts",
+        "src_type": "function",
+        "category": "cohort_formation",
+        "example_id": 2,
+        "description": "Create monthly time-based cohorts"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How can I create weekly cohorts instead of monthly ones?\", \"Context\": \"I want to do a more granular analysis by forming weekly cohorts instead of monthly ones.\", \"Code_Example\": \"from cohortanalysistools import CohortPipe, form_time_cohorts\\n\\n# Create weekly cohorts\\nweekly_cohorts = pipeline | form_time_cohorts(\\n    date_column='registration_date',\\n    cohort_column='weekly_cohort',\\n    time_period='W',  # 'W' for weekly\\n    format_cohorts=True  # Format as \\\"Week of DD MMM YYYY\\\"\\n)\\n\\n# The dataframe now has a column 'weekly_cohort' with values like \\\"Week of 01 Jan 2023\\\"\\nprint(weekly_cohorts.data['weekly_cohort'].unique())\", \"Usage\": \"form_time_cohorts(date_column='registration_date', cohort_column='weekly_cohort', time_period='W', format_cohorts=True)\"}",
+      "metadata": {
+        "function_name": "form_time_cohorts",
+        "src_type": "function",
+        "category": "cohort_formation",
+        "example_id": 3,
+        "description": "Create weekly time-based cohorts"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I group users into cohorts based on their spending amount?\", \"Context\": \"I want to segment my users based on their spending behavior, such as high-spenders, medium-spenders, and low-spenders.\", \"Code_Example\": \"from cohortanalysistools import CohortPipe, form_behavioral_cohorts\\n\\n# Define spending thresholds\\nspend_conditions = {\\n    'High-Spender': ('>=', 1000),\\n    'Medium-Spender': ('between', 250, 999),\\n    'Low-Spender': ('<=', 249)\\n}\\n\\n# Create behavior-based cohorts\\nspending_cohorts = pipeline | form_behavioral_cohorts(\\n    behavior_column='total_spend',\\n    cohort_column='spending_tier',\\n    conditions=spend_conditions\\n)\\n\\n# Check the distribution of users across spending tiers\\nprint(spending_cohorts.data['spending_tier'].value_counts())\", \"Usage\": \"form_behavioral_cohorts(behavior_column='total_spend', cohort_column='spending_tier', conditions={'High-Spender': ('>=', 1000), 'Medium-Spender': ('between', 250, 999), 'Low-Spender': ('<=', 249)})\"}",
+      "metadata": {
+        "function_name": "form_behavioral_cohorts",
+        "src_type": "function",
+        "category": "cohort_formation",
+        "example_id": 4,
+        "description": "Create behavioral cohorts based on spending amounts"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How can I create custom behavioral cohorts with complex conditions?\", \"Context\": \"I need to define custom cohorts based on multiple conditions that can't be expressed with simple operators.\", \"Code_Example\": \"from cohortanalysistools import CohortPipe, form_behavioral_cohorts\\n\\n# Define custom cohort functions\\ndef power_users(df):\\n    return (df['session_count'] > 20) & (df['feature_usage'] > 5) & (df['has_profile'] == True)\\n\\ndef casual_users(df):\\n    return (df['session_count'] <= 10) & (df['time_in_app'] < 30)\\n\\n# Create custom cohorts\\ncustom_cohorts = {\\n    'Power Users': power_users,\\n    'Casual Users': casual_users\\n}\\n\\n# Apply custom cohort logic\\nuser_segments = pipeline | form_behavioral_cohorts(\\n    behavior_column='session_count',  # Used for basic segmentation\\n    cohort_column='user_segment',\\n    custom_cohorts=custom_cohorts\\n)\\n\\n# View distribution\\nprint(user_segments.data['user_segment'].value_counts())\", \"Usage\": \"form_behavioral_cohorts(behavior_column='session_count', cohort_column='user_segment', custom_cohorts={'Power Users': power_users, 'Casual Users': casual_users})\"}",
+      "metadata": {
+        "function_name": "form_behavioral_cohorts",
+        "src_type": "function",
+        "category": "cohort_formation",
+        "example_id": 5,
+        "description": "Create custom behavioral cohorts with complex conditions"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I create cohorts based on user acquisition source and date?\", \"Context\": \"I want to analyze user behavior based on both when they signed up and their acquisition channel (organic, paid, referral, etc.).\", \"Code_Example\": \"from cohortanalysistools import CohortPipe, form_acquisition_cohorts\\n\\n# Create acquisition cohorts\\nacquisition_cohorts = pipeline | form_acquisition_cohorts(\\n    acquisition_date_column='signup_date',\\n    acquisition_source_column='utm_source',\\n    cohort_column='acquisition_cohort',\\n    time_period='M',\\n    combine_source=True  # Combines source and time period (e.g., \\\"organic - Jan 2023\\\")\\n)\\n\\n# View the cohorts\\nprint(acquisition_cohorts.data['acquisition_cohort'].unique())\", \"Usage\": \"form_acquisition_cohorts(acquisition_date_column='signup_date', acquisition_source_column='utm_source', cohort_column='acquisition_cohort', time_period='M', combine_source=True)\"}",
+      "metadata": {
+        "function_name": "form_acquisition_cohorts",
+        "src_type": "function",
+        "category": "cohort_formation",
+        "example_id": 6,
+        "description": "Create acquisition cohorts based on source and date"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate user retention rates for my cohorts?\", \"Context\": \"I want to see how well each monthly cohort retains users over time (classic retention).\", \"Code_Example\": \"from cohortanalysistools import CohortPipe, form_time_cohorts, calculate_retention\\n\\n# First form the cohorts\\npipeline_with_cohorts = pipeline | form_time_cohorts(\\n    date_column='signup_date',\\n    cohort_column='cohort',\\n    time_period='M'\\n)\\n\\n# Calculate retention\\nretention_analysis = pipeline_with_cohorts | calculate_retention(\\n    cohort_column='cohort',\\n    date_column='activity_date',  # Date of user activity\\n    user_id_column='user_id',\\n    time_period='M',\\n    max_periods=6,\\n    retention_type='classic'  # Classic retention (users who return in a specific period)\\n)\\n\\n# Print the retention matrix\\nprint(retention_analysis.retention_matrices['time_cohorts_retention'])\", \"Usage\": \"calculate_retention(cohort_column='cohort', date_column='activity_date', user_id_column='user_id', time_period='M', max_periods=6, retention_type='classic')\"}",
+      "metadata": {
+        "function_name": "calculate_retention",
+        "src_type": "function",
+        "category": "retention_analysis",
+        "example_id": 7,
+        "description": "Calculate classic retention rates for cohorts"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"What's the difference between classic, rolling, and unbounded retention?\", \"Context\": \"I'm not sure which retention type to use for my analysis.\", \"Code_Example\": \"from cohortanalysistools import CohortPipe, form_time_cohorts, calculate_retention\\n\\n# First form the cohorts\\npipeline_with_cohorts = pipeline | form_time_cohorts(\\n    date_column='signup_date',\\n    cohort_column='cohort',\\n    time_period='M'\\n)\\n\\n# Calculate classic retention (users who return in a specific period)\\nclassic_retention = pipeline_with_cohorts | calculate_retention(\\n    cohort_column='cohort',\\n    date_column='activity_date',\\n    user_id_column='user_id',\\n    retention_type='classic'\\n)\\n\\n# Calculate rolling retention (users who return in this period or any later period)\\nrolling_retention = pipeline_with_cohorts | calculate_retention(\\n    cohort_column='cohort',\\n    date_column='activity_date',\\n    user_id_column='user_id',\\n    retention_type='rolling'\\n)\\n\\n# Calculate unbounded retention (users who were active at least N times)\\nunbounded_retention = pipeline_with_cohorts | calculate_retention(\\n    cohort_column='cohort',\\n    date_column='activity_date',\\n    user_id_column='user_id',\\n    retention_type='unbounded'\\n)\\n\\n# Compare the retention matrices\\nprint(\\\"Classic Retention (Period 3):\\\")\\nprint(classic_retention.retention_matrices['time_cohorts_retention']['Period 3'])\\n\\nprint(\\\"\\\\nRolling Retention (Period 3):\\\")\\nprint(rolling_retention.retention_matrices['time_cohorts_retention']['Period 3'])\\n\\nprint(\\\"\\\\nUnbounded Retention (Period 3):\\\")\\nprint(unbounded_retention.retention_matrices['time_cohorts_retention']['Period 3'])\", \"Usage\": \"calculate_retention(cohort_column='cohort', date_column='activity_date', user_id_column='user_id', retention_type='rolling')\"}",
+      "metadata": {
+        "function_name": "calculate_retention",
+        "src_type": "function",
+        "category": "retention_analysis",
+        "example_id": 8,
+        "description": "Compare different retention types: classic, rolling, and unbounded"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I analyze user progression through a purchase funnel?\", \"Context\": \"I have event data showing user actions (view_product, add_to_cart, checkout, purchase) and want to see conversion rates through this funnel.\", \"Code_Example\": \"from cohortanalysistools import CohortPipe, form_time_cohorts, calculate_conversion\\n\\n# First form the cohorts\\npipeline_with_cohorts = pipeline | form_time_cohorts(\\n    date_column='signup_date',\\n    cohort_column='cohort',\\n    time_period='M'\\n)\\n\\n# Define the funnel steps\\nfunnel_steps = ['view_product', 'add_to_cart', 'checkout', 'purchase']\\nstep_names = ['Product View', 'Add to Cart', 'Checkout', 'Purchase']\\n\\n# Calculate conversion through the funnel\\nfunnel_analysis = pipeline_with_cohorts | calculate_conversion(\\n    cohort_column='cohort',\\n    event_column='event_name',\\n    user_id_column='user_id',\\n    funnel_steps=funnel_steps,\\n    step_names=step_names,\\n    include_rates=True,\\n    cumulative=True  # Show cumulative conversion from first step\\n)\\n\\n# Get the funnel data\\nfunnel_data = funnel_analysis.conversion_funnels['time_cohorts_conversion']\\nprint(funnel_data)\", \"Usage\": \"calculate_conversion(cohort_column='cohort', event_column='event_name', user_id_column='user_id', funnel_steps=['view_product', 'add_to_cart', 'checkout', 'purchase'], step_names=['Product View', 'Add to Cart', 'Checkout', 'Purchase'], include_rates=True, cumulative=True)\"}",
+      "metadata": {
+        "function_name": "calculate_conversion",
+        "src_type": "function",
+        "category": "funnel_analysis",
+        "example_id": 9,
+        "description": "Analyze user progression through a purchase funnel"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How can I compare step-by-step vs. cumulative conversion rates?\", \"Context\": \"I want to understand both the step-by-step drop-off and the overall conversion from start to finish.\", \"Code_Example\": \"from cohortanalysistools import CohortPipe, form_time_cohorts, calculate_conversion\\n\\n# Define funnel steps\\nfunnel_steps = ['signup', 'profile_complete', 'first_action', 'subscription']\\n\\n# Calculate cumulative conversion (from first step)\\ncumulative_analysis = pipeline | calculate_conversion(\\n    cohort_column='user_segment',\\n    event_column='event_name',\\n    user_id_column='user_id',\\n    funnel_steps=funnel_steps,\\n    cumulative=True\\n)\\n\\n# Calculate step-by-step conversion\\nstepwise_analysis = pipeline | calculate_conversion(\\n    cohort_column='user_segment',\\n    event_column='event_name',\\n    user_id_column='user_id',\\n    funnel_steps=funnel_steps,\\n    cumulative=False\\n)\\n\\n# Compare the results\\nprint(\\\"Cumulative conversion from signup to subscription:\\\")\\nprint(cumulative_analysis.conversion_funnels['behavioral_cohorts_conversion'][['cohort', 'subscription_rate']])\\n\\nprint(\\\"\\\\nStep-by-step conversion rates:\\\")\\nprint(stepwise_analysis.conversion_funnels['behavioral_cohorts_conversion'])\", \"Usage\": \"calculate_conversion(cohort_column='user_segment', event_column='event_name', user_id_column='user_id', funnel_steps=['signup', 'profile_complete', 'first_action', 'subscription'], cumulative=False)\"}",
+      "metadata": {
+        "function_name": "calculate_conversion",
+        "src_type": "function",
+        "category": "funnel_analysis",
+        "example_id": 10,
+        "description": "Compare step-by-step vs. cumulative conversion rates"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate the lifetime value (LTV) of each cohort?\", \"Context\": \"I want to track how much revenue each monthly cohort generates over time to forecast future revenue.\", \"Code_Example\": \"from cohortanalysistools import CohortPipe, form_time_cohorts, calculate_lifetime_value\\n\\n# First form the cohorts\\npipeline_with_cohorts = pipeline | form_time_cohorts(\\n    date_column='signup_date',\\n    cohort_column='cohort',\\n    time_period='M'\\n)\\n\\n# Calculate lifetime value\\nltv_analysis = pipeline_with_cohorts | calculate_lifetime_value(\\n    cohort_column='cohort',\\n    date_column='purchase_date',\\n    user_id_column='user_id',\\n    value_column='revenue',\\n    time_period='M',\\n    max_periods=12,\\n    cumulative=True  # Show cumulative LTV over time\\n)\\n\\n# Access the LTV matrix\\nltv_matrix = ltv_analysis.cohort_results['time_cohorts_ltv']['ltv_matrix']\\nprint(ltv_matrix)\\n\\n# Calculate average 6-month LTV for all cohorts\\nsix_month_ltv = ltv_matrix['Period 6'].mean()\\nprint(f\\\"Average 6-month LTV: ${six_month_ltv:.2f}\\\")\", \"Usage\": \"calculate_lifetime_value(cohort_column='cohort', date_column='purchase_date', user_id_column='user_id', value_column='revenue', time_period='M', max_periods=12, cumulative=True)\"}",
+      "metadata": {
+        "function_name": "calculate_lifetime_value",
+        "src_type": "function",
+        "category": "ltv_analysis",
+        "example_id": 11,
+        "description": "Calculate lifetime value (LTV) of cohorts"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How can I compare non-cumulative vs. cumulative LTV analysis?\", \"Context\": \"I want to see both the revenue generated in each period and the cumulative revenue over time.\", \"Code_Example\": \"from cohortanalysistools import CohortPipe, form_time_cohorts, calculate_lifetime_value\\n\\n# First form the cohorts\\npipeline_with_cohorts = pipeline | form_time_cohorts(\\n    date_column='signup_date',\\n    cohort_column='cohort',\\n    time_period='M'\\n)\\n\\n# Calculate cumulative LTV\\ncumulative_ltv = pipeline_with_cohorts | calculate_lifetime_value(\\n    cohort_column='cohort',\\n    date_column='purchase_date',\\n    user_id_column='user_id',\\n    value_column='revenue',\\n    cumulative=True\\n)\\n\\n# Calculate non-cumulative LTV (revenue per period)\\nperiod_ltv = pipeline_with_cohorts | calculate_lifetime_value(\\n    cohort_column='cohort',\\n    date_column='purchase_date',\\n    user_id_column='user_id',\\n    value_column='revenue',\\n    cumulative=False\\n)\\n\\n# Compare the results\\nprint(\\\"Cumulative LTV over time:\\\")\\nprint(cumulative_ltv.cohort_results['time_cohorts_ltv']['ltv_matrix'].iloc[0])\\n\\nprint(\\\"\\\\nPeriod-by-period revenue:\\\")\\nprint(period_ltv.cohort_results['time_cohorts_ltv']['ltv_matrix'].iloc[0])\", \"Usage\": \"calculate_lifetime_value(cohort_column='cohort', date_column='purchase_date', user_id_column='user_id', value_column='revenue', cumulative=False)\"}",
+      "metadata": {
+        "function_name": "calculate_lifetime_value",
+        "src_type": "function",
+        "category": "ltv_analysis",
+        "example_id": 12,
+        "description": "Compare non-cumulative vs. cumulative LTV analysis"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How can I chain multiple cohort analyses together?\", \"Context\": \"I want to form cohorts and then run both retention and LTV analyses on them.\", \"Code_Example\": \"from cohortanalysistools import (\\n    CohortPipe, \\n    form_time_cohorts, \\n    calculate_retention, \\n    calculate_lifetime_value\\n)\\n\\n# Start with the pipeline and form cohorts\\nanalysis_pipeline = (\\n    CohortPipe.from_dataframe(user_data)\\n    | form_time_cohorts(\\n        date_column='signup_date',\\n        cohort_column='cohort',\\n        time_period='M'\\n    )\\n)\\n\\n# Add retention analysis\\nretention_pipeline = (\\n    analysis_pipeline\\n    | calculate_retention(\\n        cohort_column='cohort',\\n        date_column='login_date',\\n        user_id_column='user_id',\\n        retention_type='classic'\\n    )\\n)\\n\\n# Add LTV analysis\\ncomplete_pipeline = (\\n    retention_pipeline\\n    | calculate_lifetime_value(\\n        cohort_column='cohort',\\n        date_column='purchase_date',\\n        user_id_column='user_id',\\n        value_column='revenue'\\n    )\\n)\\n\\n# Now we have both retention and LTV analyses\\nprint(\\\"Retention Matrix:\\\")\\nprint(complete_pipeline.retention_matrices['time_cohorts_retention'])\\n\\nprint(\\\"\\\\nLTV Matrix:\\\")\\nprint(complete_pipeline.cohort_results['time_cohorts_ltv']['ltv_matrix'])\", \"Usage\": \"CohortPipe.from_dataframe(user_data) | form_time_cohorts(...) | calculate_retention(...) | calculate_lifetime_value(...)\"}",
+      "metadata": {
+        "function_name": "multiple",
+        "src_type": "pipeline",
+        "category": "combined_analysis",
+        "example_id": 13,
+        "description": "Chain multiple cohort analyses together"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I combine behavioral and time-based cohort analysis?\", \"Context\": \"I want to compare retention metrics between different user segments (high/medium/low value) and also see how these segments perform over time.\", \"Code_Example\": \"from cohortanalysistools import (\\n    CohortPipe, \\n    form_behavioral_cohorts, \\n    form_time_cohorts, \\n    calculate_retention\\n)\\n\\n# First create behavioral cohorts\\nvalue_segments = (\\n    CohortPipe.from_dataframe(user_data)\\n    | form_behavioral_cohorts(\\n        behavior_column='lifetime_spend',\\n        cohort_column='value_segment',\\n        conditions={\\n            'High Value': ('>=', 500),\\n            'Medium Value': ('between', 100, 499),\\n            'Low Value': ('<', 100)\\n        }\\n    )\\n)\\n\\n# Then add time cohorts (time of acquisition)\\nmulti_cohort = (\\n    value_segments\\n    | form_time_cohorts(\\n        date_column='signup_date',\\n        cohort_column='time_cohort',\\n        time_period='Q'  # Quarterly\\n    )\\n)\\n\\n# Calculate retention for value segments\\nvalue_retention = (\\n    value_segments\\n    | calculate_retention(\\n        cohort_column='value_segment',\\n        date_column='activity_date',\\n        user_id_column='user_id'\\n    )\\n)\\n\\n# Calculate retention for time cohorts\\ntime_retention = (\\n    multi_cohort\\n    | calculate_retention(\\n        cohort_column='time_cohort',\\n        date_column='activity_date',\\n        user_id_column='user_id'\\n    )\\n)\\n\\n# Compare retention between high and low value users\\nvalue_matrix = value_retention.retention_matrices['behavioral_cohorts_retention']\\nprint(\\\"Month 3 retention by value segment:\\\")\\nprint(value_matrix['Period 3'])\\n\\n# Look at quarterly trends\\ntime_matrix = time_retention.retention_matrices['time_cohorts_retention']\\nprint(\\\"\\\\nRetention trends by quarter:\\\")\\nprint(time_matrix['Period 1'])  # Month 1 retention across quarters\", \"Usage\": \"pipeline | form_behavioral_cohorts(behavior_column='lifetime_spend', cohort_column='value_segment', conditions={'High Value': ('>=', 500), 'Medium Value': ('between', 100, 499), 'Low Value': ('<', 100)})\"}",
+      "metadata": {
+        "function_name": "multiple",
+        "src_type": "pipeline",
+        "category": "combined_analysis",
+        "example_id": 14,
+        "description": "Combine behavioral and time-based cohort analysis"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How can I create custom visualizations from the cohort analysis results?\", \"Context\": \"I want to create custom charts from the cohort analysis results for a presentation.\", \"Code_Example\": \"import matplotlib.pyplot as plt\\nimport seaborn as sns\\nfrom cohortanalysistools import CohortPipe, form_time_cohorts, calculate_retention\\n\\n# Run the analysis\\nretention_results = (\\n    CohortPipe.from_dataframe(user_data)\\n    | form_time_cohorts(\\n        date_column='signup_date',\\n        cohort_column='cohort',\\n        time_period='M'\\n    )\\n    | calculate_retention(\\n        cohort_column='cohort',\\n        date_column='activity_date',\\n        user_id_column='user_id',\\n        max_periods=6\\n    )\\n)\\n\\n# Get the retention matrix\\nretention_matrix = retention_results.retention_matrices['time_cohorts_retention']\\n\\n# Create a heatmap visualization\\nplt.figure(figsize=(12, 8))\\nsns.heatmap(\\n    retention_matrix, \\n    annot=True, \\n    fmt='.0%', \\n    cmap='YlGnBu',\\n    vmin=0, \\n    vmax=1\\n)\\nplt.title('Cohort Retention Analysis')\\nplt.ylabel('Cohort')\\nplt.xlabel('Months Since First Activity')\\nplt.tight_layout()\\nplt.savefig('retention_heatmap.png')\\nplt.close()\\n\\n# Create a line plot of retention by cohort\\nplt.figure(figsize=(12, 6))\\nfor cohort in retention_matrix.index[-6:]:  # Last 6 cohorts\\n    plt.plot(\\n        retention_matrix.columns, \\n        retention_matrix.loc[cohort], \\n        marker='o', \\n        label=cohort\\n    )\\nplt.title('Retention by Cohort')\\nplt.xlabel('Months Since First Activity')\\nplt.ylabel('Retention Rate')\\nplt.legend()\\nplt.grid(True, linestyle='--', alpha=0.7)\\nplt.tight_layout()\\nplt.savefig('retention_by_cohort.png')\", \"Usage\": \"plt.figure(figsize=(12, 8)); sns.heatmap(retention_matrix, annot=True, fmt='.0%', cmap='YlGnBu', vmin=0, vmax=1); plt.title('Cohort Retention Analysis')\"}",
+      "metadata": {
+        "function_name": "multiple",
+        "src_type": "visualization",
+        "category": "advanced_usage",
+        "example_id": 15,
+        "description": "Create custom visualizations from cohort analysis results"
+      }
+    }
+]

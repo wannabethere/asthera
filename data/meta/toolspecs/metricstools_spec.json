@@ -1,0 +1,211 @@
+{
+    "functions": {
+        "Count": {
+            "required_params": ["variable"],
+            "optional_params": ["output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates count from a MetricsPipe"
+            },
+            "description": "Count the number of non-null entries in a column"
+        },
+        "Sum": {
+            "required_params": ["variable"],
+            "optional_params": ["output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates sum from a MetricsPipe"
+            },
+            "description": "Calculate the sum of a column"
+        },
+        "Max": {
+            "required_params": ["variable"],
+            "optional_params": ["output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates maximum from a MetricsPipe"
+            },
+            "description": "Calculate the maximum value of a column"
+        },
+        "Min": {
+            "required_params": ["variable"],
+            "optional_params": ["output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates minimum from a MetricsPipe"
+            },
+            "description": "Calculate the minimum value of a column"
+        },
+        "Ratio": {
+            "required_params": ["numerator", "denominator"],
+            "optional_params": ["output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates ratio from a MetricsPipe"
+            },
+            "description": "Calculate the ratio of sums of two columns"
+        },
+        "Dot": {
+            "required_params": ["variable1", "variable2"],
+            "optional_params": ["normalize", "output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates dot product from a MetricsPipe"
+            },
+            "description": "Calculate the dot product between two columns"
+        },
+        "Nth": {
+            "required_params": ["variable", "n", "sort_by"],
+            "optional_params": ["ascending", "dropna", "output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that retrieves the nth value from a MetricsPipe"
+            },
+            "description": "Get the nth value of a column after sorting by another column"
+        },
+        "Variance": {
+            "required_params": ["variable"],
+            "optional_params": ["unbiased", "output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates variance from a MetricsPipe"
+            },
+            "description": "Calculate the variance of a column"
+        },
+        "StandardDeviation": {
+            "required_params": ["variable"],
+            "optional_params": ["unbiased", "output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates standard deviation from a MetricsPipe"
+            },
+            "description": "Calculate the standard deviation of a column"
+        },
+        "CV": {
+            "required_params": ["variable"],
+            "optional_params": ["unbiased", "output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates coefficient of variation from a MetricsPipe"
+            },
+            "description": "Calculate the coefficient of variation of a column"
+        },
+        "Correlation": {
+            "required_params": ["variable1", "variable2"],
+            "optional_params": ["output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates correlation from a MetricsPipe"
+            },
+            "description": "Calculate the Pearson correlation between two columns"
+        },
+        "Cov": {
+            "required_params": ["variable1", "variable2"],
+            "optional_params": ["output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates covariance from a MetricsPipe"
+            },
+            "description": "Calculate the covariance between two columns"
+        },
+        "Mean": {
+            "required_params": ["variable"],
+            "optional_params": ["output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates mean from a MetricsPipe"
+            },
+            "description": "Calculate the mean of a column"
+        },
+        "Median": {
+            "required_params": ["variable"],
+            "optional_params": ["output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates median from a MetricsPipe"
+            },
+            "description": "Calculate the median of a column"
+        },
+        "Percentile": {
+            "required_params": ["variable", "q"],
+            "optional_params": ["output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates percentile from a MetricsPipe"
+            },
+            "description": "Calculate the specified percentile of a column"
+        },
+        "PivotTable": {
+            "required_params": ["index"],
+            "optional_params": ["columns", "values", "aggfunc", "fill_value", "output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that creates a pivot table from a MetricsPipe"
+            },
+            "description": "Create a pivot table from the data"
+        },
+        "GroupBy": {
+            "required_params": ["by", "agg_dict"],
+            "optional_params": ["output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that groups data from a MetricsPipe"
+            },
+            "description": "Group the data and apply aggregation functions"
+        },
+        "Filter": {
+            "required_params": ["condition"],
+            "optional_params": ["output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that filters data from a MetricsPipe"
+            },
+            "description": "Filter the dataframe based on a condition"
+        },
+        "CumulativeSum": {
+            "required_params": ["variable"],
+            "optional_params": ["output_column"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates cumulative sum from a MetricsPipe"
+            },
+            "description": "Calculate the cumulative sum of a column"
+        },
+        "RollingMetric": {
+            "required_params": ["variable", "window"],
+            "optional_params": ["function", "min_periods", "center", "output_column"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates rolling metric from a MetricsPipe"
+            },
+            "description": "Calculate a rolling metric on a column"
+        },
+        "Execute": {
+            "required_params": [],
+            "optional_params": [],
+            "outputs": {
+                "type": "Dict",
+                "description": "Dictionary of all calculated metrics"
+            },
+            "description": "Execute the pipeline and return all calculated metrics"
+        },
+        "ShowPivot": {
+            "required_params": [],
+            "optional_params": ["pivot_name"],
+            "outputs": {
+                "type": "pd.DataFrame",
+                "description": "Pivot table from the MetricsPipe"
+            },
+            "description": "Show a specific pivot table or the last created one"
+        },
+        "ShowDataFrame": {
+            "required_params": [],
+            "optional_params": [],
+            "outputs": {
+                "type": "pd.DataFrame",
+                "description": "Current dataframe from the MetricsPipe"
+            },
+            "description": "Show the current dataframe"
+        }
+    }
+}

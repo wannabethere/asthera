@@ -1,0 +1,242 @@
+[
+    {
+      "page_content": "{\"Question\": \"How do I initialize a metrics analysis pipeline with my pandas DataFrame?\", \"Context\": \"I have a pandas DataFrame with sales data and I want to perform various metrics calculations on it.\", \"Code_Example\": \"import pandas as pd\\nfrom metricstool import MetricsPipe\\n\\n# Load your data\\nsales_data = pd.read_csv('sales_data.csv')\\n\\n# Initialize the metrics pipeline with your data\\nmetrics_pipeline = MetricsPipe.from_dataframe(sales_data)\\n\\n# Now the pipeline is ready for metrics analysis\\nprint(\\\"Pipeline initialized with data shape:\\\", metrics_pipeline.data.shape)\", \"Usage\": \"MetricsPipe.from_dataframe(df)\"}",
+      "metadata": {
+        "function_name": "MetricsPipe.from_dataframe",
+        "src_type": "class_method",
+        "category": "initialization",
+        "example_id": 1,
+        "description": "Initialize a metrics pipeline with a DataFrame"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I count the number of non-null values in a column?\", \"Context\": \"I want to count how many valid order IDs I have in my dataset.\", \"Code_Example\": \"from metricstool import MetricsPipe, Count, Execute\\n\\n# Create pipeline with your data\\npipeline = MetricsPipe.from_dataframe(sales_df)\\n\\n# Count non-null order IDs\\norder_count = pipeline | Count('order_id', 'total_orders')\\n\\n# Execute to get the result\\nresult = order_count | Execute()\\n\\nprint(f\\\"Total Orders: {result['total_orders']}\\\")\", \"Usage\": \"Count('order_id', 'total_orders')\"}",
+      "metadata": {
+        "function_name": "Count",
+        "src_type": "function",
+        "category": "basic_metrics",
+        "example_id": 2,
+        "description": "Count non-null values in a column"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate the sum of values in a column?\", \"Context\": \"I need to calculate the total revenue from all sales.\", \"Code_Example\": \"from metricstool import MetricsPipe, Sum, Execute\\n\\n# Create pipeline with your data\\npipeline = MetricsPipe.from_dataframe(sales_df)\\n\\n# Calculate sum of revenue\\ntotal_revenue = pipeline | Sum('revenue', 'total_revenue')\\n\\n# Execute to get the result\\nresult = total_revenue | Execute()\\n\\nprint(f\\\"Total Revenue: ${result['total_revenue']:.2f}\\\")\", \"Usage\": \"Sum('revenue', 'total_revenue')\"}",
+      "metadata": {
+        "function_name": "Sum",
+        "src_type": "function",
+        "category": "basic_metrics",
+        "example_id": 3,
+        "description": "Calculate the sum of values in a column"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I find the maximum value in a column?\", \"Context\": \"I want to identify the largest order value in my sales data.\", \"Code_Example\": \"from metricstool import MetricsPipe, Max, Execute\\n\\n# Create pipeline with your data\\npipeline = MetricsPipe.from_dataframe(sales_df)\\n\\n# Find maximum revenue\\nmax_revenue = pipeline | Max('revenue', 'max_order_value')\\n\\n# Execute to get the result\\nresult = max_revenue | Execute()\\n\\nprint(f\\\"Largest Order Value: ${result['max_order_value']:.2f}\\\")\", \"Usage\": \"Max('revenue', 'max_order_value')\"}",
+      "metadata": {
+        "function_name": "Max",
+        "src_type": "function",
+        "category": "basic_metrics",
+        "example_id": 4,
+        "description": "Find the maximum value in a column"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I find the minimum value in a column?\", \"Context\": \"I need to identify the smallest order value in my sales data.\", \"Code_Example\": \"from metricstool import MetricsPipe, Min, Execute\\n\\n# Create pipeline with your data\\npipeline = MetricsPipe.from_dataframe(sales_df)\\n\\n# Find minimum revenue\\nmin_revenue = pipeline | Min('revenue', 'min_order_value')\\n\\n# Execute to get the result\\nresult = min_revenue | Execute()\\n\\nprint(f\\\"Smallest Order Value: ${result['min_order_value']:.2f}\\\")\", \"Usage\": \"Min('revenue', 'min_order_value')\"}",
+      "metadata": {
+        "function_name": "Min",
+        "src_type": "function",
+        "category": "basic_metrics",
+        "example_id": 5,
+        "description": "Find the minimum value in a column"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate the ratio between two columns?\", \"Context\": \"I want to calculate the conversion rate between visitors and purchasers.\", \"Code_Example\": \"from metricstool import MetricsPipe, Ratio, Execute\\n\\n# Create pipeline with your data\\npipeline = MetricsPipe.from_dataframe(marketing_df)\\n\\n# Calculate ratio of purchasers to visitors\\nconversion_rate = pipeline | Ratio('purchasers', 'visitors', 'conversion_rate')\\n\\n# Execute to get the result\\nresult = conversion_rate | Execute()\\n\\nprint(f\\\"Conversion Rate: {result['conversion_rate']:.2%}\\\")\", \"Usage\": \"Ratio('purchasers', 'visitors', 'conversion_rate')\"}",
+      "metadata": {
+        "function_name": "Ratio",
+        "src_type": "function",
+        "category": "basic_metrics",
+        "example_id": 6,
+        "description": "Calculate the ratio between two columns"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate the dot product between two columns?\", \"Context\": \"I want to calculate the similarity between two feature vectors.\", \"Code_Example\": \"from metricstool import MetricsPipe, Dot, Execute\\n\\n# Create pipeline with your data\\npipeline = MetricsPipe.from_dataframe(vectors_df)\\n\\n# Calculate dot product with normalization (cosine similarity)\\ncosine_sim = pipeline | Dot('vector1', 'vector2', normalize=True, output_name='cosine_similarity')\\n\\n# Execute to get the result\\nresult = cosine_sim | Execute()\\n\\nprint(f\\\"Cosine Similarity: {result['cosine_similarity']:.4f}\\\")\", \"Usage\": \"Dot('vector1', 'vector2', normalize=True, output_name='cosine_similarity')\"}",
+      "metadata": {
+        "function_name": "Dot",
+        "src_type": "function",
+        "category": "vector_metrics",
+        "example_id": 7,
+        "description": "Calculate dot product between two columns"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I find a specific value in a sorted column?\", \"Context\": \"I want to find the customer ID with the highest lifetime value.\", \"Code_Example\": \"from metricstool import MetricsPipe, Nth, Execute\\n\\n# Create pipeline with your data\\npipeline = MetricsPipe.from_dataframe(customer_df)\\n\\n# Find the customer ID with the highest lifetime value\\ntop_customer = pipeline | Nth('customer_id', 0, 'lifetime_value', ascending=False, output_name='top_customer')\\n\\n# Execute to get the result\\nresult = top_customer | Execute()\\n\\nprint(f\\\"Top Customer ID: {result['top_customer']}\\\")\", \"Usage\": \"Nth('customer_id', 0, 'lifetime_value', ascending=False, output_name='top_customer')\"}",
+      "metadata": {
+        "function_name": "Nth",
+        "src_type": "function",
+        "category": "basic_metrics",
+        "example_id": 8,
+        "description": "Find a specific value in a sorted column"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate the variance of values in a column?\", \"Context\": \"I want to measure the variability in my product prices.\", \"Code_Example\": \"from metricstool import MetricsPipe, Variance, Execute\\n\\n# Create pipeline with your data\\npipeline = MetricsPipe.from_dataframe(products_df)\\n\\n# Calculate price variance\\nprice_variance = pipeline | Variance('price', unbiased=True, output_name='price_variance')\\n\\n# Execute to get the result\\nresult = price_variance | Execute()\\n\\nprint(f\\\"Price Variance: {result['price_variance']:.2f}\\\")\", \"Usage\": \"Variance('price', unbiased=True, output_name='price_variance')\"}",
+      "metadata": {
+        "function_name": "Variance",
+        "src_type": "function",
+        "category": "statistical_metrics",
+        "example_id": 9,
+        "description": "Calculate variance of values in a column"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate the standard deviation of values in a column?\", \"Context\": \"I need to understand the spread of order values in my sales data.\", \"Code_Example\": \"from metricstool import MetricsPipe, StandardDeviation, Execute\\n\\n# Create pipeline with your data\\npipeline = MetricsPipe.from_dataframe(sales_df)\\n\\n# Calculate standard deviation of order values\\norder_std = pipeline | StandardDeviation('order_value', unbiased=True, output_name='order_std')\\n\\n# Execute to get the result\\nresult = order_std | Execute()\\n\\nprint(f\\\"Order Value Standard Deviation: ${result['order_std']:.2f}\\\")\", \"Usage\": \"StandardDeviation('order_value', unbiased=True, output_name='order_std')\"}",
+      "metadata": {
+        "function_name": "StandardDeviation",
+        "src_type": "function",
+        "category": "statistical_metrics",
+        "example_id": 10,
+        "description": "Calculate standard deviation of values in a column"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate the coefficient of variation for a column?\", \"Context\": \"I want to compare the relative variability of prices across different product categories.\", \"Code_Example\": \"from metricstool import MetricsPipe, CV, Execute\\n\\n# Create pipeline with your data\\npipeline = MetricsPipe.from_dataframe(products_df)\\n\\n# Calculate coefficient of variation for prices\\nprice_cv = pipeline | CV('price', unbiased=True, output_name='price_cv')\\n\\n# Execute to get the result\\nresult = price_cv | Execute()\\n\\nprint(f\\\"Price Coefficient of Variation: {result['price_cv']:.4f}\\\")\", \"Usage\": \"CV('price', unbiased=True, output_name='price_cv')\"}",
+      "metadata": {
+        "function_name": "CV",
+        "src_type": "function",
+        "category": "statistical_metrics",
+        "example_id": 11,
+        "description": "Calculate coefficient of variation for a column"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate the correlation between two columns?\", \"Context\": \"I want to determine if there's a relationship between customer age and spending amount.\", \"Code_Example\": \"from metricstool import MetricsPipe, Correlation, Execute\\n\\n# Create pipeline with your data\\npipeline = MetricsPipe.from_dataframe(customer_df)\\n\\n# Calculate correlation between age and spending\\nage_spending_corr = pipeline | Correlation('age', 'spending', output_name='age_spending_correlation')\\n\\n# Execute to get the result\\nresult = age_spending_corr | Execute()\\n\\nprint(f\\\"Correlation between Age and Spending: {result['age_spending_correlation']:.4f}\\\")\", \"Usage\": \"Correlation('age', 'spending', output_name='age_spending_correlation')\"}",
+      "metadata": {
+        "function_name": "Correlation",
+        "src_type": "function",
+        "category": "statistical_metrics",
+        "example_id": 12,
+        "description": "Calculate correlation between two columns"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate the covariance between two columns?\", \"Context\": \"I need to understand how customer visit frequency and purchase amount vary together.\", \"Code_Example\": \"from metricstool import MetricsPipe, Cov, Execute\\n\\n# Create pipeline with your data\\npipeline = MetricsPipe.from_dataframe(customer_df)\\n\\n# Calculate covariance between visits and purchases\\nvisit_purchase_cov = pipeline | Cov('visit_frequency', 'purchase_amount', output_name='visit_purchase_covariance')\\n\\n# Execute to get the result\\nresult = visit_purchase_cov | Execute()\\n\\nprint(f\\\"Covariance between Visit Frequency and Purchase Amount: {result['visit_purchase_covariance']:.2f}\\\")\", \"Usage\": \"Cov('visit_frequency', 'purchase_amount', output_name='visit_purchase_covariance')\"}",
+      "metadata": {
+        "function_name": "Cov",
+        "src_type": "function",
+        "category": "statistical_metrics",
+        "example_id": 13,
+        "description": "Calculate covariance between two columns"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate the mean of values in a column?\", \"Context\": \"I want to find the average order value in my sales data.\", \"Code_Example\": \"from metricstool import MetricsPipe, Mean, Execute\\n\\n# Create pipeline with your data\\npipeline = MetricsPipe.from_dataframe(sales_df)\\n\\n# Calculate mean order value\\navg_order = pipeline | Mean('order_value', output_name='avg_order_value')\\n\\n# Execute to get the result\\nresult = avg_order | Execute()\\n\\nprint(f\\\"Average Order Value: ${result['avg_order_value']:.2f}\\\")\", \"Usage\": \"Mean('order_value', output_name='avg_order_value')\"}",
+      "metadata": {
+        "function_name": "Mean",
+        "src_type": "function",
+        "category": "statistical_metrics",
+        "example_id": 14,
+        "description": "Calculate mean of values in a column"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate the median of values in a column?\", \"Context\": \"I want to find the median price across all my products.\", \"Code_Example\": \"from metricstool import MetricsPipe, Median, Execute\\n\\n# Create pipeline with your data\\npipeline = MetricsPipe.from_dataframe(products_df)\\n\\n# Calculate median price\\nmedian_price = pipeline | Median('price', output_name='median_price')\\n\\n# Execute to get the result\\nresult = median_price | Execute()\\n\\nprint(f\\\"Median Product Price: ${result['median_price']:.2f}\\\")\", \"Usage\": \"Median('price', output_name='median_price')\"}",
+      "metadata": {
+        "function_name": "Median",
+        "src_type": "function",
+        "category": "statistical_metrics",
+        "example_id": 15,
+        "description": "Calculate median of values in a column"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate a specific percentile of values in a column?\", \"Context\": \"I want to find the 90th percentile of order values to identify high-value orders.\", \"Code_Example\": \"from metricstool import MetricsPipe, Percentile, Execute\\n\\n# Create pipeline with your data\\npipeline = MetricsPipe.from_dataframe(sales_df)\\n\\n# Calculate 90th percentile of order values\\nhigh_value_threshold = pipeline | Percentile('order_value', 90, output_name='order_value_p90')\\n\\n# Execute to get the result\\nresult = high_value_threshold | Execute()\\n\\nprint(f\\\"90th Percentile Order Value: ${result['order_value_p90']:.2f}\\\")\", \"Usage\": \"Percentile('order_value', 90, output_name='order_value_p90')\"}",
+      "metadata": {
+        "function_name": "Percentile",
+        "src_type": "function",
+        "category": "statistical_metrics",
+        "example_id": 16,
+        "description": "Calculate specific percentile of values in a column"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I create a pivot table from my data?\", \"Context\": \"I want to analyze average sales by region and product category.\", \"Code_Example\": \"from metricstool import MetricsPipe, PivotTable, ShowPivot\\n\\n# Create pipeline with your data\\npipeline = MetricsPipe.from_dataframe(sales_df)\\n\\n# Create a pivot table\\nsales_pivot = pipeline | PivotTable(\\n    index='region',\\n    columns='product_category',\\n    values='sales_amount',\\n    aggfunc='mean',\\n    output_name='region_category_sales'\\n)\\n\\n# Show the pivot table\\nresult = sales_pivot | ShowPivot()\\n\\nprint(\\\"Average Sales by Region and Product Category:\\\")\\nprint(result)\", \"Usage\": \"PivotTable(index='region', columns='product_category', values='sales_amount', aggfunc='mean', output_name='region_category_sales')\"}",
+      "metadata": {
+        "function_name": "PivotTable",
+        "src_type": "function",
+        "category": "data_transformation",
+        "example_id": 17,
+        "description": "Create a pivot table from data"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I group my data and apply multiple aggregations?\", \"Context\": \"I want to group my sales data by region and calculate various metrics for each region.\", \"Code_Example\": \"from metricstool import MetricsPipe, GroupBy, ShowDataFrame\\n\\n# Create pipeline with your data\\npipeline = MetricsPipe.from_dataframe(sales_df)\\n\\n# Group by region and calculate metrics\\nregion_metrics = pipeline | GroupBy(\\n    by='region',\\n    agg_dict={\\n        'order_id': 'count',\\n        'sales_amount': ['sum', 'mean', 'std'],\\n        'quantity': 'sum'\\n    },\\n    output_name='region_summary'\\n)\\n\\n# Show the grouped data\\nresult = region_metrics | ShowDataFrame()\\n\\nprint(\\\"Regional Sales Metrics:\\\")\\nprint(result)\", \"Usage\": \"GroupBy(by='region', agg_dict={'order_id': 'count', 'sales_amount': ['sum', 'mean', 'std'], 'quantity': 'sum'}, output_name='region_summary')\"}",
+      "metadata": {
+        "function_name": "GroupBy",
+        "src_type": "function",
+        "category": "data_transformation",
+        "example_id": 18,
+        "description": "Group data and apply multiple aggregations"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I filter my data based on a condition?\", \"Context\": \"I want to focus my analysis on high-value transactions over $1000.\", \"Code_Example\": \"from metricstool import MetricsPipe, Filter, ShowDataFrame\\n\\n# Create pipeline with your data\\npipeline = MetricsPipe.from_dataframe(transactions_df)\\n\\n# Filter for high-value transactions\\nhigh_value_txns = pipeline | Filter(\\n    lambda df: df['transaction_amount'] > 1000,\\n    output_name='high_value_transactions'\\n)\\n\\n# Show the filtered data\\nresult = high_value_txns | ShowDataFrame()\\n\\nprint(f\\\"Found {len(result)} high-value transactions:\\\")\\nprint(result.head())\", \"Usage\": \"Filter(lambda df: df['transaction_amount'] > 1000, output_name='high_value_transactions')\"}",
+      "metadata": {
+        "function_name": "Filter",
+        "src_type": "function",
+        "category": "data_transformation",
+        "example_id": 19,
+        "description": "Filter data based on a condition"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate cumulative sums for a column?\", \"Context\": \"I want to track the running total of sales over time.\", \"Code_Example\": \"from metricstool import MetricsPipe, CumulativeSum, ShowDataFrame\\n\\n# Create pipeline with your data (ensure it's sorted by date)\\npipeline = MetricsPipe.from_dataframe(daily_sales_df.sort_values('date'))\\n\\n# Calculate cumulative sum of daily sales\\ncumulative_sales = pipeline | CumulativeSum(\\n    'daily_sales', \\n    output_column='running_total_sales'\\n)\\n\\n# Show the updated dataframe\\nresult = cumulative_sales | ShowDataFrame()\\n\\nprint(\\\"Daily and Cumulative Sales:\\\")\\nprint(result[['date', 'daily_sales', 'running_total_sales']].head(10))\", \"Usage\": \"CumulativeSum('daily_sales', output_column='running_total_sales')\"}",
+      "metadata": {
+        "function_name": "CumulativeSum",
+        "src_type": "function",
+        "category": "time_series_metrics",
+        "example_id": 20,
+        "description": "Calculate cumulative sums for a column"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate rolling averages or other rolling metrics?\", \"Context\": \"I want to calculate a 7-day moving average of daily sales to smooth out day-to-day fluctuations.\", \"Code_Example\": \"from metricstool import MetricsPipe, RollingMetric, ShowDataFrame\\n\\n# Create pipeline with your data (ensure it's sorted by date)\\npipeline = MetricsPipe.from_dataframe(daily_sales_df.sort_values('date'))\\n\\n# Calculate 7-day moving average\\nmoving_avg = pipeline | RollingMetric(\\n    variable='daily_sales',\\n    window=7,\\n    function='mean',\\n    output_column='sales_7d_avg'\\n)\\n\\n# Show the updated dataframe\\nresult = moving_avg | ShowDataFrame()\\n\\nprint(\\\"Daily Sales with 7-day Moving Average:\\\")\\nprint(result[['date', 'daily_sales', 'sales_7d_avg']].head(10))\", \"Usage\": \"RollingMetric(variable='daily_sales', window=7, function='mean', output_column='sales_7d_avg')\"}",
+      "metadata": {
+        "function_name": "RollingMetric",
+        "src_type": "function",
+        "category": "time_series_metrics",
+        "example_id": 21,
+        "description": "Calculate rolling averages or other rolling metrics"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I execute the metrics pipeline and get the results?\", \"Context\": \"I've set up my metrics calculations and now I want to retrieve the results.\", \"Code_Example\": \"from metricstool import MetricsPipe, Count, Sum, Mean, Execute\\n\\n# Create pipeline with your data\\npipeline = MetricsPipe.from_dataframe(sales_df)\\n\\n# Add metrics calculations\\nmetrics_pipeline = pipeline | Count('order_id', 'total_orders') | Sum('revenue', 'total_revenue')\\n\\n# Execute the pipeline to get all calculated metrics\\nresults = metrics_pipeline | Execute()\\n\\n# Access individual metrics from the results dictionary\\nprint(f\\\"Total Orders: {results['total_orders']}\\\")\\nprint(f\\\"Total Revenue: ${results['total_revenue']:.2f}\\\")\", \"Usage\": \"Execute()\"}",
+      "metadata": {
+        "function_name": "Execute",
+        "src_type": "function",
+        "category": "output_functions",
+        "example_id": 22,
+        "description": "Execute the metrics pipeline and get results"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I display a pivot table from my metrics pipeline?\", \"Context\": \"I've created a pivot table and now I want to see the results.\", \"Code_Example\": \"from metricstool import MetricsPipe, PivotTable, ShowPivot\\n\\n# Create pipeline with your data\\npipeline = MetricsPipe.from_dataframe(sales_df)\\n\\n# Create a pivot table\\nsales_by_region = pipeline | PivotTable(\\n    index='region',\\n    columns='product_category',\\n    values='sales_amount',\\n    aggfunc='sum',\\n    output_name='sales_matrix'\\n)\\n\\n# Show the specific pivot table by name\\npivot_result = sales_by_region | ShowPivot('sales_matrix')\\n\\nprint(\\\"Sales by Region and Product Category:\\\")\\nprint(pivot_result)\\n\\n# Alternative: show the most recently created pivot table\\nrecent_pivot = sales_by_region | ShowPivot()  # No name specified, shows the last pivot\\nprint(\\\"\\\\nMost Recent Pivot Table:\\\")\\nprint(recent_pivot)\", \"Usage\": \"ShowPivot('sales_matrix')\"}",
+      "metadata": {
+        "function_name": "ShowPivot",
+        "src_type": "function",
+        "category": "output_functions",
+        "example_id": 23,
+        "description": "Display a pivot table from the metrics pipeline"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I display the current dataframe from my metrics pipeline?\", \"Context\": \"I've applied some transformations to my data and I want to view the resulting dataframe.\", \"Code_Example\": \"from metricstool import MetricsPipe, Filter, CumulativeSum, ShowDataFrame\\n\\n# Create pipeline with your data\\npipeline = MetricsPipe.from_dataframe(sales_df)\\n\\n# Apply transformations\\ntransformed_data = (\\n    pipeline\\n    | Filter(lambda df: df['revenue'] > 0)  # Filter out zero or negative revenue\\n    | CumulativeSum('revenue', 'cumulative_revenue')  # Add cumulative revenue column\\n)\\n\\n# Show the current state of the dataframe\\ncurrent_df = transformed_data | ShowDataFrame()\\n\\nprint(\\\"Transformed Sales Data:\\\")\\nprint(current_df.head())\", \"Usage\": \"ShowDataFrame()\"}",
+      "metadata": {
+        "function_name": "ShowDataFrame",
+        "src_type": "function",
+        "category": "output_functions",
+        "example_id": 24,
+        "description": "Display the current dataframe from the metrics pipeline"
+      }
+    }
+]

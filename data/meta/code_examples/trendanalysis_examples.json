@@ -1,0 +1,92 @@
+[
+    {
+      "page_content": "{\"Question\": \"How do I aggregate time series data by different time periods?\", \"Context\": \"I have daily sales data and want to aggregate it into weekly and monthly summaries for trend analysis.\", \"Code_Example\": \"from trendanalysistools import TrendPipe, aggregate_by_time\\n\\n# Create pipeline with your data\\npipeline = TrendPipe.from_dataframe(sales_df)\\n\\n# Aggregate by week\\nweekly_data = pipeline | aggregate_by_time(\\n  date_column='sale_date',\\n  metric_columns=['revenue', 'units_sold'],\\n  time_period='W', # 'W' for weekly\\n  aggregation='sum', # Sum the metrics for each week\\n  fill_missing=True # Fill missing weeks with NaN\\n)\\n\\n# Aggregate by month\\nmonthly_data = pipeline | aggregate_by_time(\\n  date_column='sale_date',\\n  metric_columns=['revenue', 'units_sold'],\\n  time_period='M', # 'M' for monthly\\n  aggregation='sum'\\n)\\n\\n# Access the aggregated data\\nprint(weekly_data.time_aggregations['time'].data.head())\", \"Usage\": \"aggregate_by_time(date_column='date', metric_columns=['value'], time_period='M', aggregation='sum', fill_missing=True)\"}",
+      "metadata": {
+        "function_name": "aggregate_by_time",
+        "src_type": "function",
+        "category": "time_series_processing",
+        "example_id": 1,
+        "description": "Aggregate data by different time periods (daily, weekly, monthly, etc.)"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate growth rates between time periods?\", \"Context\": \"I want to calculate month-over-month and year-over-year growth rates for my revenue data.\", \"Code_Example\": \"from trendanalysistools import TrendPipe, aggregate_by_time, calculate_growth_rates\\n\\n# First aggregate data by month\\npipeline = TrendPipe.from_dataframe(revenue_df)\\nmonthly_data = pipeline | aggregate_by_time(\\n  date_column='transaction_date',\\n  metric_columns=['revenue'],\\n  time_period='M'\\n)\\n\\n# Calculate month-over-month growth rates\\nmom_growth = monthly_data | calculate_growth_rates(\\n  window=1, # Compare to previous month\\n  annualize=False, # Don't annualize the rates\\n  method='percentage' # Calculate as percentage change\\n)\\n\\n# Calculate year-over-year growth rates\\nyoy_growth = monthly_data | calculate_growth_rates(\\n  window=12, # Compare to 12 months ago\\n  annualize=False,\\n  method='percentage'\\n)\\n\\n# Access the growth rate data\\ngrowth_df = mom_growth.trend_results['time_growth']['data']\\nprint(growth_df.head())\", \"Usage\": \"calculate_growth_rates(window=12, annualize=False, method='percentage')\"}",
+      "metadata": {
+        "function_name": "calculate_growth_rates",
+        "src_type": "function",
+        "category": "trend_analysis",
+        "example_id": 2,
+        "description": "Calculate growth rates between time periods"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I smooth out noisy time series data?\", \"Context\": \"My daily sales data is very noisy with lots of ups and downs. I want to smooth it to see the underlying trend.\", \"Code_Example\": \"from trendanalysistools import TrendPipe, aggregate_by_time, calculate_moving_average\\n\\n# Create pipeline with daily data\\npipeline = TrendPipe.from_dataframe(daily_sales_df)\\ndaily_data = pipeline | aggregate_by_time(\\n  date_column='sale_date',\\n  metric_columns=['revenue', 'units_sold'],\\n  time_period='D'\\n)\\n\\n# Calculate 7-day simple moving average\\nseven_day_ma = daily_data | calculate_moving_average(\\n  window=7,\\n  method='simple',\\n  center=False # Align at the end of window\\n)\\n\\n# Calculate 30-day exponential moving average (gives more weight to recent values)\\nthirty_day_ema = daily_data | calculate_moving_average(\\n  window=30,\\n  method='exponential'\\n)\\n\\n# Access the moving average data\\nma_df = seven_day_ma.trend_results['time_ma']['data']\\nprint(ma_df.head())\", \"Usage\": \"calculate_moving_average(window=7, method='simple', center=False)\"}",
+      "metadata": {
+        "function_name": "calculate_moving_average",
+        "src_type": "function",
+        "category": "time_series_processing",
+        "example_id": 3,
+        "description": "Smooth time series data using moving averages"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I decompose a time series into trend, seasonal, and residual components?\", \"Context\": \"I want to separate the seasonal patterns from the overall trend in my monthly sales data.\", \"Code_Example\": \"from trendanalysistools import TrendPipe, aggregate_by_time, decompose_trend\\n\\n# First aggregate to monthly data\\npipeline = TrendPipe.from_dataframe(sales_df)\\nmonthly_data = pipeline | aggregate_by_time(\\n  date_column='sale_date',\\n  metric_columns=['revenue'],\\n  time_period='M'\\n)\\n\\n# Decompose the time series\\ndecomposed = monthly_data | decompose_trend(\\n  metric_column='revenue',\\n  model='additive', # Use additive model (trend + seasonal + residual)\\n  period=12, # 12 months per year\\n  extrapolate_trend=6 # Extrapolate trend 6 months into future\\n)\\n\\n# Access the decomposition components\\ndecomp_name = 'time_revenue_decomp'\\ntrend = decomposed.trend_decompositions[decomp_name]['trend']\\nseasonal = decomposed.trend_decompositions[decomp_name]['seasonal']\\nresidual = decomposed.trend_decompositions[decomp_name]['residual']\\nprint(f'Trend values: {trend.head()}')\", \"Usage\": \"decompose_trend(metric_column='revenue', model='additive', period=12, extrapolate_trend=6)\"}",
+      "metadata": {
+        "function_name": "decompose_trend",
+        "src_type": "function",
+        "category": "time_series_analysis",
+        "example_id": 4,
+        "description": "Decompose time series into trend, seasonal, and residual components"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I forecast future values in a time series?\", \"Context\": \"I need to predict sales for the next 12 months based on historical data.\", \"Code_Example\": \"from trendanalysistools import TrendPipe, aggregate_by_time, forecast_metric\\n\\n# First aggregate to monthly data\\npipeline = TrendPipe.from_dataframe(sales_df)\\nmonthly_data = pipeline | aggregate_by_time(\\n  date_column='sale_date',\\n  metric_columns=['revenue'],\\n  time_period='M'\\n)\\n\\n# Forecast future values using Holt-Winters method\\nforecasted = monthly_data | forecast_metric(\\n  metric_column='revenue',\\n  fperiods=12, # Forecast 12 periods ahead\\n  fmethod='holt_winters', # Use Holt-Winters exponential smoothing\\n  seasonal_periods=12, # Annual seasonality (12 months)\\n  confidence_interval=0.95 # 95% confidence interval\\n)\\n\\n# Access the forecast\\nforecast_name = 'time_revenue_forecast'\\nforecast_df = forecasted.forecasts[forecast_name]['data']\\nprint(forecast_df.head())\", \"Usage\": \"forecast_metric(metric_column='revenue', fperiods=12, fmethod='holt_winters', seasonal_periods=12, confidence_interval=0.95)\"}",
+      "metadata": {
+        "function_name": "forecast_metric",
+        "src_type": "function",
+        "category": "forecasting",
+        "example_id": 5,
+        "description": "Forecast future values of time series data"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I test if a trend in my data is statistically significant?\", \"Context\": \"I think my website traffic is increasing, but I want to confirm if the upward trend is statistically significant.\", \"Code_Example\": \"from trendanalysistools import TrendPipe, aggregate_by_time, calculate_statistical_trend\\n\\n# First aggregate to daily data\\npipeline = TrendPipe.from_dataframe(traffic_df)\\ndaily_data = pipeline | aggregate_by_time(\\n  date_column='visit_date',\\n  metric_columns=['visitors', 'page_views'],\\n  time_period='D'\\n)\\n\\n# Test for statistically significant trend\\ntrend_test = daily_data | calculate_statistical_trend(\\n  metric_column='visitors',\\n  test_method='mann_kendall', # Use Mann-Kendall test (non-parametric)\\n  alpha=0.05, # 5% significance level\\n  window=None # Test entire series\\n)\\n\\n# Also calculate rolling trend (30-day windows)\\nrolling_trend = daily_data | calculate_statistical_trend(\\n  metric_column='visitors',\\n  test_method='mann_kendall',\\n  alpha=0.05,\\n  window=30 # Test in 30-day rolling windows\\n)\\n\\n# Check the results\\ntrend_name = 'time_visitors_trend'\\nprint(f\\\"Trend: {trend_test.trend_results[trend_name]['trend']}\\\")\\nprint(f\\\"Significant: {trend_test.trend_results[trend_name]['significant']}\\\")\\nprint(f\\\"p-value: {trend_test.trend_results[trend_name]['p_value']}\\\")\", \"Usage\": \"calculate_statistical_trend(metric_column='visitors', test_method='mann_kendall', alpha=0.05, window=None)\"}",
+      "metadata": {
+        "function_name": "calculate_statistical_trend",
+        "src_type": "function",
+        "category": "statistical_analysis",
+        "example_id": 6,
+        "description": "Test if a trend is statistically significant"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I compare time periods like year-over-year or month-over-month?\", \"Context\": \"I want to compare this month's performance with the same month last year and with last month.\", \"Code_Example\": \"from trendanalysistools import TrendPipe, aggregate_by_time, compare_periods\\n\\n# First aggregate to monthly data\\npipeline = TrendPipe.from_dataframe(sales_df)\\nmonthly_data = pipeline | aggregate_by_time(\\n  date_column='sale_date',\\n  metric_columns=['revenue', 'units_sold'],\\n  time_period='M'\\n)\\n\\n# Compare to previous month (month-over-month)\\nmom_comparison = monthly_data | compare_periods(\\n  metric_column='revenue',\\n  comparison_type='month_over_month',\\n  n_periods=1, # Compare to 1 month ago\\n  aggregation='mean'\\n)\\n\\n# Compare to same month last year (year-over-year)\\nyoy_comparison = monthly_data | compare_periods(\\n  metric_column='revenue',\\n  comparison_type='year_over_year',\\n  n_periods=1, # Compare to 1 year ago\\n  aggregation='mean'\\n)\\n\\n# Access the comparison results\\ncomp_name = 'time_revenue_comparison'\\ncomp_df = mom_comparison.trend_results[comp_name]['data']\\nprint(comp_df[['current', 'previous', 'abs_diff', 'rel_diff']].tail())\", \"Usage\": \"compare_periods(metric_column='revenue', comparison_type='year_over_year', n_periods=1, aggregation='mean')\"}",
+      "metadata": {
+        "function_name": "compare_periods",
+        "src_type": "function",
+        "category": "comparative_analysis",
+        "example_id": 7,
+        "description": "Compare metrics between different time periods"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I identify which metrics are growing the fastest or have the strongest trends?\", \"Context\": \"I'm tracking 20 different metrics and want to know which ones have the strongest growth or most significant trends.\", \"Code_Example\": \"from trendanalysistools import TrendPipe, aggregate_by_time, calculate_growth_rates, calculate_statistical_trend, get_top_metrics\\n\\n# First aggregate and calculate growth and trends for multiple metrics\\npipeline = TrendPipe.from_dataframe(business_df)\\nmonthly_data = pipeline | aggregate_by_time(\\n  date_column='date',\\n  metric_columns=['revenue', 'users', 'conversion_rate', 'ads_spend', 'profit'],\\n  time_period='M'\\n)\\n\\n# Calculate growth rates for all metrics\\ngrowth_data = monthly_data | calculate_growth_rates(window=3)\\n\\n# Calculate trend significance for all metrics\\ntrend_data = monthly_data | calculate_statistical_trend(\\n  metric_column='revenue',\\n  test_method='mann_kendall'\\n) | calculate_statistical_trend(\\n  metric_column='users',\\n  test_method='mann_kendall'\\n) | calculate_statistical_trend(\\n  metric_column='conversion_rate',\\n  test_method='mann_kendall'\\n) | calculate_statistical_trend(\\n  metric_column='ads_spend',\\n  test_method='mann_kendall'\\n) | calculate_statistical_trend(\\n  metric_column='profit',\\n  test_method='mann_kendall'\\n)\\n\\n# Get top 3 metrics by growth rate\\ntop_growth = get_top_metrics(\\n  n=3,\\n  metric_type='growth',\\n  ascending=False # Get highest growth first\\n)(growth_data)\\n\\n# Get top 3 metrics by trend strength\\ntop_trends = get_top_metrics(\\n  n=3,\\n  metric_type='trend',\\n  ascending=False # Get strongest positive trends first\\n)(trend_data)\\n\\nprint('Top growth metrics:\\n', top_growth)\\nprint('\\nTop trending metrics:\\n', top_trends)\", \"Usage\": \"get_top_metrics(n=5, metric_type='growth', ascending=False)\"}",
+      "metadata": {
+        "function_name": "get_top_metrics",
+        "src_type": "function",
+        "category": "metric_ranking",
+        "example_id": 8,
+        "description": "Identify top metrics based on growth, trend strength, or other criteria"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I create a complete trend analysis pipeline for my sales data?\", \"Context\": \"I want to analyze my sales data, including aggregation, growth rates, seasonality, forecasting, and identifying significant trends.\", \"Code_Example\": \"from trendanalysistools import TrendPipe, aggregate_by_time, calculate_growth_rates, calculate_moving_average, decompose_trend, forecast_metric, calculate_statistical_trend\\n\\n# Create pipeline with your sales data\\npipeline = TrendPipe.from_dataframe(sales_df)\\n\\n# Create a complete trend analysis pipeline\\nanalysis = (pipeline\\n  # Aggregate to monthly data\\n  | aggregate_by_time(\\n      date_column='sale_date',\\n      metric_columns=['revenue', 'units_sold', 'customer_count'],\\n      time_period='M'\\n    )\\n  # Calculate growth rates\\n  | calculate_growth_rates(\\n      window=1, # Month-over-month\\n      method='percentage'\\n    )\\n  | calculate_growth_rates(\\n      window=12, # Year-over-year\\n      method='percentage'\\n    )\\n  # Smooth the data\\n  | calculate_moving_average(\\n      window=3,\\n      method='simple'\\n    )\\n  # Decompose trends\\n  | decompose_trend(\\n      metric_column='revenue',\\n      model='additive',\\n      period=12\\n    )\\n  # Forecast future values\\n  | forecast_metric(\\n      metric_column='revenue',\\n      fperiods=6,\\n      fmethod='holt_winters',\\n      seasonal_periods=12\\n    )\\n  # Check statistical significance\\n  | calculate_statistical_trend(\\n      metric_column='revenue',\\n      test_method='mann_kendall'\\n    )\\n)\\n\\n# Now you can access all the components of the analysis\\nprint(\\\"Monthly data:\\\", analysis.time_aggregations['time']['data'].head())\\nprint(\\\"Growth rates:\\\", analysis.trend_results['time_growth']['data'].head())\\nprint(\\\"Moving averages:\\\", analysis.trend_results['time_ma']['data'].head())\\nprint(\\\"Trend decomposition:\\\", analysis.trend_decompositions['time_revenue_decomp']['trend'].head())\\nprint(\\\"Forecast:\\\", analysis.forecasts['time_revenue_forecast']['data'].head())\\nprint(\\\"Trend significance:\\\", analysis.trend_results['time_revenue_trend']['significant'])\", \"Usage\": \"pipeline | aggregate_by_time(...) | calculate_growth_rates(...) | decompose_trend(...) | forecast_metric(...)\"}",
+      "metadata": {
+        "function_name": "pipeline_composition",
+        "src_type": "pattern",
+        "category": "trend_analysis",
+        "example_id": 9,
+        "description": "Create a complete trend analysis pipeline using method chaining"
+      }
+    }
+  ]
