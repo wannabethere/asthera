@@ -1,0 +1,17 @@
+.TabListCollection .MuiTabs-list {
+    justify-content: center !important;
+}
+
+.TabCollection {
+    width: 20% !important;
+    min-width: 50px !important;
+    min-height: 40px !important;
+    text-transform: capitalize !important;
+    padding: 0px !important;
+    font-family: system-ui !important;
+}
+
+.TabCollection[aria-selected="true"] {
+    background-color: #e7e2e2;
+    border-radius: 3px;
+}

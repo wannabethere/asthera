@@ -1,0 +1,44 @@
+.headingForReports {
+  display: flex;
+  justify-content: center;
+}
+
+.questionInReportDashboard {
+  font-weight: 600;
+  font-size: 35px;
+}
+
+.responseInReportDashboard {
+  font-weight: 400;
+}
+
+.buttonForDownload {
+  display: flex;
+  justify-content: end;
+  background: transparent;
+  color: black;
+  text-transform: capitalize;
+  margin: 0 auto;
+  width: 70% !important;
+}
+
+.parentOfReports {
+  /* margin: 5% auto; */
+  width: 70% !important;
+}
+
+.plot-container {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 10px;
+}
+
+@media print {
+  .plot-container {
+    width: 700px;
+    height: 500px;
+    margin: 0 auto;
+    page-break-inside: avoid;
+  }
+}

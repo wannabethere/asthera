@@ -1,0 +1,266 @@
+/* .chatContainer {
+    margin: auto;
+    border-radius: "10px";
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    height: 500px;
+    max-width: 60rem;
+}
+
+.chatMessages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.chateachMessage {
+    padding: 10px;
+    border-radius: 10px;
+    font-weight: 500;
+    font-family: system-ui;
+    word-break: break-word;
+}
+
+.main-input-container {
+    box-shadow: rgba(14, 30, 37, 0.12) 0px 2px 4px 0px, rgba(14, 30, 37, 0.32) 0px 2px 16px 0px;
+    border-radius: 30px;
+    padding: 12px 12px;
+    margin-top: 50px;
+}
+
+.upload-file-container,
+.upload-file-in-chat {
+    width: fit-content;
+    background: lightgray;
+    padding: 5px 10px;
+}
+
+.file-icon {
+    display: flex;
+    align-items: center;
+    font-size: 22px;
+    color: rgb(189 150 11);
+    margin: 8px;
+}
+
+.sentBox-container {
+    display: flex;
+    align-items: flex-end;
+}
+
+.attachIcon {
+    width: 25px;
+    height: 25px;
+}
+
+.textarea-container {
+    width: 90%;
+    display: flex;
+    align-items: center;
+}
+
+.textareaField {
+    width: 100%;
+    border: none !important;
+    outline: none;
+    resize: none;
+    padding: 10px !important;
+    padding-bottom: 0px !important;
+    min-height: 40px;
+    max-height: 200px;
+    overflow-y: auto;
+    field-sizing: content;
+    line-height: 1.4;
+    font-family: "IBM Plex Sans", system-ui, sans-serif !important;
+    font-size: 0.875rem !important;
+}
+
+.sentIcon {
+    width: 35px;
+    height: 35px;
+    background: lightblue;
+    border-radius: 50%;
+    padding: 5px;
+}
+
+.sentBox-container {
+    display: block !important;
+    align-items: flex-end;
+    box-shadow: rgba(14, 30, 37, 0.12) 0px 2px 4px 0px, rgba(14, 30, 37, 0.32) 0px 2px 16px 0px;
+    border-radius: 30px;
+    padding: 12px 12px;
+    width: 70% !important;
+    margin: auto;
+}
+
+.sentBox-container_text {
+    display: flex;
+    align-items: flex-end;
+    border-radius: 30px;
+    width: 100%;
+    justify-content: space-between;
+}
+
+.send-button {
+    width: 35px;
+    height: 35px;
+}
+
+response-container {
+    border-radius: 10px;
+    font-weight: 500;
+    font-family: system-ui;
+    line-height: 1.6;
+}
+
+.response-container h2 {
+    font-size: 1.5rem;
+    color: #222;
+}
+
+.response-container ul {
+    padding-left: 1.5rem;
+    list-style-type: disc;
+} */
+
+.chatContainer {
+    margin: auto;
+    border-radius: "10px";
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    height: 500px;
+    max-width: 60rem;
+}
+
+.chatMessages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.chateachMessage {
+    padding: 10px;
+    border-radius: 10px;
+    /* max-width: 80%; */
+    font-weight: 500;
+    font-family: system-ui;
+    word-break: break-word;
+
+}
+
+.main-input-container {
+    box-shadow: rgba(14, 30, 37, 0.12) 0px 2px 4px 0px, rgba(14, 30, 37, 0.32) 0px 2px 16px 0px;
+    border-radius: 30px;
+    padding: 12px 12px;
+    margin-top: 50px;
+}
+
+.upload-file-container,
+.upload-file-in-chat {
+    width: fit-content;
+    background: lightgray;
+    padding: 5px 10px;
+}
+
+.file-icon {
+    display: flex;
+    align-items: center;
+    font-size: 22px;
+    color: rgb(189 150 11);
+    margin: 8px;
+}
+
+.sentBox-container {
+    display: flex;
+    align-items: flex-end;
+    /* box-shadow: rgba(14, 30, 37, 0.12) 0px 2px 4px 0px, rgba(14, 30, 37, 0.32) 0px 2px 16px 0px;
+    border-radius: 30px;
+    padding: 12px 12px; */
+}
+
+.attachIcon {
+    width: 25px;
+    height: 25px;
+}
+
+.textarea-container {
+    width: 90%;
+    display: flex;
+    align-items: center;
+}
+
+.textareaField {
+    width: 100%;
+    border: none !important;
+    outline: none;
+    resize: none;
+    padding: 10px !important;
+    padding-bottom: 0px !important;
+    min-height: 40px;
+    max-height: 200px;
+    overflow-y: auto;
+    field-sizing: content;
+    line-height: 1.4;
+    /* font-family: "IBM Plex Sans", system-ui, sans-serif !important; */
+    font-size: 0.875rem !important;
+}
+
+.sentIcon {
+    width: 35px;
+    height: 35px;
+    background: lightblue;
+    border-radius: 50%;
+    padding: 5px;
+}
+
+.sentBox-container {
+    display: block !important;
+    align-items: flex-end;
+    box-shadow: rgba(14, 30, 37, 0.12) 0px 2px 4px 0px, rgba(14, 30, 37, 0.32) 0px 2px 16px 0px;
+    border-radius: 22px;
+    padding: 12px 12px;
+    width: 70% !important;
+    margin: auto;
+}
+
+.sentBox-container_text {
+    display: flex;
+    align-items: center;
+    border-radius: 30px;
+    width: 100%;
+    justify-content: space-between;
+}
+
+.send-button {
+    width: 35px;
+    height: 35px;
+}
+
+.response-container {
+    border-radius: 10px;
+    font-weight: 500;
+    font-family: system-ui;
+    line-height: 1.6;
+}
+
+/* .response-container  p{
+    margin: 0 !important;
+} */
+
+.response-container h2 {
+    font-size: 1.5rem;
+    color: #222;
+}
+
+.response-container ul {
+    padding-left: 1.5rem;
+    list-style-type: disc;
+}

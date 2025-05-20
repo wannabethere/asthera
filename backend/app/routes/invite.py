@@ -1,0 +1,299 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.models.team import Team, TeamInvite, CollaborationRequest, TeamSignupRequest
+from app.models.workspace import Workspace, WorkspaceInvite, WorkspaceAccess
+from app.models.user import User
+from app.auth.okta import get_current_user
+from app.services.team_service import TeamService
+from pydantic import BaseModel, EmailStr
+from typing import List, Optional
+from uuid import UUID
+from datetime import datetime
+from app.services.authorization import (
+    check_team_access,
+    check_workspace_access,
+    require_team_owner,
+    require_workspace_admin
+)
+
+router = APIRouter(prefix="/invites", tags=["invites"])
+
+class InviteCreate(BaseModel):
+    email: EmailStr
+    team_id: Optional[UUID] = None
+    workspace_id: Optional[UUID] = None
+    role: str = "member"
+
+class InviteResponse(BaseModel):
+    id: UUID
+    email: str
+    team_id: Optional[UUID]
+    workspace_id: Optional[UUID]
+    role: str
+    status: str
+    created_by: UUID
+    created_at: datetime
+    updated_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+@router.post("/team", response_model=InviteResponse)
+async def send_team_invite(
+    req: InviteCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not req.team_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Team ID is required for team invites"
+        )
+
+    # Check if user is team owner
+    await require_team_owner(req.team_id)(current_user, db)
+
+    # Check if invite already exists
+    existing_invite = db.query(TeamInvite).filter(
+        TeamInvite.team_id == req.team_id,
+        TeamInvite.email == req.email,
+        TeamInvite.status == "pending"
+    ).first()
+
+    if existing_invite:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="An active invite already exists for this email"
+        )
+
+    # Create new invite
+    invite = TeamInvite(
+        team_id=req.team_id,
+        email=req.email,
+        role=req.role,
+        invited_by=str(current_user.id)
+    )
+    
+    db.add(invite)
+    db.commit()
+    db.refresh(invite)
+    
+    return invite
+
+@router.post("/workspace", response_model=InviteResponse)
+async def send_workspace_invite(
+    req: InviteCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not req.workspace_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Workspace ID is required for workspace invites"
+        )
+
+    # Check if user is workspace admin
+    await require_workspace_admin(req.workspace_id)(current_user, db)
+
+    # Check if invite already exists
+    existing_invite = db.query(WorkspaceInvite).filter(
+        WorkspaceInvite.workspace_id == req.workspace_id,
+        WorkspaceInvite.email == req.email,
+        WorkspaceInvite.status == "pending"
+    ).first()
+
+    if existing_invite:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="An active invite already exists for this email"
+        )
+
+    # Create new invite
+    invite = WorkspaceInvite(
+        workspace_id=req.workspace_id,
+        email=req.email,
+        role=req.role,
+        invited_by=str(current_user.id)
+    )
+    
+    db.add(invite)
+    db.commit()
+    db.refresh(invite)
+    
+    return invite
+
+@router.get("/", response_model=List[InviteResponse])
+async def list_invites(
+    team_id: Optional[UUID] = None,
+    workspace_id: Optional[UUID] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    query = db.query(TeamInvite).filter(TeamInvite.email == current_user.email)
+    
+    if team_id:
+        # Check if user is team owner
+        await require_team_owner(team_id)(current_user, db)
+        query = query.filter(TeamInvite.team_id == team_id)
+    elif workspace_id:
+        # Check if user is workspace admin
+        await require_workspace_admin(workspace_id)(current_user, db)
+        query = query.filter(TeamInvite.workspace_id == workspace_id)
+    else:
+        # List all invites created by the user
+        query = query.filter(TeamInvite.invited_by == current_user.id)
+    
+    invites = query.all()
+    return invites
+
+@router.get("/{invite_id}", response_model=InviteResponse)
+async def get_invite(
+    invite_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    invite = db.query(TeamInvite).filter(TeamInvite.id == invite_id).first()
+    if not invite:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invite not found"
+        )
+
+    # Check if user has permission to view the invite
+    if invite.team_id:
+        await require_team_owner(invite.team_id)(current_user, db)
+    elif invite.workspace_id:
+        await require_workspace_admin(invite.workspace_id)(current_user, db)
+    elif invite.invited_by != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view this invite"
+        )
+
+    return invite
+
+@router.delete("/{invite_id}", response_model=InviteResponse)
+async def delete_invite(
+    invite_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    invite = db.query(TeamInvite).filter(TeamInvite.id == invite_id).first()
+    if not invite:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invite not found"
+        )
+
+    # Check if user has permission to delete the invite
+    if invite.team_id:
+        await require_team_owner(invite.team_id)(current_user, db)
+    elif invite.workspace_id:
+        await require_workspace_admin(invite.workspace_id)(current_user, db)
+    elif invite.invited_by != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this invite"
+        )
+
+    invite.status = "cancelled"
+    db.commit()
+    db.refresh(invite)
+    return invite
+
+class InviteActionRequest(BaseModel):
+    invite_id: str
+    invite_type: str  # 'team' or 'workspace'
+    action: str  # 'accept' or 'decline'
+
+@router.post("/respond", response_model=InviteResponse)
+async def respond_invite(
+    req: InviteActionRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if req.invite_type == "team":
+        invite = db.query(TeamInvite).filter(TeamInvite.id == req.invite_id).first()
+        if not invite:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Team invite not found"
+            )
+
+        if invite.email != current_user.email:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This invite is not for your email"
+            )
+
+        if invite.status != "pending":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This invite is no longer valid"
+            )
+
+        if req.action == "accept":
+            try:
+                team_service = TeamService(db)
+                team_service.add_team_member(
+                    team_id=str(invite.team_id),
+                    user_id=str(current_user.id),
+                    role=invite.role
+                )
+                invite.status = "accepted"
+            except ValueError as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=str(e)
+                )
+        else:
+            invite.status = "declined"
+
+        invite.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(invite)
+        return invite
+
+    elif req.invite_type == "workspace":
+        invite = db.query(WorkspaceInvite).filter(WorkspaceInvite.id == req.invite_id).first()
+        if not invite:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Workspace invite not found"
+            )
+
+        if invite.email != current_user.email:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This invite is not for your email"
+            )
+
+        if invite.status != "pending":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This invite is no longer valid"
+            )
+
+        if req.action == "accept":
+            # Add workspace access
+            access = WorkspaceAccess(
+                workspace_id=invite.workspace_id,
+                user_id=str(current_user.id),
+                role=invite.role
+            )
+            db.add(access)
+            invite.status = "accepted"
+        else:
+            invite.status = "declined"
+
+        invite.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(invite)
+        return invite
+
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid invite type"
+        ) 

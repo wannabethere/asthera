@@ -1,0 +1,123 @@
+.Drawer .MuiPaper-root {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    margin-left: 5px;
+    box-shadow: rgba(17, 17, 26, 0.1) 3px -1px 16px, rgba(17, 17, 26, 0.1) -19px 11px 24px, rgba(17, 17, 26, 0.1) -20px 1px 56px;
+}
+
+.Drawer .MuiPaper-root span {
+    font-family: system-ui;
+    font-weight: 500;
+}
+
+.Drawer .MuiList-root:nth-child(2) {
+    flex: 1;
+    width: 98%;
+}
+
+.appBar input::placeholder {
+    font-weight: bold;
+    opacity: 10;
+    color: gray !important;
+    background-color: transparent;
+
+}
+
+.newProjectButton,
+.toolBarConnectButton,
+.newProjectButtonArrow {
+    text-transform: capitalize !important;
+    color: rgb(15, 107, 91) !important;
+}
+
+.listItem {
+    height: 2em !important;
+}
+
+.listItem .MuiButtonBase-root {
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+.listItemButton.open {
+    padding: 0px 20px;
+    justify-content: initial;
+}
+
+/* .listItemButton.closed { */
+/* padding: 0px 20px; */
+/* justify-content: center; */
+/* } */
+
+.listItemIcon.open {
+    margin-right: 12px;
+    min-width: 0;
+    justify-content: center
+}
+
+.listItemIcon.closed {
+    margin-right: auto;
+    min-width: 0;
+    justify-content: center
+}
+
+.MuiTypography-body1 {
+    font-family: "IBM Plex Sans", system-ui, sans-serif !important;
+}
+
+.listItemText.open {
+    opacity: 1;
+}
+
+.listItemText.closed {
+    opacity: 0;
+}
+
+.collectionIcon {
+    width: 0.8em !important;
+}
+
+.settingIcon,
+.helpIcon {
+    width: 1.5em;
+    height: 1.5em;
+}
+
+.thread-message-icon {
+    width: 1.2em !important;
+    height: 1.2em !important;
+    color: rgba(0, 0, 0, 0.54);
+}
+
+.new-thread-container {
+    backdrop-filter: blur(5px) !important;
+    background-color: #ffffff78 !important;
+    box-shadow: rgba(0, 0, 0, 0.16) 0px 1px 4px;
+    border: 0 !important;
+}
+
+.new-thread-text {
+    text-transform: capitalize;
+    color: gray;
+}
+
+.threads-childs-text.open {
+    padding: 6px !important;
+    background: none !important;
+    height: 35px !important;
+}
+
+.threads-childs-text-div>span {
+    width: 85% !important;
+    margin-left: auto !important;
+}
+
+.threads-childs-3dots {
+    width: 0.7em !important;
+
+}
+
+.button-threads-childs-3dots {
+    padding: 0px !important;
+}

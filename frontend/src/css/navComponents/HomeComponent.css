@@ -1,0 +1,134 @@
+.homeComponent {
+    padding: 1% !important;
+    height: 100% !important;
+}
+
+.DescHome {
+    width: 60%;
+    font-family: system-ui !important;
+}
+
+.textFeildHome input {
+    border-radius: 10px !important;
+    padding: 14px;
+    box-shadow: 0 0 5px rgba(81, 203, 238, 1);
+    margin: 20px 1px 3px 0px;
+    border: 1px solid rgba(81, 203, 238, 1);
+}
+
+.textFeildHome input::placeholder {
+    font-weight: bold;
+    color: black !important;
+}
+
+.submitButton {
+    background-color: #0a0a23 !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 10px !important;
+    padding: 10px !important;
+    min-height: 30px !important;
+    min-width: 120px !important;
+}
+
+.MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
+    border: none !important;
+}
+
+.TabLsitHome .MuiTabs-list {
+    justify-content: end !important;
+    margin-top: 2%;
+}
+
+.TabHome {
+    min-width: 50px !important;
+    min-height: 30px !important;
+    text-transform: capitalize !important;
+    padding: 0px !important;
+}
+
+.TabPanelHome {
+    padding: 0px !important;
+    box-shadow: rgba(14, 30, 37, 0.12) 0px 2px 4px 0px, rgba(14, 30, 37, 0.32) 0px 2px 16px 0px;
+    margin-top: 1%;
+}
+
+.TabHome[aria-selected="true"] {
+    background-color: #e7e2e2;
+    border-radius: 3px;
+}
+
+.ag-center-cols-container {
+    width: 100% !important;
+}
+
+
+
+
+
+
+
+#graphType,
+#x-axisType,
+#y-axisType {
+    font-family: system-ui;
+    margin-left: 2%;
+    padding: 8px 8px;
+    font-size: 16px;
+    background-color: #fff;
+    border: 1px solid rgb(210 208 221);
+    border-radius: 10px;
+    outline: none;
+    color: #333;
+    width: 75%;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+
+}
+
+
+#graphType:hover,
+#graphType:focus,
+#x-axisType:hover,
+#x-axisType:focus,
+#y-axisType:hover,
+#y-axisType:focus {
+    border-color: rgb(210 208 221);
+    box-shadow: 0 0 5px rgb(210 208 221);
+    /* transform: scale(1.02); */
+}
+
+select {
+    /* -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none; */
+    cursor: pointer;
+}
+
+
+
+.axisDropdown {
+    display: flex;
+    flex-direction: column !important;
+    width: 75%;
+}
+
+#scaleTypeParent {
+    align-items: center;
+    margin-top: 10px;
+    margin-left: 3%;
+    display: flex;
+    outline: 0;
+    justify-content: space-between;
+}
+
+#x-scaleType,
+#y-scaleType {
+    margin-right: 10%;
+    border: navajowhite;
+    outline: 0;
+    /* -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    cursor: pointer; */
+    /* width: 50%; */
+}
