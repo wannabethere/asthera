@@ -1,7 +1,10 @@
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+import logging
 from app.settings import get_settings, get_postgres_url
+
+logger = logging.getLogger(__name__)
 
 settings = get_settings()
 
@@ -71,7 +74,7 @@ def init_db():
         print("\nCreated all tables successfully")
         
     except Exception as e:
-        print(f"Error during database initialization: {str(e)}")
+        logger.error(f"Error during database initialization: {str(e)}")
         raise
 
 def get_db():

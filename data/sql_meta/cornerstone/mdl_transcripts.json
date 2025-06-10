@@ -1,0 +1,227 @@
+{
+  "catalog": "cornerstone_training",
+  "schema": "public",
+  "models": [
+    {
+      "name": "learning_transcripts",
+      "tableReference": {
+        "table": "learningTranscripts"
+      },
+      "columns": [
+        {
+          "name": "transcriptId",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Transcript ID",
+            "description": "Unique identifier for the learning transcript"
+          }
+        },
+        {
+          "name": "userId",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "User ID",
+            "description": "Identifier of the user taking the learning object"
+          }
+        },
+        {
+          "name": "learningObjectId",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Learning Object ID",
+            "description": "Reference to the learning object being taken"
+          }
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Status",
+            "description": "Current status of the learning transcript"
+          }
+        },
+        {
+          "name": "score",
+          "type": "INTEGER",
+          "properties": {
+            "displayName": "Score",
+            "description": "Score achieved in the learning object (if applicable)"
+          }
+        },
+        {
+          "name": "credits",
+          "type": "DECIMAL",
+          "properties": {
+            "displayName": "Credits",
+            "description": "Credits earned upon completion"
+          }
+        },
+        {
+          "name": "dueDate",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Due Date",
+            "description": "Date by which the learning object should be completed"
+          }
+        },
+        {
+          "name": "completionDate",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Completion Date",
+            "description": "Date when the learning object was completed"
+          }
+        },
+        {
+          "name": "customFields",
+          "type": "ARRAY",
+          "properties": {
+            "displayName": "Custom Fields",
+            "description": "Array of custom field objects with fieldId and value"
+          }
+        },
+        {
+          "name": "audit",
+          "type": "OBJECT",
+          "properties": {
+            "displayName": "Audit Information",
+            "description": "Object containing assignment audit information"
+          }
+        }
+      ],
+      "primaryKey": "transcriptId",
+      "properties": {
+        "displayName": "Learning Transcripts",
+        "description": "Records of user learning object completions and progress"
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "name": "completion_metrics",
+      "baseObject": "learning_transcripts",
+      "dimension": [
+        {
+          "name": "status",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "customFields",
+          "type": "ARRAY"
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_transcripts",
+          "type": "INTEGER",
+          "expression": "COUNT(*)"
+        },
+        {
+          "name": "completed_count",
+          "type": "INTEGER",
+          "expression": "COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END)"
+        },
+        {
+          "name": "completion_rate",
+          "type": "DECIMAL",
+          "expression": "COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END) * 100.0 / COUNT(*)"
+        },
+        {
+          "name": "total_credits_earned",
+          "type": "DECIMAL",
+          "expression": "SUM(CASE WHEN status = 'COMPLETED' THEN credits ELSE 0 END)"
+        },
+        {
+          "name": "avg_score",
+          "type": "DECIMAL",
+          "expression": "AVG(CASE WHEN status = 'COMPLETED' THEN score END)"
+        }
+      ],
+      "properties": {
+        "displayName": "Completion Metrics",
+        "description": "Core metrics for learning completion analysis"
+      }
+    },
+    {
+      "name": "timeliness_metrics",
+      "baseObject": "learning_transcripts",
+      "dimension": [
+        {
+          "name": "status",
+          "type": "VARCHAR"
+        }
+      ],
+      "measure": [
+        {
+          "name": "on_time_completions",
+          "type": "INTEGER",
+          "expression": "COUNT(CASE WHEN status = 'COMPLETED' AND completionDate <= dueDate THEN 1 END)"
+        },
+        {
+          "name": "late_completions",
+          "type": "INTEGER",
+          "expression": "COUNT(CASE WHEN status = 'COMPLETED' AND completionDate > dueDate THEN 1 END)"
+        },
+        {
+          "name": "overdue_count",
+          "type": "INTEGER",
+          "expression": "COUNT(CASE WHEN status != 'COMPLETED' AND dueDate < CURRENT_DATE THEN 1 END)"
+        },
+        {
+          "name": "avg_days_to_complete",
+          "type": "DECIMAL",
+          "expression": "AVG(CASE WHEN status = 'COMPLETED' THEN DATEDIFF(day, audit.assignedDate, completionDate) END)"
+        }
+      ],
+      "properties": {
+        "displayName": "Timeliness Metrics",
+        "description": "Metrics for analyzing completion timeliness"
+      }
+    }
+  ],
+  "views": [
+    {
+      "name": "user_completion_summary",
+      "statement": "SELECT userId, COUNT(*) as total_assignments, COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END) as completed_count, SUM(CASE WHEN status = 'COMPLETED' THEN credits ELSE 0 END) as total_credits, AVG(CASE WHEN status = 'COMPLETED' THEN score END) as avg_score FROM learning_transcripts GROUP BY userId ORDER BY total_credits DESC",
+      "properties": {
+        "displayName": "User Completion Summary",
+        "description": "Summary of user learning completions and achievements"
+      }
+    },
+    {
+      "name": "custom_field_analysis",
+      "statement": "SELECT cf.fieldId, cf.value, COUNT(*) as count, COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END) as completed_count FROM learning_transcripts lt, unnest(customFields) as cf GROUP BY cf.fieldId, cf.value ORDER BY count DESC",
+      "properties": {
+        "displayName": "Custom Field Analysis",
+        "description": "Analysis of learning transcripts by custom field values"
+      }
+    },
+    {
+      "name": "overdue_analysis",
+      "statement": "SELECT * FROM learning_transcripts WHERE status != 'COMPLETED' AND dueDate < CURRENT_DATE ORDER BY dueDate ASC",
+      "properties": {
+        "displayName": "Overdue Analysis",
+        "description": "List of overdue learning assignments"
+      }
+    }
+  ],
+  "enumDefinitions": [
+    {
+      "name": "TranscriptStatusEnum",
+      "values": [
+        {
+          "name": "COMPLETED",
+          "value": "COMPLETED"
+        },
+        {
+          "name": "IN_PROGRESS",
+          "value": "IN_PROGRESS"
+        }
+      ],
+      "properties": {
+        "displayName": "Transcript Status",
+        "description": "Possible status values for learning transcripts"
+      }
+    }
+  ]
+} 

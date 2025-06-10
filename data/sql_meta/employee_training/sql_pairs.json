@@ -1,0 +1,209 @@
+[
+    {
+      "categories": [],
+      "question": "What % of users have completed certifications?",
+      "sql": "SELECT (COUNT(DISTINCT CASE WHEN isCertification = true AND TrainingStatus = 'Completed' THEN EmployeeID END) * 100.0 / COUNT(DISTINCT CASE WHEN isCertification = true THEN EmployeeID END)) as certification_completion_rate FROM employee_training_records WHERE isCertification = true",
+      "context": "Admin Dashboard - Certification Completion Rate KPI. This query calculates the percentage of users who have completed their assigned certifications out of all users who have been assigned certifications.",
+      "document": "employee_training.mdl.json - admin_dashboard_metrics",
+      "samples": [],
+      "instructions": "Calculate certification completion rate as a percentage by dividing completed certifications by total assigned certifications, filtering only for certification-type activities."
+    },
+    {
+      "categories": [],
+      "question": "What is the overall training status across the org?",
+      "sql": "SELECT TrainingStatus, COUNT(*) as count, (COUNT(*) * 100.0 / (SELECT COUNT(*) FROM employee_training_records)) as percentage FROM employee_training_records GROUP BY TrainingStatus ORDER BY count DESC",
+      "context": "Admin Dashboard - Global Training Completion. This provides a breakdown of all training statuses across the organization with counts and percentages for donut chart visualization.",
+      "document": "employee_training.mdl.json - admin_dashboard_metrics",
+      "samples": [],
+      "instructions": "Group training records by status and calculate both absolute counts and percentages of total for comprehensive status overview."
+    },
+    {
+      "categories": [],
+      "question": "What types of training are most common?",
+      "sql": "SELECT ActivityType, COUNT(*) as assignment_count, COUNT(DISTINCT EmployeeID) as unique_participants FROM employee_training_records GROUP BY ActivityType ORDER BY assignment_count DESC",
+      "context": "Admin Dashboard - Training Type Distribution. Shows the most frequently assigned training types with participant counts for bar/pie chart visualization.",
+      "document": "employee_training.mdl.json - admin_dashboard_metrics",
+      "samples": [],
+      "instructions": "Aggregate training assignments by activity type, showing both total assignments and unique participant counts to understand training distribution patterns."
+    },
+    {
+      "categories": [],
+      "question": "How many users have overdue trainings?",
+      "sql": "SELECT COUNT(DISTINCT EmployeeID) as overdue_users_count FROM employee_training_records WHERE TrainingStatus = 'Overdue' OR (DueDate < CURRENT_DATE AND TrainingStatus NOT IN ('Completed', 'Waived'))",
+      "context": "Admin Dashboard - Overdue Trainings Count KPI. Counts unique users who have at least one overdue training assignment.",
+      "document": "employee_training.mdl.json - admin_dashboard_metrics",
+      "samples": [],
+      "instructions": "Count distinct employees with overdue training status or assignments past due date that haven't been completed or waived."
+    },
+    {
+      "categories": [],
+      "question": "What trainings are expiring in the next 30 days?",
+      "sql": "SELECT EmployeeName, ActivityName, ExpirationDate, DATEDIFF(day, CURRENT_DATE, ExpirationDate) as days_until_expiration FROM employee_training_records WHERE ExpirationDate BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30' DAY AND TrainingStatus = 'Completed' ORDER BY ExpirationDate ASC",
+      "context": "Admin Dashboard - Upcoming Expirations Table. Lists completed trainings/certifications that will expire within 30 days requiring renewal.",
+      "document": "employee_training.mdl.json - admin_dashboard_metrics",
+      "samples": [],
+      "instructions": "Filter completed trainings with expiration dates in the next 30 days, showing employee details and days remaining until expiration."
+    },
+    {
+      "categories": [],
+      "question": "How compliant is each region/domain?",
+      "sql": "SELECT PrimaryDomain, COUNT(DISTINCT EmployeeID) as total_employees, COUNT(DISTINCT CASE WHEN isCompliant = true THEN EmployeeID END) as compliant_employees, (COUNT(DISTINCT CASE WHEN isCompliant = true THEN EmployeeID END) * 100.0 / COUNT(DISTINCT EmployeeID)) as compliance_rate FROM employee_training_records GROUP BY PrimaryDomain ORDER BY compliance_rate DESC",
+      "context": "Admin Dashboard - Domain-wise Compliance Bar Chart. Shows compliance rates across different regions/domains for comparative analysis.",
+      "document": "employee_training.mdl.json - admin_dashboard_metrics",
+      "samples": [],
+      "instructions": "Calculate compliance rates by domain/region, showing total employees, compliant employees, and percentage compliance for each domain."
+    },
+    {
+      "categories": [],
+      "question": "How many trainings were self-assigned vs manager-assigned?",
+      "sql": "SELECT CASE WHEN ManagerName IS NOT NULL AND ManagerName != '' THEN 'Manager-Assigned' ELSE 'Self-Assigned' END as assignment_mode, COUNT(*) as assignment_count, (COUNT(*) * 100.0 / (SELECT COUNT(*) FROM employee_training_records)) as percentage FROM employee_training_records GROUP BY CASE WHEN ManagerName IS NOT NULL AND ManagerName != '' THEN 'Manager-Assigned' ELSE 'Self-Assigned' END",
+      "context": "Admin Dashboard - Assignment Mode Summary Pie Chart. Breaks down training assignments by how they were assigned (self vs manager-assigned).",
+      "document": "employee_training.mdl.json - admin_dashboard_metrics",
+      "samples": [],
+      "instructions": "Categorize assignments based on presence of manager name to determine assignment mode and calculate distribution percentages."
+    },
+    {
+      "categories": [],
+      "question": "Which of my team members are certified?",
+      "sql": "SELECT EmployeeName, ActivityName, CompletionDate, ExpirationDate FROM employee_training_records WHERE ManagerName = '{MANAGER_NAME}' AND isCertification = true AND TrainingStatus = 'Completed' ORDER BY EmployeeName, CompletionDate DESC",
+      "context": "Manager Dashboard - Team Certification Status Table. Shows which team members have completed certifications under a specific manager.",
+      "document": "employee_training.mdl.json - manager_dashboard_metrics",
+      "samples": [],
+      "instructions": "Filter for specific manager's team members who have completed certification-type trainings, showing completion and expiration dates."
+    },
+    {
+      "categories": [],
+      "question": "What % of my team is compliant with training?",
+      "sql": "SELECT ManagerName, COUNT(DISTINCT EmployeeID) as team_size, COUNT(DISTINCT CASE WHEN isCompliant = true THEN EmployeeID END) as compliant_members, (COUNT(DISTINCT CASE WHEN isCompliant = true THEN EmployeeID END) * 100.0 / COUNT(DISTINCT EmployeeID)) as team_compliance_rate FROM employee_training_records WHERE ManagerName = '{MANAGER_NAME}' GROUP BY ManagerName",
+      "context": "Manager Dashboard - Team Compliance Overview KPI. Calculates the compliance percentage for a specific manager's team.",
+      "document": "employee_training.mdl.json - manager_dashboard_metrics",
+      "samples": [],
+      "instructions": "Calculate team compliance rate by comparing compliant team members to total team size for a specific manager."
+    },
+    {
+      "categories": [],
+      "question": "Who in my team has overdue trainings?",
+      "sql": "SELECT EmployeeName, ActivityName, DueDate, DATEDIFF(day, DueDate, CURRENT_DATE) as days_overdue FROM employee_training_records WHERE ManagerName = '{MANAGER_NAME}' AND (TrainingStatus = 'Overdue' OR (DueDate < CURRENT_DATE AND TrainingStatus NOT IN ('Completed', 'Waived'))) ORDER BY days_overdue DESC",
+      "context": "Manager Dashboard - Overdue Assignments by Member Table. Lists team members with overdue training assignments and how overdue they are.",
+      "document": "employee_training.mdl.json - manager_dashboard_metrics",
+      "samples": [],
+      "instructions": "Find team members under specific manager with overdue trainings, showing activity details and days past due date."
+    },
+    {
+      "categories": [],
+      "question": "How has my team's training activity changed over time?",
+      "sql": "SELECT FORMAT(CompletionDate, 'yyyy-MM') as completion_month, COUNT(*) as completions FROM employee_training_records WHERE ManagerName = '{MANAGER_NAME}' AND CompletionDate IS NOT NULL GROUP BY FORMAT(CompletionDate, 'yyyy-MM') ORDER BY completion_month",
+      "context": "Manager Dashboard - Completion Timeline Line Chart. Shows monthly training completion trends for a specific manager's team.",
+      "document": "employee_training.mdl.json - manager_dashboard_metrics",
+      "samples": [],
+      "instructions": "Aggregate training completions by month for specific manager's team to show activity trends over time."
+    },
+    {
+      "categories": [],
+      "question": "Who has the most training assigned/completed?",
+      "sql": "SELECT EmployeeName, COUNT(*) as total_assigned, COUNT(CASE WHEN TrainingStatus = 'Completed' THEN 1 END) as completed, (COUNT(CASE WHEN TrainingStatus = 'Completed' THEN 1 END) * 100.0 / COUNT(*)) as completion_rate FROM employee_training_records WHERE ManagerName = '{MANAGER_NAME}' GROUP BY EmployeeName ORDER BY total_assigned DESC",
+      "context": "Manager Dashboard - Training Load per Employee Bar Chart. Shows training workload distribution across team members.",
+      "document": "employee_training.mdl.json - manager_dashboard_metrics",
+      "samples": [],
+      "instructions": "Calculate training load per employee showing assignments, completions, and completion rates for workload analysis."
+    },
+    {
+      "categories": [],
+      "question": "How many certifications have been assigned and completed?",
+      "sql": "SELECT COUNT(*) as total_assigned, COUNT(CASE WHEN TrainingStatus = 'Completed' THEN 1 END) as total_completed, COUNT(CASE WHEN TrainingStatus IN ('Assigned', 'In Progress') THEN 1 END) as in_progress FROM employee_training_records WHERE isCertification = true",
+      "context": "Certification Dashboard - Total Certifications KPI + Bar Chart. Shows overall certification assignment and completion statistics.",
+      "document": "employee_training.mdl.json - certification_dashboard_metrics",
+      "samples": [],
+      "instructions": "Count certification assignments, completions, and in-progress status to show overall certification program health."
+    },
+    {
+      "categories": [],
+      "question": "What percentage of certifications are completed vs in-progress?",
+      "sql": "SELECT TrainingStatus, COUNT(*) as count, (COUNT(*) * 100.0 / (SELECT COUNT(*) FROM employee_training_records WHERE isCertification = true)) as percentage FROM employee_training_records WHERE isCertification = true GROUP BY TrainingStatus ORDER BY count DESC",
+      "context": "Certification Dashboard - Certification Completion % Donut Chart. Breaks down certification status distribution for progress tracking.",
+      "document": "employee_training.mdl.json - certification_dashboard_metrics",
+      "samples": [],
+      "instructions": "Calculate percentage distribution of certification statuses to show completion vs in-progress vs other statuses."
+    },
+    {
+      "categories": [],
+      "question": "Which departments are more certified?",
+      "sql": "SELECT PrimaryOrganization, COUNT(DISTINCT EmployeeID) as total_employees, COUNT(DISTINCT CASE WHEN isCertification = true AND TrainingStatus = 'Completed' THEN EmployeeID END) as certified_employees, (COUNT(DISTINCT CASE WHEN isCertification = true AND TrainingStatus = 'Completed' THEN EmployeeID END) * 100.0 / COUNT(DISTINCT EmployeeID)) as certification_rate FROM employee_training_records GROUP BY PrimaryOrganization ORDER BY certification_rate DESC",
+      "context": "Certification Dashboard - Org-wise Certification Trend Bar Chart. Compares certification rates across different departments/organizations.",
+      "document": "employee_training.mdl.json - certification_dashboard_metrics",
+      "samples": [],
+      "instructions": "Compare certification rates across organizations by calculating percentage of employees with completed certifications per department."
+    },
+    {
+      "categories": [],
+      "question": "Which certifications will expire soon?",
+      "sql": "SELECT EmployeeName, PrimaryOrganization, ActivityName, ExpirationDate, DATEDIFF(day, CURRENT_DATE, ExpirationDate) as days_until_expiration FROM employee_training_records WHERE isCertification = true AND TrainingStatus = 'Completed' AND ExpirationDate BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '90' DAY ORDER BY ExpirationDate ASC",
+      "context": "Certification Dashboard - Certification Expiry Tracker Table. Lists certifications expiring within 90 days requiring renewal attention.",
+      "document": "employee_training.mdl.json - certification_dashboard_metrics",
+      "samples": [],
+      "instructions": "Find completed certifications expiring within 90 days, showing employee and certification details with days remaining."
+    },
+    {
+      "categories": [],
+      "question": "What % of users are compliant overall?",
+      "sql": "SELECT (COUNT(DISTINCT CASE WHEN isCompliant = true THEN EmployeeID END) * 100.0 / COUNT(DISTINCT EmployeeID)) as overall_compliance_rate FROM employee_training_records",
+      "context": "Compliance Dashboard - Compliance Overview KPI. Shows the overall organizational compliance rate as a key performance indicator.",
+      "document": "employee_training.mdl.json - compliance_dashboard_metrics",
+      "samples": [],
+      "instructions": "Calculate overall compliance rate by dividing compliant employees by total employees across the organization."
+    },
+    {
+      "categories": [],
+      "question": "How compliant is each department/org?",
+      "sql": "SELECT PrimaryOrganization, COUNT(DISTINCT EmployeeID) as total_employees, COUNT(DISTINCT CASE WHEN isCompliant = true THEN EmployeeID END) as compliant_employees, (COUNT(DISTINCT CASE WHEN isCompliant = true THEN EmployeeID END) * 100.0 / COUNT(DISTINCT EmployeeID)) as compliance_rate FROM employee_training_records GROUP BY PrimaryOrganization ORDER BY compliance_rate DESC",
+      "context": "Compliance Dashboard - Org-wise Compliance Status Bar Chart. Compares compliance rates across different departments for identifying problem areas.",
+      "document": "employee_training.mdl.json - compliance_dashboard_metrics",
+      "samples": [],
+      "instructions": "Calculate and compare compliance rates across organizations to identify departments with higher or lower compliance."
+    },
+    {
+      "categories": [],
+      "question": "Which regions/domains are lagging in compliance?",
+      "sql": "SELECT PrimaryDomain, PrimaryOrganization, COUNT(DISTINCT EmployeeID) as total_employees, (COUNT(DISTINCT CASE WHEN isCompliant = true THEN EmployeeID END) * 100.0 / COUNT(DISTINCT EmployeeID)) as compliance_rate FROM employee_training_records GROUP BY PrimaryDomain, PrimaryOrganization ORDER BY compliance_rate ASC",
+      "context": "Compliance Dashboard - Domain-wise Compliance Heatmap. Shows compliance rates by domain and organization for heatmap visualization to identify lagging regions.",
+      "document": "employee_training.mdl.json - compliance_dashboard_metrics",
+      "samples": [],
+      "instructions": "Create domain-organization compliance matrix data for heatmap visualization, ordering by lowest compliance rates first."
+    },
+    {
+      "categories": [],
+      "question": "How many trainings were completed late?",
+      "sql": "SELECT COUNT(*) as late_completions, (COUNT(*) * 100.0 / (SELECT COUNT(*) FROM employee_training_records WHERE TrainingStatus = 'Completed')) as late_completion_rate FROM employee_training_records WHERE SatisfiedLate = true AND TrainingStatus = 'Completed'",
+      "context": "Compliance Dashboard - Late Completions KPI + Table. Shows count and percentage of trainings completed after their due date.",
+      "document": "employee_training.mdl.json - compliance_dashboard_metrics",
+      "samples": [],
+      "instructions": "Count trainings marked as satisfied late and calculate percentage of total completions to measure timeliness compliance."
+    },
+    {
+      "categories": [],
+      "question": "Which users will soon be non-compliant due to expiring training?",
+      "sql": "SELECT EmployeeName, PrimaryOrganization, ActivityName, ExpirationDate, DATEDIFF(day, CURRENT_DATE, ExpirationDate) as days_until_expiration FROM employee_training_records WHERE TrainingStatus = 'Completed' AND ExpirationDate BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30' DAY ORDER BY ExpirationDate ASC",
+      "context": "Compliance Dashboard - At-Risk Users (Upcoming Expiry) Table. Identifies users whose completed trainings will expire soon, making them non-compliant.",
+      "document": "employee_training.mdl.json - compliance_dashboard_metrics",
+      "samples": [],
+      "instructions": "Find users with completed trainings expiring within 30 days who will become non-compliant without renewal."
+    },
+    {
+      "categories": [],
+      "question": "Which trainings are assigned the most?",
+      "sql": "SELECT ActivityName, ActivityType, COUNT(*) as assignment_count, COUNT(DISTINCT EmployeeID) as unique_participants FROM employee_training_records GROUP BY ActivityName, ActivityType ORDER BY assignment_count DESC LIMIT 10",
+      "context": "Training Insights Dashboard - Most Popular Trainings Bar Chart. Shows the most frequently assigned training activities to understand training demand.",
+      "document": "employee_training.mdl.json - training_insights_metrics",
+      "samples": [],
+      "instructions": "Rank training activities by assignment frequency to identify most popular/demanded trainings with participant counts."
+    },
+    {
+      "categories": [],
+      "question": "How is training completion trending over time?",
+      "sql": "SELECT FORMAT(CompletionDate, 'yyyy-MM') as completion_month, COUNT(*) as completions, COUNT(DISTINCT EmployeeID) as unique_completers FROM employee_training_records WHERE CompletionDate IS NOT NULL GROUP BY FORMAT(CompletionDate, 'yyyy-MM') ORDER BY completion_month",
+      "context": "Training Insights Dashboard - Completion Trends Line Chart. Shows monthly training completion trends to identify patterns and seasonality.",
+      "document": "employee_training.mdl.json - training_insights_metrics",
+      "samples": [],
+      "instructions": "Aggregate completions by month to show trends over time, including both total completions and unique individuals completing."
+    }
+  ]

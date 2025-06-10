@@ -1,14 +1,52 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 import os
 from pathlib import Path
 from dotenv import load_dotenv
 import logging
 import sys
+import pandas as pd
+from enum import Enum
+
+
+class EngineType(str, Enum):
+    """Supported engine types"""
+    PANDAS = "pandas"
+    POSTGRES = "postgres"
+    SQLITE = "sqlite"
 
 # Configure logger
 logger = logging.getLogger(__name__)
+
+class DataFrameConfig:
+    """Configuration for DataFrame data sources"""
+    def __init__(self, data_sources: Dict[str, Union[str, pd.DataFrame]] = None):
+        self.data_sources = data_sources or {}
+        self._loaded_dataframes = {}
+        
+    def load_dataframes(self) -> Dict[str, pd.DataFrame]:
+        """Load all dataframes from configured sources"""
+        for name, source in self.data_sources.items():
+            if isinstance(source, pd.DataFrame):
+                self._loaded_dataframes[name] = source
+            elif isinstance(source, str):
+                try:
+                    # Try to load from file
+                    if source.endswith('.csv'):
+                        self._loaded_dataframes[name] = pd.read_csv(source)
+                    elif source.endswith(('.xlsx', '.xls')):
+                        self._loaded_dataframes[name] = pd.read_excel(source)
+                    elif source.endswith('.parquet'):
+                        self._loaded_dataframes[name] = pd.read_parquet(source)
+                    else:
+                        logger.warning(f"Unsupported file format for {source}")
+                except Exception as e:
+                    logger.error(f"Failed to load dataframe from {source}: {e}")
+            else:
+                logger.warning(f"Unsupported data source type for {name}")
+                
+        return self._loaded_dataframes
 
 class Settings(BaseSettings):
     """Application settings with environment variable loading."""
@@ -16,8 +54,25 @@ class Settings(BaseSettings):
     # Base paths
     BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
     
+    # Engine Settings
+    ENGINE_TYPE: str = EngineType.POSTGRES  # Default to postgres engine
+    ENGINE_DATA_SOURCES: Dict[str, Any] = {}  # Default empty data sources
+    ENGINE_CONNECTION_STRING: Optional[str] = None
+    ENGINE_POSTGRES_CONFIG: Dict[str, Any] = {
+        "host": "unedadevpostgresql.postgres.database.azure.com",
+        "port": 5432,
+        "database": "phenom_egen_ai",
+        "user": "pixentia",
+        "password": "FLc%26dL%40M9A5Q7wI%3B",  # URL encoded version of FLc&dL@M9A5Q7wI;
+        "sslmode": "require"  # Required for Azure PostgreSQL
+    }
+    
+    # SQLite Settings
+    SQLITE_DB_PATH: Optional[str] = None  # Path to SQLite database file
+    SQLITE_USE_MEMORY: bool = False  # Whether to use in-memory SQLite database
+    
     # API Keys and Security
-    OPENAI_API_KEY: str = ""
+    OPENAI_API_KEY: str = "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"
     
     # API Configuration
     API_HOST: str = "0.0.0.0"
@@ -42,6 +97,13 @@ class Settings(BaseSettings):
     MODEL_NAME: str = "gpt-4o-mini"
     TEMPERATURE: float = 0.0
     
+    # SQL Generation Model Settings
+    SQL_GENERATION_TEMPERATURE: float = 0.0
+    SQL_GENERATION_MAX_TOKENS: int = 1000
+    SQL_GENERATION_TOP_P: float = 1.0
+    SQL_GENERATION_FREQUENCY_PENALTY: float = 0.0
+    SQL_GENERATION_PRESENCE_PENALTY: float = 0.0
+    
     # RAG Settings
     MAX_DOCUMENTS: int = 4
     RELEVANCE_THRESHOLD: float = 0.7
@@ -56,15 +118,21 @@ class Settings(BaseSettings):
     LOG_FORMAT: str = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     
     # Database Settings
-    POSTGRES_HOST: str = "localhost"
+    #POSTGRES_HOST: str = "localhost"
+    #POSTGRES_PORT: int = 5432
+    #POSTGRES_DB: str = "genimel"
+    #POSTGRES_USER: str = "postgres"
+    #POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_HOST: str = "unedadevpostgresql.postgres.database.azure.com"
     POSTGRES_PORT: int = 5432
-    POSTGRES_DB: str = "genimel"
-    POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_USER: str = "pixentia"
+    POSTGRES_PASSWORD: str = "FLc%26dL%40M9A5Q7wI%3B"  # URL encoded version of FLc&dL@M9A5Q7wI;
+    POSTGRES_DB: str = "phenom_egen_ai"
     
     # Vector Store Settings
-    VECTOR_STORE_PATH: str = "/data/vector_store"
-    CHROMA_STORE_PATH: str = "/data/chroma_db"
+    VECTOR_STORE_PATH: str = "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/lexy/data/vector_store"
+    CHROMA_STORE_PATH: str = "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/lexy/data/chroma_db"
+    
     # ChromaDB Settings
     CHROMA_USE_LOCAL: bool = True
     CHROMA_HOST: str = "localhost"
@@ -75,18 +143,47 @@ class Settings(BaseSettings):
     # Embedding Settings
     EMBEDDING_PROVIDER: str = "openai"
     EMBEDDING_MODEL: str = "text-embedding-3-small"
+    
     # KPI Strategy Map Settings
-    KPI_PATTERNS_FILE: str = "../config/kpistrategies.yaml"  # Default patterns file
+    KPI_PATTERNS_FILE: str = "../config/kpistrategies.yaml"
     KPI_EXTRACTION_ENABLED: bool = True
     KPI_EXTRACTION_MIN_CONFIDENCE: float = 0.7
     KPI_MAX_DOCUMENTS: int = 5
     KPI_USE_GPT: bool = True
-    KPI_GPT_MODEL: str = "gpt-4o-mini"  # Default to the same model as the application
+    KPI_GPT_MODEL: str = "gpt-4o-mini"
     KPI_GPT_TEMPERATURE: float = 0.2
     
     # Session Settings
-    SESSION_TIMEOUT: int = 3600  # 1 hour in seconds
-    MAX_SESSION_SIZE: int = 1000  # Maximum number of messages per session
+    SESSION_TIMEOUT: int = 3600
+    MAX_SESSION_SIZE: int = 1000
+    
+    def get_engine_config(self) -> Dict[str, Any]:
+        """Get engine configuration based on settings"""
+        config = {
+            "engine_type": self.ENGINE_TYPE
+        }
+        
+        if self.ENGINE_TYPE == EngineType.PANDAS:
+            # Load dataframes from configured sources
+            df_config = DataFrameConfig(self.ENGINE_DATA_SOURCES)
+            config["data_sources"] = df_config.load_dataframes()
+            
+        elif self.ENGINE_TYPE == EngineType.POSTGRES:
+            config["postgres_config"] = {
+                "host": self.POSTGRES_HOST,
+                "port": self.POSTGRES_PORT,
+                "database": self.POSTGRES_DB,
+                "username": self.POSTGRES_USER,
+                "password": self.POSTGRES_PASSWORD
+            }
+            
+        elif self.ENGINE_TYPE == EngineType.SQLITE:
+            if self.SQLITE_USE_MEMORY:
+                config["connection_string"] = ":memory:"
+            else:
+                config["connection_string"] = self.SQLITE_DB_PATH or ":memory:"
+                
+        return config
     
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -298,9 +395,6 @@ def get_settings() -> Settings:
     """
     logger.debug("Creating new Settings instance")
     return Settings()
-
-
-
 
 def load_environment_variables(env_file=None):
     """

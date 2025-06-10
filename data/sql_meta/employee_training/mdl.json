@@ -1,0 +1,657 @@
+{
+    "catalog": "employee_training",
+    "schema": "public",
+    "models": [
+      {
+        "name": "employee_training_records",
+        "tableReference": {
+          "table": "sampleSumTotal"
+        },
+        "columns": [
+          {
+            "name": "EmployeeName",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Employee Name",
+              "description": "Full name of the employee"
+            }
+          },
+          {
+            "name": "EmployeeID",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Employee ID",
+              "description": "Unique identifier for the employee"
+            }
+          },
+          {
+            "name": "EmployeeEmail",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Employee Email",
+              "description": "Email address of the employee"
+            }
+          },
+          {
+            "name": "PrimaryDomain",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Primary Domain",
+              "description": "Primary domain/region of the employee"
+            }
+          },
+          {
+            "name": "PrimaryOrganization",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Primary Organization",
+              "description": "Organization/Department of the employee"
+            }
+          },
+          {
+            "name": "PrimaryJob",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Primary Job",
+              "description": "Job title/role of the employee"
+            }
+          },
+          {
+            "name": "ManagerName",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Manager Name",
+              "description": "Name of the employee's manager"
+            }
+          },
+          {
+            "name": "ActivityName",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Activity Name",
+              "description": "Name of the training activity"
+            }
+          },
+          {
+            "name": "ActivityCode",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Activity Code",
+              "description": "Unique code for the training activity"
+            }
+          },
+          {
+            "name": "ActivityType",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Activity Type",
+              "description": "Type of training activity"
+            }
+          },
+          {
+            "name": "ActivityStartDate",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Activity Start Date",
+              "description": "Start date of the training activity"
+            }
+          },
+          {
+            "name": "ActivityEndDate",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Activity End Date",
+              "description": "End date of the training activity"
+            }
+          },
+          {
+            "name": "isCertification",
+            "type": "BOOLEAN",
+            "properties": {
+              "displayName": "Is Certification",
+              "description": "Whether the activity is a certification"
+            }
+          },
+          {
+            "name": "TrainingStatus",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Training Status",
+              "description": "Current status of the training"
+            }
+          },
+          {
+            "name": "AssignmentDate",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Assignment Date",
+              "description": "Date when the training was assigned"
+            }
+          },
+          {
+            "name": "DueDate",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Due Date",
+              "description": "Due date for completing the training"
+            }
+          },
+          {
+            "name": "ExpirationDate",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Expiration Date",
+              "description": "Expiration date of the training/certification"
+            }
+          },
+          {
+            "name": "CompletionDate",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Completion Date",
+              "description": "Date when the training was completed"
+            }
+          },
+          {
+            "name": "SatisfiedLate",
+            "type": "BOOLEAN",
+            "properties": {
+              "displayName": "Satisfied Late",
+              "description": "Whether the training was completed after the due date"
+            }
+          },
+          {
+            "name": "isCompliant",
+            "type": "BOOLEAN",
+            "properties": {
+              "displayName": "Is Compliant",
+              "description": "Whether the employee is compliant with training requirements"
+            }
+          },
+          {
+            "name": "isAssigned",
+            "type": "BOOLEAN",
+            "properties": {
+              "displayName": "Is Assigned",
+              "description": "Whether the training is assigned to the employee"
+            }
+          },
+          {
+            "name": "assignment_mode",
+            "type": "VARCHAR",
+            "isCalculated": true,
+            "expression": "CASE WHEN ManagerName IS NOT NULL AND ManagerName != '' THEN 'Manager-Assigned' ELSE 'Self-Assigned' END",
+            "properties": {
+              "displayName": "Assignment Mode",
+              "description": "How the training was assigned (Self vs Manager)"
+            }
+          }
+        ],
+        "primaryKey": "EmployeeID",
+        "properties": {
+          "displayName": "Employee Training Records",
+          "description": "Records of employee training activities and compliance status"
+        }
+      }
+    ],
+    "metrics": [
+      {
+        "name": "admin_dashboard_metrics",
+        "baseObject": "employee_training_records",
+        "dimension": [
+          {
+            "name": "PrimaryDomain",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "PrimaryOrganization",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "ActivityType",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "TrainingStatus",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "assignment_mode",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "total_users",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT EmployeeID)"
+          },
+          {
+            "name": "certified_users",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT CASE WHEN isCertification = true AND TrainingStatus = 'Completed' THEN EmployeeID END)"
+          },
+          {
+            "name": "certification_completion_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(DISTINCT CASE WHEN isCertification = true AND TrainingStatus = 'Completed' THEN EmployeeID END) * 100.0 / NULLIF(COUNT(DISTINCT CASE WHEN isCertification = true THEN EmployeeID END), 0)"
+          },
+          {
+            "name": "total_trainings",
+            "type": "INTEGER",
+            "expression": "COUNT(*)"
+          },
+          {
+            "name": "completed_trainings",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN TrainingStatus = 'Completed' THEN 1 END)"
+          },
+          {
+            "name": "overdue_trainings_count",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN TrainingStatus = 'Overdue' THEN 1 END)"
+          },
+          {
+            "name": "compliant_users",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT CASE WHEN isCompliant = true THEN EmployeeID END)"
+          },
+          {
+            "name": "compliance_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(DISTINCT CASE WHEN isCompliant = true THEN EmployeeID END) * 100.0 / COUNT(DISTINCT EmployeeID)"
+          },
+          {
+            "name": "upcoming_expirations",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN ExpirationDate BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days' THEN 1 END)"
+          }
+        ],
+        "timeGrain": [
+          {
+            "name": "assignment_date_grain",
+            "refColumn": "AssignmentDate",
+            "dateParts": ["YEAR", "QUARTER", "MONTH", "WEEK", "DAY"]
+          },
+          {
+            "name": "completion_date_grain",
+            "refColumn": "CompletionDate",
+            "dateParts": ["YEAR", "QUARTER", "MONTH", "WEEK", "DAY"]
+          }
+        ],
+        "properties": {
+          "displayName": "Admin Dashboard Metrics",
+          "description": "Comprehensive metrics for admin dashboard views"
+        }
+      },
+      {
+        "name": "manager_dashboard_metrics",
+        "baseObject": "employee_training_records",
+        "dimension": [
+          {
+            "name": "ManagerName",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "EmployeeName",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "TrainingStatus",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "ActivityName",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "team_members_count",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT EmployeeID)"
+          },
+          {
+            "name": "team_certified_count",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT CASE WHEN isCertification = true AND TrainingStatus = 'Completed' THEN EmployeeID END)"
+          },
+          {
+            "name": "team_compliance_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(DISTINCT CASE WHEN isCompliant = true THEN EmployeeID END) * 100.0 / COUNT(DISTINCT EmployeeID)"
+          },
+          {
+            "name": "team_overdue_count",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN TrainingStatus = 'Overdue' THEN 1 END)"
+          },
+          {
+            "name": "trainings_per_employee",
+            "type": "DECIMAL",
+            "expression": "COUNT(*) * 1.0 / COUNT(DISTINCT EmployeeID)"
+          }
+        ],
+        "timeGrain": [
+          {
+            "name": "completion_timeline",
+            "refColumn": "CompletionDate",
+            "dateParts": ["YEAR", "QUARTER", "MONTH", "WEEK"]
+          }
+        ],
+        "properties": {
+          "displayName": "Manager Dashboard Metrics",
+          "description": "Metrics for manager team oversight and tracking"
+        }
+      },
+      {
+        "name": "certification_dashboard_metrics",
+        "baseObject": "employee_training_records",
+        "dimension": [
+          {
+            "name": "ActivityName",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "PrimaryOrganization",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "TrainingStatus",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "total_certifications_assigned",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN isCertification = true THEN 1 END)"
+          },
+          {
+            "name": "total_certifications_completed",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN isCertification = true AND TrainingStatus = 'Completed' THEN 1 END)"
+          },
+          {
+            "name": "certifications_in_progress",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN isCertification = true AND TrainingStatus IN ('In Progress', 'Assigned') THEN 1 END)"
+          },
+          {
+            "name": "certification_completion_percentage",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN isCertification = true AND TrainingStatus = 'Completed' THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN isCertification = true THEN 1 END), 0)"
+          },
+          {
+            "name": "certifications_expiring_soon",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN isCertification = true AND ExpirationDate BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '90 days' THEN 1 END)"
+          }
+        ],
+        "properties": {
+          "displayName": "Certification Dashboard Metrics",
+          "description": "Specialized metrics for certification tracking and management"
+        }
+      },
+      {
+        "name": "compliance_dashboard_metrics",
+        "baseObject": "employee_training_records",
+        "dimension": [
+          {
+            "name": "PrimaryDomain",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "PrimaryOrganization",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "EmployeeName",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "overall_compliance_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(DISTINCT CASE WHEN isCompliant = true THEN EmployeeID END) * 100.0 / COUNT(DISTINCT EmployeeID)"
+          },
+          {
+            "name": "late_completions_count",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN SatisfiedLate = true THEN 1 END)"
+          },
+          {
+            "name": "at_risk_users",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT CASE WHEN ExpirationDate BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days' THEN EmployeeID END)"
+          },
+          {
+            "name": "non_compliant_users",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT CASE WHEN isCompliant = false THEN EmployeeID END)"
+          }
+        ],
+        "properties": {
+          "displayName": "Compliance Dashboard Metrics",
+          "description": "Metrics focused on compliance tracking and risk identification"
+        }
+      },
+      {
+        "name": "training_insights_metrics",
+        "baseObject": "employee_training_records",
+        "dimension": [
+          {
+            "name": "ActivityName",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "ActivityType",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "PrimaryOrganization",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "assignment_mode",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "training_assignments_count",
+            "type": "INTEGER",
+            "expression": "COUNT(*)"
+          },
+          {
+            "name": "unique_participants",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT EmployeeID)"
+          },
+          {
+            "name": "completion_count",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN TrainingStatus = 'Completed' THEN 1 END)"
+          },
+          {
+            "name": "average_completion_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN TrainingStatus = 'Completed' THEN 1 END) * 100.0 / COUNT(*)"
+          },
+          {
+            "name": "self_assigned_count",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN assignment_mode = 'Self-Assigned' THEN 1 END)"
+          },
+          {
+            "name": "manager_assigned_count",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN assignment_mode = 'Manager-Assigned' THEN 1 END)"
+          }
+        ],
+        "timeGrain": [
+          {
+            "name": "assignment_trends",
+            "refColumn": "AssignmentDate",
+            "dateParts": ["YEAR", "QUARTER", "MONTH"]
+          },
+          {
+            "name": "completion_trends",
+            "refColumn": "CompletionDate",
+            "dateParts": ["YEAR", "QUARTER", "MONTH"]
+          }
+        ],
+        "properties": {
+          "displayName": "Training Insights Metrics",
+          "description": "Analytics metrics for training program insights and trends"
+        }
+      }
+    ],
+    "cumulativeMetrics": [
+      {
+        "name": "monthly_completion_trend",
+        "baseObject": "employee_training_records",
+        "description": "Cumulative training completions by month",
+        "timeColumn": "CompletionDate",
+        "aggregation": "COUNT",
+        "window": "MONTH",
+        "measure": {
+          "name": "cumulative_completions",
+          "type": "INTEGER",
+          "expression": "COUNT(CASE WHEN TrainingStatus = 'Completed' THEN 1 END)"
+        },
+        "dimensions": ["PrimaryOrganization", "ActivityType"],
+        "properties": {
+          "displayName": "Monthly Completion Trend",
+          "description": "Track cumulative training completions over time"
+        }
+      },
+      {
+        "name": "quarterly_compliance_trend",
+        "baseObject": "employee_training_records",
+        "description": "Quarterly compliance rate trending",
+        "timeColumn": "CompletionDate",
+        "aggregation": "RATE",
+        "window": "QUARTER",
+        "measure": {
+          "name": "compliance_rate_trend",
+          "type": "DECIMAL",
+          "expression": "COUNT(DISTINCT CASE WHEN isCompliant = true THEN EmployeeID END) * 100.0 / COUNT(DISTINCT EmployeeID)"
+        },
+        "dimensions": ["PrimaryDomain", "PrimaryOrganization"],
+        "properties": {
+          "displayName": "Quarterly Compliance Trend",
+          "description": "Track compliance rate changes over quarters"
+        }
+      },
+      {
+        "name": "certification_expiration_forecast",
+        "baseObject": "employee_training_records",
+        "description": "Forecast upcoming certification expirations",
+        "timeColumn": "ExpirationDate",
+        "aggregation": "COUNT",
+        "window": "MONTH",
+        "measure": {
+          "name": "expiring_certifications",
+          "type": "INTEGER",
+          "expression": "COUNT(CASE WHEN isCertification = true AND ExpirationDate IS NOT NULL THEN 1 END)"
+        },
+        "dimensions": ["PrimaryOrganization", "ActivityName"],
+        "properties": {
+          "displayName": "Certification Expiration Forecast",
+          "description": "Predict certification renewal needs"
+        }
+      }
+    ],
+    "views": [
+      {
+        "name": "overdue_trainings",
+        "statement": "SELECT * FROM employee_training_records WHERE TrainingStatus = 'Overdue'",
+        "properties": {
+          "displayName": "Overdue Trainings",
+          "description": "View of all overdue training activities"
+        }
+      },
+      {
+        "name": "upcoming_certifications",
+        "statement": "SELECT * FROM employee_training_records WHERE isCertification = true AND ExpirationDate > CURRENT_DATE ORDER BY ExpirationDate",
+        "properties": {
+          "displayName": "Upcoming Certifications",
+          "description": "View of upcoming certification expirations"
+        }
+      },
+      {
+        "name": "team_overdue_summary",
+        "statement": "SELECT ManagerName, COUNT(*) as overdue_count, COUNT(DISTINCT EmployeeID) as affected_employees FROM employee_training_records WHERE TrainingStatus = 'Overdue' GROUP BY ManagerName ORDER BY overdue_count DESC",
+        "properties": {
+          "displayName": "Team Overdue Summary",
+          "description": "Manager-level view of overdue training assignments"
+        }
+      },
+      {
+        "name": "compliance_heatmap_data",
+        "statement": "SELECT PrimaryDomain, PrimaryOrganization, COUNT(DISTINCT CASE WHEN isCompliant = true THEN EmployeeID END) * 100.0 / COUNT(DISTINCT EmployeeID) as compliance_percentage FROM employee_training_records GROUP BY PrimaryDomain, PrimaryOrganization",
+        "properties": {
+          "displayName": "Compliance Heatmap Data",
+          "description": "Data for domain-wise compliance heatmap visualization"
+        }
+      },
+      {
+        "name": "training_popularity_ranking",
+        "statement": "SELECT ActivityName, ActivityType, COUNT(*) as assignment_count, COUNT(DISTINCT EmployeeID) as unique_participants, COUNT(CASE WHEN TrainingStatus = 'Completed' THEN 1 END) as completions FROM employee_training_records GROUP BY ActivityName, ActivityType ORDER BY assignment_count DESC",
+        "properties": {
+          "displayName": "Training Popularity Ranking",
+          "description": "Ranked view of most popular training activities"
+        }
+      }
+    ],
+    "enumDefinitions": [
+      {
+        "name": "TrainingStatusEnum",
+        "values": [
+          {
+            "name": "Assigned",
+            "value": "Assigned"
+          },
+          {
+            "name": "InProgress",
+            "value": "In Progress"
+          },
+          {
+            "name": "Completed",
+            "value": "Completed"
+          },
+          {
+            "name": "Overdue",
+            "value": "Overdue"
+          },
+          {
+            "name": "Expired",
+            "value": "Expired"
+          }
+        ],
+        "properties": {
+          "displayName": "Training Status",
+          "description": "Enumeration of possible training statuses"
+        }
+      },
+      {
+        "name": "AssignmentModeEnum",
+        "values": [
+          {
+            "name": "SelfAssigned",
+            "value": "Self-Assigned"
+          },
+          {
+            "name": "ManagerAssigned",
+            "value": "Manager-Assigned"
+          }
+        ],
+        "properties": {
+          "displayName": "Assignment Mode",
+          "description": "How training was assigned to employee"
+        }
+      }
+    ]
+  }

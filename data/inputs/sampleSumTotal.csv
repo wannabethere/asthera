@@ -1,0 +1,75 @@
+Employee Name,EmployeeID,EmployeeEmail,PrimaryDomain,PrimaryOrganization,PrimaryJob,Manager Name,ActivityName,ActivityCode,ActivityType,ActivityStartDate,ActivityEndDate,is Certification,Training Status,AssignmentDate,DueDate,ExpirationDate,CompletionDate,SatisfiedLate,isCompliant,isAssigned
+Holly Reynolds,104052,holly.reynolds@example.com,UK,Marketing,Project Manager,Jessica Stewart,Stress Management,stre_mana,QuickAssessments,,,Yes,Registered,,,,,,,Self
+James Woods,100858,james.woods@example.com,Germany,Marketing,Software Engineer,Bryan Evans,Human Resources Management,huma_reso_mana,QuickAssessments,,,Yes,Satisfied,08-02-2023,18-10-2024,22-05-2025,13-07-2024,No,,Assigned
+Tina Wang,100767,tina.wang@example.com,Germany,Marketing,Data Scientist,Alexis Banks,Business Writing and Presentation Skills,busi_writ_and_pres_skil,Curriculum,,,Yes,Waived,,,,19-05-2023,,Yes,Self
+Austin James,105481,austin.james@example.com,UK,Finance,Project Manager,Jamie Harper,Effective Communication Skills,effe_comm_skil,QuickAssessments,,,Yes,Assigned,03-03-2024,02-09-2024,10-07-2025,,No,,Assigned
+Tara Jones,104371,tara.jones@example.com,USA,Engineering,Product Owner,Christopher Thomas,Leadership Development Course,lead_deve_cour,Curriculum,,,Yes,Expired,,,,,,No,Self
+Robin Nichols,102980,robin.nichols@example.com,Canada,Data Science,Data Scientist,Carlos Schmidt,Customer Service Excellence,cust_serv_exce,ILT course,,,No,Overdue,26-11-2023,01-04-2025,23-12-2025,,No,,Assigned
+Michael Stewart,106919,michael.stewart@example.com,USA,Engineering,Project Manager,Deanna Wilson,Negotiation Techniques,nego_tech,Curriculum,,,Yes,Registered,,,,,,No,Self
+Donald Perez,103985,donald.perez@example.com,Germany,Finance,Project Manager,Emily Maldonado,Agile Methodology Training,agil_meth_trai,ILT Classes,05-01-2021 13:00,05-01-2021 15:00,,Inprogress,,,,,,,Self
+Nicholas Nguyen,109370,nicholas.nguyen@example.com,Canada,Marketing,Business Analyst,Ronald Barnett,Leadership Development Course,lead_deve_cour,Versional,,,No,Waived,,,,18-11-2024,,No,Self
+Lisa Campbell,109885,lisa.campbell@example.com,India,Finance,Data Scientist,Kevin Cooley,Supply Chain Management,supp_chai_mana,ILT course,,,No,Assigned,05-05-2024,11-10-2024,23-02-2025,,No,,Assigned
+Mark White,101593,mark.white@example.com,Canada,Engineering,Software Engineer,Rhonda Maynard,Sales Techniques,sale_tech,QuickAssessments,,,Yes,Overdue,28-08-2022,25-01-2024,14-03-2024,,No,,Assigned
+Scott Johns,109676,scott.johns@example.com,USA,Data Science,Product Owner,Christine Griffin,Change Management Strategies,chan_mana_stra,QuickAssessments,,,Yes,Overdue,24-09-2024,17-06-2026,10-08-2026,,No,,Assigned
+Joshua Reynolds,108182,joshua.reynolds@example.com,USA,Engineering,Software Engineer,Jason Mckee,Stress Management,stre_mana,WBT,,,No,Inprogress,10-04-2024,09-06-2024,12-07-2024,,No,No,Assigned
+Anne King,101253,anne.king@example.com,India,Data Science,Project Manager,Brent Simmons,Human Resources Management,huma_reso_mana,WBT,,,Yes,Assigned,08-08-2023,17-04-2025,07-03-2026,,No,No,Assigned
+Crystal Gates,102935,crystal.gates@example.com,UK,Marketing,Product Owner,Julian Baker,Compliance and Regulatory Training,comp_and_regu_trai,Elearning,,,No,Registered,,,,,,No,Self
+Kimberly Mcdaniel,102066,kimberly.mcdaniel@example.com,UK,Engineering,Business Analyst,Emily Sanchez,Change Management Strategies,chan_mana_stra,WBT,,,Yes,Satisfied,29-09-2022,21-06-2024,29-10-2024,04-03-2023,No,Yes,Assigned
+Jessica Jones,106247,jessica.jones@example.com,USA,Human Resources,Business Analyst,Timothy Bowman,Presentation Skills,pres_skil,Versional,,,No,Registered,,,,,,No,Self
+Jill Cook,102104,jill.cook@example.com,Canada,Data Science,Business Analyst,Michael Wilson,Data Analysis and Visualization,data_anal_and_visu,ILT Classes,09-15-2024 10:00,09-15-2024 13:00,,Registered,,,,,,,Self
+Brian Reyes,105291,brian.reyes@example.com,Germany,Finance,Business Analyst,Frank Hernandez,Team Collaboration and Dynamics,team_coll_and_dyna,Elearning,,,No,Assigned,16-09-2022,31-12-2023,05-05-2024,,No,No,Assigned
+Trevor Lyons,108032,trevor.lyons@example.com,UK,Human Resources,Business Analyst,Jessica Woodward,Cybersecurity Awareness,cybe_awar,WBT,,,Yes,Overdue,02-05-2023,26-08-2024,17-03-2025,,No,No,Assigned
+Melissa Miller,106325,melissa.miller@example.com,Canada,Engineering,Data Scientist,Christina Arnold,Emotional Intelligence in the Workplace,emot_inte_in_the_work,Elearning,,,Yes,Registered,,,,,,No,Self
+Sandra Kirby,109001,sandra.kirby@example.com,Canada,Finance,Product Owner,Timothy Herring,Time Management Techniques,time_mana_tech,QuickAssessments,,,No,Registered,,,,,,,Self
+Beth Bell,106581,beth.bell@example.com,UK,Human Resources,Product Owner,Brian Hunter,Customer Service Excellence,cust_serv_exce,QuickAssessments,,,Yes,Satisfied,01-12-2022,06-04-2024,19-09-2024,06-08-2024,Yes,,Assigned
+Tara Hawkins,104701,tara.hawkins@example.com,USA,Marketing,Project Manager,Andrea Oliver,Presentation Skills,pres_skil,Elearning,,,No,Waived,,,,05-05-2022,,No,Self
+Danielle Harper,104916,danielle.harper@example.com,India,Engineering,Data Scientist,Gilbert Tucker,Project Management Fundamentals,proj_mana_fund,Versional,,,No,Satisfied,19-05-2024,19-09-2025,14-04-2026,14-01-2024,No,No,Assigned
+Jamie Bray,102918,jamie.bray@example.com,Canada,Data Science,Software Engineer,Mr. Matthew Taylor,Time Management Techniques,time_mana_tech,QuickAssessments,,,No,Registered,,,,,,,Self
+Curtis Krueger,104924,curtis.krueger@example.com,Germany,Finance,Project Manager,Allison Lee,Data Analysis and Visualization,data_anal_and_visu,QuickAssessments,,,Yes,Satisfied,16-02-2025,10-03-2025,14-08-2025,03-04-2024,No,,Assigned
+Marcus Johnson,102321,marcus.johnson@example.com,UK,Data Science,Project Manager,Jessica Mitchell,Customer Service Excellence,cust_serv_exce,ILT course,,,Yes,Registered,,,,,,,Self
+Marcus Hughes,100698,marcus.hughes@example.com,Germany,Finance,Project Manager,Erin Erickson,Agile Methodology Training,agil_meth_trai,Versional,,,Yes,Satisfied,09-06-2022,06-04-2023,15-03-2024,23-04-2025,Yes,Yes,Assigned
+Vanessa Kelley,104587,vanessa.kelley@example.com,Germany,Engineering,Business Analyst,Charles Brown,Sales Techniques,sale_tech,ILT Classes,03-26-2025 12:00,03-26-2025 13:00,,Registered,,,,,,,Self
+Sophia Jones,101539,sophia.jones@example.com,Canada,Human Resources,Data Scientist,Chris Burnett,Time Management Techniques,time_mana_tech,ILT Classes,,,,Inprogress,,,,,,,Self
+David Jones,108534,david.jones@example.com,India,Engineering,Data Scientist,Brandi Osborn,Team Collaboration and Dynamics,team_coll_and_dyna,WBT,,,Yes,Assigned,10-07-2024 09:00,02-10-2024,28-12-2024,,No,No,Assigned
+Jamie Thomas,107488,jamie.thomas@example.com,Germany,Marketing,Business Analyst,Brooke Lucero MD,Data Analysis and Visualization,data_anal_and_visu,ILT Classes,09-15-2024 10:00,09-15-2024 13:00,,Waived,,,,09-15-2024 13:00,,,Self
+Amy Webb,104784,amy.webb@example.com,Germany,Data Science,Product Owner,Joshua Herrera,Emotional Intelligence in the Workplace,emot_inte_in_the_work,WBT,,,No,Expired,,,,,,No,Self
+Stephen Moody,106536,stephen.moody@example.com,Germany,Engineering,Business Analyst,Laura Cox,Supply Chain Management,supp_chai_mana,Elearning,,,Yes,Overdue,12-11-2024 13:00,21-02-2024,12-11-2024,,No,No,Assigned
+Frank Reyes,100453,frank.reyes@example.com,UK,Human Resources,Business Analyst,Jeffrey Warren,Change Management Strategies,chan_mana_stra,ILT course,,,No,Expired,08-07-2024 11:00,,,,,,Self
+Kimberly Bell,104988,kimberly.bell@example.com,USA,Engineering,Product Owner,Nathaniel Miller,Emotional Intelligence in the Workplace,emot_inte_in_the_work,WBT,,,No,Assigned,07-11-2023 09:00,30-03-2023,17-01-2024,,No,No,Assigned
+Sandra Lopez,101378,sandra.lopez@example.com,USA,Human Resources,Data Scientist,Shannon Atkinson,Customer Service Excellence,cust_serv_exce,QuickAssessments,,,No,Overdue,06-13-2024 12:00,30-09-2024,27-09-2025,,No,,Assigned
+Angela Garrison,107895,angela.garrison@example.com,India,Marketing,Business Analyst,Ralph Robertson,Human Resources Management,huma_reso_mana,QuickAssessments,,,No,Inprogress,06-16-2023 12:00,08-08-2024,13-02-2025,,No,,Assigned
+Mark Ferguson,100265,mark.ferguson@example.com,India,Human Resources,Product Owner,Sabrina Hancock,Supply Chain Management,supp_chai_mana,Curriculum,,,No,Waived,06-16-2023 12:00,,,30-09-2024,,No,Self
+Sarah Keith,103186,sarah.keith@example.com,USA,Data Science,Project Manager,Michele Moses,Effective Communication Skills,effe_comm_skil,ILT Classes,03-03-2025 12:00,03-03-2025 17:00,,cancelled,,,,,,,Self
+Charles Powell,109376,charles.powell@example.com,Canada,Marketing,Project Manager,Hannah Holland,Project Management Fundamentals,proj_mana_fund,Versional,,,No,Satisfied,03-26-2025 12:00,18-03-2025,16-01-2026,22-08-2024,No,No,Assigned
+Jesse Fernandez,102276,jesse.fernandez@example.com,Germany,Marketing,Software Engineer,Mary Wiley,Presentation Skills,pres_skil,QuickAssessments,,,Yes,Registered,02-21-2025 09:00,,,,,,Self
+Barbara Gutierrez,106078,barbara.gutierrez@example.com,Germany,Human Resources,Data Scientist,Benjamin Mendez,Business Writing and Presentation Skills,busi_writ_and_pres_skil,ILT Classes,01-01-2024 11:00,01-01-2024 16:00,,Registered,,,,,,,Self
+Cory Weiss,105582,cory.weiss@example.com,Canada,Finance,Product Owner,Andrew Simpson,Sales Techniques,sale_tech,Curriculum,,,Yes,Assigned,06-16-2023 12:00,04-01-2026,09-03-2026,,No,No,Assigned
+Nicholas Gates,104048,nicholas.gates@example.com,UK,Data Science,Product Owner,Dylan Guzman,Supply Chain Management,supp_chai_mana,QuickAssessments,,,No,Waived,09-15-2024 10:00,,,06-11-2024,,,Self
+Robert Burgess,100221,robert.burgess@example.com,India,Engineering,Product Owner,Scott Wells,Marketing Strategies,mark_stra,Versional,,,No,Expired,03-03-2025 12:00,,,,,No,Self
+Amy Coleman,103347,amy.coleman@example.com,USA,Finance,Software Engineer,Randy Lewis,Effective Communication Skills,effe_comm_skil,ILT Classes,03-03-2025 12:00,03-03-2025 17:00,,Waived,,,,03-03-2025,,,Self
+Martha Acosta,108660,martha.acosta@example.com,UK,Marketing,Data Scientist,Sherry Macdonald,Agile Methodology Training,agil_meth_trai,ILT course,,,Yes,Waived,02-21-2025 09:00,,,12-07-2022,,,Self
+Glen Krueger,107035,glen.krueger@example.com,UK,Human Resources,Business Analyst,Kathryn Huff,Negotiation Techniques,nego_tech,Elearning,,,No,Expired,06-16-2023 12:00,,,,,No,Self
+Andrew Reilly,107120,andrew.reilly@example.com,Germany,Marketing,Project Manager,Rachel Brooks,Sales Techniques,sale_tech,ILT course,,,Yes,Waived,01-01-2024 11:00,,,28-04-2025,,,Self
+Ronald Moran,107553,ronald.moran@example.com,UK,Finance,Project Manager,Margaret Alvarez,Agile Methodology Training,agil_meth_trai,ILT course,,,Yes,Registered,02-20-2023 12:00,,,,,,Self
+Ashlee Martinez,101955,ashlee.martinez@example.com,USA,Human Resources,Software Engineer,Stacy Edwards,Cybersecurity Awareness,cybe_awar,Curriculum,,,Yes,Expired,02-20-2023 12:00,,,,,No,Self
+Shawna Smith,108302,shawna.smith@example.com,India,Data Science,Business Analyst,Jared Jacobs,Human Resources Management,huma_reso_mana,QuickAssessments,,,Yes,Satisfied,10-25-2023 12:00,20-12-2025,16-04-2026,11-11-2023,No,,Assigned
+Donald Kim,100512,donald.kim@example.com,Germany,Marketing,Business Analyst,Rose Lawson,Project Management Fundamentals,proj_mana_fund,ILT Classes,02-20-2023 12:00,02-20-2023 14:00,,Waived,,,,02-20-2023 14:00,,,Self
+Lindsay Savage,105300,lindsay.savage@example.com,USA,Finance,Project Manager,Ricky Brooks,Human Resources Management,huma_reso_mana,QuickAssessments,,,No,Expired,12-11-2024 13:00,,,,,,Self
+Brian Palmer,102555,brian.palmer@example.com,USA,Finance,Business Analyst,Donald King,Supply Chain Management,supp_chai_mana,ILT course,,,No,Waived,09-12-2023 12:00,,,10-06-2023,,,Self
+Amy Pierce,109054,amy.pierce@example.com,Canada,Engineering,Business Analyst,Mr. Joshua Perez,Supply Chain Management,supp_chai_mana,Elearning,,,Yes,Waived,06-16-2023 12:00,,,16-02-2024,,Yes,Self
+Nicole Salas,103911,nicole.salas@example.com,USA,Marketing,Project Manager,Jonathan Lawrence,Project Management Fundamentals,proj_mana_fund,Versional,,,Yes,Satisfied,06-13-2024 12:00,25-03-2024,30-01-2025,09-10-2022,No,Yes,Assigned
+Kathleen Kennedy,101128,kathleen.kennedy@example.com,USA,Human Resources,Project Manager,Dr. Scott Stewart DDS,Change Management Strategies,chan_mana_stra,Elearning,,,No,Expired,06-13-2024 12:00,,,,,No,Self
+Robert Simmons,108962,robert.simmons@example.com,UK,Data Science,Data Scientist,Bryan Francis,Team Collaboration and Dynamics,team_coll_and_dyna,Curriculum,,,Yes,Registered,12-11-2024 13:00,,,,,No,Self
+Kimberly Morton,101258,kimberly.morton@example.com,USA,Data Science,Business Analyst,Cody Jones,Effective Communication Skills,effe_comm_skil,Curriculum,,,No,Overdue,08-07-2024 11:00,28-05-2025,04-01-2026,,No,No,Assigned
+Linda Reed,101029,linda.reed@example.com,UK,Finance,Project Manager,Joseph Sharp,Cybersecurity Awareness,cybe_awar,ILT Classes,10-07-2024 09:00,10-07-2024 12:00,,Satisfied,,,,07-10-2024 00:00,,,Self
+Erika Warren,106156,erika.warren@example.com,Germany,Marketing,Product Owner,James Fernandez,Sales Techniques,sale_tech,Curriculum,,,No,Registered,05-01-2025 12:00,,,,,No,Self
+Frank Green,108438,frank.green@example.com,Germany,Data Science,Project Manager,Jennifer Johnson,Customer Service Excellence,cust_serv_exce,Elearning,,,No,Satisfied,03-26-2025 12:00,05-01-2024,01-10-2024,09-10-2024,Yes,No,Assigned
+Jennifer Odonnell,100567,jennifer.odonnell@example.com,Canada,Marketing,Software Engineer,Tina Larson,Agile Methodology Training,agil_meth_trai,ILT Classes,05-01-2021 13:00,05-01-2021 15:00,,Inprogress,,,,,,,Self
+Daniel Lawson,107869,daniel.lawson@example.com,India,Human Resources,Software Engineer,Shelby Smith,Emotional Intelligence in the Workplace,emot_inte_in_the_work,Curriculum,,,No,Assigned,02-21-2025 09:00,15-06-2025,20-01-2026,,No,No,Assigned
+Kathleen Morgan,105850,kathleen.morgan@example.com,India,Finance,Software Engineer,William Clarke,Business Writing and Presentation Skills,busi_writ_and_pres_skil,ILT course,,,Yes,Satisfied,02-21-2025 09:00,15-10-2024,18-07-2025,21-12-2023,No,,Assigned
+Krista Serrano,101884,krista.serrano@example.com,UK,Finance,Project Manager,Kimberly Brown,Data Analysis and Visualization,data_anal_and_visu,ILT course,,,No,Expired,08-07-2024 11:00,,,,,,Self
+Michelle Romero,105630,michelle.romero@example.com,Canada,Finance,Data Scientist,Jessica Robinson,Marketing Strategies,mark_stra,QuickAssessments,,,Yes,Inprogress,09-01-2022 09:00,04-03-2023,22-09-2023,,No,,Assigned
+Heidi Snyder,109501,heidi.snyder@example.com,USA,Marketing,Product Owner,Anthony Douglas,Effective Communication Skills,effe_comm_skil,ILT Classes,03-03-2025 12:00,03-03-2025 17:00,,Registered,,,,,,,Self
+Andrew Rivera,108674,andrew.rivera@example.com,Canada,Engineering,Product Owner,Heather Frye,Change Management Strategies,chan_mana_stra,Versional,,,Yes,Registered,07-11-2023 09:00,,,,,No,Self
+Anthony Hess,103169,anthony.hess@example.com,India,Engineering,Project Manager,William Lawson,Cybersecurity Awareness,cybe_awar,Elearning,,,No,Expired,09-12-2023 12:00,,,,,No,Self
+

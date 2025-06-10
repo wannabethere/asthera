@@ -1,0 +1,245 @@
+[
+    {
+      "categories": [],
+      "question": "How many trainings are assigned vs completed across different Divisions (Administration, Acme Products, Private Operations)?",
+      "sql": "SELECT Division, COUNT(*) as total_assigned, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as completed, COUNT(CASE WHEN Transcript_Status = 'Assigned' THEN 1 END) as still_assigned FROM csod_training_records WHERE Division IN ('Administration', 'Acme Products', 'Private Operations') GROUP BY Division ORDER BY Division",
+      "context": "Direct Visualization - Bar Chart. Compares assignment and completion counts across the three main divisions for performance comparison.",
+      "document": "cornerstone_training.mdl.json - training_completion_metrics",
+      "samples": [],
+      "instructions": "Count total assignments and completions by division to create comparative bar chart showing training activity across business units."
+    },
+    {
+      "categories": [],
+      "question": "What is the proportion of different Transcript Status (Assigned / Satisfied / Expired / Waived)?",
+      "sql": "SELECT Transcript_Status, COUNT(*) as count, (COUNT(*) * 100.0 / (SELECT COUNT(*) FROM csod_training_records)) as percentage FROM csod_training_records GROUP BY Transcript_Status ORDER BY count DESC",
+      "context": "Direct Visualization - Pie Chart. Shows distribution of training transcript statuses for overall program health assessment.",
+      "document": "cornerstone_training.mdl.json - training_completion_metrics",
+      "samples": [],
+      "instructions": "Calculate percentage distribution of all transcript statuses to visualize training program status breakdown."
+    },
+    {
+      "categories": [],
+      "question": "How many employees have completed the training on time or Late per Division?",
+      "sql": "SELECT Division, COUNT(CASE WHEN Transcript_Status = 'Satisfied' AND is_satisfied_late = false THEN 1 END) as on_time_completions, COUNT(CASE WHEN Transcript_Status = 'Satisfied' AND is_satisfied_late = true THEN 1 END) as late_completions FROM csod_training_records GROUP BY Division ORDER BY Division",
+      "context": "Direct Visualization - Bar/Column Chart. Compares on-time vs late completion patterns across divisions for timeliness analysis.",
+      "document": "cornerstone_training.mdl.json - training_completion_metrics",
+      "samples": [],
+      "instructions": "Separate completed trainings into on-time and late categories by division to analyze completion timeliness patterns."
+    },
+    {
+      "categories": [],
+      "question": "How has the number of completed trainings changed month by month? (using CompletionDate)",
+      "sql": "SELECT FORMAT(Completed_Date, 'yyyy-MM') as completion_month, COUNT(*) as completions FROM csod_training_records WHERE Completed_Date IS NOT NULL GROUP BY FORMAT(Completed_Date, 'yyyy-MM') ORDER BY completion_month",
+      "context": "Direct Visualization - Timeline/Line Chart. Shows monthly completion trends to identify seasonality and training program momentum.",
+      "document": "cornerstone_training.mdl.json - training_completion_metrics",
+      "samples": [],
+      "instructions": "Aggregate completions by month to create time series data for trend analysis and pattern identification."
+    },
+    {
+      "categories": [],
+      "question": "Stack training activities by ActivityType and show their Training Statuses (Assigned, Completed, Expired).",
+      "sql": "SELECT Training_Type, Transcript_Status, COUNT(*) as count FROM csod_training_records GROUP BY Training_Type, Transcript_Status ORDER BY Training_Type, Transcript_Status",
+      "context": "Direct Visualization - Stacked Bar Chart. Shows status distribution within each training type for detailed program analysis.",
+      "document": "cornerstone_training.mdl.json - training_completion_metrics",
+      "samples": [],
+      "instructions": "Create cross-tabulation of training types and statuses for stacked visualization showing completion patterns by activity type."
+    },
+    {
+      "categories": [],
+      "question": "Show a heatmap of training completions by Division vs Position.",
+      "sql": "SELECT Division, Position, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as completions, COUNT(*) as total_assignments FROM csod_training_records GROUP BY Division, Position ORDER BY Division, Position",
+      "context": "Direct Visualization - Heatmap. Creates matrix data for heatmap showing completion intensity across division-position combinations.",
+      "document": "cornerstone_training.mdl.json - training_completion_metrics",
+      "samples": [],
+      "instructions": "Generate completion counts by division-position matrix for heatmap visualization of training activity distribution."
+    },
+    {
+      "categories": [],
+      "question": "Which 5 training activities have the highest number of completions?",
+      "sql": "SELECT Training_Title, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as completion_count, COUNT(*) as total_assignments, (COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)) as completion_rate FROM csod_training_records GROUP BY Training_Title ORDER BY completion_count DESC LIMIT 5",
+      "context": "Direct Visualization - Top N. Identifies most successful training activities by completion volume for program optimization.",
+      "document": "cornerstone_training.mdl.json - training_activity_analytics",
+      "samples": [],
+      "instructions": "Rank training activities by completion count and return top 5 with completion rates for success analysis."
+    },
+    {
+      "categories": [],
+      "question": "What percentage of assigned trainings have been completed?",
+      "sql": "SELECT (COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)) as overall_completion_rate FROM csod_training_records",
+      "context": "Maths/Analytics - Completion Rate. Calculates overall training program completion rate as key performance indicator.",
+      "document": "cornerstone_training.mdl.json - training_completion_metrics",
+      "samples": [],
+      "instructions": "Calculate global completion rate by dividing satisfied trainings by total assignments for program effectiveness measurement."
+    },
+    {
+      "categories": [],
+      "question": "On average, how many days does it take from AssignmentDate to CompletionDate?",
+      "sql": "SELECT AVG(completion_days) as avg_completion_days, MIN(completion_days) as min_days, MAX(completion_days) as max_days FROM csod_training_records WHERE completion_days IS NOT NULL AND completion_days >= 0",
+      "context": "Maths/Analytics - Average Completion Time. Measures training completion velocity for process optimization and resource planning.",
+      "document": "cornerstone_training.mdl.json - training_timeliness_metrics",
+      "samples": [],
+      "instructions": "Calculate average time from assignment to completion using calculated completion_days field, excluding negative values."
+    },
+    {
+      "categories": [],
+      "question": "How many trainings were completed after their DueDate (late completions)?",
+      "sql": "SELECT COUNT(*) as late_completions, (COUNT(*) * 100.0 / (SELECT COUNT(*) FROM csod_training_records WHERE Transcript_Status = 'Satisfied')) as late_completion_rate FROM csod_training_records WHERE is_satisfied_late = true",
+      "context": "Maths/Analytics - Overdue Analysis. Analyzes late completion patterns to identify compliance and process issues.",
+      "document": "cornerstone_training.mdl.json - training_timeliness_metrics",
+      "samples": [],
+      "instructions": "Count trainings completed after due date and calculate percentage of total completions for timeliness assessment."
+    },
+    {
+      "categories": [],
+      "question": "Which division has the highest completion percentage?",
+      "sql": "SELECT Division, COUNT(*) as total_assignments, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as completions, (COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)) as completion_rate FROM csod_training_records GROUP BY Division ORDER BY completion_rate DESC",
+      "context": "Maths/Analytics - Division Comparison. Compares training performance across divisions to identify best practices and problem areas.",
+      "document": "cornerstone_training.mdl.json - division_comparison_metrics",
+      "samples": [],
+      "instructions": "Calculate completion rates by division and rank to identify highest performing business unit."
+    },
+    {
+      "categories": [],
+      "question": "How many trainings have expired without being completed?",
+      "sql": "SELECT COUNT(*) as expired_trainings, (COUNT(*) * 100.0 / (SELECT COUNT(*) FROM csod_training_records)) as expired_rate FROM csod_training_records WHERE Transcript_Status = 'Expired'",
+      "context": "Maths/Analytics - Expired Trainings. Measures training program waste and identifies potential process improvements.",
+      "document": "cornerstone_training.mdl.json - training_completion_metrics",
+      "samples": [],
+      "instructions": "Count trainings with expired status and calculate percentage of total assignments for waste analysis."
+    },
+    {
+      "categories": [],
+      "question": "Employees who were assigned trainings in the same month - how many completed over time?",
+      "sql": "SELECT assignment_month, COUNT(*) as total_assigned, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as completed, (COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)) as completion_rate FROM csod_training_records GROUP BY assignment_month ORDER BY assignment_month",
+      "context": "Maths/Analytics - Cohort Analysis. Analyzes completion patterns for training cohorts assigned in the same time period.",
+      "document": "cornerstone_training.mdl.json - cohort_completion_analysis",
+      "samples": [],
+      "instructions": "Group by assignment month to analyze completion rates for each monthly cohort, showing cohort performance over time."
+    },
+    {
+      "categories": [],
+      "question": "Which managers have the highest or lowest team compliance?",
+      "sql": "SELECT Manager_Name, COUNT(DISTINCT User_ID) as team_size, COUNT(*) as total_assignments, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as completions, (COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)) as team_completion_rate FROM csod_training_records WHERE Manager_Name IS NOT NULL GROUP BY Manager_Name ORDER BY team_completion_rate DESC",
+      "context": "Maths/Analytics - Manager View. Identifies manager performance in training compliance for coaching and recognition opportunities.",
+      "document": "cornerstone_training.mdl.json - manager_oversight_metrics",
+      "samples": [],
+      "instructions": "Calculate team completion rates by manager, showing team size and performance metrics for management oversight."
+    },
+    {
+      "categories": [],
+      "question": "What is the overall Completion rate across all Assignments?",
+      "sql": "SELECT COUNT(DISTINCT User_ID) as total_employees, COUNT(*) as total_assignments, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as completions, (COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)) as completion_rate FROM csod_training_records",
+      "context": "Dashboard Widget - Employee Training Completion Insights. Overall program health metrics for executive dashboard.",
+      "document": "cornerstone_training.mdl.json - training_completion_metrics",
+      "samples": [],
+      "instructions": "Calculate comprehensive completion statistics including employee count, assignments, and completion rate for program overview."
+    },
+    {
+      "categories": [],
+      "question": "Which Division has the lowest compliance rates?",
+      "sql": "SELECT Division, COUNT(*) as assignments, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as completions, (COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)) as compliance_rate FROM csod_training_records GROUP BY Division ORDER BY compliance_rate ASC",
+      "context": "Dashboard Widget - Employee Training Completion Insights. Identifies divisions needing additional support or intervention.",
+      "document": "cornerstone_training.mdl.json - division_comparison_metrics",
+      "samples": [],
+      "instructions": "Rank divisions by completion rate ascending to identify lowest performing areas requiring attention."
+    },
+    {
+      "categories": [],
+      "question": "How does completion rate vary by Position (e.g., IT vs. Sales)?",
+      "sql": "SELECT Position, COUNT(*) as assignments, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as completions, (COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)) as completion_rate FROM csod_training_records GROUP BY Position ORDER BY completion_rate DESC",
+      "context": "Dashboard Widget - Employee Training Completion Insights. Analyzes training effectiveness across different job roles.",
+      "document": "cornerstone_training.mdl.json - role_based_effectiveness_metrics",
+      "samples": [],
+      "instructions": "Compare completion rates across positions to identify role-specific training challenges or successes."
+    },
+    {
+      "categories": [],
+      "question": "Which managers oversee the most past due employees?",
+      "sql": "SELECT Manager_Name, COUNT(DISTINCT User_ID) as past_due_employees, COUNT(*) as overdue_assignments FROM csod_training_records WHERE is_overdue = true AND Manager_Name IS NOT NULL GROUP BY Manager_Name ORDER BY past_due_employees DESC",
+      "context": "Dashboard Widget - Employee Training Completion Insights. Identifies managers needing support with team training compliance.",
+      "document": "cornerstone_training.mdl.json - manager_oversight_metrics",
+      "samples": [],
+      "instructions": "Count unique employees with overdue trainings by manager to identify teams needing intervention."
+    },
+    {
+      "categories": [],
+      "question": "Which Division has the highest percentage of late submissions?",
+      "sql": "SELECT Division, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as total_completions, COUNT(CASE WHEN is_satisfied_late = true THEN 1 END) as late_completions, (COUNT(CASE WHEN is_satisfied_late = true THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END), 0)) as late_submission_rate FROM csod_training_records GROUP BY Division ORDER BY late_submission_rate DESC",
+      "context": "Dashboard Widget - Training Timeliness Audit. Identifies divisions with time management challenges in training completion.",
+      "document": "cornerstone_training.mdl.json - training_timeliness_metrics",
+      "samples": [],
+      "instructions": "Calculate late submission rates by division to identify areas with timeliness issues."
+    },
+    {
+      "categories": [],
+      "question": "How many active training assignments are overdue by more than 30 days?",
+      "sql": "SELECT COUNT(*) as overdue_30_days, COUNT(DISTINCT User_ID) as affected_employees FROM csod_training_records WHERE days_overdue > 30",
+      "context": "Dashboard Widget - Training Timeliness Audit. Identifies severely overdue assignments requiring immediate attention.",
+      "document": "cornerstone_training.mdl.json - training_timeliness_metrics",
+      "samples": [],
+      "instructions": "Count assignments overdue by more than 30 days using calculated days_overdue field for escalation prioritization."
+    },
+    {
+      "categories": [],
+      "question": "Which ActivityType (e.g., 'Compliance Course') is most frequently delayed?",
+      "sql": "SELECT Training_Type, COUNT(*) as total_assignments, COUNT(CASE WHEN is_satisfied_late = true THEN 1 END) as late_completions, (COUNT(CASE WHEN is_satisfied_late = true THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END), 0)) as late_rate FROM csod_training_records GROUP BY Training_Type ORDER BY late_rate DESC",
+      "context": "Dashboard Widget - Training Timeliness Audit. Identifies training types with inherent completion challenges.",
+      "document": "cornerstone_training.mdl.json - training_timeliness_metrics",
+      "samples": [],
+      "instructions": "Analyze late completion rates by training type to identify content or delivery issues."
+    },
+    {
+      "categories": [],
+      "question": "Do certain managers correlate with higher late submission rates?",
+      "sql": "SELECT Manager_Name, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as total_completions, COUNT(CASE WHEN is_satisfied_late = true THEN 1 END) as late_completions, (COUNT(CASE WHEN is_satisfied_late = true THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END), 0)) as late_submission_rate FROM csod_training_records WHERE Manager_Name IS NOT NULL GROUP BY Manager_Name ORDER BY late_submission_rate DESC",
+      "context": "Dashboard Widget - Training Timeliness Audit. Analyzes manager influence on team training timeliness.",
+      "document": "cornerstone_training.mdl.json - manager_oversight_metrics",
+      "samples": [],
+      "instructions": "Calculate late submission rates by manager to identify management practices affecting timeliness."
+    },
+    {
+      "categories": [],
+      "question": "Which manager's team has the highest past due rate?",
+      "sql": "SELECT Manager_Name, COUNT(*) as total_assignments, COUNT(CASE WHEN is_overdue = true THEN 1 END) as overdue_assignments, (COUNT(CASE WHEN is_overdue = true THEN 1 END) * 100.0 / COUNT(*)) as past_due_rate FROM csod_training_records WHERE Manager_Name IS NOT NULL GROUP BY Manager_Name ORDER BY past_due_rate DESC",
+      "context": "Dashboard Widget - Manager Training Oversight Dashboard. Identifies managers with highest team non-compliance rates.",
+      "document": "cornerstone_training.mdl.json - manager_oversight_metrics",
+      "samples": [],
+      "instructions": "Calculate past due rates by manager team to identify management oversight issues."
+    },
+    {
+      "categories": [],
+      "question": "Do managers with larger teams correlate with lower completions?",
+      "sql": "SELECT Manager_Name, COUNT(DISTINCT User_ID) as team_size, COUNT(*) as total_assignments, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as completions, (COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)) as completion_rate FROM csod_training_records WHERE Manager_Name IS NOT NULL GROUP BY Manager_Name ORDER BY team_size DESC",
+      "context": "Dashboard Widget - Manager Training Oversight Dashboard. Analyzes relationship between team size and training management effectiveness.",
+      "document": "cornerstone_training.mdl.json - manager_oversight_metrics",
+      "samples": [],
+      "instructions": "Show team size vs completion rate correlation to understand management span of control impact on training."
+    },
+    {
+      "categories": [],
+      "question": "Which job roles take the longest to complete assignments on average?",
+      "sql": "SELECT Position, COUNT(*) as completed_assignments, AVG(completion_days) as avg_completion_days, MIN(completion_days) as min_days, MAX(completion_days) as max_days FROM csod_training_records WHERE completion_days IS NOT NULL AND completion_days >= 0 GROUP BY Position ORDER BY avg_completion_days DESC",
+      "context": "Dashboard Widget - Role-Based Training Effectiveness. Identifies positions with training completion challenges.",
+      "document": "cornerstone_training.mdl.json - role_based_effectiveness_metrics",
+      "samples": [],
+      "instructions": "Calculate average completion time by position to identify roles needing additional training support or time allocation."
+    },
+    {
+      "categories": [],
+      "question": "Are there monthly/quarterly spikes in assignment volumes (AssignmentDate)?",
+      "sql": "SELECT FORMAT(Assigned_Date, 'yyyy-MM') as assignment_month, COUNT(*) as assignments, COUNT(DISTINCT User_ID) as unique_assignees FROM csod_training_records WHERE Assigned_Date IS NOT NULL GROUP BY FORMAT(Assigned_Date, 'yyyy-MM') ORDER BY assignment_month",
+      "context": "Dashboard Widget - Historical Training Behavior Analysis. Identifies seasonal patterns in training assignment scheduling.",
+      "document": "cornerstone_training.mdl.json - quarterly_assignment_volume",
+      "samples": [],
+      "instructions": "Analyze monthly assignment volumes to identify spikes, patterns, and resource planning opportunities."
+    },
+    {
+      "categories": [],
+      "question": "Has overall completion rate improved since last year?",
+      "sql": "SELECT YEAR(Assigned_Date) as assignment_year, COUNT(*) as assignments, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as completions, (COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)) as completion_rate FROM csod_training_records WHERE Assigned_Date IS NOT NULL GROUP BY YEAR(Assigned_Date) ORDER BY assignment_year",
+      "context": "Dashboard Widget - Historical Training Behavior Analysis. Tracks year-over-year improvement in training program effectiveness.",
+      "document": "cornerstone_training.mdl.json - training_completion_metrics",
+      "samples": [],
+      "instructions": "Compare completion rates across years to measure program improvement and identify trends."
+    }
+  ]

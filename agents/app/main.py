@@ -6,7 +6,18 @@ import sys
 from contextlib import asynccontextmanager
 import datetime
 import traceback
-from app.routers import  documents,  recommendation, planner,pipeline_generator
+#from app.routers import  documents,  recommendation, planner,pipeline_generator
+from app.routers import (
+    ask_router,
+    question_recommendation_router,
+    chart_router,
+    chart_adjustment_router,
+    instructions_router
+)
+#from app.services.sql.routers import ask, ask_feedback, question_recommendation
+from app.core.middleware import RequestLoggingMiddleware
+from app.routers import combined_ask
+from app.services.service_container import SQLServiceContainer
 
 # Configure logging first
 logging.basicConfig(
@@ -50,8 +61,14 @@ async def lifespan(app: FastAPI):
         # For convenience, also store individual dependencies in app state
         for key, value in dependencies.items():
             setattr(app.state, key, value)
+            
+        # Initialize SQL services
+        logger.info("Initializing SQL services...")
+        sql_container = SQLServiceContainer.get_instance()
+        sql_container.initialize_services(app.state)
+        app.state.sql_service_container = sql_container
         
-        logger.info("API initialized successfully with all dependencies")
+        logger.info("API initialized successfully with all dependencies and services")
     except Exception as e:
         logger.error(f"Failed to initialize API dependencies: {str(e)}")
         logger.error(traceback.format_exc())
@@ -89,7 +106,6 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -99,15 +115,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add request logging middleware
+app.add_middleware(RequestLoggingMiddleware)
 
-
-
-
+"""
 app.include_router(
     recommendation.router,
     prefix="/api/recommendations",
     tags=["recommendations"]
 )
+
 
 app.include_router(
     planner.router,
@@ -120,12 +137,17 @@ app.include_router(
     prefix="/api/pipelines",
     tags=["pipelines"]
 )
+"""
 
-app.include_router(
-    documents.router,
-    prefix="/api/documents",
-    tags=["documents"]
-)
+
+
+
+app.include_router(ask_router)
+app.include_router(question_recommendation_router)
+app.include_router(chart_router)
+app.include_router(chart_adjustment_router)
+app.include_router(instructions_router)
+app.include_router(combined_ask.router)
 
 @app.get("/api/health")
 async def health_check():

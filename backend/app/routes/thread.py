@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
 from app.models.workspace import Project, ProjectAccess
-from app.models.thread import Thread, ThreadCollaborator, ThreadConfiguration
+from app.models.thread import Thread, ThreadCollaborator, ThreadConfiguration, Workflow
 from app.models.team import Team, CollaborationRequest
 from app.auth.okta import get_current_user
 from typing import Optional, List, Dict, Any
@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 from app.services.authorization import check_project_access
 from app.services.thread_service import ThreadService
 from app.schemas.thread import (
-    ThreadCreate, Thread as ThreadSchema, WorkflowBase, Workflow, WorkflowStep,
+    ThreadCreate, Thread as ThreadSchema, WorkflowBase, Workflow as WorkflowSchema, WorkflowStep,
     NoteCreate, Note, TimelineCreate, Timeline, TimelineEvent, ThreadMessageCreate, ThreadMessage,
     ThreadCollaboratorCreate, ThreadCollaborator as ThreadCollaboratorSchema,
     ThreadCollaboratorUpdate, ThreadConfigurationCreate, ThreadConfiguration as ThreadConfigurationSchema,
@@ -24,6 +24,7 @@ import json
 import logging
 from pydantic import BaseModel
 from datetime import datetime
+from sqlalchemy.sql import func
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -53,6 +54,20 @@ class ThreadResponse(BaseModel):
     workspace_name: Optional[str] = None
     project_name: Optional[str] = None
 
+class ThreadWorkflowResponse(BaseModel):
+    id: str
+    thread_id: str
+    title: str
+    description: Optional[str]
+    steps: List[Dict[str, Any]]
+    status: str
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    creator: Optional[UserResponse] = None
+
+    class Config:
+        from_attributes = True
+
 def thread_to_schema(thread) -> ThreadResponse:
     return ThreadResponse(
         id=thread.id,
@@ -66,6 +81,21 @@ def thread_to_schema(thread) -> ThreadResponse:
         workspace_id=getattr(thread, 'workspace_id', None),
         workspace_name=getattr(thread, 'workspace_name', None),
         project_name=getattr(thread, 'project_name', None)
+    )
+
+def workflow_to_response(workflow: Workflow, db: Session) -> ThreadWorkflowResponse:
+    creator = None
+    if workflow.user:
+        creator = user_to_response(workflow.user)
+    
+    return ThreadWorkflowResponse(
+        id=str(workflow.id),
+        thread_id=str(workflow.thread_id),
+        title=workflow.title,
+        description=workflow.description,
+        steps=workflow.steps,
+        status=workflow.status,
+        creator=creator
     )
 
 # --- Thread CRUD ---
@@ -143,7 +173,7 @@ async def get_thread(
     return thread_to_schema(thread)
 
 # --- Workflow Endpoints ---
-@router.post("/{thread_id}/workflows", response_model=Workflow)
+@router.post("/{thread_id}/workflows", response_model=ThreadWorkflowResponse)
 async def create_workflow(
     thread_id: UUID,
     workflow_data: WorkflowBase,
@@ -156,9 +186,36 @@ async def create_workflow(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Thread not found")
     if not check_project_access(db, str(thread.project_id), str(current_user.id)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to access this thread")
-    return service.create_workflow(thread_id, user_id=current_user.id, workflow_data=workflow_data)
+    
+    id=uuid4()
+    # Create workflow with current user as creator
+    workflow = Workflow(
+        id=id,
+        thread_id=thread_id,
+        user_id=current_user.id,  # Use current user's ID
+        title=workflow_data.title,
+        description=workflow_data.description,
+        steps=workflow_data.steps or [],
+        status=workflow_data.status or "draft"
+    )
+    
+    try:
+        db.add(workflow)
+        db.commit()
+        db.refresh(workflow)  # This ensures we get the generated ID and timestamps
+        logger.info(f"Successfully created workflow {workflow.id}")
+        workflow_response = workflow_to_response(workflow, db)
+        logger.info(f"Workflow response: {workflow_response}")
+        return workflow_response
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error creating workflow: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error creating workflow: {str(e)}"
+        )
 
-@router.get("/{thread_id}/workflows", response_model=List[Workflow])
+@router.get("/{thread_id}/workflows", response_model=List[ThreadWorkflowResponse])
 async def list_workflows(
     thread_id: UUID,
     db: Session = Depends(get_db),
@@ -170,23 +227,82 @@ async def list_workflows(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Thread not found")
     if not check_project_access(db, str(thread.project_id), str(current_user.id)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to access this thread")
-    return service.get_workflows(thread_id)
+    
+    # Get workflows for the thread
+    workflows = db.query(Workflow).filter(
+        Workflow.thread_id == thread_id
+    ).order_by(Workflow.created_at.desc()).all()
+    
+    return [workflow_to_response(w, db) for w in workflows]
 
-@router.post("/workflows/{workflow_id}/steps", response_model=Workflow)
+@router.get("/workflows/{workflow_id}", response_model=ThreadWorkflowResponse)
+async def get_workflow(
+    workflow_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    workflow = db.query(Workflow).filter(Workflow.id == workflow_id).first()
+    if not workflow:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
+    
+    # Check thread access
+    service = ThreadService(db)
+    thread = service.get_thread(workflow.thread_id)
+    if not check_project_access(db, str(thread.project_id), str(current_user.id)):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to access this workflow")
+    
+    return workflow_to_response(workflow, db)
+
+@router.delete("/workflows/{workflow_id}")
+async def delete_workflow(
+    workflow_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    workflow = db.query(Workflow).filter(Workflow.id == workflow_id).first()
+    if not workflow:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
+    
+    # Check if user is the creator or has admin access
+    thread = service.get_thread(workflow.thread_id)
+    if not check_project_access(db, str(thread.project_id), str(current_user.id)):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this workflow")
+    
+    # Only allow deletion by creator or thread owner
+    if workflow.user_id != current_user.id and thread.created_by != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only workflow creator or thread owner can delete workflows")
+    
+    db.delete(workflow)
+    db.commit()
+    return {"message": "Workflow deleted successfully"}
+
+@router.post("/{thread_id}/workflows/{workflow_id}/steps", response_model=ThreadWorkflowResponse)
 async def add_workflow_step(
+    thread_id: UUID,    
     workflow_id: UUID,
     step: WorkflowStep,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    service = ThreadService(db)
-    workflow = db.query(Workflow).filter(Workflow.id == workflow_id).first()
+    workflow = db.query(Workflow).filter(Workflow.id == workflow_id and Workflow.thread_id == thread_id).first()
     if not workflow:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
-    thread = db.query(Thread).filter(Thread.id == workflow.thread_id).first()
+    
+    # Check thread access
+    service = ThreadService(db)
+    thread = service.get_thread(workflow.thread_id)
     if not check_project_access(db, str(thread.project_id), str(current_user.id)):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to access this workflow")
-    return service.add_workflow_step(workflow_id, step)
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to modify this workflow")
+    
+    # Add step to workflow
+    steps = workflow.steps or []
+    steps.append(step.dict())
+    workflow.steps = steps
+    workflow.updated_at = func.now()
+    
+    db.commit()
+    db.refresh(workflow)
+    return workflow_to_response(workflow, db)
 
 # --- Note Endpoints ---
 @router.post("/{thread_id}/notes", response_model=Note)

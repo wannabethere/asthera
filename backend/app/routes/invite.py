@@ -130,22 +130,37 @@ async def list_invites(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    query = db.query(TeamInvite).filter(TeamInvite.email == current_user.email)
-    
+    # Initialize empty lists for both types of invites
+    team_invites = []
+    workspace_invites = []
+
+    # Query team invites
+    team_query = db.query(TeamInvite).filter(TeamInvite.email == current_user.email)
     if team_id:
         # Check if user is team owner
         await require_team_owner(team_id)(current_user, db)
-        query = query.filter(TeamInvite.team_id == team_id)
-    elif workspace_id:
+        team_query = team_query.filter(TeamInvite.team_id == team_id)
+    elif not workspace_id:
+        # If no specific team_id or workspace_id, get all team invites for the user
+        team_invites = team_query.all()
+
+    # Query workspace invites
+    workspace_query = db.query(WorkspaceInvite).filter(WorkspaceInvite.email == current_user.email)
+    if workspace_id:
         # Check if user is workspace admin
         await require_workspace_admin(workspace_id)(current_user, db)
-        query = query.filter(TeamInvite.workspace_id == workspace_id)
-    else:
-        # List all invites created by the user
-        query = query.filter(TeamInvite.invited_by == current_user.id)
+        workspace_query = workspace_query.filter(WorkspaceInvite.workspace_id == workspace_id)
+    elif not team_id:
+        # If no specific team_id or workspace_id, get all workspace invites for the user
+        workspace_invites = workspace_query.all()
+
+    # Combine both types of invites
+    all_invites = team_invites + workspace_invites
     
-    invites = query.all()
-    return invites
+    # Sort by created_at in descending order
+    all_invites.sort(key=lambda x: x.created_at, reverse=True)
+    
+    return all_invites
 
 @router.get("/{invite_id}", response_model=InviteResponse)
 async def get_invite(

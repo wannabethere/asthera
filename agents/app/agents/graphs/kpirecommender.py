@@ -18,7 +18,7 @@ from enum import Enum
 import json
 import re
 import chromadb
-from genimel.services.documents import DocumentChromaStore
+from app.storage.documents import DocumentChromaStore
 # RedisGraph Store is imported separately and kept distinct
 # from redis_graph_store import RedisGraphStore
 # from strategic_map import StrategicMap

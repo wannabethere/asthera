@@ -1,0 +1,384 @@
+[
+    {
+        "id": "mapping_brand_references",
+        "content": "Maps brand names to the corresponding column values in the products table, accounting for various ways users might refer to specific brands.",
+        "metadata": {
+            "type": "entity_schema_mapping",
+            "schemaElement": "products.brand",
+            "elementType": "column_value_mapping",
+            "valueType": "brand",
+            "brandMappings": [
+                {
+                    "userReference": "Nike",
+                    "variants": [
+                        "nike",
+                        "Nikey",
+                        "Nike Inc"
+                    ],
+                    "dbValue": "Nike"
+                },
+                {
+                    "userReference": "Apple",
+                    "variants": [
+                        "apple",
+                        "Apple Inc",
+                        "iPhone maker"
+                    ],
+                    "dbValue": "Apple"
+                },
+                {
+                    "userReference": "Samsung",
+                    "variants": [
+                        "samsung",
+                        "Samsung Electronics",
+                        "Galaxy maker"
+                    ],
+                    "dbValue": "Samsung"
+                },
+                {
+                    "userReference": "Microsoft",
+                    "variants": [
+                        "microsoft",
+                        "MS",
+                        "MSFT"
+                    ],
+                    "dbValue": "Microsoft"
+                },
+                {
+                    "userReference": "Sony",
+                    "variants": [
+                        "sony",
+                        "Sony Corp",
+                        "PlayStation maker"
+                    ],
+                    "dbValue": "Sony"
+                }
+            ],
+            "contextClues": [
+                {
+                    "term": "shoes",
+                    "associatedBrands": [
+                        "Nike",
+                        "Adidas",
+                        "Puma",
+                        "Reebok"
+                    ]
+                },
+                {
+                    "term": "smartphones",
+                    "associatedBrands": [
+                        "Apple",
+                        "Samsung",
+                        "Google",
+                        "Xiaomi"
+                    ]
+                },
+                {
+                    "term": "gaming",
+                    "associatedBrands": [
+                        "Sony",
+                        "Microsoft",
+                        "Nintendo"
+                    ]
+                }
+            ],
+            "examples": [
+                {
+                    "query": "How many Nike shoes did we sell?",
+                    "brandValue": "Nike",
+                    "reason": "Direct brand reference"
+                },
+                {
+                    "query": "Revenue from iPhones last quarter",
+                    "brandValue": "Apple",
+                    "reason": "Product line implies brand"
+                },
+                {
+                    "query": "Compare PlayStation and Xbox sales",
+                    "brandValues": [
+                        "Sony",
+                        "Microsoft"
+                    ],
+                    "reason": "Product lines imply brands"
+                }
+            ]
+        }
+    },
+    {
+        "id": "mapping_product_category_brand_associations",
+        "content": "Maps product categories to their associated brands, helping to disambiguate queries that mention product types without explicitly naming brands.",
+        "metadata": {
+            "type": "entity_schema_mapping",
+            "schemaElement": "products.category",
+            "elementType": "category_brand_association",
+            "categoryMappings": [
+                {
+                    "category": "Smartphones",
+                    "brands": [
+                        "Apple",
+                        "Samsung",
+                        "Google",
+                        "Xiaomi",
+                        "OnePlus"
+                    ],
+                    "nlVariations": [
+                        "phones",
+                        "mobile phones",
+                        "cell phones"
+                    ]
+                },
+                {
+                    "category": "Laptops",
+                    "brands": [
+                        "Apple",
+                        "Dell",
+                        "HP",
+                        "Lenovo",
+                        "Microsoft",
+                        "Asus"
+                    ],
+                    "nlVariations": [
+                        "notebooks",
+                        "computers",
+                        "PCs"
+                    ]
+                },
+                {
+                    "category": "Athletic Footwear",
+                    "brands": [
+                        "Nike",
+                        "Adidas",
+                        "Puma",
+                        "New Balance",
+                        "Under Armour"
+                    ],
+                    "nlVariations": [
+                        "sneakers",
+                        "running shoes",
+                        "athletic shoes",
+                        "trainers"
+                    ]
+                }
+            ],
+            "examples": [
+                {
+                    "query": "Which smartphone brand sells the most?",
+                    "category": "Smartphones",
+                    "possibleBrands": [
+                        "Apple",
+                        "Samsung",
+                        "Google",
+                        "Xiaomi",
+                        "OnePlus"
+                    ]
+                },
+                {
+                    "query": "Compare athletic shoe sales by brand",
+                    "category": "Athletic Footwear",
+                    "possibleBrands": [
+                        "Nike",
+                        "Adidas",
+                        "Puma",
+                        "New Balance",
+                        "Under Armour"
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "id": "template_single_brand_analysis",
+        "content": "Template for analyzing metrics for a specific brand. Handles patterns like 'Show X for brand Y' or 'How is brand Y performing?'",
+        "metadata": {
+            "type": "query_template",
+            "pattern": "[METRIC] for [BRAND]",
+            "intentMapping": "brand_performance",
+            "sqlTemplate": "SELECT {time_dimension}, {agg_function}({measure_col}) as {metric_name} FROM {base_table} JOIN products ON {base_table}.product_id = products.product_id WHERE products.brand = '{brand_value}' GROUP BY {time_dimension} ORDER BY {time_dimension}",
+            "placeholders": [
+                {
+                    "name": "time_dimension",
+                    "source": "time_dimension_mapping"
+                },
+                {
+                    "name": "agg_function",
+                    "source": "metric_function_mapping"
+                },
+                {
+                    "name": "measure_col",
+                    "source": "measure_mapping"
+                },
+                {
+                    "name": "metric_name",
+                    "source": "nl_request"
+                },
+                {
+                    "name": "base_table",
+                    "source": "schema_base_table"
+                },
+                {
+                    "name": "brand_value",
+                    "source": "brand_value_mapping"
+                }
+            ],
+            "examples": [
+                {
+                    "nlQuery": "Show monthly revenue for Nike products",
+                    "extractedEntities": {
+                        "metric": "revenue",
+                        "brand": "Nike",
+                        "time_dimension": "DATE_TRUNC('month', order_date)",
+                        "measure": "total_amount",
+                        "agg_function": "SUM"
+                    },
+                    "generatedSQL": "SELECT DATE_TRUNC('month', order_date) as month, SUM(order_items.price * order_items.quantity) as revenue FROM orders JOIN order_items ON orders.order_id = order_items.order_id JOIN products ON order_items.product_id = products.product_id WHERE products.brand = 'Nike' GROUP BY month ORDER BY month"
+                }
+            ]
+        }
+    },
+    {
+        "id": "template_brand_performance_by_region",
+        "content": "Template for analyzing brand performance across different geographical regions. Handles patterns like 'Brand X performance by region' or 'which regions sell the most Brand Y products'.",
+        "metadata": {
+            "type": "query_template",
+            "pattern": "[BRAND] [METRIC] by region",
+            "intentMapping": "brand_performance",
+            "sqlTemplate": "SELECT customers.region, {agg_function}({measure_col}) as {metric_name} FROM {base_table} JOIN order_items ON orders.order_id = order_items.order_id JOIN products ON order_items.product_id = products.product_id JOIN customers ON orders.customer_id = customers.customer_id WHERE products.brand = '{brand_value}' GROUP BY customers.region ORDER BY {metric_name} DESC",
+            "placeholders": [
+                {
+                    "name": "agg_function",
+                    "source": "metric_function_mapping"
+                },
+                {
+                    "name": "measure_col",
+                    "source": "measure_mapping"
+                },
+                {
+                    "name": "metric_name",
+                    "source": "nl_request"
+                },
+                {
+                    "name": "base_table",
+                    "source": "schema_base_table"
+                },
+                {
+                    "name": "brand_value",
+                    "source": "brand_value_mapping"
+                }
+            ],
+            "examples": [
+                {
+                    "nlQuery": "Which regions have the highest Nike sales?",
+                    "extractedEntities": {
+                        "brand": "Nike",
+                        "metric": "sales",
+                        "measure": "order_items.quantity",
+                        "agg_function": "SUM"
+                    },
+                    "generatedSQL": "SELECT customers.region, SUM(order_items.quantity) as sales FROM orders JOIN order_items ON orders.order_id = order_items.order_id JOIN products ON order_items.product_id = products.product_id JOIN customers ON orders.customer_id = customers.customer_id WHERE products.brand = 'Nike' GROUP BY customers.region ORDER BY sales DESC"
+                }
+            ]
+        }
+    },
+    {
+        "id": "template_brand_market_share",
+        "content": "Template for analyzing market share distribution across brands. Handles patterns like 'brand breakdown', 'market share by brand', or 'distribution of sales across brands'.",
+        "metadata": {
+            "type": "query_template",
+            "pattern": "[METRIC] breakdown by brand",
+            "intentMapping": "brand_performance",
+            "sqlTemplate": "WITH total AS (SELECT SUM({measure_col}) as total_{metric_name} FROM {base_table} JOIN products ON {base_table}.product_id = products.product_id {where_clause}) SELECT products.brand, {agg_function}({measure_col}) as {metric_name}, ({agg_function}({measure_col}) / total.total_{metric_name}) * 100 as percentage FROM {base_table} JOIN products ON {base_table}.product_id = products.product_id CROSS JOIN total {where_clause} GROUP BY products.brand, total.total_{metric_name} ORDER BY {metric_name} DESC",
+            "placeholders": [
+                {
+                    "name": "agg_function",
+                    "source": "metric_function_mapping"
+                },
+                {
+                    "name": "measure_col",
+                    "source": "measure_mapping"
+                },
+                {
+                    "name": "metric_name",
+                    "source": "nl_request"
+                },
+                {
+                    "name": "base_table",
+                    "source": "schema_base_table"
+                },
+                {
+                    "name": "where_clause",
+                    "source": "filter_condition_mapping",
+                    "optional": true
+                }
+            ],
+            "examples": [
+                {
+                    "nlQuery": "What's the market share breakdown by brand in the smartphone category?",
+                    "extractedEntities": {
+                        "metric": "market_share",
+                        "category": "Smartphones",
+                        "measure": "order_items.price * order_items.quantity",
+                        "agg_function": "SUM",
+                        "filter_condition": "WHERE products.category = 'Smartphones'"
+                    },
+                    "generatedSQL": "WITH total AS (SELECT SUM(order_items.price * order_items.quantity) as total_revenue FROM orders JOIN order_items ON orders.order_id = order_items.order_id JOIN products ON order_items.product_id = products.product_id WHERE products.category = 'Smartphones') SELECT products.brand, SUM(order_items.price * order_items.quantity) as revenue, (SUM(order_items.price * order_items.quantity) / total.total_revenue) * 100 as percentage FROM orders JOIN order_items ON orders.order_id = order_items.order_id JOIN products ON order_items.product_id = products.product_id CROSS JOIN total WHERE products.category = 'Smartphones' GROUP BY products.brand, total.total_revenue ORDER BY revenue DESC"
+                }
+            ]
+        }
+    },
+    {
+        "id": "template_brand_comparison",
+        "content": "Template for comparing metrics between specific brands. Handles patterns like 'Compare X between brands Y and Z' or 'Brand Y vs Brand Z'.",
+        "metadata": {
+            "type": "query_template",
+            "pattern": "compare [METRIC] between [BRAND] and [BRAND]",
+            "intentMapping": "brand_comparison",
+            "sqlTemplate": "SELECT products.brand, {time_dimension}, {agg_function}({measure_col}) as {metric_name} FROM {base_table} JOIN products ON {base_table}.product_id = products.product_id WHERE products.brand IN ('{brand_value1}', '{brand_value2}') GROUP BY products.brand, {time_dimension} ORDER BY {time_dimension}, products.brand",
+            "placeholders": [
+                {
+                    "name": "time_dimension",
+                    "source": "time_dimension_mapping"
+                },
+                {
+                    "name": "agg_function",
+                    "source": "metric_function_mapping"
+                },
+                {
+                    "name": "measure_col",
+                    "source": "measure_mapping"
+                },
+                {
+                    "name": "metric_name",
+                    "source": "nl_request"
+                },
+                {
+                    "name": "base_table",
+                    "source": "schema_base_table"
+                },
+                {
+                    "name": "brand_value1",
+                    "source": "brand_value_mapping"
+                },
+                {
+                    "name": "brand_value2",
+                    "source": "brand_value_mapping"
+                }
+            ],
+            "examples": [
+                {
+                    "nlQuery": "Compare quarterly sales between Apple and Samsung",
+                    "extractedEntities": {
+                        "metric": "sales",
+                        "brands": [
+                            "Apple",
+                            "Samsung"
+                        ],
+                        "time_dimension": "DATE_TRUNC('quarter', order_date)",
+                        "measure": "quantity",
+                        "agg_function": "SUM"
+                    },
+                    "generatedSQL": "SELECT products.brand, DATE_TRUNC('quarter', order_date) as quarter, SUM(order_items.quantity) as sales FROM orders JOIN order_items ON orders.order_id = order_items.order_id JOIN products ON order_items.product_id = products.product_id WHERE products.brand IN ('Apple', 'Samsung') GROUP BY products.brand, quarter ORDER BY quarter, products.brand"
+                }
+            ]
+        }
+    }
+]

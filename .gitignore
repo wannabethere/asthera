@@ -4,3 +4,12 @@ venv/
 *.log
 *.zip
 */.npm-cache/
+lexy
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+*.pywz
+*.pyzw
+sql_helper/

@@ -1,0 +1,718 @@
+{
+    "catalog": "cornerstone_training",
+    "schema": "public",
+    "models": [
+      {
+        "name": "csod_training_records",
+        "description": "Cornerstone OnDemand training records and completion tracking by the employee by division for the organization. This table covers completion rates by division, including how many assignments were completed on time versus late",
+        "tableReference": {
+          "table": "sampleCSODTraining"
+        },
+        "columns": [
+          {
+            "name": "id",
+            "type": "INTEGER",
+            "properties": {
+              "displayName": "ID",
+              "description": "Employee ID as a primary key identifier for the employee"
+            }
+          },
+          {
+            "name": "full_name",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Full Name",
+              "description": "Full name of the employee"
+            }
+          },
+          {
+            "name": "user_id",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "User ID",
+              "description": "ID of the user or Unique identifier for the employee"
+            }
+          },
+          {
+            "name": "manager_name",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Manager Name",
+              "description": "Name of the employee's manager"
+            }
+          },
+          {
+            "name": "training_type",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Training Type",
+              "description": "Type/category of the training"
+            }
+          },
+          {
+            "name": "curriculum_title",
+            "type": "TEXT",
+            "properties": {
+              "displayName": "Curriculum Title",
+              "description": "Title of the curriculum or training program"
+            }
+          },
+          {
+            "name": "training_title",
+            "type": "TEXT",
+            "properties": {
+              "displayName": "Training Title",
+              "description": "Specific title of the training activity"
+            }
+          },
+          {
+            "name": "transcript_status",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Transcript Status",
+              "description": "Current status of the training transcript"
+            }
+          },
+          {
+            "name": "division",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Division",
+              "description": "Business division name or department name that the employee belongs to"
+            }
+          },
+          {
+            "name": "position",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Position",
+              "description": "Job position or role of the employee"
+            }
+          },
+          {
+            "name": "assigned_date",
+            "type": "DATE",
+            "properties": {
+              "displayName": "Assigned Date",
+              "description": "Date when the training was assigned"
+            }
+          },
+          {
+            "name": "completed_date",
+            "type": "DATE",
+            "properties": {
+              "displayName": "Completed Date",
+              "description": "Date when the training was completed by the employee"
+            }
+          },
+          {
+            "name": "due_date",
+            "type": "DATE",
+            "properties": {
+              "displayName": "Due Date",
+              "description": "Due date for completing the training by the employee"
+            }
+          },
+          {
+            "name": "satisfied_late",
+            "type": "BOOLEAN",
+            "properties": {
+              "displayName": "Satisfied Late",
+              "description": "Indicator if training was completed after due date by the employee"
+            }
+          },
+          {
+            "name": "created_at",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Created At",
+              "description": "Timestamp when the record was created"
+            }
+          },
+          {
+            "name": "updated_at",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Updated At",
+              "description": "Timestamp when the record was last updated"
+            }
+          },
+          {
+            "name": "is_completed",
+            "type": "BOOLEAN",
+            "isCalculated": true,
+            "expression": "CASE WHEN transcript_status = 'Satisfied' THEN true ELSE false END",
+            "properties": {
+              "displayName": "Is Completed",
+              "description": "Whether the training has been completed by the employee"
+            }
+          },
+          {
+            "name": "is_overdue",
+            "type": "BOOLEAN",
+            "isCalculated": true,
+            "expression": "CASE WHEN due_date < CURRENT_DATE AND transcript_status NOT IN ('Satisfied', 'Waived') THEN true ELSE false END",
+            "properties": {
+              "displayName": "Is Overdue",
+              "description": "Whether the training is past due and incomplete by the employee"
+            }
+          },
+          {
+            "name": "completion_days",
+            "type": "INTEGER",
+            "isCalculated": true,
+            "expression": "CASE WHEN completed_date IS NOT NULL AND assigned_date IS NOT NULL THEN DATEDIFF(day, assigned_date, completed_date) END",
+            "properties": {
+              "displayName": "Completion Days",
+              "description": "Number of days from assignment to completion by the employee"
+            }
+          },
+          {
+            "name": "days_overdue",
+            "type": "INTEGER",
+            "isCalculated": true,
+            "expression": "CASE WHEN due_date < CURRENT_DATE AND transcript_status NOT IN ('Satisfied', 'Waived') THEN DATEDIFF(day, due_date, CURRENT_DATE) ELSE 0 END",
+            "properties": {
+              "displayName": "Days Overdue",
+              "description": "Number of days past the due date by the employee"
+            }
+          },
+          {
+            "name": "assignment_month",
+            "type": "INTEGER",
+            "isCalculated": true,
+            "expression": "EXTRACT(MONTH FROM assigned_date)",
+            "properties": {
+              "displayName": "Assignment Month",
+              "description": "Month when training was assigned (for cohort analysis) by the employee"
+            }
+          },
+          {
+            "name": "is_satisfied_late",
+            "type": "BOOLEAN",
+            "isCalculated": true,
+            "expression": "CASE WHEN satisfied_late = true THEN true ELSE false END",
+            "properties": {
+              "displayName": "Is Satisfied Late",
+              "description": "Boolean indicator for late completion by the employee"
+            }
+          }
+        ],
+        "primaryKey": "id",
+        "properties": {
+          "displayName": "CSOD Training Records",
+          "description": "Cornerstone OnDemand training records and completion tracking by the employee"
+        }
+      }
+    ],
+    "metrics": [
+      {
+        "name": "training_completion_metrics",
+        "baseObject": "csod_training_records",
+        "dimension": [
+          {
+            "name": "division",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "position",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "training_type",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "transcript_status",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "total_assignments",
+            "type": "INTEGER",
+            "expression": "COUNT(*)"
+          },
+          {
+            "name": "completed_assignments",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END)"
+          },
+          {
+            "name": "completion_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)"
+          },
+          {
+            "name": "assigned_count",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN transcript_status = 'Assigned' THEN 1 END)"
+          },
+          {
+            "name": "expired_count",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN transcript_status = 'Expired' THEN 1 END)"
+          },
+          {
+            "name": "waived_count",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN transcript_status = 'Waived' THEN 1 END)"
+          },
+          {
+            "name": "unique_employees",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT user_id)"
+          },
+          {
+            "name": "late_completions",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_satisfied_late = true THEN 1 END)"
+          },
+          {
+            "name": "on_time_completions",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN transcript_status = 'Satisfied' AND is_satisfied_late = false THEN 1 END)"
+          }
+        ],
+        "timeGrain": [
+          {
+            "name": "assigned_date_grain",
+            "refColumn": "assigned_date",
+            "dateParts": ["YEAR", "QUARTER", "MONTH", "WEEK", "DAY"]
+          },
+          {
+            "name": "completed_date_grain",
+            "refColumn": "completed_date",
+            "dateParts": ["YEAR", "QUARTER", "MONTH", "WEEK", "DAY"]
+          }
+        ],
+        "properties": {
+          "displayName": "Training Completion Metrics",
+          "description": "Core metrics for training assignments and completions"
+        }
+      },
+      {
+        "name": "manager_oversight_metrics",
+        "baseObject": "csod_training_records",
+        "dimension": [
+          {
+            "name": "manager_name",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "full_name",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "division",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "team_size",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT user_id)"
+          },
+          {
+            "name": "team_assignments",
+            "type": "INTEGER",
+            "expression": "COUNT(*)"
+          },
+          {
+            "name": "team_completions",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END)"
+          },
+          {
+            "name": "team_completion_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)"
+          },
+          {
+            "name": "team_overdue_count",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_overdue = true THEN 1 END)"
+          },
+          {
+            "name": "team_past_due_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN is_overdue = true THEN 1 END) * 100.0 / COUNT(*)"
+          },
+          {
+            "name": "team_late_submissions",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_satisfied_late = true THEN 1 END)"
+          },
+          {
+            "name": "team_late_submission_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN is_satisfied_late = true THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END), 0)"
+          }
+        ],
+        "properties": {
+          "displayName": "Manager Oversight Metrics",
+          "description": "Metrics for manager team training oversight and performance"
+        }
+      },
+      {
+        "name": "training_timeliness_metrics",
+        "baseObject": "csod_training_records",
+        "dimension": [
+          {
+            "name": "division",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "training_type",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "position",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "avg_completion_days",
+            "type": "DECIMAL",
+            "expression": "AVG(completion_days)"
+          },
+          {
+            "name": "overdue_30_days",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN days_overdue > 30 THEN 1 END)"
+          },
+          {
+            "name": "late_submission_percentage",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN is_satisfied_late = true THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END), 0)"
+          },
+          {
+            "name": "on_time_percentage",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN transcript_status = 'Satisfied' AND is_satisfied_late = false THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END), 0)"
+          },
+          {
+            "name": "avg_days_overdue",
+            "type": "DECIMAL",
+            "expression": "AVG(CASE WHEN days_overdue > 0 THEN days_overdue END)"
+          }
+        ],
+        "properties": {
+          "displayName": "Training Timeliness Metrics",
+          "description": "Metrics focused on training completion timing and delays"
+        }
+      },
+      {
+        "name": "role_based_effectiveness_metrics",
+        "baseObject": "csod_training_records",
+        "dimension": [
+          {
+            "name": "position",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "training_type",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "division",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "role_completion_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)"
+          },
+          {
+            "name": "role_avg_completion_time",
+            "type": "DECIMAL",
+            "expression": "AVG(completion_days)"
+          },
+          {
+            "name": "role_late_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN is_satisfied_late = true THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END), 0)"
+          },
+          {
+            "name": "role_overdue_count",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_overdue = true THEN 1 END)"
+          },
+          {
+            "name": "role_assignments_per_person",
+            "type": "DECIMAL",
+            "expression": "COUNT(*) * 1.0 / COUNT(DISTINCT user_id)"
+          }
+        ],
+        "properties": {
+          "displayName": "Role-Based Effectiveness Metrics",
+          "description": "Training effectiveness metrics by job role and position"
+        }
+      },
+      {
+        "name": "training_activity_analytics",
+        "baseObject": "csod_training_records",
+        "dimension": [
+          {
+            "name": "training_title",
+            "type": "TEXT"
+          },
+          {
+            "name": "curriculum_title",
+            "type": "TEXT"
+          },
+          {
+            "name": "training_type",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "activity_assignments",
+            "type": "INTEGER",
+            "expression": "COUNT(*)"
+          },
+          {
+            "name": "activity_completions",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END)"
+          },
+          {
+            "name": "activity_completion_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)"
+          },
+          {
+            "name": "unique_participants",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT user_id)"
+          },
+          {
+            "name": "activity_avg_completion_days",
+            "type": "DECIMAL",
+            "expression": "AVG(completion_days)"
+          },
+          {
+            "name": "activity_late_completions",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_satisfied_late = true THEN 1 END)"
+          }
+        ],
+        "properties": {
+          "displayName": "Training Activity Analytics",
+          "description": "Performance metrics for individual training activities and curricula"
+        }
+      },
+      {
+        "name": "division_comparison_metrics",
+        "baseObject": "csod_training_records",
+        "dimension": [
+          {
+            "name": "division",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "training_type",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "division_completion_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)"
+          },
+          {
+            "name": "division_employee_count",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT user_id)"
+          },
+          {
+            "name": "division_training_volume",
+            "type": "INTEGER",
+            "expression": "COUNT(*)"
+          },
+          {
+            "name": "division_overdue_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN is_overdue = true THEN 1 END) * 100.0 / COUNT(*)"
+          },
+          {
+            "name": "division_late_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN is_satisfied_late = true THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END), 0)"
+          }
+        ],
+        "properties": {
+          "displayName": "Division Comparison Metrics",
+          "description": "Comparative metrics across business divisions"
+        }
+      }
+    ],
+    "cumulativeMetrics": [
+      {
+        "name": "monthly_completion_trend",
+        "baseObject": "csod_training_records",
+        "description": "Track monthly completion trends over time",
+        "timeColumn": "completed_date",
+        "aggregation": "COUNT",
+        "window": "MONTH",
+        "measure": {
+          "name": "monthly_completions",
+          "type": "INTEGER",
+          "expression": "COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END)"
+        },
+        "dimensions": ["division", "training_type"],
+        "properties": {
+          "displayName": "Monthly Completion Trend",
+          "description": "Cumulative tracking of training completions by month"
+        }
+      },
+      {
+        "name": "quarterly_assignment_volume",
+        "baseObject": "csod_training_records",
+        "description": "Track quarterly assignment volume patterns",
+        "timeColumn": "assigned_date",
+        "aggregation": "COUNT",
+        "window": "QUARTER",
+        "measure": {
+          "name": "quarterly_assignments",
+          "type": "INTEGER",
+          "expression": "COUNT(*)"
+        },
+        "dimensions": ["division", "training_type"],
+        "properties": {
+          "displayName": "Quarterly Assignment Volume",
+          "description": "Track assignment patterns and spikes over quarters"
+        }
+      },
+      {
+        "name": "cohort_completion_analysis",
+        "baseObject": "csod_training_records",
+        "description": "Analyze completion rates for assignment cohorts",
+        "timeColumn": "completed_date",
+        "aggregation": "RATE",
+        "window": "MONTH",
+        "measure": {
+          "name": "cohort_completion_rate",
+          "type": "DECIMAL",
+          "expression": "COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)"
+        },
+        "dimensions": ["assignment_month", "division"],
+        "properties": {
+          "displayName": "Cohort Completion Analysis",
+          "description": "Track how assignment cohorts perform over time"
+        }
+      }
+    ],
+    "views": [
+      {
+        "name": "top_training_activities",
+        "statement": "SELECT training_title, COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END) as completion_count, COUNT(*) as total_assignments, COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*) as completion_rate FROM csod_training_records GROUP BY training_title ORDER BY completion_count DESC LIMIT 5",
+        "properties": {
+          "displayName": "Top 5 Training Activities",
+          "description": "Training activities with highest completion counts"
+        }
+      },
+      {
+        "name": "division_position_heatmap",
+        "statement": "SELECT division, position, COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END) as completions, COUNT(*) as assignments FROM csod_training_records GROUP BY division, position",
+        "properties": {
+          "displayName": "Division vs Position Heatmap Data",
+          "description": "Completion data for heatmap visualization by division and position"
+        }
+      },
+      {
+        "name": "overdue_analysis",
+        "statement": "SELECT * FROM csod_training_records WHERE is_overdue = true ORDER BY days_overdue DESC",
+        "properties": {
+          "displayName": "Overdue Training Analysis",
+          "description": "All overdue training assignments with days overdue"
+        }
+      },
+      {
+        "name": "manager_performance_summary",
+        "statement": "SELECT manager_name, COUNT(DISTINCT user_id) as team_size, COUNT(*) as total_assignments, COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END) as completions, COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*) as completion_rate, COUNT(CASE WHEN is_overdue = true THEN 1 END) as overdue_count FROM csod_training_records GROUP BY manager_name ORDER BY completion_rate DESC",
+        "properties": {
+          "displayName": "Manager Performance Summary",
+          "description": "Team performance metrics by manager"
+        }
+      },
+      {
+        "name": "training_status_breakdown",
+        "statement": "SELECT transcript_status, COUNT(*) as count, COUNT(*) * 100.0 / (SELECT COUNT(*) FROM csod_training_records) as percentage FROM csod_training_records GROUP BY transcript_status ORDER BY count DESC",
+        "properties": {
+          "displayName": "Training Status Breakdown",
+          "description": "Distribution of training transcript statuses"
+        }
+      },
+      {
+        "name": "late_completion_analysis",
+        "statement": "SELECT division, position, manager_name, COUNT(CASE WHEN is_satisfied_late = true THEN 1 END) as late_completions, COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END) as total_completions, COUNT(CASE WHEN is_satisfied_late = true THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END), 0) as late_percentage FROM csod_training_records GROUP BY division, position, manager_name HAVING COUNT(CASE WHEN transcript_status = 'Satisfied' THEN 1 END) > 0 ORDER BY late_percentage DESC",
+        "properties": {
+          "displayName": "Late Completion Analysis",
+          "description": "Analysis of late completions by division, position, and manager"
+        }
+      },
+      {
+        "name": "monthly_completion_timeline",
+        "statement": "SELECT EXTRACT(MONTH FROM completed_date) as completion_month, COUNT(*) as completions FROM csod_training_records WHERE completed_date IS NOT NULL GROUP BY EXTRACT(MONTH FROM completed_date) ORDER BY completion_month",
+        "properties": {
+          "displayName": "Monthly Completion Timeline",
+          "description": "Month-by-month completion timeline for trend analysis"
+        }
+      }
+    ],
+    "enumDefinitions": [
+      {
+        "name": "TranscriptStatusEnum",
+        "values": [
+          {
+            "name": "Assigned",
+            "value": "Assigned"
+          },
+          {
+            "name": "Satisfied",
+            "value": "Satisfied"
+          },
+          {
+            "name": "Expired",
+            "value": "Expired"
+          },
+          {
+            "name": "Waived",
+            "value": "Waived"
+          }
+        ],
+        "properties": {
+          "displayName": "Transcript Status",
+          "description": "Possible training transcript status values"
+        }
+      },
+      {
+        "name": "DivisionEnum",
+        "values": [
+          {
+            "name": "Administration",
+            "value": "Administration"
+          },
+          {
+            "name": "AcmeProducts",
+            "value": "Acme Products"
+          },
+          {
+            "name": "PrivateOperations",
+            "value": "Private Operations"
+          }
+        ],
+        "properties": {
+          "displayName": "Division",
+          "description": "Business divisions in the organization"
+        }
+      }
+    ]
+  }

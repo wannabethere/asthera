@@ -1,0 +1,62 @@
+[
+    {
+      "question": "What % of users have completed certifications?",
+      "instructions": "Calculate certification completion rate as a percentage by dividing completed certifications by total assigned certifications, filtering only for certification-type activities.",
+      "sql": "SELECT (COUNT(DISTINCT CASE WHEN isCertification = true AND TrainingStatus = 'Completed' THEN EmployeeID END) * 100.0 / COUNT(DISTINCT CASE WHEN isCertification = true THEN EmployeeID END)) as certification_completion_rate FROM employee_training_records WHERE isCertification = true",
+      "chain_of_thought": "1. **Identify the goal**: Need percentage of users who completed certifications vs. those assigned certifications. 2. **Determine data needed**: Numerator = unique employees who completed certifications, Denominator = unique employees assigned any certifications. 3. **Filter criteria**: Only certification-type activities (isCertification = true). 4. **Calculation logic**: Use COUNT(DISTINCT EmployeeID) to avoid double-counting employees with multiple certifications, use CASE WHEN for conditional counting of completions, multiply by 100.0 for percentage. 5. **SQL construction**: WHERE clause filters certifications, CASE statements handle conditional counting, DISTINCT ensures unique employee count."
+    },
+    {
+      "question": "What is the overall training status across the org?",
+      "instructions": "Group training records by status and calculate both absolute counts and percentages of total for comprehensive status overview.",
+      "sql": "SELECT TrainingStatus, COUNT(*) as count, (COUNT(*) * 100.0 / (SELECT COUNT(*) FROM employee_training_records)) as percentage FROM employee_training_records GROUP BY TrainingStatus ORDER BY count DESC",
+      "chain_of_thought": "1. **Identify the goal**: Need breakdown of all training statuses with counts and percentages for donut chart. 2. **Data structure needed**: Each status with its count and percentage of total. 3. **Calculation approach**: GROUP BY TrainingStatus to get counts per status, subquery to get total records for percentage calculation. 4. **Percentage logic**: Each status count divided by total records, multiplied by 100.0 for percentage. 5. **Ordering**: ORDER BY count DESC to show most common statuses first. 6. **SQL construction**: Main query groups and counts, subquery gets denominator, percentage calculated in SELECT."
+    },
+    {
+      "question": "How many users have overdue trainings?",
+      "instructions": "Count distinct employees with overdue training status or assignments past due date that haven't been completed or waived.",
+      "sql": "SELECT COUNT(DISTINCT EmployeeID) as overdue_users_count FROM employee_training_records WHERE TrainingStatus = 'Overdue' OR (DueDate < CURRENT_DATE AND TrainingStatus NOT IN ('Completed', 'Waived'))",
+      "chain_of_thought": "1. **Identify the goal**: Count unique users (not training records) who have overdue trainings. 2. **Define 'overdue'**: Either explicitly marked as 'Overdue' OR past due date and not completed/waived. 3. **Avoid double counting**: Use COUNT(DISTINCT EmployeeID) since one user might have multiple overdue trainings. 4. **Logic conditions**: TrainingStatus = 'Overdue' OR (DueDate < CURRENT_DATE AND status not completed/waived). 5. **Date comparison**: Use CURRENT_DATE for dynamic comparison. 6. **SQL construction**: WHERE clause with OR condition, DISTINCT in COUNT to get unique users."
+    },
+    {
+      "question": "How compliant is each region/domain?",
+      "instructions": "Calculate compliance rates by domain/region, showing total employees, compliant employees, and percentage compliance for each domain.",
+      "sql": "SELECT PrimaryDomain, COUNT(DISTINCT EmployeeID) as total_employees, COUNT(DISTINCT CASE WHEN isCompliant = true THEN EmployeeID END) as compliant_employees, (COUNT(DISTINCT CASE WHEN isCompliant = true THEN EmployeeID END) * 100.0 / COUNT(DISTINCT EmployeeID)) as compliance_rate FROM employee_training_records GROUP BY PrimaryDomain ORDER BY compliance_rate DESC",
+      "chain_of_thought": "1. **Identify the goal**: Compare compliance rates across domains for bar chart visualization. 2. **Metrics needed**: Total employees per domain, compliant employees per domain, compliance percentage. 3. **Grouping logic**: GROUP BY PrimaryDomain to get domain-level aggregation. 4. **Employee counting**: COUNT(DISTINCT EmployeeID) to avoid double-counting employees with multiple training records. 5. **Compliance calculation**: Conditional counting with CASE WHEN for compliant employees, percentage = compliant/total * 100. 6. **Ordering**: ORDER BY compliance_rate DESC to show best performing domains first. 7. **SQL construction**: Three calculated fields in SELECT, grouped by domain, ordered by performance."
+    },
+    {
+      "question": "Which of my team members are certified?",
+      "instructions": "Filter for specific manager's team members who have completed certification-type trainings, showing completion and expiration dates.",
+      "sql": "SELECT EmployeeName, ActivityName, CompletionDate, ExpirationDate FROM employee_training_records WHERE ManagerName = '{MANAGER_NAME}' AND isCertification = true AND TrainingStatus = 'Completed' ORDER BY EmployeeName, CompletionDate DESC",
+      "chain_of_thought": "1. **Identify the goal**: Show team members with completed certifications for a specific manager. 2. **Filter criteria**: Specific manager (parameterized), certification-type activities, completed status. 3. **Display fields**: Employee name, certification name, when completed, when expires. 4. **Manager parameter**: Use {MANAGER_NAME} placeholder for dynamic filtering. 5. **Certification filter**: isCertification = true AND TrainingStatus = 'Completed'. 6. **Ordering logic**: Primary by employee name for easy scanning, secondary by completion date DESC to show most recent first. 7. **SQL construction**: Simple SELECT with WHERE conditions and ORDER BY clause."
+    },
+    {
+      "question": "What % of my team is compliant with training?",
+      "instructions": "Calculate team compliance rate by comparing compliant team members to total team size for a specific manager.",
+      "sql": "SELECT ManagerName, COUNT(DISTINCT EmployeeID) as team_size, COUNT(DISTINCT CASE WHEN isCompliant = true THEN EmployeeID END) as compliant_members, (COUNT(DISTINCT CASE WHEN isCompliant = true THEN EmployeeID END) * 100.0 / COUNT(DISTINCT EmployeeID)) as team_compliance_rate FROM employee_training_records WHERE ManagerName = '{MANAGER_NAME}' GROUP BY ManagerName",
+      "chain_of_thought": "1. **Identify the goal**: Calculate compliance percentage for a specific manager's team. 2. **Manager filter**: WHERE ManagerName = '{MANAGER_NAME}' to focus on one team. 3. **Team metrics**: Team size (total distinct employees), compliant members count, compliance rate. 4. **Avoid double counting**: Use DISTINCT EmployeeID since employees may have multiple training records. 5. **Compliance logic**: Conditional counting with CASE WHEN isCompliant = true. 6. **Percentage calculation**: Compliant members / team size * 100.0. 7. **Grouping**: GROUP BY ManagerName (though only one manager due to WHERE clause). 8. **SQL construction**: Multiple aggregations in SELECT with conditional counting."
+    },
+    {
+      "question": "How has my team's training activity changed over time?",
+      "instructions": "Aggregate training completions by month for specific manager's team to show activity trends over time.",
+      "sql": "SELECT FORMAT(CompletionDate, 'yyyy-MM') as completion_month, COUNT(*) as completions FROM employee_training_records WHERE ManagerName = '{MANAGER_NAME}' AND CompletionDate IS NOT NULL GROUP BY FORMAT(CompletionDate, 'yyyy-MM') ORDER BY completion_month",
+      "chain_of_thought": "1. **Identify the goal**: Show monthly completion trends for manager's team over time for line chart. 2. **Time aggregation**: Need to group completions by month using FORMAT function. 3. **Manager filter**: WHERE ManagerName = '{MANAGER_NAME}' to focus on specific team. 4. **Null handling**: CompletionDate IS NOT NULL to exclude incomplete trainings. 5. **Date formatting**: FORMAT(CompletionDate, 'yyyy-MM') creates month buckets like '2024-01'. 6. **Counting logic**: COUNT(*) counts all completion records (not distinct employees) to show activity volume. 7. **Ordering**: ORDER BY completion_month for chronological trend display. 8. **SQL construction**: Date formatting in SELECT and GROUP BY, proper filtering and ordering."
+    },
+    {
+      "question": "How many certifications have been assigned and completed?",
+      "instructions": "Count certification assignments, completions, and in-progress status to show overall certification program health.",
+      "sql": "SELECT COUNT(*) as total_assigned, COUNT(CASE WHEN TrainingStatus = 'Completed' THEN 1 END) as total_completed, COUNT(CASE WHEN TrainingStatus IN ('Assigned', 'In Progress') THEN 1 END) as in_progress FROM employee_training_records WHERE isCertification = true",
+      "chain_of_thought": "1. **Identify the goal**: Get overall certification program statistics - assigned, completed, in-progress counts. 2. **Filter scope**: WHERE isCertification = true to include only certifications. 3. **Count types**: Total assigned (COUNT(*)), completed (conditional count), in-progress (conditional count). 4. **Conditional counting**: Use CASE WHEN with COUNT to get status-specific counts in single query. 5. **Status categories**: 'Completed' for finished, 'Assigned'/'In Progress' for active. 6. **Single query efficiency**: All counts in one query rather than separate queries. 7. **SQL construction**: Multiple conditional COUNTs in SELECT with certification filter."
+    },
+    {
+      "question": "What % of users are compliant overall?",
+      "instructions": "Calculate overall compliance rate by dividing compliant employees by total employees across the organization.",
+      "sql": "SELECT (COUNT(DISTINCT CASE WHEN isCompliant = true THEN EmployeeID END) * 100.0 / COUNT(DISTINCT EmployeeID)) as overall_compliance_rate FROM employee_training_records",
+      "chain_of_thought": "1. **Identify the goal**: Calculate organization-wide compliance rate as single KPI metric. 2. **Compliance definition**: Use isCompliant boolean field to determine compliance status. 3. **Employee-level calculation**: Count distinct employees (not training records) for accurate rate. 4. **Numerator**: COUNT(DISTINCT CASE WHEN isCompliant = true THEN EmployeeID END) - unique compliant employees. 5. **Denominator**: COUNT(DISTINCT EmployeeID) - total unique employees. 6. **Percentage conversion**: Multiply by 100.0 for percentage result. 7. **No grouping needed**: Single aggregate result across entire organization. 8. **SQL construction**: Single SELECT with conditional counting and percentage calculation."
+    },
+    {
+      "question": "Which trainings are assigned the most?",
+      "instructions": "Rank training activities by assignment frequency to identify most popular/demanded trainings with participant counts.",
+      "sql": "SELECT ActivityName, ActivityType, COUNT(*) as assignment_count, COUNT(DISTINCT EmployeeID) as unique_participants FROM employee_training_records GROUP BY ActivityName, ActivityType ORDER BY assignment_count DESC LIMIT 10",
+      "chain_of_thought": "1. **Identify the goal**: Find most frequently assigned trainings to understand demand patterns. 2. **Grouping level**: GROUP BY ActivityName, ActivityType to get training-level statistics. 3. **Metrics needed**: Total assignments (COUNT(*)), unique participants (COUNT(DISTINCT EmployeeID)). 4. **Assignment frequency**: COUNT(*) includes repeat assignments to same person if applicable. 5. **Participant reach**: COUNT(DISTINCT EmployeeID) shows how many different people assigned. 6. **Ranking logic**: ORDER BY assignment_count DESC to show most assigned first. 7. **Result limiting**: LIMIT 10 to show top trainings only. 8. **SQL construction**: Group by training details, count assignments and participants, order and limit results."
+    }
+  ]

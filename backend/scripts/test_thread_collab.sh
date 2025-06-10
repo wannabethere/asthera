@@ -671,4 +671,98 @@ fi
 
 print_status 0 "Get thread details"
 
+# Create a workflow
+echo "Creating a workflow..."
+WORKFLOW_RESPONSE=$(make_api_request "POST" "/threads/${THREAD_ID}/workflows" "${AUTH_HEADER}" '{
+    "title": "Test Workflow",
+    "description": "Test workflow for collaboration",
+    "steps": [],
+    "status": "draft"
+}' "Create workflow")
+
+echo "Debug: WORKFLOW_RESPONSE: ${WORKFLOW_RESPONSE}"
+# Validate JSON response before processing
+if ! echo "$WORKFLOW_RESPONSE" | jq . >/dev/null 2>&1; then
+    echo -e "${RED}Invalid JSON response from workflow creation${NC}"
+    echo "Debug: Raw response content:"
+    echo "$WORKFLOW_RESPONSE"
+    echo "Debug: Response length: $(echo -n "$WORKFLOW_RESPONSE" | wc -c) characters"
+    #exit 1
+fi
+
+echo "Debug: Raw workflow response:"
+echo "$WORKFLOW_RESPONSE" | jq '.' || {
+    echo -e "${RED}Failed to parse workflow response with jq${NC}"
+    echo "Debug: Raw response content:"
+    echo "$WORKFLOW_RESPONSE"
+    #exit 1
+}
+
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Failed to create workflow${NC}"
+fi
+
+# Extract workflow ID with multiple fallback methods
+echo "Debug: Extracting workflow ID with multiple methods..."
+
+# Method 1: Use grep with Perl regex to extract just the first UUID after id field
+WORKFLOW_ID=$(echo "$WORKFLOW_RESPONSE" | grep -m 1 -oP '"id":"\K[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
+
+# Method 2 (alternative): If method 1 fails, try awk for precise field extraction
+if [ -z "$WORKFLOW_ID" ]; then
+    WORKFLOW_ID=$(echo "$WORKFLOW_RESPONSE" | awk -F'"id":"' '{print $2}' | awk -F'"' '{print $1}' | head -1)
+fi
+
+# Method 3 (fallback): If all else fails, use sed with a minimal pattern
+if [ -z "$WORKFLOW_ID" ]; then
+    WORKFLOW_ID=$(echo "$WORKFLOW_RESPONSE" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p' | head -1)
+fi
+
+echo "Debug: Extracted workflow ID: ${WORKFLOW_ID}"
+echo "Debug: WORKFLOW_ID length: $(echo -n "${WORKFLOW_ID}" | wc -c) characters"
+
+# Verify it matches UUID pattern
+if [[ $WORKFLOW_ID =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]]; then
+    echo "Debug: Valid UUID format confirmed"
+else
+    echo "Debug: WARNING - Extracted ID does not match UUID format"
+    echo -e "${RED}Failed to extract valid workflow ID${NC}"
+    echo "Debug: Full workflow response:"
+    echo "$WORKFLOW_RESPONSE"
+    echo "Debug: Response structure:"
+    echo "$WORKFLOW_RESPONSE" | jq 'keys' 2>/dev/null || echo "Could not parse response structure"
+    exit 1
+fi
+
+print_status 0 "Create workflow"
+
+# Add a workflow step
+echo "Adding a workflow step..."
+STEP_RESPONSE=$(make_api_request "POST" "/threads/${THREAD_ID}/workflows/${WORKFLOW_ID}/steps" "${AUTH_HEADER}" '{
+    "name": "Test Step",
+    "description": "Test workflow step",
+    "order": 1,
+    "status": "pending",
+    "assignee_id": "'${USER2_ID}'",
+    "due_date": "'$(date -v+7d +%Y-%m-%d)'"
+}' "Add workflow step")
+
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Failed to add workflow step${NC}"
+    exit 1
+fi
+
+print_status 0 "Add workflow step"
+
+# List workflows
+echo "Listing workflows..."
+WORKFLOWS_RESPONSE=$(make_api_request "GET" "/threads/${THREAD_ID}/workflows" "${AUTH_HEADER}" "" "List workflows")
+
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Failed to list workflows${NC}"
+    exit 1
+fi
+
+print_status 0 "List workflows"
+
 echo -e "${GREEN}All tests completed successfully!${NC}" 

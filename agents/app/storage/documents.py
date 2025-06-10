@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import uuid
-from typing import List,Dict, Tuple,Any
+from typing import List,Dict, Tuple,Any, Optional
 from uuid import uuid4
 from langchain.schema import Document as LangchainDocument
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -14,6 +14,7 @@ import chromadb
 from app.settings import get_settings
 from collections import defaultdict
 from sklearn.feature_extraction.text import TfidfVectorizer
+from enum import Enum, auto
 
 import numpy as np
 settings = get_settings()
@@ -25,6 +26,12 @@ embeddings_model = OpenAIEmbeddings(
 )
 VECTOR_STORE_PATH = os.getenv("VECTOR_STORE_PATH", "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/InsightsNB/")
 CHROMA_STORE_PATH = os.getenv("CHROMA_STORE_PATH", os.path.join(VECTOR_STORE_PATH, "chroma_db"))
+
+class DuplicatePolicy(Enum):
+    """Policy for handling duplicate documents in the store."""
+    SKIP = auto()  # Skip duplicate documents
+    OVERWRITE = auto()  # Overwrite existing documents
+    FAIL = auto()  # Raise an error if duplicates are found
 
 class BM25Ranker:
     """BM25 ranking implementation for document search."""
@@ -311,6 +318,27 @@ class DocumentChromaStore:
             logger.error(f"Failed to initialize Chroma store: {str(e)}")
             raise
 
+    def compute_document_embeddings(self, documents: List[LangchainDocument]) -> List[List[float]]:
+        """Compute embeddings for a list of documents.
+        
+        Args:
+            documents: List of LangchainDocument objects
+            
+        Returns:
+            List of embedding vectors for each document
+        """
+        try:
+            # Extract text content from documents
+            texts = [doc.page_content for doc in documents]
+            
+            # Compute embeddings using the embeddings model
+            embeddings = self.embeddings_model.embed_documents(texts)
+            
+            return embeddings
+        except Exception as e:
+            logger.error(f"Error computing document embeddings: {str(e)}")
+            return []
+
     def add_documents(self, docs: List[Any]):
         """Add documents to the vectorstore.
         
@@ -331,7 +359,6 @@ class DocumentChromaStore:
                 ids.append(doc.metadata.get("id", document_id))
                 continue
             else:
-                #print("doc",doc)
                 if not isinstance(doc, dict):
                     logger.warning(f"Skipping invalid document format: {doc}")
                     continue
@@ -346,10 +373,29 @@ class DocumentChromaStore:
                     ids.append(document_id)
         
         if documents:
-            self.vectorstore.add_documents(documents=documents, ids=ids)
-            self.add_tfidf_vectors(documents=documents, ids=ids)    
-            logger.info(f"Added {len(documents)} documents to the vectorstore.")
-            print("documents added to the vectorstore",len(documents))
+            # Compute embeddings for all documents
+            embeddings = self.compute_document_embeddings(documents)
+            
+            if embeddings:
+                # Add documents with pre-computed embeddings
+                self.vectorstore.add_documents(
+                    documents=documents,
+                    ids=ids,
+                    embeddings=embeddings
+                )
+                
+                # Add TF-IDF vectors if enabled
+                if self.tf_idf:
+                    self.add_tfidf_vectors(documents=documents, ids=ids)
+                
+                logger.info(f"Added {len(documents)} documents with embeddings to the vectorstore.")
+                print("documents added to the vectorstore", len(documents))
+            else:
+                # Fallback to regular document addition if embedding computation fails
+                self.vectorstore.add_documents(documents=documents, ids=ids)
+                if self.tf_idf:
+                    self.add_tfidf_vectors(documents=documents, ids=ids)
+                logger.info(f"Added {len(documents)} documents to the vectorstore (without pre-computed embeddings).")
         else:
             logger.warning("No valid documents were found to add to the vectorstore.")
 
@@ -376,66 +422,14 @@ class DocumentChromaStore:
             logger.warning("No documents provided to add to the vectorstore.")
         return
 
-    def semantic_searches(self, query_texts: List[str], n_results: int = 5, where: Dict = None) -> Dict[str, List]:
-        """Perform semantic search on multiple queries.
-        
-        Args:
-            query_texts: List of search query strings
-            n_results: Number of results to return per query (default: 5)
-            where: Optional metadata filter dictionary
-            
-        Returns:
-            Dictionary containing:
-            - documents: List of lists of document contents
-            - distances: List of lists of similarity scores
-            - metadatas: List of lists of document metadata
-        """
-        if not self.vectorstore:
-            logger.warning("Chroma store not initialized. Please initialize first.")
-            return {
-                "documents": [],
-                "distances": [],
-                "metadatas": []
-            }
-            
-        try:
-            # Format results
-            formatted_results = []
-            # Process results for each query
-            for query in query_texts:
-                query_results= self.vectorstore.similarity_search_with_score(
-                    query,
-                    k=n_results,
-                    filter=where
-                )
-
-                for doc, score in query_results:
-                   formatted_results.append({
-                    "content": doc.page_content,
-                    "metadata": doc.metadata,
-                    "score": float(score),  # Convert numpy float to Python float
-                    "id": doc.metadata.get("id", None)
-                })
-                
-                
-            
-            logger.info(f"Found results for {len(query_texts)} queries")
-            formatted_results.sort(key=lambda x: x["score"])
-            
-            logger.info(f"Found {len(formatted_results)} results for query: {query_texts}")
-            return formatted_results
-            
-        except Exception as e:
-            logger.error(f"Error during batch semantic search: {str(e)}")
-            return []
-        
-    def semantic_search(self, query: str, k: int = 5, where: Dict = None) -> List[Dict]:
+    def semantic_search(self, query: str, k: int = 5, where: Dict = None, query_embedding: List[float] = None) -> List[Dict]:
         """Perform semantic search on the Chroma store.
         
         Args:
             query: The search query string
             k: Number of results to return (default: 5)
             where: Optional metadata filter dictionary
+            query_embedding: Optional pre-computed query embedding vector
             
         Returns:
             List of dictionaries containing search results with scores
@@ -445,11 +439,12 @@ class DocumentChromaStore:
             return []
             
         try:
-            # Perform similarity search with scores
+            
+                # Otherwise perform regular similarity search
             results = self.vectorstore.similarity_search_with_score(
                 query,
                 k=k,
-                filter=where  # Apply metadata filters if provided
+                filter=where
             )
             
             # Format results
@@ -472,13 +467,14 @@ class DocumentChromaStore:
             logger.error(f"Error during semantic search: {str(e)}")
             return []
 
-    def semantic_search_with_bm25(self, query: str, k: int = 5, where: Dict = None) -> List[Dict]:
+    def semantic_search_with_bm25(self, query: str, k: int = 5, where: Dict = None, query_embedding: List[float] = None) -> List[Dict]:
         """Perform semantic search using both vector similarity and BM25 ranking.
         
         Args:
             query: The search query string
             k: Number of results to return (default: 5)
             where: Optional metadata filter dictionary
+            query_embedding: Optional pre-computed query embedding vector
             
         Returns:
             List of dictionaries containing search results with combined scores
@@ -488,12 +484,14 @@ class DocumentChromaStore:
             return []
             
         try:
-            # Get vector similarity results
+            # Get vector similarity results using query embedding if provided
             vector_results = self.vectorstore.similarity_search_with_score(
-                query,
-                k=k,
-                filter=where
-            )
+                    query,
+                    k=k,
+                    filter=where
+                )
+            
+                
             
             # Initialize BM25 ranker
             bm25 = BM25Ranker()
@@ -533,8 +531,8 @@ class DocumentChromaStore:
         except Exception as e:
             logger.error(f"Error during semantic search with BM25: {str(e)}")
             return []
-        
-    def semantic_search_with_tfidf(self, query: str, k: int = 5, where: Dict = None) -> List[Dict]:
+
+    def semantic_search_with_tfidf(self, query: str, k: int = 5, where: Dict = None, query_embedding: List[float] = None) -> List[Dict]:
         """Perform semantic search combined with TF-IDF ranking.
         If TF-IDF calculation fails, falls back to semantic search results.
         
@@ -542,13 +540,26 @@ class DocumentChromaStore:
             query: The search query string
             k: Number of results to return (default: 5)
             where: Optional metadata filter dictionary
+            query_embedding: Optional pre-computed query embedding vector
             
         Returns:
             List of dictionaries containing search results with combined scores
         """
         try:
-            # Semantic search
-            sem_results = self.vectorstore.similarity_search_with_score(query, k=k, filter=where)
+            # Semantic search using query embedding if provided
+            if query_embedding is not None:
+                sem_results = self.vectorstore.similarity_search_by_vector(
+                    query_embedding,
+                    k=k,
+                    filter=where
+                )
+            else:
+                sem_results = self.vectorstore.similarity_search_with_score(
+                    query,
+                    k=k,
+                    filter=where
+                )
+            
             sem_docs = [doc for doc, _ in sem_results]
             sem_scores = [score for _, score in sem_results]
             
@@ -682,6 +693,58 @@ def create_langchain_doc_util(metadata: Dict, data: Dict) -> tuple[str, Langchai
         logger.error(f"Error creating Langchain document: {str(e)}")
         return None, None
 
+class AsyncDocumentWriter:
+    """Asynchronous document writer for Chroma document store."""
+    
+    def __init__(self, document_store: DocumentChromaStore, policy: Optional[DuplicatePolicy] = None):
+        """Initialize the async document writer.
+        
+        Args:
+            document_store: The Chroma document store instance
+            policy: Optional duplicate policy (SKIP, OVERWRITE, or FAIL)
+        """
+        self.document_store = document_store
+        self.policy = policy or DuplicatePolicy.OVERWRITE
+
+    async def run(self, documents: List[LangchainDocument], policy: Optional[DuplicatePolicy] = None) -> Dict[str, int]:
+        """Write documents to the Chroma store asynchronously.
+        
+        Args:
+            documents: List of LangchainDocument to write
+            policy: Optional duplicate policy (SKIP, OVERWRITE, or FAIL)
+            
+        Returns:
+            Dictionary containing the number of documents written
+        """
+        if not documents:
+            logger.warning("No documents provided to write")
+            return {"documents_written": 0}
+
+        try:
+            # Handle duplicates based on policy
+            if policy == DuplicatePolicy.SKIP:
+                # Filter out documents that already exist
+                existing_ids = set(self.document_store.collection.get()['ids'])
+                documents = [doc for doc in documents if doc.metadata.get('id') not in existing_ids]
+            elif policy == DuplicatePolicy.FAIL:
+                # Check if any documents already exist
+                existing_ids = set(self.document_store.collection.get()['ids'])
+                duplicate_ids = [doc.metadata.get('id') for doc in documents if doc.metadata.get('id') in existing_ids]
+                if duplicate_ids:
+                    raise ValueError(f"Duplicate documents found with IDs: {duplicate_ids}")
+
+            # Add documents to the store
+            if documents:
+                self.document_store.add_documents(documents)
+                logger.info(f"Successfully wrote {len(documents)} documents to Chroma store")
+                return {"documents_written": len(documents)}
+            else:
+                logger.info("No documents to write after applying duplicate policy")
+                return {"documents_written": 0}
+            
+        except Exception as e:
+            logger.error(f"Error writing documents to Chroma store: {str(e)}")
+            return {"documents_written": 0}
 
 if __name__ == "__main__":
     # Set up logging

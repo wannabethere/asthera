@@ -1,0 +1,28 @@
+{
+  "project_id": "employee_training",
+  "tables": [
+    {
+      "name": "employee_training_records",
+      "display_name": "Employee Training Records",
+      "description": "Records of employee training activities and compliance status",
+      "mdl_file": "mdl.json",
+      "ddl_file": "ddl.json"
+    }
+  ], 
+  "knowledge_base": [
+    {
+      "name": "employee_training_knowledge_base",
+      "display_name": "Employee Training Knowledge Base",
+      "description": "Knowledge base for Employee Training",
+      "file_path": "instructions.json"
+    }
+  ],
+  "examples": [
+    {
+      "name": "employee_training_example",
+      "display_name": "Employee Training Example",
+      "description": "Example of Employee Training",
+      "file_path": "sql_pairs.json"
+    }
+  ]
+} 

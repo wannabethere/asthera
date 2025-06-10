@@ -1,0 +1,230 @@
+{
+  "catalog": "cornerstone_training",
+  "schema": "public",
+  "models": [
+    {
+      "name": "learning_objects",
+      "tableReference": {
+        "table": "learningObjects"
+      },
+      "columns": [
+        {
+          "name": "learningObjectId",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Learning Object ID",
+            "description": "Unique identifier for the learning object"
+          }
+        },
+        {
+          "name": "title",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Title",
+            "description": "Title of the learning object"
+          }
+        },
+        {
+          "name": "loType",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Learning Object Type",
+            "description": "Type of learning object (e.g., online_course, curriculum)"
+          }
+        },
+        {
+          "name": "subjects",
+          "type": "ARRAY",
+          "properties": {
+            "displayName": "Subjects",
+            "description": "Array of subjects covered in the learning object"
+          }
+        },
+        {
+          "name": "keywords",
+          "type": "ARRAY",
+          "properties": {
+            "displayName": "Keywords",
+            "description": "Array of keywords associated with the learning object"
+          }
+        },
+        {
+          "name": "instructors",
+          "type": "ARRAY",
+          "properties": {
+            "displayName": "Instructors",
+            "description": "Array of instructor objects with id and name"
+          }
+        },
+        {
+          "name": "durationMinutes",
+          "type": "INTEGER",
+          "properties": {
+            "displayName": "Duration (Minutes)",
+            "description": "Duration of the learning object in minutes"
+          }
+        },
+        {
+          "name": "creditHours",
+          "type": "DECIMAL",
+          "properties": {
+            "displayName": "Credit Hours",
+            "description": "Number of credit hours awarded for completion"
+          }
+        },
+        {
+          "name": "tags",
+          "type": "ARRAY",
+          "properties": {
+            "displayName": "Tags",
+            "description": "Array of tags associated with the learning object"
+          }
+        },
+        {
+          "name": "createdDate",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Created Date",
+            "description": "Date when the learning object was created"
+          }
+        }
+      ],
+      "primaryKey": "learningObjectId",
+      "properties": {
+        "displayName": "Learning Objects",
+        "description": "Catalog of learning objects and their metadata"
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "name": "learning_catalog_metrics",
+      "baseObject": "learning_objects",
+      "dimension": [
+        {
+          "name": "loType",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "subjects",
+          "type": "ARRAY"
+        },
+        {
+          "name": "tags",
+          "type": "ARRAY"
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_objects",
+          "type": "INTEGER",
+          "expression": "COUNT(*)"
+        },
+        {
+          "name": "total_duration_hours",
+          "type": "DECIMAL",
+          "expression": "SUM(durationMinutes) / 60.0"
+        },
+        {
+          "name": "total_credit_hours",
+          "type": "DECIMAL",
+          "expression": "SUM(creditHours)"
+        },
+        {
+          "name": "avg_duration_minutes",
+          "type": "DECIMAL",
+          "expression": "AVG(durationMinutes)"
+        },
+        {
+          "name": "avg_credit_hours",
+          "type": "DECIMAL",
+          "expression": "AVG(creditHours)"
+        }
+      ],
+      "properties": {
+        "displayName": "Learning Catalog Metrics",
+        "description": "Core metrics for learning object catalog analysis"
+      }
+    },
+    {
+      "name": "instructor_metrics",
+      "baseObject": "learning_objects",
+      "dimension": [
+        {
+          "name": "instructors",
+          "type": "ARRAY"
+        },
+        {
+          "name": "loType",
+          "type": "VARCHAR"
+        }
+      ],
+      "measure": [
+        {
+          "name": "instructor_object_count",
+          "type": "INTEGER",
+          "expression": "COUNT(*)"
+        },
+        {
+          "name": "instructor_total_duration",
+          "type": "DECIMAL",
+          "expression": "SUM(durationMinutes)"
+        },
+        {
+          "name": "instructor_total_credits",
+          "type": "DECIMAL",
+          "expression": "SUM(creditHours)"
+        }
+      ],
+      "properties": {
+        "displayName": "Instructor Metrics",
+        "description": "Metrics for instructor contributions and coverage"
+      }
+    }
+  ],
+  "views": [
+    {
+      "name": "subject_coverage_analysis",
+      "statement": "SELECT unnest(subjects) as subject, COUNT(*) as object_count, AVG(durationMinutes) as avg_duration FROM learning_objects GROUP BY subject ORDER BY object_count DESC",
+      "properties": {
+        "displayName": "Subject Coverage Analysis",
+        "description": "Analysis of learning object distribution across subjects"
+      }
+    },
+    {
+      "name": "instructor_portfolio",
+      "statement": "SELECT i.id, i.name, COUNT(*) as object_count, SUM(lo.durationMinutes) as total_duration FROM learning_objects lo, unnest(instructors) as i GROUP BY i.id, i.name ORDER BY object_count DESC",
+      "properties": {
+        "displayName": "Instructor Portfolio",
+        "description": "Summary of learning objects by instructor"
+      }
+    },
+    {
+      "name": "tag_distribution",
+      "statement": "SELECT unnest(tags) as tag, COUNT(*) as usage_count FROM learning_objects GROUP BY tag ORDER BY usage_count DESC",
+      "properties": {
+        "displayName": "Tag Distribution",
+        "description": "Distribution of tags across learning objects"
+      }
+    }
+  ],
+  "enumDefinitions": [
+    {
+      "name": "LearningObjectTypeEnum",
+      "values": [
+        {
+          "name": "online_course",
+          "value": "online_course"
+        },
+        {
+          "name": "curriculum",
+          "value": "curriculum"
+        }
+      ],
+      "properties": {
+        "displayName": "Learning Object Types",
+        "description": "Types of learning objects in the system"
+      }
+    }
+  ]
+}

@@ -8,7 +8,7 @@ from fastapi import APIRouter, File, UploadFile, Query, Path, HTTPException
 # Import the DataFrameAnalyzer from datasetanalyzer.py
 from app.agents.graphs.dataframeanalyzer import DataFrameAnalyzer
 # Import the DataFrameQAGenerator from dataanalyzer.py
-from app.agents.graphs.dataframeanalyzer import DataFrameQAGenerator
+from app.agents.nodes.recommender.dataanalyzer import DataFrameQAGenerator
 
 # Define models
 class ChatMessage:

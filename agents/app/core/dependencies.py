@@ -1,10 +1,11 @@
 from fastapi import Depends, Request
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from app.storage.sessionmanager import get_session_manager
 from app.settings import get_settings
-from agents.app.storage.documents import DocumentChromaStore, CHROMA_STORE_PATH
+from app.storage.documents import DocumentChromaStore, CHROMA_STORE_PATH
 from langchain_openai import ChatOpenAI
 import chromadb
+from app.core.provider import DocumentStoreProvider
 
 def get_app_state(request: Request):
     """Get the FastAPI app state."""
@@ -19,11 +20,50 @@ def get_recommendation_system(app_state=Depends(get_app_state)):
     return app_state.recommendation_system
 
 # Configuration
-def get_llm(temperature: float = 0.0, model: str = "gpt-4o"):
+def get_llm(temperature: float = 0.0, model: str = "gpt-4o-mini"):
     """Get the LLM with specified temperature and model."""
     return ChatOpenAI(
-        model=model,
+        model="gpt-4o-mini",
         temperature=temperature
+    )
+
+def get_doc_store_provider():
+    """Get the document store provider with all SQL-related stores."""
+    # Initialize ChromaDB client
+    client = chromadb.PersistentClient(path=CHROMA_STORE_PATH)
+    
+    # Create document stores for SQL-related collections
+    sql_stores = {
+        "db_schema": DocumentChromaStore(
+            persistent_client=client,
+            collection_name="db_schema"
+        ),
+        "sql_pairs": DocumentChromaStore(
+            persistent_client=client,
+            collection_name="sql_pairs"
+        ),
+        "instructions": DocumentChromaStore(
+            persistent_client=client,
+            collection_name="instructions"
+        ),
+        "historical_question": DocumentChromaStore(
+            persistent_client=client,
+            collection_name="historical_question"
+        ),
+        "table_description": DocumentChromaStore(
+            persistent_client=client,
+            collection_name="table_description"
+        ),
+        "project_meta": DocumentChromaStore(
+            persistent_client=client,
+            collection_name="project_meta"
+        )
+    }
+    
+    # Create and return the document store provider
+    return DocumentStoreProvider(
+        stores=sql_stores,
+        default_store="sql_pairs"
     )
 
 def get_dependencies():
@@ -62,11 +102,26 @@ def get_dependencies():
         collection_name="tools_insights_collection"
     )
     
+    # Get document store provider for SQL stores
+    doc_store_provider = get_doc_store_provider()
     
     return {
         "session_manager": session_manager,
         "db_config": db_config,
         "vectorstore_examples": vectorstore_examples,
         "vectorstore_functions": vectorstore_functions,
-        "vectorstore_insights": vectorstore_insights
+        "vectorstore_insights": vectorstore_insights,
+        "doc_store_provider": doc_store_provider
     }
+
+"""
+def get_ask_service() -> AskService:
+    #Get AskService instance
+    return AskService()
+
+def get_question_recommendation_service() -> QuestionRecommendation:
+    #Get QuestionRecommendation service instance
+    pipeline_container = PipelineContainer.get_instance()
+    return QuestionRecommendation(pipeline_container.get_all_pipelines())
+
+"""
