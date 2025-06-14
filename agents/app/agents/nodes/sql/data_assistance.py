@@ -135,6 +135,7 @@ class DataAssistancePipeline:
                 previous_queries = [history.question for history in request.histories]
                 query = "\n".join(previous_queries) + "\n" + query
             
+            
             # Build prompt using LangChain PromptTemplate
             prompt = self.prompt_template.format(
                 query=query,
@@ -142,21 +143,17 @@ class DataAssistancePipeline:
                 language=request.language
             )
             
-            # Generate response
-            result = await (
-                self.generator
-                | {
-                    "prompt": prompt,
-                    "query_id": request.project_id or ""
-                }
-            ).invoke()
+            # Concatenate system and user prompts directly
+            full_prompt = f"{data_assistance_system_prompt}\n\n{prompt}"
+            
+            result = await self.llm.ainvoke(full_prompt)
             
             # Update metrics
             self.doc_store_provider.update_metrics("sql_queries", "query")
-            
+            logger.info(f"data assistance result I am here {result}")
             return DataAssistanceResult(
                 success=True,
-                data=result,
+                data=result.content,
                 metadata={
                     "operation": "data_assistance",
                     "language": request.language
@@ -263,19 +260,14 @@ class DataAssistanceTool:
     ) -> str:
         """Create prompt for data assistance"""
         try:
-            # Format database schemas
+            # Format database schemas as a readable string
             formatted_schemas = "\n".join(db_schemas) if db_schemas else ""
-            
-            prompt_template = PromptTemplate(
-                input_variables=["db_schemas", "query", "language"],
-                template=data_assistance_user_prompt_template
-            )
-            
-            return prompt_template.format(
+            user_prompt = data_assistance_user_prompt_template.format(
                 db_schemas=formatted_schemas,
                 query=query,
                 language=configuration.language or "English"
             )
+            return user_prompt
         except Exception as e:
             logger.error(f"Error creating prompt: {e}")
             return ""
@@ -284,24 +276,11 @@ class DataAssistanceTool:
     async def generate_assistance(self, prompt_input: str, query_id: str = None) -> dict:
         """Generate data assistance using LLM"""
         try:
-            # Create full prompt with system and user parts
-            full_prompt = PromptTemplate(
-                input_variables=["system_prompt", "user_prompt"],
-                template="{system_prompt}\n\n{user_prompt}"
-            )
-            
-            # Generate response using operator pattern
-            result = await (
-                self.llm
-                | {
-                    "system_prompt": data_assistance_system_prompt,
-                    "user_prompt": prompt_input
-                }
-            ).invoke()
-            
-            # Update metrics
+            # Concatenate system and user prompts directly
+            full_prompt = f"{data_assistance_system_prompt}\n\n{prompt_input}"
+            logger.info("data assistance full_prompt", full_prompt)
+            result = await self.llm.ainvoke(full_prompt)
             self.doc_store_provider.update_metrics("data_assistance", "query")
-            
             return {"replies": [result]}
         except Exception as e:
             logger.error(f"Error in data assistance generation: {e}")
@@ -330,7 +309,7 @@ class DataAssistanceTool:
                 db_schemas=db_schemas,
                 configuration=configuration
             )
-            
+            logger.info("data assistance prompt_input I created the prompt", prompt_input)
             # Step 2: Generate assistance
             generate_result = await self.generate_assistance(prompt_input, query_id)
             

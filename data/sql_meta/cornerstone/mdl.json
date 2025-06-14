@@ -70,7 +70,7 @@
             "type": "VARCHAR",
             "properties": {
               "displayName": "Transcript Status",
-              "description": "Current status of the training transcript"
+              "description": "Current status of the training transcript in. Values possible are Assigned / Satisfied / Expired / Waived and other possible values"
             }
           },
           {
@@ -102,7 +102,7 @@
             "type": "DATE",
             "properties": {
               "displayName": "Completed Date",
-              "description": "Date when the training was completed by the employee"
+              "description": "Date when the training was completed by the employee. For any training related questions use this column"
             }
           },
           {
@@ -110,7 +110,7 @@
             "type": "DATE",
             "properties": {
               "displayName": "Due Date",
-              "description": "Due date for completing the training by the employee"
+              "description": "Due date for completing the training by the employee. For any training related questions use this column"
             }
           },
           {

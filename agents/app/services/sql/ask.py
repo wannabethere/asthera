@@ -1,10 +1,12 @@
 import asyncio
 import logging
-from typing import Dict, List, Literal, Optional, Any, AsyncGenerator
+from typing import Dict, List, Literal, Optional, Any, AsyncGenerator, Callable
 import json
 from aiohttp import web
 from aiohttp.web import Response
 from aiohttp.web_request import Request
+import pandas as pd
+import numpy as np
 
 from cachetools import TTLCache
 from langfuse.decorators import observe
@@ -40,8 +42,26 @@ from app.agents.pipelines.enhanced_sql_pipeline import (
 from app.agents.pipelines.pipeline_container import PipelineContainer
 from app.core.dependencies import get_doc_store_provider
 from app.agents.pipelines.enhanced_sql_pipeline import EnhancedPipelineFactory
+from app.utils.streaming import streaming_manager
 
 logger = logging.getLogger("lexy-ai-service")
+
+class PandasJSONEncoder(json.JSONEncoder):
+    """Custom JSON encoder to handle pandas and numpy types"""
+    def default(self, obj):
+        if pd.isna(obj) or isinstance(obj, (pd.NaT, np.datetime64)):
+            return None
+        if isinstance(obj, (np.integer, np.int64)):
+            return int(obj)
+        if isinstance(obj, (np.float, np.float64)):
+            return float(obj)
+        if isinstance(obj, (np.ndarray,)):
+            return obj.tolist()
+        if isinstance(obj, pd.DataFrame):
+            return obj.to_dict(orient='records')
+        if isinstance(obj, pd.Series):
+            return obj.to_dict()
+        return super().default(obj)
 
 class AskService(BaseService[AskRequest, AskResultResponse]):
     def __init__(
@@ -167,18 +187,70 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                 "error": str(e)
             }
 
+    async def _run_ask_pipeline_steps(
+        self,
+        query_id: str,
+        user_query: str,
+        histories: list,
+        request: AskRequest,
+        stream_update: callable = None
+    ) -> dict:
+        """Shared logic for ask pipeline steps, optionally streaming updates."""
+        # Step 3: Retrieve relevant data (currently stub)
+        retrieval_result = {}
+        retrieval_result["success"] = True
+        retrieval_result["data"] = {
+            "table_names": [],
+            "table_ddls": [],
+            "has_calculated_field": False,
+            "has_metric": False
+        }
+        if stream_update:
+            await stream_update(query_id, "retrieving_data", {"query": user_query})
+
+        # Step 4: Generate SQL
+        if stream_update:
+            await stream_update(query_id, "generating_sql", {"query": user_query})
+        sql_result = await self._generate_sql(
+            query_id, user_query, histories, request, retrieval_result["data"]
+        )
+        reasoning_result = None
+
+        # Step 5: Generate SQL data
+        if stream_update:
+            await stream_update(query_id, "executing_sql", {"query": user_query})
+        sql_data = await self._generate_sql_data(
+            query_id, sql_result, request.project_id, configuration={"timeout": 60, "dry_run": False}
+        )
+
+        # Step 6: Generate SQL answer
+        if stream_update:
+            await stream_update(query_id, "generating_answer", {"query": user_query})
+        answer_result = await self._generate_sql_answer(
+            query_id, sql_data, user_query, sql_result, request
+        )
+
+        # Step 7: Process final results with answer
+        if stream_update:
+            await stream_update(query_id, "processing_results", {"query": user_query})
+        final_result = await self._process_final_results(
+            query_id, sql_result, reasoning_result, retrieval_result["data"]
+        )
+
+        # Add answer to the final result
+        if answer_result.get("success"):
+            final_result["answer"] = answer_result.get("answer")
+            final_result["explanation"] = answer_result.get("explanation")
+            final_result["metadata"]["answer_metadata"] = answer_result.get("metadata", {})
+
+        # Include sql_data and answer_result in the metadata to preserve AskResultResponse structure
+        final_result["metadata"]["sql_data"] = sql_data
+        final_result["metadata"]["answer_result"] = answer_result
+
+        return final_result
+
     async def _process_request_impl(self, request: AskRequest) -> Dict[str, Any]:
         """Implementation of request processing logic"""
-        results = {
-            "ask_result": {},
-            "metadata": {
-                "type": "",
-                "error_type": "",
-                "error_message": "",
-                "enhanced_sql_used": self._enable_enhanced_sql and request.enable_scoring,
-            },
-        }
-
         query_id = request.query_id
         histories = request.histories[: self._max_histories]
         user_query = request.query
@@ -194,43 +266,10 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             if intent_result:
                 return intent_result
 
-            # Step 3: Retrieve relevant data
-            retrieval_result = {}
-            retrieval_result["success"] = True
-            retrieval_result["data"] = {
-                "table_names": [],
-                "table_ddls": [],
-                "has_calculated_field": False,
-                "has_metric": False
-            }
-            
-            # Step 4: Generate SQL
-            sql_result = await self._generate_sql(
-                query_id, user_query, histories, request, retrieval_result["data"]
+            # Shared pipeline steps
+            final_result = await self._run_ask_pipeline_steps(
+                query_id, user_query, histories, request, stream_update=None
             )
-            
-            reasoning_result = None
-            
-            #Step 5: Call generate sql data for the query id
-            
-            sql_data = await self._generate_sql_data(query_id, sql_result, request.project_id, configuration={"timeout": 60, "dry_run": False})
-            
-            # Step 6: Generate SQL answer
-            answer_result = await self._generate_sql_answer(
-                query_id, sql_data, user_query, sql_result, request
-            )
-            
-            # Step 7: Process final results with answer
-            final_result = await self._process_final_results(
-                query_id, sql_result, reasoning_result, retrieval_result["data"]
-            )
-            
-            # Add answer to the final result
-            if answer_result.get("success"):
-                final_result["answer"] = answer_result.get("answer")
-                final_result["explanation"] = answer_result.get("explanation")
-                final_result["metadata"]["answer_metadata"] = answer_result.get("metadata", {})
-            
             return final_result
 
         except Exception as e:
@@ -301,7 +340,12 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                 return None
 
             # Get SQL samples and instructions
-            sql_samples_task, instructions_task = await asyncio.gather(
+            db_schemas, sql_samples_task, instructions_task = await asyncio.gather(
+                self._pipeline_container.get_pipeline("database_schemas").run(
+                    retrieval_type="database_schemas",
+                    query=user_query,
+                    project_id=request.project_id
+                ),
                 self._pipeline_container.get_pipeline("sql_pairs").run(
                     retrieval_type="sql_pairs",
                     query=user_query,
@@ -330,23 +374,24 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                     project_id=request.project_id,
                     configuration=config_dict,
                 )
-            ).get("post_process", {})
-
+            )
+            
+            
             intent = intent_classification_result.get("intent")
             rephrased_question = intent_classification_result.get("rephrased_question")
             intent_reasoning = intent_classification_result.get("reasoning")
 
             if rephrased_question:
                 user_query = rephrased_question
-
+            print("intent in ask service", intent_classification_result, intent, rephrased_question, intent_reasoning)
             # Handle different intents
             if intent == "MISLEADING_QUERY":
                 return await self._handle_misleading_query(
-                    query_id, user_query, histories, request, intent_classification_result, rephrased_question, intent_reasoning
+                    query_id, user_query, histories, request, db_schemas, rephrased_question, intent_reasoning
                 )
             elif intent == "GENERAL":
                 return await self._handle_general_query(
-                    query_id, user_query, histories, request, intent_classification_result, rephrased_question, intent_reasoning
+                    query_id, user_query, histories, request, db_schemas, rephrased_question, intent_reasoning
                 )
             elif intent == "USER_GUIDE":
                 return await self._handle_user_guide(
@@ -861,20 +906,20 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         user_query: str,
         histories: List[Dict],
         request: AskRequest,
-        intent_classification_result: Dict[str, Any],
+        db_schemas: Dict[str, Any],
         rephrased_question: str,
         intent_reasoning: str,
     ) -> Dict[str, Any]:
         """Handle misleading query intent"""
-        asyncio.create_task(
-            self._pipeline_container.get_pipeline("misleading_assistance").run(
-                query=user_query,
-                histories=histories,
-                db_schemas=intent_classification_result.get("db_schemas"),
-                language=request.configurations.language,
-                query_id=request.query_id,
-            )
+       
+        result = await self._pipeline_container.get_pipeline("misleading_assistance").run(
+            query=user_query,
+            histories=histories,
+            db_schemas=db_schemas,
+            language=request.configurations.language,
+            query_id=request.query_id,
         )
+        print("misleading query result", result)
 
         self._update_cache_status(
             query_id,
@@ -890,7 +935,9 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         )
 
         return {
-            "metadata": {"type": "MISLEADING_QUERY"},
+            "metadata": {"type": "MISLEADING_QUERY",
+                         "assistance": result.get("data", {}).get("assistance", "")
+                         },
         }
 
     async def _handle_general_query(
@@ -899,7 +946,7 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         user_query: str,
         histories: List[Dict],
         request: AskRequest,
-        intent_classification_result: Dict[str, Any],
+        db_schemas: Dict[str, Any],
         rephrased_question: str,
         intent_reasoning: str,
     ) -> Dict[str, Any]:
@@ -909,39 +956,12 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             result = await self._pipeline_container.get_pipeline("data_assistance").run(
                 query=user_query,
                 histories=histories,
-                db_schemas=intent_classification_result.get("db_schemas"),
+                db_schemas=db_schemas,
                 language=request.configurations.language,
                 query_id=request.query_id,
             )
-
+            logger.info(f"general query handling result I am here {result}")
             # Parse the content if it's a JSON string
-            content = result.get("data", {}).get("content", "")
-            if content and content.startswith("```json"):
-                try:
-                    # Extract JSON from markdown code block
-                    json_str = content.split("```json")[1].split("```")[0].strip()
-                    parsed_data = json.loads(json_str)
-                    
-                    # Extract all questions from categories
-                    all_questions = []
-                    for category in parsed_data.get("categories", []):
-                        all_questions.extend(category.get("questions", []))
-                    
-                    # Update result with properly formatted data
-                    result["data"] = {
-                        "questions": all_questions,
-                        "reasoning": [intent_reasoning] if intent_reasoning else [],
-                        "categories": parsed_data.get("categories", [])
-                    }
-                except json.JSONDecodeError as e:
-                    logger.error(f"Error parsing JSON from content: {e}")
-                    # Fallback to empty lists if parsing fails
-                    result["data"] = {
-                        "questions": [],
-                        "reasoning": [intent_reasoning] if intent_reasoning else [],
-                        "categories": []
-                    }
-
             self._update_cache_status(
                 query_id,
                 "finished",
@@ -952,13 +972,17 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                     intent_reasoning=intent_reasoning,
                     is_followup=True if histories else False,
                     general_type="DATA_ASSISTANCE",
-                    response=result.get("data", {})
+                    metadata={"type": "GENERAL", "data": result.get("data", {})}
                 )
             )
 
             return {
-                "metadata": {"type": "GENERAL"},
-                "data": result.get("data", {})
+                "status": "finished",
+                "type": "GENERAL",
+                "rephrased_question": rephrased_question,
+                "intent_reasoning": intent_reasoning,
+                "is_followup": True if histories else False,
+                "metadata": {"type": "GENERAL","data": result.get("data", {})}
             }
         except Exception as e:
             logger.error(f"Error in general query handling: {e}")
@@ -1321,418 +1345,110 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             }
             for client in self._streaming_clients[query_id]:
                 try:
+                    print(f"[DEBUG] [ask.py] Sending streaming update to client: {message}")
                     await client.send_json(message)
                 except Exception as e:
                     logger.error(f"Error sending streaming update: {e}")
                     # Remove failed client
                     self._streaming_clients[query_id].remove(client)
 
-    async def process_request_with_streaming(self, request: AskRequest) -> AsyncGenerator[Dict[str, Any], None]:
-        """Process an ask request with streaming updates"""
-        event_id = request.query_id
-        self._cache_request(event_id, request)
-        
+    async def process_request_with_streaming(self, request: AskRequest, stream_update: Optional[Callable[[Dict[str, Any]], None]] = None) -> AsyncGenerator[Dict[str, Any], None]:
+        """Process a request with streaming updates. If stream_update is provided, call it for each update; otherwise, yield the update."""
+        query_id = request.query_id
+        request.query_id = query_id  # Ensure the property is cached and stable
+        print(f"[DEBUG] [ask.py] Registering stream for {query_id}")
+        self._cache_request(query_id, request)
         try:
+            def send(update):
+                if stream_update:
+                    return stream_update(update)
+                else:
+                    return update
+            # Send initial status to ensure stream is ready
+            update = {"status": "starting", "data": {"query": request.query}}
+            if stream_update:
+                await stream_update(update)
+            else:
+                yield update
+            print(f"[DEBUG] [ask.py] Put 'starting' status for {query_id}")
             # Step 1: Check historical questions
-            await self._stream_update(event_id, "checking_history", {"query": request.query})
-            historical_result = await self._check_historical_questions(event_id, request.query, request.project_id, request.histories)
+            update = {"status": "checking_history", "data": {"query": request.query}}
+            if stream_update:
+                await stream_update(update)
+            else:
+                yield update
+            print(f"[DEBUG] [ask.py] Put 'checking_history' status for {query_id}")
+            historical_result = await self._check_historical_questions(query_id, request.query, request.project_id, request.histories)
+            update = {"status": "checking_history", "data": {"query": request.query}}
+            if stream_update:
+                await stream_update(update)
+            else:
+                yield update
             if historical_result:
-                await self._stream_update(event_id, "finished", historical_result)
-                yield historical_result
+                update = {"status": "finished", "data": historical_result}
+                if stream_update:
+                    await stream_update(update)
+                else:
+                    yield update
+                print(f"[DEBUG] [ask.py] Put 'finished' status (history) for {query_id}")
                 return
-
             # Step 2: Process intent classification
-            await self._stream_update(event_id, "classifying_intent", {"query": request.query})
-            intent_result = await self._process_intent_classification(event_id, request.query, request.histories, request)
+            update = {"status": "classifying_intent", "data": {"query": request.query}}
+            if stream_update:
+                await stream_update(update)
+            else:
+                yield update
+            print(f"[DEBUG] [ask.py] Put 'classifying_intent' status for {query_id}")
+            intent_result = await self._process_intent_classification(query_id, request.query, request.histories, request)
+            update = {"status": "classifying_intent", "data": {"query": request.query}}
+            if stream_update:
+                await stream_update(update)
+            else:
+                yield update
             if intent_result:
-                await self._stream_update(event_id, "finished", intent_result)
-                yield intent_result
+                update = {"status": "finished", "data": intent_result}
+                if stream_update:
+                    await stream_update(update)
+                else:
+                    yield update
+                print(f"[DEBUG] [ask.py] Put 'finished' status (intent) for {query_id}")
                 return
-
-            # Step 3: Retrieve relevant data
-            await self._stream_update(event_id, "retrieving_data", {"query": request.query})
-            retrieval_result = {}
-            retrieval_result["success"] = True
-            retrieval_result["data"] = {
-                "table_names": [],
-                "table_ddls": [],
-                "has_calculated_field": False,
-                "has_metric": False
-            }
-            
-            # Step 4: Generate SQL
-            await self._stream_update(event_id, "generating_sql", {"query": request.query})
-            sql_result = await self._generate_sql(
-                event_id, request.query, request.histories, request, retrieval_result["data"]
-            )
-            
-            reasoning_result = None
-            
-            # Step 6: Generate SQL answer
-            await self._stream_update(event_id, "generating_answer", {"query": request.query})
-            answer_result = await self._generate_sql_answer(
-                event_id, request.query, sql_result, request
-            )
-            
-            # Step 7: Process final results with answer
-            await self._stream_update(event_id, "processing_results", {"query": request.query})
-            final_result = await self._process_final_results(
-                event_id, sql_result, reasoning_result, retrieval_result["data"]
-            )
-            
-            # Add answer to the final result
-            if answer_result.get("success"):
-                final_result["answer"] = answer_result.get("answer")
-                final_result["explanation"] = answer_result.get("explanation")
-                final_result["metadata"]["answer_metadata"] = answer_result.get("metadata", {})
-            
-            await self._stream_update(event_id, "finished", final_result)
-            yield final_result
-
-        except Exception as e:
-            logger.exception(f"Error in streaming request: {e}")
-            error_result = self._handle_error(event_id, e, request.histories)
-            await self._stream_update(event_id, "error", error_result)
-            yield error_result
-
-    async def _generate_sql_data(self, query_id: str, sql_result: Dict[str, Any], project_id: str, configuration: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Generate SQL execution data"""
-        if self._is_stopped(query_id):
-            return {"success": False}
-
-        self._update_cache_status(
-            query_id,
-            "executing_sql",
-            AskResultResponse(
-                status="executing_sql",
-                type="TEXT_TO_SQL",
-                is_followup=True
-            )
-        )
-
-        try:
-            # Get SQL execution pipeline
-            sql_execution_pipeline = self._pipeline_container.get_pipeline("sql_execution")
-            if not sql_execution_pipeline:
-                raise RuntimeError("SQL execution pipeline not found")
-
-           
-
-            # Get SQL from result
-            sql = ""
-            if sql_result.get("api_results"):
-                sql = sql_result["api_results"][0].sql
-
-            if not sql:
-                return {
-                    "success": False,
-                    "error": {
-                        "code": "SQL_EXECUTION_ERROR",
-                        "message": "No SQL found in result"
-                    }
-                }
-
-            # Execute SQL
-            result = await sql_execution_pipeline.run(
-                sql=sql,
-                project_id=project_id,
-                configuration=configuration
-            )
-
-            if result.get("post_process"):
-                return {
-                    "success": True,
-                    "data": result["post_process"]
-                }
+            # Shared pipeline steps with streaming
+            update = {"status": "running_pipeline_steps", "data": {"query": request.query}}
+            if stream_update:
+                await stream_update(update)
             else:
-                return {
-                    "success": False,
-                    "error": {
-                        "code": "SQL_EXECUTION_ERROR",
-                        "message": "No data returned from SQL execution"
-                    }
-                }
-
-        except Exception as e:
-            logger.exception(f"Error in SQL data generation: {e}")
-            return {
-                "success": False,
-                "error": {
-                    "code": "SQL_EXECUTION_ERROR",
-                    "message": str(e)
-                }
-            }
-
-    async def _generate_sql_answer(self, query_id: str, sql_data: Dict[str, Any], user_query: str, sql_result: Dict[str, Any], request: AskRequest) -> Dict[str, Any]:
-        """Generate SQL answer using sql_answer pipeline"""
-        if self._is_stopped(query_id):
-            return {"success": False}
-
-        self._update_cache_status(
-            query_id,
-            "generating_answer",
-            AskResultResponse(
-                status="generating_answer",
-                type="TEXT_TO_SQL",
-                is_followup=True if request.histories else False,
+                yield update
+            print(f"[DEBUG] [ask.py] Running pipeline steps for {query_id}")
+            final_result = await self._run_ask_pipeline_steps(
+                query_id, request.query, request.histories, request, 
+                stream_update=None
             )
-        )
-
-        try:
-            # Get SQL answer pipeline
-            answer_pipeline = self._pipeline_container.get_pipeline("sql_answer")
-            if not answer_pipeline:
-                logger.warning("SQL answer pipeline not found")
-                return {"success": False, "error": "SQL answer pipeline not available"}
-            
-            # Get SQL from result
-            sql = ""
-            if sql_result.get("api_results"):
-                sql = sql_result["api_results"][0].sql
-
-            if not sql:
-                return {
-                    "success": False,
-                    "error": "No SQL found in result"
-                }
-
-            if not sql_data.get("success") or not sql_data.get("data"):
-                return {
-                    "success": False,
-                    "error": "No SQL execution data available"
-                }
-
-            # Generate answer using the pipeline
-            answer_result = await answer_pipeline.run(
-                query=user_query,
-                sql=sql,
-                sql_data=sql_data["data"],
-                project_id=request.project_id,
-                language=request.configurations.language if request.configurations else "English",
-                schema_context=request.schema_context if hasattr(request, 'schema_context') else None
-            )
-
-            # Handle the response format
-            if answer_result.get("success"):
-                return {
-                    "success": True,
-                    "answer": answer_result.get("answer", ""),
-                    "explanation": answer_result.get("explanation", ""),
-                    "metadata": answer_result.get("metadata", {})
-                }
+            print(f"[DEBUG] [ask.py] Pipeline steps complete for {query_id}, final_result: {final_result}")
+            # Send final update
+            update = {"status": "finished", "data": final_result}
+            if stream_update:
+                await stream_update(update)
             else:
-                return {
-                    "success": False,
-                    "error": answer_result.get("error", "Failed to generate answer")
-                }
-
+                yield update
+            print(f"[DEBUG] [ask.py] Put 'finished' status (final) for {query_id}")
         except Exception as e:
-            logger.error(f"Error generating SQL answer: {e}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
-
-    async def _generate_sql_data_streaming(self, query_id: str, sql_result: Dict[str, Any], project_id: str, configuration: Optional[Dict[str, Any]] = None) -> AsyncGenerator[Dict[str, Any], None]:
-        """Generate SQL execution data with streaming updates"""
-        if self._is_stopped(query_id):
-            yield {
-                "status": "error",
-                "error": {
-                    "code": "REQUEST_STOPPED",
-                    "message": "Request was stopped"
-                }
-            }
-            return
-
-        self._update_cache_status(
-            query_id,
-            "executing_sql",
-            AskResultResponse(
-                status="executing_sql",
-                type="TEXT_TO_SQL",
-                is_followup=True
-            )
-        )
-
-        try:
-            # Get SQL execution pipeline
-            sql_execution_pipeline = self._pipeline_container.get_pipeline("sql_execution")
-            if not sql_execution_pipeline:
-                yield {
-                    "status": "error",
-                    "error": {
-                        "code": "PIPELINE_ERROR",
-                        "message": "SQL execution pipeline not found"
-                    }
-                }
-                return
-
-            # Update configuration to disable dry run
-            exec_config = configuration or {}
-            exec_config["dry_run"] = False
-
-            # Get SQL from result
-            sql = ""
-            if sql_result.get("api_results"):
-                sql = sql_result["api_results"][0].sql
-
-            if not sql:
-                yield {
-                    "status": "error",
-                    "error": {
-                        "code": "SQL_EXECUTION_ERROR",
-                        "message": "No SQL found in result"
-                    }
-                }
-                return
-
-            # Execute SQL with streaming updates
-            yield {
-                "status": "executing_sql",
-                "data": {
-                    "sql": sql,
-                    "project_id": project_id
-                }
-            }
-
-            # Execute SQL
-            result = await sql_execution_pipeline.run(
-                sql=sql,
-                project_id=project_id,
-                configuration=exec_config
-            )
-
-            # Stream the results
-            if result.get("post_process"):
-                yield {
-                    "status": "sql_data_ready",
-                    "data": result["post_process"]
-                }
+            logger.exception(f"Error processing request: {e}")
+            print(f"[DEBUG] [ask.py] Error processing request: {e}")
+            error_result = self._handle_error(query_id, e, request.histories or [])
+            self._update_cache_status(query_id, "failed", error_result)
+            update = {"status": "error", "data": error_result}
+            if stream_update:
+                await stream_update(update)
             else:
-                yield {
-                    "status": "error",
-                    "error": {
-                        "code": "SQL_EXECUTION_ERROR",
-                        "message": "No data returned from SQL execution"
-                    }
-                }
-
-        except Exception as e:
-            logger.error(f"Error in SQL data generation: {e}")
-            yield {
-                "status": "error",
-                "error": {
-                    "code": "SQL_EXECUTION_ERROR",
-                    "message": str(e)
-                }
-            }
-
-    async def _generate_sql_answer_streaming(self, query_id: str, sql_data: Dict[str, Any], user_query: str, sql_result: Dict[str, Any], request: AskRequest) -> AsyncGenerator[Dict[str, Any], None]:
-        """Generate human-readable answer from SQL execution data using sql_answer pipeline with streaming"""
-        if self._is_stopped(query_id):
-            yield {
-                "status": "error",
-                "error": {
-                    "code": "REQUEST_STOPPED",
-                    "message": "Request was stopped"
-                }
-            }
-            return
-
-        self._update_cache_status(
-            query_id,
-            "generating_answer",
-            AskResultResponse(
-                status="generating_answer",
-                type="TEXT_TO_SQL",
-                is_followup=True if request.histories else False,
-            )
-        )
-
-        try:
-            # Get SQL answer pipeline
-            answer_pipeline = self._pipeline_container.get_pipeline("sql_answer")
-            if not answer_pipeline:
-                yield {
-                    "status": "error",
-                    "error": {
-                        "code": "PIPELINE_ERROR",
-                        "message": "SQL answer pipeline not found"
-                    }
-                }
-                return
-
-            # Get SQL from result
-            sql = ""
-            if sql_result.get("api_results"):
-                sql = sql_result["api_results"][0].sql
-
-            if not sql:
-                yield {
-                    "status": "error",
-                    "error": {
-                        "code": "ANSWER_GENERATION_ERROR",
-                        "message": "No SQL found in result"
-                    }
-                }
-                return
-
-            if not sql_data.get("success") or not sql_data.get("data"):
-                yield {
-                    "status": "error",
-                    "error": {
-                        "code": "ANSWER_GENERATION_ERROR",
-                        "message": "No SQL execution data available"
-                    }
-                }
-                return
-
-            yield {
-                "status": "generating_answer",
-                "data": {
-                    "query": user_query,
-                    "project_id": request.project_id
-                }
-            }
-
-            # Generate answer using the pipeline
-            answer_result = await answer_pipeline.run(
-                query=user_query,
-                sql=sql,
-                sql_data=sql_data["data"],
-                project_id=request.project_id,
-                language=request.configurations.language if request.configurations else "English",
-                schema_context=request.schema_context if hasattr(request, 'schema_context') else None
-            )
-
-            if answer_result.get("success"):
-                yield {
-                    "status": "answer_ready",
-                    "data": {
-                        "answer": answer_result.get("answer", ""),
-                        "explanation": answer_result.get("explanation", ""),
-                        "metadata": answer_result.get("metadata", {})
-                    }
-                }
-            else:
-                yield {
-                    "status": "error",
-                    "error": {
-                        "code": "ANSWER_GENERATION_ERROR",
-                        "message": answer_result.get("error", "Failed to generate answer")
-                    }
-                }
-
-        except Exception as e:
-            logger.error(f"Error in SQL answer generation: {e}")
-            yield {
-                "status": "error",
-                "error": {
-                    "code": "ANSWER_GENERATION_ERROR",
-                    "message": str(e)
-                }
-            }
+                yield update
+            print(f"[DEBUG] [ask.py] Put 'error' status for {query_id}: {e}")
+        finally:
+            try:
+                print(f"[DEBUG] [ask.py] Closed stream for {query_id}")
+            except Exception as e:
+                logger.error(f"Error closing stream: {e}")
+                print(f"[DEBUG] [ask.py] Error closing stream for {query_id}: {e}")
 
     async def execute_sql_with_streaming(self, request: AskRequest) -> AsyncGenerator[Dict[str, Any], None]:
         """Execute SQL and stream results with human-readable answer"""
@@ -1743,27 +1459,9 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
 
                 # If we have a successful SQL generation, execute it
                 if sql_update.get("status") == "finished" and sql_update.get("api_results"):
-                    sql = sql_update["api_results"][0].sql
-
-                    # Execute SQL and stream data
-                    async for data_update in self._generate_sql_data(
-                        query_id=request.query_id,
-                        sql_result=sql_update,
-                        project_id=request.project_id,
-                        configuration=request.configurations.dict() if request.configurations else None
-                    ):
-                        yield data_update
-
-                        # If we have SQL data, generate answer
-                        if data_update.get("status") == "sql_data_ready":
-                            async for answer_update in self._generate_sql_answer(
-                                query_id=request.query_id,
-                                sql_data=data_update,
-                                user_query=request.query,
-                                sql_result=sql_update,
-                                request=request
-                            ):
-                                yield answer_update
+                    # The SQL data and answer are already included in the final result
+                    # from process_request_with_streaming, so we don't need to do anything else
+                    break
 
         except Exception as e:
             logger.error(f"Error in SQL execution streaming: {e}")
@@ -1853,3 +1551,150 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             for client in self._streaming_clients[query_id]:
                 asyncio.create_task(client.close())
             del self._streaming_clients[query_id]
+
+    async def _generate_sql_data(self, query_id: str, sql_result: Dict[str, Any], project_id: str, configuration: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Generate SQL execution data"""
+        if self._is_stopped(query_id):
+            return {"success": False}
+
+        self._update_cache_status(
+            query_id,
+            "executing_sql",
+            AskResultResponse(
+                status="executing_sql",
+                type="TEXT_TO_SQL",
+                is_followup=True
+            )
+        )
+
+        try:
+            # Get SQL execution pipeline
+            sql_execution_pipeline = self._pipeline_container.get_pipeline("sql_execution")
+            if not sql_execution_pipeline:
+                raise RuntimeError("SQL execution pipeline not found")
+
+            # Get SQL from result
+            sql = ""
+            if sql_result.get("api_results"):
+                sql = sql_result["api_results"][0].sql
+            logger.info(f"sql in generate_sql_data: {sql}") 
+            if not sql:
+                return {
+                    "success": False,
+                    "error": {
+                        "code": "SQL_EXECUTION_ERROR",
+                        "message": "No SQL found in result"
+                    }
+                }
+
+            # Execute SQL
+            result = await sql_execution_pipeline.run(
+                sql=sql,
+                project_id=project_id,
+                configuration=configuration
+            )
+
+            if result.get("post_process"):
+                return {
+                    "success": True,
+                    "data": result["post_process"]['data']
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": {
+                        "code": "SQL_EXECUTION_ERROR",
+                        "message": "No data returned from SQL execution"
+                    }
+                }
+
+        except Exception as e:
+            logger.exception(f"Error in SQL data generation: {e}")
+            return {
+                "success": False,
+                "error": {
+                    "code": "SQL_EXECUTION_ERROR",
+                    "message": str(e)
+                }
+            }
+
+    async def _generate_sql_answer(self, query_id: str, sql_data: Dict[str, Any], user_query: str, sql_result: Dict[str, Any], request: AskRequest) -> Dict[str, Any]:
+        """Generate SQL answer using sql_answer pipeline"""
+        if self._is_stopped(query_id):
+            return {"success": False}
+
+        self._update_cache_status(
+            query_id,
+            "generating_answer",
+            AskResultResponse(
+                status="generating_answer",
+                type="TEXT_TO_SQL",
+                is_followup=True if request.histories else False,
+            )
+        )
+
+        try:
+            # Get SQL answer pipeline
+            answer_pipeline = self._pipeline_container.get_pipeline("sql_answer")
+            if not answer_pipeline:
+                logger.warning("SQL answer pipeline not found")
+                return {"success": False, "error": "SQL answer pipeline not available"}
+            
+            # Get SQL from result
+            sql = ""
+            if sql_result.get("api_results"):
+                sql = sql_result["api_results"][0].sql
+
+            if not sql:
+                return {
+                    "success": False,
+                    "error": "No SQL found in result"
+                }
+
+            if not sql_data.get("success") or not sql_data.get("data"):
+                return {
+                    "success": False,
+                    "error": "No SQL execution data available"
+                }
+
+            # Format SQL data for the answer pipeline
+            formatted_sql_data = {
+                "columns": list(sql_data["data"][0].keys()) if sql_data["data"] else [],
+                "rows": sql_data["data"],
+                "row_count": len(sql_data["data"])
+            }
+
+            # Generate answer using the pipeline
+            answer_result = await answer_pipeline.run(
+                query=user_query,
+                sql=sql,
+                sql_data=formatted_sql_data,
+                project_id=request.project_id,
+                language=request.configurations.language if request.configurations else "English",
+                schema_context=request.schema_context if hasattr(request, 'schema_context') else None
+            )
+
+            logger.info(f"SQL answer generation result: {answer_result}")
+
+            # Handle the response format
+            if answer_result.get("success"):
+                return {
+                    "success": True,
+                    "answer": answer_result.get("answer", ""),
+                    "explanation": answer_result.get("explanation", ""),
+                    "metadata": answer_result.get("metadata", {})
+                }
+            else:
+                error_msg = answer_result.get("error", "Failed to generate answer")
+                logger.error(f"SQL answer generation failed: {error_msg}")
+                return {
+                    "success": False,
+                    "error": error_msg
+                }
+
+        except Exception as e:
+            logger.error(f"Error generating SQL answer: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }

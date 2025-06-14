@@ -1,5 +1,5 @@
 {
-  "project_id": "cornerstone_training",
+  "project_id": "cornerstone",
   "tables": [
     {
       "name": "csod_training_records",
@@ -14,13 +14,6 @@
       "description": "Catalog of learning objects and their metadata",
       "mdl_file": "mdl_learnings.json",
       "ddl_file": "ddl_learnings.json"
-    },
-    {
-      "name": "learning_transcripts",
-      "display_name": "Learning Transcripts",
-      "description": "Records of user learning object completions and progress",
-      "mdl_file": "mdl_transcripts.json",
-      "ddl_file": "ddl_transcripts.json"
     }
   ],
   "knowledge_base": [

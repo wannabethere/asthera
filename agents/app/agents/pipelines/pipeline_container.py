@@ -197,6 +197,24 @@ class PipelineContainer:
         
         self._pipelines["database_schemas"]._initialized = True
         
+        self._pipelines["metrics"] = RetrievalPipeline(
+            name="db_schema",
+            version="1.0",
+            description="Database Schemas Retrieval Pipeline",
+            llm=self._llm,
+            retrieval_helper=self._retrieval_helper
+        )
+        self._pipelines["metrics"]._initialized = True
+
+        self._pipelines["views"] = RetrievalPipeline(
+            name="db_schema",
+            version="1.0",
+            description="Database Schemas Retrieval Pipeline",  
+            llm=self._llm,
+            retrieval_helper=self._retrieval_helper
+        )
+        self._pipelines["views"]._initialized = True
+
         # Initialize SQL generation and reasoning pipelines
         self._pipelines["sql_generation"] = SQLGenerationPipeline(
             llm=self._llm,

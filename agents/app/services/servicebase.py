@@ -5,11 +5,13 @@ import logging
 import json
 from datetime import datetime
 from pydantic import BaseModel
+import asyncio
 
 from app.agents.pipelines.base import Pipeline
 from app.core.session_manager import SessionManager
 from app.core.provider import DocumentStoreProvider
 from app.core.dependencies import get_doc_store_provider
+from app.utils.streaming import streaming_manager
 
 logger = logging.getLogger("lexy-ai-service")
 
@@ -223,4 +225,34 @@ class BaseService(Generic[T, R]):
         cached_data = self._results_cache.get(event_id, {})
         if isinstance(cached_data, dict):
             return cached_data
-        return {"status": "unknown", "result": None} 
+        return {"status": "unknown", "result": None}
+
+    async def process_request_with_streaming(self, request: T, stream_callback=None):
+        """
+        Process a request asynchronously with streaming updates using the shared StreamingManager.
+        Subclasses should call this method and yield updates from the StreamingManager.
+        Optionally, a stream_callback can be provided to receive updates as they are produced.
+        """
+        event_id = getattr(request, 'query_id', None) or self._generate_event_id()
+        await streaming_manager.register(event_id)
+        try:
+            # Start the actual processing in the background, passing the callback if provided
+            async def default_callback(update):
+                await streaming_manager.put(event_id, update)
+            callback = stream_callback or default_callback
+            # Subclasses should implement _process_request_impl_with_streaming and call callback for each update
+            process_task = asyncio.create_task(self._process_request_impl_with_streaming(request, callback))
+            while True:
+                update = await streaming_manager.get(event_id)
+                yield update
+                # You may want to define a convention for 'finished' or 'error' in the update
+                if update.get('status') in ['finished', 'error']:
+                    break
+        finally:
+            await streaming_manager.close(event_id)
+
+    async def _process_request_impl_with_streaming(self, request: T, stream_callback):
+        """
+        Subclasses should override this to implement streaming logic and call stream_callback for each update.
+        """
+        raise NotImplementedError("Subclasses must implement _process_request_impl_with_streaming") 

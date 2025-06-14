@@ -116,7 +116,8 @@ class PandasEngine(Engine):
 
     def _format_query_result(self, result_df: pd.DataFrame) -> Dict[str, Any]:
         """Format query result into standard response format"""
-        data = result_df.values.tolist()
+        df = convert_to_json_serializable(result_df)
+        data = result_df.to_dict(orient='records')
         columns = result_df.columns.tolist()
         
         return {
@@ -234,13 +235,15 @@ class PandasEngine(Engine):
                     "data": [],
                     "columns": []
                 }
-            
+            print("result_df in _execute_sql_sync", result_df.count())
             # Apply limit if specified
+            limit = 1000
             if limit is not None:
-                result_df = result_df.head(limit)
+                result_df = result_df.iloc[:limit]
             
+            #print("result_df in _execute_sql_sync", result_df.to_dict(orient='records'))
             # Format and return result
-            return True, self._format_query_result(result_df)
+            return True, convert_to_json_serializable(result_df)
                 
         except Exception as e:
             logger.exception(f"Error executing SQL: {e}")
@@ -547,3 +550,21 @@ class PandasEngineConfig:
             data_sources=all_dataframes,
             postgres_config=postgres_config
         )
+
+def convert_to_json_serializable(df):
+    # Convert timedelta and datetime columns to strings
+    for column in df.columns:
+        if pd.api.types.is_timedelta64_dtype(df[column]):
+            df[column] = df[column].astype(str)  # Convert timedelta to string
+        elif pd.api.types.is_datetime64_dtype(df[column]):
+            df[column] = df[column].dt.strftime('%Y-%m-%d %H:%M:%S')  # Convert datetime to string
+
+    # Convert DataFrame to dictionary
+    data = df.to_dict(orient='records')
+    columns = df.columns.tolist()
+
+    return {
+        "data": data,
+        "columns": columns,
+        "row_count": len(data)
+    }

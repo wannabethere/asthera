@@ -3,6 +3,9 @@ from dataclasses import dataclass, field
 from app.storage.documents import DocumentChromaStore
 from langchain_openai import OpenAIEmbeddings
 from app.utils.cache import Cache, InMemoryCache
+from app.settings import get_settings
+
+settings = get_settings()
 
 @dataclass
 class DocumentStoreProvider:
@@ -182,7 +185,7 @@ def get_embedder():
     global _embedder_provider
     if _embedder_provider is None:
         # You may want to fetch the API key from settings here
-        _embedder_provider = EmbedderProvider()
+        _embedder_provider = EmbedderProvider(settings.OPENAI_API_KEY)
     return _embedder_provider.get_embedder()
 
 class CacheProvider:

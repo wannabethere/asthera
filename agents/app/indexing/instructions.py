@@ -108,7 +108,7 @@ class Instructions:
             
             # Write documents to store
             logger.info("Writing documents to store")
-            #write_result = await self._writer.run(documents=documents)
+            write_result = await self._writer.run(documents=documents)
             #logger.info(f"Successfully wrote {write_result['documents_written']} documents to store")
             
             result = {

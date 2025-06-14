@@ -762,7 +762,7 @@ class IntentClassificationPipeline(AgentPipeline):
                 instructions=instructions,
                 configuration=config
             )
-            
+            print("intent classification result", result)
             # Update metrics
             self._metrics.update({
                 "last_query": query,
@@ -773,7 +773,10 @@ class IntentClassificationPipeline(AgentPipeline):
             
             return {
                 "success": True,
-                "data": result,
+                "rephrased_question": result.get("rephrased_question"),
+                "intent": result.get("intent"),
+                "reasoning": result.get("reasoning"),
+                "results": result.get("results") or None,
                 "error": None
             }
             
@@ -1004,23 +1007,9 @@ class DataAssistancePipeline(AgentPipeline):
             document_store_provider=document_store_provider,
             engine=engine
         )
-        self.use_enhanced_agent = use_enhanced_agent
         self.data_assistance = CoreDataAssistancePipeline(doc_store_provider=document_store_provider)
         
-        # Initialize the appropriate agent
-        if use_enhanced_agent:
-            self.agent = create_scoring_integrated_sql_rag_agent(
-                llm=llm,
-                engine=engine,
-                document_store_provider=document_store_provider,
-                enable_scoring=True
-            )
-        else:
-            self.agent = SQLRAGAgent(
-                llm=llm,
-                engine=engine,
-                document_store_provider=document_store_provider
-            )
+       
 
     async def run(self, **kwargs) -> Dict[str, Any]:
         query = kwargs.pop("query", "")  # Remove query from kwargs
@@ -1041,7 +1030,9 @@ class DataAssistancePipeline(AgentPipeline):
             project_id=project_id,
             timeout=timeout
         )
+        
         result: DataAssistanceResult = await self.data_assistance.run(request)
+        logger.info(f"data assistance result I am here {result}")
         return {
             "success": result.success,
             "data": result.data,
@@ -1204,8 +1195,8 @@ class SQLAnswerPipeline(AgentPipeline):
             language = kwargs.get("language", "English")
             project_id = kwargs.get("project_id")
             schema_context = kwargs.pop("schema_context", None)  # Remove schema_context from kwargs
-            
-            # Generate answer using the appropriate agent
+            print("sql_data in sql answer pipeline", len(sql_data))
+            # Generate answer usin g the appropriate agent
             if self.use_enhanced_agent:
                 result = await self.agent.process_sql_request_enhanced(
                     operation="ANSWER",
@@ -1213,7 +1204,6 @@ class SQLAnswerPipeline(AgentPipeline):
                     sql=sql,
                     sql_data=sql_data,
                     schema_context=schema_context,
-                    language=language,
                     **kwargs
                 )
             else:
@@ -1222,7 +1212,6 @@ class SQLAnswerPipeline(AgentPipeline):
                     query=query,
                     sql=sql,
                     sql_data=sql_data,
-                    language=language,
                     **kwargs
                 )
             

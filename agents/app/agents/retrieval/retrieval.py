@@ -30,6 +30,7 @@ The database schema includes tables, columns, primary keys, foreign keys, relati
 ### INSTRUCTIONS ###
 1. Carefully analyze the schema and identify the essential tables and columns needed to answer the question.
 1.1 ***Please select as many columns as possible even if they might not be fully relevant to the question. There are other downstream agents that will filter out the irrelevant columns.***
+1.2 ***Please select columns that are relevant to the question from the same schema as much as possible. Then if not possible select from the next best schema. This will avoid unnecessary joins.***
 2. For each table, provide a clear and concise reasoning for why specific columns are selected.
 3. List each reason as part of a step-by-step chain of thought, justifying the inclusion of each column.
 4. If a "." is included in columns, put the name before the first dot into chosen columns.
@@ -374,7 +375,7 @@ class TableRetrieval:
             table_docs = await self._retrieve_table_descriptions(
                 query, tables, project_id
             )
-            
+            #print("table_docs in run table retrieval", table_docs)
             if not table_docs:
                 return {
                     "retrieval_results": [],
@@ -388,8 +389,15 @@ class TableRetrieval:
             )
             
             
+            metrics = await self._retrieve_metrics(query, tables, project_id)
+            views = await self._retrieve_views(query, tables, project_id)
+           
+
+            # Combine all
+            schema_docs = schema_docs + metrics + views
+            
             # Construct database schemas
-            db_schemas = self._construct_db_schemas(schema_docs,table_docs)
+            db_schemas = self._construct_db_schemas(schema_docs, table_docs)
             
             
             # Check if we can use schemas without pruning
@@ -404,12 +412,8 @@ class TableRetrieval:
                     "has_metric": schema_check["has_metric"]
                 }
             
-            #print("schema_check in run table retrieval table_docs", table_docs)
-            #print("schema_check in run table retrieval schema_check", schema_check)
-            #print("schema_check in run table retrieval db_schemas", db_schemas)
-            #print("schema_check in run table retrieval schema_docs", schema_docs)
-            
-            # If we need to prune, use LLM to select relevant columns
+           
+            logger.info(f"query in run table retrieval: {schema_docs}")
             if query:
                 # Build prompt with schemas
                 prompt = self._build_prompt(query, schema_docs, histories)
@@ -487,6 +491,120 @@ class TableRetrieval:
         logger.info(f"Extracted {len(table_names)} unique table names: {table_names}")
         return list(table_names)
 
+    async def _retrieve_metrics(
+        self,
+        query: str,
+        tables: Optional[List[str]],
+        project_id: Optional[str]
+    ) -> List[Any]:
+        """Retrieve table descriptions from the document store."""
+        try:
+            where = {"type": {"$eq": 'METRIC'}}
+            if project_id:
+                where = {"$and": [{"project_id": {"$eq": project_id}},{"type": {"$eq": "METRIC"}}]}
+            where = {"project_id": {"$eq": project_id}}
+            #where = None
+            if query:
+                # Get query embedding
+                #embedding_result = await self._embedder.aembed_query(query)
+                # Get results from document store
+                if where:
+                    results = self.table_store.semantic_search(
+                        query=query,
+                        k=30,
+                        where=where,
+                        #query_embedding=embedding_result
+                    )
+                else:
+                    results = self.table_store.semantic_search(
+                        query=query,
+                        k=100
+                    )
+        
+            if not results:
+                return []
+            
+            filtered_results = [
+                item for item in results
+                if (
+                    (
+                        isinstance(item.get('content'), str) and
+                        ast.literal_eval(item['content']).get('type') == 'METRIC' 
+                    )
+                    or (
+                        isinstance(item.get('metadata'), dict) and
+                        item['metadata'].get('type') == 'METRIC'
+                    )
+                )
+            ]
+            
+            # Extract table names
+            #table_names = self._extract_table_names(results)
+            #print("table_names in retrieve_table_descriptions", table_names)
+           
+            # Results are already a list of documents
+            return filtered_results
+        except Exception as e:
+            logger.error(f"Error in table retrieval: {str(e)}")
+            return []
+
+    async def _retrieve_views(
+        self,
+        query: str,
+        tables: Optional[List[str]],
+        project_id: Optional[str]
+    ) -> List[Any]:
+        """Retrieve table descriptions from the document store."""
+        try:
+            where = {"type": {"$eq": 'VIEW'}}
+            if project_id:
+                where = {"$and": [{"project_id": {"$eq": project_id}},{"type": {"$eq": "VIEW"}}]}
+            where = {"project_id": {"$eq": project_id}}
+            #where = None
+            if query:
+                # Get query embedding
+                #embedding_result = await self._embedder.aembed_query(query)
+                # Get results from document store
+                if where:
+                    results = self.table_store.semantic_search(
+                        query=query,
+                        k=30,
+                        where=where,
+                        #query_embedding=embedding_result
+                    )
+                else:
+                    results = self.table_store.semantic_search(
+                        query=query,
+                        k=100
+                    )
+        
+            if not results:
+                return []
+            
+            filtered_results = [
+                item for item in results
+                if (
+                    (
+                        isinstance(item.get('content'), str) and
+                        ast.literal_eval(item['content']).get('type') == 'VIEW' 
+                    )
+                    or (
+                        isinstance(item.get('metadata'), dict) and
+                        item['metadata'].get('type') == 'VIEW'
+                    )
+                )
+            ]
+           
+            # Extract table names
+            #table_names = self._extract_table_names(results)
+            #print("table_names in retrieve_table_descriptions", table_names)
+           
+            # Results are already a list of documents
+            return filtered_results
+        except Exception as e:
+            logger.error(f"Error in table retrieval: {str(e)}")
+            return []
+        
     async def _retrieve_table_descriptions(
         self,
         query: str,
@@ -497,36 +615,51 @@ class TableRetrieval:
         try:
             where = {"type": {"$eq": 'TABLE_DESCRIPTION'}}
             if project_id:
-                where = {"$and": [{"project_id": {"$eq": project_id}},{"type":"TABLE_DESCRIPTION"}]}
-            
+                where = {"$and": [{"project_id": {"$eq": project_id}},{"type": {"$eq": "TABLE_DESCRIPTION"}}]}
+            where = {"project_id": {"$eq": project_id}}
+            #where = None
             if query:
                 # Get query embedding
-                embedding_result = await self._embedder.aembed_query(query)
+                #embedding_result = await self._embedder.aembed_query(query)
                 # Get results from document store
                 if where:
                     results = self.table_store.semantic_search(
                         query=query,
                         k=30,
                         where=where,
-                        query_embedding=embedding_result
+                        #query_embedding=embedding_result
                     )
                 else:
                     results = self.table_store.semantic_search(
                         query=query,
-                        k=100,
-                        where=where
+                        k=100
                     )
-            
+        
             if not results:
                 return []
-            #print("results", results)
+            
+            filtered_results = [
+                item for item in results
+                if (
+                    (
+                        isinstance(item.get('content'), str) and
+                        ast.literal_eval(item['content']).get('type') == 'TABLE_DESCRIPTION' and
+                        ast.literal_eval(item['content']).get('mdl_type') == 'TABLE_SCHEMA'
+                    )
+                    or (
+                        isinstance(item.get('metadata'), dict) and
+                        item['metadata'].get('type') == 'TABLE_DESCRIPTION' and
+                        item['metadata'].get('mdl_type') == 'TABLE_SCHEMA'
+                    )
+                )
+            ]
             
             # Extract table names
             #table_names = self._extract_table_names(results)
-            #print("Extracted table names:", table_names)
+            #print("table_names in retrieve_table_descriptions", table_names)
            
             # Results are already a list of documents
-            return results
+            return filtered_results
         except Exception as e:
             logger.error(f"Error in table retrieval: {str(e)}")
             return []
@@ -544,6 +677,7 @@ class TableRetrieval:
             where = {"type": {"$eq": 'MODEL'}}
             if project_id:
                 where = {"$and": [{"project_id": {"$eq": project_id}}, {"type": {"$eq": 'MODEL'}}]}
+            #where = {"type": {"$eq": 'MODEL'}}
             # Perform search with empty table names
             if where:
                 results = self.schema_store.semantic_search(
@@ -569,196 +703,180 @@ class TableRetrieval:
                     where=where
                 )
                 results.extend(tresults)
-                
+        
+        #logger.info(f"results in retrieve_schemas: {json.dumps(results, indent=4)}")        
         if not results:
             return []
         
         return results
 
+    def _parse_doc_content(self, doc) -> dict:
+        """Safely parse the 'content' field from a document and return a dict."""
+        content = doc.get('content', '')
+        if not content:
+            return {}
+        try:
+            content = content.strip("'").strip('"')
+            return ast.literal_eval(content)
+        except Exception as e:
+            logger.warning(f"Failed to parse content: {content} | Error: {str(e)}")
+            return {}
+
+    def _is_table_doc(self, content_dict) -> bool:
+        return content_dict.get('type') in ['TABLE_SCHEMA', 'TABLE_DESCRIPTION', 'MODEL']
+
+    def _is_column_doc(self, content_dict) -> bool:
+        return content_dict.get('type') in ['TABLE_COLUMNS', 'COLUMNS']
+
+    def _extract_table_name(self, doc, content_dict) -> str:
+        return content_dict.get('name') or doc.get('metadata', {}).get('name', '')
+
+    def _extract_columns(self, content_dict) -> list:
+        columns = content_dict.get('columns', '')
+        if isinstance(columns, str):
+            return [col.strip() for col in columns.split(',') if col.strip()]
+        elif isinstance(columns, list):
+            return [col.strip() if isinstance(col, str) else str(col) for col in columns]
+        return []
+
+    def _build_column_defs(self, columns, default_type="STRING"):
+        col_defs = []
+        for col in columns:
+            # If col['name'] is a stringified dict, parse it
+            if isinstance(col, dict) and isinstance(col.get('name'), str) and col['name'].strip().startswith("{'type': 'COLUMN'"):
+                try:
+                    col_info = ast.literal_eval(col['name'])
+                    name = col_info.get('name', '')
+                    dtype = col_info.get('data_type', default_type)
+                    comment = col_info.get('comment', '')
+                except Exception as e:
+                    logger.warning(f"Failed to parse column name as dict: {col['name']} | Error: {str(e)}")
+                    name = col.get('name', '')
+                    dtype = col.get('data_type', default_type)
+                    comment = col.get('comment', '')
+            elif isinstance(col, dict):
+                name = col.get('name', '')
+                dtype = col.get('data_type', default_type)
+                comment = col.get('comment', '')
+            else:
+                name = str(col)
+                dtype = default_type
+                comment = ''
+            col_def = f"{name} {dtype}"
+            if comment:
+                if comment.strip().startswith("--"):
+                    col_def += f"\n{comment.strip()}"
+                else:
+                    col_def += f" -- {comment}"
+            col_defs.append(col_def)
+        return col_defs if col_defs else [f"id {default_type}"]
+
+    def _build_table_ddl(self, table_name, description, columns):
+        col_defs = self._build_column_defs(columns)
+        print("col_defs in build_table_ddl: ", col_defs)
+        table_comment = f"-- {description}\n" if description else ""
+        return f"{table_comment}CREATE TABLE {table_name} (\n  " + ",\n  ".join(col_defs) + "\n);"
+
+    def _build_metric_ddl(self, content_dict):
+        table_name = content_dict.get("name", "")
+        description = content_dict.get("description", "")
+        columns = content_dict.get("columns", [])
+        if not columns:
+            columns = [
+                {"name": "metric_name", "data_type": "STRING", "comment": "Name of the metric"},
+                {"name": "metric_value", "data_type": "FLOAT", "comment": "Value of the metric"},
+                {"name": "dimension", "data_type": "STRING", "comment": "Dimension being measured"},
+                {"name": "timestamp", "data_type": "TIMESTAMP", "comment": "When the metric was calculated"}
+            ]
+        col_defs = self._build_column_defs(columns, default_type="FLOAT")
+        table_comment = f"-- {description}\n" if description else ""
+        return f"{table_comment}CREATE TABLE {table_name} (\n  " + ",\n  ".join(col_defs) + "\n);"
+
+    def _build_view_ddl(self, content_dict):
+        view_name = content_dict.get("name", "")
+        description = content_dict.get("description", "")
+        statement = content_dict.get("statement", "")
+        view_comment = f"-- {description}\n" if description else ""
+        return f"{view_comment}CREATE VIEW {view_name}\nAS {statement}"
+
     def _construct_db_schemas(self, column_docs: List[Dict], table_docs: List[Dict]) -> List[Dict]:
         """Construct database schemas from retrieved documents."""
-        # Dictionary to store tables and their columns
         tables = {}
-        
         logger.info(f"Processing {len(table_docs)} table documents and {len(column_docs)} column documents")
-        
-        # First pass: collect all tables from table docs
+        # Collect all tables from table docs
         for doc in table_docs:
-            try:
-                content = doc.get('content', '')
-                if not content:
-                    continue
-                
-                # Parse the content string into a dictionary
-                try:
-                    # Clean up the content string by removing any extra quotes
-                    content = content.strip("'").strip('"')
-                    content_dict = ast.literal_eval(content)
-                except:
-                    logger.warning(f"Failed to parse content: {content}")
-                    continue
-                
-                if not isinstance(content_dict, dict):
-                    continue
-                
-                # Handle table definitions
-                if content_dict.get('type') in ['TABLE_SCHEMA', 'TABLE_DESCRIPTION', 'MODEL']:
-                    table_name = content_dict.get('name')
-                    if not table_name:
-                        logger.warning("Skipping table as no name found")
-                        continue
-                        
-                    # Extract description from comment if available
-                    description = content_dict.get('description', '')
-    
-                    # Initialize table if not exists
-                    if table_name not in tables:
-                        tables[table_name] = {
-                            "name": table_name,
-                            "type": content_dict.get('type', 'TABLE'),
-                            "description": description,
-                            "columns": []
-                        }
-                        logger.info(f"Initialized table {table_name} with description: {description}")
-                
-            except Exception as e:
-                logger.warning(f"Error processing table document: {str(e)}")
+            content_dict = self._parse_doc_content(doc)
+            if not self._is_table_doc(content_dict):
                 continue
-        
-        #print("column_docs in construct_db_schemas: ", json.dumps(column_docs, indent=2))
-        # Second pass: process column documents
+            table_name = self._extract_table_name(doc, content_dict)
+            if not table_name:
+                continue
+            description = content_dict.get('description', '')
+            if table_name not in tables:
+                tables[table_name] = {
+                    "name": table_name,
+                    "type": content_dict.get('type', 'TABLE'),
+                    "description": description,
+                    "columns": []
+                }
+        # Process column documents
         for doc in column_docs:
-            try:
-                content = doc.get('content', '')
-                if not content:
-                    continue
-                
-                # Parse the content string into a dictionary
-                try:
-                    content = content.strip("'").strip('"')
-                    content_dict = ast.literal_eval(content)
-                except:
-                    logger.warning(f"Failed to parse column content: {content}")
-                    continue
-                
-                if not isinstance(content_dict, dict):
-                    continue
-
-                # Handle columns
-                if content_dict.get('type') in ['TABLE_COLUMNS', 'COLUMNS']:
-                    table_name = doc.get('metadata', {}).get('name')
-                    if not table_name:
-                        logger.warning("Skipping columns as no table name found in metadata")
-                        continue
-                    
-                    columns = content_dict.get('columns', '')
-                    if not columns:
-                        continue
-
-                    # Handle both string and list types for columns
-                    if isinstance(columns, str):
-                        column_names = [col.strip() for col in columns.split(',')]
-                    elif isinstance(columns, list):
-                        column_names = [col.strip() if isinstance(col, str) else str(col) for col in columns]
-                    else:
-                        logger.warning(f"Unexpected type for columns: {type(columns)}")
-                        continue
-
-                    # Add columns to the table if it exists
-                    if table_name in tables:
-                        for col_name in column_names:
-                            if col_name:
-                                tables[table_name]["columns"].append({
-                                    "name": col_name,
-                                    "data_type": "STRING",
-                                    "comment": "",
-                                    "is_primary_key": False
-                                })
-                                logger.debug(f"Added column {col_name} to table {table_name}")
-                    else:
-                        logger.warning(f"Table {table_name} not found when processing columns")
-                
-            except Exception as e:
-                logger.warning(f"Error processing column document: {str(e)}")
+            content_dict = self._parse_doc_content(doc)
+            if not self._is_column_doc(content_dict):
                 continue
-        
-        # Convert tables dictionary to list
+            table_name = doc.get('metadata', {}).get('name')
+            if not table_name or table_name not in tables:
+                continue
+            columns = self._extract_columns(content_dict)
+            for col_name in columns:
+                if col_name:
+                    tables[table_name]["columns"].append({
+                        "name": col_name,
+                        "data_type": "STRING",
+                        "comment": "",
+                        "is_primary_key": False
+                    })
         final_schemas = list(tables.values())
         logger.info(f"Constructed {len(final_schemas)} schemas")
-        
         return final_schemas
-        
 
     def _check_schemas_without_pruning(
         self,
         db_schemas: List[Dict],
         schema_docs: List[Any]
     ) -> Dict:
-        """Check if schemas can be used without pruning."""
         retrieval_results = []
         has_calculated_field = False
         has_metric = False
-        
         try:
-            # Process table schemas
             for schema in db_schemas:
                 if not isinstance(schema, dict):
                     continue
-                    
-                # Get schema type from metadata or content
                 schema_type = schema.get("type")
                 if not schema_type:
                     continue
-                
-                if schema_type == "TABLE" or schema_type == "TABLE_DESCRIPTION" or schema_type == "MODEL":
-                    ddl, _has_calculated_field = self._build_table_ddl(schema)
+                if schema_type in ["TABLE", "TABLE_DESCRIPTION", "MODEL"]:
+                    ddl = self._build_table_ddl(schema.get("name", ""), schema.get("description", ""), schema.get("columns", []))
                     retrieval_results.append({
                         "table_name": schema.get("name", ""),
                         "table_ddl": ddl
                     })
-                    has_calculated_field = has_calculated_field or _has_calculated_field
-            
-            # Process metrics and views
             for doc in schema_docs:
-                try:
-                    # Get content from metadata or parse page_content
-                    content = doc.get('content', '')
-                    if not content:
-                        continue
-                        
-                    try:
-                        content_dict = ast.literal_eval(content)
-                    except:
-                        continue
-                    
-                    if not isinstance(content_dict, dict):
-                        continue
-                        
-                    # Get type from content
-                    doc_type = content_dict.get('type')
-                    if not doc_type:
-                        continue
-                    
-                    if doc_type == "METRIC":
-                        retrieval_results.append({
-                            "table_name": content_dict.get("name", ""),
-                            "table_ddl": self._build_metric_ddl(content_dict)
-                        })
-                        has_metric = True
-                    elif doc_type == "VIEW":
-                        retrieval_results.append({
-                            "table_name": content_dict.get("name", ""),
-                            "table_ddl": self._build_view_ddl(content_dict)
-                        })
-                except Exception as e:
-                    logger.warning(f"Error processing schema document: {str(e)}")
-                    continue
-            
-            # Check token count
-            
+                content_dict = self._parse_doc_content(doc)
+                doc_type = content_dict.get('type')
+                if doc_type == "METRIC":
+                    retrieval_results.append({
+                        "table_name": content_dict.get("name", ""),
+                        "table_ddl": self._build_metric_ddl(content_dict)
+                    })
+                    has_metric = True
+                elif doc_type == "VIEW":
+                    retrieval_results.append({
+                        "table_name": content_dict.get("name", ""),
+                        "table_ddl": self._build_view_ddl(content_dict)
+                    })
             table_ddls = [result["table_ddl"] for result in retrieval_results]
             token_count = len(self._encoding.encode(" ".join(table_ddls)))
-            
             if token_count > 100_000 or not self._allow_using_db_schemas_without_pruning:
                 return {
                     "db_schemas": [],
@@ -766,14 +884,12 @@ class TableRetrieval:
                     "has_calculated_field": has_calculated_field,
                     "has_metric": has_metric
                 }
-                
             return {
                 "db_schemas": retrieval_results,
                 "tokens": token_count,
                 "has_calculated_field": has_calculated_field,
                 "has_metric": has_metric
             }
-            
         except Exception as e:
             logger.error(f"Error in schema check: {str(e)}")
             return {
@@ -798,64 +914,6 @@ class TableRetrieval:
                 previous_queries = [history["question"] for history in histories]
                 query = "\n".join(previous_queries) + "\n" + query
             
-            # Build schema DDLs
-            """ schema_ddls = []
-            processed_tables = set()  # Track processed tables to avoid duplicates
-            
-            for schema in db_schemas:
-                if not isinstance(schema, dict):
-                    logger.warning(f"Invalid schema format: {schema}")
-                    continue
-                
-                try:
-                    # Extract table name and content
-                    table_name = schema.get('metadata', {}).get('name')
-                    if not table_name or table_name in processed_tables:
-                        continue
-                        
-                    # Parse content string into dict
-                    content = schema.get('content', '')
-                    if not content:
-                        continue
-                        
-                    try:
-                        content_dict = ast.literal_eval(content)
-                    except:
-                        logger.warning(f"Failed to parse content: {content}")
-                        continue
-                    
-                    if not isinstance(content_dict, dict):
-                        continue
-                    
-                    # Build schema string
-                    description = content_dict.get('description', '')
-                    columns = content_dict.get('columns', '')
-                    
-                    # Create schema string
-                    schema_str = f"-- {description}\nCREATE TABLE {table_name} (\n"
-                    if isinstance(columns, str):
-                        # Handle string columns
-                        col_list = [col.strip() for col in columns.split(',')]
-                        schema_str += "  " + ",\n  ".join([f"{col} STRING" for col in col_list]) + "\n);"
-                    else:
-                        # Handle list/dict columns
-                        schema_str += "  id STRING\n);"
-                    
-                    schema_ddls.append(schema_str)
-                    processed_tables.add(table_name)
-                        
-                except Exception as e:
-                    logger.warning(f"Error processing schema: {str(e)}")
-                    continue
-            
-            if not schema_ddls:
-                logger.warning("No valid schemas were found")
-                return self._prompt.format(
-                    question=query,
-                    db_schemas="-- No valid schemas found"
-                )
-            print("db_schemas", db_schemas)
-            print("schema_ddls", schema_ddls) """
             # Format prompt with the schema DDLs
             try:
                 # Join DDLs with newlines to create a single string
@@ -942,21 +1000,39 @@ class TableRetrieval:
                 
             # Get selected columns for this table
             
-            selected_columns = selected_tables[table_name]
-            
-            # Build DDL with selected columns
-            ddl, _has_calculated_field = self._build_table_ddl(
-                schema,
-                columns=selected_columns
+            selected_column_names = selected_tables[table_name]
+           
+            # Filter the schema's columns to only those selected
+            all_columns = schema.get("columns", [])
+            filtered_columns = []
+            for col in all_columns:
+                # Handle stringified dict columns
+                if isinstance(col, dict) and isinstance(col.get('name'), str) and col['name'].strip().startswith("{'type': 'COLUMN'"):
+                    try:
+                        col_info = ast.literal_eval(col['name'])
+                        col_name = col_info.get('name', '')
+                    except Exception:
+                        col_name = col.get('name', '')
+                elif isinstance(col, dict):
+                    col_name = col.get('name', '')
+                else:
+                    col_name = str(col)
+                if col_name in selected_column_names:
+                    filtered_columns.append(col)
+            # Build DDL with filtered columns
+            ddl = self._build_table_ddl(
+                table_name,
+                schema.get("description", ""),
+                filtered_columns
             )
             logger.info(f"selected_tables ddl in table retrieval: {ddl}")
             retrieval_results.append({
                 "table_name": table_name,
                 "table_ddl": ddl
             })
-            has_calculated_field = has_calculated_field or _has_calculated_field
         
         # Process metrics and views
+        print("schema_docs in table retrieval: ", schema_docs)
         for doc in schema_docs:
             try:
                 # Get content from document
@@ -974,6 +1050,7 @@ class TableRetrieval:
                     
                 # Get type and name
                 doc_type = content_dict.get('type')
+               
                 table_name = content_dict.get('name')
                 
                 if not doc_type or not table_name:
@@ -983,13 +1060,13 @@ class TableRetrieval:
                 if table_name not in selected_tables:
                     continue
                 
-                if doc_type == "METRIC":
+                if doc_type == "METRIC" or content_dict.get('mdl_type') == "METRIC":
                     retrieval_results.append({
                         "table_name": table_name,
                         "table_ddl": self._build_metric_ddl(content_dict)
                     })
                     has_metric = True
-                elif doc_type == "VIEW":
+                elif doc_type == "VIEW" or content_dict.get('mdl_type') == "VIEW":
                     retrieval_results.append({
                         "table_name": table_name,
                         "table_ddl": self._build_view_ddl(content_dict)
@@ -1004,158 +1081,6 @@ class TableRetrieval:
             "has_calculated_field": has_calculated_field,
             "has_metric": has_metric
         }
-
-    def _build_table_ddl(
-        self,
-        schema: Dict,
-        columns: Optional[set] = None,
-        tables: Optional[set] = None
-    ) -> tuple[str, bool]:
-        """Build table DDL with optional column filtering.
-        
-        Args:
-            schema: Dictionary containing table schema information
-            columns: Optional set of column names to include
-            tables: Optional set of table names to include
-            
-        Returns:
-            Tuple of (DDL string, has_calculated_field boolean)
-        """
-        try:
-            has_calculated_field = False
-            filtered_columns = []
-            
-            # Get table name and description
-            table_name = schema.get("name", "")
-            if not table_name:
-                return "", False
-                
-            description = schema.get("description", "")
-            
-            # Get columns from schema
-            schema_columns = schema.get("columns", [])
-            print("schema_columns in retrieval", schema_columns)
-            # Process columns
-            for column in schema_columns:
-                if not isinstance(column, dict):
-                    continue
-                    
-                # Parse the column name which is stored as a string
-                try:
-                    col_info = ast.literal_eval(column.get("name", "{}"))
-                    if not isinstance(col_info, dict):
-                        continue
-                        
-                    col_name = col_info.get("name", "")
-                    if not col_name:
-                        continue
-                    
-                    # Skip if column filtering is enabled and column not in set
-                    if columns is not None and col_name not in columns:
-                        continue
-                        
-                    # Handle nested columns (with dots)
-                    if "." in col_name:
-                        parent_column = col_name.split(".")[0]
-                        if columns is not None and parent_column not in columns:
-                            continue
-                            
-                    # Check for calculated fields
-                    if "Calculated Field" in column.get("comment", ""):
-                        has_calculated_field = True
-                    
-                    # Get column type and comment
-                    col_type = col_info.get("data_type", "STRING")
-                    col_comment = col_info.get("comment", "")
-                    
-                    # Build column definition
-                    col_def = f"{col_name} {col_type}"
-                    if col_comment:
-                        col_def = f"-- {col_comment}\n{col_def}"
-                    
-                    filtered_columns.append(col_def)
-                    
-                except Exception as e:
-                    logger.warning(f"Error parsing column info: {str(e)}")
-                    continue
-            
-            # If no valid columns were found, add at least one default column
-            if not filtered_columns:
-                filtered_columns = ["id STRING"]
-            
-            # Build table DDL
-            table_comment = f"-- {description}\n" if description else ""
-            ddl = f"{table_comment}CREATE TABLE {table_name} (\n  " + ",\n  ".join(filtered_columns) + "\n);"
-            
-            return ddl, has_calculated_field
-            
-        except Exception as e:
-            logger.error(f"Error building table DDL: {str(e)}")
-            # Return a minimal valid DDL
-            return f"CREATE TABLE {schema.get('name', 'unknown')} (\n  id STRING\n);", False
-
-    def _build_metric_ddl(self, content: Dict) -> str:
-        """Build metric DDL."""
-        try:
-            table_name = content.get("name", "")
-            description = content.get("description", "")
-            
-            # Get columns from content or metadata
-            columns = content.get("columns", [])
-            if not columns and isinstance(content.get("metadata"), dict):
-                columns = content["metadata"].get("columns", [])
-            
-            # If no columns found, create default metric columns
-            if not columns:
-                columns = [
-                    {"name": "metric_name", "data_type": "STRING", "comment": "Name of the metric"},
-                    {"name": "metric_value", "data_type": "FLOAT", "comment": "Value of the metric"},
-                    {"name": "dimension", "data_type": "STRING", "comment": "Dimension being measured"},
-                    {"name": "timestamp", "data_type": "TIMESTAMP", "comment": "When the metric was calculated"}
-                ]
-            
-            columns_ddl = []
-            for column in columns:
-                if not isinstance(column, dict):
-                    continue
-                    
-                col_name = column.get("name", "")
-                if not col_name:
-                    continue
-                    
-                col_comment = column.get("comment", "")
-                col_type = column.get("data_type", "STRING")
-                col_def = f"{col_name} {col_type}"
-                if col_comment:
-                    col_def = f"-- {col_comment}\n{col_def}"
-                
-                columns_ddl.append(col_def)
-            
-            # If no valid columns were found, add at least one default column
-            if not columns_ddl:
-                columns_ddl = ["metric_value FLOAT"]
-            
-            table_comment = f"-- {description}\n" if description else ""
-            return f"{table_comment}CREATE TABLE {table_name} (\n  " + ",\n  ".join(columns_ddl) + "\n);"
-            
-        except Exception as e:
-            logger.error(f"Error building metric DDL: {str(e)}")
-            # Return a minimal valid DDL with default columns
-            return f"CREATE TABLE {content.get('name', 'unknown')} (\n  metric_value FLOAT\n);"
-
-    def _build_view_ddl(self, content: Dict) -> str:
-        """Build view DDL."""
-        try:
-            view_name = content.get("name", "")
-            description = content.get("description", "")
-            statement = content.get("statement", "")
-            
-            view_comment = f"-- {description}\n" if description else ""
-            return f"{view_comment}CREATE VIEW {view_name}\nAS {statement}"
-            
-        except Exception as e:
-            logger.error(f"Error building view DDL: {str(e)}")
-            return f"CREATE VIEW {content.get('name', 'unknown')} AS SELECT 1;"
 
 
    

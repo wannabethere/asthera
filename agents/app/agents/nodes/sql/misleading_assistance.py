@@ -6,6 +6,7 @@ import orjson
 from langchain.agents import Tool
 from langchain.prompts import PromptTemplate
 from langfuse.decorators import observe
+import json
 
 from app.core.dependencies import get_llm
 from app.core.provider import DocumentStoreProvider, get_embedder
@@ -33,13 +34,11 @@ Please provide your response in proper Markdown format.
 
 misleading_assistance_user_prompt_template = """
 ### DATABASE SCHEMA ###
-{% for db_schema in db_schemas %}
-    {{ db_schema }}
-{% endfor %}
+{db_schemas}
 
 ### INPUT ###
-User's question: {{query}}
-Language: {{language}}
+User's question: {query}
+Language: {language}
 
 Please think step by step
 """
@@ -115,7 +114,7 @@ class MisleadingAssistanceTool:
             
             return prompt_template.format(
                 query=full_query,
-                db_schemas=db_schemas,
+                db_schemas=json.dumps(db_schemas),
                 language=language,
             )
         except Exception as e:
@@ -127,19 +126,10 @@ class MisleadingAssistanceTool:
         """Generate misleading assistance using LLM"""
         try:
             # Create full prompt with system and user parts
-            full_prompt = PromptTemplate(
-                input_variables=["system_prompt", "user_prompt"],
-                template="{system_prompt}\n\n{user_prompt}"
-            )
+            full_prompt = f"{misleading_assistance_system_prompt}\n\n{prompt_input}"
             
-            # Generate response using operator pattern
-            result = await (
-                self.llm
-                | {
-                    "system_prompt": misleading_assistance_system_prompt,
-                    "user_prompt": prompt_input
-                }
-            ).invoke()
+            # Generate response using LLM
+            result = await self.llm.ainvoke(full_prompt)
             
             # Update metrics
             self.doc_store_provider.update_metrics("misleading_assistance", "query")
@@ -171,12 +161,12 @@ class MisleadingAssistanceTool:
             
             # Step 2: Generate assistance
             generate_result = await self.generate_misleading_assistance(prompt_input, query_id)
-            
+            print("misleading assistance result generate_result", generate_result)
             # Step 3: Return result
             assistance_text = generate_result.get("replies", [""])[0]
-            
+            print("misleading assistance result assistance_text", assistance_text.content)
             return {
-                "assistance": assistance_text,
+                "assistance": assistance_text.content,
                 "success": True
             }
             
@@ -195,14 +185,7 @@ class MisleadingAssistance:
     def __init__(self, doc_store_provider: DocumentStoreProvider, **kwargs):
         self.tool = MisleadingAssistanceTool(doc_store_provider)
 
-    def _streaming_callback(self, chunk, query_id):
-        """Delegate streaming callback to tool"""
-        return self.tool._streaming_callback(chunk, query_id)
-
-    async def get_streaming_results(self, query_id):
-        """Delegate streaming results to tool"""
-        async for result in self.tool.get_streaming_results(query_id):
-            yield result
+   
 
     @observe(name="Misleading Assistance")
     async def run(
@@ -221,7 +204,7 @@ class MisleadingAssistance:
             query_id=query_id,
             histories=histories,
         )
-        
+       
         # Return in original format
         if result.get("success", False):
             return {"replies": [result["assistance"]]}

@@ -24,8 +24,7 @@ embedding_model: str = "text-embedding-3-small"
 embeddings_model = OpenAIEmbeddings(
             model= embedding_model, openai_api_key=settings.OPENAI_API_KEY
 )
-VECTOR_STORE_PATH = os.getenv("VECTOR_STORE_PATH", "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/InsightsNB/")
-CHROMA_STORE_PATH = os.getenv("CHROMA_STORE_PATH", os.path.join(VECTOR_STORE_PATH, "chroma_db"))
+CHROMA_STORE_PATH = settings.CHROMA_STORE_PATH
 
 class DuplicatePolicy(Enum):
     """Policy for handling duplicate documents in the store."""
@@ -280,12 +279,16 @@ class DocumentChromaStore:
         # Ensure the storage directory exists
         os.makedirs(self.vectorstore_path, exist_ok=True)
         self.initialize()
+        
 
     def initialize(self):
         """Initialize or load the Chroma vectorstore."""
+        
         try:
+            if self.collection:
+                return
             logger.info(f"Initializing Chroma store at {self.vectorstore_path} with collection {self.collection_name}")
-            
+            print("initializing Chroma store at", self.vectorstore_path, self.collection_name)  
             # Initialize the persistent client with the specified path
             
             
@@ -439,14 +442,14 @@ class DocumentChromaStore:
             return []
             
         try:
-            
+            logger.info(f"query in semantic_search for {self.collection_name}: {query}")
                 # Otherwise perform regular similarity search
             results = self.vectorstore.similarity_search_with_score(
                 query,
                 k=k,
                 filter=where
             )
-            
+            logger.info(f"results in semantic_search for {self.collection_name}: {results}")
             # Format results
             formatted_results = []
             for doc, score in results:
@@ -460,7 +463,7 @@ class DocumentChromaStore:
             # Sort results by score (lower is better for Chroma)
             formatted_results.sort(key=lambda x: x["score"])
             
-            logger.info(f"Found {len(formatted_results)} results for query: {query}")
+            logger.info(f"Found {len(formatted_results)}  {self.collection_name} results for query: {query}")
             return formatted_results
             
         except Exception as e:

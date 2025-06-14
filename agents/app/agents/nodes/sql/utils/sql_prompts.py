@@ -22,6 +22,7 @@ SQL_GENERATION_MODEL_KWARGS = {
 TEXT_TO_SQL_RULES = """
 #### SQL RULES ####
 - ONLY USE SELECT statements, NO DELETE, UPDATE OR INSERT etc. statements that might change the data in the database.
+- Strictly Support POSTGRES SQL Syntax.
 - ONLY USE the tables and columns mentioned in the database schema.
 - ONLY USE "*" if the user query asks for all the columns of a table.
 - ONLY CHOOSE columns belong to the tables mentioned in the database schema.

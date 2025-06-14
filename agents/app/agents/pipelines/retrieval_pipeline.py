@@ -137,7 +137,20 @@ class RetrievalPipeline(AgentPipeline):
                     tables=kwargs.get("tables")
                 )
                 formatted_result = {"formatted_output": {"documents": result.get("schemas", [])}, "metadata": result}
-
+            elif retrieval_type == "metrics":
+                result = await self._retrieval_helper.get_metrics(
+                    project_id=project_id,
+                    query=query,
+                    tables=kwargs.get("tables")
+                )
+                formatted_result = {"formatted_output": {"documents": result.get("metrics", [])}, "metadata": result}
+            elif retrieval_type == "views":
+                result = await self._retrieval_helper.get_views(
+                    project_id=project_id,
+                    query=query,
+                    tables=kwargs.get("tables")
+                )
+                formatted_result = {"formatted_output": {"documents": result.get("views", [])}, "metadata": result}
             else:
                 raise ValueError(f"Unknown retrieval_type: {retrieval_type}")
 

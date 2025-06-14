@@ -37,7 +37,9 @@ class AskRequest(BaseModel):
     
     @property
     def query_id(self) -> str:
-        return self._query_id or str(uuid.uuid4())
+        if self._query_id is None:
+            self._query_id = str(uuid.uuid4())
+        return self._query_id
 
     @query_id.setter
     def query_id(self, query_id: str):
@@ -72,7 +74,7 @@ class AskResult(BaseModel):
 
 
 class AskError(BaseModel):
-    code: Literal["NO_RELEVANT_DATA", "NO_RELEVANT_SQL", "OTHERS"]
+    code: Literal["NO_RELEVANT_DATA", "NO_RELEVANT_SQL", "OTHERS","MISLEADING_QUERY","GENERAL","USER_GUIDE"]
     message: str
 
 

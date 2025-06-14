@@ -13,7 +13,9 @@ from app.agents.retrieval.historical_question_retrieval import HistoricalQuestio
 from app.agents.retrieval.sql_pairs_retrieval import SqlPairsRetrieval
 from app.agents.retrieval.retrieval import TableRetrieval
 from app.agents.retrieval.preprocess_sql_data import PreprocessSqlData
-
+from app.core.dependencies import get_doc_store_provider
+from app.core.provider import get_embedder
+import os
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -21,40 +23,23 @@ logging.basicConfig(
 )
 logger = logging.getLogger("genieml-agents")
 settings = get_settings()
-
+os.environ["OPENAI_API_KEY"] = settings.OPENAI_API_KEY
 class RetrievalTest:
     def __init__(self):
         """Initialize the retrieval test with all necessary components."""
         # Initialize embeddings
+         
         self.embeddings = OpenAIEmbeddings(
-            model="text-embedding-3-small",
+            model=settings.EMBEDDING_MODEL,
             openai_api_key=settings.OPENAI_API_KEY
         )
         
-        # Initialize ChromaDB client
         self.persistent_client = chromadb.PersistentClient(
             path=settings.CHROMA_STORE_PATH
         )
         
         # Initialize document stores
-        self.document_stores = {
-            "instructions": DocumentChromaStore(
-                persistent_client=self.persistent_client,
-                collection_name="instructions"
-            ),
-            "historical_question": DocumentChromaStore(
-                persistent_client=self.persistent_client,
-                collection_name="historical_question"
-            ),
-            "sql_pairs": DocumentChromaStore(
-                persistent_client=self.persistent_client,
-                collection_name="sql_pairs"
-            ),
-            "table_description": DocumentChromaStore(
-                persistent_client=self.persistent_client,
-                collection_name="table_description"
-            )
-        }
+        self.document_stores = get_doc_store_provider().stores
         
         # Initialize retrievers
         self.retrievers = {

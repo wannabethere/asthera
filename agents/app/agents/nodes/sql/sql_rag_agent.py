@@ -570,16 +570,25 @@ Please provide your response in proper Markdown string format.
                 project_id=kwargs.get("project_id", "default")
             )
             
-            # Get SQL pairs
-            sql_pairs_result = await self.retrieval_helper.get_sql_pairs(
-                query=query,
-                project_id=kwargs.get("project_id", "default"),
-                similarity_threshold=0.3,
-                max_retrieval_size=3
+            sql_pairs_result, instructions_result = await asyncio.gather(
+                self.retrieval_helper.get_sql_pairs(
+                    query=query,
+                    project_id=kwargs.get("project_id", "default"),
+                    similarity_threshold=0.3,
+                    max_retrieval_size=3
+                ),
+                self.retrieval_helper.get_instructions(
+                    query=query,
+                    project_id=kwargs.get("project_id", "default"),
+                    similarity_threshold=0.3,
+                    top_k=3
+                )
             )
-
+            
+            instructions = instructions_result.get("documents", []) if instructions_result else []
+            
             # Combine all contexts
-            all_contexts = contexts + schema_data["schema_contexts"]
+            all_contexts = json.dumps(contexts) + json.dumps(schema_data["schema_contexts"]) + json.dumps(instructions)
 
             if sql_pairs_result and "sql_pairs" in sql_pairs_result:
                 for pair in sql_pairs_result["sql_pairs"]:
@@ -599,10 +608,10 @@ Please provide your response in proper Markdown string format.
                 has_calculated_field=any("Calculated Field" in ctx for ctx in all_contexts),
                 has_metric=any("metric" in ctx.lower() for ctx in all_contexts)
             )
-            
+            logger.debug(f"reasoning in generate sql internal in sql_rag_agent: {reasoning}")
             # Add reasoning if provided
             if reasoning:
-                instructions += f"\n### REASONING PLAN ###\n{reasoning}\n"
+                instructions += f"\n### REASONING PLAN ###\n{reasoning}\n ###IMPORTANT **Please ensure to use all the reasoning steps to answer the question and dont skip any steps if not results will be broken**"
             
             # Add table names if available
             if schema_data["table_names"]:
@@ -610,8 +619,8 @@ Please provide your response in proper Markdown string format.
             
             # Add query and contexts
             instructions += f"\n### DATABASE SCHEMA ###\n{chr(10).join(all_contexts)}\n\n### QUESTION ###\nUser's Question: {query}\nCurrent Time: {config.show_current_time()}\n\nLet's think step by step."
-            instructions += f"If there are multiple steps, please provide the sqls with step by step and their sqls in JSON format."
-            instructions += f"** Please ensure to use all the reasoning steps to answer the question and dont skip any steps. **"
+            
+            
             
             # Create messages
             messages = [
@@ -631,7 +640,7 @@ Please provide your response in proper Markdown string format.
                 },
                 **SQL_GENERATION_MODEL_KWARGS
             )
-            
+            logger.info(f"result in generate sql internal for token input size: {result}")
             # Extract SQL from the result
             if hasattr(result, 'content'):
                 sql_content = self._extract_sql_from_content(result.content)
@@ -1044,7 +1053,7 @@ Please provide your response in proper Markdown string format.
         while attempt < max_attempts:
             try:
                 attempt += 1
-                logger.info(f"Processing {operation.value} request, attempt {attempt}")
+                logger.info(f"Processing {operation.value} request, attempt {attempt} {kwargs}")
                 print(f"trying post process result {operation.value}")
                 if operation == SQLOperationType.GENERATION:
                     return await self._handle_sql_generation(query, **kwargs)
@@ -1093,30 +1102,18 @@ Please provide your response in proper Markdown string format.
                     table_ddl = schema.get("table_ddl", "")
                     if table_ddl:
                         schema_contexts.append(table_ddl)
-        logger.info(f"schema_contexts: {schema_contexts}")
-        # Retrieve relevant samples
-        sql_pairs_result = await self.retrieval_helper.get_sql_pairs(
-            query=query,
-            project_id=kwargs.get("project_id", "default"),
-            similarity_threshold=0.2,
-            max_retrieval_size=5
-        )
-        logger.info(f"sql_pairs_result: {sql_pairs_result}")
-        samples = []
-        if sql_pairs_result and "sql_pairs" in sql_pairs_result:
-            samples = sql_pairs_result["sql_pairs"]
         
         # Generate reasoning first
         reasoning_result = await self._reason_sql_internal(
             query, schema_contexts, kwargs.get("language", "English")
         )
-        logger.info(f"reasoning_result: {reasoning_result}")
+        
         reasoning = reasoning_result.get("reasoning", "")
         if hasattr(reasoning, 'content'):
             # Extract content and remove markdown formatting
             content = reasoning.content
             reasoning = content
-        print("reasoning in generate sql internal", reasoning)
+        
         # Generate SQL with the reasoning
         sql_result = await self._generate_sql_internal(
             query, schema_contexts, reasoning, kwargs.get("configuration", {})

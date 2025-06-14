@@ -232,6 +232,11 @@ class ScoringIntegratedSQLRAGAgent(SQLRAGAgent):
         start_time = datetime.now()
         
         try:
+            # Remove language from kwargs if it's already passed as a direct parameter
+            print("kwargs2 in process_sql_request_enhanced", kwargs)
+            if 'language' in kwargs:
+                kwargs.pop('language')
+            print("kwargs3 in process_sql_request_enhanced", kwargs)
             # Convert operation to enum if it's a string
             if isinstance(operation, str):
                 try:

@@ -73,31 +73,27 @@ class Instructions:
         logger.info("Instructions Retrieval is running...")
         
         try:
-            # Count documents to check if we have any to search
-            count = self._count_documents(project_id)
-            if not count:
-                return {"documents": []}
             
             # Get default instructions
-            default_docs = self._get_default_instructions(project_id)
+            #default_docs = self._get_default_instructions(project_id)
             
             # Get custom instructions if query is provided
             custom_docs = []
             if query:
                 # Generate query embedding
-                embedding_result = await self._embedder.aembed_query(query)
-                if embedding_result:
-                    # Retrieve similar documents
-                    custom_docs = self._retrieve_documents(
-                        query=query,
-                        query_embedding=embedding_result,
-                        project_id=project_id
-                    )
-                    # Filter by similarity score
-                    custom_docs = self._filter_by_score(custom_docs)
+                #embedding_result = await self._embedder.aembed_query(query)
+                #logger.info(f"embedding_result in instructions: {embedding_result}")
+                custom_docs = self._retrieve_documents(
+                    query=query,
+                    query_embedding=[0.0],
+                    project_id=project_id
+                )
+               
+                # Filter by similarity score
+                #custom_docs = self._filter_by_score(custom_docs)
             
             # Merge and format results
-            all_docs = default_docs + custom_docs
+            all_docs = custom_docs
             return self._formatter.run(all_docs)
             
         except Exception as e:
@@ -205,53 +201,46 @@ class Instructions:
             List of retrieved LangchainDocument objects
         """
         try:
-            if project_id:
-                where = {"project_id": {"$eq": project_id}}
-                results = self._document_store.semantic_search(
-                    query=query,
-                    query_embedding=[query_embedding],
-                    where=where,
-                    k=self._top_k
-                )
-            else:
-                results = self._document_store.semantic_search(
-                    query=query,
-                    query_embedding=[query_embedding],
-                    k=self._top_k
-                )
+            logger.info(f"project_id in retrieve_documents for Instructions: {project_id} {query}")
+            results = self._document_store.semantic_search(
+                query=query,
+                where={"project_id": {"$eq": project_id}} if project_id else None,
+                k=self._top_k if self._top_k < 10 else 5
+            )
             print(f"results in instructions: {results}")
-            if not results or not results.get("documents"):
+            if not results:
                 return []
-                
-            # Get documents from first query result
-            documents = results["documents"][0]
-            metadatas = results["metadatas"][0]
-            distances = results["distances"][0]
+
+            # If results is a list of dicts (new format)
+            if isinstance(results, list):
+                combined_docs = []
+                for item in results:
+                    # Parse content if it's a JSON string
+                    content = item.get("content", "")
+                    try:
+                        content_dict = orjson.loads(content) if isinstance(content, str) else content
+                    except Exception:
+                        content_dict = {"question": content}
+                    metadata = item.get("metadata", {})
+                    # Merge score and id into metadata
+                    metadata = {**metadata, "score": item.get("score", 0), "id": item.get("id", "")}
+                    # If content_dict is a dict, get question, else fallback
+                    page_content = content_dict.get("question") if isinstance(content_dict, dict) else str(content_dict)
+                    # Optionally add more fields from content_dict to metadata
+                    for key in ["instruction", "instruction_id", "chain_of_thought", "sql", "is_default"]:
+                        if key in content_dict:
+                            metadata[key] = content_dict[key]
+                    combined_docs.append(
+                        LangchainDocument(
+                            page_content=page_content,
+                            metadata=metadata
+                        )
+                    )
+                print(f"combined_docs in instructions: {combined_docs} {len(combined_docs)}")
+                return combined_docs
+            else:
+                return []
             
-            # Combine documents with their metadata and distances
-            combined_docs = []
-            for doc, metadata, distance in zip(documents, metadatas, distances):
-                # Create document with text and metadata
-                combined_docs.append({
-                    "text": doc,  # Keep original text
-                    "metadata": {
-                        **metadata,
-                        "score": 1.0 - distance,
-                        "instruction": metadata.get("instruction", ""),
-                        "instruction_id": metadata.get("instruction_id", ""),
-                        "chain_of_thought": metadata.get("chain_of_thought", ""),
-                        "sql": metadata.get("sql", ""),
-                        "is_default": metadata.get("is_default", False)
-                    }
-                })
-            print(f"combined_docs in instructions: {combined_docs}")
-            return [
-                LangchainDocument(
-                    page_content=doc["text"],
-                    metadata=doc["metadata"]
-                )
-                for doc in combined_docs
-            ]
         except Exception as e:
             logger.error(f"Error retrieving similar documents: {str(e)}")
             return []
@@ -282,7 +271,7 @@ if __name__ == "__main__":
     from agents.app.settings import get_settings
     
     settings = get_settings()
-    
+    print(f"client in instructions is initialized: settings.CHROMA_STORE_PATH: {settings.CHROMA_STORE_PATH}")
     # Initialize embeddings
     embeddings = OpenAIEmbeddings(
         model="text-embedding-3-small",
@@ -290,23 +279,30 @@ if __name__ == "__main__":
     )
     
     # Initialize document store and processor
-    persistent_client = chromadb.PersistentClient(path=settings.CHROMA_STORE_PATH)
-    doc_store = DocumentChromaStore(
-        persistent_client=persistent_client,
-        collection_name="instructions"
-    )
+    client = chromadb.PersistentClient(path=settings.CHROMA_STORE_PATH)
     
+    
+
+    if client is None:
+        raise ValueError("Client is not initialized")
+    doc_store = DocumentChromaStore(
+            persistent_client=client,
+            collection_name="instructions",
+            embeddings_model=embeddings,
+            tf_idf=False
+    )
+    print(f"doc_store in instructions is initialized: {doc_store.collection}")
     processor = Instructions(
         document_store=doc_store,
         embedder=embeddings,
-        similarity_threshold=0.7,
+        similarity_threshold=0.1,
         top_k=10
     )
     
     # Example query
-    query = "hello"
+    query = "What is the proportions of each different Transcript Status (Assigned / Satisfied / Expired / Waived) when compared to the total number of transcripts ?"
     
     # Process the query
     import asyncio
-    result = asyncio.run(processor.run(query, project_id="test"))
+    result = asyncio.run(processor.run(query, project_id="cornerstone"))
     print(f"Retrieved instructions: {result}")

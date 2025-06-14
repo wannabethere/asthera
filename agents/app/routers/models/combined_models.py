@@ -43,4 +43,11 @@ class CombinedAskResponse(BaseModel):
     # Question recommendation fields
     questions: Dict[str, List[Dict[str, Any]]] = Field(default_factory=dict)
     categories: List[str] = Field(default_factory=list)
-    reasoning: Optional[str] = None 
+    reasoning: Optional[str] = None
+    
+    # Additional fields from AskResult
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    processing_time_seconds: float = 0.0
+    timestamp: str = ""
+    answer: str = ""
+    explanation: str = "" 

@@ -64,8 +64,8 @@ class QuestionRecommendation:
             }
         )
         
-        """
-        TODO: Add metrics and views retrieval
+        
+        #TODO: Add metrics and views retrieval
         # Get metrics and views
         metrics_result = await self._pipeline_container.get_pipeline("metrics").run(
             query=candidate["question"],
@@ -78,7 +78,7 @@ class QuestionRecommendation:
             project_id=project_id,
             retrieval_type="views"
         )
-        """
+        
         
         table_ddls = schema_result
         
@@ -105,6 +105,7 @@ class QuestionRecommendation:
         )
         instructions = result["formatted_output"].get("instructions", [])
         return instructions
+   
     @observe(name="Validate Question")
     async def _validate_question(
         self,
@@ -124,9 +125,7 @@ class QuestionRecommendation:
                 self._instructions_retrieval(candidate, project_id),
             )
             table_ddls, has_calculated_field, has_metric = _document
-            print("Table DDLs: ", table_ddls)
-            print("SQL Samples: ", sql_samples)
-            print("Instructions: ", instructions)
+            
 
             sql_generation_reasoning = (
                 await self._pipelines["sql_generation_reasoning"].run(
@@ -234,21 +233,21 @@ class QuestionRecommendation:
                 "question": request.user_question,
                 "previous_questions": request.previous_questions
             }
-            _document, sql_samples, instructions = await asyncio.gather(
+            _document, sql_samples = await asyncio.gather(
                 self._document_retrieval(candidate, request.project_id),
-                self._sql_pairs_retrieval(candidate, request.project_id),
-                self._instructions_retrieval(candidate, request.project_id),
+                self._sql_pairs_retrieval(candidate, request.project_id)
             )
-
-            table_ddls, has_calculated_field, has_metric = _document
-            print("Table DDLs: ", table_ddls)
-            print("SQL Samples: ", sql_samples)
-            print("Instructions: ", instructions)
+            table_ddls, _, _ = _document
+            models= {
+                "table_ddls": table_ddls,
+                "sql_samples": sql_samples
+            }
+            
 
             # Generate recommendations
             result = await recommendation_pipeline.run(
                 user_question=request.user_question,
-                mdl=request.mdl,
+                mdl=models,
                 project_id=request.project_id,
                 configuration=config_dict,
                 previous_questions=request.previous_questions,

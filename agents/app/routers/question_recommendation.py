@@ -5,14 +5,14 @@ from app.services.sql.models import Configuration
 from app.services.sql.question_recommendation import QuestionRecommendation
 from app.services.service_container import SQLServiceContainer
 
-router = APIRouter(prefix="/question-recommendation", tags=["question-recommendation"])
+router = APIRouter(prefix="/recommendation", tags=["recommendation"])
 
 def get_question_recommendation_service():
     """Get the QuestionRecommendation service instance from the service container."""
     container = SQLServiceContainer.get_instance()
     return container.get_service("question_recommendation")
 
-@router.post("/recommend")
+@router.post("/sqlrecommend")
 async def recommend_questions(
     event_id: str,
     mdl: str,

@@ -4,6 +4,9 @@ venv/
 *.log
 *.zip
 */.npm-cache/
+__pycache__/
+__MACOSX/
+.pytest_cache/
 lexy
 *.pyc
 *.pyo

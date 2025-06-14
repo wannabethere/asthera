@@ -1,6 +1,8 @@
 import asyncio
 import logging
 from typing import Dict, Any, Optional, List
+import hashlib
+import json
 
 import chromadb
 from langchain_openai import OpenAIEmbeddings
@@ -15,6 +17,7 @@ from app.agents.retrieval.retrieval import TableRetrieval
 from app.agents.retrieval.preprocess_sql_data import PreprocessSqlData
 from app.agents.nodes.sql.utils.sql_prompts import AskHistory
 from app.core.dependencies import get_doc_store_provider
+from app.utils.cache import InMemoryCache
 
 # Configure logging
 logging.basicConfig(
@@ -50,7 +53,7 @@ class RetrievalHelper:
             "instructions": Instructions(
                 document_store=self.document_stores["instructions"],
                 embedder=self.embeddings,
-                similarity_threshold=0.7,
+                similarity_threshold=0.1,
                 top_k=30
             ),
             "historical_question": HistoricalQuestionRetrieval(
@@ -89,6 +92,8 @@ class RetrievalHelper:
             reduction_step=50
         )
 
+        self.cache = InMemoryCache()
+
     async def get_database_schemas(
         self, 
         project_id: str, 
@@ -109,6 +114,18 @@ class RetrievalHelper:
         Returns:
             Dictionary containing database schemas and metadata
         """
+        cache_key = hashlib.sha256(json.dumps({
+            'method': 'get_database_schemas',
+            'project_id': project_id,
+            'table_retrieval': table_retrieval,
+            'query': query,
+            'histories': [h.__dict__ for h in histories] if histories else None,
+            'tables': tables
+        }, sort_keys=True, default=str).encode()).hexdigest()
+        cached = await self.cache.get(cache_key)
+        if cached is not None:
+            return cached
+        
         try:
             # Initialize empty history_dicts
             history_dicts = []
@@ -134,13 +151,14 @@ class RetrievalHelper:
                 tables=tables,
                 histories=history_dicts
             )
-            logger.info(f"schema_result: {schema_result}")
+            #logger.info(f"schema_result: {schema_result}")
             if not schema_result or "retrieval_results" not in schema_result:
                 logger.warning(f"No schema information found for project {project_id}")
-                return {
+                result = {
                     "error": "No schema information found",
                     "schemas": []
                 }
+                return result
             
             # Process and format the schema information
             schemas = []
@@ -154,7 +172,7 @@ class RetrievalHelper:
                     }
                     schemas.append(schema_info)
             
-            return {
+            result = {
                 "schemas": schemas,
                 "total_schemas": len(schemas),
                 "project_id": project_id,
@@ -164,16 +182,21 @@ class RetrievalHelper:
                 "has_calculated_field": schema_result.get("has_calculated_field", False),
                 "has_metric": schema_result.get("has_metric", False)
             }
+            if schemas:
+                await self.cache.set(cache_key, result, ttl=300)
+            return result
             
         except Exception as e:
             logger.error(f"Error fetching database schemas: {str(e)}")
-            return {
+            result = {
                 "error": str(e),
                 "schemas": [],
                 "project_id": project_id,
                 "query": query,
                 "tables": tables
             }
+            await self.cache.set(cache_key, result, ttl=300)
+            return result
     
     async def get_sql_pairs(
         self,
@@ -193,6 +216,17 @@ class RetrievalHelper:
         Returns:
             Dictionary containing SQL pairs and metadata
         """
+        cache_key = hashlib.sha256(json.dumps({
+            'method': 'get_sql_pairs',
+            'query': query,
+            'project_id': project_id,
+            'similarity_threshold': similarity_threshold,
+            'max_retrieval_size': max_retrieval_size
+        }, sort_keys=True, default=str).encode()).hexdigest()
+        cached = await self.cache.get(cache_key)
+        if cached is not None:
+            return cached
+        
         try:
             # Use the SQL pairs retriever to get similar queries and their SQL
             sql_pairs_result = await self.retrievers["sql_pairs"].run(
@@ -202,13 +236,14 @@ class RetrievalHelper:
             
             if not sql_pairs_result or "documents" not in sql_pairs_result:
                 logger.warning(f"No SQL pairs found for project {project_id}")
-                return {
+                result = {
                     "error": "No SQL pairs found",
                     "sql_pairs": []
                 }
+                return result
             
             # Process and format the SQL pairs
-            logger.info(f"sql_pairs_result in retrieval_helper: {sql_pairs_result}")
+            logger.info(f"sql_pairs_result in retrieval_helper {query}: {sql_pairs_result}")
             sql_pairs = []
             for doc in sql_pairs_result["documents"]:
                 if isinstance(doc, dict):
@@ -221,7 +256,7 @@ class RetrievalHelper:
                     }
                     sql_pairs.append(sql_pair)
             
-            return {
+            result = {
                 "sql_pairs": sql_pairs,
                 "total_pairs": len(sql_pairs),
                 "project_id": project_id,
@@ -229,15 +264,20 @@ class RetrievalHelper:
                 "similarity_threshold": similarity_threshold,
                 "max_retrieval_size": max_retrieval_size
             }
+            if sql_pairs:
+                await self.cache.set(cache_key, result, ttl=300)
+            return result
             
         except Exception as e:
             logger.error(f"Error fetching SQL pairs: {str(e)}")
-            return {
+            result = {
                 "error": str(e),
                 "sql_pairs": [],
                 "project_id": project_id,
                 "query": query
             }
+            await self.cache.set(cache_key, result, ttl=300)
+            return result
 
     async def get_instructions(
         self,
@@ -257,19 +297,31 @@ class RetrievalHelper:
         Returns:
             Dictionary containing instructions and metadata
         """
+        cache_key = hashlib.sha256(json.dumps({
+            'method': 'get_instructions',
+            'query': query,
+            'project_id': project_id,
+            'similarity_threshold': similarity_threshold,
+            'top_k': top_k
+        }, sort_keys=True, default=str).encode()).hexdigest()
+        cached = await self.cache.get(cache_key)
+        if cached is not None:
+            return cached
+        
         try:
             # Use the instructions retriever to get similar instructions
             instructions_result = await self.retrievers["instructions"].run(
                 query=query,
                 project_id=project_id
             )
-            
+            logger.info(f"instructions_result in retrieval_helper {query}: {instructions_result}")
             if not instructions_result or "documents" not in instructions_result:
                 logger.warning(f"No instructions found for project {project_id}")
-                return {
+                result = {
                     "error": "No instructions found",
                     "instructions": []
                 }
+                return result
             
             # Process and format the instructions
             instructions = []
@@ -282,7 +334,7 @@ class RetrievalHelper:
                     }
                     instructions.append(instruction)
             
-            return {
+            result = {
                 "instructions": instructions,
                 "total_instructions": len(instructions),
                 "project_id": project_id,
@@ -290,15 +342,20 @@ class RetrievalHelper:
                 "similarity_threshold": similarity_threshold,
                 "top_k": top_k
             }
+            if instructions:
+                await self.cache.set(cache_key, result, ttl=300)
+            return result
             
         except Exception as e:
             logger.error(f"Error fetching instructions: {str(e)}")
-            return {
+            result = {
                 "error": str(e),
                 "instructions": [],
                 "project_id": project_id,
                 "query": query
             }
+            await self.cache.set(cache_key, result, ttl=300)
+            return result
 
     async def get_historical_questions(
         self,
@@ -316,15 +373,26 @@ class RetrievalHelper:
         Returns:
             Dictionary containing historical questions and metadata
         """
+        cache_key = hashlib.sha256(json.dumps({
+            'method': 'get_historical_questions',
+            'query': query,
+            'project_id': project_id,
+            'similarity_threshold': similarity_threshold
+        }, sort_keys=True, default=str).encode()).hexdigest()
+        cached = await self.cache.get(cache_key)
+        if cached is not None:
+            return cached
+        
         try:
             # Generate embedding for the query
             embedding = await self.embeddings.aembed_query(query)
             if not embedding:
                 logger.warning("Failed to generate embedding for query")
-                return {
+                result = {
                     "error": "Failed to generate embedding",
                     "historical_questions": []
                 }
+                return result
 
             # Use the historical question retriever to get similar questions
             historical_result = await self.retrievers["historical_question"].run(
@@ -334,10 +402,11 @@ class RetrievalHelper:
             
             if not historical_result or "documents" not in historical_result:
                 logger.warning(f"No historical questions found for project {project_id}")
-                return {
+                result = {
                     "error": "No historical questions found",
                     "historical_questions": []
                 }
+                return result
             
             # Process and format the historical questions
             historical_questions = []
@@ -351,21 +420,106 @@ class RetrievalHelper:
                     }
                     historical_questions.append(question)
             
-            return {
+            result = {
                 "historical_questions": historical_questions,
                 "total_questions": len(historical_questions),
                 "project_id": project_id,
                 "query": query,
                 "similarity_threshold": similarity_threshold
             }
+            if historical_questions:
+                await self.cache.set(cache_key, result, ttl=300)
+            return result
             
         except Exception as e:
             logger.error(f"Error fetching historical questions: {str(e)}")
-            return {
+            result = {
                 "error": str(e),
                 "historical_questions": [],
                 "project_id": project_id,
                 "query": query
+            }
+            await self.cache.set(cache_key, result, ttl=300)
+            return result
+
+    async def get_views(
+        self,
+        query: str,
+        project_id: str,
+        tables: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """Fetch all views for a given query and project."""
+        try:
+            schema_result = await self.retrievers["table_retrieval"].run(
+                query=query,
+                project_id=project_id,
+                tables=tables
+            )
+            if not schema_result or "retrieval_results" not in schema_result:
+                logger.warning(f"No schema information found for project {project_id}")
+                return {
+                    "error": "No schema information found",
+                    "views": []
+                }
+            views = []
+            for result in schema_result["retrieval_results"]:
+                if isinstance(result, dict) and result.get("type") == "VIEW":
+                    views.append(result)
+            return {
+                "views": views,
+                "total_views": len(views),
+                "project_id": project_id,
+                "query": query,
+                "tables": tables
+            }
+        except Exception as e:
+            logger.error(f"Error fetching views: {str(e)}")
+            return {
+                "error": str(e),
+                "views": [],
+                "project_id": project_id,
+                "query": query,
+                "tables": tables
+            }
+
+    async def get_metrics(
+        self,
+        query: str,
+        project_id: str,
+        tables: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """Fetch all metrics for a given query and project."""
+        try:
+            schema_result = await self.retrievers["table_retrieval"].run(
+                query=query,
+                project_id=project_id,
+                tables=tables
+            )
+            if not schema_result or "retrieval_results" not in schema_result:
+                logger.warning(f"No schema information found for project {project_id}")
+                return {
+                    "error": "No schema information found",
+                    "metrics": []
+                }
+            metrics = []
+            for result in schema_result["retrieval_results"]:
+                if isinstance(result, dict) and result.get("type") == "METRICS":
+                    metrics.append(result)
+            return {
+                "metrics": metrics,
+                "total_metrics": len(metrics),
+                "project_id": project_id,
+                "query": query,
+                "tables": tables
+            }
+        except Exception as e:
+            logger.error(f"Error fetching metrics: {str(e)}")
+            return {
+                "error": str(e),
+                "metrics": [],
+                "project_id": project_id,
+                "query": query,
+                "tables": tables
             }
 
 async def main():
@@ -422,6 +576,24 @@ async def main():
             project_id=test_project_id
         )
         print("historical_results: ", historical_results)
+        
+        # Test views retrieval
+        logger.info(f"\nTesting views retrieval with query: {test_query}")
+        views_results = await helper.get_views(
+            query=test_query,
+            project_id=test_project_id,
+            tables=test_tables
+        )
+        print("views_results: ", views_results)
+        
+        # Test metrics retrieval
+        logger.info(f"\nTesting metrics retrieval with query: {test_query}")
+        metrics_results = await helper.get_metrics(
+            query=test_query,
+            project_id=test_project_id,
+            tables=test_tables
+        )
+        print("metrics_results: ", metrics_results)
         
         # Print results
         logger.info("\nDatabase Schema Retrieval Results:")
@@ -504,6 +676,28 @@ async def main():
                     logger.info(f"Statement: {question['statement']}")
                 if question['viewId']:
                     logger.info(f"View ID: {question['viewId']}")
+        
+        # Print views results
+        logger.info("\nViews Retrieval Results:")
+        if "error" in views_results:
+            logger.error(f"Error: {views_results['error']}")
+        else:
+            logger.info(f"Total views found: {views_results['total_views']}")
+            for i, view in enumerate(views_results['views'], 1):
+                logger.info(f"\nView {i}:")
+                logger.info(f"Table Name: {view['table_name']}")
+                logger.info(f"Table DDL: {view['table_ddl']}")
+        
+        # Print metrics results
+        logger.info("\nMetrics Retrieval Results:")
+        if "error" in metrics_results:
+            logger.error(f"Error: {metrics_results['error']}")
+        else:
+            logger.info(f"Total metrics found: {metrics_results['total_metrics']}")
+            for i, metric in enumerate(metrics_results['metrics'], 1):
+                logger.info(f"\nMetric {i}:")
+                logger.info(f"Metric Name: {metric['metric_name']}")
+                logger.info(f"Metric Value: {metric['metric_value']}")
         
     except Exception as e:
         logger.error(f"Error in main: {str(e)}")

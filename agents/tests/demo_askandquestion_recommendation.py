@@ -345,21 +345,37 @@ async def run_demo():
         {
             "question": "Show me the certification completion rates by activity type, including how long it takes employees to complete their certifications on average",
             "event_id": "employee_event_4"
-        }
-        """
-    # Test cases
-    test_cases = [
-        # Cornerstone Training Records test cases
+        },
         {
             #"question": "Show me the training completion rates by division, including how many assignments were completed on time versus late",
             #"question": "How many trainings are assigned vs completed across different Divisions (Administration, Acme Products, Private Operations)?",
             #"question": "What is the proportion of different Transcript Status (Assigned / Satisfied / Expired / Waived)?",
-            #"question": "What are the proportions of different Transcript Status(Assigned / Satisfied / Expired / Waived) when compared to the total number of transcripts ?",
+            "question": "What is the proportions of each different Transcript Status (Assigned / Satisfied / Expired / Waived) when compared to the total number of transcripts ?",
             #"question": "How many employees have completed the training on time or Late per Division?",
             #"question": "How has the number of completed trainings changed month by month? (using CompletionDate)",
             #"question": "How many training activities for each employee and give me their Training Statuses by Assigned, Completed, Expired",
-            "question": "On average, how many days does it take from AssignmentDate to CompletionDate for each employee?",
+            #"question": "On average, how many days does it take from AssignmentDate to CompletionDate for each employee by division?",
+            #"question": "Which job roles take the longest to complete assignments on average?",
             "event_id": "cornerstone_event_1"
+        }
+        
+        """
+    # Test cases
+    test_cases = [
+        # Cornerstone Training Records test cases
+        
+        
+        {
+            #"question": "Show me the training completion rates by division, including how many assignments were completed on time versus late",
+            #"question": "How many trainings are assigned vs completed across different Divisions (Administration, Acme Products, Private Operations)?",
+            #"question": "What is the proportion of different Transcript Status (Assigned / Satisfied / Expired / Waived)?",
+            "question": "What are the relevant columns I should be asking questions about with the training data sets",
+            #"question": "How many employees have completed the training on time or Late per Division?",
+            #"question": "How has the number of completed trainings changed month by month? (using CompletionDate)",
+            #"question": "How many training activities for each employee and give me their Training Statuses by Assigned, Completed, Expired",
+            #"question": "On average, how many days does it take from AssignmentDate to CompletionDate for each employee by division?",
+            #"question": "Which job roles take the longest to complete assignments on average?",
+            "event_id": "cornerstone_event_2"
         }
     ]
     
