@@ -283,7 +283,8 @@ class PandasEngine(Engine):
                 except Exception as e:
                     return False, {"error": f"SQL syntax error: {str(e)}"}
             
-
+            limit = 1000
+            sql = f"{sql} LIMIT {limit}"
             # Execute SQL in thread pool to avoid blocking
             loop = asyncio.get_event_loop()
             success, result = await loop.run_in_executor(
@@ -403,6 +404,146 @@ class PandasEngine(Engine):
     def __del__(self):
         """Cleanup when object is destroyed"""
         self.cleanup()
+
+    async def execute_sql_in_batches(
+        self,
+        sql: str,
+        session: aiohttp.ClientSession,
+        batch_size: int = 1000,
+        batch_num: Optional[int] = None,
+        max_batches: Optional[int] = None,
+        dry_run: bool = True,
+        **kwargs,
+    ) -> Tuple[bool, Optional[Dict[str, Any]]]:
+        """
+        Execute SQL query in batches to handle large result sets efficiently
+        
+        Args:
+            sql: SQL query to execute
+            session: aiohttp ClientSession (not used in pandas engine)
+            batch_size: Number of rows to fetch in each batch
+            batch_num: Specific batch number to retrieve (None for all batches)
+            max_batches: Maximum number of batches to process (None for unlimited)
+            dry_run: If True, validates SQL without executing
+            **kwargs: Additional arguments
+            
+        Returns:
+            Tuple of (success: bool, result: Dict)
+        """
+        try:
+            if dry_run:
+                # For dry run, just validate the SQL syntax
+                try:
+                    sqlparse.parse(sql)
+                except Exception as e:
+                    return False, {"error": f"SQL syntax error: {str(e)}"}
+
+            # First, get total count
+            count_sql = f"SELECT COUNT(*) as total_count FROM ({sql}) as count_query"
+            success, count_result = await self.execute_sql(
+                count_sql,
+                session,
+                dry_run=False,
+                **kwargs
+            )
+            
+            if dry_run and success:
+                return True, {"status": "SQL syntax is valid and total count of rows is " + str(count_result["data"][0]["total_count"])}
+            
+            if not success or not count_result.get("data"):
+                return False, {"error": "Failed to get total count", "data": [], "columns": []}
+            
+            total_count = count_result["data"][0]["total_count"]
+            
+            # Calculate number of batches
+            num_batches = (total_count + batch_size - 1) // batch_size
+            if max_batches is not None:
+                num_batches = min(num_batches, max_batches)
+            
+            # If batch_num is specified, only process that batch
+            if batch_num is not None:
+                if batch_num < 0 or batch_num >= num_batches:
+                    return False, {
+                        "error": f"Invalid batch number. Must be between 0 and {num_batches - 1}",
+                        "data": [],
+                        "columns": []
+                    }
+                
+                offset = batch_num * batch_size
+                batch_sql = f"{sql} LIMIT {batch_size} OFFSET {offset}"
+                
+                success, batch_result = await self.execute_sql(
+                    batch_sql,
+                    session,
+                    dry_run=False,
+                    **kwargs
+                )
+                
+                if not success:
+                    return False, {
+                        "error": f"Failed to execute batch {batch_num}",
+                        "data": [],
+                        "columns": []
+                    }
+                
+                return True, {
+                    "data": batch_result.get("data", []),
+                    "columns": batch_result.get("columns", []),
+                    "row_count": len(batch_result.get("data", [])),
+                    "batch_info": {
+                        "batch_num": batch_num,
+                        "batch_size": batch_size,
+                        "total_batches": num_batches,
+                        "total_count": total_count,
+                        "is_last_batch": batch_num == num_batches - 1
+                    }
+                }
+            
+            # Process all batches if no specific batch requested
+            all_data = []
+            columns = None
+            
+            for current_batch in range(num_batches):
+                offset = current_batch * batch_size
+                batch_sql = f"{sql} LIMIT {batch_size} OFFSET {offset}"
+                
+                success, batch_result = await self.execute_sql(
+                    batch_sql,
+                    session,
+                    dry_run=False,
+                    **kwargs
+                )
+                
+                if not success:
+                    return False, {
+                        "error": f"Failed to execute batch {current_batch + 1}",
+                        "data": all_data,
+                        "columns": columns
+                    }
+                
+                # Store columns from first batch
+                if columns is None and batch_result.get("columns"):
+                    columns = batch_result["columns"]
+                
+                # Append batch data
+                if batch_result.get("data"):
+                    all_data.extend(batch_result["data"])
+                
+                # Log progress
+                logger.info(f"Processed batch {current_batch + 1}/{num_batches} ({len(all_data)}/{total_count} rows)")
+            
+            return True, {
+                "data": all_data,
+                "columns": columns,
+                "row_count": len(all_data),
+                "total_count": total_count,
+                "batches_processed": num_batches,
+                "batch_size": batch_size
+            }
+            
+        except Exception as e:
+            logger.exception(f"Error in execute_sql_in_batches: {e}")
+            return False, {"error": str(e), "data": [], "columns": []}
 
 
 class PandasEngineConfig:

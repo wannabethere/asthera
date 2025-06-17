@@ -5,9 +5,9 @@ import asyncio
 import orjson
 from langchain.agents import AgentType, initialize_agent
 from langchain.agents.agent import AgentExecutor
-from langchain.schema import AgentAction, AgentFinish
+
 from langchain.prompts import PromptTemplate
-from langchain.schema import LLMResult
+
 
 from app.agents.nodes.sql.utils.chart import (
     ChartDataPreprocessor,
@@ -210,7 +210,7 @@ class VegaLiteChartGenerationPipeline:
     def _load_default_vega_schema(self) -> Dict[str, Any]:
         """Load default Vega-Lite schema"""
         try:
-            with open("src/pipelines/generation/utils/vega-lite-schema-v5.json", "r") as f:
+            with open("app/agents/nodes/sql/utils/vega-lite-schema-v5.json", "r") as f:
                 return orjson.loads(f.read())
         except FileNotFoundError:
             logger.warning("Vega-Lite schema file not found, using empty schema")
@@ -442,7 +442,8 @@ class AdvancedVegaLiteChartGeneration(VegaLiteChartGenerationPipeline):
 # Example usage and testing
 if __name__ == "__main__":
     import asyncio
-    from langchain.llms import OpenAI
+    import os
+    os.environ["OPENAI_API_KEY"] = "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"
     
     # Example usage
     async def test_vega_lite_chart_generation():

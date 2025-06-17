@@ -20,12 +20,11 @@ ENV PYTHONPATH=/app
 
 # Create necessary directories
 RUN mkdir -p /app/data \
-    /app/config \
-    /app/initscripts
+    /app/config 
 
 # Copy specific directories
 COPY agents/config /app/config/
-COPY agents/initscripts /app/initscripts/
+
 
 # Command to run the application
-CMD ["uvicorn", "genieml.agents.main:app", "--reload", "--host", "0.0.0.0", "--port", "8020", "--workers", "4"] 
+CMD ["uvicorn", "genieml.agents.main:app", "--reload", "--host", "0.0.0.0", "--port", "8025", "--workers", "4"] 

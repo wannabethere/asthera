@@ -236,7 +236,7 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         final_result = await self._process_final_results(
             query_id, sql_result, reasoning_result, retrieval_result["data"]
         )
-
+        print("final_result in ask service", answer_result)
         # Add answer to the final result
         if answer_result.get("success"):
             final_result["answer"] = answer_result.get("answer")
@@ -1556,7 +1556,7 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         """Generate SQL execution data"""
         if self._is_stopped(query_id):
             return {"success": False}
-
+        ### This is only a dry run we get atmost 1000 rows back. 
         self._update_cache_status(
             query_id,
             "executing_sql",
@@ -1680,8 +1680,8 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             if answer_result.get("success"):
                 return {
                     "success": True,
-                    "answer": answer_result.get("answer", ""),
-                    "explanation": answer_result.get("explanation", ""),
+                    "answer": answer_result.get("data",{}).get("answer", ""),
+                    "explanation": answer_result.get("data",{}).get("reasoning", ""),
                     "metadata": answer_result.get("metadata", {})
                 }
             else:

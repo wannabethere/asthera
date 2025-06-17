@@ -31,7 +31,7 @@ class ProjectReader:
         self.base_path = Path(base_path)
         print(f"Initializing IndexingOrchestrator with base path: {base_path}")
 
-        self.persistent_client = persistent_client
+        self.persistent_client = persistent_client#chromadb.HttpClient(host='ec2-54-161-71-105.compute-1.amazonaws.com', port=8888)
         self.embeddings = OpenAIEmbeddings(
             model="text-embedding-3-small",
             openai_api_key=settings.OPENAI_API_KEY

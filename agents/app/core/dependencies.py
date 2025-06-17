@@ -31,7 +31,7 @@ def get_doc_store_provider():
     """Get the document store provider with all SQL-related stores."""
     # Initialize ChromaDB client
     client = chromadb.PersistentClient(path=CHROMA_STORE_PATH)
-    
+    #client = chromadb.HttpClient(host='ec2-54-161-71-105.compute-1.amazonaws.com', port=8888)
     # Create document stores for SQL-related collections
     sql_stores = {
         "db_schema": DocumentChromaStore(

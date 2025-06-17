@@ -9,6 +9,8 @@ from app.core.provider import DocumentStoreProvider
 from app.agents.nodes.sql.user_guide_assistance import UserGuideAssistance
 from app.agents.nodes.sql.question_recommendation import QuestionRecommendation
 from app.core.dependencies import get_llm
+import pandas as pd
+from app.agents.nodes.sql.recursive_summarizer import RecursiveDataSummarizer
 
 logger = logging.getLogger("lexy-ai-service")
 
@@ -21,7 +23,8 @@ class SQLExecutionPipeline(AgentPipeline):
         description: str,
         llm: ChatOpenAI,
         retrieval_helper: RetrievalHelper,
-        engine: Engine
+        engine: Engine,
+        dry_run: bool = True
     ):
         super().__init__(
             name=name,
@@ -339,6 +342,114 @@ class QuestionRecommendationPipeline(AgentPipeline):
             
         except Exception as e:
             logger.error(f"Error in question recommendation pipeline: {str(e)}")
+            self._metrics.update({"last_error": str(e), "success": False})
+            raise
+
+class DataSummarizationPipeline(AgentPipeline):
+    """Pipeline for generating data summaries using recursive summarization"""
+    def __init__(
+        self,
+        name: str,
+        version: str,
+        description: str,
+        llm: ChatOpenAI,
+        engine: Engine,
+        retrieval_helper: RetrievalHelper
+    ):
+        super().__init__(
+            name=name,
+            version=version,
+            description=description,
+            llm=get_llm(),
+            retrieval_helper=retrieval_helper,
+            engine=engine
+        )
+        self._configuration = {
+            "chunk_size": 150,
+            "language": "English"
+        }
+        self._engine = engine
+        self._metrics = {}
+        self._summarizer = RecursiveDataSummarizer(
+            chunk_size=self._configuration["chunk_size"],
+            language=self._configuration["language"],
+            llm=get_llm()
+        )
+
+    @property
+    def is_initialized(self) -> bool:
+        return self._initialized
+
+    def get_configuration(self) -> Dict[str, Any]:
+        return self._configuration.copy()
+
+    def update_configuration(self, config: Dict[str, Any]) -> None:
+        self._configuration.update(config)
+        # Update summarizer configuration if needed
+        if "chunk_size" in config:
+            self._summarizer = RecursiveDataSummarizer(
+                chunk_size=config["chunk_size"],
+                language=self._configuration["language"] or "English",
+                llm=get_llm()
+            )
+
+    def get_metrics(self) -> Dict[str, Any]:
+        return self._metrics.copy()
+
+    def reset_metrics(self) -> None:
+        self._metrics.clear()
+
+    async def run(
+        self,
+        query: str,
+        sql: str,
+        data_description: str,
+        project_id: Optional[str] = None,
+        configuration: Optional[Dict[str, Any]] = None,
+        **kwargs
+    ) -> Dict[str, Any]:
+        if not self._initialized:
+            raise RuntimeError("Pipeline must be initialized before running")
+        try:
+            # Update configuration if provided
+            if configuration:
+                self.update_configuration(configuration)
+
+            # Define progress callback
+            async def progress_callback(message: str):
+                logger.info(f"Summarization progress: {message}")
+
+           
+            # Generate summary
+            result = self._summarizer.summarize_dataframe(
+                df=df,
+                data_description=data_description,
+                progress_callback=progress_callback
+            )
+
+            # Update metrics
+            self._metrics.update({
+                "last_project_id": project_id,
+                "rows_processed": len(df),
+                "success": True,
+                "total_tokens": result["metadata"]["total_tokens"],
+                "estimated_cost": result["metadata"]["estimated_cost"]
+            })
+
+            return {
+                "post_process": {
+                    "executive_summary": result["executive_summary"],
+                    "data_overview": result["data_overview"]
+                },
+                "metadata": {
+                    "project_id": project_id,
+                    "data_description": data_description,
+                    "processing_stats": result["metadata"]
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"Error in data summarization pipeline: {str(e)}")
             self._metrics.update({"last_error": str(e), "success": False})
             raise
 
