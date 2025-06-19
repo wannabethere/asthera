@@ -19,6 +19,7 @@ from app.agents.pipelines.sql_pipelines import (
 )
 from app.agents.pipelines.retrieval_pipeline import RetrievalPipeline
 from app.core.engine_provider import EngineProvider
+from app.agents.pipelines.sql_execution import DataSummarizationPipeline
 logger = logging.getLogger("lexy-ai-service")
 settings = get_settings()
 
@@ -368,6 +369,17 @@ class PipelineContainer:
             document_store_provider=self._doc_store_provider
         )
         self._pipelines["user_guide"]._initialized = True
+        # Initialize the data summarization pipeline
+        self._pipelines["data_summarization"] = DataSummarizationPipeline(
+            name="data_summarization",
+            version="1.0",
+            description="Pipeline for generating data summaries using recursive summarization",
+            llm=self._llm,
+            engine=self._engine,  # You'll need to configure this with your database connection
+            retrieval_helper=self._retrieval_helper
+        )
+        
+        self._pipelines["data_summarization"]._initialized = True
     
     @classmethod
     def get_instance(cls) -> 'PipelineContainer':

@@ -113,7 +113,7 @@ class SQLPipeline:
                     project_id=request.project_id,
                     timeout=request.timeout
                 )
-            
+            print("result in enhanced sql pipeline", result)
             return SQLResult(
                 success=result.get("success", False),
                 data=result,

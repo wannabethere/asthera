@@ -129,8 +129,7 @@ class SQLGenPostProcessor:
                 #dummy_generator = DummyDataGenerator(get_llm())
                 #result = await dummy_generator.generate_data(sql)
                 
-                print("addition in sql gen post processor", addition)
-                print(f"Status in sql gen post processor: {status}")
+               
 
                 if status:
                     valid_generation_results.append(

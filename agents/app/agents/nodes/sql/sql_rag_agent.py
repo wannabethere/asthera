@@ -129,6 +129,7 @@ class SQLRAGAgent:
             SQLOperationType.GENERATION.value: f"""
 You are a helpful assistant that converts natural language queries into ANSI SQL queries.
 Given user's question, database schema, etc., you should think deeply and carefully and generate the SQL query based on the given reasoning plan step by step.
+**In addition, you should also provide a column filters chosen,time filters chosen, aggregations applied on columns and group by columns chosen in the SQL query as a JSON object**
 
 {TEXT_TO_SQL_RULES}
 
@@ -444,46 +445,73 @@ Please provide your response in proper Markdown string format.
             func=retrieve_samples_func
         )
     
-    def _extract_sql_from_content(self, content: str) -> str:
-        """Extract SQL query from content that may contain explanations"""
+    def _extract_sql_from_content(self, content: str) -> Dict[str, Any]:
+        """Extract SQL query and parsed entities from content that may contain explanations"""
         try:
-            # First try to extract JSON
+            # First try to parse the entire content as JSON
+            try:
+                json_data = json.loads(content)
+                if isinstance(json_data, dict):
+                    
+                    return {
+                        "sql": json_data.get("sql", "").strip(),
+                        "parsed_entities": json_data.get("parsed_entities", {})
+                    }
+            except json.JSONDecodeError:
+                pass
+
+            # If that fails, try to find JSON object in the content
             import re
-            import json
-            
-            # Look for JSON object
             json_match = re.search(r'\{[\s\S]*?\}', content)
             if json_match:
                 try:
                     json_str = json_match.group(0)
                     json_data = json.loads(json_str)
-                    if isinstance(json_data, dict) and "sql" in json_data:
-                        return json_data["sql"].strip()
+                    if isinstance(json_data, dict):
+                        return {
+                            "sql": json_data.get("sql", "").strip(),
+                            "parsed_entities": json_data.get("parsed_entities", {})
+                        }
                 except json.JSONDecodeError:
                     pass
             
             # If no valid JSON found, look for SQL code block
             sql_match = re.search(r'```sql\n(.*?)\n```', content, re.DOTALL)
             if sql_match:
-                return sql_match.group(1).strip()
+                return {
+                    "sql": sql_match.group(1).strip(),
+                    "parsed_entities": {}
+                }
             
             # If no code block, look for SQL statement
             sql_match = re.search(r'SELECT.*?;', content, re.DOTALL | re.IGNORECASE)
             if sql_match:
-                return sql_match.group(0).strip()
+                return {
+                    "sql": sql_match.group(0).strip(),
+                    "parsed_entities": {}
+                }
             
             # If still no match, try to find any SQL-like content
             sql_match = re.search(r'(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP).*?;', content, re.DOTALL | re.IGNORECASE)
             if sql_match:
-                return sql_match.group(0).strip()
+                return {
+                    "sql": sql_match.group(0).strip(),
+                    "parsed_entities": {}
+                }
             
-            # If no SQL found, return empty string
+            # If no SQL found, return empty dict
             logger.warning(f"No SQL found in content: {content}")
-            return ""
+            return {
+                "sql": "",
+                "parsed_entities": {}
+            }
             
         except Exception as e:
             logger.error(f"Error extracting SQL from content: {e}")
-            return ""
+            return {
+                "sql": "",
+                "parsed_entities": {}
+            }
 
     async def _retrieve_schema_context(self, query: str, project_id: str = "default") -> Dict[str, Any]:
         """Helper method to retrieve schema context and table names"""
@@ -597,7 +625,7 @@ Please provide your response in proper Markdown string format.
 
             # Generate SQL using LLM
             logger.info(f"Generating SQL for query: {query}")
-            logger.debug(f"Using contexts: {all_contexts}")
+            
             
             # Create configuration object
             config = Configuration(**(configuration or {}))
@@ -642,8 +670,13 @@ Please provide your response in proper Markdown string format.
             )
             logger.info(f"result in generate sql internal for token input size: {result}")
             # Extract SQL from the result
+            parsed_entities = {}
             if hasattr(result, 'content'):
-                sql_content = self._extract_sql_from_content(result.content)
+                extracted_data = self._extract_sql_from_content(result.content)
+                
+                sql_content = extracted_data["sql"]
+                parsed_entities = extracted_data["parsed_entities"]
+                
                 if not sql_content:
                     return {
                         "valid_generation_results": [],
@@ -655,7 +688,10 @@ Please provide your response in proper Markdown string format.
                     }
                 
                 # Format as JSON for post-processor
-                sql_json = {"sql": sql_content}
+                sql_json = {
+                    "sql": sql_content,
+                    "parsed_entities": parsed_entities
+                }
                 result = json.dumps(sql_json)
             
             
@@ -668,12 +704,14 @@ Please provide your response in proper Markdown string format.
                     project_id=kwargs.get("project_id")
                 )
                 
-                print("post_processed_result in generate sql internal", post_processed_result)
+                print("post_processed_result in generate sql internal", parsed_entities)
                
-                # return post_processed_result
+                
+                
                 return {
                     "valid_generation_results": [{
                         "sql": sql_content,
+                        "parsed_entities": parsed_entities,
                         "reasoning": reasoning,
                         "type": "GENERATION_SUCCESS"
                     }],
@@ -1129,7 +1167,8 @@ Please provide your response in proper Markdown string format.
                 "data": {},
                 "timestamp": sql_result.get("timestamp", ""),
                 "operation_type": sql_result.get("operation_type", "generation"),
-                "reasoning": reasoning
+                "reasoning": reasoning,
+                "parsed_entities": sql_result.get("parsed_entities", {})
             },
             "error": None
         }
@@ -1139,6 +1178,7 @@ Please provide your response in proper Markdown string format.
             valid_result = sql_result["valid_generation_results"][0]
             standardized_result["data"]["sql"] = valid_result.get("sql", "")
             standardized_result["data"]["type"] = valid_result.get("type", "GENERATION_SUCCESS")
+            standardized_result["data"]["parsed_entities"] = valid_result.get("parsed_entities", {})
         
         # Add reasoning
         standardized_result["data"]["reasoning"] = reasoning
@@ -1148,7 +1188,7 @@ Please provide your response in proper Markdown string format.
             standardized_result["error"] = "Failed to generate valid SQL"
             logger.warning(f"Failed to generate SQL for query: {query} with reasoning: {reasoning} and schema_contexts: {schema_contexts}")
         
-        
+        print("standardized_result2 in sql generation", standardized_result)
         return standardized_result
     
     async def _handle_sql_breakdown(self, query: str, **kwargs) -> Dict[str, Any]:

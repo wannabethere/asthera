@@ -110,11 +110,12 @@ class _AskResultResponse(BaseModel):
         "reasoning",
         "executing_sql",
         "generating_answer",
+        "generating_summary",
     ]
     rephrased_question: Optional[str] = None
     intent_reasoning: Optional[str] = None
     sql_generation_reasoning: Optional[str] = None
-    type: Optional[Literal["GENERAL", "TEXT_TO_SQL"]] = None
+    type: Optional[Literal["GENERAL", "TEXT_TO_SQL","DATA_SUMMARIZATION"]] = None
     retrieved_tables: Optional[List[str]] = None
     response: Optional[List[AskResult]] = None
     invalid_sql: Optional[str] = None
@@ -122,7 +123,7 @@ class _AskResultResponse(BaseModel):
     trace_id: Optional[str] = None
     is_followup: Optional[bool] = False
     general_type: Optional[
-        Literal["MISLEADING_QUERY", "DATA_ASSISTANCE", "USER_GUIDE"]
+        Literal["MISLEADING_QUERY", "DATA_ASSISTANCE", "USER_GUIDE", "DATA_SUMMARIZATION","GENERAL"]
     ] = None
     quality_scoring: Optional[Union[QualityScoring, Dict[str, Any], float]] = None
 
@@ -130,7 +131,7 @@ class _AskResultResponse(BaseModel):
 class AskResultResponse(_AskResultResponse):
     is_followup: Optional[bool] = Field(False, exclude=True)
     general_type: Optional[
-        Literal["MISLEADING_QUERY", "DATA_ASSISTANCE", "USER_GUIDE"]
+        Literal["MISLEADING_QUERY", "DATA_ASSISTANCE", "USER_GUIDE", "DATA_SUMMARIZATION","GENERAL"]
     ] = Field(None, exclude=True)
 
 

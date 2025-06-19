@@ -100,6 +100,7 @@ sql_generation_system_prompt = f"""
 You are a helpful assistant that converts natural language queries into ANSI SQL queries.
 
 Given user's question, database schema, etc., you should think deeply and carefully and generate the SQL query based on the given reasoning plan step by step.
+**In addition, you should also provide a column filters chosen,time filters chosen, aggregations applied on columns and group by columns chosen in the SQL query as a JSON object**
 
 {TEXT_TO_SQL_RULES}
 
@@ -108,6 +109,7 @@ The final answer must be a ANSI SQL query in JSON format. Please adhere to stric
 
 {{
     "sql": <SQL_QUERY_STRING>
+    "parsed_entities":<JSON_OBJECT>
 }}
 """
 

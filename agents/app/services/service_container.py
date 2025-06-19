@@ -5,6 +5,7 @@ from app.services.sql.question_recommendation import QuestionRecommendation
 from app.services.sql.chart import ChartService
 from app.services.sql.chart_adjustment import ChartAdjustmentService
 from app.services.sql.instructions import InstructionsService
+from app.services.sql.sql_helper_services import SQLHelperService
 from app.agents.pipelines.pipeline_container import PipelineContainer
 
 class SQLServiceContainer:
@@ -76,6 +77,14 @@ class SQLServiceContainer:
         if doc_store_provider:
             instructions_service.doc_store_provider = doc_store_provider
         self.register_service("instructions_service", instructions_service)
+
+        # Initialize SQL helper service
+        sql_helper_service = SQLHelperService(pipeline_container=self.pipeline_container)
+        if session_manager:
+            sql_helper_service.session_manager = session_manager
+        if doc_store_provider:
+            sql_helper_service.doc_store_provider = doc_store_provider
+        self.register_service("sql_helper_service", sql_helper_service)
     
     def get_service(self, service_name: str) -> BaseService:
         """Get a service instance by name.

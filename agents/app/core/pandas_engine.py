@@ -20,7 +20,7 @@ except ImportError:
     POSTGRES_AVAILABLE = False
 
 os.environ["OPENAI_API_KEY"] = "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"
-logger = logging.getLogger("wren-ai-service")
+logger = logging.getLogger("lexy-ai-service")
 
 
 class PandasEngine(Engine):
@@ -435,6 +435,7 @@ class PandasEngine(Engine):
                 # For dry run, just validate the SQL syntax
                 try:
                     sqlparse.parse(sql)
+                    return True, {"status": "SQL syntax is valid"}
                 except Exception as e:
                     return False, {"error": f"SQL syntax error: {str(e)}"}
 
@@ -447,16 +448,13 @@ class PandasEngine(Engine):
                 **kwargs
             )
             
-            if dry_run and success:
-                return True, {"status": "SQL syntax is valid and total count of rows is " + str(count_result["data"][0]["total_count"])}
-            
             if not success or not count_result.get("data"):
                 return False, {"error": "Failed to get total count", "data": [], "columns": []}
             
-            total_count = count_result["data"][0]["total_count"]
+            total_count = int(count_result["data"][0]["total_count"])
             
             # Calculate number of batches
-            num_batches = (total_count + batch_size - 1) // batch_size
+            num_batches = (total_count + int(batch_size) - 1) // int(batch_size)    
             if max_batches is not None:
                 num_batches = min(num_batches, max_batches)
             
@@ -693,19 +691,67 @@ class PandasEngineConfig:
         )
 
 def convert_to_json_serializable(df):
-    # Convert timedelta and datetime columns to strings
-    for column in df.columns:
-        if pd.api.types.is_timedelta64_dtype(df[column]):
-            df[column] = df[column].astype(str)  # Convert timedelta to string
-        elif pd.api.types.is_datetime64_dtype(df[column]):
-            df[column] = df[column].dt.strftime('%Y-%m-%d %H:%M:%S')  # Convert datetime to string
+    """
+    Convert DataFrame to JSON-serializable format, handling all pandas data types
+    """
+    try:
+        # Create a copy to avoid modifying the original DataFrame
+        df_copy = df.copy()
+        
+        # Convert timedelta and datetime columns to strings
+        for column in df_copy.columns:
+            try:
+                # Use a more robust approach to handle different pandas versions
+                dtype = df_copy[column].dtype
+                dtype_str = str(dtype).lower()
+                
+                # Handle different data types based on string representation
+                if 'timedelta' in dtype_str:
+                    df_copy[column] = df_copy[column].astype(str)  # Convert timedelta to string
+                elif 'datetime' in dtype_str:
+                    df_copy[column] = df_copy[column].dt.strftime('%Y-%m-%d %H:%M:%S')  # Convert datetime to string
+                elif 'categorical' in dtype_str:
+                    df_copy[column] = df_copy[column].astype(str)  # Convert categorical to string
+                elif 'object' in dtype_str:
+                    # Convert object columns to string, handling None/NaN values
+                    df_copy[column] = df_copy[column].astype(str).replace('nan', None)
+                elif 'period' in dtype_str:
+                    df_copy[column] = df_copy[column].astype(str)  # Convert period to string
+                elif 'interval' in dtype_str:
+                    df_copy[column] = df_copy[column].astype(str)  # Convert interval to string
+                elif 'sparse' in dtype_str:
+                    df_copy[column] = df_copy[column].astype(str)  # Convert sparse to string
+                elif hasattr(dtype, 'kind') and dtype.kind in ['O', 'S', 'U']:
+                    # Object, string, or unicode types
+                    df_copy[column] = df_copy[column].astype(str).replace('nan', None)
+                else:
+                    # For any other data type, try to convert to string as fallback
+                    df_copy[column] = df_copy[column].astype(str)
+            except Exception as e:
+                logger.warning(f"Failed to convert column {column} to JSON-serializable format: {e}")
+                # Fallback: convert to string
+                try:
+                    df_copy[column] = df_copy[column].astype(str)
+                except Exception as fallback_error:
+                    logger.error(f"Even fallback conversion failed for column {column}: {fallback_error}")
+                    # Last resort: replace with error message
+                    df_copy[column] = f"<conversion_error: {str(fallback_error)}>"
 
-    # Convert DataFrame to dictionary
-    data = df.to_dict(orient='records')
-    columns = df.columns.tolist()
+        # Convert DataFrame to dictionary
+        data = df_copy.to_dict(orient='records')
+        columns = df_copy.columns.tolist()
 
-    return {
-        "data": data,
-        "columns": columns,
-        "row_count": len(data)
-    }
+        return {
+            "data": data,
+            "columns": columns,
+            "row_count": len(data)
+        }
+    except Exception as e:
+        logger.error(f"Error converting DataFrame to JSON-serializable format: {e}")
+        # Fallback: return minimal information
+        return {
+            "data": [],
+            "columns": df.columns.tolist() if hasattr(df, 'columns') else [],
+            "row_count": len(df) if hasattr(df, '__len__') else 0,
+            "error": f"Failed to serialize data: {str(e)}"
+        }

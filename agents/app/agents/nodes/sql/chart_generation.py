@@ -1,10 +1,12 @@
 import logging
 from typing import Any, Dict, Optional, List
 import asyncio
+import os
 
 import orjson
 from langchain.agents import AgentType, initialize_agent
 from langchain.agents.agent import AgentExecutor
+from langchain.tools import Tool
 
 from langchain.prompts import PromptTemplate
 
@@ -82,8 +84,27 @@ class VegaLiteChartGenerationAgent:
     def _create_agent(self) -> AgentExecutor:
         """Create and configure the Langchain agent"""
         try:
+            # Create tools with proper function definitions
+            tools = [
+                Tool(
+                    name="preprocess_data",
+                    func=lambda x: self.data_preprocessor.run(orjson.loads(x)),
+                    description="Preprocess the input data for chart generation"
+                ),
+                Tool(
+                    name="postprocess_chart",
+                    func=lambda x: self.post_processor.run(
+                        x,
+                        self.vega_schema,
+                        [],  # Empty sample data as it will be provided in the actual call
+                        True  # Default to removing data from chart schema
+                    ),
+                    description="Post-process the generated chart schema"
+                )
+            ]
+            
             agent = initialize_agent(
-                tools=self.tools,
+                tools=tools,
                 llm=self.llm,
                 agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
                 verbose=True,
@@ -128,7 +149,7 @@ class VegaLiteChartGenerationAgent:
                 preprocessed_data["sample_data"],
                 remove_data_from_chart_schema
             )
-            
+            print("final_result for vega lite chart generation", final_result)
             return final_result
             
         except Exception as e:
@@ -210,7 +231,11 @@ class VegaLiteChartGenerationPipeline:
     def _load_default_vega_schema(self) -> Dict[str, Any]:
         """Load default Vega-Lite schema"""
         try:
-            with open("app/agents/nodes/sql/utils/vega-lite-schema-v5.json", "r") as f:
+            # Get the directory of the current file
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            schema_path = os.path.join(current_dir, "utils", "vega-lite-schema-v5.json")
+            
+            with open(schema_path, "r") as f:
                 return orjson.loads(f.read())
         except FileNotFoundError:
             logger.warning("Vega-Lite schema file not found, using empty schema")
@@ -262,7 +287,7 @@ class VegaLiteChartGenerationPipeline:
                     result["observable_code"] = self.exporter.to_observable_notebook(chart_schema, sample_data)
                     result["altair_code"] = self.exporter.to_altair_python(chart_schema)
                     result["chart_summary"] = self.exporter.get_chart_summary(chart_schema)
-            
+            print("result for vega lite chart generation pipeline", result)
             return result
             
         except Exception as e:

@@ -7,6 +7,7 @@ from aiohttp.web import Response
 from aiohttp.web_request import Request
 import pandas as pd
 import numpy as np
+from datetime import datetime
 
 from cachetools import TTLCache
 from langfuse.decorators import observe
@@ -531,3 +532,332 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
                 self._streaming_clients[query_id].remove(client)
             if not self._streaming_clients[query_id]:
                 del self._streaming_clients[query_id]
+
+    async def generate_sql_summary_and_visualization(
+        self,
+        query_id: str,
+        sql: str,
+        query: str,
+        project_id: str,
+        data_description: Optional[str] = None,
+        configuration: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Generate SQL summary and visualization using DataSummarizationPipeline
+        
+        Args:
+            query_id: Unique identifier for the query
+            sql: The SQL query to execute and summarize
+            query: The user's original query
+            project_id: Project identifier
+            data_description: Optional description of the data being analyzed
+            configuration: Optional configuration parameters for the pipeline
+            
+        Returns:
+            Dict containing summary and visualization results including:
+            - success: Whether the generation was successful
+            - data: Results including:
+                - executive_summary: The generated summary
+                - data_overview: Overview of the data processed
+                - visualization: The generated chart/visualization
+            - error: Any error that occurred
+        """
+        if self._is_stopped(query_id):
+            return {"success": False}
+
+        try:
+            # Get data summarization pipeline
+            data_summarization_pipeline = self._pipeline_container.get_pipeline("data_summarization")
+            if not data_summarization_pipeline:
+                raise RuntimeError("Data summarization pipeline not found")
+
+            # Update status
+            self._update_cache_status(
+                query_id,
+                "generating_summary",
+                AskResultResponse(
+                    status="generating_summary",
+                    type="DATA_SUMMARIZATION",
+                    is_followup=False
+                )
+            )
+
+            # Prepare data description if not provided
+            if not data_description:
+                data_description = f"Data from SQL query: {sql[:100]}..."
+
+            # Merge default configuration with provided configuration
+            default_config = {
+                "batch_size": 1000,
+                "chunk_size": 150,
+                "language": "English",
+                "enable_chart_generation": True,
+                "chart_format": "vega_lite",
+                "include_other_formats": False,
+                "use_multi_format": True
+            }
+            
+            if configuration:
+                default_config.update(configuration)
+
+            # Run the data summarization pipeline
+            result = await data_summarization_pipeline.run(
+                query=query,
+                sql=sql,
+                data_description=data_description,
+                project_id=project_id,
+                configuration=default_config
+            )
+
+            # Process the result
+            if result and result.get("post_process"):
+                post_process = result["post_process"]
+                
+                return {
+                    "success": True,
+                    "data": {
+                        "executive_summary": post_process.get("executive_summary", ""),
+                        "data_overview": post_process.get("data_overview", {}),
+                        "visualization": post_process.get("visualization", {}),
+                        "metadata": result.get("metadata", {})
+                    },
+                    "error": None
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "No data returned from summarization pipeline"
+                }
+
+        except Exception as e:
+            logger.error(f"Error generating SQL summary and visualization: {e}")
+            return {
+                "success": False,
+                "data": None,
+                "error": str(e)
+            }
+
+    async def stream_sql_summary_and_visualization(
+        self,
+        query_id: str,
+        sql: str,
+        query: str,
+        project_id: str,
+        data_description: Optional[str] = None,
+        configuration: Optional[Dict[str, Any]] = None
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """Stream SQL summary and visualization using DataSummarizationPipeline with callbacks
+        
+        Args:
+            query_id: Unique identifier for the query
+            sql: The SQL query to execute and summarize
+            query: The user's original query
+            project_id: Project identifier
+            data_description: Optional description of the data being analyzed
+            configuration: Optional configuration parameters for the pipeline
+            
+        Yields:
+            Dict containing streaming updates including:
+            - status: Current status of the operation
+            - data: Partial or complete results
+            - error: Any error that occurred
+        """
+        if self._is_stopped(query_id):
+            yield {"status": "stopped", "error": "Query was stopped"}
+            return
+
+        try:
+            # Get data summarization pipeline
+            data_summarization_pipeline = self._pipeline_container.get_pipeline("data_summarization")
+            if not data_summarization_pipeline:
+                yield {"status": "error", "error": "Data summarization pipeline not found"}
+                return
+
+            # Prepare data description if not provided
+            if not data_description:
+                data_description = f"Data from SQL query: {sql[:100]}..."
+
+            # Merge default configuration with provided configuration
+            default_config = {
+                "batch_size": 1000,
+                "chunk_size": 150,
+                "language": "English",
+                "enable_chart_generation": True,
+                "chart_format": "vega_lite",
+                "include_other_formats": True,
+                "use_multi_format": True
+            }
+            
+            if configuration:
+                default_config.update(configuration)
+
+            # Track final result
+            final_result = None
+
+            # Define status callback function for streaming
+            def status_callback(status: str, details: Dict[str, Any] = None):
+                """Status callback function that yields updates"""
+                nonlocal final_result
+                
+                try:
+                    # Update cache status
+                    self._update_cache_status(
+                        query_id,
+                        status,
+                        AskResultResponse(
+                            status=status,
+                            type="DATA_SUMMARIZATION",
+                            is_followup=False
+                        )
+                    )
+
+                    # Prepare streaming update
+                    update = {
+                        "status": status,
+                        "details": details or {},
+                        "timestamp": datetime.now().isoformat()
+                    }
+
+                    # Add specific data based on status
+                    if status == "fetch_data_complete":
+                        update["data"] = {
+                            "total_count": details.get("total_count", 0),
+                            "total_batches": details.get("total_batches", 0),
+                            "batch_size": details.get("batch_size", 0)
+                        }
+                    elif status == "summarization_begin":
+                        update["data"] = {
+                            "batch_number": details.get("batch_number", 0),
+                            "total_batches": details.get("total_batches", 0),
+                            "batch_size": details.get("batch_size", 0)
+                        }
+                    elif status == "summarization_complete":
+                        update["data"] = {
+                            "batch_number": details.get("batch_number", 0),
+                            "total_batches": details.get("total_batches", 0),
+                            "is_last_batch": details.get("is_last_batch", False)
+                        }
+                    elif status == "chart_generation_begin":
+                        update["data"] = {
+                            "chart_format": details.get("chart_format", "vega_lite"),
+                            "total_batches": details.get("total_batches", 0)
+                        }
+                    elif status == "chart_generation_complete":
+                        update["data"] = {
+                            "success": details.get("success", False),
+                            "chart_format": details.get("chart_format", "vega_lite"),
+                            "error": details.get("error")
+                        }
+
+                    # Yield the update (this will be handled by the async generator)
+                    # Note: We can't directly yield here, so we'll store it for later processing
+                    if hasattr(self, '_streaming_updates'):
+                        self._streaming_updates.append(update)
+                    else:
+                        self._streaming_updates = [update]
+
+                except Exception as e:
+                    logger.error(f"Error in status callback: {e}")
+
+            # Initialize streaming updates list
+            self._streaming_updates = []
+
+            # Run the data summarization pipeline with status callback
+            result = await data_summarization_pipeline.run(
+                query=query,
+                sql=sql,
+                data_description=data_description,
+                project_id=project_id,
+                configuration=default_config,
+                status_callback=status_callback
+            )
+
+            # Process streaming updates
+            for update in self._streaming_updates:
+                yield update
+
+            # Process the final result
+            if result and result.get("post_process"):
+                post_process = result["post_process"]
+                final_result = {
+                    "status": "completed",
+                    "data": {
+                        "executive_summary": post_process.get("executive_summary", ""),
+                        "data_overview": post_process.get("data_overview", {}),
+                        "visualization": post_process.get("visualization", {}),
+                        "metadata": result.get("metadata", {})
+                    },
+                    "timestamp": datetime.now().isoformat()
+                }
+            else:
+                final_result = {
+                    "status": "error",
+                    "error": "No data returned from summarization pipeline",
+                    "timestamp": datetime.now().isoformat()
+                }
+
+            # Yield final result
+            yield final_result
+
+            # Clean up streaming updates
+            if hasattr(self, '_streaming_updates'):
+                del self._streaming_updates
+
+        except Exception as e:
+            logger.error(f"Error streaming SQL summary and visualization: {e}")
+            yield {
+                "status": "error",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+
+    def stop_query(self, query_id: str) -> None:
+        """Stop an ongoing query process.
+        
+        Args:
+            query_id: Unique identifier for the query to stop
+        """
+        try:
+            # Mark the query as stopped in the cache
+            self._stop_query(query_id)
+            logger.info(f"Query {query_id} stopped successfully")
+        except Exception as e:
+            logger.error(f"Error stopping query {query_id}: {e}")
+            raise
+
+    def get_query_status(self, query_id: str) -> Dict[str, Any]:
+        """Get the status of a query.
+        
+        Args:
+            query_id: Unique identifier for the query
+            
+        Returns:
+            Dict containing the query status information
+        """
+        try:
+            # Get the cached status for the query
+            cached_result = self._get_cached_result(query_id)
+            if cached_result:
+                return {
+                    "query_id": query_id,
+                    "status": cached_result.status,
+                    "type": cached_result.type,
+                    "is_followup": cached_result.is_followup,
+                    "timestamp": datetime.now().isoformat()
+                }
+            else:
+                return {
+                    "query_id": query_id,
+                    "status": "not_found",
+                    "message": "Query not found in cache",
+                    "timestamp": datetime.now().isoformat()
+                }
+        except Exception as e:
+            logger.error(f"Error getting status for query {query_id}: {e}")
+            return {
+                "query_id": query_id,
+                "status": "error",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+
+

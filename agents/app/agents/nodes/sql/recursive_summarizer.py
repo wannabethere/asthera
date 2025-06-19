@@ -3,13 +3,13 @@ import numpy as np
 from typing import List, Dict, Any, Optional, Union
 from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
 from langchain.schema import BaseOutputParser
 from langchain.callbacks import get_openai_callback
 import json
 import logging
 from datetime import datetime
 from app.core.dependencies import get_llm
+from app.core.pandas_engine import convert_to_json_serializable
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -30,6 +30,15 @@ class SummaryOutputParser(BaseOutputParser):
                 "metrics": {},
                 "recommendations": []
             }
+        except Exception as e:
+            # Handle any other parsing errors
+            logger.warning(f"Error parsing LLM output: {e}")
+            return {
+                "summary": str(text).strip(),
+                "key_insights": [],
+                "metrics": {},
+                "recommendations": []
+            }
 
 class RecursiveDataSummarizer:
     """
@@ -43,7 +52,13 @@ class RecursiveDataSummarizer:
         language: str = "English",
         llm: ChatOpenAI = None
     ):
-        self.llm = llm
+        print(f"RecursiveDataSummarizer init - LLM type: {type(llm)}")
+        print(f"RecursiveDataSummarizer init - LLM value: {llm}")
+        
+        self.llm = llm or get_llm()  # Use provided LLM or get default
+        print(f"RecursiveDataSummarizer init - Final LLM type: {type(self.llm)}")
+        print(f"RecursiveDataSummarizer init - Final LLM value: {self.llm}")
+        
         self.chunk_size = chunk_size
         self.output_parser = SummaryOutputParser()
         
@@ -154,41 +169,57 @@ Final Executive Summary:
         )
     
     def _setup_chains(self):
-        """Initialize LangChain chains for different summarization levels"""
-        self.chunk_chain = LLMChain(
-            llm=self.llm,
-            prompt=self.chunk_prompt,
-            output_parser=self.output_parser
-        )
+        """Initialize LangChain chains for different summarization levels using modern pipe operator"""
+        print(f"_setup_chains - LLM type: {type(self.llm)}")
+        print(f"_setup_chains - LLM value: {self.llm}")
         
-        self.intermediate_chain = LLMChain(
-            llm=self.llm,
-            prompt=self.intermediate_prompt,
-            output_parser=self.output_parser
-        )
+        if not self.llm:
+            raise ValueError("LLM is not initialized. Please provide a valid LLM instance.")
         
-        self.final_chain = LLMChain(
-            llm=self.llm,
-            prompt=self.final_prompt,
-            output_parser=self.output_parser
-        )
+        # Create chains using the modern pipe operator pattern
+        self.chunk_chain = self.chunk_prompt | self.llm | self.output_parser
+        print(f"_setup_chains - chunk_chain created: {type(self.chunk_chain)}")
+        
+        self.intermediate_chain = self.intermediate_prompt | self.llm | self.output_parser
+        print(f"_setup_chains - intermediate_chain created: {type(self.intermediate_chain)}")
+        
+        self.final_chain = self.final_prompt | self.llm | self.output_parser
+        print(f"_setup_chains - final_chain created: {type(self.final_chain)}")
     
     def _prepare_data_chunk(self, df: pd.DataFrame) -> str:
         """Convert DataFrame to string format for LLM processing"""
-        # Basic statistics
-        stats = df.describe(include='all').to_string()
-        
-        # Sample rows
-        sample_size = min(5, len(df))
-        sample_rows = df.head(sample_size).to_string()
-        
-        # Column info
-        column_info = f"Columns: {list(df.columns)}\n"
-        column_info += f"Data types: {df.dtypes.to_dict()}\n"
-        column_info += f"Total rows: {len(df)}\n"
-        column_info += f"Missing values: {df.isnull().sum().to_dict()}\n"
-        
-        return f"""
+        try:
+            # Basic statistics
+            stats = df.describe(include='all').to_string()
+            
+            # Sample rows
+            sample_size = min(5, len(df))
+            sample_rows = df.head(sample_size).to_string()
+            
+            # Column info - convert data types to strings for JSON serialization
+            data_types_dict = {}
+            for col, dtype in df.dtypes.items():
+                try:
+                    # Handle pandas data types properly
+                    if hasattr(dtype, 'name'):
+                        data_types_dict[str(col)] = dtype.name
+                    else:
+                        data_types_dict[str(col)] = str(dtype)
+                except Exception as e:
+                    logger.warning(f"Failed to convert data type for column {col}: {e}")
+                    data_types_dict[str(col)] = "unknown"
+            
+            missing_values_dict = {}
+            for col, count in df.isnull().sum().items():
+                missing_values_dict[str(col)] = int(count)
+            
+            # Ensure all values are strings before concatenation
+            column_info = f"Columns: {list(df.columns)}\n"
+            column_info += f"Data types: {str(data_types_dict)}\n"
+            column_info += f"Total rows: {str(len(df))}\n"
+            column_info += f"Missing values: {str(missing_values_dict)}\n"
+            
+            return f"""
 {column_info}
 
 SAMPLE DATA:
@@ -196,6 +227,17 @@ SAMPLE DATA:
 
 STATISTICAL SUMMARY:
 {stats}
+"""
+        except Exception as e:
+            logger.error(f"Error in _prepare_data_chunk: {e}")
+            # Fallback: return basic information
+            return f"""
+Error preparing data chunk: {str(e)}
+
+Basic info:
+- Shape: {str(df.shape) if hasattr(df, 'shape') else 'unknown'}
+- Columns: {str(list(df.columns)) if hasattr(df, 'columns') else 'unknown'}
+- Total rows: {str(len(df)) if hasattr(df, '__len__') else 'unknown'}
 """
     
     def _chunk_data(self, df: pd.DataFrame) -> List[pd.DataFrame]:
@@ -209,202 +251,129 @@ STATISTICAL SUMMARY:
     def _summarize_chunk(self, data: Union[pd.DataFrame, Dict[str, Any]], data_description: str) -> str:
         """Summarize a single data chunk"""
         try:
+            # Ensure data_description is a string
+            data_description_str = str(data_description) if data_description is not None else "Unknown data"
+            
+            # Check if chain is properly initialized
+            if not hasattr(self, 'chunk_chain') or self.chunk_chain is None:
+                raise ValueError("Chunk chain is not properly initialized. Please check LLM configuration.")
+            
             # Convert DataFrame to summary format if needed
             if isinstance(data, pd.DataFrame):
                 chunk_text = self._prepare_data_chunk(data)
             else:
-                # Format dictionary data for summarization
-                chunk_text = json.dumps(data, indent=2)
+                # Format dictionary data for summarization with JSON serialization handling
+                def convert_to_serializable(obj):
+                    """Convert pandas objects to JSON-serializable formats"""
+                    import pandas as pd
+                    
+                    # Handle pandas data types specifically
+                    if hasattr(obj, 'dtype'):
+                        if isinstance(obj.dtype, pd.api.extensions.ExtensionDtype):
+                            return str(obj.dtype)
+                        elif hasattr(obj, 'to_dict'):
+                            try:
+                                return obj.to_dict()
+                            except Exception:
+                                return str(obj)
+                        else:
+                            return str(obj)
+                    elif isinstance(obj, dict):
+                        return {str(k): convert_to_serializable(v) for k, v in obj.items()}
+                    elif isinstance(obj, list):
+                        return [convert_to_serializable(item) for item in obj]
+                    elif isinstance(obj, (int, float, str, bool, type(None))):
+                        return obj
+                    elif hasattr(obj, '__class__') and 'pandas' in str(obj.__class__):
+                        # Handle any pandas objects
+                        return str(obj)
+                    elif hasattr(obj, '__class__') and 'numpy' in str(obj.__class__):
+                        # Handle numpy objects
+                        return str(obj)
+                    else:
+                        return str(obj)
+                
+                # Convert data to JSON-serializable format
+                serializable_data = convert_to_serializable(data)
+                try:
+                    chunk_text = json.dumps(serializable_data, indent=2)
+                except Exception as json_error:
+                    logger.warning(f"JSON serialization failed, using string representation: {json_error}")
+                    # Fallback: convert to string representation
+                    chunk_text = str(serializable_data)
             
             with get_openai_callback() as cb:
-                result = self.chunk_chain.run(
-                    data_chunk=chunk_text,
-                    data_description=data_description
-                )
+                result = self.chunk_chain.invoke({
+                    "data_chunk": chunk_text,
+                    "data_description": data_description_str
+                })
                 
                 # Update stats
                 self.stats["total_tokens"] += cb.total_tokens
                 self.stats["total_cost"] += cb.total_cost
                 self.stats["chunks_processed"] += 1
+               
             
-            return result if isinstance(result, str) else result.get("summary", str(result))
+            # Handle different result types
+            if isinstance(result, str):
+                return result
+            elif isinstance(result, dict):
+                return result.get("summary", str(result))
+            else:
+                return str(result)
             
         except Exception as e:
             logger.error(f"Error summarizing chunk: {e}")
+            logger.error(f"Error type: {type(e)}")
+            logger.error(f"Error details: {str(e)}")
             return f"Error processing data: {str(e)}"
     
     def _combine_summaries(self, summaries: List[str], data_description: str, is_final: bool = False) -> str:
         """Combine multiple summaries into one"""
         try:
+            # Ensure data_description is a string
+            data_description_str = str(data_description) if data_description is not None else "Unknown data"
+            
+            # Check if chains are properly initialized
+            if not hasattr(self, 'final_chain') or not hasattr(self, 'intermediate_chain'):
+                raise ValueError("Chains are not properly initialized. Please check LLM configuration.")
+            
             summaries_text = "\n\n".join([f"Summary {i+1}:\n{summary}" for i, summary in enumerate(summaries)])
             
             with get_openai_callback() as cb:
                 if is_final:
-                    result = self.final_chain.run(
-                        summaries=summaries_text,
-                        data_description=data_description,
-                        total_rows=self.stats["total_rows"]
-                    )
+                    result = self.final_chain.invoke({
+                        "summaries": summaries_text,
+                        "data_description": data_description_str,
+                        "total_rows": self.stats["total_rows"]
+                    })
                 else:
-                    result = self.intermediate_chain.run(
-                        summaries=summaries_text,
-                        data_description=data_description
-                    )
+                    result = self.intermediate_chain.invoke({
+                        "summaries": summaries_text,
+                        "data_description": data_description_str
+                    })
                 
                 # Update stats
                 self.stats["total_tokens"] += cb.total_tokens
                 self.stats["total_cost"] += cb.total_cost
             
-            return result if isinstance(result, str) else result.get("summary", str(result))
+            
+            
+            # Handle different result types
+            if isinstance(result, str):
+                return result
+            elif isinstance(result, dict):
+                return result.get("summary", str(result))
+            else:
+                return str(result)
             
         except Exception as e:
             logger.error(f"Error combining summaries: {e}")
+            logger.error(f"Error type: {type(e)}")
+            logger.error(f"Error details: {str(e)}")
             return f"Error combining {len(summaries)} summaries: {str(e)}"
     
-    def summarize_dataframe(
-        self,
-        data: Union[pd.DataFrame, Dict[str, pd.DataFrame]],
-        data_description: str = "Dataset",
-        progress_callback: Optional[callable] = None
-    ) -> Dict[str, Any]:
-        """
-        Main method to summarize data, handling both DataFrame and dictionary of DataFrames
-        
-        Args:
-            data: DataFrame or dictionary of DataFrames to summarize
-            data_description: Description of what the data represents
-            progress_callback: Optional callback function for progress updates
-            
-        Returns:
-            Dictionary containing the summary and metadata
-        """
-        logger.info(f"Starting summarization of data")
-        
-        # Initialize stats
-        self.stats["total_rows"] = 0
-        self.stats["chunks_processed"] = 0
-        self.stats["summarization_levels"] = 0
-        
-        try:
-            summaries = []
-            
-            if isinstance(data, pd.DataFrame):
-                # Single DataFrame case
-                self.stats["total_rows"] = len(data)
-                
-                if len(data) <= self.chunk_size:
-                    # Small DataFrame - process directly
-                    if progress_callback:
-                        progress_callback(f"Processing small DataFrame with {len(data)} rows")
-                    summary = self._recursive_summarize(data, data_description, progress_callback)
-                    summaries.append(summary)
-                else:
-                    # Large DataFrame - process in batches
-                    if progress_callback:
-                        progress_callback(f"Processing large DataFrame with {len(data)} rows in batches")
-                    
-                    chunks = self._chunk_data(data)
-                    for i, chunk in enumerate(chunks):
-                        if progress_callback:
-                            progress_callback(f"Processing batch {i+1}/{len(chunks)}")
-                        summary = self._recursive_summarize(chunk, data_description, progress_callback)
-                        summaries.append(summary)
-                
-            elif isinstance(data, dict):
-                # Dictionary of DataFrames case
-                if progress_callback:
-                    progress_callback(f"Processing dictionary with {len(data)} DataFrames")
-                
-                for name, df in data.items():
-                    if not isinstance(df, pd.DataFrame):
-                        logger.warning(f"Skipping non-DataFrame item: {name}")
-                        continue
-                    
-                    self.stats["total_rows"] += len(df)
-                    
-                    if progress_callback:
-                        progress_callback(f"Processing DataFrame '{name}' with {len(df)} rows")
-                    
-                    if len(df) <= self.chunk_size:
-                        # Small DataFrame - process directly
-                        summary = self._recursive_summarize(df, f"{data_description} - {name}", progress_callback)
-                        summaries.append(summary)
-                    else:
-                        # Large DataFrame - process in batches
-                        chunks = self._chunk_data(df)
-                        df_summaries = []
-                        
-                        for i, chunk in enumerate(chunks):
-                            if progress_callback:
-                                progress_callback(f"Processing batch {i+1}/{len(chunks)} for '{name}'")
-                            chunk_summary = self._recursive_summarize(chunk, f"{data_description} - {name}", progress_callback)
-                            df_summaries.append(chunk_summary)
-                        
-                        # Combine summaries for this DataFrame
-                        df_summary = self._combine_summaries(df_summaries, f"{data_description} - {name}", is_final=True)
-                        summaries.append(df_summary)
-            
-            else:
-                raise ValueError(f"Unsupported data type: {type(data)}")
-            
-            # Combine all summaries
-            if len(summaries) > 1:
-                if progress_callback:
-                    progress_callback(f"Combining {len(summaries)} summaries")
-                final_summary = self._combine_summaries(summaries, data_description, is_final=True)
-            elif summaries:
-                final_summary = summaries[0]
-            else:
-                final_summary = "No valid data found to summarize"
-            
-            # Prepare result
-            result = {
-                "executive_summary": final_summary,
-                "metadata": {
-                    "total_rows": self.stats["total_rows"],
-                    "chunks_processed": self.stats["chunks_processed"],
-                    "summarization_levels": self.stats["summarization_levels"],
-                    "total_tokens": self.stats["total_tokens"],
-                    "estimated_cost": self.stats["total_cost"],
-                    "timestamp": datetime.now().isoformat(),
-                    "data_description": data_description
-                }
-            }
-            
-            # Add data overview
-            if isinstance(data, pd.DataFrame):
-                result["data_overview"] = {
-                    "shape": data.shape,
-                    "columns": list(data.columns),
-                    "data_types": data.dtypes.to_dict(),
-                    "missing_values": data.isnull().sum().to_dict()
-                }
-            elif isinstance(data, dict):
-                result["data_overview"] = {
-                    "dataframes": {
-                        name: {
-                            "shape": df.shape,
-                            "columns": list(df.columns),
-                            "data_types": df.dtypes.to_dict(),
-                            "missing_values": df.isnull().sum().to_dict()
-                        }
-                        for name, df in data.items()
-                        if isinstance(df, pd.DataFrame)
-                    }
-                }
-            
-            logger.info(f"Summarization complete. Processed {self.stats['chunks_processed']} chunks")
-            return result
-            
-        except Exception as e:
-            logger.error(f"Error in summarize_dataframe: {e}")
-            return {
-                "error": str(e),
-                "metadata": {
-                    "timestamp": datetime.now().isoformat(),
-                    "data_description": data_description
-                }
-            }
+   
     
     def _recursive_summarize(
         self,
@@ -426,41 +395,160 @@ STATISTICAL SUMMARY:
             str: Generated summary
         """
         try:
+            # Ensure data_description is a string
+            data_description_str = str(data_description) if data_description is not None else "Unknown data"
+            
+            print(f"Summarizing data: {data}")
             if isinstance(data, pd.DataFrame):
                 if progress_callback:
-                    progress_callback(f"Summarizing DataFrame with {len(data)} rows")
+                   progress_callback(f"Summarizing DataFrame with {len(data)} rows")
+                print(f"Summarizing data: {data}")
+                # Convert data types to strings to ensure JSON serialization
+                data_types_dict = {}
+                for col, dtype in data.dtypes.items():
+                    try:
+                        # Handle pandas data types properly
+                        if hasattr(dtype, 'name'):
+                            data_types_dict[str(col)] = dtype.name
+                        else:
+                            data_types_dict[str(col)] = str(dtype)
+                    except Exception as e:
+                        logger.warning(f"Failed to convert data type for column {col}: {e}")
+                        data_types_dict[str(col)] = "unknown"
                 
-                # Prepare DataFrame summary
+                # Convert missing values to JSON-serializable format
+                missing_values_dict = {}
+                for col, count in data.isnull().sum().items():
+                    missing_values_dict[str(col)] = int(count)
+                
+                # Convert basic stats to JSON-serializable format
+                basic_stats_dict = {}
+                try:
+                    describe_df = data.describe(include='all')
+                    for col in describe_df.columns:
+                        col_stats = {}
+                        for stat, value in describe_df[col].items():
+                            if pd.isna(value):
+                                col_stats[str(stat)] = None
+                            elif isinstance(value, (int, float)):
+                                col_stats[str(stat)] = float(value) if isinstance(value, float) else int(value)
+                            else:
+                                col_stats[str(stat)] = str(value)
+                        basic_stats_dict[str(col)] = col_stats
+                except Exception as e:
+                    logger.warning(f"Could not generate basic stats: {e}")
+                    basic_stats_dict = {}
+                
+                # Prepare DataFrame summary with JSON-serializable data
+                # Convert sample data to JSON-serializable format
+                sample_df = data.head(5)
+                sample_data_serializable = convert_to_json_serializable(sample_df)
+                
                 summary_data = {
-                    "shape": data.shape,
-                    "columns": list(data.columns),
-                    "data_types": data.dtypes.to_dict(),
-                    "missing_values": data.isnull().sum().to_dict(),
-                    "sample_data": data.head(5).to_dict(orient='records'),
-                    "basic_stats": data.describe(include='all').to_dict()
+                    "shape": list(data.shape),  # Convert tuple to list
+                    "columns": [str(col) for col in data.columns],
+                    "data_types": data_types_dict,
+                    "missing_values": missing_values_dict,
+                    "sample_data": sample_data_serializable.get("data", []),
+                    "basic_stats": basic_stats_dict
                 }
                 
                 # Generate summary using the chunk summarizer
-                return self._summarize_chunk(summary_data, data_description)
+                return self._summarize_chunk(summary_data, data_description_str)
                 
             elif isinstance(data, dict):
                 if progress_callback:
                     progress_callback("Summarizing dictionary data")
-                
+               
                 # If the dictionary contains a DataFrame, convert it
                 if "data" in data and isinstance(data["data"], pd.DataFrame):
                     df = data["data"]
-                    return self._recursive_summarize(df, data_description, progress_callback)
+                    return self._recursive_summarize(df, data_description_str, progress_callback)
                 
                 # Otherwise, summarize the dictionary directly
-                return self._summarize_chunk(data, data_description)
+                return self._summarize_chunk(data, data_description_str)
                 
             else:
                 raise ValueError(f"Unsupported data type: {type(data)}")
                 
         except Exception as e:
             logger.error(f"Error in single batch summarization: {e}")
+            logger.error(f"Error type: {type(e)}")
+            logger.error(f"Error details: {str(e)}")
             return f"Error generating summary: {str(e)}"
+
+    def summarize_dataframe(
+        self,
+        df: pd.DataFrame,
+        data_description: str,
+        progress_callback: Optional[callable] = None
+    ) -> Dict[str, Any]:
+        """
+        Generate a comprehensive summary of a DataFrame
+        
+        Args:
+            df: Input DataFrame to summarize
+            data_description: Description of the data
+            progress_callback: Optional callback for progress updates
+            
+        Returns:
+            Dict containing the summary and metadata
+        """
+        try:
+            # Ensure data_description is a string
+            data_description_str = str(data_description) if data_description is not None else "Unknown data"
+            
+            # Update stats
+            self.stats["total_rows"] = len(df)
+            self.stats["summarization_levels"] = 1
+            
+            if progress_callback:
+                progress_callback(f"Starting summarization of {len(df)} rows")
+            
+            # Generate the summary
+            executive_summary = self._recursive_summarize(
+                df, 
+                data_description_str, 
+                progress_callback
+            )
+            
+            # Prepare data overview
+            data_overview = {
+                "shape": list(df.shape),
+                "columns": [str(col) for col in df.columns],
+                "data_types": {str(col): str(dtype) for col, dtype in df.dtypes.items()},
+                "missing_values": {str(col): int(count) for col, count in df.isnull().sum().items()}
+            }
+            
+            # Prepare metadata
+            metadata = {
+                "timestamp": datetime.now().isoformat(),
+                "data_description": data_description_str,
+                "total_rows": self.stats["total_rows"],
+                "chunks_processed": self.stats["chunks_processed"],
+                "summarization_levels": self.stats["summarization_levels"],
+                "total_tokens": self.stats["total_tokens"],
+                "total_cost": self.stats["total_cost"]
+            }
+            
+            return {
+                "executive_summary": executive_summary,
+                "data_overview": data_overview,
+                "metadata": metadata
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in summarize_dataframe: {e}")
+            return {
+                "executive_summary": f"Error generating summary: {str(e)}",
+                "data_overview": {},
+                "metadata": {
+                    "timestamp": datetime.now().isoformat(),
+                    "data_description": data_description_str,
+                    "total_rows": len(df) if hasattr(df, '__len__') else 0,
+                    "error": str(e)
+                }
+            }
 
 # Example usage and helper functions
 def load_and_summarize_csv(
@@ -480,20 +568,27 @@ def save_summary_report(summary_result: Dict[str, Any], output_path: str):
     """
     Save the summary result to a formatted report file
     """
-    with open(output_path, 'w') as f:
-        f.write("# DATA ANALYSIS SUMMARY REPORT\n\n")
-        f.write(f"Generated: {summary_result['metadata']['timestamp']}\n")
-        f.write(f"Dataset: {summary_result['metadata']['data_description']}\n")
-        f.write(f"Records Analyzed: {summary_result['metadata']['total_rows']:,}\n\n")
-        
-        f.write("## Executive Summary\n\n")
-        f.write(summary_result['executive_summary'])
-        f.write("\n\n")
-        
-        f.write("## Data Overview\n\n")
-        f.write(f"- **Shape**: {summary_result['data_overview']['shape']}\n")
-        f.write(f"- **Columns**: {', '.join(summary_result['data_overview']['columns'])}\n")
-        f.write(f"- **Processing Stats**: {summary_result['metadata']['chunks_processed']} chunks in {summary_result['metadata']['summarization_levels']} levels\n")
+    try:
+        with open(output_path, 'w') as f:
+            f.write("# DATA ANALYSIS SUMMARY REPORT\n\n")
+            f.write(f"Generated: {summary_result['metadata']['timestamp']}\n")
+            f.write(f"Dataset: {summary_result['metadata']['data_description']}\n")
+            f.write(f"Records Analyzed: {summary_result['metadata']['total_rows']:,}\n\n")
+            
+            f.write("## Executive Summary\n\n")
+            f.write(str(summary_result['executive_summary']))
+            f.write("\n\n")
+            
+            f.write("## Data Overview\n\n")
+            f.write(f"- **Shape**: {summary_result['data_overview']['shape']}\n")
+            f.write(f"- **Columns**: {', '.join([str(col) for col in summary_result['data_overview']['columns']])}\n")
+            f.write(f"- **Processing Stats**: {summary_result['metadata']['chunks_processed']} chunks in {summary_result['metadata']['summarization_levels']} levels\n")
+    except Exception as e:
+        logger.error(f"Error saving summary report: {e}")
+        # Fallback: save basic information
+        with open(output_path, 'w') as f:
+            f.write(f"Error saving report: {str(e)}\n")
+            f.write(f"Basic info: {str(summary_result)}\n")
 
 # Example usage
 if __name__ == "__main__":
@@ -509,9 +604,8 @@ if __name__ == "__main__":
     
     # Create summarizer
     summarizer = RecursiveDataSummarizer(
-        model_name="gpt-3.5-turbo",
-        temperature=0.3,
-        chunk_size=200
+        chunk_size=200,
+        llm=ChatOpenAI(model="gpt-3.5-turbo", temperature=0.3)
     )
     
     # Generate summary

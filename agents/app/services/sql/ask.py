@@ -215,7 +215,7 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             query_id, user_query, histories, request, retrieval_result["data"]
         )
         reasoning_result = None
-
+        print("sql_result in ask service", sql_result)
         # Step 5: Generate SQL data
         if stream_update:
             await stream_update(query_id, "executing_sql", {"query": user_query})
@@ -236,7 +236,7 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         final_result = await self._process_final_results(
             query_id, sql_result, reasoning_result, retrieval_result["data"]
         )
-        print("final_result in ask service", answer_result)
+        #print("final_result in ask service", answer_result)
         # Add answer to the final result
         if answer_result.get("success"):
             final_result["answer"] = answer_result.get("answer")
@@ -585,13 +585,13 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             result = await self._generate_enhanced_sql(
                 query_id, user_query, histories, request, retrieval_data, reasoning_result, sql_functions
             )
-            print("result in ask generate enhanced sql", result)
+            #print("result in ask generate enhanced sql", result)
             return result
         else:
             result = await self._generate_standard_sql(
                 query_id, user_query, histories, request, retrieval_data, reasoning_result, sql_functions
             )
-            print("result in ask generate standard sql", result)
+            #print("result in ask generate standard sql", result)
             return result
 
     async def _generate_enhanced_sql(
@@ -637,11 +637,12 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             # Execute using unified system
             enhanced_result = await self._enhanced_sql_system.execute_pipeline(pipeline_request)
             
-            print("enhanced_result in ask service", enhanced_result)
+            #print("enhanced_result in ask service", enhanced_result)
             if enhanced_result.success and enhanced_result.data:
                 # Extract all relevant data from the enhanced result
                 result_data = enhanced_result.data
                 sql = result_data.get("sql", "")
+                parsed_entities = result_data.get("parsed_entities", {})
 
                 reasoning = result_data.get("reasoning", "")
                 operation_type = result_data.get("operation_type", "generation")
@@ -662,7 +663,8 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                         "operation_type": operation_type,
                         "reasoning": reasoning,
                         "processing_time_seconds": enhanced_result.relevance_scoring.processing_time_seconds,
-                        "timestamp": enhanced_result.timestamp
+                        "timestamp": enhanced_result.timestamp,
+                        "parsed_entities": parsed_entities
                     }
                 }
             else:
@@ -720,6 +722,9 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         if sql_valid_results := text_to_sql_generation_results["post_process"][
             "valid_generation_results"
         ]:
+            # Extract parsed entities from the first valid result
+            parsed_entities = sql_valid_results[0].get("parsed_entities", {})
+            
             return {
                 "success": True,
                 "api_results": [
@@ -727,6 +732,13 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                         **{
                             "sql": result.get("sql"),
                             "type": "llm",
+                            "metadata": {
+                                "operation_type": "generation",
+                                "reasoning": reasoning_result.get("reasoning", "") if reasoning_result else "",
+                                "processing_time_seconds": text_to_sql_generation_results.get("processing_time_seconds", 0.0),
+                                "timestamp": text_to_sql_generation_results.get("timestamp", ""),
+                                "parsed_entities": parsed_entities
+                            }
                         }
                     )
                     for result in sql_valid_results
