@@ -719,14 +719,16 @@ Please provide your response in proper Markdown string format.
                 }
             except Exception as e:
                 logger.error(f"Error in post-processing: {e}")
-                return {
-                    "valid_generation_results": [],
-                    "invalid_generation_results": [{
-                        "sql": result,
-                        "type": "POST_PROCESSING_ERROR",
-                        "error": str(e)
-                    }]
-                }
+                # Attempt SQL correction when post-processing fails
+                correction_result = await self._handle_post_processing_error_with_correction(
+                    query=query,
+                    sql_content=sql_content,
+                    reasoning=reasoning,
+                    schema_contexts=schema_data["schema_contexts"],
+                    error_message=str(e),
+                    **kwargs
+                )
+                return correction_result
 
         except Exception as e:
             logger.exception(f"Error in SQL generation: {e}")
@@ -832,13 +834,15 @@ Please provide your response in proper Markdown string format.
             ### TASK ###
             You are an ANSI SQL expert with exceptional logical thinking skills and debugging skills.
             Now you are given syntactically incorrect ANSI SQL query and related error message, please generate the syntactically correct ANSI SQL query without changing original semantics.
-            
+            You are also given the database schema, please use it to generate the correct SQL query.
+            You are also given the reasoning used to construct the sql query.                
             {TEXT_TO_SQL_RULES}
             
             ### FINAL ANSWER FORMAT ###
             The final answer must be a corrected SQL query in JSON format:
             {{
                 "sql": <CORRECTED_SQL_QUERY_STRING>
+                "sql_correction_reasoning": <SQL_CORRECTION_REASONING_STRING>
             }}
             """
             
@@ -869,10 +873,236 @@ Please provide your response in proper Markdown string format.
             prompt = full_prompt.format(system_prompt=system_prompt, user_prompt=user_prompt)
             result = await self.llm.ainvoke(prompt)
             
-            return {"sql": result, "success": True}
+            # Extract content from the result
+            if hasattr(result, 'content'):
+                result_content = result.content
+            else:
+                result_content = str(result)
+            
+            # Try to parse the JSON response
+            try:
+                # First try to extract JSON from the content
+                extracted_data = self._extract_sql_from_content(result_content)
+                
+                # If we have a JSON response with sql_correction_reasoning, parse it
+                if isinstance(result_content, str) and result_content.strip().startswith('{'):
+                    try:
+                        json_data = json.loads(result_content)
+                        if isinstance(json_data, dict):
+                            corrected_sql = json_data.get("sql", "")
+                            correction_reasoning = json_data.get("sql_correction_reasoning", "")
+                            
+                            return {
+                                "sql": corrected_sql,
+                                "sql_correction_reasoning": correction_reasoning,
+                                "success": True
+                            }
+                    except json.JSONDecodeError:
+                        pass
+                
+                # Fallback to extracted SQL if JSON parsing fails
+                corrected_sql = extracted_data.get("sql", result_content)
+                return {
+                    "sql": corrected_sql,
+                    "sql_correction_reasoning": f"Corrected SQL based on error: {error_message}",
+                    "success": True
+                }
+                
+            except Exception as parse_error:
+                logger.warning(f"Error parsing correction result: {parse_error}")
+                return {
+                    "sql": result_content,
+                    "sql_correction_reasoning": f"Raw correction result: {result_content}",
+                    "success": True
+                }
+                
         except Exception as e:
             logger.error(f"Error in internal SQL correction: {e}")
-            return {"sql": "", "success": False, "error": str(e)}
+            return {"sql": "", "sql_correction_reasoning": "", "success": False, "error": str(e)}
+    
+    async def _handle_post_processing_error_with_correction(
+        self,
+        query: str,
+        sql_content: str,
+        reasoning: str,
+        schema_contexts: List[str],
+        error_message: str,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """
+        Handle post-processing errors by attempting SQL correction
+        
+        This method is automatically called when post-processing fails in SQL generation.
+        It can also be called manually using the convenience function `correct_sql_with_rag()`.
+        
+        The method combines all available context (schema, reasoning, original query) to
+        provide the correction system with comprehensive information for better results.
+        
+        Args:
+            query: Original user query
+            sql_content: Generated SQL that failed post-processing
+            reasoning: Reasoning used to generate the SQL
+            schema_contexts: Database schema contexts
+            error_message: Post-processing error message
+            **kwargs: Additional arguments
+            
+        Returns:
+            Dictionary with correction attempt results containing:
+            - valid_generation_results: List of successful corrections
+            - invalid_generation_results: List of failed corrections with error details and recommendations
+            
+            Each invalid result may include:
+            - sql: The corrected SQL (if available)
+            - sql_correction_reasoning: Reasoning behind the correction attempt
+            - type: Error type (CORRECTION_SUCCESS, CORRECTION_VALIDATION_ERROR, etc.)
+            - error: Error message
+            - original_error: Original post-processing error
+            - recommendations: List of suggestions for fixing the issue
+            - correction_attempted: Boolean indicating if correction was attempted
+        """
+        try:
+            logger.info(f"Attempting SQL correction for post-processing error: {error_message}")
+            
+            # Combine all contexts for correction
+            all_contexts = schema_contexts.copy()
+            
+            # Add reasoning as context if available
+            if reasoning:
+                all_contexts.append(f"### REASONING CONTEXT ###\n{reasoning}")
+            
+            # Add original query as context
+            all_contexts.append(f"### ORIGINAL QUERY ###\n{query}")
+            
+            # Attempt SQL correction
+            correction_result = await self._correct_sql_internal(
+                sql=sql_content,
+                error_message=error_message,
+                contexts=all_contexts
+            )
+            
+            if correction_result.get("success", False):
+                corrected_sql = correction_result.get("sql", "")
+                sql_correction_reasoning = correction_result.get("sql_correction_reasoning", "")
+                
+                if hasattr(corrected_sql, 'content'):
+                    corrected_sql = corrected_sql.content
+                
+                # Try to extract SQL from correction result
+                extracted_data = self._extract_sql_from_content(corrected_sql)
+                corrected_sql_content = extracted_data.get("sql", corrected_sql)
+                
+                # Validate the corrected SQL with post-processor
+                try:
+                    corrected_json = json.dumps({
+                        "sql": corrected_sql_content,
+                        "parsed_entities": extracted_data.get("parsed_entities", {})
+                    })
+                    
+                    post_processed_correction = await self.gen_processor.run(
+                        [corrected_json],
+                        timeout=kwargs.get("timeout", 30.0),
+                        project_id=kwargs.get("project_id")
+                    )
+                    
+                    logger.info("SQL correction successful and validated")
+                    return {
+                        "valid_generation_results": [{
+                            "sql": corrected_sql_content,
+                            "parsed_entities": extracted_data.get("parsed_entities", {}),
+                            "reasoning": reasoning,
+                            "sql_correction_reasoning": sql_correction_reasoning,
+                            "type": "CORRECTION_SUCCESS",
+                            "original_error": error_message
+                        }],
+                        "invalid_generation_results": []
+                    }
+                    
+                except Exception as validation_error:
+                    logger.warning(f"Corrected SQL failed validation: {validation_error}")
+                    
+                    # Create recommendations based on correction reasoning
+                    recommendations = []
+                    if sql_correction_reasoning:
+                        recommendations.append(f"Correction attempt reasoning: {sql_correction_reasoning}")
+                    
+                    # Add specific recommendations based on error type
+                    validation_error_str = str(validation_error).lower()
+                    if "column" in validation_error_str and "not found" in validation_error_str:
+                        recommendations.append("Check column names against the database schema")
+                        recommendations.append("Verify table aliases and column references")
+                    elif "syntax" in validation_error_str:
+                        recommendations.append("Review SQL syntax and ensure proper formatting")
+                        recommendations.append("Check for missing or extra parentheses, quotes, or semicolons")
+                    elif "table" in validation_error_str and "not found" in validation_error_str:
+                        recommendations.append("Verify table names exist in the database")
+                        recommendations.append("Check table aliases and schema references")
+                    elif "type" in validation_error_str and "mismatch" in validation_error_str:
+                        recommendations.append("Ensure data types match between columns and values")
+                        recommendations.append("Check for proper type casting where needed")
+                    else:
+                        recommendations.append("Review the SQL query for logical or structural issues")
+                        recommendations.append("Consider simplifying the query or breaking it into smaller parts")
+                    
+                    return {
+                        "valid_generation_results": [],
+                        "invalid_generation_results": [{
+                            "sql": corrected_sql_content,
+                            "sql_correction_reasoning": sql_correction_reasoning,
+                            "type": "CORRECTION_VALIDATION_ERROR",
+                            "error": str(validation_error),
+                            "original_error": error_message,
+                            "recommendations": recommendations,
+                            "correction_attempted": True
+                        }]
+                    }
+            else:
+                logger.warning(f"SQL correction failed: {correction_result.get('error', 'Unknown error')}")
+                
+                # Create recommendations for correction failure
+                recommendations = []
+                if correction_result.get("sql_correction_reasoning"):
+                    recommendations.append(f"Correction attempt reasoning: {correction_result.get('sql_correction_reasoning')}")
+                
+                recommendations.extend([
+                    "The SQL correction system was unable to fix the query automatically",
+                    "Consider reviewing the original query and database schema",
+                    "Check if the query logic matches the intended business requirement"
+                ])
+                
+                return {
+                    "valid_generation_results": [],
+                    "invalid_generation_results": [{
+                        "sql": sql_content,
+                        "type": "CORRECTION_FAILED",
+                        "error": correction_result.get("error", "Correction attempt failed"),
+                        "original_error": error_message,
+                        "recommendations": recommendations,
+                        "correction_attempted": True
+                    }]
+                }
+                
+        except Exception as e:
+            logger.error(f"Error in post-processing error correction handler: {e}")
+            
+            # Create recommendations for handler error
+            recommendations = [
+                "An error occurred during the SQL correction process",
+                "The correction system encountered an unexpected issue",
+                "Consider manually reviewing and fixing the SQL query",
+                "Check the database schema and query requirements"
+            ]
+            
+            return {
+                "valid_generation_results": [],
+                "invalid_generation_results": [{
+                    "sql": sql_content,
+                    "type": "CORRECTION_HANDLER_ERROR",
+                    "error": str(e),
+                    "original_error": error_message,
+                    "recommendations": recommendations,
+                    "correction_attempted": False
+                }]
+            }
     
     async def _reason_sql_internal(self, query: str, contexts: List[str], language: str) -> Dict[str, Any]:
         """Internal SQL reasoning logic"""
@@ -1257,6 +1487,8 @@ Please provide your response in proper Markdown string format.
         
         if correction_result.get("success", False):
             corrected_sql = correction_result.get("sql", "")
+            sql_correction_reasoning = correction_result.get("sql_correction_reasoning", "")
+            
             if hasattr(corrected_sql, 'content'):
                 corrected_sql = corrected_sql.content
             correction_result["sql"] = corrected_sql
@@ -1386,6 +1618,40 @@ async def answer_with_sql_rag(
         sql=sql,
         sql_data=sql_data,
         language=language,
+        **kwargs
+    )
+
+
+async def correct_sql_with_rag(
+    agent: SQLRAGAgent,
+    query: str,
+    sql: str,
+    reasoning: str,
+    schema_contexts: List[str],
+    error_message: str,
+    **kwargs
+) -> Dict[str, Any]:
+    """
+    Correct SQL using RAG agent with comprehensive context
+    
+    Args:
+        agent: SQLRAGAgent instance
+        query: Original user query
+        sql: SQL that needs correction
+        reasoning: Reasoning used to generate the SQL
+        schema_contexts: Database schema contexts
+        error_message: Error message from post-processing or execution
+        **kwargs: Additional arguments
+        
+    Returns:
+        Dictionary with correction results
+    """
+    return await agent._handle_post_processing_error_with_correction(
+        query=query,
+        sql_content=sql,
+        reasoning=reasoning,
+        schema_contexts=schema_contexts,
+        error_message=error_message,
         **kwargs
     )
 

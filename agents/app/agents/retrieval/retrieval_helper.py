@@ -40,11 +40,7 @@ class RetrievalHelper:
             openai_api_key=settings.OPENAI_API_KEY
         )
         
-        # Initialize ChromaDB client
-        self.persistent_client = chromadb.PersistentClient(
-            path=settings.CHROMA_STORE_PATH
-        )
-        
+     
         # Initialize document stores
         self.document_stores = get_doc_store_provider().stores
         

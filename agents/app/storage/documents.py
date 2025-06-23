@@ -253,7 +253,7 @@ class DocumentVectorstore:
             logger.error(f"Error during semantic search with BM25: {str(e)}")
             return []
 
-persistent_client = chromadb.PersistentClient(path=CHROMA_STORE_PATH)
+
 
 class DocumentChromaStore:
     """Handle Chroma vectorstore operations."""
@@ -277,7 +277,6 @@ class DocumentChromaStore:
         self.collection = None
         self.tfidf_collection_name = f"{self.collection_name}_tfidf"
         # Ensure the storage directory exists
-        os.makedirs(self.vectorstore_path, exist_ok=True)
         self.initialize()
         
 

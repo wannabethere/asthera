@@ -744,7 +744,7 @@ class DataSummarizationPipeline(AgentPipeline):
                 self.update_configuration(configuration)
 
             # Define progress callback
-            async def progress_callback(message: str):
+            def progress_callback(message: str):
                 logger.info(f"Summarization progress: {message}")
 
             # Define local status update function
@@ -775,7 +775,7 @@ class DataSummarizationPipeline(AgentPipeline):
                     raise Exception("Failed to get total count for batch processing")
 
                 total_count = int(count_result["data"][0]["total_count"])
-                batch_size = int(self._configuration["batch_size"]) or 1000
+                batch_size = int(self._configuration["batch_size"]) or 2000
                 total_batches = (total_count + batch_size - 1) // batch_size
                 print(f"Total batches: {total_batches}")
                 
@@ -826,7 +826,7 @@ class DataSummarizationPipeline(AgentPipeline):
                             data_description=f"{data_description_str} (Batch {current_batch + 1}/{total_batches})",
                             progress_callback=progress_callback
                         )
-
+                        print("batch_summary for data summarization pipeline", batch_summary)
                         # Cache batch summary
                         self._batch_summaries[current_batch] = batch_summary
 
@@ -994,40 +994,9 @@ class DataSummarizationPipeline(AgentPipeline):
                             print("final_result for data summarization pipeline", post_process_result)
                             return post_process_result
                         else:
-                            # Return intermediate result for current batch
-                            # Handle batch_summary based on its type
-                            if isinstance(batch_summary, str):
-                                batch_summary_data = batch_summary
-                                batch_tokens = 0
-                                batch_cost = 0.0
-                            elif isinstance(batch_summary, dict):
-                                batch_summary_data = batch_summary.get("executive_summary", str(batch_summary))
-                                batch_tokens = batch_summary.get("metadata", {}).get("total_tokens", 0)
-                                batch_cost = batch_summary.get("metadata", {}).get("estimated_cost", 0.0)
-                            else:
-                                batch_summary_data = str(batch_summary)
-                                batch_tokens = 0
-                                batch_cost = 0.0
+                            continue
                             
-                            return {
-                                "post_process": {
-                                    "batch_summary": batch_summary_data,
-                                    "batch_info": {
-                                        "current_batch": current_batch + 1,
-                                        "total_batches": total_batches,
-                                        "is_last_batch": is_last_batch
-                                    }
-                                },
-                                "metadata": {
-                                    "project_id": project_id,
-                                    "data_description": data_description_str,
-                                    "processing_stats": {
-                                        "total_tokens": batch_tokens,
-                                        "estimated_cost": batch_cost,
-                                        "batches_processed": current_batch + 1
-                                    }
-                                }
-                            }
+                
 
         except Exception as e:
             logger.error(f"Error in data summarization pipeline: {str(e)}")

@@ -233,11 +233,172 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
                 "error": str(e)
             }
 
+
+        """
+    This function is used to generate the SQL expansion using the SQL expansion pipeline.
+    It is used to generate the SQL query from the user's query and to execute the SQL query.
+    It is also used to get the data from the database.
+    """
+    async def generate_sql_correction(
+        self,
+        query_id: str,
+        query: str,
+        error_message: str,
+        sql: str,
+        project_id: str,
+        configuration: Optional[Dict[str, Any]] = None,
+        schema_context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Generate SQL expansion using SQL expansion pipeline
+        
+        Args:       
+            query_id: Unique identifier for the query
+            query: The user's query
+            project_id: Project identifier
+        """
+        try:
+            # Initialize the SQL expansion pipeline
+            sql_correction_pipeline = self._pipeline_container.get_pipeline("sql_correction")
+            if not sql_correction_pipeline:
+                raise RuntimeError("SQL correction pipeline not found")
+
+            # Generate SQL expansion
+            correction_result = await sql_correction_pipeline.run(
+                query=query,
+                sql=sql,
+                error_message=error_message,
+                project_id=project_id,
+                configuration=configuration,
+                schema_context=schema_context
+            )
+            # Combine and analyze results
+            combined_analysis = {
+                "expansion_suggestions":  {},
+                "correction_suggestions": correction_result.get("data", {}),
+                "combined_analysis": {
+                    "missing_elements": [],
+                    "required_changes": [],
+                    "suggested_improvements": []
+                }
+            }
+
+            
+            # Extract required changes from correction
+            if correction_result.get("success"):
+                correction_data = correction_result.get("data", {})
+                if "required_changes" in correction_data:
+                    combined_analysis["combined_analysis"]["required_changes"].extend(
+                        correction_data["required_changes"]
+                    )
+                    combined_analysis["combined_analysis"]["suggested_improvements"] = [
+                        f"Add {element}" for element in combined_analysis["combined_analysis"]["missing_elements"]
+                    ] + [
+                        f"Modify {change}" for change in combined_analysis["combined_analysis"]["required_changes"]
+                    ]
+
+                
+
+            
+
+            return {
+                "success": True,
+                "data": combined_analysis,
+                "error": None
+            }
+
+        
+            return correction_result
+        
+        except Exception as e:
+            logger.error(f"Error generating SQL correction: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+
+    """
+    This function is used to generate the SQL expansion using the SQL expansion pipeline.
+    It is used to generate the SQL query from the user's query and to execute the SQL query.
+    It is also used to get the data from the database.
+    """
+    async def generate_sql_expansion(
+        self,
+        query_id: str,
+        query: str,
+        sql: str,
+        project_id: str,
+        configuration: Optional[Dict[str, Any]] = None,
+        schema_context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Generate SQL expansion using SQL expansion pipeline
+        
+        Args:       
+            query_id: Unique identifier for the query
+            query: The user's query
+            project_id: Project identifier
+        """
+        try:
+            # Initialize the SQL expansion pipeline
+            sql_expansion_pipeline = self._pipeline_container.get_pipeline("sql_expansion")
+            if not sql_expansion_pipeline:
+                raise RuntimeError("SQL expansion pipeline not found")
+
+            # Generate SQL expansion
+            expansion_result = await sql_expansion_pipeline.run(
+                query=query,
+                sql=sql,
+                project_id=project_id,
+                configuration=configuration,
+                schema_context=schema_context
+            )
+             # Combine and analyze results
+            combined_analysis = {
+                "expansion_suggestions": expansion_result.get("data", {}),
+                "correction_suggestions": {},
+                "combined_analysis": {
+                    "missing_elements": [],
+                    "required_changes": [],
+                    "suggested_improvements": []
+                }
+            }
+             # Extract missing elements from expansion
+            if expansion_result.get("success"):
+                expansion_data = expansion_result.get("data", {})
+                if "missing_elements" in expansion_data:
+                    combined_analysis["combined_analysis"]["missing_elements"].extend(
+                        expansion_data["missing_elements"]
+                    )
+                    combined_analysis["combined_analysis"]["suggested_improvements"] = [
+                        f"Add {element}" for element in combined_analysis["combined_analysis"]["missing_elements"]
+                    ] + [
+                        f"Modify {change}" for change in combined_analysis["combined_analysis"]["required_changes"]
+                    ]
+
+            return {
+                "success": True,
+                "data": combined_analysis,
+                "error": None
+            }
+        
+        except Exception as e:
+            logger.error(f"Error generating SQL expansion: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    """
+    This function is used to analyze the query requirements using SQL expansion and correction pipelines.
+    It is used to generate the SQL query from the user's query and to execute the SQL query.
+    It is also used to get the data from the database.
+    """
+    ##TODO: Fix this function for SQL Correction and Expansion when the query is not working as per the customers request.
     async def analyze_query_requirements(
         self,
         query_id: str,
         query: str,
         project_id: str,
+        sql: Optional[str] = None,
         configuration: Optional[Dict[str, Any]] = None,
         schema_context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
@@ -245,7 +406,8 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
         
         Args:
             query_id: Unique identifier for the query
-            query: The user's query to analyze
+            sql: The SQL query to analyze
+            user_query: The user's query to analyze
             project_id: Project identifier
             configuration: Optional configuration parameters
             schema_context: Optional schema context
@@ -808,6 +970,80 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
                 "status": "error",
                 "error": str(e),
                 "timestamp": datetime.now().isoformat()
+            }
+
+    async def generate_data_assistance(
+        self,
+        query_id: str,
+        query: str,
+        project_id: str,
+        configuration: Optional[Dict[str, Any]] = None,
+        schema_context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Generate data assistance using DataAssistance pipeline
+        
+        Args:
+            query_id: Unique identifier for the query
+            query: The user's query
+            project_id: Project identifier
+            configuration: Optional configuration parameters
+            schema_context: Optional schema context
+            
+        Returns:
+            Dict containing data assistance results including:
+            - success: Whether the generation was successful
+            - data: Results from the data assistance pipeline
+            - error: Any error that occurred
+        """
+        if self._is_stopped(query_id):
+            return {"success": False}
+
+        try:
+            # Get data assistance pipeline
+            data_assistance_pipeline = self._pipeline_container.get_pipeline("data_assistance")
+            if not data_assistance_pipeline:
+                raise RuntimeError("Data assistance pipeline not found")
+
+            # Update status
+            self._update_cache_status(
+                query_id,
+                "understanding",
+                AskResultResponse(
+                    status="understanding",
+                    type="GENERAL",
+                    general_type="DATA_ASSISTANCE",
+                    is_followup=False
+                )
+            )
+
+            # Run data assistance pipeline
+            result = await data_assistance_pipeline.run(
+                query=query,
+                project_id=project_id,
+                schema_context=schema_context,
+                configuration=configuration
+            )
+
+            # Process the result
+            if result and result.get("success"):
+                return {
+                    "success": True,
+                    "data": result.get("data", {}),
+                    "metadata": result.get("metadata", {}),
+                    "error": None
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": result.get("error", "Failed to generate data assistance")
+                }
+
+        except Exception as e:
+            logger.error(f"Error generating data assistance: {e}")
+            return {
+                "success": False,
+                "data": None,
+                "error": str(e)
             }
 
     def stop_query(self, query_id: str) -> None:

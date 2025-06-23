@@ -190,9 +190,11 @@ class ScoringIntegratedSQLRAGAgent(SQLRAGAgent):
         
         return "\n".join(feedback_parts)
     
-    async def _enhanced_sql_correction(self, sql: str, error_message: str, **kwargs) -> Dict[str, Any]:
+    async def _enhanced_sql_correction(self, query: str,  **kwargs) -> Dict[str, Any]:
         """Enhanced SQL correction with quality assessment"""
         self.performance_metrics["correction_attempts"] += 1
+        sql = kwargs.pop('sql', "")  # Use query as fallback if sql not in kwargs
+        error_message = kwargs.pop('error_message', "")
         
         # Get correction from base agent
         correction_result = await super()._handle_sql_correction("", sql=sql, error_message=error_message, **kwargs)
@@ -233,10 +235,10 @@ class ScoringIntegratedSQLRAGAgent(SQLRAGAgent):
         
         try:
             # Remove language from kwargs if it's already passed as a direct parameter
-            print("kwargs2 in process_sql_request_enhanced", kwargs)
+            
             if 'language' in kwargs:
                 kwargs.pop('language')
-            print("kwargs3 in process_sql_request_enhanced", kwargs)
+            print("kwargs in process_sql_request_enhanced", kwargs)
             # Convert operation to enum if it's a string
             if isinstance(operation, str):
                 try:
@@ -248,6 +250,7 @@ class ScoringIntegratedSQLRAGAgent(SQLRAGAgent):
             if operation == SQLOperationType.GENERATION:
                 result = await self._enhanced_sql_generation(query, **kwargs)
             elif operation == SQLOperationType.CORRECTION:
+                # Extract sql and error_message from kwargs for correction
                 result = await self._enhanced_sql_correction(query, **kwargs)
             else:
                 # Use base agent for other operations

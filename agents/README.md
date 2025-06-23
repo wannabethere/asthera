@@ -5,6 +5,7 @@ https://deepwiki.com/onyx-dot-app/onyx
 
 
 nohup uvicorn main:app --reload --host 0.0.0.0 --port 8025 --workers 4 > uvicorn.log 2>&1 &
+nohup uvicorn app.main:app --reload --host 0.0.0.0 --port 8025 --workers 4 > uvicorn.log 2>&1 & echo $! > run.pid
 docker run -d -v  ./structured-data:/data -p 8888:8000 chromadb/chroma:0.6.3
 docker run -d -v ./unstructured-data:/data -p 8015:8000 chromadb/chroma:0.5.13
 

@@ -12,6 +12,7 @@ from app.core.engine_provider import EngineProvider
 from app.agents.nodes.sql.chart_generation import create_chart_generation_pipeline
 from app.agents.nodes.sql.plotly_chart_generation import create_plotly_chart_generation_pipeline
 from app.agents.nodes.sql.powerbi_chart_generation import create_powerbi_chart_generation_pipeline
+from app.services.sql.sql_helper_services import SQLHelperService
 
 # Configure logging
 logging.getLogger("app.storage.documents").setLevel(logging.WARNING)
@@ -32,6 +33,14 @@ class DataSummarizationDemo:
         if not self._initialized:
             # Initialize pipeline container
             self.pipeline_container = PipelineContainer.initialize()
+            
+            # Initialize SQL Helper Service
+            self.sql_helper_service = SQLHelperService(
+                pipeline_container=self.pipeline_container,
+                allow_intent_classification=True,
+                allow_sql_generation_reasoning=True,
+                max_histories=10
+            )
             
             # Create chart generation pipelines (to avoid circular dependency)
             self.chart_generation_pipeline = create_chart_generation_pipeline()
@@ -187,6 +196,175 @@ class DataSummarizationDemo:
         
         return results
 
+    async def test_data_assistance(self, query: str, project_id: str):
+        """
+        Test data assistance functionality
+        
+        Args:
+            query: The user's query for data assistance
+            project_id: The project ID
+            
+        Returns:
+            Dict containing data assistance results
+        """
+        print(f"\nTesting Data Assistance for: {query}")
+        print("="*60)
+        
+        try:
+            result = await self.sql_helper_service.generate_data_assistance(
+                query_id=f"data_assistance_{project_id}",
+                query=query,
+                project_id=project_id,
+                configuration={
+                    "language": "English",
+                    "include_schema_info": True
+                }
+            )
+            
+            if result.get("success"):
+                print("✅ Data assistance generated successfully!")
+                data = result.get("data", {})
+                
+                if "assistance_type" in data:
+                    print(f"   Assistance Type: {data['assistance_type']}")
+                
+                if "suggestions" in data:
+                    print(f"   Suggestions: {len(data['suggestions'])} items")
+                    for i, suggestion in enumerate(data['suggestions'][:3], 1):  # Show first 3
+                        print(f"     {i}. {suggestion}")
+                
+                if "schema_info" in data:
+                    print(f"   Schema Information: {len(data['schema_info'])} tables")
+                
+                if "metadata" in result:
+                    print(f"   Processing Time: {result['metadata'].get('processing_time', 'Unknown')}")
+                
+                return {"status": "success", "data": data}
+            else:
+                print(f"❌ Data assistance failed: {result.get('error', 'Unknown error')}")
+                return {"status": "failed", "error": result.get('error')}
+                
+        except Exception as e:
+            print(f"❌ Error testing data assistance: {str(e)}")
+            return {"status": "error", "error": str(e)}
+
+    async def test_sql_correction(self, query: str, sql: str, error_message: str, project_id: str):
+        """
+        Test SQL correction functionality
+        
+        Args:
+            query: The user's original query
+            sql: The SQL query that needs correction
+            error_message: The error message from the failed SQL
+            project_id: The project ID
+            
+        Returns:
+            Dict containing SQL correction results
+        """
+        print(f"\nTesting SQL Correction for: {query}")
+        print("="*60)
+        print(f"Original SQL: {sql}")
+        print(f"Error Message: {error_message}")
+        
+        try:
+            result = await self.sql_helper_service.generate_sql_correction(
+                query_id=f"sql_correction_{project_id}",
+                query=query,
+                sql=sql,
+                error_message=error_message,
+                project_id=project_id,
+                configuration={
+                    "language": "English",
+                    "include_explanation": True
+                }
+            )
+            
+            if result.get("success"):
+                print("✅ SQL correction generated successfully!")
+                data = result.get("data", {})
+                
+                # Display correction suggestions
+                if "correction_suggestions" in data:
+                    corrections = data["correction_suggestions"]
+                    if "required_changes" in corrections:
+                        print(f"   Required Changes: {len(corrections['required_changes'])} items")
+                        for i, change in enumerate(corrections['required_changes'][:3], 1):  # Show first 3
+                            print(f"     {i}. {change}")
+                
+                # Display combined analysis
+                if "combined_analysis" in data:
+                    analysis = data["combined_analysis"]
+                    if "suggested_improvements" in analysis:
+                        print(f"   Suggested Improvements: {len(analysis['suggested_improvements'])} items")
+                        for i, improvement in enumerate(analysis['suggested_improvements'][:3], 1):  # Show first 3
+                            print(f"     {i}. {improvement}")
+                
+                return {"status": "success", "data": data}
+            else:
+                print(f"❌ SQL correction failed: {result.get('error', 'Unknown error')}")
+                return {"status": "failed", "error": result.get('error')}
+                
+        except Exception as e:
+            print(f"❌ Error testing SQL correction: {str(e)}")
+            return {"status": "error", "error": str(e)}
+
+    async def test_sql_expansion(self, query: str, sql: str, project_id: str):
+        """
+        Test SQL expansion functionality
+        
+        Args:
+            query: The user's original query
+            sql: The SQL query to expand
+            project_id: The project ID
+            
+        Returns:
+            Dict containing SQL expansion results
+        """
+        print(f"\nTesting SQL Expansion for: {query}")
+        print("="*60)
+        print(f"Original SQL: {sql}")
+        
+        try:
+            result = await self.sql_helper_service.generate_sql_expansion(
+                query_id=f"sql_expansion_{project_id}",
+                query=query,
+                sql=sql,
+                project_id=project_id,
+                configuration={
+                    "language": "English",
+                    "include_explanation": True
+                }
+            )
+            
+            if result.get("success"):
+                print("✅ SQL expansion generated successfully!")
+                data = result.get("data", {})
+                
+                # Display expansion suggestions
+                if "expansion_suggestions" in data:
+                    expansions = data["expansion_suggestions"]
+                    if "missing_elements" in expansions:
+                        print(f"   Missing Elements: {len(expansions['missing_elements'])} items")
+                        for i, element in enumerate(expansions['missing_elements'][:3], 1):  # Show first 3
+                            print(f"     {i}. {element}")
+                
+                # Display combined analysis
+                if "combined_analysis" in data:
+                    analysis = data["combined_analysis"]
+                    if "suggested_improvements" in analysis:
+                        print(f"   Suggested Improvements: {len(analysis['suggested_improvements'])} items")
+                        for i, improvement in enumerate(analysis['suggested_improvements'][:3], 1):  # Show first 3
+                            print(f"     {i}. {improvement}")
+                
+                return {"status": "success", "data": data}
+            else:
+                print(f"❌ SQL expansion failed: {result.get('error', 'Unknown error')}")
+                return {"status": "failed", "error": result.get('error')}
+                
+        except Exception as e:
+            print(f"❌ Error testing SQL expansion: {str(e)}")
+            return {"status": "error", "error": str(e)}
+
 """
 ,
         {
@@ -314,9 +492,171 @@ async def run_demo():
         
         print("\n" + "="*50)
 
+
+
+async def run_additional_tests():
+    """Run additional tests for data assistance, SQL correction, and SQL expansion"""
+    print("\n" + "="*80)
+    print("ADDITIONAL TESTS: DATA ASSISTANCE, SQL CORRECTION, SQL EXPANSION")
+    print("="*80)
+    
+    # Initialize demo
+    demo = DataSummarizationDemo()
+    await demo.initialize()
+    
+    # Test cases for data assistance
+    data_assistance_tests = [
+        {
+            "query": "What tables are available for analyzing employee training data?",
+            "project_id": "cornerstone"
+        },
+        {
+            "query": "What are the columns available for performing analysis on learning objectives?",
+            "project_id": "cornerstone"
+        },
+        {
+            "query": "What metrics can I calculate from the training records?",
+            "project_id": "cornerstone"
+        }
+    ]
+    
+    # Test cases for SQL correction
+    sql_correction_tests = [
+        {
+            "query": "Show me sales by region",
+            "sql": "SELECT region, SUM(sales) FROM sales_table GROUP BY region",
+            "error_message": "Column 'sales' does not exist. Did you mean 'sales_amount'?",
+            "project_id": "cornerstone"
+        },
+        {
+            "query": "Count employees by department",
+            "sql": "SELECT department, COUNT(*) FROM employees GROUP BY dept",
+            "error_message": "Column 'dept' does not exist. Did you mean 'department'?",
+            "project_id": "cornerstone"
+        },
+        {
+            "query": "Get training completion rates",
+            "sql": "SELECT division, COUNT(*) FROM csod_training_records WHERE is_completed = true",
+            "error_message": "Boolean value 'true' is not valid. Use 1 or '1' for true values.",
+            "project_id": "cornerstone"
+        }
+    ]
+    
+    # Test cases for SQL expansion
+    sql_expansion_tests = [
+        {
+            "query": "Show me sales performance",
+            "sql": "SELECT region, SUM(sales_amount) FROM sales GROUP BY region",
+            "project_id": "cornerstone"
+        },
+        {
+            "query": "Analyze employee productivity",
+            "sql": "SELECT department, AVG(salary) FROM employees GROUP BY department",
+            "project_id": "cornerstone"
+        },
+        {
+            "query": "Training effectiveness analysis",
+            "sql": "SELECT division, COUNT(*) FROM csod_training_records WHERE is_completed = 1 GROUP BY division",
+            "project_id": "cornerstone"
+        }
+    ]
+    
+    # Run data assistance tests
+    print("\n" + "="*60)
+    print("DATA ASSISTANCE TESTS")
+    print("="*60)
+    print("SKIPPING DATA ASSISTANCE TESTS FOR NOW")
+    print("="*60)
+    """
+    data_assistance_results = []
+    for test in data_assistance_tests:
+        result = await demo.test_data_assistance(
+            query=test["query"],
+            project_id=test["project_id"]
+        )
+        data_assistance_results.append({
+            "test": test,
+            "result": result
+        })
+    """
+    # Run SQL correction tests
+    print("\n" + "="*60)
+    print("SQL CORRECTION TESTS")
+    print("="*60)
+    
+    sql_correction_results = []
+    for test in sql_correction_tests:
+        result = await demo.test_sql_correction(
+            query=test["query"],
+            sql=test["sql"],
+            error_message=test["error_message"],
+            project_id=test["project_id"]
+        )
+        sql_correction_results.append({
+            "test": test,
+            "result": result
+        })
+    
+    # Run SQL expansion tests
+    print("\n" + "="*60)
+    print("SQL EXPANSION TESTS")
+    print("="*60)
+    
+    sql_expansion_results = []
+    for test in sql_expansion_tests:
+        result = await demo.test_sql_expansion(
+            query=test["query"],
+            sql=test["sql"],
+            project_id=test["project_id"]
+        )
+        sql_expansion_results.append({
+            "test": test,
+            "result": result
+        })
+    
+    # Print summary
+    print("\n" + "="*80)
+    print("ADDITIONAL TESTS SUMMARY")
+    print("="*80)
+    
+    # Data assistance summary
+    print("\nData Assistance Tests:")
+    print("SKIPPING DATA ASSISTANCE TESTS FOR NOW")
+    print("="*60)
+    #success_count = sum(1 for r in data_assistance_results if r["result"]["status"] == "success")
+    #print(f"  ✅ Success: {success_count}/{len(data_assistance_results)}")
+    #for i, result in enumerate(data_assistance_results, 1):
+    #    status = "✅" if result["result"]["status"] == "success" else "❌"
+    #    print(f"    {status} Test {i}: {result['test']['query'][:50]}...")
+    
+    # SQL correction summary
+    print("\nSQL Correction Tests:")
+    success_count = sum(1 for r in sql_correction_results if r["result"]["status"] == "success")
+    print(f"  ✅ Success: {success_count}/{len(sql_correction_results)}")
+    for i, result in enumerate(sql_correction_results, 1):
+        status = "✅" if result["result"]["status"] == "success" else "❌"
+        print(f"    {status} Test {i}: {result['test']['query'][:50]}...")
+    
+    # SQL expansion summary
+    print("\nSQL Expansion Tests:")
+    success_count = sum(1 for r in sql_expansion_results if r["result"]["status"] == "success")
+    print(f"  ✅ Success: {success_count}/{len(sql_expansion_results)}")
+    for i, result in enumerate(sql_expansion_results, 1):
+        status = "✅" if result["result"]["status"] == "success" else "❌"
+        print(f"    {status} Test {i}: {result['test']['query'][:50]}...")
+    
+    return {
+        #"data_assistance": data_assistance_results,
+        "sql_correction": sql_correction_results,
+        "sql_expansion": sql_expansion_results
+    }
+
 if __name__ == "__main__":
-    # Run the demo
-    asyncio.run(run_demo())
+    # Run the main demo
+    #asyncio.run(run_demo())
+    
+    # Run the additional tests
+    asyncio.run(run_additional_tests())
     
     # Additional chart format testing
     async def run_chart_format_testing():

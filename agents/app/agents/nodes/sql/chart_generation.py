@@ -56,7 +56,8 @@ class VegaLiteChartGenerationAgent:
         {chart_generation_instructions}
         
         ### OUTPUT FORMAT ###
-        
+        ***Important***
+        ** Please donot put ```json at the beginning and end of your VEGA-LITE JSON SCHEMA. It will break the JSON parsing.**
         Please provide your chain of thought reasoning, chart type and the vega-lite schema in JSON format.
         
         {{
@@ -268,12 +269,14 @@ class VegaLiteChartGenerationPipeline:
                 language=language,
                 remove_data_from_chart_schema=remove_data_from_chart_schema
             )
-            
+            print("result for vega lite chart generation pipeline", result)
             # Add export functionality if requested
             if export_format and result.get("success", False):
                 chart_schema = result.get("chart_schema", {})
                 sample_data = data.get("data", [])
-                
+                print("export_format", export_format)
+                print("chart_schema", chart_schema)
+                export_format = "json"
                 if export_format == "json":
                     result["exported_json"] = self.exporter.to_vega_lite_json(chart_schema)
                 elif export_format == "observable":

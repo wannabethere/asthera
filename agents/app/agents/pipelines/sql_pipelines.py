@@ -24,8 +24,8 @@ from app.agents.nodes.sql.utils.chart_models import ChartAdjustmentOption
 from app.agents.nodes.sql.powerbi_chart_generation import PowerBIChartGenerationPipeline
 from app.agents.nodes.sql.plotly_chart_generation import PlotlyChartGenerationPipeline
 from app.agents.nodes.sql.plotly_chart_adjustment import PlotlyChartAdjustment, PlotlyChartAdjustmentOption
-from app.agents.nodes.sql.data_assistance import DataAssistancePipeline as CoreDataAssistancePipeline, DataAssistanceRequest, DataAssistanceResult
-
+from app.agents.nodes.sql.data_assistance import DataAssistanceRequest, DataAssistanceResult
+from app.agents.nodes.sql.data_assistance import DataAssistanceTool
 import logging
 
 logger = logging.getLogger("lexy-ai-service")
@@ -300,7 +300,7 @@ class SQLCorrectionPipeline(AgentPipeline):
                 error_message=error_message,
                 **kwargs
             )
-        
+        logger.info("result in sql correction pipeline", result)
         return {
             "success": result.get("success", False),
             "data": result.get("data", {}),
@@ -1007,7 +1007,7 @@ class DataAssistancePipeline(AgentPipeline):
             document_store_provider=document_store_provider,
             engine=engine
         )
-        self.data_assistance = CoreDataAssistancePipeline(doc_store_provider=document_store_provider)
+        self.data_assistance = DataAssistanceTool(doc_store_provider=document_store_provider, retrieval_helper=retrieval_helper)
         
        
 
@@ -1019,7 +1019,8 @@ class DataAssistancePipeline(AgentPipeline):
         configuration = kwargs.get("configuration")
         project_id = kwargs.get("project_id")
         timeout = kwargs.get("timeout", 30.0)
-
+        query_id = kwargs.get("query_id")
+        
         # Prepare request dataclass
         request = DataAssistanceRequest(
             query=query,
@@ -1028,7 +1029,8 @@ class DataAssistancePipeline(AgentPipeline):
             histories=histories,
             configuration=configuration,
             project_id=project_id,
-            timeout=timeout
+            timeout=timeout,
+            query_id=query_id
         )
         
         result: DataAssistanceResult = await self.data_assistance.run(request)

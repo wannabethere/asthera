@@ -413,13 +413,13 @@ class TableRetrieval:
                 }
             
            
-            logger.info(f"query in run table retrieval: {schema_docs}")
+            #logger.info(f"query in run table retrieval: {schema_docs}")
             if query:
                 # Build prompt with schemas
                 prompt = self._build_prompt(query, schema_docs, histories)
                 # Get column selection from LLM
                 column_selection = await self._get_column_selection(prompt)
-                print("column_selection", column_selection)
+                #print("column_selection", column_selection)
                 # Construct final results with selected columns
                 return self._construct_retrieval_results(
                     column_selection, db_schemas, schema_docs
@@ -773,7 +773,7 @@ class TableRetrieval:
 
     def _build_table_ddl(self, table_name, description, columns):
         col_defs = self._build_column_defs(columns)
-        print("col_defs in build_table_ddl: ", col_defs)
+        #print("col_defs in build_table_ddl: ", col_defs)
         table_comment = f"-- {description}\n" if description else ""
         return f"{table_comment}CREATE TABLE {table_name} (\n  " + ",\n  ".join(col_defs) + "\n);"
 
@@ -1025,14 +1025,14 @@ class TableRetrieval:
                 schema.get("description", ""),
                 filtered_columns
             )
-            logger.info(f"selected_tables ddl in table retrieval: {ddl}")
+            #logger.info(f"selected_tables ddl in table retrieval: {ddl}")
             retrieval_results.append({
                 "table_name": table_name,
                 "table_ddl": ddl
             })
         
         # Process metrics and views
-        print("schema_docs in table retrieval: ", schema_docs)
+        #print("schema_docs in table retrieval: ", schema_docs)
         for doc in schema_docs:
             try:
                 # Get content from document

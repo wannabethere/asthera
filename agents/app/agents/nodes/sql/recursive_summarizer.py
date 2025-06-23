@@ -151,15 +151,6 @@ Create a polished executive summary that includes:
 - Performance indicators
 - Statistical highlights
 
-**INSIGHTS & IMPLICATIONS**
-- Business implications of the findings
-- Notable trends or changes
-- Areas requiring attention
-
-**RECOMMENDATIONS**
-- Actionable recommendations based on the data
-- Suggested next steps
-- Priority areas for investigation
 
 Make this suitable for senior executives and stakeholders. Use clear, professional language with quantitative support where appropriate.
 **Keep the summary in less than 500 words.**
@@ -186,6 +177,8 @@ Final Executive Summary:
         self.final_chain = self.final_prompt | self.llm | self.output_parser
         print(f"_setup_chains - final_chain created: {type(self.final_chain)}")
     
+
+
     def _prepare_data_chunk(self, df: pd.DataFrame) -> str:
         """Convert DataFrame to string format for LLM processing"""
         try:
@@ -626,3 +619,17 @@ if __name__ == "__main__":
     print("=" * 50)
     for key, value in result['metadata'].items():
         print(f"{key}: {value}")
+
+    """
+    Removed this block of text from the out put 
+    **INSIGHTS & IMPLICATIONS**
+    - Business implications of the findings
+    - Notable trends or changes
+    - Areas requiring attention
+
+    **RECOMMENDATIONS**
+    - Actionable recommendations based on the data
+    - Suggested next steps
+    - Priority areas for investigation
+
+    """
