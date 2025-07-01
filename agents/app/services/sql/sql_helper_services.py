@@ -327,6 +327,8 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
         query_id: str,
         query: str,
         sql: str,
+        original_query: str,
+        original_reasoning: str,
         project_id: str,
         configuration: Optional[Dict[str, Any]] = None,
         schema_context: Optional[Dict[str, Any]] = None
@@ -348,6 +350,8 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
             expansion_result = await sql_expansion_pipeline.run(
                 query=query,
                 sql=sql,
+                original_query=original_query,
+                original_reasoning=original_reasoning,
                 project_id=project_id,
                 configuration=configuration,
                 schema_context=schema_context

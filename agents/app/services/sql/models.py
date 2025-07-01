@@ -197,6 +197,7 @@ class ChartAdjustmentOption(BaseModel):
     chart_type: Literal[
         "bar", "grouped_bar", "line", "pie", "stacked_bar", "area", "multi_line"
     ]
+    adjustment_option: Optional[str] = None
     x_axis: Optional[str] = None
     y_axis: Optional[str] = None
     x_offset: Optional[str] = None

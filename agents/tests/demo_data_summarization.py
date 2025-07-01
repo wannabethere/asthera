@@ -282,7 +282,7 @@ class DataSummarizationDemo:
             if result.get("success"):
                 print("✅ SQL correction generated successfully!")
                 data = result.get("data", {})
-                
+                print("data in sql correction", data)
                 # Display correction suggestions
                 if "correction_suggestions" in data:
                     corrections = data["correction_suggestions"]
@@ -290,7 +290,7 @@ class DataSummarizationDemo:
                         print(f"   Required Changes: {len(corrections['required_changes'])} items")
                         for i, change in enumerate(corrections['required_changes'][:3], 1):  # Show first 3
                             print(f"     {i}. {change}")
-                
+                print("correction_suggestions in sql correction", data["correction_suggestions"])
                 # Display combined analysis
                 if "combined_analysis" in data:
                     analysis = data["combined_analysis"]
@@ -298,7 +298,7 @@ class DataSummarizationDemo:
                         print(f"   Suggested Improvements: {len(analysis['suggested_improvements'])} items")
                         for i, improvement in enumerate(analysis['suggested_improvements'][:3], 1):  # Show first 3
                             print(f"     {i}. {improvement}")
-                
+                print("combined_analysis in sql correction", data["combined_analysis"])
                 return {"status": "success", "data": data}
             else:
                 print(f"❌ SQL correction failed: {result.get('error', 'Unknown error')}")
@@ -308,7 +308,7 @@ class DataSummarizationDemo:
             print(f"❌ Error testing SQL correction: {str(e)}")
             return {"status": "error", "error": str(e)}
 
-    async def test_sql_expansion(self, query: str, sql: str, project_id: str):
+    async def test_sql_expansion(self, query: str, sql: str, project_id: str, original_query: str, original_reasoning: str):
         """
         Test SQL expansion functionality
         
@@ -330,6 +330,8 @@ class DataSummarizationDemo:
                 query=query,
                 sql=sql,
                 project_id=project_id,
+                original_query=original_query,
+                original_reasoning=original_reasoning,
                 configuration={
                     "language": "English",
                     "include_explanation": True
@@ -520,6 +522,7 @@ async def run_additional_tests():
         }
     ]
     
+    """
     # Test cases for SQL correction
     sql_correction_tests = [
         {
@@ -539,19 +542,10 @@ async def run_additional_tests():
             "sql": "SELECT division, COUNT(*) FROM csod_training_records WHERE is_completed = true",
             "error_message": "Boolean value 'true' is not valid. Use 1 or '1' for true values.",
             "project_id": "cornerstone"
-        }
-    ]
-    
-    # Test cases for SQL expansion
-    sql_expansion_tests = [
+        },
         {
             "query": "Show me sales performance",
             "sql": "SELECT region, SUM(sales_amount) FROM sales GROUP BY region",
-            "project_id": "cornerstone"
-        },
-        {
-            "query": "Analyze employee productivity",
-            "sql": "SELECT department, AVG(salary) FROM employees GROUP BY department",
             "project_id": "cornerstone"
         },
         {
@@ -560,6 +554,19 @@ async def run_additional_tests():
             "project_id": "cornerstone"
         }
     ]
+    """
+    # Test cases for SQL expansion
+    sql_expansion_tests = [
+        
+        {
+            "query": "Enhance the query to include the total employees  in each division by transcript status",
+            "original_query": "What is the proportion of different Transcript Status (Assigned / Satisfied / Expired / Waived)?",
+            "original_reasoning": "```markdown\n1. **Understand the Question**  \n   The user is asking for the proportion of different Transcript Status values (Assigned, Satisfied, Expired, Waived) from the training records. This means we need to analyze the data in the `csod_training_records` table to determine how many records fall into each of these categories and then calculate their proportions relative to the total number of records.\n\n2. **Identify Relevant Data**  \n   We need to focus on the `transcript_status` column in the `csod_training_records` table. This column contains the values we are interested in (Assigned, Satisfied, Expired, Waived). We will also need to count the total number of records to calculate proportions.\n\n3. **Count Each Status**  \n   We will write a SQL query to count the occurrences of each Transcript Status. This can be done using a `GROUP BY` clause on the `transcript_status` column, which will allow us to see how many records correspond to each status.\n\n4. **Calculate Total Records**  \n   In the same query or a separate one, we will calculate the total number of records in the `csod_training_records` table. This total will be used to compute the proportions of each status.\n\n5. **Compute Proportions**  \n   Once we have the counts for each status and the total number of records, we will calculate the proportion of each status by dividing the count of each status by the total number of records. This will give us the desired proportions in decimal form.\n\n6. **Format the Results**  \n   Finally, we will format the results in a clear and understandable way, possibly as a percentage, to present the proportions of each Transcript Status to the user.\n```",
+            "sql": "SELECT tr.transcript_status AS Transcript_Status, COUNT(tr.transcript_status) * 1.0 / SUM(COUNT(tr.transcript_status)) OVER () AS Proportion FROM csod_training_records AS tr WHERE lower(tr.transcript_status) IN (lower('Assigned'), lower('Satisfied'), lower('Expired'), lower('Waived')) GROUP BY tr.transcript_status",
+            "project_id": "cornerstone"
+        }
+        
+    ]
     
     # Run data assistance tests
     print("\n" + "="*60)
@@ -567,7 +574,7 @@ async def run_additional_tests():
     print("="*60)
     print("SKIPPING DATA ASSISTANCE TESTS FOR NOW")
     print("="*60)
-    """
+    
     data_assistance_results = []
     for test in data_assistance_tests:
         result = await demo.test_data_assistance(
@@ -578,12 +585,13 @@ async def run_additional_tests():
             "test": test,
             "result": result
         })
-    """
+    
     # Run SQL correction tests
     print("\n" + "="*60)
     print("SQL CORRECTION TESTS")
     print("="*60)
     
+    """
     sql_correction_results = []
     for test in sql_correction_tests:
         result = await demo.test_sql_correction(
@@ -596,7 +604,7 @@ async def run_additional_tests():
             "test": test,
             "result": result
         })
-    
+    """
     # Run SQL expansion tests
     print("\n" + "="*60)
     print("SQL EXPANSION TESTS")
@@ -607,7 +615,9 @@ async def run_additional_tests():
         result = await demo.test_sql_expansion(
             query=test["query"],
             sql=test["sql"],
-            project_id=test["project_id"]
+            project_id=test["project_id"],
+            original_query=test["original_query"],
+            original_reasoning=test["original_reasoning"]
         )
         sql_expansion_results.append({
             "test": test,
@@ -623,12 +633,13 @@ async def run_additional_tests():
     print("\nData Assistance Tests:")
     print("SKIPPING DATA ASSISTANCE TESTS FOR NOW")
     print("="*60)
-    #success_count = sum(1 for r in data_assistance_results if r["result"]["status"] == "success")
-    #print(f"  ✅ Success: {success_count}/{len(data_assistance_results)}")
-    #for i, result in enumerate(data_assistance_results, 1):
-    #    status = "✅" if result["result"]["status"] == "success" else "❌"
-    #    print(f"    {status} Test {i}: {result['test']['query'][:50]}...")
+    success_count = sum(1 for r in data_assistance_results if r["result"]["status"] == "success")
+    print(f"  ✅ Success: {success_count}/{len(data_assistance_results)}")
+    for i, result in enumerate(data_assistance_results, 1):
+        status = "✅" if result["result"]["status"] == "success" else "❌"
+        print(f"    {status} Test {i}: {result['test']['query'][:50]}...")
     
+    """
     # SQL correction summary
     print("\nSQL Correction Tests:")
     success_count = sum(1 for r in sql_correction_results if r["result"]["status"] == "success")
@@ -636,7 +647,7 @@ async def run_additional_tests():
     for i, result in enumerate(sql_correction_results, 1):
         status = "✅" if result["result"]["status"] == "success" else "❌"
         print(f"    {status} Test {i}: {result['test']['query'][:50]}...")
-    
+    """
     # SQL expansion summary
     print("\nSQL Expansion Tests:")
     success_count = sum(1 for r in sql_expansion_results if r["result"]["status"] == "success")
@@ -646,14 +657,14 @@ async def run_additional_tests():
         print(f"    {status} Test {i}: {result['test']['query'][:50]}...")
     
     return {
-        #"data_assistance": data_assistance_results,
-        "sql_correction": sql_correction_results,
+        "data_assistance": data_assistance_results,
+        #"sql_correction": sql_correction_results,
         "sql_expansion": sql_expansion_results
     }
 
 if __name__ == "__main__":
     # Run the main demo
-    #asyncio.run(run_demo())
+    asyncio.run(run_demo())
     
     # Run the additional tests
     asyncio.run(run_additional_tests())

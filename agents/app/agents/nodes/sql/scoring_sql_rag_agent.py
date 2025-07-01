@@ -195,6 +195,8 @@ class ScoringIntegratedSQLRAGAgent(SQLRAGAgent):
         self.performance_metrics["correction_attempts"] += 1
         sql = kwargs.pop('sql', "")  # Use query as fallback if sql not in kwargs
         error_message = kwargs.pop('error_message', "")
+       
+        
         
         # Get correction from base agent
         correction_result = await super()._handle_sql_correction("", sql=sql, error_message=error_message, **kwargs)

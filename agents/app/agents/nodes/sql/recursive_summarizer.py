@@ -154,6 +154,8 @@ Create a polished executive summary that includes:
 
 Make this suitable for senior executives and stakeholders. Use clear, professional language with quantitative support where appropriate.
 **Keep the summary in less than 500 words.**
+**Donot include any other text than the summary.** 
+** Please provide any recommendations or insights in a separate section that is easily identifiable by using the clear --Begin Insights Markdown and --End Insights Markdown section.
 
 Final Executive Summary:
 """

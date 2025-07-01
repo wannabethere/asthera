@@ -96,6 +96,12 @@ app = FastAPI(
     * Recommendations
     * Data Pipeline Generation
     * Document Management
+    * **SQL Helper Endpoints:**
+        * SQL Summary & Visualization (sync/stream)
+        * Data Assistance
+        * SQL Expansion
+        * Query Requirements Analysis
+        * SQL Visualization
     
     ## Authentication
     Most endpoints require authentication. Use the OAuth endpoints to authenticate.

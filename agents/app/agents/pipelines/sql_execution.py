@@ -11,7 +11,7 @@ from app.agents.nodes.sql.question_recommendation import QuestionRecommendation
 from app.core.dependencies import get_llm
 import pandas as pd
 from app.agents.nodes.sql.recursive_summarizer import RecursiveDataSummarizer
-from app.agents.nodes.sql.chart_generation import create_chart_generation_pipeline
+from app.agents.nodes.sql.chart_generation import create_chart_generation_pipeline,create_vega_lite_chart_generation_pipeline
 from app.agents.nodes.sql.plotly_chart_generation import create_plotly_chart_generation_pipeline
 from app.agents.nodes.sql.powerbi_chart_generation import create_powerbi_chart_generation_pipeline
 from datetime import datetime
@@ -396,7 +396,7 @@ class DataSummarizationPipeline(AgentPipeline):
         )
         
         # Initialize chart generation pipelines from input parameters
-        self._chart_generator = chart_generation_pipeline or create_chart_generation_pipeline()
+        self._chart_generator = chart_generation_pipeline or create_vega_lite_chart_generation_pipeline()
         self._plotly_chart_generator = plotly_chart_generation_pipeline or create_plotly_chart_generation_pipeline(self._llm)
         self._powerbi_chart_generator = powerbi_chart_generation_pipeline or create_powerbi_chart_generation_pipeline(self._llm)
         

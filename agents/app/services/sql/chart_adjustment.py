@@ -60,7 +60,7 @@ class ChartAdjustmentService(BaseService[ChartAdjustmentRequest, ChartAdjustment
                 "chart_adjustment",
                 query=request.query,
                 sql=request.sql,
-                adjustment_option=request.adjustment_option,
+                adjustment_option=request.adjustment_option.adjustment_option,
                 chart_schema=request.chart_schema,
                 data=sql_data,
                 language=request.configurations.language,

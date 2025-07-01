@@ -518,6 +518,78 @@ class RetrievalHelper:
                 "tables": tables
             }
 
+    async def get_table_names_and_schema_contexts(
+        self,
+        query: str,
+        project_id: str,
+        table_retrieval: dict,
+        histories: Optional[list[AskHistory]] = None,
+        tables: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """Extract table names and schema contexts from database schemas.
+        
+        Args:
+            query: The query string to use for schema retrieval
+            project_id: The project ID to fetch schemas for
+            table_retrieval: Dictionary containing table retrieval configuration
+            histories: Optional list of AskHistory objects for context
+            tables: Optional list of specific tables to retrieve schemas for
+            
+        Returns:
+            Dictionary containing table names, schema contexts, and metadata
+        """
+        try:
+            # Get database schemas first
+            schema_result = await self.get_database_schemas(
+                project_id=project_id,
+                table_retrieval=table_retrieval,
+                query=query,
+                histories=histories,
+                tables=tables
+            )
+            
+            table_names = []
+            schema_contexts = []
+            
+            if schema_result and "schemas" in schema_result:
+                for schema in schema_result["schemas"]:
+                    if isinstance(schema, dict):
+                        # Extract table name from schema
+                        table_name = schema.get("table_name", "")
+                        if table_name:
+                            table_names.append(table_name)
+                        
+                        # Extract table DDL from schema
+                        table_ddl = schema.get("table_ddl", "")
+                        if table_ddl:
+                            schema_contexts.append(table_ddl)
+            
+            return {
+                "table_names": table_names,
+                "schema_contexts": schema_contexts,
+                "total_tables": len(table_names),
+                "total_contexts": len(schema_contexts),
+                "project_id": project_id,
+                "query": query,
+                "has_calculated_field": schema_result.get("has_calculated_field", False),
+                "has_metric": schema_result.get("has_metric", False),
+                "error": schema_result.get("error", None)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error extracting table names and schema contexts: {str(e)}")
+            return {
+                "table_names": [],
+                "schema_contexts": [],
+                "total_tables": 0,
+                "total_contexts": 0,
+                "project_id": project_id,
+                "query": query,
+                "has_calculated_field": False,
+                "has_metric": False,
+                "error": str(e)
+            }
+
 async def main():
     """Main function to test the RetrievalHelper functionality."""
     try:

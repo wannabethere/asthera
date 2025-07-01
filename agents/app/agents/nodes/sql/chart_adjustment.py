@@ -52,13 +52,7 @@ Sample Data: {sample_data}
 Sample Column Values: {sample_column_values}
 Language: {language}
 
-Adjustment Options:
-- Chart Type: {chart_type}
-{conditional_x_axis}
-{conditional_y_axis}
-{conditional_x_offset}
-{conditional_color}
-{conditional_theta}
+Adjustment Option: {adjustment_option}
 
 Please think step by step
 """
@@ -172,7 +166,7 @@ class ChartAdjustmentTool:
         self,
         query: str,
         sql: str,
-        adjustment_option: ChartAdjustmentOption,
+        adjustment_option: str,
         chart_schema: dict,
         data: dict,
         language: str,
@@ -190,20 +184,10 @@ class ChartAdjustmentTool:
             prompt_template = PromptTemplate(
                 input_variables=[
                     "query", "sql", "chart_schema", "sample_data", 
-                    "sample_column_values", "language", "chart_type",
-                    "conditional_x_axis", "conditional_y_axis",
-                    "conditional_x_offset", "conditional_color",
-                    "conditional_theta"
+                    "sample_column_values", "language", "adjustment_option"
                 ],
                 template=chart_adjustment_user_prompt_template
             )
-            
-            # Prepare conditional fields
-            conditional_x_axis = f"- X Axis: {adjustment_option.x_axis}" if adjustment_option.x_axis and adjustment_option.chart_type != "pie" else ""
-            conditional_y_axis = f"- Y Axis: {adjustment_option.y_axis}" if adjustment_option.y_axis and adjustment_option.chart_type != "pie" else ""
-            conditional_x_offset = f"- X Offset: {adjustment_option.x_offset}" if adjustment_option.x_offset and adjustment_option.chart_type == "grouped_bar" else ""
-            conditional_color = f"- Color: {adjustment_option.color}" if adjustment_option.color and adjustment_option.chart_type != "area" else ""
-            conditional_theta = f"- Theta: {adjustment_option.theta}" if adjustment_option.theta and adjustment_option.chart_type == "pie" else ""
             
             user_prompt = prompt_template.format(
                 query=query,
@@ -212,12 +196,7 @@ class ChartAdjustmentTool:
                 sample_data=sample_data,
                 sample_column_values=sample_column_values,
                 language=language,
-                chart_type=adjustment_option.chart_type,
-                conditional_x_axis=conditional_x_axis,
-                conditional_y_axis=conditional_y_axis,
-                conditional_x_offset=conditional_x_offset,
-                conditional_color=conditional_color,
-                conditional_theta=conditional_theta
+                adjustment_option=adjustment_option
             )
             
             # Step 3: Generate chart adjustment
@@ -251,7 +230,7 @@ class ChartAdjustment:
         self,
         query: str,
         sql: str,
-        adjustment_option: ChartAdjustmentOption,
+        adjustment: str,
         chart_schema: dict,
         data: dict,
         language: str,
@@ -260,7 +239,7 @@ class ChartAdjustment:
         return await self.tool.run(
             query=query,
             sql=sql,
-            adjustment_option=adjustment_option,
+            adjustment=adjustment,
             chart_schema=chart_schema,
             data=data,
             language=language
@@ -281,7 +260,7 @@ def create_chart_adjustment_tool(llm_provider=None) -> Tool:
     
     return Tool(
         name="chart_adjuster",
-        description="Adjusts chart visualizations based on user preferences. Input should be JSON with 'query', 'sql', 'adjustment_option', 'chart_schema', 'data', and 'language' fields.",
+        description="Adjusts chart visualizations based on user preferences. Input should be JSON with 'query', 'sql', 'adjustment', 'chart_schema', 'data', and 'language' fields.",
         func=adjust_chart_func
     )
 
@@ -303,13 +282,6 @@ if __name__ == "__main__":
         from app.core.dependencies import get_llm
         llm_provider = get_llm()  # Initialize with your config
         chart_adj = ChartAdjustment()
-        
-        # Create a proper ChartAdjustmentOption with required fields
-        adjustment_option = ChartAdjustmentOption(
-            chart_type="bar",  # Required field
-            x_axis="category",
-            y_axis="value"
-        )
         
         # Sample chart schema
         sample_chart_schema = {
@@ -337,7 +309,7 @@ if __name__ == "__main__":
         result = await chart_adj.run(
             query="Show me the data as a bar chart with categories on x-axis and values on y-axis",
             sql="SELECT category, value FROM table",
-            adjustment_option=adjustment_option,
+            adjustment_option="Make the bars blue",
             chart_schema=sample_chart_schema,
             data=sample_data,
             language="English"

@@ -51,16 +51,29 @@ class SQLVisualizationRequest(BaseModel):
     chart_config: Optional[Dict[str, Any]] = None
     streaming: bool = False
 
+class DataAssistanceRequest(BaseModel):
+    """Request model for data assistance."""
+    query: str
+    project_id: str
+    configuration: Optional[Dict[str, Any]] = None
+    schema_context: Optional[Dict[str, Any]] = None
+
+class SQLExpansionRequest(BaseModel):
+    """Request model for SQL expansion."""
+    query: str
+    sql: Optional[str] = None
+    original_query: Optional[str] = None
+    original_reasoning: Optional[str] = None
+    project_id: str
+    configuration: Optional[Dict[str, Any]] = None
+    schema_context: Optional[Dict[str, Any]] = None
+
 @router.post("/summary")
 async def generate_sql_summary_and_visualization(request: SQLSummaryRequest):
     """Generate SQL summary and visualization using DataSummarizationPipeline."""
     try:
         service = get_sql_helper_service()
-        
-        # Generate a unique query ID
         query_id = str(uuid.uuid4())
-        
-        # Call the service method
         result = await service.generate_sql_summary_and_visualization(
             query_id=query_id,
             sql=request.sql,
@@ -69,14 +82,12 @@ async def generate_sql_summary_and_visualization(request: SQLSummaryRequest):
             data_description=request.data_description,
             configuration=request.configuration
         )
-        
         return {
             "query_id": query_id,
             "success": result.get("success", False),
             "data": result.get("data", {}),
             "error": result.get("error")
         }
-        
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating SQL summary: {str(e)}")
 
@@ -85,12 +96,8 @@ async def stream_sql_summary_and_visualization(request: SQLStreamingRequest):
     """Stream SQL summary and visualization using DataSummarizationPipeline with callbacks."""
     try:
         service = get_sql_helper_service()
-        
-        # Generate a unique query ID
         query_id = str(uuid.uuid4())
-        
         async def generate_stream():
-            """Generate streaming response."""
             try:
                 async for update in service.stream_sql_summary_and_visualization(
                     query_id=query_id,
@@ -100,9 +107,7 @@ async def stream_sql_summary_and_visualization(request: SQLStreamingRequest):
                     data_description=request.data_description,
                     configuration=request.configuration
                 ):
-                    # Convert update to JSON string with newline for SSE format
                     yield f"data: {json.dumps(update)}\n\n"
-                    
             except Exception as e:
                 error_update = {
                     "status": "error",
@@ -110,7 +115,6 @@ async def stream_sql_summary_and_visualization(request: SQLStreamingRequest):
                     "timestamp": datetime.now().isoformat()
                 }
                 yield f"data: {json.dumps(error_update)}\n\n"
-        
         return StreamingResponse(
             generate_stream(),
             media_type="text/plain",
@@ -120,7 +124,6 @@ async def stream_sql_summary_and_visualization(request: SQLStreamingRequest):
                 "Content-Type": "text/event-stream"
             }
         )
-        
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error streaming SQL summary: {str(e)}")
 
@@ -208,4 +211,52 @@ def get_query_status(query_id: str):
         status = service.get_query_status(query_id)
         return {"query_id": query_id, "status": status}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting query status: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Error getting query status: {str(e)}")
+
+@router.post("/data-assistance")
+async def generate_data_assistance(request: DataAssistanceRequest):
+    """Generate data assistance using DataAssistance pipeline."""
+    try:
+        service = get_sql_helper_service()
+        query_id = str(uuid.uuid4())
+        result = await service.generate_data_assistance(
+            query_id=query_id,
+            query=request.query,
+            project_id=request.project_id,
+            configuration=request.configuration,
+            schema_context=request.schema_context
+        )
+        return {
+            "query_id": query_id,
+            "success": result.get("success", False),
+            "data": result.get("data", {}),
+            "metadata": result.get("metadata", {}),
+            "error": result.get("error")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating data assistance: {str(e)}")
+
+@router.post("/sql-expansion")
+async def generate_sql_expansion(request: SQLExpansionRequest):
+    """Generate SQL expansion using SQL expansion pipeline."""
+    try:
+        service = get_sql_helper_service()
+        query_id = str(uuid.uuid4())
+        result = await service.generate_sql_expansion(
+            query_id=query_id,
+            query=request.query,
+            sql=request.sql or "",
+            original_query=request.original_query or request.query,
+            original_reasoning=request.original_reasoning or "",
+            project_id=request.project_id,
+            configuration=request.configuration,
+            schema_context=request.schema_context
+        )
+        return {
+            "query_id": query_id,
+            "success": result.get("success", False),
+            "data": result.get("data", {}),
+            "error": result.get("error")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating SQL expansion: {str(e)}") 

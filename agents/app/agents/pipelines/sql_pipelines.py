@@ -348,21 +348,17 @@ class SQLExpansionPipeline(AgentPipeline):
         query = kwargs.pop("query", "")  # Remove query from kwargs
         original_sql = kwargs.pop("original_sql", "")  # Remove original_sql from kwargs
         contexts = kwargs.get("contexts", [])
-        schema_context = kwargs.pop("schema_context", None)  # Remove schema_context from kwargs
-        
+       
         if self.use_enhanced_agent:
             result = await self.agent.process_sql_request_enhanced(
                 operation="EXPANSION",
                 query=query,
-                original_sql=original_sql,
-                schema_context=schema_context,
                 **kwargs
             )
         else:
             result = await self.agent.process_sql_request(
                 operation="EXPANSION",
                 query=query,
-                original_sql=original_sql,
                 **kwargs
             )
         

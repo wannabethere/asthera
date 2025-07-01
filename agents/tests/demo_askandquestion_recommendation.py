@@ -368,8 +368,8 @@ async def run_demo():
         {
             #"question": "Show me the training completion rates by division, including how many assignments were completed on time versus late",
             #"question": "How many trainings are assigned vs completed across different Divisions (Administration, Acme Products, Private Operations)?",
-            #"question": "What is the proportion of different Transcript Status (Assigned / Satisfied / Expired / Waived)?",
-            "question": "What are the relevant columns I should be asking questions about with the training data sets",
+            "question": "What is the proportion of different Transcript Status (Assigned / Satisfied / Expired / Waived)?",
+            #"question": "What are the relevant columns I should be asking questions about with the training data sets",
             #"question": "How many employees have completed the training on time or Late per Division?",
             #"question": "How has the number of completed trainings changed month by month? (using CompletionDate)",
             #"question": "How many training activities for each employee and give me their Training Statuses by Assigned, Completed, Expired",

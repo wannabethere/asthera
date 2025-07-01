@@ -515,39 +515,21 @@ Please provide your response in proper Markdown string format.
 
     async def _retrieve_schema_context(self, query: str, project_id: str = "default") -> Dict[str, Any]:
         """Helper method to retrieve schema context and table names"""
-        schema_result = await self.retrieval_helper.get_database_schemas(
+        schema_data = await self.retrieval_helper.get_table_names_and_schema_contexts(
+            query=query,
             project_id=project_id,
             table_retrieval={
                 "table_retrieval_size": 10,
                 "table_column_retrieval_size": 100,
                 "allow_using_db_schemas_without_pruning": False
-            },
-            query=query
+            }
         )
         
-        table_names = []
-        schema_contexts = []
-        
-        if schema_result and "schemas" in schema_result:
-            for schema in schema_result["schemas"]:
-                if isinstance(schema, dict):
-                    # Extract table name from schema
-                    table_name = schema.get("table_name", "")
-                    if table_name:
-                        table_names.append(table_name)
-                    
-                    # Extract table DDL from schema
-                    table_ddl = schema.get("table_ddl", "")
-                    if table_ddl:
-                        schema_contexts.append(table_ddl)
-        
-        
-        
         return {
-            "table_names": table_names,
-            "schema_contexts": schema_contexts,
-            "has_calculated_field": schema_result.get("has_calculated_field", False),
-            "has_metric": schema_result.get("has_metric", False)
+            "table_names": schema_data.get("table_names", []),
+            "schema_contexts": schema_data.get("schema_contexts", []),
+            "has_calculated_field": schema_data.get("has_calculated_field", False),
+            "has_metric": schema_data.get("has_metric", False)
         }
 
     async def _get_schema_and_samples(self, query: str, **kwargs):
@@ -778,11 +760,11 @@ Please provide your response in proper Markdown string format.
             logger.error(f"Error in internal SQL breakdown: {e}")
             return {"breakdown": "", "success": False, "error": str(e)}
     
-    async def _expand_sql_internal(self, query: str, original_sql: str, contexts: List[str]) -> Dict[str, Any]:
+    async def _expand_sql_internal(self, query: str, original_sql: str, contexts: Any, original_reasoning: str, original_query: str) -> Dict[str, Any]:
         """Internal SQL expansion logic"""
         try:
             prompt_template = PromptTemplate(
-                input_variables=["query", "original_sql", "contexts"],
+                input_variables=["query", "original_sql", "contexts", "original_reasoning", "original_query"],
                 template="""
                 ### DATABASE SCHEMA ###
                 {contexts}
@@ -790,6 +772,8 @@ Please provide your response in proper Markdown string format.
                 ### QUESTION ###
                 User's adjustment request: {query}
                 Original SQL: {original_sql}
+                reasoning: {original_reasoning}
+                original_query: {original_query}
                 """
             )
             
@@ -817,7 +801,9 @@ Please provide your response in proper Markdown string format.
             user_prompt = prompt_template.format(
                 query=query, 
                 original_sql=original_sql, 
-                contexts="\n".join(contexts)
+                contexts="\n".join(contexts),
+                original_reasoning=original_reasoning,
+                original_query=original_query
             )
             prompt = full_prompt.format(system_prompt=system_prompt, user_prompt=user_prompt)
             result = await self.llm.ainvoke(prompt)
@@ -881,7 +867,7 @@ Please provide your response in proper Markdown string format.
             
             # Try to parse the JSON response
             try:
-                # First try to extract JSON from the content
+                print("result_content in sql correction", result_content)# First try to extract JSON from the content
                 extracted_data = self._extract_sql_from_content(result_content)
                 
                 # If we have a JSON response with sql_correction_reasoning, parse it
@@ -899,7 +885,7 @@ Please provide your response in proper Markdown string format.
                             }
                     except json.JSONDecodeError:
                         pass
-                
+                print("extracted_data in sql correction", extracted_data)
                 # Fallback to extracted SQL if JSON parsing fails
                 corrected_sql = extracted_data.get("sql", result_content)
                 return {
@@ -1353,23 +1339,17 @@ Please provide your response in proper Markdown string format.
     async def _handle_sql_generation(self, query: str, **kwargs) -> Dict[str, Any]:
         """Handle SQL generation with RAG and self-correction"""
         # Retrieve relevant schema
-        schema_result = await self.retrieval_helper.get_database_schemas(
+        schema_data = await self.retrieval_helper.get_table_names_and_schema_contexts(
+            query=query,
             project_id=kwargs.get("project_id", "default"),
             table_retrieval={
                 "table_retrieval_size": 10,
                 "table_column_retrieval_size": 100,
                 "allow_using_db_schemas_without_pruning": False
-            },
-            query=query
+            }
         )
         
-        schema_contexts = []
-        if schema_result and "schemas" in schema_result:
-            for schema in schema_result["schemas"]:
-                if isinstance(schema, dict):
-                    table_ddl = schema.get("table_ddl", "")
-                    if table_ddl:
-                        schema_contexts.append(table_ddl)
+        schema_contexts = schema_data.get("schema_contexts", [])
         
         # Generate reasoning first
         reasoning_result = await self._reason_sql_internal(
@@ -1452,8 +1432,27 @@ Please provide your response in proper Markdown string format.
         """Handle SQL expansion"""
         original_sql = kwargs.get("original_sql", "")
         contexts = kwargs.get("contexts", [])
+         #contexts = kwargs.get("contexts", [])
+        original_query = kwargs.pop('original_query', "")
+        project_id = kwargs.pop('project_id', "")
+        reasoning = kwargs.pop('reasoning', "")
         
-        expansion_result = await self._expand_sql_internal(query, original_sql, contexts)
+        if contexts is None:
+            schema_data = await self.retrieval_helper.get_table_names_and_schema_contexts(
+                query=original_query,
+                project_id=project_id,
+                table_retrieval={
+                    "table_retrieval_size": 10,
+                    "table_column_retrieval_size": 100,
+                    "allow_using_db_schemas_without_pruning": False
+                }
+            )
+            
+            schema_contexts = schema_data.get("schema_contexts", [])        
+        else:
+            schema_contexts = contexts
+        
+        expansion_result = await self._expand_sql_internal(query,  original_sql, schema_contexts, reasoning, original_query)
         
         if expansion_result.get("success", False):
             expanded_sql = expansion_result.get("sql", "")
@@ -1481,9 +1480,22 @@ Please provide your response in proper Markdown string format.
         """Handle SQL correction"""
         sql = kwargs.get("sql", "")
         error_message = kwargs.get("error_message", "")
-        contexts = kwargs.get("contexts", [])
+        #contexts = kwargs.get("contexts", [])
+        original_query = kwargs.pop('original_query', "")
+        project_id = kwargs.pop('project_id', "")
         
-        correction_result = await self._correct_sql_internal(sql, error_message, contexts)
+        schema_data = await self.retrieval_helper.get_table_names_and_schema_contexts(
+            query=original_query,
+            project_id=project_id,
+            table_retrieval={
+                "table_retrieval_size": 10,
+                "table_column_retrieval_size": 100,
+                "allow_using_db_schemas_without_pruning": False
+            }
+        )
+        
+        schema_contexts = schema_data.get("schema_contexts", [])
+        correction_result = await self._correct_sql_internal(sql, error_message, schema_contexts)
         
         if correction_result.get("success", False):
             corrected_sql = correction_result.get("sql", "")
