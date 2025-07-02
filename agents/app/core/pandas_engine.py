@@ -8,8 +8,10 @@ from concurrent.futures import ThreadPoolExecutor
 import sqlite3
 import tempfile
 import os
+import hashlib
 from .engine import Engine, clean_generation_result, add_quotes
 from app.settings import EngineType
+from app.utils.cache import Cache, InMemoryCache
 # Optional PostgreSQL imports
 try:
     from sqlalchemy import create_engine, text
@@ -29,7 +31,9 @@ class PandasEngine(Engine):
         engine_type: EngineType = EngineType.PANDAS,
         data_sources: Dict[str, pd.DataFrame] = None, 
         connection_string: str = None,
-        postgres_config: Dict[str, str] = None
+        postgres_config: Dict[str, str] = None,
+        cache_provider: Optional[Cache] = None,
+        cache_ttl: int = 3600  # Default 1 hour TTL
     ):
         """
         Initialize PandasEngine
@@ -38,6 +42,8 @@ class PandasEngine(Engine):
             data_sources: Dictionary mapping table names to pandas DataFrames
             connection_string: Optional SQLite connection string for persistent storage
             postgres_config: Optional PostgreSQL connection configuration
+            cache_provider: Optional cache provider (defaults to InMemoryCache)
+            cache_ttl: Cache TTL in seconds (default: 3600)
         """
         self.data_sources = data_sources or {}
         self.connection_string = connection_string
@@ -47,6 +53,10 @@ class PandasEngine(Engine):
         self.engine_type = engine_type
         self.executor = ThreadPoolExecutor(max_workers=4)
         
+        # Setup cache
+        self.cache_provider = cache_provider or InMemoryCache()
+        self.cache_ttl = cache_ttl
+        
         # Setup PostgreSQL if config provided
         if postgres_config and POSTGRES_AVAILABLE:
             self._setup_postgres_connection()
@@ -54,6 +64,8 @@ class PandasEngine(Engine):
     def add_data_source(self, table_name: str, dataframe: pd.DataFrame):
         """Add a pandas DataFrame as a data source"""
         self.data_sources[table_name] = dataframe
+        # Clear cache when data sources change
+        asyncio.create_task(self.clear_cache())
         
     def _setup_postgres_connection(self):
         """Setup PostgreSQL connection if config is provided"""
@@ -160,12 +172,15 @@ class PandasEngine(Engine):
             parsed = sqlparse.parse(sql)[0]
             tokens = parsed.tokens
             
-            # Extract table name and WHERE clause
+            # Extract table name, WHERE clause, LIMIT, and OFFSET
             table_name = None
             where_clause = None
             select_columns = []
+            limit_value = None
+            offset_value = None
             
-            for token in tokens:
+            # Parse tokens to extract all components
+            for i, token in enumerate(tokens):
                 if isinstance(token, sqlparse.sql.Identifier):
                     table_name = token.get_real_name()
                 elif isinstance(token, sqlparse.sql.Where):
@@ -174,6 +189,24 @@ class PandasEngine(Engine):
                     select_columns = [str(col).strip() for col in token.get_identifiers()]
                 elif isinstance(token, sqlparse.sql.Identifier) and token.get_name().upper() != 'FROM':
                     select_columns = [token.get_name()]
+                elif isinstance(token, sqlparse.sql.Limit):
+                    # Extract LIMIT value
+                    limit_tokens = token.tokens
+                    for limit_token in limit_tokens:
+                        if isinstance(limit_token, sqlparse.sql.Literal):
+                            try:
+                                limit_value = int(str(limit_token))
+                            except ValueError:
+                                logger.warning(f"Invalid LIMIT value: {limit_token}")
+                elif str(token).upper() == 'OFFSET':
+                    # Extract OFFSET value from next token
+                    if i + 1 < len(tokens):
+                        next_token = tokens[i + 1]
+                        if isinstance(next_token, sqlparse.sql.Literal):
+                            try:
+                                offset_value = int(str(next_token))
+                            except ValueError:
+                                logger.warning(f"Invalid OFFSET value: {next_token}")
             
             if not table_name or table_name not in self.data_sources:
                 return None
@@ -204,6 +237,18 @@ class PandasEngine(Engine):
                     logger.warning(f"Pandas query failed: {query_error}")
                     return None
             
+            # Apply OFFSET if present
+            if offset_value is not None and offset_value > 0:
+                if offset_value < len(result_df):
+                    result_df = result_df.iloc[offset_value:]
+                else:
+                    # If offset is beyond the data, return empty DataFrame
+                    return pd.DataFrame(columns=result_df.columns)
+            
+            # Apply LIMIT if present
+            if limit_value is not None and limit_value > 0:
+                result_df = result_df.iloc[:limit_value]
+            
             return result_df
             
         except Exception as e:
@@ -216,12 +261,15 @@ class PandasEngine(Engine):
             # Parse and validate SQL
             quoted_sql = self._parse_and_validate_sql(sql, limit)
             
-            if self.engine_type == EngineType.PANDAS:
+            # Handle engine_type whether it's an enum or string
+            engine_type_str = self.engine_type.value if hasattr(self.engine_type, 'value') else str(self.engine_type)
+            
+            if engine_type_str == 'PANDAS' or self.engine_type == EngineType.PANDAS:
                 # Try direct DataFrame execution first
                 result_df = self._execute_df_query(quoted_sql)
-            elif self.engine_type == EngineType.POSTGRES:
+            elif engine_type_str == 'POSTGRES' or self.engine_type == EngineType.POSTGRES:
                 result_df = self._execute_postgres_query(quoted_sql)
-            elif self.engine_type == EngineType.SQLITE:
+            elif engine_type_str == 'SQLITE' or self.engine_type == EngineType.SQLITE:
                 result_df = self._execute_sqlite_query(quoted_sql)
             
             # If PostgreSQL fails, try SQLite
@@ -235,13 +283,15 @@ class PandasEngine(Engine):
                     "data": [],
                     "columns": []
                 }
-            print("result_df in _execute_sql_sync", result_df.count())
-            # Apply limit if specified
-            limit = 1000
-            if limit is not None:
+            
+            # Check if SQL already has LIMIT clause (for pagination)
+            sql_upper = quoted_sql.upper()
+            has_limit_or_offset = 'LIMIT' in sql_upper or 'OFFSET' in sql_upper
+            
+            # Only apply additional limit if no LIMIT/OFFSET is present in the SQL
+            if not has_limit_or_offset and limit is not None:
                 result_df = result_df.iloc[:limit]
             
-            #print("result_df in _execute_sql_sync", result_df.to_dict(orient='records'))
             # Format and return result
             return True, convert_to_json_serializable(result_df)
                 
@@ -253,22 +303,43 @@ class PandasEngine(Engine):
                 "columns": []
             }
     
+    def _generate_cache_key(self, sql: str, limit: Optional[int] = None, **kwargs) -> str:
+        """Generate a unique cache key for the SQL query and parameters"""
+        # Handle engine_type whether it's an enum or string
+        engine_type_str = self.engine_type.value if hasattr(self.engine_type, 'value') else str(self.engine_type)
+        
+        # Create a string representation of all parameters
+        params_str = f"sql:{sql}|limit:{limit}|engine:{engine_type_str}"
+        
+        # Add data source information to ensure cache invalidation when data changes
+        data_sources_str = "|".join([f"{name}:{len(df)}" for name, df in self.data_sources.items()])
+        params_str += f"|data_sources:{data_sources_str}"
+        
+        # Add any additional kwargs that might affect the result
+        for key, value in sorted(kwargs.items()):
+            params_str += f"|{key}:{value}"
+        
+        # Generate hash for consistent key length
+        return hashlib.md5(params_str.encode()).hexdigest()
+
     async def execute_sql(
         self,
         sql: str,
         session: aiohttp.ClientSession,
         dry_run: bool = True,
         limit: Optional[int] = None,
+        use_cache: bool = True,
         **kwargs,
     ) -> Tuple[bool, Optional[Dict[str, Any]]]:
         """
-        Execute SQL query asynchronously using pandas
+        Execute SQL query asynchronously using pandas with caching support
         
         Args:
             sql: SQL query to execute
             session: aiohttp ClientSession (not used in pandas engine)
             dry_run: If True, validates SQL without executing
             limit: Optional limit for number of rows returned
+            use_cache: Whether to use caching (default: True)
             **kwargs: Additional arguments
             
         Returns:
@@ -283,8 +354,29 @@ class PandasEngine(Engine):
                 except Exception as e:
                     return False, {"error": f"SQL syntax error: {str(e)}"}
             
-            limit = 1000
-            sql = f"{sql} LIMIT {limit}"
+            # Check if SQL already has LIMIT clause (for pagination)
+            sql_upper = sql.upper()
+            has_limit = 'LIMIT' in sql_upper
+            
+            # Only add default limit if no LIMIT clause is present and no specific limit is provided
+            if not has_limit and limit is None:
+                limit = 1000
+                sql = f"{sql} LIMIT {limit}"
+            elif limit is not None and not has_limit:
+                # Use provided limit
+                sql = f"{sql} LIMIT {limit}"
+            
+            # Check cache if enabled
+            if use_cache:
+                cache_key = self._generate_cache_key(sql, limit, **kwargs)
+                cached_result = await self.cache_provider.get(cache_key)
+                
+                if cached_result is not None:
+                    logger.info(f"Cache hit for query: {sql[:100]}...")
+                    return True, cached_result
+                else:
+                    logger.info(f"Cache miss for query: {sql[:100]}...")
+            
             # Execute SQL in thread pool to avoid blocking
             loop = asyncio.get_event_loop()
             success, result = await loop.run_in_executor(
@@ -293,6 +385,12 @@ class PandasEngine(Engine):
                 sql, 
                 limit
             )
+            
+            # Cache the result if execution was successful and caching is enabled
+            if success and use_cache and result:
+                cache_key = self._generate_cache_key(sql, limit, **kwargs)
+                await self.cache_provider.set(cache_key, result, ttl=self.cache_ttl)
+                logger.info(f"Cached result for query: {sql[:100]}...")
             
             return success, result
             
@@ -413,10 +511,11 @@ class PandasEngine(Engine):
         batch_num: Optional[int] = None,
         max_batches: Optional[int] = None,
         dry_run: bool = True,
+        use_cache: bool = True,
         **kwargs,
     ) -> Tuple[bool, Optional[Dict[str, Any]]]:
         """
-        Execute SQL query in batches to handle large result sets efficiently
+        Execute SQL query in batches to handle large result sets efficiently with caching support
         
         Args:
             sql: SQL query to execute
@@ -425,6 +524,7 @@ class PandasEngine(Engine):
             batch_num: Specific batch number to retrieve (None for all batches)
             max_batches: Maximum number of batches to process (None for unlimited)
             dry_run: If True, validates SQL without executing
+            use_cache: Whether to use caching (default: True)
             **kwargs: Additional arguments
             
         Returns:
@@ -439,12 +539,31 @@ class PandasEngine(Engine):
                 except Exception as e:
                     return False, {"error": f"SQL syntax error: {str(e)}"}
 
+            # Check cache for batch operations if enabled
+            if use_cache:
+                cache_key = self._generate_cache_key(
+                    sql, 
+                    limit=None, 
+                    batch_size=batch_size,
+                    batch_num=batch_num,
+                    max_batches=max_batches,
+                    **kwargs
+                )
+                cached_result = await self.cache_provider.get(cache_key)
+                
+                if cached_result is not None:
+                    logger.info(f"Cache hit for batch query: {sql[:100]}...")
+                    return True, cached_result
+                else:
+                    logger.info(f"Cache miss for batch query: {sql[:100]}...")
+
             # First, get total count
             count_sql = f"SELECT COUNT(*) as total_count FROM ({sql}) as count_query"
             success, count_result = await self.execute_sql(
                 count_sql,
                 session,
                 dry_run=False,
+                use_cache=use_cache,
                 **kwargs
             )
             
@@ -474,6 +593,7 @@ class PandasEngine(Engine):
                     batch_sql,
                     session,
                     dry_run=False,
+                    use_cache=use_cache,
                     **kwargs
                 )
                 
@@ -484,7 +604,7 @@ class PandasEngine(Engine):
                         "columns": []
                     }
                 
-                return True, {
+                result = {
                     "data": batch_result.get("data", []),
                     "columns": batch_result.get("columns", []),
                     "row_count": len(batch_result.get("data", [])),
@@ -496,6 +616,20 @@ class PandasEngine(Engine):
                         "is_last_batch": batch_num == num_batches - 1
                     }
                 }
+                
+                # Cache the result if enabled
+                if use_cache:
+                    cache_key = self._generate_cache_key(
+                        sql, 
+                        limit=None, 
+                        batch_size=batch_size,
+                        batch_num=batch_num,
+                        max_batches=max_batches,
+                        **kwargs
+                    )
+                    await self.cache_provider.set(cache_key, result, ttl=self.cache_ttl)
+                
+                return True, result
             
             # Process all batches if no specific batch requested
             all_data = []
@@ -509,6 +643,7 @@ class PandasEngine(Engine):
                     batch_sql,
                     session,
                     dry_run=False,
+                    use_cache=use_cache,
                     **kwargs
                 )
                 
@@ -530,7 +665,7 @@ class PandasEngine(Engine):
                 # Log progress
                 logger.info(f"Processed batch {current_batch + 1}/{num_batches} ({len(all_data)}/{total_count} rows)")
             
-            return True, {
+            result = {
                 "data": all_data,
                 "columns": columns,
                 "row_count": len(all_data),
@@ -539,21 +674,73 @@ class PandasEngine(Engine):
                 "batch_size": batch_size
             }
             
+            # Cache the result if enabled
+            if use_cache:
+                cache_key = self._generate_cache_key(
+                    sql, 
+                    limit=None, 
+                    batch_size=batch_size,
+                    batch_num=batch_num,
+                    max_batches=max_batches,
+                    **kwargs
+                )
+                await self.cache_provider.set(cache_key, result, ttl=self.cache_ttl)
+            
+            return True, result
+            
         except Exception as e:
             logger.exception(f"Error in execute_sql_in_batches: {e}")
             return False, {"error": str(e), "data": [], "columns": []}
+
+    async def clear_cache(self):
+        """Clear all cached results"""
+        await self.cache_provider.clear()
+        logger.info("Cache cleared")
+    
+    async def invalidate_cache_for_table(self, table_name: str):
+        """Invalidate cache entries that might be affected by changes to a specific table"""
+        # This is a simplified approach - in a more sophisticated implementation,
+        # you might want to track which cache keys are associated with which tables
+        await self.cache_provider.clear()
+        logger.info(f"Cache invalidated for table: {table_name}")
+    
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """Get cache statistics (if supported by the cache provider)"""
+        if hasattr(self.cache_provider, '_cache'):
+            cache_size = len(self.cache_provider._cache)
+            return {
+                "cache_type": type(self.cache_provider).__name__,
+                "cache_size": cache_size,
+                "cache_ttl": self.cache_ttl
+            }
+        return {
+            "cache_type": type(self.cache_provider).__name__,
+            "cache_ttl": self.cache_ttl
+        }
 
 
 class PandasEngineConfig:
     """Configuration helper for PandasEngine"""
     
     @staticmethod
-    def from_dataframes(dataframes: Dict[str, pd.DataFrame]) -> PandasEngine:
+    def from_dataframes(
+        dataframes: Dict[str, pd.DataFrame], 
+        cache_provider: Optional[Cache] = None,
+        cache_ttl: int = 3600
+    ) -> PandasEngine:
         """Create engine from dictionary of DataFrames"""
-        return PandasEngine(data_sources=dataframes)
+        return PandasEngine(
+            data_sources=dataframes,
+            cache_provider=cache_provider,
+            cache_ttl=cache_ttl
+        )
     
     @staticmethod
-    def from_csv_files(csv_files: Dict[str, str]) -> PandasEngine:
+    def from_csv_files(
+        csv_files: Dict[str, str],
+        cache_provider: Optional[Cache] = None,
+        cache_ttl: int = 3600
+    ) -> PandasEngine:
         """Create engine from CSV files"""
         dataframes = {}
         for table_name, csv_path in csv_files.items():
@@ -562,16 +749,27 @@ class PandasEngineConfig:
                 logger.info(f"Loaded CSV file: {csv_path} as table: {table_name}")
             except Exception as e:
                 logger.error(f"Failed to load CSV file {csv_path}: {e}")
-        return PandasEngine(data_sources=dataframes)
+        return PandasEngine(
+            data_sources=dataframes,
+            cache_provider=cache_provider,
+            cache_ttl=cache_ttl
+        )
     
     @staticmethod
-    def from_excel_file(excel_path: str, sheet_names: Dict[str, str] = None) -> PandasEngine:
+    def from_excel_file(
+        excel_path: str, 
+        sheet_names: Dict[str, str] = None,
+        cache_provider: Optional[Cache] = None,
+        cache_ttl: int = 3600
+    ) -> PandasEngine:
         """
         Create engine from Excel file
         
         Args:
             excel_path: Path to Excel file
             sheet_names: Optional mapping of table_name -> sheet_name
+            cache_provider: Optional cache provider
+            cache_ttl: Cache TTL in seconds
         """
         try:
             excel_file = pd.ExcelFile(excel_path)
@@ -593,11 +791,18 @@ class PandasEngineConfig:
                     except Exception as e:
                         logger.error(f"Failed to load Excel sheet {sheet_name}: {e}")
                         
-            return PandasEngine(data_sources=dataframes)
+            return PandasEngine(
+                data_sources=dataframes,
+                cache_provider=cache_provider,
+                cache_ttl=cache_ttl
+            )
             
         except Exception as e:
             logger.error(f"Failed to load Excel file {excel_path}: {e}")
-            return PandasEngine()
+            return PandasEngine(
+                cache_provider=cache_provider,
+                cache_ttl=cache_ttl
+            )
     
     @staticmethod
     def from_postgres(
@@ -605,7 +810,9 @@ class PandasEngineConfig:
         database: str,
         username: str,
         password: str,
-        port: int = 5432
+        port: int = 5432,
+        cache_provider: Optional[Cache] = None,
+        cache_ttl: int = 3600
     ) -> PandasEngine:
         """
         Create engine with PostgreSQL connection
@@ -616,10 +823,15 @@ class PandasEngineConfig:
             username: Username
             password: Password
             port: Port number (default: 5432)
+            cache_provider: Optional cache provider
+            cache_ttl: Cache TTL in seconds
         """
         if not POSTGRES_AVAILABLE:
             logger.error("PostgreSQL dependencies not available. Install with: pip install sqlalchemy psycopg2-binary")
-            return PandasEngine()
+            return PandasEngine(
+                cache_provider=cache_provider,
+                cache_ttl=cache_ttl
+            )
         
         postgres_config = {
             'host': host,
@@ -629,7 +841,11 @@ class PandasEngineConfig:
             'password': password
         }
         
-        return PandasEngine(postgres_config=postgres_config)
+        return PandasEngine(
+            postgres_config=postgres_config,
+            cache_provider=cache_provider,
+            cache_ttl=cache_ttl
+        )
     
     @staticmethod
     def from_mixed_sources(
@@ -637,7 +853,9 @@ class PandasEngineConfig:
         csv_files: Dict[str, str] = None,
         excel_file: str = None,
         excel_sheet_mapping: Dict[str, str] = None,
-        postgres_config: Dict[str, str] = None
+        postgres_config: Dict[str, str] = None,
+        cache_provider: Optional[Cache] = None,
+        cache_ttl: int = 3600
     ) -> PandasEngine:
         """
         Create engine from multiple sources
@@ -648,6 +866,8 @@ class PandasEngineConfig:
             excel_file: Excel file path
             excel_sheet_mapping: Excel sheet mapping
             postgres_config: PostgreSQL configuration
+            cache_provider: Optional cache provider
+            cache_ttl: Cache TTL in seconds
         """
         all_dataframes = {}
         
@@ -687,7 +907,9 @@ class PandasEngineConfig:
         
         return PandasEngine(
             data_sources=all_dataframes,
-            postgres_config=postgres_config
+            postgres_config=postgres_config,
+            cache_provider=cache_provider,
+            cache_ttl=cache_ttl
         )
 
 def convert_to_json_serializable(df):

@@ -68,6 +68,15 @@ class SQLExpansionRequest(BaseModel):
     configuration: Optional[Dict[str, Any]] = None
     schema_context: Optional[Dict[str, Any]] = None
 
+class SQLDataRequest(BaseModel):
+    """Request model for SQL data generation."""
+    sql: str
+    query: str
+    project_id: str
+    configuration: Optional[Dict[str, Any]] = None
+    page: Optional[int] = None
+    page_size: Optional[int] = None
+
 @router.post("/summary")
 async def generate_sql_summary_and_visualization(request: SQLSummaryRequest):
     """Generate SQL summary and visualization using DataSummarizationPipeline."""
@@ -259,4 +268,28 @@ async def generate_sql_expansion(request: SQLExpansionRequest):
             "error": result.get("error")
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error generating SQL expansion: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Error generating SQL expansion: {str(e)}")
+
+@router.post("/data-generation")
+async def generate_sql_data(request: SQLDataRequest):
+    """Generate SQL data using SQL data generation pipeline."""
+    try:
+        service = get_sql_helper_service()
+        query_id = str(uuid.uuid4())
+        result = await service.generate_sql_data(
+            query_id=query_id,
+            sql=request.sql,
+            query=request.query,
+            project_id=request.project_id,
+            configuration=request.configuration,
+            page=request.page,
+            page_size=request.page_size
+        )
+        return {
+            "query_id": query_id,
+            "success": result.get("success", False),
+            "data": result.get("data", {}),
+            "error": result.get("error")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating SQL data: {str(e)}") 

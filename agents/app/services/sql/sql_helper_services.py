@@ -106,8 +106,27 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
 
         self._streaming_clients: Dict[str, List[web.WebSocketResponse]] = {}
 
-    async def _generate_sql_data(self, query_id: str, sql_result: Dict[str, Any], project_id: str, configuration: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Generate SQL execution data"""
+    async def generate_sql_data(
+        self, 
+        query_id: str, 
+        sql: str,
+        query: str, 
+        project_id: str, 
+        configuration: Optional[Dict[str, Any]] = None,
+        page: Optional[int] = None,
+        page_size: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """Generate SQL execution data with optional pagination
+        
+        Args:
+            query_id: Unique identifier for the query
+            sql: The SQL query to execute
+            query: The original user query
+            project_id: Project identifier
+            configuration: Optional configuration parameters
+            page: Page number for pagination (1-based, optional)
+            page_size: Number of records per page (optional)
+        """
         if self._is_stopped(query_id):
             return {"success": False}
 
@@ -128,9 +147,6 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
                 raise RuntimeError("SQL execution pipeline not found")
 
             # Get SQL from result
-            sql = ""
-            if sql_result.get("api_results"):
-                sql = sql_result["api_results"][0].sql
             logger.info(f"sql in generate_sql_data: {sql}") 
             if not sql:
                 return {
@@ -141,18 +157,48 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
                     }
                 }
 
+            # Prepare configuration with pagination
+            execution_config = configuration or {}
+            if page is not None and page_size is not None:
+                execution_config.update({
+                    "page": page,
+                    "page_size": page_size,
+                    "enable_pagination": True
+                })
+
             # Execute SQL
             result = await sql_execution_pipeline.run(
                 sql=sql,
+                query=query,
                 project_id=project_id,
-                configuration=configuration
+                configuration=execution_config
             )
 
             if result.get("post_process"):
-                return {
+                data = result["post_process"]['data']
+                
+                # Add pagination metadata if pagination was used
+                response = {
                     "success": True,
-                    "data": result["post_process"]['data']
+                    "data": data
                 }
+                
+                # Add pagination info if available
+                if "pagination" in result["post_process"]:
+                    response["pagination"] = result["post_process"]["pagination"]
+                elif page is not None and page_size is not None:
+                    # Add basic pagination info if not provided by pipeline
+                    total_records = len(data) if isinstance(data, list) else 0
+                    response["pagination"] = {
+                        "page": page,
+                        "page_size": page_size,
+                        "total_records": total_records,
+                        "total_pages": (total_records + page_size - 1) // page_size if total_records > 0 else 0,
+                        "has_next": page * page_size < total_records,
+                        "has_previous": page > 1
+                    }
+                
+                return response
             else:
                 return {
                     "success": False,
@@ -172,66 +218,7 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
                 }
             }
     
-    async def _generate_sql_summary(
-        self,
-        query_id: str,
-        user_query: str,
-        sql_result: Dict[str, Any],
-        request: AskRequest,
-    ) -> Dict[str, Any]:
-        """Generate a summary of the SQL query and its results"""
-        if self._is_stopped(query_id):
-            return {"success": False}
-
-        self._update_cache_status(
-            query_id,
-            "generating",
-            AskResultResponse(
-                status="generating",
-                type="TEXT_TO_SQL",
-                is_followup=True if request.histories else False,
-            )
-        )
-
-        try:
-            # Get SQL summary pipeline
-            summary_pipeline = self._pipeline_container.get_pipeline("sql_summary")
-            if not summary_pipeline:
-                logger.warning("SQL summary pipeline not found")
-                return {"success": False, "error": "SQL summary pipeline not available"}
-            
-            # Prepare the SQL for summary
-            sql_to_summarize = ""
-            if sql_result.get("api_results"):
-                sql_to_summarize = sql_result["api_results"][0].sql
-
-            # Generate summary using the updated pipeline interface
-            summary_result = await summary_pipeline.run(
-                query=user_query,
-                sql=sql_to_summarize,
-                project_id=request.project_id,
-                schema_context=request.schema_context if hasattr(request, 'schema_context') else None
-            )
-            print("summary_result in ask service", summary_result)
-            # Handle the new response format
-            if summary_result.get("success"):
-                return {
-                    "success": True,
-                    "summary": summary_result.get("data", {}).get("summary", ""),
-                    "metadata": summary_result.get("data", {}).get("metadata", {})
-                }
-            else:
-                return {
-                    "success": False,
-                    "error": summary_result.get("error", "Failed to generate summary")
-                }
-
-        except Exception as e:
-            logger.error(f"Error generating SQL summary: {e}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+   
 
 
         """
@@ -249,20 +236,22 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
         configuration: Optional[Dict[str, Any]] = None,
         schema_context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Generate SQL expansion using SQL expansion pipeline
+        """Generate SQL correction using SQL correction pipeline
         
         Args:       
             query_id: Unique identifier for the query
             query: The user's query
+            error_message: The error message from the original SQL execution
+            sql: The original SQL that failed
             project_id: Project identifier
         """
         try:
-            # Initialize the SQL expansion pipeline
+            # Initialize the SQL correction pipeline
             sql_correction_pipeline = self._pipeline_container.get_pipeline("sql_correction")
             if not sql_correction_pipeline:
                 raise RuntimeError("SQL correction pipeline not found")
 
-            # Generate SQL expansion
+            # Generate SQL correction
             correction_result = await sql_correction_pipeline.run(
                 query=query,
                 sql=sql,
@@ -271,43 +260,51 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
                 configuration=configuration,
                 schema_context=schema_context
             )
+            
+            # Extract the actual data from the pipeline result
+            # The SQL correction pipeline likely returns valid_generation_results and invalid_generation_results
+            valid_results = correction_result.get("valid_generation_results", [])
+            invalid_results = correction_result.get("invalid_generation_results", [])
+            
+            # Extract SQL from valid results
+            corrected_sql_list = [result.get("sql", "") for result in valid_results if result.get("sql")]
+            
             # Combine and analyze results
             combined_analysis = {
-                "expansion_suggestions":  {},
-                "correction_suggestions": correction_result.get("data", {}),
+                "expansion_suggestions": {},
+                "correction_suggestions": {
+                    "corrected_sql": corrected_sql_list,
+                    "valid_results": valid_results,
+                    "invalid_results": invalid_results,
+                    "total_valid": len(valid_results),
+                    "total_invalid": len(invalid_results),
+                    "original_error": error_message
+                },
                 "combined_analysis": {
                     "missing_elements": [],
                     "required_changes": [],
                     "suggested_improvements": []
                 }
             }
-
             
-            # Extract required changes from correction
-            if correction_result.get("success"):
-                correction_data = correction_result.get("data", {})
-                if "required_changes" in correction_data:
-                    combined_analysis["combined_analysis"]["required_changes"].extend(
-                        correction_data["required_changes"]
-                    )
-                    combined_analysis["combined_analysis"]["suggested_improvements"] = [
-                        f"Add {element}" for element in combined_analysis["combined_analysis"]["missing_elements"]
-                    ] + [
-                        f"Modify {change}" for change in combined_analysis["combined_analysis"]["required_changes"]
-                    ]
-
-                
-
+            # Generate suggestions based on the results
+            if corrected_sql_list:
+                combined_analysis["combined_analysis"]["suggested_improvements"] = [
+                    f"Use corrected SQL: {sql}" for sql in corrected_sql_list
+                ]
             
+            if invalid_results:
+                error_messages = [result.get("error", "Unknown error") for result in invalid_results]
+                combined_analysis["combined_analysis"]["required_changes"].extend(error_messages)
+                combined_analysis["combined_analysis"]["suggested_improvements"].extend([
+                    f"Fix SQL error: {error}" for error in error_messages
+                ])
 
             return {
                 "success": True,
                 "data": combined_analysis,
                 "error": None
             }
-
-        
-            return correction_result
         
         except Exception as e:
             logger.error(f"Error generating SQL correction: {e}")
@@ -356,9 +353,24 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
                 configuration=configuration,
                 schema_context=schema_context
             )
-             # Combine and analyze results
+            
+            # Extract the actual data from the pipeline result
+            # The SQL expansion pipeline returns valid_generation_results and invalid_generation_results
+            valid_results = expansion_result.get("valid_generation_results", [])
+            invalid_results = expansion_result.get("invalid_generation_results", [])
+            
+            # Extract SQL from valid results
+            expanded_sql_list = [result.get("sql", "") for result in valid_results if result.get("sql")]
+            
+            # Combine and analyze results
             combined_analysis = {
-                "expansion_suggestions": expansion_result.get("data", {}),
+                "expansion_suggestions": {
+                    "expanded_sql": expanded_sql_list,
+                    "valid_results": valid_results,
+                    "invalid_results": invalid_results,
+                    "total_valid": len(valid_results),
+                    "total_invalid": len(invalid_results)
+                },
                 "correction_suggestions": {},
                 "combined_analysis": {
                     "missing_elements": [],
@@ -366,19 +378,21 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
                     "suggested_improvements": []
                 }
             }
-             # Extract missing elements from expansion
-            if expansion_result.get("success"):
-                expansion_data = expansion_result.get("data", {})
-                if "missing_elements" in expansion_data:
-                    combined_analysis["combined_analysis"]["missing_elements"].extend(
-                        expansion_data["missing_elements"]
-                    )
-                    combined_analysis["combined_analysis"]["suggested_improvements"] = [
-                        f"Add {element}" for element in combined_analysis["combined_analysis"]["missing_elements"]
-                    ] + [
-                        f"Modify {change}" for change in combined_analysis["combined_analysis"]["required_changes"]
-                    ]
-
+            
+            # Generate suggestions based on the results
+            if expanded_sql_list:
+                combined_analysis["combined_analysis"]["suggested_improvements"] = [
+                    f"Use expanded SQL: {sql}" for sql in expanded_sql_list
+                ]
+            
+            if invalid_results:
+                error_messages = [result.get("error", "Unknown error") for result in invalid_results]
+                combined_analysis["combined_analysis"]["required_changes"].extend(error_messages)
+                combined_analysis["combined_analysis"]["suggested_improvements"].extend([
+                    f"Fix SQL error: {error}" for error in error_messages
+                ])
+            
+            print("combined_analysis in generate_sql_expansion in sql_helper_services", combined_analysis)
             return {
                 "success": True,
                 "data": combined_analysis,
@@ -396,7 +410,6 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
     It is used to generate the SQL query from the user's query and to execute the SQL query.
     It is also used to get the data from the database.
     """
-    ##TODO: Fix this function for SQL Correction and Expansion when the query is not working as per the customers request.
     async def analyze_query_requirements(
         self,
         query_id: str,
@@ -452,10 +465,33 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
                 configuration=configuration
             )
 
+            # Extract data from expansion result (SQL expansion pipeline returns valid_generation_results and invalid_generation_results)
+            valid_expansion_results = expansion_result.get("valid_generation_results", [])
+            invalid_expansion_results = expansion_result.get("invalid_generation_results", [])
+            expanded_sql_list = [result.get("sql", "") for result in valid_expansion_results if result.get("sql")]
+            
+            # Extract data from correction result (assuming it has a similar structure or different structure)
+            correction_data = correction_result.get("data", {}) if correction_result.get("data") else {}
+            if not correction_data and correction_result.get("valid_generation_results"):
+                # If correction pipeline also uses the same structure
+                valid_correction_results = correction_result.get("valid_generation_results", [])
+                invalid_correction_results = correction_result.get("invalid_generation_results", [])
+                correction_data = {
+                    "valid_results": valid_correction_results,
+                    "invalid_results": invalid_correction_results,
+                    "corrected_sql": [result.get("sql", "") for result in valid_correction_results if result.get("sql")]
+                }
+
             # Combine and analyze results
             combined_analysis = {
-                "expansion_suggestions": expansion_result.get("data", {}),
-                "correction_suggestions": correction_result.get("data", {}),
+                "expansion_suggestions": {
+                    "expanded_sql": expanded_sql_list,
+                    "valid_results": valid_expansion_results,
+                    "invalid_results": invalid_expansion_results,
+                    "total_valid": len(valid_expansion_results),
+                    "total_invalid": len(invalid_expansion_results)
+                },
+                "correction_suggestions": correction_data,
                 "combined_analysis": {
                     "missing_elements": [],
                     "required_changes": [],
@@ -464,27 +500,27 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
             }
 
             # Extract missing elements from expansion
-            if expansion_result.get("success"):
-                expansion_data = expansion_result.get("data", {})
-                if "missing_elements" in expansion_data:
-                    combined_analysis["combined_analysis"]["missing_elements"].extend(
-                        expansion_data["missing_elements"]
-                    )
+            if expanded_sql_list:
+                combined_analysis["combined_analysis"]["missing_elements"].extend([
+                    f"Expanded SQL option: {sql}" for sql in expanded_sql_list
+                ])
 
             # Extract required changes from correction
-            if correction_result.get("success"):
-                correction_data = correction_result.get("data", {})
-                if "required_changes" in correction_data:
-                    combined_analysis["combined_analysis"]["required_changes"].extend(
-                        correction_data["required_changes"]
-                    )
+            if correction_data:
+                if "corrected_sql" in correction_data and correction_data["corrected_sql"]:
+                    combined_analysis["combined_analysis"]["required_changes"].extend([
+                        f"Corrected SQL: {sql}" for sql in correction_data["corrected_sql"]
+                    ])
+                if "invalid_results" in correction_data and correction_data["invalid_results"]:
+                    error_messages = [result.get("error", "Unknown error") for result in correction_data["invalid_results"]]
+                    combined_analysis["combined_analysis"]["required_changes"].extend(error_messages)
 
             # Generate suggested improvements
-            if expansion_result.get("success") and correction_result.get("success"):
+            if expanded_sql_list or correction_data:
                 combined_analysis["combined_analysis"]["suggested_improvements"] = [
-                    f"Add {element}" for element in combined_analysis["combined_analysis"]["missing_elements"]
+                    f"Use expanded SQL: {sql}" for sql in expanded_sql_list
                 ] + [
-                    f"Modify {change}" for change in combined_analysis["combined_analysis"]["required_changes"]
+                    f"Apply correction: {change}" for change in combined_analysis["combined_analysis"]["required_changes"]
                 ]
 
             return {
@@ -505,7 +541,7 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
         self,
         query_id: str,
         query: str,
-        sql_result: Dict[str, Any],
+        sql: str,
         request: AskRequest,
         chart_config: Optional[Dict[str, Any]] = None,
         streaming: bool = False
@@ -515,7 +551,7 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
         Args:
             query_id: Unique identifier for the query
             query: The user's query
-            sql_result: The SQL query result
+            sql: The SQL query
             request: The original AskRequest
             chart_config: Optional chart configuration
             streaming: Whether to stream the results
@@ -539,9 +575,10 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
                 raise RuntimeError("Chart generation pipeline not found")
 
             # Generate SQL data
-            sql_data_result = await self._generate_sql_data(
+            sql_data_result = await self.generate_sql_data(
                 query_id=query_id,
-                sql_result=sql_result,
+                sql=sql,
+                query=query,
                 project_id=request.project_id,
                 configuration=request.configuration
             )
@@ -549,17 +586,7 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
             if not sql_data_result.get("success"):
                 return sql_data_result
 
-            # Generate SQL summary
-            summary_result = await self._generate_sql_summary(
-                query_id=query_id,
-                user_query=query,
-                sql_result=sql_result,
-                request=request
-            )
-
-            if not summary_result.get("success"):
-                return summary_result
-
+            
             # Update status for chart generation
             self._update_cache_status(
                 query_id,
@@ -570,11 +597,12 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
                     is_followup=True if request.histories else False,
                 )
             )
+            
 
             # Generate chart
             chart_result = await chart_pipeline.run(
                 query=query,
-                sql=sql_result.get("api_results", [{}])[0].get("sql", ""),
+                sql=sql,
                 data=sql_data_result.get("data", {}),
                 language=request.language,
                 export_format=chart_config.get("export_format") if chart_config else None,
@@ -585,13 +613,10 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
             combined_result = {
                 "success": all([
                     sql_data_result.get("success", False),
-                    summary_result.get("success", False),
                     chart_result.get("success", False)
                 ]),
                 "data": {
                     "sql_data": sql_data_result.get("data", {}),
-                    "summary": summary_result.get("summary", ""),
-                    "summary_metadata": summary_result.get("metadata", {}),
                     "chart": chart_result.get("data", {})
                 },
                 "error": None
@@ -1095,6 +1120,345 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
             logger.error(f"Error getting status for query {query_id}: {e}")
             return {
                 "query_id": query_id,
+                "status": "error",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+
+    async def render_visualization(
+        self,
+        query_id: str,
+        query: str,
+        sql: str,
+        project_id: str,
+        configuration: Optional[Dict[str, Any]] = None,
+        status_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None
+    ) -> Dict[str, Any]:
+        """Render visualization by generating chart schema and executing it with full data
+        
+        This service combines chart generation and execution to provide a complete
+        visualization solution. It first generates a chart schema using sample data,
+        then executes the chart with the full dataset.
+        
+        Args:
+            query_id: Unique identifier for the query
+            query: The user's query
+            sql: The SQL query to execute
+            project_id: Project identifier
+            configuration: Optional configuration parameters including:
+                - chart_format: Chart format (vega_lite, plotly, powerbi)
+                - include_other_formats: Whether to include other format conversions
+                - use_multi_format: Whether to use multi-format chart generation
+                - page_size: Page size for data pagination
+                - max_rows: Maximum rows to process
+                - enable_pagination: Whether to enable pagination
+                - sort_by: Column to sort by
+                - sort_order: Sort order (ASC/DESC)
+                - timeout_seconds: Timeout for execution
+                - cache_results: Whether to cache results
+                - cache_ttl_seconds: Cache TTL in seconds
+                - language: Language for chart generation
+            status_callback: Optional callback function for status updates
+            
+        Returns:
+            Dict containing visualization results including:
+            - success: Whether the rendering was successful
+            - data: Results including:
+                - chart_schema: The executed chart schema with full data
+                - chart_type: Type of chart generated
+                - reasoning: Reasoning behind chart selection
+                - chart_format: Format of the chart
+                - data_count: Number of data points in the chart
+                - validation: Validation results
+                - execution_config: Configuration used for execution
+                - sample_data: Sample data used for schema generation
+                - plotly_schema: Plotly schema (if include_other_formats=True)
+                - powerbi_schema: PowerBI schema (if include_other_formats=True)
+                - vega_lite_schema: Vega-Lite schema (if include_other_formats=True)
+            - error: Any error that occurred
+        """
+        if self._is_stopped(query_id):
+            return {"success": False}
+
+        try:
+            # Update status for visualization rendering
+            self._update_cache_status(
+                query_id,
+                "rendering_visualization",
+                AskResultResponse(
+                    status="rendering_visualization",
+                    type="VISUALIZATION",
+                    is_followup=False
+                )
+            )
+
+            # Get chart execution pipeline
+            chart_execution_pipeline = self._pipeline_container.get_pipeline("chart_execution")
+            if not chart_execution_pipeline:
+                raise RuntimeError("Chart execution pipeline not found")
+
+            # Define status update function
+            def send_status_update(status: str, details: Dict[str, Any] = None):
+                """Send status update via callback if available"""
+                if status_callback:
+                    try:
+                        status_callback(status, details or {})
+                    except Exception as e:
+                        logger.error(f"Error in status callback: {str(e)}")
+                logger.info(f"Visualization Rendering Status - {status}: {details}")
+
+            # Merge default configuration with provided configuration
+            default_config = {
+                "chart_format": "vega_lite",
+                "include_other_formats": False,
+                "use_multi_format": True,
+                "page_size": 1000,
+                "max_rows": 10000,
+                "enable_pagination": True,
+                "sort_by": None,
+                "sort_order": "ASC",
+                "timeout_seconds": 30,
+                "cache_results": True,
+                "cache_ttl_seconds": 300,
+                "language": "English",
+                "remove_data_from_chart_schema": True
+            }
+            
+            if configuration:
+                default_config.update(configuration)
+
+            # Send initial status update
+            send_status_update("started", {
+                "project_id": project_id,
+                "query": query,
+                "sql": sql,
+                "chart_format": default_config["chart_format"]
+            })
+
+            # Execute chart using the chart execution pipeline
+            result = await chart_execution_pipeline.run(
+                query=query,
+                sql=sql,
+                project_id=project_id,
+                configuration=default_config,
+                status_callback=send_status_update
+            )
+
+            # Process the result
+            if result and result.get("post_process"):
+                post_process = result["post_process"]
+                
+                # Prepare response
+                response = {
+                    "success": True,
+                    "data": {
+                        "chart_schema": post_process.get("chart_schema", {}),
+                        "chart_type": post_process.get("chart_type", ""),
+                        "reasoning": post_process.get("reasoning", ""),
+                        "chart_format": post_process.get("chart_format", "vega_lite"),
+                        "data_count": post_process.get("data_count", 0),
+                        "validation": post_process.get("validation", {}),
+                        "execution_config": post_process.get("execution_config", {}),
+                        "sample_data": post_process.get("sample_data", {})
+                    },
+                    "metadata": result.get("metadata", {}),
+                    "error": None
+                }
+
+                # Add other format schemas if available
+                if "plotly_schema" in post_process:
+                    response["data"]["plotly_schema"] = post_process["plotly_schema"]
+                if "powerbi_schema" in post_process:
+                    response["data"]["powerbi_schema"] = post_process["powerbi_schema"]
+                if "vega_lite_schema" in post_process:
+                    response["data"]["vega_lite_schema"] = post_process["vega_lite_schema"]
+
+                # Send completion status update
+                send_status_update("completed", {
+                    "project_id": project_id,
+                    "data_count": post_process.get("data_count", 0),
+                    "chart_type": post_process.get("chart_type", ""),
+                    "chart_format": post_process.get("chart_format", "vega_lite")
+                })
+
+                return response
+            else:
+                error_msg = "No data returned from chart execution pipeline"
+                send_status_update("error", {"project_id": project_id, "error": error_msg})
+                return {
+                    "success": False,
+                    "data": None,
+                    "error": error_msg
+                }
+
+        except Exception as e:
+            logger.error(f"Error rendering visualization: {e}")
+            
+            # Send error status update
+            if status_callback:
+                try:
+                    status_callback("error", {"project_id": project_id, "error": str(e)})
+                except Exception as callback_error:
+                    logger.error(f"Error in status callback: {str(callback_error)}")
+            
+            return {
+                "success": False,
+                "data": None,
+                "error": str(e)
+            }
+
+    async def stream_visualization_rendering(
+        self,
+        query_id: str,
+        query: str,
+        sql: str,
+        project_id: str,
+        configuration: Optional[Dict[str, Any]] = None
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """Stream visualization rendering process with real-time updates
+        
+        Args:
+            query_id: Unique identifier for the query
+            query: The user's query
+            sql: The SQL query to execute
+            project_id: Project identifier
+            configuration: Optional configuration parameters
+            
+        Yields:
+            Dict containing streaming updates including:
+            - status: Current status of the operation
+            - data: Partial or complete results
+            - error: Any error that occurred
+        """
+        if self._is_stopped(query_id):
+            yield {"status": "stopped", "error": "Query was stopped"}
+            return
+
+        try:
+            # Track streaming updates
+            streaming_updates = []
+
+            # Define status callback function for streaming
+            def status_callback(status: str, details: Dict[str, Any] = None):
+                """Status callback function that stores updates for streaming"""
+                try:
+                    # Update cache status
+                    self._update_cache_status(
+                        query_id,
+                        status,
+                        AskResultResponse(
+                            status=status,
+                            type="VISUALIZATION",
+                            is_followup=False
+                        )
+                    )
+
+                    # Prepare streaming update
+                    update = {
+                        "status": status,
+                        "details": details or {},
+                        "timestamp": datetime.now().isoformat()
+                    }
+
+                    # Add specific data based on status
+                    if status == "started":
+                        update["data"] = {
+                            "project_id": details.get("project_id"),
+                            "query": details.get("query"),
+                            "chart_format": details.get("chart_format", "vega_lite")
+                        }
+                    elif status == "getting_sample_data":
+                        update["data"] = {
+                            "project_id": details.get("project_id")
+                        }
+                    elif status == "sample_data_ready":
+                        update["data"] = {
+                            "project_id": details.get("project_id"),
+                            "sample_size": details.get("sample_size", 0)
+                        }
+                    elif status == "generating_chart_schema":
+                        update["data"] = {
+                            "project_id": details.get("project_id"),
+                            "chart_format": details.get("chart_format", "vega_lite")
+                        }
+                    elif status == "chart_schema_ready":
+                        update["data"] = {
+                            "project_id": details.get("project_id"),
+                            "chart_type": details.get("chart_type", ""),
+                            "chart_format": details.get("chart_format", "vega_lite")
+                        }
+                    elif status == "executing_chart":
+                        update["data"] = {
+                            "project_id": details.get("project_id"),
+                            "execution_config": details.get("execution_config", {})
+                        }
+                    elif status == "chart_execution_complete":
+                        update["data"] = {
+                            "project_id": details.get("project_id"),
+                            "data_count": details.get("data_count", 0),
+                            "validation_success": details.get("validation_success", False)
+                        }
+                    elif status == "generating_other_formats":
+                        update["data"] = {
+                            "project_id": details.get("project_id")
+                        }
+                    elif status == "other_formats_ready":
+                        update["data"] = {
+                            "project_id": details.get("project_id")
+                        }
+                    elif status == "completed":
+                        update["data"] = {
+                            "project_id": details.get("project_id"),
+                            "data_count": details.get("data_count", 0),
+                            "chart_type": details.get("chart_type", ""),
+                            "chart_format": details.get("chart_format", "vega_lite")
+                        }
+                    elif status == "error":
+                        update["data"] = {
+                            "project_id": details.get("project_id"),
+                            "error": details.get("error", "Unknown error")
+                        }
+
+                    # Store update for streaming
+                    streaming_updates.append(update)
+
+                except Exception as e:
+                    logger.error(f"Error in status callback: {e}")
+
+            # Call the render_visualization method with status callback
+            result = await self.render_visualization(
+                query_id=query_id,
+                query=query,
+                sql=sql,
+                project_id=project_id,
+                configuration=configuration,
+                status_callback=status_callback
+            )
+
+            # Stream all status updates
+            for update in streaming_updates:
+                yield update
+
+            # Stream final result
+            if result.get("success"):
+                final_result = {
+                    "status": "completed",
+                    "data": result.get("data", {}),
+                    "metadata": result.get("metadata", {}),
+                    "timestamp": datetime.now().isoformat()
+                }
+            else:
+                final_result = {
+                    "status": "error",
+                    "error": result.get("error", "Unknown error"),
+                    "timestamp": datetime.now().isoformat()
+                }
+
+            yield final_result
+
+        except Exception as e:
+            logger.error(f"Error streaming visualization rendering: {e}")
+            yield {
                 "status": "error",
                 "error": str(e),
                 "timestamp": datetime.now().isoformat()

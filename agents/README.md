@@ -9,6 +9,9 @@ nohup uvicorn app.main:app --reload --host 0.0.0.0 --port 8025 --workers 4 > uvi
 docker run -d -v  ./structured-data:/data -p 8888:8000 chromadb/chroma:0.6.3
 docker run -d -v ./unstructured-data:/data -p 8015:8000 chromadb/chroma:0.5.13
 
+find . -type d -name __pycache__ -exec rm -r {} +
+find . -type d -name "__MACOSX" -print0 | xargs -0 rm -rf
+
 
 
  'columns': ['Full_Name', 'User_ID', 'Division', 'Assigned_Date', 'Completed_Date', 'Due_Date', 'is_completed', 'is_satisfied_late']}, 'table_name': 'csod_training_records'}

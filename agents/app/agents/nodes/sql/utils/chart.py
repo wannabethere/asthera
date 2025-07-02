@@ -362,8 +362,6 @@ class ChartGenerationPostProcessor:
             }
 
 
-
-
 # Langchain Tools for Vega-Lite Chart Generation
 def create_chart_data_preprocessor_tool() -> Tool:
     """Create Langchain tool for data preprocessing"""
@@ -498,3 +496,223 @@ chart = alt.Chart({data_variable}).mark_{mark_type}()"""
                     summary["has_temporal_data"] = True
         
         return summary
+
+
+class ChartExecutionConfig:
+    """Configuration for chart execution with pagination"""
+    
+    def __init__(
+        self,
+        page_size: int = 1000,
+        max_rows: Optional[int] = None,
+        enable_pagination: bool = True,
+        sort_by: Optional[str] = None,
+        sort_order: str = "ASC",
+        timeout_seconds: int = 30,
+        cache_results: bool = True,
+        cache_ttl_seconds: int = 300
+    ):
+        self.page_size = page_size
+        self.max_rows = max_rows
+        self.enable_pagination = enable_pagination
+        self.sort_by = sort_by
+        self.sort_order = sort_order.upper()
+        self.timeout_seconds = timeout_seconds
+        self.cache_results = cache_results
+        self.cache_ttl_seconds = cache_ttl_seconds
+
+
+class ChartExecutor:
+    """Execute chart schemas with data fetched from database"""
+    
+    def __init__(self, db_engine=None):
+        self.db_engine = db_engine
+        self.cache = {}  # Simple in-memory cache
+    
+    async def execute_chart(
+        self,
+        chart_schema: Dict[str, Any],
+        sql_query: str,
+        config: Optional[ChartExecutionConfig] = None,
+        db_engine=None
+    ) -> Dict[str, Any]:
+        """
+        Execute a chart schema with data fetched from database
+        
+        Args:
+            chart_schema: Vega-Lite chart schema
+            sql_query: SQL query to fetch data
+            config: Execution configuration for pagination and limits
+            db_engine: Database engine (overrides instance engine)
+        
+        Returns:
+            Dict containing executed chart schema and metadata
+        """
+        try:
+            # Use provided engine or instance engine
+            engine = db_engine or self.db_engine
+            if not engine:
+                raise ValueError("Database engine is required")
+            
+            # Use default config if none provided
+            if config is None:
+                config = ChartExecutionConfig()
+            
+            # Check cache first
+            cache_key = self._generate_cache_key(sql_query, config)
+            if config.cache_results and cache_key in self.cache:
+                cached_result = self.cache[cache_key]
+                if self._is_cache_valid(cached_result, config.cache_ttl_seconds):
+                    logger.info("Using cached chart execution result")
+                    return cached_result
+            
+            # Fetch data from database
+            data = await self._fetch_data(engine, sql_query, config)
+            
+            # Execute chart with fetched data
+            result = self._execute_chart_with_data(chart_schema, data, config)
+            
+            # Cache result if enabled
+            if config.cache_results:
+                result["cached_at"] = pd.Timestamp.now().isoformat()
+                self.cache[cache_key] = result
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error executing chart: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "chart_schema": chart_schema,
+                "data_count": 0
+            }
+    
+    async def _fetch_data(
+        self,
+        engine,
+        sql_query: str,
+        config: ChartExecutionConfig
+    ) -> List[Dict[str, Any]]:
+        """Fetch data from database with pagination support"""
+        try:
+            # Modify SQL for pagination if enabled
+            if config.enable_pagination and config.max_rows:
+                # Add LIMIT clause
+                if "LIMIT" not in sql_query.upper():
+                    sql_query += f" LIMIT {config.max_rows}"
+                elif config.page_size:
+                    # Replace existing LIMIT with our max_rows
+                    import re
+                    sql_query = re.sub(r'LIMIT\s+\d+', f'LIMIT {config.max_rows}', sql_query, flags=re.IGNORECASE)
+            
+            # Add sorting if specified
+            if config.sort_by and "ORDER BY" not in sql_query.upper():
+                sql_query += f" ORDER BY {config.sort_by} {config.sort_order}"
+            
+            logger.info(f"Executing SQL query: {sql_query}")
+            
+            # Always use execute_sql method since PandasEngine is a wrapper around other engines
+            import aiohttp
+            async with aiohttp.ClientSession() as session:
+                success, result = await engine.execute_sql(
+                    sql_query,
+                    session,
+                    dry_run=False,
+                    limit=config.max_rows
+                )
+                
+                if success and result and "data" in result:
+                    data = result["data"]
+                    logger.info(f"Fetched {len(data)} rows from database")
+                    return data
+                else:
+                    error_msg = result.get("error", "Unknown error") if result else "No result returned"
+                    logger.error(f"Database execution failed: {error_msg}")
+                    raise Exception(f"Failed to execute query: {error_msg}")
+            
+        except Exception as e:
+            logger.error(f"Error fetching data: {e}")
+            raise
+    
+    def _execute_chart_with_data(
+        self,
+        chart_schema: Dict[str, Any],
+        data: List[Dict[str, Any]],
+        config: ChartExecutionConfig
+    ) -> Dict[str, Any]:
+        """Execute chart schema with provided data"""
+        try:
+            # Create a copy of the chart schema
+            executed_schema = chart_schema.copy()
+            
+            # Add data to the schema
+            executed_schema["data"] = {"values": data}
+            
+            # Create result without validation
+            result = {
+                "success": True,
+                "chart_schema": executed_schema,
+                "data_count": len(data),
+                "execution_config": {
+                    "page_size": config.page_size,
+                    "max_rows": config.max_rows,
+                    "enable_pagination": config.enable_pagination,
+                    "sort_by": config.sort_by,
+                    "sort_order": config.sort_order
+                }
+            }
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error executing chart with data: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "chart_schema": chart_schema,
+                "data_count": len(data) if data else 0
+            }
+    
+    def _generate_cache_key(self, sql_query: str, config: ChartExecutionConfig) -> str:
+        """Generate cache key for the query and config"""
+        import hashlib
+        key_data = f"{sql_query}_{config.page_size}_{config.max_rows}_{config.sort_by}_{config.sort_order}"
+        return hashlib.md5(key_data.encode()).hexdigest()
+    
+    def _is_cache_valid(self, cached_result: Dict[str, Any], ttl_seconds: int) -> bool:
+        """Check if cached result is still valid"""
+        if "cached_at" not in cached_result:
+            return False
+        
+        cached_time = pd.Timestamp(cached_result["cached_at"])
+        current_time = pd.Timestamp.now()
+        return (current_time - cached_time).total_seconds() < ttl_seconds
+    
+    def clear_cache(self):
+        """Clear the execution cache"""
+        self.cache.clear()
+        logger.info("Chart execution cache cleared")
+
+
+# Convenience function for chart execution
+async def execute_chart_with_sql(
+    chart_schema: Dict[str, Any],
+    sql_query: str,
+    db_engine,
+    config: Optional[ChartExecutionConfig] = None
+) -> Dict[str, Any]:
+    """
+    Convenience function to execute a chart with SQL data
+    
+    Args:
+        chart_schema: Vega-Lite chart schema
+        sql_query: SQL query to fetch data
+        db_engine: Database engine
+        config: Execution configuration
+    
+    Returns:
+        Dict containing executed chart schema and metadata
+    """
+    executor = ChartExecutor(db_engine)
+    return await executor.execute_chart(chart_schema, sql_query, config)

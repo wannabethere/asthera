@@ -19,6 +19,9 @@ from app.agents.nodes.sql.utils.chart import (
     create_chart_data_preprocessor_tool,
     create_chart_postprocessor_tool,
     VegaLiteChartExporter,
+    ChartExecutor,
+    ChartExecutionConfig,
+    execute_chart_with_sql,
 )
 
 from app.core.dependencies import get_llm
@@ -222,7 +225,29 @@ class VegaLiteChartGenerationAgent:
 
 
 class VegaLiteChartGenerationPipeline:
-    """Main pipeline for Vega-Lite chart generation using Langchain"""
+    """Main pipeline for Vega-Lite chart generation using Langchain
+    
+    This pipeline supports both sample data processing and full data execution.
+    When execute_on_full_data=True, the chart will be generated using sample data
+    for schema validation and then executed on the complete dataset.
+    
+    Key Features:
+    - Sample data processing for efficient chart schema generation
+    - Full data execution for complete dataset visualization
+    - Schema validation against Vega-Lite specifications
+    - Multiple export formats (JSON, Observable, Altair, Summary)
+    - Chart type suggestions based on data structure
+    - Comprehensive error handling and validation
+    
+    Usage:
+        pipeline = VegaLiteChartGenerationPipeline()
+        result = await pipeline.run(
+            query="Show sales trends",
+            sql="SELECT * FROM sales",
+            data={"columns": [...], "data": [...]},
+            execute_on_full_data=True  # Execute on full dataset
+        )
+    """
     
     def __init__(self,  vega_schema: Optional[Dict[str, Any]] = None, **kwargs):
         self.agent = VegaLiteChartGenerationAgent(vega_schema, **kwargs)
@@ -475,7 +500,7 @@ if __name__ == "__main__":
     
     # Example usage
     async def test_vega_lite_chart_generation():
-                # Sample data
+        # Sample data
         sample_data = {
             "columns": ["Date", "Sales", "Region"],
             "data": [
@@ -488,7 +513,7 @@ if __name__ == "__main__":
             ]
         }
         
-        # Test chart generation
+        # Test chart generation (schema only)
         result = await generate_vega_lite_chart(
             query="Show me sales trends by region over time",
             sql="SELECT Date, Sales, Region FROM sales_data ORDER BY Date",
@@ -497,7 +522,7 @@ if __name__ == "__main__":
             export_format="all"
         )
         
-        print("Chart Generation Result:")
+        print("Chart Generation Result (Schema Only):")
         print(orjson.dumps(result, option=orjson.OPT_INDENT_2).decode())
         
         # Test with original interface
@@ -523,6 +548,59 @@ if __name__ == "__main__":
         
         print("\nAdvanced Generation Result:")
         print(orjson.dumps(advanced_result, option=orjson.OPT_INDENT_2).decode())
+        
+        # Test separate chart execution (if database engine is available)
+        try:
+            from app.agents.nodes.sql.utils.chart import ChartExecutor, ChartExecutionConfig, execute_chart_with_sql
+            
+            # Mock database engine for demonstration
+            class MockDBEngine:
+                async def execute(self, sql):
+                    # Return mock data based on SQL
+                    if "sales_data" in sql.lower():
+                        return [
+                            {"Date": "2023-01-01", "Sales": 100000, "Region": "North"},
+                            {"Date": "2023-02-01", "Sales": 120000, "Region": "North"},
+                            {"Date": "2023-03-01", "Sales": 110000, "Region": "North"},
+                            {"Date": "2023-04-01", "Sales": 130000, "Region": "North"},
+                            {"Date": "2023-05-01", "Sales": 140000, "Region": "North"},
+                            {"Date": "2023-01-01", "Sales": 90000, "Region": "South"},
+                            {"Date": "2023-02-01", "Sales": 95000, "Region": "South"},
+                            {"Date": "2023-03-01", "Sales": 105000, "Region": "South"},
+                            {"Date": "2023-04-01", "Sales": 115000, "Region": "South"},
+                            {"Date": "2023-05-01", "Sales": 125000, "Region": "South"}
+                        ]
+                    return []
+            
+            mock_engine = MockDBEngine()
+            
+            # Get chart schema from generation
+            chart_schema = result.get("chart_schema", {})
+            
+            # Execute chart with SQL data
+            config = ChartExecutionConfig(
+                page_size=1000,
+                max_rows=10000,
+                enable_pagination=True,
+                sort_by="Date",
+                sort_order="ASC"
+            )
+            
+            executed_result = await execute_chart_with_sql(
+                chart_schema=chart_schema,
+                sql_query="SELECT Date, Sales, Region FROM sales_data ORDER BY Date",
+                db_engine=mock_engine,
+                config=config
+            )
+            
+            print("\nChart Execution Result (with SQL data):")
+            print(f"Success: {executed_result.get('success', False)}")
+            print(f"Data count: {executed_result.get('data_count', 0)}")
+            print(f"Validation: {executed_result.get('validation', {})}")
+            print(f"Execution config: {executed_result.get('execution_config', {})}")
+            
+        except ImportError:
+            print("\nChart execution test skipped (database dependencies not available)")
     
     # Run the test
     asyncio.run(test_vega_lite_chart_generation())

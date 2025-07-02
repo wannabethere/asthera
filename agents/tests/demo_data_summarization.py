@@ -389,7 +389,7 @@ class DataSummarizationDemo:
 async def run_demo():
     """Run a demo of the data summarization system with multiple test cases"""
     # Sample SQL queries for testing
-    test_cases = [
+    test_cases1 = [
         {
             "query": "Show me the training completion rates by division, including how many assignments were completed on time versus late",
             "sql": """
@@ -403,7 +403,32 @@ async def run_demo():
             "chart_format": "vega_lite"
         }
     ]
-    
+    """
+    {
+
+  "sql": "",
+
+  "query": "How many trainings are assigned vs completed across different Divisions (Administration, Acme Products, Private Operations)?",
+
+  "project_id": "cornerstone",
+
+  "data_description": "sample"
+
+}
+ 
+    """
+
+    test_cases   = [
+        {
+            "query": "How many trainings are assigned vs completed across different Divisions (Administration, Acme Products, Private Operations)?",
+            "sql": """
+               SELECT cr.division AS Division, COUNT(CASE WHEN lower(cr.transcript_status) = lower('Assigned') THEN 1 END) AS Assigned_Trainings, COUNT(CASE WHEN cr.completed_date IS NOT NULL THEN 1 END) AS Completed_Trainings FROM csod_training_records AS cr WHERE lower(cr.division) IN (lower('Administration'), lower('Acme Products'), lower('Private Operations')) GROUP BY cr.division
+            """,
+            "data_description": "Corner stone data learning management data for coaching and training",
+            "event_id": "demo_event_1",
+            "chart_format": "vega_lite"
+        }
+    ]
     # Initialize demo
     demo = DataSummarizationDemo()
     await demo.initialize()
@@ -661,6 +686,271 @@ async def run_additional_tests():
         #"sql_correction": sql_correction_results,
         "sql_expansion": sql_expansion_results
     }
+
+# Example usage of the enhanced DataSummarizationPipeline with chart generation
+async def example_data_summarization_with_charts():
+    """
+    Example demonstrating how to use the DataSummarizationPipeline with multi-format chart generation
+    """
+    import os
+    from app.core.engine import Engine
+    from app.agents.retrieval.retrieval_helper import RetrievalHelper
+    
+    # Setup (you would normally get these from your application context)
+    llm = get_llm()
+    engine = Engine()  # Your database engine
+    retrieval_helper = RetrievalHelper()  # Your retrieval helper
+    
+    # Create chart generation pipelines (to avoid circular dependency)
+    chart_generation_pipeline = create_chart_generation_pipeline()
+    plotly_chart_generation_pipeline = create_plotly_chart_generation_pipeline()
+    powerbi_chart_generation_pipeline = create_powerbi_chart_generation_pipeline()
+    
+    # Create the pipeline with chart generation pipelines passed as parameters
+    pipeline = DataSummarizationPipeline(
+        name="Enhanced Data Summarization",
+        version="1.0",
+        description="Data summarization with multi-format chart generation",
+        llm=llm,
+        engine=engine,
+        retrieval_helper=retrieval_helper,
+        chart_generation_pipeline=chart_generation_pipeline,
+        plotly_chart_generation_pipeline=plotly_chart_generation_pipeline,
+        powerbi_chart_generation_pipeline=powerbi_chart_generation_pipeline
+    )
+    
+    # Configure chart generation
+    pipeline.enable_chart_generation(True)
+    pipeline.set_chart_generation_batch(0)  # Use first batch for chart generation
+    pipeline.set_chart_format("vega_lite")  # Set chart format
+    pipeline.set_include_other_formats(True)  # Include other format conversions
+    pipeline.set_use_multi_format(True)  # Use multi-format chart generation
+    
+    # Example configuration
+    configuration = {
+        "batch_size": 500,  # Smaller batches for better chart generation
+        "chunk_size": 100,
+        "language": "English",
+        "chart_language": "English",
+        "chart_format": "vega_lite",
+        "include_other_formats": True,
+        "use_multi_format": True
+    }
+    
+    # Example usage
+    try:
+        result = await pipeline.run(
+            query="Analyze sales performance trends",
+            sql="SELECT date, region, sales_amount, product_category FROM sales_data ORDER BY date",
+            data_description="Sales performance data across regions and product categories",
+            project_id="example_project_123",
+            configuration=configuration
+        )
+        
+        print("=== Data Summarization with Multi-Format Charts Result ===")
+        print(f"Executive Summary: {result['post_process']['executive_summary'][:200]}...")
+        print(f"Data Overview: {result['post_process']['data_overview']}")
+        
+        # Check if visualization was generated
+        if 'visualization' in result['post_process']:
+            viz = result['post_process']['visualization']
+            if 'chart_schema' in viz:
+                print(f"Chart Type: {viz.get('chart_type', 'Unknown')}")
+                print(f"Chart Format: {viz.get('format', 'Unknown')}")
+                print(f"Chart Schema: {viz.get('chart_schema', {})}")
+                print(f"Chart Reasoning: {viz.get('reasoning', '')[:100]}...")
+                print(f"Batch Used: {viz.get('batch_used', 'Unknown')}")
+                
+                # Check for other format schemas
+                if 'plotly_schema' in viz:
+                    print(f"Plotly Schema Available: {list(viz['plotly_schema'].keys())}")
+                if 'powerbi_schema' in viz:
+                    print(f"PowerBI Schema Available: {list(viz['powerbi_schema'].keys())}")
+            else:
+                print(f"Chart Generation Error: {viz.get('error', 'Unknown error')}")
+        else:
+            print("No visualization generated")
+        
+        # Print metrics
+        metrics = pipeline.get_metrics()
+        print(f"Processing Metrics: {metrics}")
+        
+    except Exception as e:
+        print(f"Error in example: {str(e)}")
+
+
+async def example_data_summarization_with_status_callback():
+    """
+    Example demonstrating how to use the DataSummarizationPipeline with status callback
+    """
+    import os
+    from app.core.engine import Engine
+    from app.agents.retrieval.retrieval_helper import RetrievalHelper
+    
+    # Setup
+    llm = get_llm()
+    engine = Engine()
+    retrieval_helper = RetrievalHelper()
+    
+    # Create chart generation pipelines
+    chart_generation_pipeline = create_chart_generation_pipeline()
+    plotly_chart_generation_pipeline = create_plotly_chart_generation_pipeline()
+    powerbi_chart_generation_pipeline = create_powerbi_chart_generation_pipeline()
+    
+    # Define status callback function
+    def status_callback(status: str, details: Dict[str, Any]):
+        """Example status callback function"""
+        print(f"🔄 STATUS UPDATE: {status}")
+        print(f"   Details: {details}")
+        
+        # You can implement different logic based on status
+        if status == "fetch_data_complete":
+            print(f"   ✅ Data fetch completed - {details.get('total_count', 0)} records, {details.get('total_batches', 0)} batches")
+        elif status == "summarization_begin":
+            print(f"   📊 Starting summarization for batch {details.get('batch_number', 0)}/{details.get('total_batches', 0)}")
+        elif status == "summarization_complete":
+            print(f"   ✅ Summarization completed for batch {details.get('batch_number', 0)}")
+            if details.get('is_last_batch', False):
+                print(f"   🎉 All batches processed!")
+        elif status == "chart_generation_begin":
+            print(f"   📈 Starting chart generation with format: {details.get('chart_format', 'unknown')}")
+        elif status == "chart_generation_complete":
+            if details.get('success', False):
+                print(f"   ✅ Chart generation completed successfully")
+            else:
+                print(f"   ❌ Chart generation failed: {details.get('error', 'Unknown error')}")
+        elif status == "chart_generation_error":
+            print(f"   ❌ Chart generation error: {details.get('error', 'Unknown error')}")
+    
+    # Create the pipeline (without status callback in constructor)
+    pipeline = DataSummarizationPipeline(
+        name="Data Summarization with Status Callback",
+        version="1.0",
+        description="Data summarization with status updates",
+        llm=llm,
+        engine=engine,
+        retrieval_helper=retrieval_helper,
+        chart_generation_pipeline=chart_generation_pipeline,
+        plotly_chart_generation_pipeline=plotly_chart_generation_pipeline,
+        powerbi_chart_generation_pipeline=powerbi_chart_generation_pipeline
+    )
+    
+    # Configure pipeline
+    pipeline.enable_chart_generation(True)
+    pipeline.set_chart_format("vega_lite")
+    
+    # Example configuration
+    configuration = {
+        "batch_size": 100,  # Small batches to see more status updates
+        "chunk_size": 50,
+        "language": "English",
+        "chart_language": "English"
+    }
+    
+    print("🚀 Starting Data Summarization with Status Callback Example")
+    print("=" * 60)
+    
+    try:
+        result = await pipeline.run(
+            query="Analyze customer purchase patterns",
+            sql="SELECT customer_id, purchase_date, amount, product_category FROM customer_purchases ORDER BY purchase_date",
+            data_description="Customer purchase data with product categories",
+            project_id="status_callback_example",
+            configuration=configuration,
+            status_callback=status_callback  # Pass callback to run method
+        )
+        
+        print("\n" + "=" * 60)
+        print("🎯 FINAL RESULT")
+        print("=" * 60)
+        print(f"Executive Summary: {result['post_process']['executive_summary'][:200]}...")
+        print(f"Data Overview: {result['post_process']['data_overview']}")
+        
+        if 'visualization' in result['post_process']:
+            viz = result['post_process']['visualization']
+            if 'chart_schema' in viz:
+                print(f"Chart Generated: {viz.get('chart_type', 'Unknown')} ({viz.get('format', 'Unknown')})")
+            else:
+                print(f"Chart Generation Error: {viz.get('error', 'Unknown error')}")
+        
+        # Print final metrics
+        metrics = pipeline.get_metrics()
+        print(f"Final Metrics: {metrics}")
+        
+    except Exception as e:
+        print(f"❌ Error in example: {str(e)}")
+
+
+async def example_different_chart_formats():
+    """
+    Example demonstrating different chart formats
+    """
+    import os
+    from app.core.engine import Engine
+    from app.agents.retrieval.retrieval_helper import RetrievalHelper
+    
+    # Setup
+    llm = get_llm()
+    engine = Engine()
+    retrieval_helper = RetrievalHelper()
+    
+    # Create chart generation pipelines
+    chart_generation_pipeline = create_chart_generation_pipeline()
+    plotly_chart_generation_pipeline = create_plotly_chart_generation_pipeline()
+    powerbi_chart_generation_pipeline = create_powerbi_chart_generation_pipeline()
+    
+    # Test different formats
+    formats = ["vega_lite", "plotly", "powerbi"]
+    
+    for chart_format in formats:
+        print(f"\n=== Testing {chart_format.upper()} Format ===")
+        
+        # Create pipeline with chart generation pipelines
+        pipeline = DataSummarizationPipeline(
+            name=f"Data Summarization - {chart_format}",
+            version="1.0",
+            description=f"Data summarization with {chart_format} chart generation",
+            llm=llm,
+            engine=engine,
+            retrieval_helper=retrieval_helper,
+            chart_generation_pipeline=chart_generation_pipeline,
+            plotly_chart_generation_pipeline=plotly_chart_generation_pipeline,
+            powerbi_chart_generation_pipeline=powerbi_chart_generation_pipeline
+        )
+        
+        # Configure for specific format
+        pipeline.enable_chart_generation(True)
+        pipeline.set_chart_format(chart_format)
+        pipeline.set_include_other_formats(False)  # Don't include other formats for this test
+        pipeline.set_use_multi_format(True)
+        
+        try:
+            result = await pipeline.run(
+                query="Show sales trends by region",
+                sql="SELECT date, region, sales_amount FROM sales_data ORDER BY date",
+                data_description="Sales data with regional breakdown",
+                project_id=f"test_project_{chart_format}",
+                configuration={
+                    "batch_size": 100,
+                    "chunk_size": 50,
+                    "language": "English",
+                    "chart_format": chart_format
+                }
+            )
+            
+            if 'visualization' in result['post_process']:
+                viz = result['post_process']['visualization']
+                if 'chart_schema' in viz:
+                    print(f"✅ {chart_format.upper()} chart generated successfully")
+                    print(f"   Chart Type: {viz.get('chart_type', 'Unknown')}")
+                    print(f"   Format: {viz.get('format', 'Unknown')}")
+                else:
+                    print(f"❌ {chart_format.upper()} chart generation failed: {viz.get('error', 'Unknown error')}")
+            else:
+                print(f"❌ No {chart_format.upper()} visualization generated")
+                
+        except Exception as e:
+            print(f"❌ Error testing {chart_format}: {str(e)}")
 
 if __name__ == "__main__":
     # Run the main demo

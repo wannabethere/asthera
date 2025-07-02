@@ -303,7 +303,13 @@ class SQLCorrectionPipeline(AgentPipeline):
         logger.info("result in sql correction pipeline", result)
         return {
             "success": result.get("success", False),
-            "data": result.get("data", {}),
+            "valid_generation_results": [
+                {
+                    "sql": result.get("sql", ""),
+                    "correlation_id": result.get("correlation_id", "")
+                }
+            ] if result.get("success", False) and result.get("sql") else [],
+            "invalid_generation_results": [],
             "error": result.get("error")
         }
 
@@ -362,11 +368,29 @@ class SQLExpansionPipeline(AgentPipeline):
                 **kwargs
             )
         
-        return {
-            "success": result.get("success", False),
-            "data": result.get("data", {}),
-            "error": result.get("error")
-        }
+        # The agent returns a structure with sql, success, correlation_id directly
+        # We need to convert this to the expected format with valid_generation_results
+        if result.get("success", False):
+            # Convert the agent result to the expected pipeline format
+            return {
+                "success": True,
+                "valid_generation_results": [
+                    {
+                        "sql": result.get("sql", ""),
+                        "correlation_id": result.get("correlation_id", "")
+                    }
+                ],
+                "invalid_generation_results": [],
+                "error": None
+            }
+        else:
+            # If the agent failed, return empty results
+            return {
+                "success": False,
+                "valid_generation_results": [],
+                "invalid_generation_results": [],
+                "error": result.get("error", "Unknown error")
+            }
 
 class ChartGenerationPipeline(AgentPipeline):
     """Pipeline for chart generation with support for multiple chart types"""

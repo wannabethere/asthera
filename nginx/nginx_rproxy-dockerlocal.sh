@@ -3,8 +3,8 @@
 set -e
 
 # === USER CONFIGURATION ===
-DOMAIN="your-domain.com"                  # Replace with your domain
-EMAIL="admin@your-domain.com"             # For Certbot registration
+DOMAIN="ec2-54-161-71-105.compute-1.amazonaws.com"                  # Replace with your domain
+EMAIL="admin@flowharmonic.com"             # For Certbot registration
 NETWORKS=("app-network" "analytics-network")  # Add more as needed
 PROXY_DIR="$HOME/nginx-reverse-proxy"
 CERTBOT_MODE="manual"                     # Set to 'manual' or 'auto'
@@ -36,7 +36,7 @@ server {
     server_name analytics.ec2-54-161-71-105.compute-1.amazonaws.com;
 
     location / {
-        proxy_pass http://analytics-service:8020;
+        proxy_pass http://ec2-54-161-71-105.compute-1.amazonaws.com:8020;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
