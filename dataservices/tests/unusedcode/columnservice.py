@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from app.service.dbmodels import  Metric, View, Column, CalculatedColumn, Table
-from app.service.projectManagerService import ProjectManager
+from app.schemas.dbmodels import  Metric, View,  CalculatedColumn, Table, SQLColumn
+from app.utils.history import ProjectManager
 from app.service.models import GeneratedDefinition, DefinitionType,UserExample
 import uuid
 from typing import List,Dict,Any
@@ -112,17 +112,21 @@ class DefinitionPersistenceService:
         """Create calculated column in database"""
         table = self._find_primary_table(definition.related_tables, project_id)
         
-        # Create the column first
-        column = Column(
+        # Create the SQLColumn with type 'calculated_column'
+        column = SQLColumn(
             table_id=table.table_id,
             name=definition.name,
             display_name=definition.display_name,
             description=definition.description,
-            column_type='calculated_column',
+            column_type='calculated_column',  # Mark as calculated column
             data_type=definition.metadata.get('data_type', 'VARCHAR'),
-            usage_type='measure',
-            modified_by=created_by,
-            metadata={
+            usage_type=definition.metadata.get('usage_type', 'calculated'),
+            is_nullable=definition.metadata.get('is_nullable', True),
+            is_primary_key=definition.metadata.get('is_primary_key', False),
+            is_foreign_key=definition.metadata.get('is_foreign_key', False),
+            default_value=definition.metadata.get('default_value'),
+            ordinal_position=definition.metadata.get('ordinal_position'),
+            json_metadata={
                 **definition.metadata,
                 'chain_of_thought': definition.chain_of_thought,
                 'confidence_score': definition.confidence_score,
@@ -131,16 +135,18 @@ class DefinitionPersistenceService:
                 'related_columns': definition.related_columns,
                 'generated_by': 'llm_service',
                 'generation_timestamp': datetime.utcnow().isoformat()
-            }
+            },
+            modified_by=created_by
         )
         
         self.session.add(column)
         self.session.flush()
         
-        # Create the calculated column definition
+        # Create the associated CalculatedColumn with the calculation details
         calc_column = CalculatedColumn(
             column_id=column.column_id,
             calculation_sql=definition.sql_query,
+            function_id=definition.metadata.get('function_id'),
             dependencies=definition.related_columns,
             modified_by=created_by
         )

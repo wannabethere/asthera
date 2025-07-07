@@ -1,10 +1,10 @@
 from app.service.models import ProjectContext,DocumentedTable
-from app.service.projectManagerService import ProjectManager
+from app.service.project_management_service import ProjectManager
 from app.agents.schema_manager import LLMSchemaDocumentationGenerator
-from app.agents.schema_manager import SchemaParser
+from app.utils.parser import SchemaParser
 import datetime
 from sqlalchemy.orm import Session
-from app.service.dbmodels import Table, Columns
+from app.schemas.dbmodels import Table, SQLColumn as Columns
 from typing import List, Dict, Any,Optional
 # ===============================================
 # =============================
@@ -14,11 +14,11 @@ from typing import List, Dict, Any,Optional
 class SchemaDocumentationService:
     """Main service for schema documentation"""
     
-    def __init__(self, session: Session, openai_api_key: str, project_id: str):
+    def __init__(self, session: Session, llm, project_id: str):
         self.session = session
         self.project_id = project_id
         self.project_manager = ProjectManager(session)
-        self.llm_generator = LLMSchemaDocumentationGenerator(openai_api_key)
+        self.llm_generator = LLMSchemaDocumentationGenerator(llm)
         self.schema_parser = SchemaParser()
     
     async def document_schema_from_ddl(self, ddl_statement: str, 
@@ -157,3 +157,4 @@ class SchemaDocumentationService:
         except Exception as e:
             print(f"Warning: Could not fetch sample data for {table_name}: {str(e)}")
             return []
+        

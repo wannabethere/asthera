@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from app.service.database import get_db
 from app.config import ServiceConfig
-from app.service.dbservice import ServiceFactory
+from genieml.dataservices.app.service.baseservice import ServiceFactory
 from app.service.projectManagerService import ProjectManager
 from app.service.models import CreateProjectRequest,ProjectResponse,DefinitionType,UserExample,ProjectContext
 from app.service.database import get_db

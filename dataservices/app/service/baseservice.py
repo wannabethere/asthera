@@ -18,11 +18,11 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
 import json
 from app.config import ServiceConfig
-from app.service.llmservice import LLMDefinitionService
+from genieml.dataservices.tests.unusedcode.columnservice import LLMDefinitionService
 from app.service.database import SessionLocal, create_db_tables
 
 # Import our services
-from app.service.dbmodels import Base, Project
+from app.schemas.dbmodels import Base, Project
 from app.service.models import DefinitionType, UserExample, GeneratedDefinition
 
 # ============================================================================
@@ -39,10 +39,10 @@ class ServiceFactory:
     
     async def get_service(self, project_id: str) -> LLMDefinitionService:
         """Get or create service instance for project"""
+        # Create a new session directly from the factory
+        session = SessionLocal()
         if project_id not in self._services:
-            # Create a new session directly from the factory
-            session = SessionLocal()
-            
+                
             service = LLMDefinitionService(
                 session=session,
                 openai_api_key=self.config.openai_api_key,

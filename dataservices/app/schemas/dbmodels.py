@@ -39,7 +39,18 @@ class Project(Base, TimestampMixin):
     display_name = Column(String(200), nullable=False)
     description = Column(Text)
     created_by = Column(String(100))
-    status = Column(String(20), default='active', nullable=False)
+    # Enhanced status management for workflow
+    status = Column(String(20), default='draft', nullable=False)
+    """
+    Status values:
+    - 'draft': Initial creation, adding tables and columns
+    - 'draft_ready': Tables completed, ready for metrics/views
+    - 'review': Under review before publishing  
+    - 'active': Published and live
+    - 'inactive': Temporarily disabled
+    - 'archived': Permanently archived
+    """
+
     
     # Versioning fields
     major_version = Column(Integer, default=1, nullable=False)
@@ -47,9 +58,9 @@ class Project(Base, TimestampMixin):
     patch_version = Column(Integer, default=0, nullable=False)
     last_modified_by = Column(String(100))
     last_modified_entity = Column(String(100))
-    last_modified_entity_id = Column(UUID(as_uuid=True))
+    last_modified_entity_id = Column(String(36))
     version_locked = Column(Boolean, default=False, nullable=False)
-    metadata = Column(JSONB)
+    json_metadata = Column(JSONB)
     
     # Relationships
     datasets = relationship("Dataset", back_populates="project", cascade="all, delete-orphan")
@@ -62,20 +73,87 @@ class Project(Base, TimestampMixin):
     version_history = relationship("ProjectVersionHistory", back_populates="project", cascade="all, delete-orphan")
     project_histories = relationship("ProjectHistory", back_populates="project", cascade="all, delete-orphan")
     
-    # Constraints
+   # Enhanced constraints
     __table_args__ = (
-        CheckConstraint("status IN ('active', 'inactive', 'archived')", name='check_status'),
+        CheckConstraint(
+            "status IN ('draft', 'draft_ready', 'review', 'active', 'inactive', 'archived')", 
+            name='check_status'
+        ),
         Index('idx_projects_status', 'status'),
         Index('idx_projects_version', 'major_version', 'minor_version', 'patch_version'),
         Index('idx_projects_version_locked', 'version_locked'),
+        Index('idx_projects_created_at', 'created_at'),
     )
-    
     @hybrid_property
     def version_string(self) -> str:
         """Generate version string from major.minor.patch"""
         return f"{self.major_version}.{self.minor_version}.{self.patch_version}"
     
-    def increment_version(self, change_type: str, entity_type: str, entity_id: uuid.UUID, 
+    @hybrid_property
+    def is_draft(self) -> bool:
+        """Check if project is in any draft state"""
+        return self.status in ['draft', 'draft_ready']
+    
+    @hybrid_property
+    def is_published(self) -> bool:
+        """Check if project is published"""
+        return self.status == 'active'
+    
+    @hybrid_property
+    def can_add_tables(self) -> bool:
+        """Check if tables can be added"""
+        return self.status == 'draft'
+    
+    @hybrid_property
+    def can_add_metrics(self) -> bool:
+        """Check if metrics/views can be added"""
+        return self.status in ['draft_ready', 'review']
+    
+    @hybrid_property
+    def table_count(self) -> int:
+        """Get count of tables"""
+        return len(self.tables) if self.tables else 0
+    
+    def transition_to_draft_ready(self, user: str = 'system') -> bool:
+        """Transition from draft to draft_ready"""
+        if self.status != 'draft':
+            raise ValueError(f"Cannot transition to draft_ready from {self.status}")
+        
+        if self.table_count == 0:
+            raise ValueError("Project must have at least one table")
+        
+        self.status = 'draft_ready'
+        self.draft_completed_at = func.now()
+        self.last_modified_by = user
+        return True
+    
+    def transition_to_review(self, user: str = 'system') -> bool:
+        """Transition to review status"""
+        if self.status != 'draft_ready':
+            raise ValueError(f"Cannot transition to review from {self.status}")
+        
+        self.status = 'review'
+        self.last_modified_by = user
+        return True
+    
+    def publish(self, user: str = 'system') -> bool:
+        """Publish the project"""
+        if self.status not in ['draft_ready', 'review']:
+            raise ValueError(f"Cannot publish from {self.status}")
+        
+        self.status = 'active'
+        self.published_at = func.now()
+        self.version_locked = False  # Unlock for future modifications
+        self.last_modified_by = user
+        return True
+    
+    def archive(self, user: str = 'system') -> bool:
+        """Archive the project"""
+        self.status = 'archived'
+        self.last_modified_by = user
+        return True
+    
+    def increment_version(self, change_type: str, entity_type: str, entity_id: str, 
                          modified_by: str, description: Optional[str] = None) -> str:
         """Increment project version based on change type"""
         old_version = self.version_string
@@ -100,27 +178,37 @@ class Project(Base, TimestampMixin):
         
         return new_version
     
-    def lock_version(self, locked: bool = True):
-        """Lock or unlock project version"""
-        if locked and self.version_locked:
-            raise ValueError(f"Project {self.project_id} is already version locked")
-        self.version_locked = locked
+    def get_workflow_status(self) -> Dict[str, Any]:
+        """Get comprehensive workflow status"""
+        return {
+            'status': self.status,
+            'is_draft': self.is_draft,
+            'is_published': self.is_published,
+            'can_add_tables': self.can_add_tables,
+            'can_add_metrics': self.can_add_metrics,
+            'table_count': self.table_count,
+            'version': self.version_string,
+            'created_at': self.created_at,
+            'draft_completed_at': self.draft_completed_at,
+            'published_at': self.published_at,
+            'last_modified_by': self.last_modified_by
+        }
     
     def __repr__(self):
-        return f"<Project(id='{self.project_id}', name='{self.display_name}', version='{self.version_string}')>"
+        return f"<Project(id='{self.project_id}', name='{self.display_name}', status='{self.status}', version='{self.version_string}')>"
 
 
 class ProjectVersionHistory(Base, TimestampMixin):
     """Track all project version changes"""
     __tablename__ = 'project_version_history'
     
-    version_history_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    version_history_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     project_id = Column(String(50), ForeignKey('projects.project_id', ondelete='CASCADE'), nullable=False)
     old_version = Column(String(20))
     new_version = Column(String(20))
     change_type = Column(String(20), nullable=False)
     triggered_by_entity = Column(String(100), nullable=False)
-    triggered_by_entity_id = Column(UUID(as_uuid=True))
+    triggered_by_entity_id = Column(String(36))
     triggered_by_user = Column(String(100))
     change_description = Column(Text)
     
@@ -137,12 +225,12 @@ class Dataset(Base, TimestampMixin, EntityVersionMixin):
     """Collections of tables within a project"""
     __tablename__ = 'datasets'
     
-    dataset_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    dataset_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     project_id = Column(String(50), ForeignKey('projects.project_id', ondelete='CASCADE'), nullable=False)
     name = Column(String(100), nullable=False)
     display_name = Column(String(200))
     description = Column(Text)
-    metadata = Column(JSONB)
+    json_metadata = Column(JSONB)
     
     # Relationships
     project = relationship("Project", back_populates="datasets")
@@ -159,8 +247,8 @@ class Table(Base, TimestampMixin, EntityVersionMixin):
     """Individual data tables with descriptions"""
     __tablename__ = 'tables'
     
-    table_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    dataset_id = Column(UUID(as_uuid=True), ForeignKey('datasets.dataset_id', ondelete='CASCADE'))
+    table_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    dataset_id = Column(String(36), ForeignKey('datasets.dataset_id', ondelete='CASCADE'))
     project_id = Column(String(50), ForeignKey('projects.project_id', ondelete='CASCADE'), nullable=False)
     name = Column(String(100), nullable=False)
     display_name = Column(String(200))
@@ -168,12 +256,12 @@ class Table(Base, TimestampMixin, EntityVersionMixin):
     mdl_file = Column(String(200))
     ddl_file = Column(String(200))
     table_type = Column(String(20), default='table', nullable=False)
-    metadata = Column(JSONB)
+    json_metadata = Column(JSONB)
     
     # Relationships
     project = relationship("Project", back_populates="tables")
     dataset = relationship("Dataset", back_populates="tables")
-    columns = relationship("Column", back_populates="table", cascade="all, delete-orphan")
+    columns = relationship("SQLColumn", back_populates="table", cascade="all, delete-orphan")
     metrics = relationship("Metric", back_populates="table", cascade="all, delete-orphan")
     views = relationship("View", back_populates="table", cascade="all, delete-orphan")
     from_relationships = relationship("Relationship", foreign_keys="[Relationship.from_table_id]", back_populates="from_table")
@@ -188,12 +276,12 @@ class Table(Base, TimestampMixin, EntityVersionMixin):
     )
 
 
-class Column(Base, TimestampMixin, EntityVersionMixin):
+class SQLColumn(Base, TimestampMixin, EntityVersionMixin):
     """Table columns with comprehensive metadata"""
     __tablename__ = 'columns'
     
-    column_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    table_id = Column(UUID(as_uuid=True), ForeignKey('tables.table_id', ondelete='CASCADE'), nullable=False)
+    column_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    table_id = Column(String(36), ForeignKey('tables.table_id', ondelete='CASCADE'), nullable=False)
     name = Column(String(100), nullable=False)
     display_name = Column(String(200))
     description = Column(Text)
@@ -205,7 +293,7 @@ class Column(Base, TimestampMixin, EntityVersionMixin):
     is_foreign_key = Column(Boolean, default=False)
     default_value = Column(Text)
     ordinal_position = Column(Integer)
-    metadata = Column(JSONB)
+    json_metadata = Column(JSONB)
     
     # Relationships
     table = relationship("Table", back_populates="columns")
@@ -223,11 +311,11 @@ class Column(Base, TimestampMixin, EntityVersionMixin):
 
 
 class SQLFunction(Base, TimestampMixin, EntityVersionMixin):
-    """Project-level reusable functions"""
+    """Project-level reusable functions with optional project association"""
     __tablename__ = 'sql_functions'
     
-    function_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    project_id = Column(String(50), ForeignKey('projects.project_id', ondelete='CASCADE'), nullable=False)
+    function_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id = Column(String(50), ForeignKey('projects.project_id', ondelete='CASCADE'), nullable=True)
     name = Column(String(100), nullable=False)
     display_name = Column(String(200))
     description = Column(Text)
@@ -240,7 +328,11 @@ class SQLFunction(Base, TimestampMixin, EntityVersionMixin):
     calculated_columns = relationship("CalculatedColumn", back_populates="function")
     
     __table_args__ = (
-        UniqueConstraint('project_id', 'name', name='uq_sql_functions_project_name'),
+        # Partial unique constraint - only enforce uniqueness when project_id is not null
+        # This allows global functions (project_id = null) to have the same name as project-specific functions
+        UniqueConstraint('project_id', 'name', name='uq_sql_functions_project_name', deferrable=True),
+        Index('idx_sql_functions_project_id', 'project_id'),
+        Index('idx_sql_functions_name', 'name'),
     )
 
 
@@ -248,14 +340,14 @@ class CalculatedColumn(Base, TimestampMixin, EntityVersionMixin):
     """Special columns with associated functions"""
     __tablename__ = 'calculated_columns'
     
-    calculated_column_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    column_id = Column(UUID(as_uuid=True), ForeignKey('columns.column_id', ondelete='CASCADE'), nullable=False)
+    calculated_column_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    column_id = Column(String(36), ForeignKey('columns.column_id', ondelete='CASCADE'), nullable=False)
     calculation_sql = Column(Text, nullable=False)
-    function_id = Column(UUID(as_uuid=True), ForeignKey('sql_functions.function_id'))
+    function_id = Column(String(36), ForeignKey('sql_functions.function_id'))
     dependencies = Column(JSONB)  # Array of column/table dependencies
     
     # Relationships
-    column = relationship("Column", back_populates="calculated_column")
+    column = relationship("SQLColumn", back_populates="calculated_column")
     function = relationship("SQLFunction", back_populates="calculated_columns")
 
 
@@ -263,8 +355,8 @@ class Metric(Base, TimestampMixin, EntityVersionMixin):
     """Table-level metrics and KPIs"""
     __tablename__ = 'metrics'
     
-    metric_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    table_id = Column(UUID(as_uuid=True), ForeignKey('tables.table_id', ondelete='CASCADE'), nullable=False)
+    metric_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    table_id = Column(String(36), ForeignKey('tables.table_id', ondelete='CASCADE'), nullable=False)
     name = Column(String(100), nullable=False)
     display_name = Column(String(200))
     description = Column(Text)
@@ -272,7 +364,7 @@ class Metric(Base, TimestampMixin, EntityVersionMixin):
     metric_type = Column(String(50))
     aggregation_type = Column(String(50))
     format_string = Column(String(50))
-    metadata = Column(JSONB)
+    json_metadata = Column(JSONB)
     
     # Relationships
     table = relationship("Table", back_populates="metrics")
@@ -286,14 +378,14 @@ class View(Base, TimestampMixin, EntityVersionMixin):
     """Table views and perspectives"""
     __tablename__ = 'views'
     
-    view_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    table_id = Column(UUID(as_uuid=True), ForeignKey('tables.table_id', ondelete='CASCADE'), nullable=False)
+    view_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    table_id = Column(String(36), ForeignKey('tables.table_id', ondelete='CASCADE'), nullable=False)
     name = Column(String(100), nullable=False)
     display_name = Column(String(200))
     description = Column(Text)
     view_sql = Column(Text, nullable=False)
     view_type = Column(String(50))
-    metadata = Column(JSONB)
+    json_metadata = Column(JSONB)
     
     # Relationships
     table = relationship("Table", back_populates="views")
@@ -307,24 +399,24 @@ class Relationship(Base, TimestampMixin, EntityVersionMixin):
     """Define relationships between tables/datasets"""
     __tablename__ = 'relationships'
     
-    relationship_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    relationship_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     project_id = Column(String(50), ForeignKey('projects.project_id', ondelete='CASCADE'), nullable=False)
     name = Column(String(100))
     relationship_type = Column(String(50), nullable=False)
-    from_table_id = Column(UUID(as_uuid=True), ForeignKey('tables.table_id', ondelete='CASCADE'), nullable=False)
-    to_table_id = Column(UUID(as_uuid=True), ForeignKey('tables.table_id', ondelete='CASCADE'), nullable=False)
-    from_column_id = Column(UUID(as_uuid=True), ForeignKey('columns.column_id'))
-    to_column_id = Column(UUID(as_uuid=True), ForeignKey('columns.column_id'))
+    from_table_id = Column(String(36), ForeignKey('tables.table_id', ondelete='CASCADE'), nullable=False)
+    to_table_id = Column(String(36), ForeignKey('tables.table_id', ondelete='CASCADE'), nullable=False)
+    from_column_id = Column(String(36), ForeignKey('columns.column_id'))
+    to_column_id = Column(String(36), ForeignKey('columns.column_id'))
     description = Column(Text)
     is_active = Column(Boolean, default=True)
-    metadata = Column(JSONB)
+    json_metadata = Column(JSONB)
     
     # Relationships
     project = relationship("Project", back_populates="relationships")
     from_table = relationship("Table", foreign_keys=[from_table_id], back_populates="from_relationships")
     to_table = relationship("Table", foreign_keys=[to_table_id], back_populates="to_relationships")
-    from_column = relationship("Column", foreign_keys=[from_column_id], back_populates="from_relationships")
-    to_column = relationship("Column", foreign_keys=[to_column_id], back_populates="to_relationships")
+    from_column = relationship("SQLColumn", foreign_keys=[from_column_id], back_populates="from_relationships")
+    to_column = relationship("SQLColumn", foreign_keys=[to_column_id], back_populates="to_relationships")
     
     __table_args__ = (
         Index('idx_relationships_project_id', 'project_id'),
@@ -337,19 +429,24 @@ class Instruction(Base, TimestampMixin, EntityVersionMixin):
     """Each instruction item as a row (from instructions.json)"""
     __tablename__ = 'instructions'
     
-    instruction_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    instruction_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     project_id = Column(String(50), ForeignKey('projects.project_id', ondelete='CASCADE'), nullable=False)
+    instruction_type = Column(String(20), nullable=False, default='sql_query')  # 'sql_query' or 'instructions'
     question = Column(Text, nullable=False)
-    instructions = Column(Text, nullable=False)
-    sql_query = Column(Text, nullable=False)
+    instructions = Column(Text)  # Now nullable
+    sql_query = Column(Text)  # Now nullable
     chain_of_thought = Column(Text)
-    metadata = Column(JSONB)
+    json_metadata = Column(JSONB)
     
     # Relationships
     project = relationship("Project", back_populates="instructions")
     
     __table_args__ = (
         Index('idx_instructions_project_id', 'project_id'),
+        CheckConstraint(
+            "(sql_query IS NOT NULL AND instruction_type = 'sql_query') OR (instructions IS NOT NULL AND instruction_type = 'instructions')",
+            name='check_instruction_type_content'
+        ),
     )
 
 
@@ -357,8 +454,10 @@ class Example(Base, TimestampMixin, EntityVersionMixin):
     """Each SQL pair item as a row (from sql_pairs.json)"""
     __tablename__ = 'examples'
     
-    example_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    example_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     project_id = Column(String(50), ForeignKey('projects.project_id', ondelete='CASCADE'), nullable=False)
+    definition_type = Column(String(50), nullable=False, default='sql_pair')  # 'metric', 'view', 'calculated_column', 'sql_pair', 'instruction'
+    name = Column(String(100), nullable=False)  # Add name field to match UserExample
     question = Column(Text, nullable=False)
     sql_query = Column(Text, nullable=False)
     context = Column(Text)
@@ -366,13 +465,20 @@ class Example(Base, TimestampMixin, EntityVersionMixin):
     instructions = Column(Text)
     categories = Column(JSONB)  # Array of category strings
     samples = Column(JSONB)  # Array of sample data
-    metadata = Column(JSONB)
+    additional_context = Column(JSONB)  # Add additional_context field to match UserExample
+    user_id = Column(String(100), default='system')  # Add user_id field to match UserExample
+    json_metadata = Column(JSONB)
     
     # Relationships
     project = relationship("Project", back_populates="examples")
     
     __table_args__ = (
+        CheckConstraint(
+            "definition_type IN ('metric', 'view', 'calculated_column', 'sql_pair', 'instruction')", 
+            name='check_definition_type'
+        ),
         Index('idx_examples_project_id', 'project_id'),
+        Index('idx_examples_definition_type', 'definition_type'),
     )
 
 
@@ -380,7 +486,7 @@ class KnowledgeBase(Base, TimestampMixin, EntityVersionMixin):
     """Project knowledge base entries"""
     __tablename__ = 'knowledge_base'
     
-    kb_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    kb_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     project_id = Column(String(50), ForeignKey('projects.project_id', ondelete='CASCADE'), nullable=False)
     name = Column(String(100), nullable=False)
     display_name = Column(String(200))
@@ -388,7 +494,7 @@ class KnowledgeBase(Base, TimestampMixin, EntityVersionMixin):
     file_path = Column(String(500))
     content_type = Column(String(50))
     content = Column(Text)
-    metadata = Column(JSONB)
+    json_metadata = Column(JSONB)
     
     # Relationships
     project = relationship("Project", back_populates="knowledge_base")
@@ -398,16 +504,15 @@ class KnowledgeBase(Base, TimestampMixin, EntityVersionMixin):
         Index('idx_knowledge_base_project_id', 'project_id'),
     )
 
-
 class ProjectHistory(Base, TimestampMixin):
     """Track changes and versions"""
     __tablename__ = 'project_histories'
     
-    history_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    history_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     project_id = Column(String(50), ForeignKey('projects.project_id', ondelete='CASCADE'), nullable=False)
-    table_id = Column(UUID(as_uuid=True), ForeignKey('tables.table_id'))
+    table_id = Column(String(36), ForeignKey('tables.table_id'))
     entity_type = Column(String(50), nullable=False)
-    entity_id = Column(UUID(as_uuid=True))
+    entity_id = Column(String(36))
     action = Column(String(20), nullable=False)
     old_values = Column(JSONB)
     new_values = Column(JSONB)
@@ -484,6 +589,7 @@ def update_project_version(session: Session, entity: Any, action: str):
             project_id = column.table.project_id
             entity_id = getattr(entity, f"{entity_type}_id", None)
     
+    # Skip version update for global entities (no project_id) like global SQL functions
     if not project_id:
         return
     
@@ -539,96 +645,120 @@ def before_flush(session, flush_context, instances):
             update_project_version(session, obj, 'delete')
 
 
-# ============================================================================
-# UTILITY CLASSES AND MANAGERS
-# ============================================================================
 
-class ProjectManager:
-    """Utility class for project management operations"""
-    
-    def __init__(self, session: Session):
-        self.session = session
-    
-    def create_project(self, project_id: str, display_name: str, description: str = None, 
-                      created_by: str = 'system') -> Project:
-        """Create a new project"""
-        project = Project(
-            project_id=project_id,
-            display_name=display_name,
-            description=description,
-            created_by=created_by,
-            last_modified_by=created_by
-        )
-        self.session.add(project)
-        self.session.commit()
-        return project
-    
-    def lock_project_version(self, project_id: str, locked: bool = True, 
-                           modified_by: str = 'system') -> bool:
-        """Lock or unlock project version"""
-        project = self.session.query(Project).filter(Project.project_id == project_id).first()
-        if not project:
-            return False
-        
-        project.lock_version(locked)
-        project.last_modified_by = modified_by
-        self.session.commit()
-        return True
-    
-    def manual_version_increment(self, project_id: str, change_type: str, 
-                               modified_by: str, description: str) -> Optional[str]:
-        """Manually increment project version"""
-        project = self.session.query(Project).filter(Project.project_id == project_id).first()
-        if not project:
-            return None
-        
-        old_version = project.version_string
-        new_version = project.increment_version(
-            change_type=change_type,
-            entity_type='manual',
-            entity_id=None,
-            modified_by=modified_by
-        )
-        
-        # Create version history
-        version_history = ProjectVersionHistory(
-            project_id=project_id,
-            old_version=old_version,
-            new_version=new_version,
-            change_type=change_type,
-            triggered_by_entity='manual',
-            triggered_by_user=modified_by,
-            change_description=description
-        )
-        self.session.add(version_history)
-        self.session.commit()
-        
-        return new_version
-    
-    def get_project_summary(self, project_id: str) -> Optional[Dict[str, Any]]:
-        """Get comprehensive project summary"""
-        project = self.session.query(Project).filter(Project.project_id == project_id).first()
-        if not project:
-            return None
-        
-        return {
-            'project_id': project.project_id,
-            'display_name': project.display_name,
-            'current_version': project.version_string,
-            'version_locked': project.version_locked,
-            'last_modified_by': project.last_modified_by,
-            'last_modified_entity': project.last_modified_entity,
-            'status': project.status,
-            'total_datasets': len(project.datasets),
-            'total_tables': len(project.tables),
-            'total_instructions': len(project.instructions),
-            'total_examples': len(project.examples),
-            'total_knowledge_base': len(project.knowledge_base),
-            'version_changes': len(project.version_history),
-            'created_at': project.created_at,
-            'updated_at': project.updated_at
-        }
+# Additional helper models for workflow tracking
 
+class WorkflowLog(Base, TimestampMixin):
+    """Track workflow transitions and actions"""
+    __tablename__ = 'workflow_logs'
+    
+    log_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id = Column(String(50), ForeignKey('projects.project_id', ondelete='CASCADE'), nullable=False)
+    action = Column(String(50), nullable=False)  # 'created', 'table_added', 'draft_ready', 'published', etc.
+    from_status = Column(String(20))
+    to_status = Column(String(20))
+    user_id = Column(String(100))
+    notes = Column(Text)
+    json_metadata = Column(JSONB)
+    
+    # Relationships
+    project = relationship("Project")
+    
+    __table_args__ = (
+        Index('idx_workflow_logs_project_id', 'project_id'),
+        Index('idx_workflow_logs_action', 'action'),
+        Index('idx_workflow_logs_created_at', 'created_at'),
+    )
+
+# Event handlers for workflow logging
+@event.listens_for(Project.status, 'set')
+def log_status_change(target, value, old_value, initiator):
+    """Log status changes"""
+    if old_value != value and old_value is not None:
+        # This would need to be implemented with session context
+        print(f"Status changed from {old_value} to {value} for project {target.project_id}")
+
+# Enhanced utility functions
+
+def validate_project_transition(project: Project, new_status: str) -> bool:
+    """Validate if a status transition is allowed"""
+    valid_transitions = {
+        'draft': ['draft_ready', 'archived'],
+        'draft_ready': ['review', 'active', 'archived'],
+        'review': ['active', 'draft_ready', 'archived'],
+        'active': ['inactive', 'archived'],
+        'inactive': ['active', 'archived'],
+        'archived': []  # Cannot transition from archived
+    }
+    
+    return new_status in valid_transitions.get(project.status, [])
+
+def get_project_completion_score(project: Project) -> float:
+    """Calculate project completion score (0-100)"""
+    score = 0.0
+    
+    # Basic structure (40 points)
+    if project.table_count > 0:
+        score += 20
+    if project.table_count >= 2:
+        score += 10
+    if project.description:
+        score += 10
+    
+    # Tables with columns (30 points)
+    if project.tables:
+        tables_with_columns = sum(1 for table in project.tables if table.column_count > 0)
+        score += (tables_with_columns / len(project.tables)) * 30
+    
+    # Semantic descriptions (20 points)
+    if project.tables:
+        tables_with_semantic = sum(1 for table in project.tables if table.has_semantic_description)
+        score += (tables_with_semantic / len(project.tables)) * 20
+    
+    # Metrics and views (10 points)
+    total_metrics = sum(len(table.metrics) for table in project.tables if table.metrics)
+    total_views = sum(len(table.views) for table in project.tables if table.views)
+    if total_metrics > 0 or total_views > 0:
+        score += 10
+    
+    return min(score, 100.0)
+
+
+
+class ProjectJSONStore(Base, TimestampMixin):
+    """Store project JSON data with ChromaDB integration"""
+    __tablename__ = 'project_json_store'
+    
+    store_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id = Column(String(50), ForeignKey('projects.project_id', ondelete='CASCADE'), nullable=False)
+    
+    # ChromaDB document ID for the stored JSON
+    chroma_document_id = Column(String(100), nullable=False, unique=True)
+    
+    # JSON data type and content
+    json_type = Column(String(50), nullable=False)  # 'tables', 'metrics', 'views', 'calculated_columns', 'enums', 'project'
+    json_content = Column(JSONB, nullable=False)
+    
+    # Metadata
+    version = Column(String(20), default='1.0.0')
+    is_active = Column(Boolean, default=True)
+    last_updated_by = Column(String(100))
+    update_reason = Column(Text)
+    
+    # Relationships
+    project = relationship("Project")
+    
+    __table_args__ = (
+        Index('idx_project_json_store_project_id', 'project_id'),
+        Index('idx_project_json_store_type', 'json_type'),
+        Index('idx_project_json_store_chroma_id', 'chroma_document_id'),
+        Index('idx_project_json_store_active', 'is_active'),
+        UniqueConstraint('project_id', 'json_type', name='uq_project_json_type'),
+    )
+    
+    def __repr__(self):
+        return f"<ProjectJSONStore(id='{self.store_id}', project='{self.project_id}', type='{self.json_type}', chroma_id='{self.chroma_document_id}')>"
+    
 
 # Example usage and testing
 if __name__ == "__main__":
