@@ -1,5 +1,6 @@
 -- Project Management System PostgreSQL Schema with Comprehensive Versioning
 -- Automatic project version updates when any related entity is modified
+-- Updated to match SQLAlchemy models exactly
 
 -- Enable UUID extension for unique identifiers
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -16,36 +17,39 @@ CREATE TABLE projects (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(100),
-    status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'archived')),
+    status VARCHAR(20) DEFAULT 'draft' NOT NULL,
     -- Versioning fields
     major_version INTEGER DEFAULT 1 NOT NULL,
     minor_version INTEGER DEFAULT 0 NOT NULL,
     patch_version INTEGER DEFAULT 0 NOT NULL,
-    version_string VARCHAR(20) GENERATED ALWAYS AS (major_version || '.' || minor_version || '.' || patch_version) STORED,
     last_modified_by VARCHAR(100),
-    last_modified_entity VARCHAR(100), -- tracks which entity type caused the last version update
-    last_modified_entity_id UUID, -- tracks which specific entity caused the last version update
-    version_locked BOOLEAN DEFAULT false, -- prevents modifications when true
-    metadata JSONB
+    last_modified_entity VARCHAR(100),
+    last_modified_entity_id VARCHAR(36),
+    version_locked BOOLEAN DEFAULT false NOT NULL,
+    json_metadata JSONB,
+    -- Workflow tracking fields
+    draft_completed_at TIMESTAMP WITH TIME ZONE,
+    published_at TIMESTAMP WITH TIME ZONE
 );
 
 -- Project Version History - Track all version changes
 CREATE TABLE project_version_history (
-    version_history_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    version_history_id VARCHAR(36) PRIMARY KEY DEFAULT uuid_generate_v4()::VARCHAR(36),
     project_id VARCHAR(50) NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
     old_version VARCHAR(20),
     new_version VARCHAR(20),
-    change_type VARCHAR(20) NOT NULL, -- 'major', 'minor', 'patch'
+    change_type VARCHAR(20) NOT NULL,
     triggered_by_entity VARCHAR(100) NOT NULL,
-    triggered_by_entity_id UUID,
+    triggered_by_entity_id VARCHAR(36),
     triggered_by_user VARCHAR(100),
     change_description TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Datasets table - Collections of tables within a project
 CREATE TABLE datasets (
-    dataset_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    dataset_id VARCHAR(36) PRIMARY KEY DEFAULT uuid_generate_v4()::VARCHAR(36),
     project_id VARCHAR(50) NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
     display_name VARCHAR(200),
@@ -55,40 +59,40 @@ CREATE TABLE datasets (
     -- Entity versioning
     entity_version INTEGER DEFAULT 1 NOT NULL,
     modified_by VARCHAR(100),
-    metadata JSONB,
+    json_metadata JSONB,
     UNIQUE(project_id, name)
 );
 
 -- Tables table - Individual data tables with descriptions
 CREATE TABLE tables (
-    table_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    dataset_id UUID REFERENCES datasets(dataset_id) ON DELETE CASCADE,
+    table_id VARCHAR(36) PRIMARY KEY DEFAULT uuid_generate_v4()::VARCHAR(36),
+    dataset_id VARCHAR(36) REFERENCES datasets(dataset_id) ON DELETE CASCADE,
     project_id VARCHAR(50) NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
     display_name VARCHAR(200),
     description TEXT,
     mdl_file VARCHAR(200),
     ddl_file VARCHAR(200),
-    table_type VARCHAR(20) DEFAULT 'table' CHECK (table_type IN ('table', 'view', 'materialized_view')),
+    table_type VARCHAR(20) DEFAULT 'table' NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     -- Entity versioning
     entity_version INTEGER DEFAULT 1 NOT NULL,
     modified_by VARCHAR(100),
-    metadata JSONB,
+    json_metadata JSONB,
     UNIQUE(project_id, name)
 );
 
 -- Columns table - Table columns with comprehensive metadata
 CREATE TABLE columns (
-    column_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    table_id UUID NOT NULL REFERENCES tables(table_id) ON DELETE CASCADE,
+    column_id VARCHAR(36) PRIMARY KEY DEFAULT uuid_generate_v4()::VARCHAR(36),
+    table_id VARCHAR(36) NOT NULL REFERENCES tables(table_id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
     display_name VARCHAR(200),
     description TEXT,
-    column_type VARCHAR(20) NOT NULL DEFAULT 'column' CHECK (column_type IN ('column', 'calculated_column')),
+    column_type VARCHAR(20) DEFAULT 'column' NOT NULL,
     data_type VARCHAR(50),
-    usage_type VARCHAR(50), -- dimension, measure, attribute, etc.
+    usage_type VARCHAR(50),
     is_nullable BOOLEAN DEFAULT true,
     is_primary_key BOOLEAN DEFAULT false,
     is_foreign_key BOOLEAN DEFAULT false,
@@ -99,7 +103,7 @@ CREATE TABLE columns (
     -- Entity versioning
     entity_version INTEGER DEFAULT 1 NOT NULL,
     modified_by VARCHAR(100),
-    metadata JSONB,
+    json_metadata JSONB,
     UNIQUE(table_id, name)
 );
 
@@ -109,29 +113,29 @@ CREATE TABLE columns (
 
 -- SQL Functions table - Project-level reusable functions
 CREATE TABLE sql_functions (
-    function_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    project_id VARCHAR(50) NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
+    function_id VARCHAR(36) PRIMARY KEY DEFAULT uuid_generate_v4()::VARCHAR(36),
+    project_id VARCHAR(50) REFERENCES projects(project_id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
     display_name VARCHAR(200),
     description TEXT,
     function_sql TEXT NOT NULL,
     return_type VARCHAR(50),
-    parameters JSONB, -- Array of parameter definitions
+    parameters JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     -- Entity versioning
     entity_version INTEGER DEFAULT 1 NOT NULL,
     modified_by VARCHAR(100),
-    UNIQUE(project_id, name)
+    UNIQUE(project_id, name) DEFERRABLE
 );
 
 -- Calculated Columns table - Special columns with associated functions
 CREATE TABLE calculated_columns (
-    calculated_column_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    column_id UUID NOT NULL REFERENCES columns(column_id) ON DELETE CASCADE,
+    calculated_column_id VARCHAR(36) PRIMARY KEY DEFAULT uuid_generate_v4()::VARCHAR(36),
+    column_id VARCHAR(36) NOT NULL REFERENCES columns(column_id) ON DELETE CASCADE,
     calculation_sql TEXT NOT NULL,
-    function_id UUID REFERENCES sql_functions(function_id),
-    dependencies JSONB, -- Array of column/table dependencies
+    function_id VARCHAR(36) REFERENCES sql_functions(function_id),
+    dependencies JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     -- Entity versioning
@@ -145,13 +149,13 @@ CREATE TABLE calculated_columns (
 
 -- Metrics table - Table-level metrics and KPIs
 CREATE TABLE metrics (
-    metric_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    table_id UUID NOT NULL REFERENCES tables(table_id) ON DELETE CASCADE,
+    metric_id VARCHAR(36) PRIMARY KEY DEFAULT uuid_generate_v4()::VARCHAR(36),
+    table_id VARCHAR(36) NOT NULL REFERENCES tables(table_id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
     display_name VARCHAR(200),
     description TEXT,
     metric_sql TEXT NOT NULL,
-    metric_type VARCHAR(50), -- count, sum, avg, custom, etc.
+    metric_type VARCHAR(50),
     aggregation_type VARCHAR(50),
     format_string VARCHAR(50),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -159,25 +163,25 @@ CREATE TABLE metrics (
     -- Entity versioning
     entity_version INTEGER DEFAULT 1 NOT NULL,
     modified_by VARCHAR(100),
-    metadata JSONB,
+    json_metadata JSONB,
     UNIQUE(table_id, name)
 );
 
 -- Views table - Table views and perspectives
 CREATE TABLE views (
-    view_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    table_id UUID NOT NULL REFERENCES tables(table_id) ON DELETE CASCADE,
+    view_id VARCHAR(36) PRIMARY KEY DEFAULT uuid_generate_v4()::VARCHAR(36),
+    table_id VARCHAR(36) NOT NULL REFERENCES tables(table_id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
     display_name VARCHAR(200),
     description TEXT,
     view_sql TEXT NOT NULL,
-    view_type VARCHAR(50), -- filtered, aggregated, joined, etc.
+    view_type VARCHAR(50),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     -- Entity versioning
     entity_version INTEGER DEFAULT 1 NOT NULL,
     modified_by VARCHAR(100),
-    metadata JSONB,
+    json_metadata JSONB,
     UNIQUE(table_id, name)
 );
 
@@ -187,14 +191,14 @@ CREATE TABLE views (
 
 -- Relationships table - Define relationships between tables/datasets
 CREATE TABLE relationships (
-    relationship_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    relationship_id VARCHAR(36) PRIMARY KEY DEFAULT uuid_generate_v4()::VARCHAR(36),
     project_id VARCHAR(50) NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
     name VARCHAR(100),
-    relationship_type VARCHAR(50) NOT NULL, -- one_to_one, one_to_many, many_to_many
-    from_table_id UUID NOT NULL REFERENCES tables(table_id) ON DELETE CASCADE,
-    to_table_id UUID NOT NULL REFERENCES tables(table_id) ON DELETE CASCADE,
-    from_column_id UUID REFERENCES columns(column_id),
-    to_column_id UUID REFERENCES columns(column_id),
+    relationship_type VARCHAR(50) NOT NULL,
+    from_table_id VARCHAR(36) NOT NULL REFERENCES tables(table_id) ON DELETE CASCADE,
+    to_table_id VARCHAR(36) NOT NULL REFERENCES tables(table_id) ON DELETE CASCADE,
+    from_column_id VARCHAR(36) REFERENCES columns(column_id),
+    to_column_id VARCHAR(36) REFERENCES columns(column_id),
     description TEXT,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -202,7 +206,7 @@ CREATE TABLE relationships (
     -- Entity versioning
     entity_version INTEGER DEFAULT 1 NOT NULL,
     modified_by VARCHAR(100),
-    metadata JSONB
+    json_metadata JSONB
 );
 
 -- ============================================================================
@@ -211,42 +215,47 @@ CREATE TABLE relationships (
 
 -- Instructions table - Each instruction item as a row (from instructions.json)
 CREATE TABLE instructions (
-    instruction_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    instruction_id VARCHAR(36) PRIMARY KEY DEFAULT uuid_generate_v4()::VARCHAR(36),
     project_id VARCHAR(50) NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
+    instruction_type VARCHAR(20) DEFAULT 'sql_query' NOT NULL,
     question TEXT NOT NULL,
-    instructions TEXT NOT NULL,
-    sql_query TEXT NOT NULL,
+    instructions TEXT,
+    sql_query TEXT,
     chain_of_thought TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     -- Entity versioning
     entity_version INTEGER DEFAULT 1 NOT NULL,
     modified_by VARCHAR(100),
-    metadata JSONB
+    json_metadata JSONB
 );
 
 -- Examples table - Each SQL pair item as a row (from sql_pairs.json)
 CREATE TABLE examples (
-    example_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    example_id VARCHAR(36) PRIMARY KEY DEFAULT uuid_generate_v4()::VARCHAR(36),
     project_id VARCHAR(50) NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
+    definition_type VARCHAR(50) DEFAULT 'sql_pair' NOT NULL,
+    name VARCHAR(100) NOT NULL,
     question TEXT NOT NULL,
     sql_query TEXT NOT NULL,
     context TEXT,
     document_reference VARCHAR(200),
     instructions TEXT,
-    categories JSONB, -- Array of category strings
-    samples JSONB, -- Array of sample data
+    categories JSONB,
+    samples JSONB,
+    additional_context JSONB,
+    user_id VARCHAR(100) DEFAULT 'system',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     -- Entity versioning
     entity_version INTEGER DEFAULT 1 NOT NULL,
     modified_by VARCHAR(100),
-    metadata JSONB
+    json_metadata JSONB
 );
 
 -- Knowledge Base table - Project knowledge base entries
 CREATE TABLE knowledge_base (
-    kb_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    kb_id VARCHAR(36) PRIMARY KEY DEFAULT uuid_generate_v4()::VARCHAR(36),
     project_id VARCHAR(50) NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
     display_name VARCHAR(200),
@@ -259,7 +268,7 @@ CREATE TABLE knowledge_base (
     -- Entity versioning
     entity_version INTEGER DEFAULT 1 NOT NULL,
     modified_by VARCHAR(100),
-    metadata JSONB,
+    json_metadata JSONB,
     UNIQUE(project_id, name)
 );
 
@@ -269,22 +278,77 @@ CREATE TABLE knowledge_base (
 
 -- Project History table - Track changes and versions
 CREATE TABLE project_histories (
-    history_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    history_id VARCHAR(36) PRIMARY KEY DEFAULT uuid_generate_v4()::VARCHAR(36),
     project_id VARCHAR(50) NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
-    table_id UUID REFERENCES tables(table_id),
-    entity_type VARCHAR(50) NOT NULL, -- project, table, column, metric, etc.
-    entity_id UUID,
-    action VARCHAR(20) NOT NULL, -- create, update, delete
+    table_id VARCHAR(36) REFERENCES tables(table_id),
+    entity_type VARCHAR(50) NOT NULL,
+    entity_id VARCHAR(36),
+    action VARCHAR(20) NOT NULL,
     old_values JSONB,
     new_values JSONB,
     old_entity_version INTEGER,
     new_entity_version INTEGER,
     changed_by VARCHAR(100),
-    changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     change_description TEXT,
     project_version_before VARCHAR(20),
-    project_version_after VARCHAR(20)
+    project_version_after VARCHAR(20),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- ============================================================================
+-- WORKFLOW AND ADDITIONAL MODELS
+-- ============================================================================
+
+-- Workflow Logs table - Track workflow transitions and actions
+CREATE TABLE workflow_logs (
+    log_id VARCHAR(36) PRIMARY KEY DEFAULT uuid_generate_v4()::VARCHAR(36),
+    project_id VARCHAR(50) NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
+    action VARCHAR(50) NOT NULL,
+    from_status VARCHAR(20),
+    to_status VARCHAR(20),
+    user_id VARCHAR(100),
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    json_metadata JSONB
+);
+
+-- Project JSON Store table - Store project JSON data with ChromaDB integration
+CREATE TABLE project_json_store (
+    store_id VARCHAR(36) PRIMARY KEY DEFAULT uuid_generate_v4()::VARCHAR(36),
+    project_id VARCHAR(50) NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
+    chroma_document_id VARCHAR(100) NOT NULL UNIQUE,
+    json_type VARCHAR(50) NOT NULL,
+    json_content JSONB NOT NULL,
+    version VARCHAR(20) DEFAULT '1.0.0',
+    is_active BOOLEAN DEFAULT true,
+    last_updated_by VARCHAR(100),
+    update_reason TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(project_id, json_type)
+);
+
+-- ============================================================================
+-- CONSTRAINTS AND CHECKS
+-- ============================================================================
+
+-- Add check constraints
+ALTER TABLE projects ADD CONSTRAINT check_status 
+    CHECK (status IN ('draft', 'draft_ready', 'review', 'active', 'inactive', 'archived'));
+
+ALTER TABLE tables ADD CONSTRAINT check_table_type 
+    CHECK (table_type IN ('table', 'view', 'materialized_view'));
+
+ALTER TABLE columns ADD CONSTRAINT check_column_type 
+    CHECK (column_type IN ('column', 'calculated_column'));
+
+ALTER TABLE instructions ADD CONSTRAINT check_instruction_type_content 
+    CHECK ((sql_query IS NOT NULL AND instruction_type = 'sql_query') OR (instructions IS NOT NULL AND instruction_type = 'instructions'));
+
+ALTER TABLE examples ADD CONSTRAINT check_definition_type 
+    CHECK (definition_type IN ('metric', 'view', 'calculated_column', 'sql_pair', 'instruction'));
 
 -- ============================================================================
 -- VERSIONING FUNCTIONS AND TRIGGERS
@@ -293,9 +357,9 @@ CREATE TABLE project_histories (
 -- Function to increment project version based on change type
 CREATE OR REPLACE FUNCTION increment_project_version(
     p_project_id VARCHAR(50),
-    p_change_type VARCHAR(20), -- 'major', 'minor', 'patch'
+    p_change_type VARCHAR(20),
     p_entity_type VARCHAR(100),
-    p_entity_id UUID,
+    p_entity_id VARCHAR(36),
     p_modified_by VARCHAR(100),
     p_change_description TEXT DEFAULT NULL
 )
@@ -309,7 +373,8 @@ DECLARE
     version_locked BOOLEAN;
 BEGIN
     -- Check if project version is locked
-    SELECT major_version, minor_version, patch_version, version_string, version_locked
+    SELECT major_version, minor_version, patch_version, 
+           (major_version || '.' || minor_version || '.' || patch_version), version_locked
     INTO current_major, current_minor, current_patch, old_version, version_locked
     FROM projects 
     WHERE project_id = p_project_id;
@@ -400,7 +465,7 @@ RETURNS TRIGGER AS $$
 DECLARE
     project_id_val VARCHAR(50);
     entity_type_val VARCHAR(100);
-    entity_id_val UUID;
+    entity_id_val VARCHAR(36);
     change_type_val VARCHAR(20);
     modified_by_val VARCHAR(100);
     old_values JSONB;
@@ -641,6 +706,42 @@ CREATE TRIGGER update_tables_updated_at BEFORE UPDATE ON tables
 CREATE TRIGGER update_columns_updated_at BEFORE UPDATE ON columns
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_sql_functions_updated_at BEFORE UPDATE ON sql_functions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_calculated_columns_updated_at BEFORE UPDATE ON calculated_columns
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_metrics_updated_at BEFORE UPDATE ON metrics
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_views_updated_at BEFORE UPDATE ON views
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_relationships_updated_at BEFORE UPDATE ON relationships
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_instructions_updated_at BEFORE UPDATE ON instructions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_examples_updated_at BEFORE UPDATE ON examples
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_knowledge_base_updated_at BEFORE UPDATE ON knowledge_base
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_project_version_history_updated_at BEFORE UPDATE ON project_version_history
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_project_histories_updated_at BEFORE UPDATE ON project_histories
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_workflow_logs_updated_at BEFORE UPDATE ON workflow_logs
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_project_json_store_updated_at BEFORE UPDATE ON project_json_store
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- ============================================================================
 -- INSIGHTS VIEW WITH VERSIONING INFORMATION
 -- ============================================================================
@@ -652,7 +753,7 @@ SELECT
     p.display_name as project_name,
     p.description as project_description,
     p.status as project_status,
-    p.version_string as current_version,
+    (p.major_version || '.' || p.minor_version || '.' || p.patch_version) as current_version,
     p.last_modified_entity,
     p.last_modified_by,
     p.version_locked,
@@ -700,7 +801,7 @@ LEFT JOIN examples e ON p.project_id = e.project_id
 LEFT JOIN knowledge_base kb ON p.project_id = kb.project_id
 LEFT JOIN project_version_history pvh ON p.project_id = pvh.project_id
 GROUP BY 
-    p.project_id, p.display_name, p.description, p.status, p.version_string,
+    p.project_id, p.display_name, p.description, p.status, p.major_version, p.minor_version, p.patch_version,
     p.last_modified_entity, p.last_modified_by, p.version_locked, p.created_at, p.updated_at;
 
 -- ============================================================================
@@ -754,6 +855,7 @@ $$ LANGUAGE plpgsql;
 CREATE INDEX idx_projects_status ON projects(status);
 CREATE INDEX idx_projects_version ON projects(major_version, minor_version, patch_version);
 CREATE INDEX idx_projects_version_locked ON projects(version_locked);
+CREATE INDEX idx_projects_created_at ON projects(created_at);
 
 -- Version history indexes
 CREATE INDEX idx_project_version_history_project_id ON project_version_history(project_id);
@@ -767,9 +869,30 @@ CREATE INDEX idx_columns_entity_version ON columns(entity_version);
 -- Other performance indexes
 CREATE INDEX idx_datasets_project_id ON datasets(project_id);
 CREATE INDEX idx_tables_project_id ON tables(project_id);
+CREATE INDEX idx_tables_dataset_id ON tables(dataset_id);
 CREATE INDEX idx_columns_table_id ON columns(table_id);
+CREATE INDEX idx_columns_type ON columns(column_type);
+CREATE INDEX idx_sql_functions_project_id ON sql_functions(project_id);
+CREATE INDEX idx_sql_functions_name ON sql_functions(name);
+CREATE INDEX idx_metrics_table_id ON metrics(table_id);
+CREATE INDEX idx_views_table_id ON views(table_id);
+CREATE INDEX idx_relationships_project_id ON relationships(project_id);
+CREATE INDEX idx_relationships_from_table ON relationships(from_table_id);
+CREATE INDEX idx_relationships_to_table ON relationships(to_table_id);
+CREATE INDEX idx_instructions_project_id ON instructions(project_id);
+CREATE INDEX idx_examples_project_id ON examples(project_id);
+CREATE INDEX idx_examples_definition_type ON examples(definition_type);
+CREATE INDEX idx_knowledge_base_project_id ON knowledge_base(project_id);
 CREATE INDEX idx_project_histories_project_id ON project_histories(project_id);
 CREATE INDEX idx_project_histories_entity ON project_histories(entity_type, entity_id);
+CREATE INDEX idx_project_histories_changed_at ON project_histories(created_at);
+CREATE INDEX idx_workflow_logs_project_id ON workflow_logs(project_id);
+CREATE INDEX idx_workflow_logs_action ON workflow_logs(action);
+CREATE INDEX idx_workflow_logs_created_at ON workflow_logs(created_at);
+CREATE INDEX idx_project_json_store_project_id ON project_json_store(project_id);
+CREATE INDEX idx_project_json_store_type ON project_json_store(json_type);
+CREATE INDEX idx_project_json_store_chroma_id ON project_json_store(chroma_document_id);
+CREATE INDEX idx_project_json_store_active ON project_json_store(is_active);
 
 -- ============================================================================
 -- SAMPLE PROJECT SETUP
@@ -777,4 +900,4 @@ CREATE INDEX idx_project_histories_entity ON project_histories(entity_type, enti
 
 -- Insert sample project with initial version
 INSERT INTO projects (project_id, display_name, description, created_by, status, last_modified_by)
-VALUES ('cornerstone', 'Cornerstone Training Analysis', 'Cornerstone OnDemand training records and completion tracking', 'system', 'active', 'system');
+VALUES ('cornerstone', 'Cornerstone Training Analysis', 'Cornerstone OnDemand training records and completion tracking', 'system', 'draft', 'system');

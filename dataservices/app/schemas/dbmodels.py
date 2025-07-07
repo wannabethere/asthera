@@ -62,6 +62,10 @@ class Project(Base, TimestampMixin):
     version_locked = Column(Boolean, default=False, nullable=False)
     json_metadata = Column(JSONB)
     
+    # Workflow tracking fields
+    draft_completed_at = Column(DateTime(timezone=True))
+    published_at = Column(DateTime(timezone=True))
+    
     # Relationships
     datasets = relationship("Dataset", back_populates="project", cascade="all, delete-orphan")
     tables = relationship("Table", back_populates="project", cascade="all, delete-orphan")

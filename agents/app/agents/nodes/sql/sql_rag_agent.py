@@ -782,7 +782,8 @@ Please provide your response in proper Markdown string format.
             You are a great data analyst. You are now given a task to expand original SQL from user input.
             
             ### INSTRUCTIONS ###
-            - Columns are given from the user's adjustment request
+            - Columns are mentioned from the user's adjustment request
+            - Please donot create a new table only use the schemas provided to you in the request.
             - Columns to be adjusted must belong to the given database schema; if no such column exists, keep sql empty string
             - You can add/delete/modify columns, add/delete/modify keywords such as DISTINCT or apply aggregate functions on columns
             
@@ -1437,20 +1438,19 @@ Please provide your response in proper Markdown string format.
         project_id = kwargs.pop('project_id', "")
         reasoning = kwargs.pop('reasoning', "")
         
-        if contexts is None:
-            schema_data = await self.retrieval_helper.get_table_names_and_schema_contexts(
-                query=original_query,
-                project_id=project_id,
-                table_retrieval={
-                    "table_retrieval_size": 10,
-                    "table_column_retrieval_size": 100,
-                    "allow_using_db_schemas_without_pruning": False
-                }
-            )
-            
-            schema_contexts = schema_data.get("schema_contexts", [])        
-        else:
-            schema_contexts = contexts
+       
+        schema_data = await self.retrieval_helper.get_table_names_and_schema_contexts(
+            query=original_query,
+            project_id=project_id,
+            table_retrieval={
+                "table_retrieval_size": 10,
+                "table_column_retrieval_size": 100,
+                "allow_using_db_schemas_without_pruning": False
+            }
+        )
+        
+        schema_contexts = schema_data.get("schema_contexts", [])        
+        
         
         expansion_result = await self._expand_sql_internal(query,  original_sql, schema_contexts, reasoning, original_query)
         
