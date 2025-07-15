@@ -1,0 +1,89 @@
+{
+  "reasoning_weight": 0.7,
+  "terminology_value": 0.03,
+  "length_score_thresholds": {
+    "long": {
+      "threshold": 50,
+      "score": 0.2
+    },
+    "medium": {
+      "threshold": 25,
+      "score": 0.15
+    },
+    "short": {
+      "threshold": 10,
+      "score": 0.1
+    },
+    "very_short": {
+      "score": 0.05
+    }
+  },
+  "operations": {
+    "cohort_analysis": {
+      "terms": [
+        "cohort",
+        "retention",
+        "churn",
+        "lifetime value",
+        "ltv",
+        "CohortPipe",
+        "from_dataframe",
+        "calculate_lifetime_value",
+        "form_behavioral_cohorts",
+        "behavior_column",
+        "cohort_column",
+        "date_column",
+        "user_id_column",
+        "value_column",
+        "time_period",
+        "max_periods",
+        "cumulative",
+        "transactions_df"
+      ],
+      "max_score": 0.3,
+      "min_match_threshold": 2
+    },
+    "segmentation": {
+      "terms": [
+        "segmentation",
+        "clustering",
+        "kmeans",
+        "dbscan",
+        "hierarchical",
+        "SegmentationPipe",
+        "from_dataframe",
+        "get_features",
+        "run_kmeans",
+        "run_dbscan",
+        "run_hierarchical",
+        "compare_algorithms",
+        "n_clusters",
+        "eps",
+        "min_samples",
+        "linkage",
+        "ward",
+        "segment_name"
+      ],
+      "max_score": 0.3,
+      "min_match_threshold": 2
+    }
+  },
+  "pipeline_indicators": [
+    "pipe(?:line)?",
+    "sequential",
+    "\\|",
+    "output.*feeds into",
+    "CohortPipe",
+    "SegmentationPipe",
+    "from_dataframe",
+    "calculate_lifetime_value",
+    "form_behavioral_cohorts",
+    "get_features",
+    "run_kmeans",
+    "run_dbscan",
+    "run_hierarchical",
+    "compare_algorithms"
+  ],
+  "pipeline_score_value": 0.06,
+  "pipeline_max_score": 0.3
+}
