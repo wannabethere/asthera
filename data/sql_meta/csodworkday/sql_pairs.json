@@ -1,0 +1,425 @@
+[
+    {
+      "categories": [],
+      "question": "How many trainings are assigned vs completed across different Divisions (Administration, Acme Products, Private Operations)?",
+      "sql": "SELECT Division, COUNT(*) as total_assigned, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as completed, COUNT(CASE WHEN Transcript_Status = 'Assigned' THEN 1 END) as still_assigned FROM csod_training_records WHERE Division IN ('Administration', 'Acme Products', 'Private Operations') GROUP BY Division ORDER BY Division",
+      "context": "Direct Visualization - Bar Chart. Compares assignment and completion counts across the three main divisions for performance comparison.",
+      "document": "cornerstone_training.mdl.json - training_completion_metrics",
+      "samples": [],
+      "instructions": "Count total assignments and completions by division to create comparative bar chart showing training activity across business units."
+    },
+    {
+      "categories": [],
+      "question": "What is the proportion of different Transcript Status (Assigned / Satisfied / Expired / Waived)?",
+      "sql": "SELECT Transcript_Status, COUNT(*) as count, (COUNT(*) * 100.0 / (SELECT COUNT(*) FROM csod_training_records)) as percentage FROM csod_training_records GROUP BY Transcript_Status ORDER BY count DESC",
+      "context": "Direct Visualization - Pie Chart. Shows distribution of training transcript statuses for overall program health assessment.",
+      "document": "cornerstone_training.mdl.json - training_completion_metrics",
+      "samples": [],
+      "instructions": "Calculate percentage distribution of all transcript statuses to visualize training program status breakdown."
+    },
+    {
+      "categories": [],
+      "question": "How many employees have completed the training on time or Late per Division?",
+      "sql": "SELECT Division, COUNT(CASE WHEN Transcript_Status = 'Satisfied' AND is_satisfied_late = false THEN 1 END) as on_time_completions, COUNT(CASE WHEN Transcript_Status = 'Satisfied' AND is_satisfied_late = true THEN 1 END) as late_completions FROM csod_training_records GROUP BY Division ORDER BY Division",
+      "context": "Direct Visualization - Bar/Column Chart. Compares on-time vs late completion patterns across divisions for timeliness analysis.",
+      "document": "cornerstone_training.mdl.json - training_completion_metrics",
+      "samples": [],
+      "instructions": "Separate completed trainings into on-time and late categories by division to analyze completion timeliness patterns."
+    },
+    {
+      "categories": [],
+      "question": "How has the number of completed trainings changed month by month? (using CompletionDate)",
+      "sql": "SELECT FORMAT(Completed_Date, 'yyyy-MM') as completion_month, COUNT(*) as completions FROM csod_training_records WHERE Completed_Date IS NOT NULL GROUP BY FORMAT(Completed_Date, 'yyyy-MM') ORDER BY completion_month",
+      "context": "Direct Visualization - Timeline/Line Chart. Shows monthly completion trends to identify seasonality and training program momentum.",
+      "document": "cornerstone_training.mdl.json - training_completion_metrics",
+      "samples": [],
+      "instructions": "Aggregate completions by month to create time series data for trend analysis and pattern identification."
+    },
+    {
+      "categories": [],
+      "question": "Stack training activities by ActivityType and show their Training Statuses (Assigned, Completed, Expired).",
+      "sql": "SELECT Training_Type, Transcript_Status, COUNT(*) as count FROM csod_training_records GROUP BY Training_Type, Transcript_Status ORDER BY Training_Type, Transcript_Status",
+      "context": "Direct Visualization - Stacked Bar Chart. Shows status distribution within each training type for detailed program analysis.",
+      "document": "cornerstone_training.mdl.json - training_completion_metrics",
+      "samples": [],
+      "instructions": "Create cross-tabulation of training types and statuses for stacked visualization showing completion patterns by activity type."
+    },
+    {
+      "categories": [],
+      "question": "Show a heatmap of training completions by Division vs Position.",
+      "sql": "SELECT Division, Position, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as completions, COUNT(*) as total_assignments FROM csod_training_records GROUP BY Division, Position ORDER BY Division, Position",
+      "context": "Direct Visualization - Heatmap. Creates matrix data for heatmap showing completion intensity across division-position combinations.",
+      "document": "cornerstone_training.mdl.json - training_completion_metrics",
+      "samples": [],
+      "instructions": "Generate completion counts by division-position matrix for heatmap visualization of training activity distribution."
+    },
+    {
+      "categories": [],
+      "question": "Which 5 training activities have the highest number of completions?",
+      "sql": "SELECT Training_Title, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as completion_count, COUNT(*) as total_assignments, (COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)) as completion_rate FROM csod_training_records GROUP BY Training_Title ORDER BY completion_count DESC LIMIT 5",
+      "context": "Direct Visualization - Top N. Identifies most successful training activities by completion volume for program optimization.",
+      "document": "cornerstone_training.mdl.json - training_activity_analytics",
+      "samples": [],
+      "instructions": "Rank training activities by completion count and return top 5 with completion rates for success analysis."
+    },
+    {
+      "categories": [],
+      "question": "What percentage of assigned trainings have been completed?",
+      "sql": "SELECT (COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)) as overall_completion_rate FROM csod_training_records",
+      "context": "Maths/Analytics - Completion Rate. Calculates overall training program completion rate as key performance indicator.",
+      "document": "cornerstone_training.mdl.json - training_completion_metrics",
+      "samples": [],
+      "instructions": "Calculate global completion rate by dividing satisfied trainings by total assignments for program effectiveness measurement."
+    },
+    {
+      "categories": [],
+      "question": "On average, how many days does it take from AssignmentDate to CompletionDate?",
+      "sql": "SELECT AVG(completion_days) as avg_completion_days, MIN(completion_days) as min_days, MAX(completion_days) as max_days FROM csod_training_records WHERE completion_days IS NOT NULL AND completion_days >= 0",
+      "context": "Maths/Analytics - Average Completion Time. Measures training completion velocity for process optimization and resource planning.",
+      "document": "cornerstone_training.mdl.json - training_timeliness_metrics",
+      "samples": [],
+      "instructions": "Calculate average time from assignment to completion using calculated completion_days field, excluding negative values."
+    },
+    {
+      "categories": [],
+      "question": "How many trainings were completed after their DueDate (late completions)?",
+      "sql": "SELECT COUNT(*) as late_completions, (COUNT(*) * 100.0 / (SELECT COUNT(*) FROM csod_training_records WHERE Transcript_Status = 'Satisfied')) as late_completion_rate FROM csod_training_records WHERE is_satisfied_late = true",
+      "context": "Maths/Analytics - Overdue Analysis. Analyzes late completion patterns to identify compliance and process issues.",
+      "document": "cornerstone_training.mdl.json - training_timeliness_metrics",
+      "samples": [],
+      "instructions": "Count trainings completed after due date and calculate percentage of total completions for timeliness assessment."
+    },
+    {
+      "categories": [],
+      "question": "Which division has the highest completion percentage?",
+      "sql": "SELECT Division, COUNT(*) as total_assignments, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as completions, (COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)) as completion_rate FROM csod_training_records GROUP BY Division ORDER BY completion_rate DESC",
+      "context": "Maths/Analytics - Division Comparison. Compares training performance across divisions to identify best practices and problem areas.",
+      "document": "cornerstone_training.mdl.json - division_comparison_metrics",
+      "samples": [],
+      "instructions": "Calculate completion rates by division and rank to identify highest performing business unit."
+    },
+    {
+      "categories": [],
+      "question": "How many trainings have expired without being completed?",
+      "sql": "SELECT COUNT(*) as expired_trainings, (COUNT(*) * 100.0 / (SELECT COUNT(*) FROM csod_training_records)) as expired_rate FROM csod_training_records WHERE Transcript_Status = 'Expired'",
+      "context": "Maths/Analytics - Expired Trainings. Measures training program waste and identifies potential process improvements.",
+      "document": "cornerstone_training.mdl.json - training_completion_metrics",
+      "samples": [],
+      "instructions": "Count trainings with expired status and calculate percentage of total assignments for waste analysis."
+    },
+    {
+      "categories": [],
+      "question": "Employees who were assigned trainings in the same month - how many completed over time?",
+      "sql": "SELECT assignment_month, COUNT(*) as total_assigned, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as completed, (COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)) as completion_rate FROM csod_training_records GROUP BY assignment_month ORDER BY assignment_month",
+      "context": "Maths/Analytics - Cohort Analysis. Analyzes completion patterns for training cohorts assigned in the same time period.",
+      "document": "cornerstone_training.mdl.json - cohort_completion_analysis",
+      "samples": [],
+      "instructions": "Group by assignment month to analyze completion rates for each monthly cohort, showing cohort performance over time."
+    },
+    {
+      "categories": [],
+      "question": "Which managers have the highest or lowest team compliance?",
+      "sql": "SELECT Manager_Name, COUNT(DISTINCT User_ID) as team_size, COUNT(*) as total_assignments, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as completions, (COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)) as team_completion_rate FROM csod_training_records WHERE Manager_Name IS NOT NULL GROUP BY Manager_Name ORDER BY team_completion_rate DESC",
+      "context": "Maths/Analytics - Manager View. Identifies manager performance in training compliance for coaching and recognition opportunities.",
+      "document": "cornerstone_training.mdl.json - manager_oversight_metrics",
+      "samples": [],
+      "instructions": "Calculate team completion rates by manager, showing team size and performance metrics for management oversight."
+    },
+    {
+      "categories": [],
+      "question": "What is the overall Completion rate across all Assignments?",
+      "sql": "SELECT COUNT(DISTINCT User_ID) as total_employees, COUNT(*) as total_assignments, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as completions, (COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)) as completion_rate FROM csod_training_records",
+      "context": "Dashboard Widget - Employee Training Completion Insights. Overall program health metrics for executive dashboard.",
+      "document": "cornerstone_training.mdl.json - training_completion_metrics",
+      "samples": [],
+      "instructions": "Calculate comprehensive completion statistics including employee count, assignments, and completion rate for program overview."
+    },
+    {
+      "categories": [],
+      "question": "Which Division has the lowest compliance rates?",
+      "sql": "SELECT Division, COUNT(*) as assignments, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as completions, (COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)) as compliance_rate FROM csod_training_records GROUP BY Division ORDER BY compliance_rate ASC",
+      "context": "Dashboard Widget - Employee Training Completion Insights. Identifies divisions needing additional support or intervention.",
+      "document": "cornerstone_training.mdl.json - division_comparison_metrics",
+      "samples": [],
+      "instructions": "Rank divisions by completion rate ascending to identify lowest performing areas requiring attention."
+    },
+    {
+      "categories": [],
+      "question": "How does completion rate vary by Position (e.g., IT vs. Sales)?",
+      "sql": "SELECT Position, COUNT(*) as assignments, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as completions, (COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)) as completion_rate FROM csod_training_records GROUP BY Position ORDER BY completion_rate DESC",
+      "context": "Dashboard Widget - Employee Training Completion Insights. Analyzes training effectiveness across different job roles.",
+      "document": "cornerstone_training.mdl.json - role_based_effectiveness_metrics",
+      "samples": [],
+      "instructions": "Compare completion rates across positions to identify role-specific training challenges or successes."
+    },
+    {
+      "categories": [],
+      "question": "Which managers oversee the most past due employees?",
+      "sql": "SELECT Manager_Name, COUNT(DISTINCT User_ID) as past_due_employees, COUNT(*) as overdue_assignments FROM csod_training_records WHERE is_overdue = true AND Manager_Name IS NOT NULL GROUP BY Manager_Name ORDER BY past_due_employees DESC",
+      "context": "Dashboard Widget - Employee Training Completion Insights. Identifies managers needing support with team training compliance.",
+      "document": "cornerstone_training.mdl.json - manager_oversight_metrics",
+      "samples": [],
+      "instructions": "Count unique employees with overdue trainings by manager to identify teams needing intervention."
+    },
+    {
+      "categories": [],
+      "question": "Which Division has the highest percentage of late submissions?",
+      "sql": "SELECT Division, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as total_completions, COUNT(CASE WHEN is_satisfied_late = true THEN 1 END) as late_completions, (COUNT(CASE WHEN is_satisfied_late = true THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END), 0)) as late_submission_rate FROM csod_training_records GROUP BY Division ORDER BY late_submission_rate DESC",
+      "context": "Dashboard Widget - Training Timeliness Audit. Identifies divisions with time management challenges in training completion.",
+      "document": "cornerstone_training.mdl.json - training_timeliness_metrics",
+      "samples": [],
+      "instructions": "Calculate late submission rates by division to identify areas with timeliness issues."
+    },
+    {
+      "categories": [],
+      "question": "How many active training assignments are overdue by more than 30 days?",
+      "sql": "SELECT COUNT(*) as overdue_30_days, COUNT(DISTINCT User_ID) as affected_employees FROM csod_training_records WHERE days_overdue > 30",
+      "context": "Dashboard Widget - Training Timeliness Audit. Identifies severely overdue assignments requiring immediate attention.",
+      "document": "cornerstone_training.mdl.json - training_timeliness_metrics",
+      "samples": [],
+      "instructions": "Count assignments overdue by more than 30 days using calculated days_overdue field for escalation prioritization."
+    },
+    {
+      "categories": [],
+      "question": "Which ActivityType (e.g., 'Compliance Course') is most frequently delayed?",
+      "sql": "SELECT Training_Type, COUNT(*) as total_assignments, COUNT(CASE WHEN is_satisfied_late = true THEN 1 END) as late_completions, (COUNT(CASE WHEN is_satisfied_late = true THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END), 0)) as late_rate FROM csod_training_records GROUP BY Training_Type ORDER BY late_rate DESC",
+      "context": "Dashboard Widget - Training Timeliness Audit. Identifies training types with inherent completion challenges.",
+      "document": "cornerstone_training.mdl.json - training_timeliness_metrics",
+      "samples": [],
+      "instructions": "Analyze late completion rates by training type to identify content or delivery issues."
+    },
+    {
+      "categories": [],
+      "question": "Do certain managers correlate with higher late submission rates?",
+      "sql": "SELECT Manager_Name, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as total_completions, COUNT(CASE WHEN is_satisfied_late = true THEN 1 END) as late_completions, (COUNT(CASE WHEN is_satisfied_late = true THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END), 0)) as late_submission_rate FROM csod_training_records WHERE Manager_Name IS NOT NULL GROUP BY Manager_Name ORDER BY late_submission_rate DESC",
+      "context": "Dashboard Widget - Training Timeliness Audit. Analyzes manager influence on team training timeliness.",
+      "document": "cornerstone_training.mdl.json - manager_oversight_metrics",
+      "samples": [],
+      "instructions": "Calculate late submission rates by manager to identify management practices affecting timeliness."
+    },
+    {
+      "categories": [],
+      "question": "Which manager's team has the highest past due rate?",
+      "sql": "SELECT Manager_Name, COUNT(*) as total_assignments, COUNT(CASE WHEN is_overdue = true THEN 1 END) as overdue_assignments, (COUNT(CASE WHEN is_overdue = true THEN 1 END) * 100.0 / COUNT(*)) as past_due_rate FROM csod_training_records WHERE Manager_Name IS NOT NULL GROUP BY Manager_Name ORDER BY past_due_rate DESC",
+      "context": "Dashboard Widget - Manager Training Oversight Dashboard. Identifies managers with highest team non-compliance rates.",
+      "document": "cornerstone_training.mdl.json - manager_oversight_metrics",
+      "samples": [],
+      "instructions": "Calculate past due rates by manager team to identify management oversight issues."
+    },
+    {
+      "categories": [],
+      "question": "Do managers with larger teams correlate with lower completions?",
+      "sql": "SELECT Manager_Name, COUNT(DISTINCT User_ID) as team_size, COUNT(*) as total_assignments, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as completions, (COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)) as completion_rate FROM csod_training_records WHERE Manager_Name IS NOT NULL GROUP BY Manager_Name ORDER BY team_size DESC",
+      "context": "Dashboard Widget - Manager Training Oversight Dashboard. Analyzes relationship between team size and training management effectiveness.",
+      "document": "cornerstone_training.mdl.json - manager_oversight_metrics",
+      "samples": [],
+      "instructions": "Show team size vs completion rate correlation to understand management span of control impact on training."
+    },
+    {
+      "categories": [],
+      "question": "Which job roles take the longest to complete assignments on average?",
+      "sql": "SELECT Position, COUNT(*) as completed_assignments, AVG(completion_days) as avg_completion_days, MIN(completion_days) as min_days, MAX(completion_days) as max_days FROM csod_training_records WHERE completion_days IS NOT NULL AND completion_days >= 0 GROUP BY Position ORDER BY avg_completion_days DESC",
+      "context": "Dashboard Widget - Role-Based Training Effectiveness. Identifies positions with training completion challenges.",
+      "document": "cornerstone_training.mdl.json - role_based_effectiveness_metrics",
+      "samples": [],
+      "instructions": "Calculate average completion time by position to identify roles needing additional training support or time allocation."
+    },
+    {
+      "categories": [],
+      "question": "Are there monthly/quarterly spikes in assignment volumes (AssignmentDate)?",
+      "sql": "SELECT FORMAT(Assigned_Date, 'yyyy-MM') as assignment_month, COUNT(*) as assignments, COUNT(DISTINCT User_ID) as unique_assignees FROM csod_training_records WHERE Assigned_Date IS NOT NULL GROUP BY FORMAT(Assigned_Date, 'yyyy-MM') ORDER BY assignment_month",
+      "context": "Dashboard Widget - Historical Training Behavior Analysis. Identifies seasonal patterns in training assignment scheduling.",
+      "document": "cornerstone_training.mdl.json - quarterly_assignment_volume",
+      "samples": [],
+      "instructions": "Analyze monthly assignment volumes to identify spikes, patterns, and resource planning opportunities."
+    },
+    {
+      "categories": [],
+      "question": "Has overall completion rate improved since last year?",
+      "sql": "SELECT YEAR(Assigned_Date) as assignment_year, COUNT(*) as assignments, COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) as completions, (COUNT(CASE WHEN Transcript_Status = 'Satisfied' THEN 1 END) * 100.0 / COUNT(*)) as completion_rate FROM csod_training_records WHERE Assigned_Date IS NOT NULL GROUP BY YEAR(Assigned_Date) ORDER BY assignment_year",
+      "context": "Dashboard Widget - Historical Training Behavior Analysis. Tracks year-over-year improvement in training program effectiveness.",
+      "document": "cornerstone_training.mdl.json - training_completion_metrics",
+      "samples": [],
+      "instructions": "Compare completion rates across years to measure program improvement and identify trends."
+    },
+    {
+      "categories": [],
+      "question": "What is the average proficiency improvement across all skill categories?",
+      "sql": "SELECT skill_category, AVG(proficiency_improvement) as avg_improvement, COUNT(*) as total_assessments, COUNT(CASE WHEN proficiency_improvement > 0 THEN 1 END) as improved_skills FROM workday_employee_skills_development WHERE proficiency_improvement IS NOT NULL GROUP BY skill_category ORDER BY avg_improvement DESC",
+      "context": "Direct Visualization - Bar Chart. Shows skill development effectiveness by category for training program optimization.",
+      "document": "workday_learning_development.mdl.json - skills_development_metrics",
+      "samples": [],
+      "instructions": "Calculate average proficiency gains by skill category to identify most effective training areas and visualize improvement patterns."
+    },
+    {
+      "categories": [],
+      "question": "How many employees have achieved their target proficiency levels by division?",
+      "sql": "SELECT division, COUNT(DISTINCT employee_id) as total_employees, COUNT(DISTINCT CASE WHEN is_skill_proficient = true THEN employee_id END) as proficient_employees, (COUNT(DISTINCT CASE WHEN is_skill_proficient = true THEN employee_id END) * 100.0 / COUNT(DISTINCT employee_id)) as proficiency_achievement_rate FROM workday_employee_skills_development GROUP BY division ORDER BY proficiency_achievement_rate DESC",
+      "context": "Direct Visualization - Column Chart. Compares skill proficiency achievement across divisions for organizational capability assessment.",
+      "document": "workday_learning_development.mdl.json - skills_development_metrics",
+      "samples": [],
+      "instructions": "Measure target proficiency achievement rates by division to identify areas of strength and improvement opportunities."
+    },
+    {
+      "categories": [],
+      "question": "Show a heatmap of skills gaps by division and skill criticality.",
+      "sql": "SELECT division, skill_criticality, COUNT(*) as skills_assessed, AVG(target_gap) as avg_gap, COUNT(CASE WHEN target_gap > 0 THEN 1 END) as skills_with_gaps FROM workday_employee_skills_development WHERE target_gap IS NOT NULL GROUP BY division, skill_criticality ORDER BY division, skill_criticality",
+      "context": "Direct Visualization - Heatmap. Creates matrix showing skill gap intensity across division-criticality combinations for strategic planning.",
+      "document": "workday_learning_development.mdl.json - competency_gap_analysis",
+      "samples": [],
+      "instructions": "Generate gap analysis data by division and criticality for heatmap visualization of organizational skill priorities."
+    },
+    {
+      "categories": [],
+      "question": "Which training curricula deliver the highest ROI in terms of skill development?",
+      "sql": "SELECT training_curriculum_title, skill_category, COUNT(*) as participants, AVG(proficiency_improvement) as avg_improvement, AVG(training_cost) as avg_cost, AVG(roi_indicator) as avg_roi FROM workday_employee_skills_development WHERE training_curriculum_title IS NOT NULL AND proficiency_improvement > 0 GROUP BY training_curriculum_title, skill_category ORDER BY avg_roi DESC LIMIT 10",
+      "context": "Direct Visualization - Top N. Identifies highest ROI training programs for budget allocation and program expansion decisions.",
+      "document": "workday_learning_development.mdl.json - training_roi_metrics",
+      "samples": [],
+      "instructions": "Rank training curricula by ROI indicator to identify most cost-effective skill development programs."
+    },
+    {
+      "categories": [],
+      "question": "What percentage of critical skills have gaps across the organization?",
+      "sql": "SELECT skill_criticality, COUNT(*) as total_skills, COUNT(CASE WHEN target_gap > 0 THEN 1 END) as skills_with_gaps, (COUNT(CASE WHEN target_gap > 0 THEN 1 END) * 100.0 / COUNT(*)) as gap_percentage FROM workday_employee_skills_development WHERE target_gap IS NOT NULL GROUP BY skill_criticality ORDER BY CASE skill_criticality WHEN 'Critical' THEN 1 WHEN 'Important' THEN 2 ELSE 3 END",
+      "context": "Maths/Analytics - Gap Analysis. Calculates percentage of skills with gaps by criticality level for risk assessment.",
+      "document": "workday_learning_development.mdl.json - competency_gap_analysis",
+      "samples": [],
+      "instructions": "Calculate skill gap percentages by criticality to prioritize training investments and identify organizational risks."
+    },
+    {
+      "categories": [],
+      "question": "How many certifications are expiring in the next 6 months?",
+      "sql": "SELECT COUNT(*) as expiring_certifications, COUNT(DISTINCT employee_id) as affected_employees, skill_category, certification_earned FROM workday_employee_skills_development WHERE certification_expiry_date BETWEEN CURRENT_DATE AND DATEADD(month, 6, CURRENT_DATE) GROUP BY skill_category, certification_earned ORDER BY COUNT(*) DESC",
+      "context": "Maths/Analytics - Certification Management. Identifies upcoming certification renewals for compliance planning.",
+      "document": "workday_learning_development.mdl.json - skills_development_metrics",
+      "samples": [],
+      "instructions": "Count certifications expiring within 6 months by category to plan renewal training and maintain compliance."
+    },
+    {
+      "categories": [],
+      "question": "What is the average time to achieve target proficiency by job level?",
+      "sql": "SELECT job_level, AVG(DATEDIFF(day, hire_date, skill_assessment_date)) as avg_days_to_proficiency, COUNT(*) as assessments, AVG(proficiency_improvement) as avg_improvement FROM workday_employee_skills_development WHERE is_skill_proficient = true AND skill_assessment_date IS NOT NULL GROUP BY job_level ORDER BY avg_days_to_proficiency",
+      "context": "Maths/Analytics - Development Timeline. Measures skill development velocity by job level for career planning.",
+      "document": "workday_learning_development.mdl.json - skills_development_metrics",
+      "samples": [],
+      "instructions": "Calculate time from hire to proficiency achievement by job level to optimize onboarding and development timelines."
+    },
+    {
+      "categories": [],
+      "question": "Which managers have teams with the highest skill development ROI?",
+      "sql": "SELECT manager_name, division, COUNT(DISTINCT employee_id) as team_size, AVG(proficiency_improvement) as avg_team_improvement, AVG(training_cost) as avg_team_cost, AVG(roi_indicator) as team_roi FROM workday_employee_skills_development WHERE manager_name IS NOT NULL GROUP BY manager_name, division ORDER BY team_roi DESC",
+      "context": "Maths/Analytics - Manager Effectiveness. Identifies managers excelling at team skill development for best practice sharing.",
+      "document": "workday_learning_development.mdl.json - training_roi_metrics",
+      "samples": [],
+      "instructions": "Rank managers by team skill development ROI to identify coaching opportunities and recognize high performers."
+    },
+    {
+      "categories": [],
+      "question": "What is the overall skills proficiency achievement rate?",
+      "sql": "SELECT COUNT(*) as total_skill_assessments, COUNT(CASE WHEN is_skill_proficient = true THEN 1 END) as skills_meeting_target, (COUNT(CASE WHEN is_skill_proficient = true THEN 1 END) * 100.0 / COUNT(*)) as overall_proficiency_rate, COUNT(DISTINCT employee_id) as employees_assessed FROM workday_employee_skills_development",
+      "context": "Dashboard Widget - Skills Development Overview. Key performance indicator for organizational skill capability.",
+      "document": "workday_learning_development.mdl.json - skills_development_metrics",
+      "samples": [],
+      "instructions": "Calculate organization-wide skill proficiency achievement rate as primary skills development KPI."
+    },
+    {
+      "categories": [],
+      "question": "Which division has the largest skills investment but lowest improvement?",
+      "sql": "SELECT division, SUM(training_cost) as total_investment, AVG(proficiency_improvement) as avg_improvement, COUNT(DISTINCT employee_id) as employees, (SUM(training_cost) / COUNT(DISTINCT employee_id)) as cost_per_employee FROM workday_employee_skills_development GROUP BY division ORDER BY total_investment DESC, avg_improvement ASC",
+      "context": "Dashboard Widget - Skills Development Overview. Identifies divisions with potential training efficiency issues.",
+      "document": "workday_learning_development.mdl.json - training_roi_metrics",
+      "samples": [],
+      "instructions": "Compare investment levels with improvement outcomes by division to identify training program inefficiencies."
+    },
+    {
+      "categories": [],
+      "question": "How many employees are ready for succession planning roles?",
+      "sql": "SELECT succession_plan_role, COUNT(DISTINCT employee_id) as total_candidates, COUNT(DISTINCT CASE WHEN is_skill_proficient = true THEN employee_id END) as ready_candidates, (COUNT(DISTINCT CASE WHEN is_skill_proficient = true THEN employee_id END) * 100.0 / COUNT(DISTINCT employee_id)) as readiness_rate FROM workday_employee_skills_development WHERE succession_plan_role IS NOT NULL GROUP BY succession_plan_role ORDER BY readiness_rate DESC",
+      "context": "Dashboard Widget - Skills Development Overview. Measures succession planning readiness for leadership continuity.",
+      "document": "workday_learning_development.mdl.json - succession_readiness_metrics",
+      "samples": [],
+      "instructions": "Calculate succession readiness rates by target role to assess leadership pipeline health."
+    },
+    {
+      "categories": [],
+      "question": "Which critical skills have the largest gaps organization-wide?",
+      "sql": "SELECT skill_name, skill_category, COUNT(*) as employees_assessed, AVG(target_gap) as avg_gap, COUNT(CASE WHEN target_gap > 0 THEN 1 END) as employees_with_gaps FROM workday_employee_skills_development WHERE skill_criticality = 'Critical' AND target_gap IS NOT NULL GROUP BY skill_name, skill_category ORDER BY avg_gap DESC, employees_with_gaps DESC",
+      "context": "Dashboard Widget - Critical Skills Gap Alert. Identifies priority skills requiring immediate training intervention.",
+      "document": "workday_learning_development.mdl.json - competency_gap_analysis",
+      "samples": [],
+      "instructions": "Prioritize critical skills with largest gaps for urgent training program development and resource allocation."
+    },
+    {
+      "categories": [],
+      "question": "What percentage of employees have expired certifications?",
+      "sql": "SELECT COUNT(DISTINCT employee_id) as employees_with_certifications, COUNT(DISTINCT CASE WHEN certification_status = 'Expired' THEN employee_id END) as employees_with_expired_certs, (COUNT(DISTINCT CASE WHEN certification_status = 'Expired' THEN employee_id END) * 100.0 / COUNT(DISTINCT employee_id)) as expired_certification_rate FROM workday_employee_skills_development WHERE certification_earned IS NOT NULL",
+      "context": "Dashboard Widget - Certification Compliance. Monitors certification compliance rates for regulatory requirements.",
+      "document": "workday_learning_development.mdl.json - skills_development_metrics",
+      "samples": [],
+      "instructions": "Calculate expired certification rates to ensure compliance and identify renewal training needs."
+    },
+    {
+      "categories": [],
+      "question": "Which job titles show the fastest skill development progression?",
+      "sql": "SELECT job_title, COUNT(*) as assessments, AVG(proficiency_improvement) as avg_improvement, AVG(DATEDIFF(day, hire_date, skill_assessment_date)) as avg_development_time, COUNT(CASE WHEN proficiency_improvement > 0 THEN 1 END) as improved_assessments FROM workday_employee_skills_development WHERE proficiency_improvement IS NOT NULL GROUP BY job_title ORDER BY avg_improvement DESC",
+      "context": "Dashboard Widget - Role-Based Development Analytics. Identifies roles with effective skill development patterns.",
+      "document": "workday_learning_development.mdl.json - skills_development_metrics",
+      "samples": [],
+      "instructions": "Analyze skill development speed by job title to optimize role-specific training approaches."
+    },
+    {
+      "categories": [],
+      "question": "How does training cost correlate with proficiency improvement?",
+      "sql": "SELECT CASE WHEN training_cost < 1000 THEN 'Low Cost (<$1K)' WHEN training_cost < 5000 THEN 'Medium Cost ($1K-$5K)' ELSE 'High Cost (>$5K)' END as cost_tier, COUNT(*) as assessments, AVG(proficiency_improvement) as avg_improvement, AVG(training_cost) as avg_cost, AVG(roi_indicator) as avg_roi FROM workday_employee_skills_development WHERE training_cost > 0 AND proficiency_improvement IS NOT NULL GROUP BY CASE WHEN training_cost < 1000 THEN 'Low Cost (<$1K)' WHEN training_cost < 5000 THEN 'Medium Cost ($1K-$5K)' ELSE 'High Cost (>$5K)' END ORDER BY avg_cost",
+      "context": "Dashboard Widget - Training Investment Analysis. Analyzes cost-effectiveness across different investment levels.",
+      "document": "workday_learning_development.mdl.json - training_roi_metrics",
+      "samples": [],
+      "instructions": "Segment training by cost tiers to understand investment vs. outcome relationships for budget optimization."
+    },
+    {
+      "categories": [],
+      "question": "Which competency frameworks show the highest success rates?",
+      "sql": "SELECT competency_framework, COUNT(*) as total_assessments, COUNT(CASE WHEN is_skill_proficient = true THEN 1 END) as successful_assessments, (COUNT(CASE WHEN is_skill_proficient = true THEN 1 END) * 100.0 / COUNT(*)) as success_rate, AVG(proficiency_improvement) as avg_improvement FROM workday_employee_skills_development WHERE competency_framework IS NOT NULL GROUP BY competency_framework ORDER BY success_rate DESC",
+      "context": "Dashboard Widget - Competency Framework Effectiveness. Evaluates different competency frameworks for program optimization.",
+      "document": "workday_learning_development.mdl.json - skills_development_metrics",
+      "samples": [],
+      "instructions": "Compare competency framework effectiveness to identify best practices and optimize skill development approaches."
+    },
+    {
+      "categories": [],
+      "question": "How many high-potential employees (top performers) have skill gaps in critical areas?",
+      "sql": "SELECT division, COUNT(DISTINCT employee_id) as high_performers, COUNT(DISTINCT CASE WHEN target_gap > 0 AND skill_criticality = 'Critical' THEN employee_id END) as high_performers_with_critical_gaps, (COUNT(DISTINCT CASE WHEN target_gap > 0 AND skill_criticality = 'Critical' THEN employee_id END) * 100.0 / COUNT(DISTINCT employee_id)) as critical_gap_rate FROM workday_employee_skills_development WHERE performance_rating >= 4.0 GROUP BY division ORDER BY critical_gap_rate DESC",
+      "context": "Dashboard Widget - High Potential Development. Identifies skill development needs for top performers.",
+      "document": "workday_learning_development.mdl.json - competency_gap_analysis",
+      "samples": [],
+      "instructions": "Analyze critical skill gaps among high performers to prioritize leadership development investments."
+    },
+    {
+      "categories": [],
+      "question": "What is the trend in skill proficiency improvements over the last 12 months?",
+      "sql": "SELECT FORMAT(skill_assessment_date, 'yyyy-MM') as assessment_month, COUNT(*) as assessments, AVG(proficiency_improvement) as avg_improvement, COUNT(CASE WHEN proficiency_improvement > 0 THEN 1 END) as positive_improvements FROM workday_employee_skills_development WHERE skill_assessment_date >= DATEADD(month, -12, CURRENT_DATE) GROUP BY FORMAT(skill_assessment_date, 'yyyy-MM') ORDER BY assessment_month",
+      "context": "Dashboard Widget - Skills Development Trend. Tracks monthly skill development momentum for program evaluation.",
+      "document": "workday_learning_development.mdl.json - skills_development_metrics",
+      "samples": [],
+      "instructions": "Monitor monthly skill improvement trends to evaluate program effectiveness and identify seasonal patterns."
+    },
+    {
+      "categories": [],
+      "question": "Which assessment methods produce the most reliable skill measurements?",
+      "sql": "SELECT assessment_method, COUNT(*) as total_assessments, AVG(proficiency_improvement) as avg_improvement, COUNT(CASE WHEN proficiency_improvement > 0 THEN 1 END) as positive_assessments, (COUNT(CASE WHEN proficiency_improvement > 0 THEN 1 END) * 100.0 / COUNT(*)) as positive_rate FROM workday_employee_skills_development GROUP BY assessment_method ORDER BY positive_rate DESC, avg_improvement DESC",
+      "context": "Dashboard Widget - Assessment Method Analysis. Evaluates different skill assessment approaches for quality improvement.",
+      "document": "workday_learning_development.mdl.json - skills_development_metrics",
+      "samples": [],
+      "instructions": "Compare assessment method effectiveness to optimize skill evaluation processes and ensure measurement quality."
+    },
+    {
+      "categories": [],
+      "question": "How does employee tenure correlate with skill development success?",
+      "sql": "SELECT CASE WHEN tenure_months < 12 THEN 'New (0-1 year)' WHEN tenure_months < 36 THEN 'Developing (1-3 years)' WHEN tenure_months < 60 THEN 'Experienced (3-5 years)' ELSE 'Veteran (5+ years)' END as tenure_group, COUNT(*) as assessments, AVG(proficiency_improvement) as avg_improvement, COUNT(CASE WHEN is_skill_proficient = true THEN 1 END) as target_achieved, (COUNT(CASE WHEN is_skill_proficient = true THEN 1 END) * 100.0 / COUNT(*)) as achievement_rate FROM workday_employee_skills_development GROUP BY CASE WHEN tenure_months < 12 THEN 'New (0-1 year)' WHEN tenure_months < 36 THEN 'Developing (1-3 years)' WHEN tenure_months < 60 THEN 'Experienced (3-5 years)' ELSE 'Veteran (5+ years)' END ORDER BY tenure_months",
+      "context": "Dashboard Widget - Tenure Impact Analysis. Analyzes how employee experience affects skill development outcomes.",
+      "document": "workday_learning_development.mdl.json - skills_development_metrics",
+      "samples": [],
+      "instructions": "Segment skill development success by tenure to understand experience-based learning patterns and optimize training approaches."
+    }
+  ]

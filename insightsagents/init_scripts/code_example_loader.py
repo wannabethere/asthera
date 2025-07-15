@@ -5,10 +5,10 @@ from langchain_core.documents import Document
 from pathlib import Path
 import chromadb
 from langchain.schema import HumanMessage, SystemMessage
-from genimel.services.documents import DocumentChromaStore, CHROMA_STORE_PATH, create_langchain_doc_util
+from app.storage.documents import DocumentChromaStore, CHROMA_STORE_PATH, create_langchain_doc_util
 
 #from chatbot.multiagent_planners.nodes.recommender_agent import RetrievalFunctionsAgent
-from genimel.agents.utils.agent_utils import  extract_insights_nb
+from app.utils.insight_utils import  extract_insights_nb
 from langchain_openai import ChatOpenAI
 
 class CodeExampleLoader:
@@ -237,7 +237,113 @@ class CodeFunctionLoader:
             print(f"Error processing directory {self.directory_path}: {e}")
             
         return all_documents
+
+class UsageExampleLoader:
+    """
+    Loads usage examples from JSON files and creates Document objects.
+    """
+    def __init__(self, base_path: str = "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/meta/usage_examples"):
+        """
+        Initialize the usage example loader.
+        
+        Args:
+            base_path (str): Base path to the usage examples directory
+        """
+        self.base_path = Path(base_path)
+        if not self.base_path.exists():
+            raise ValueError(f"Base path {base_path} does not exist")
     
+    def load_examples(self) -> List[Document]:
+        """
+        Load all usage examples from JSON files and convert them to LangChain Documents.
+        
+        Returns:
+            List[Document]: List of LangChain Documents containing usage examples
+        """
+        documents = []
+        
+        # Get all JSON files in the directory
+        json_files = list(self.base_path.glob("*.json"))
+        
+        for json_file in json_files:
+            if json_file.stat().st_size == 0:  # Skip empty files
+                continue
+            
+            try:
+                # Read and parse JSON file
+                with open(json_file, 'r') as f:
+                    examples = json.load(f)
+                print(f"Usage examples loaded from {json_file} length: {len(examples)}")
+                
+                # Convert each example to a Document
+                for example in examples:
+                    if isinstance(example, dict):
+                        # Create page content from example data
+                        page_content = json.dumps({
+                            "example": example.get("example", ""),
+                            "description": example.get("description", ""),
+                            "function_name": example.get("function_name", ""),
+                            "category": example.get("category", ""),
+                            "input_data": example.get("input_data", {}),
+                            "output_data": example.get("output_data", {}),
+                            "code_snippet": example.get("code_snippet", "")
+                        })
+                        
+                        # Create metadata
+                        metadata = {
+                            "source_file": str(json_file.name),
+                            "type": "usage_example",
+                            "function_name": example.get("function_name", ""),
+                            "category": example.get("category", ""),
+                            "example_type": example.get("example_type", "")
+                        }
+                        
+                        # Create LangChain Document
+                        doc = Document(
+                            page_content=page_content,
+                            metadata=metadata
+                        )
+                        documents.append(doc)
+                        
+            except json.JSONDecodeError as e:
+                print(f"Error parsing {json_file}: {e}")
+            except Exception as e:
+                print(f"Error processing {json_file}: {e}")
+        
+        return documents
+    
+    def get_examples_by_function(self, function_name: str) -> List[Document]:
+        """
+        Get all usage examples for a specific function.
+        
+        Args:
+            function_name (str): Function name to filter by
+            
+        Returns:
+            List[Document]: List of LangChain Documents matching the function name
+        """
+        all_docs = self.load_examples()
+        return [doc for doc in all_docs if doc.metadata.get("function_name") == function_name]
+    
+    def get_examples_by_category(self, category: str) -> List[Document]:
+        """
+        Get all usage examples from a specific category.
+        
+        Args:
+            category (str): Category to filter by
+            
+        Returns:
+            List[Document]: List of LangChain Documents matching the category
+        """
+        all_docs = self.load_examples()
+        return [doc for doc in all_docs if doc.metadata.get("category") == category]
+
+def load_usage_examples(base_path:str):
+    usage_example_loader = UsageExampleLoader(base_path=base_path)
+    return usage_example_loader.load_examples()
+
+
+
 
 def initialize_insights_vectorstore(vectorstore:DocumentChromaStore):
     
@@ -250,7 +356,7 @@ def initialize_insights_vectorstore(vectorstore:DocumentChromaStore):
             #id,doc = create_langchain_doc_util(metadata=insights['metadata'], data=insights['data'])
             insights_list.append(insights)
             #print("insight doc",insights)
-    #print("insights_list",len(insights_list))
+    print("insights_list",len(insights_list))
     vectorstore.add_documents(insights_list)
     
     return vectorstore
@@ -258,8 +364,10 @@ def initialize_insights_vectorstore(vectorstore:DocumentChromaStore):
 def main():
     # Example usage
     
-    example_loader = CodeExampleLoader(base_path="/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genimel/meta/code_examples/")
-    function_loader = CodeFunctionLoader(json_files_path="/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genimel/meta/toolspecs")
+    usage_example_loader = CodeExampleLoader(base_path="/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/meta/code_examples/")
+    function_loader = CodeFunctionLoader(json_files_path="/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/meta/toolspecs")
+    usage_example_loader_new = UsageExampleLoader(base_path="/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/meta/usage_examples")
+    
     # Load all examples
     all_functions = function_loader.load_all_functions()
     #print("all_functions",all_functions)
@@ -267,14 +375,22 @@ def main():
     examples_vectorstore  = DocumentChromaStore(persistent_client=client,collection_name="tools_examples_collection")
     functions_vectorstore  = DocumentChromaStore(persistent_client=client,collection_name="tools_spec_collection")
     insights_vectorstore  = DocumentChromaStore(persistent_client=client,collection_name="tools_insights_collection")
+    usage_examples_vectorstore = DocumentChromaStore(persistent_client=client,collection_name="usage_examples_collection")
     #print(f"Loaded {len(all_functions)} total examples")
    
     
-    examples = example_loader.load_examples()
+    usage_examples = usage_example_loader.load_examples()
+    new_usage_examples = usage_example_loader_new.load_examples()
+    print(f"Loaded {len(new_usage_examples)} usage examples")
+    
+    # Load usage examples into ChromaDB
+    usage_examples_vectorstore.add_documents(new_usage_examples)
+    print("Usage examples loaded into ChromaDB")
+    
     #print("examples",examples)
-    examples_vectorstore.add_documents(examples)
-    functions_vectorstore.add_documents(all_functions)
-    initialize_insights_vectorstore(insights_vectorstore)
+    #examples_vectorstore.add_documents(usage_examples)
+    #functions_vectorstore.add_documents(all_functions)
+    #initialize_insights_vectorstore(insights_vectorstore)
         
     # Get examples by function
     search_query = "How do I create lead values for multiple columns in panel data with groups?"
@@ -290,21 +406,33 @@ def main():
     print("results_examples",results_examples)
     results_insights = insights_vectorstore.semantic_search(search_query, k=2)
     print("results_insights",results_insights)
-    #print(results_examples)
+    print("length of results_examples",len(results_examples))
+    print("length of results_functions",len(results_functions))
+    print("length of results_insights",len(results_insights))
     #print(results_insights)
 
 
-    search_query = "Help me segment customers based on their purchase history?"
+    search_query = "How do I analyze funnel performance across different user segments with my event data?"
     functions =functions_vectorstore.semantic_search('analyze_funnel_by_segment',k=3)
     for function in functions:
         function_spec = json.loads(json.loads(function['content']))
         if function_spec['function_name'] == 'analyze_funnel_by_segment':
             print(function_spec)
     
-    results_functions = functions_vectorstore.semantic_search(search_query, k=2)    
-    results_examples = examples_vectorstore.semantic_search(search_query, k=2)
-    results_insights = insights_vectorstore.semantic_search(search_query, k=2)
-    print(results_insights)
+    #results_functions = functions_vectorstore.semantic_search(search_query, k=2)    
+    #results_examples = examples_vectorstore.semantic_search(search_query, k=2)
+    #results_insights = insights_vectorstore.semantic_search(search_query, k=2)
+    #print(results_insights)
+
+    results_functions = functions_vectorstore.semantic_searches(query_texts=[search_query], n_results=5)    
+    results_examples = examples_vectorstore.semantic_searches(query_texts=[search_query], n_results=5)
+    results_insights = insights_vectorstore.semantic_searches(query_texts=[search_query], n_results=5)
+    results_usage_examples = usage_examples_vectorstore.semantic_searches(query_texts=[search_query], n_results=5)
+    print("results_functions",results_functions)
+    print("results_examples",results_examples)
+    print("results_insights",results_insights)
+    print("results_usage_examples",results_usage_examples)
+    print("length of results_usage_examples",len(results_usage_examples))
     #print(results_examples)
     #print(results_insights)
 
@@ -315,6 +443,15 @@ def main():
     #results_functions,content = functions_retrieval_agent.retrieve(search_query)
     #print("results_functions",results_functions)
     #print("content",content)
+    
+    # Example: Search for usage examples by function name
+    print("\n--- Usage Examples Search Demo ---")
+    usage_examples_for_lead = usage_example_loader_new.get_examples_by_function("lead")
+    print(f"Found {len(usage_examples_for_lead)} usage examples for 'lead' function")
+    
+    # Example: Search for usage examples by category
+    usage_examples_by_category = usage_example_loader_new.get_examples_by_category("time_series_analysis")
+    print(f"Found {len(usage_examples_by_category)} usage examples for 'time_series_analysis' category")
     
 if __name__ == "__main__":
     function_spec = json.loads('"{\\"function_name\\": \\"lead\\", \\"description\\": \\"Create lead (future) values for specified columns\\", \\"inputs\\": {}, \\"required_params\\": [\\"columns\\"], \\"optional_params\\": [\\"periods\\", \\"time_column\\", \\"group_columns\\", \\"suffix\\"], \\"outputs\\": {\\"type\\": \\"Callable\\", \\"description\\": \\"Function that creates lead values in a TimeSeriesPipe\\"}}"')

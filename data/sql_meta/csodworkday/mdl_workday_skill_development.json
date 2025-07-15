@@ -1,0 +1,740 @@
+{
+    "catalog": "workday_learning_development",
+    "schema": "public",
+    "models": [
+      {
+        "name": "workday_employee_skills_development",
+        "description": "Workday employee skills and competency development tracking linked to training activities. This table provides deeper insights into skill acquisition, proficiency levels, and career development impact of training programs.",
+        "tableReference": {
+          "table": "sampleWorkdaySkillsDevelopment"
+        },
+        "columns": [
+          {
+            "name": "id",
+            "type": "INTEGER",
+            "properties": {
+              "displayName": "ID",
+              "description": "Primary key identifier for the skills development record"
+            }
+          },
+          {
+            "name": "employee_id",
+            "type": "VARCHAR",
+            "relationship": {
+                "description": "Primary foreign key relationship to csod_training_records.id - establishes the core employee connection between training activities and skill development outcomes",
+                "type": "many-to-one"
+            },
+            "properties": {
+              "displayName": "Employee ID",
+              "description": "Employee identifier matching CSOD user_id for cross-reference"
+            }
+          },
+          {
+            "name": "employee_name",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Employee Name",
+              "description": "Full name of the employee"
+            }
+          },
+          {
+            "name": "manager_id",
+            "type": "VARCHAR",
+            "relationship": {
+                "description": "Hierarchical relationship to workday_employee_skills_development.employee_id - enables manager-employee hierarchy analysis within skills development",
+                "type": "self-referencing"
+            },
+            "properties": {
+              "displayName": "Manager ID",
+              "description": "Manager's employee ID"
+            }
+          },
+          {
+            "name": "manager_name",
+            "type": "VARCHAR",
+            "relationship": {
+                "description": "Reference relationship to csod_training_records.manager_name - enables consistent manager-level analysis across training completion and skill development systems",
+                "type": "reference"
+            },
+            "properties": {
+              "displayName": "Manager Name",
+              "description": "Name of the employee's direct manager"
+            }
+          },
+          {
+            "name": "division",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Division",
+              "description": "Business division matching CSOD division for alignment"
+            },
+            "relationship": {
+                "description": "Reference relationship to csod_training_records.division - enables cross-system division-level analysis of training effectiveness and skill development outcomes",
+                "type": "reference"
+            }
+          },
+          {
+            "name": "job_title",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Job Title",
+              "description": "Current job title of the employee"
+            }
+          },
+          {
+            "name": "job_level",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Job Level",
+              "description": "Career level (e.g., Individual Contributor, Senior, Lead, Manager)"
+            }
+          },
+          {
+            "name": "hire_date",
+            "type": "DATE",
+            "properties": {
+              "displayName": "Hire Date",
+              "description": "Employee's hire date for tenure analysis"
+            }
+          },
+          {
+            "name": "skill_name",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Skill Name",
+              "description": "Name of the specific skill being developed"
+            }
+          },
+          {
+            "name": "skill_category",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Skill Category",
+              "description": "Category of skill (Technical, Leadership, Compliance, Soft Skills)"
+            }
+          },
+          {
+            "name": "competency_framework",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Competency Framework",
+              "description": "Competency framework this skill belongs to"
+            }
+          },
+          {
+            "name": "pre_training_proficiency",
+            "type": "INTEGER",
+            "properties": {
+              "displayName": "Pre-Training Proficiency",
+              "description": "Skill proficiency level before training (1-5 scale)"
+            }
+          },
+          {
+            "name": "post_training_proficiency",
+            "type": "INTEGER",
+            "properties": {
+              "displayName": "Post-Training Proficiency",
+              "description": "Skill proficiency level after training completion (1-5 scale)"
+            }
+          },
+          {
+            "name": "target_proficiency",
+            "type": "INTEGER",
+            "properties": {
+              "displayName": "Target Proficiency",
+              "description": "Target proficiency level for the role (1-5 scale)"
+            }
+          },
+          {
+            "name": "skill_criticality",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Skill Criticality",
+              "description": "Criticality of skill for role (Critical, Important, Beneficial)"
+            }
+          },
+          {
+            "name": "training_curriculum_id",
+            "type": "VARCHAR",
+            "relationship": {
+                "description": "Foreign key relationship to training_skill_mapping.curriculum_id - links skill development to specific training curricula through bridge table",
+                "type": "many-to-one"
+            },
+            "properties": {
+              "displayName": "Training Curriculum ID",
+              "description": "ID linking to CSOD curriculum that developed this skill"
+            }
+          },
+          {
+            "name": "training_curriculum_title",
+            "type": "TEXT",
+            "relationship": {
+                "description": "Foreign key relationship to csod_training_records.curriculum_title - directly connects skill development outcomes to the training programs that produced them",
+                "type": "many-to-one"
+            },
+            "properties": {
+              "displayName": "Training Curriculum Title",
+              "description": "Title of training curriculum from CSOD"
+            }
+          },
+          {
+            "name": "skill_assessment_date",
+            "type": "DATE",
+            "properties": {
+              "displayName": "Skill Assessment Date",
+              "description": "Date when skill proficiency was assessed"
+            }
+          },
+          {
+            "name": "assessment_method",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Assessment Method",
+              "description": "Method used to assess skill (Self-Assessment, Manager Review, Certification, Practical Test)"
+            }
+          },
+          {
+            "name": "certification_earned",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Certification Earned",
+              "description": "Certification or credential earned through training"
+            }
+          },
+          {
+            "name": "certification_expiry_date",
+            "type": "DATE",
+            "properties": {
+              "displayName": "Certification Expiry Date",
+              "description": "Date when certification expires"
+            }
+          },
+          {
+            "name": "cost_center",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Cost Center",
+              "description": "Cost center for training expense allocation"
+            }
+          },
+          {
+            "name": "training_cost",
+            "type": "DECIMAL",
+            "properties": {
+              "displayName": "Training Cost",
+              "description": "Cost associated with the training program"
+            }
+          },
+          {
+            "name": "performance_rating",
+            "type": "DECIMAL",
+            "properties": {
+              "displayName": "Performance Rating",
+              "description": "Latest performance rating (1-5 scale)"
+            }
+          },
+          {
+            "name": "career_development_plan",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Career Development Plan",
+              "description": "Associated career development plan"
+            }
+          },
+          {
+            "name": "succession_plan_role",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Succession Plan Role",
+              "description": "Role in succession planning this skill supports"
+            }
+          },
+          {
+            "name": "created_at",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Created At",
+              "description": "Timestamp when the record was created"
+            }
+          },
+          {
+            "name": "updated_at",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Updated At",
+              "description": "Timestamp when the record was last updated"
+            }
+          },
+          {
+            "name": "proficiency_improvement",
+            "type": "INTEGER",
+            "isCalculated": true,
+            "expression": "CASE WHEN post_training_proficiency IS NOT NULL AND pre_training_proficiency IS NOT NULL THEN post_training_proficiency - pre_training_proficiency ELSE 0 END",
+            "properties": {
+              "displayName": "Proficiency Improvement",
+              "description": "Improvement in proficiency level after training"
+            }
+          },
+          {
+            "name": "target_gap",
+            "type": "INTEGER",
+            "isCalculated": true,
+            "expression": "CASE WHEN target_proficiency IS NOT NULL AND post_training_proficiency IS NOT NULL THEN target_proficiency - post_training_proficiency ELSE NULL END",
+            "properties": {
+              "displayName": "Target Gap",
+              "description": "Gap remaining to reach target proficiency"
+            }
+          },
+          {
+            "name": "is_skill_proficient",
+            "type": "BOOLEAN",
+            "isCalculated": true,
+            "expression": "CASE WHEN post_training_proficiency >= target_proficiency THEN true ELSE false END",
+            "properties": {
+              "displayName": "Is Skill Proficient",
+              "description": "Whether employee has reached target proficiency"
+            }
+          },
+          {
+            "name": "certification_status",
+            "type": "VARCHAR",
+            "isCalculated": true,
+            "expression": "CASE WHEN certification_expiry_date IS NULL THEN 'No Certification' WHEN certification_expiry_date > CURRENT_DATE THEN 'Active' WHEN certification_expiry_date <= CURRENT_DATE THEN 'Expired' END",
+            "properties": {
+              "displayName": "Certification Status",
+              "description": "Current status of certification"
+            }
+          },
+          {
+            "name": "tenure_months",
+            "type": "INTEGER",
+            "isCalculated": true,
+            "expression": "DATEDIFF(month, hire_date, CURRENT_DATE)",
+            "properties": {
+              "displayName": "Tenure Months",
+              "description": "Employee tenure in months"
+            }
+          },
+          {
+            "name": "roi_indicator",
+            "type": "DECIMAL",
+            "isCalculated": true,
+            "expression": "CASE WHEN training_cost > 0 AND proficiency_improvement > 0 THEN proficiency_improvement / training_cost * 1000 ELSE 0 END",
+            "properties": {
+              "displayName": "ROI Indicator",
+              "description": "Simple ROI indicator (proficiency improvement per $1000 spent)"
+            }
+          }
+        ],
+        "primaryKey": "id",
+        "properties": {
+          "displayName": "Workday Employee Skills Development",
+          "description": "Comprehensive skills and competency development tracking linked to training activities"
+        }
+      }
+    ],
+    "metrics": [
+      {
+        "name": "skills_development_metrics",
+        "baseObject": "workday_employee_skills_development",
+        "dimension": [
+          {
+            "name": "division",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "job_level",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "skill_category",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "competency_framework",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "total_skills_developed",
+            "type": "INTEGER",
+            "expression": "COUNT(*)"
+          },
+          {
+            "name": "avg_proficiency_improvement",
+            "type": "DECIMAL",
+            "expression": "AVG(proficiency_improvement)"
+          },
+          {
+            "name": "skills_meeting_target",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_skill_proficient = true THEN 1 END)"
+          },
+          {
+            "name": "target_achievement_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN is_skill_proficient = true THEN 1 END) * 100.0 / COUNT(*)"
+          },
+          {
+            "name": "total_training_investment",
+            "type": "DECIMAL",
+            "expression": "SUM(training_cost)"
+          },
+          {
+            "name": "avg_training_cost",
+            "type": "DECIMAL",
+            "expression": "AVG(training_cost)"
+          },
+          {
+            "name": "active_certifications",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN certification_status = 'Active' THEN 1 END)"
+          },
+          {
+            "name": "expired_certifications",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN certification_status = 'Expired' THEN 1 END)"
+          }
+        ],
+        "timeGrain": [
+          {
+            "name": "assessment_date_grain",
+            "refColumn": "skill_assessment_date",
+            "dateParts": ["YEAR", "QUARTER", "MONTH", "WEEK", "DAY"]
+          }
+        ],
+        "properties": {
+          "displayName": "Skills Development Metrics",
+          "description": "Core metrics for skills development and proficiency tracking"
+        }
+      },
+      {
+        "name": "competency_gap_analysis",
+        "baseObject": "workday_employee_skills_development",
+        "dimension": [
+          {
+            "name": "division",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "job_title",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "skill_criticality",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "avg_target_gap",
+            "type": "DECIMAL",
+            "expression": "AVG(target_gap)"
+          },
+          {
+            "name": "critical_skills_gaps",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN skill_criticality = 'Critical' AND target_gap > 0 THEN 1 END)"
+          },
+          {
+            "name": "employees_with_gaps",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT CASE WHEN target_gap > 0 THEN employee_id END)"
+          },
+          {
+            "name": "skills_above_target",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN target_gap < 0 THEN 1 END)"
+          }
+        ],
+        "properties": {
+          "displayName": "Competency Gap Analysis",
+          "description": "Analysis of skill gaps and competency requirements"
+        }
+      },
+      {
+        "name": "training_roi_metrics",
+        "baseObject": "workday_employee_skills_development",
+        "dimension": [
+          {
+            "name": "training_curriculum_title",
+            "type": "TEXT"
+          },
+          {
+            "name": "skill_category",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "division",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "total_investment",
+            "type": "DECIMAL",
+            "expression": "SUM(training_cost)"
+          },
+          {
+            "name": "avg_roi_indicator",
+            "type": "DECIMAL",
+            "expression": "AVG(roi_indicator)"
+          },
+          {
+            "name": "participants_count",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT employee_id)"
+          },
+          {
+            "name": "cost_per_participant",
+            "type": "DECIMAL",
+            "expression": "SUM(training_cost) / COUNT(DISTINCT employee_id)"
+          },
+          {
+            "name": "avg_proficiency_gain",
+            "type": "DECIMAL",
+            "expression": "AVG(proficiency_improvement)"
+          }
+        ],
+        "properties": {
+          "displayName": "Training ROI Metrics",
+          "description": "Return on investment analysis for training programs"
+        }
+      },
+      {
+        "name": "succession_readiness_metrics",
+        "baseObject": "workday_employee_skills_development",
+        "dimension": [
+          {
+            "name": "succession_plan_role",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "division",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "job_level",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "succession_candidates",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT employee_id)"
+          },
+          {
+            "name": "ready_candidates",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT CASE WHEN is_skill_proficient = true THEN employee_id END)"
+          },
+          {
+            "name": "succession_readiness_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(DISTINCT CASE WHEN is_skill_proficient = true THEN employee_id END) * 100.0 / COUNT(DISTINCT employee_id)"
+          },
+          {
+            "name": "avg_skills_per_candidate",
+            "type": "DECIMAL",
+            "expression": "COUNT(*) * 1.0 / COUNT(DISTINCT employee_id)"
+          }
+        ],
+        "properties": {
+          "displayName": "Succession Readiness Metrics",
+          "description": "Metrics for succession planning and leadership development readiness"
+        }
+      }
+    ],
+    "cumulativeMetrics": [
+      {
+        "name": "quarterly_skill_progression",
+        "baseObject": "workday_employee_skills_development",
+        "description": "Track quarterly skill development progression",
+        "timeColumn": "skill_assessment_date",
+        "aggregation": "AVG",
+        "window": "QUARTER",
+        "measure": {
+          "name": "quarterly_avg_proficiency",
+          "type": "DECIMAL",
+          "expression": "AVG(post_training_proficiency)"
+        },
+        "dimensions": ["division", "skill_category"],
+        "properties": {
+          "displayName": "Quarterly Skill Progression",
+          "description": "Track skill proficiency improvements over quarters"
+        }
+      },
+      {
+        "name": "annual_certification_trend",
+        "baseObject": "workday_employee_skills_development",
+        "description": "Track annual certification earning trends",
+        "timeColumn": "skill_assessment_date",
+        "aggregation": "COUNT",
+        "window": "YEAR",
+        "measure": {
+          "name": "annual_certifications",
+          "type": "INTEGER",
+          "expression": "COUNT(CASE WHEN certification_earned IS NOT NULL THEN 1 END)"
+        },
+        "dimensions": ["division", "competency_framework"],
+        "properties": {
+          "displayName": "Annual Certification Trend",
+          "description": "Track certification achievements year over year"
+        }
+      }
+    ],
+    "views": [
+      {
+        "name": "skills_gap_priority_matrix",
+        "statement": "SELECT skill_name, skill_category, skill_criticality, COUNT(*) as employees_with_gap, AVG(target_gap) as avg_gap, COUNT(DISTINCT division) as divisions_affected FROM workday_employee_skills_development WHERE target_gap > 0 GROUP BY skill_name, skill_category, skill_criticality ORDER BY CASE skill_criticality WHEN 'Critical' THEN 1 WHEN 'Important' THEN 2 ELSE 3 END, avg_gap DESC",
+        "properties": {
+          "displayName": "Skills Gap Priority Matrix",
+          "description": "Priority matrix for addressing skill gaps based on criticality and impact"
+        }
+      },
+      {
+        "name": "high_performing_development_programs",
+        "statement": "SELECT training_curriculum_title, skill_category, COUNT(*) as participants, AVG(proficiency_improvement) as avg_improvement, AVG(roi_indicator) as avg_roi, SUM(training_cost) as total_investment FROM workday_employee_skills_development WHERE proficiency_improvement > 0 GROUP BY training_curriculum_title, skill_category HAVING COUNT(*) >= 5 ORDER BY avg_improvement DESC, avg_roi DESC",
+        "properties": {
+          "displayName": "High-Performing Development Programs",
+          "description": "Training programs with highest skill development impact"
+        }
+      },
+      {
+        "name": "certification_expiry_alert",
+        "statement": "SELECT employee_name, division, certification_earned, certification_expiry_date, DATEDIFF(day, CURRENT_DATE, certification_expiry_date) as days_until_expiry FROM workday_employee_skills_development WHERE certification_expiry_date BETWEEN CURRENT_DATE AND DATEADD(month, 3, CURRENT_DATE) ORDER BY certification_expiry_date",
+        "properties": {
+          "displayName": "Certification Expiry Alert",
+          "description": "Certifications expiring in the next 3 months"
+        }
+      },
+      {
+        "name": "division_competency_dashboard",
+        "statement": "SELECT division, competency_framework, COUNT(DISTINCT employee_id) as employees, AVG(post_training_proficiency) as avg_proficiency, COUNT(CASE WHEN is_skill_proficient = true THEN 1 END) * 100.0 / COUNT(*) as proficiency_rate FROM workday_employee_skills_development GROUP BY division, competency_framework ORDER BY division, proficiency_rate DESC",
+        "properties": {
+          "displayName": "Division Competency Dashboard",
+          "description": "Competency overview by division and framework"
+        }
+      },
+      {
+        "name": "succession_pipeline_readiness",
+        "statement": "SELECT succession_plan_role, COUNT(DISTINCT employee_id) as candidates, COUNT(DISTINCT CASE WHEN is_skill_proficient = true THEN employee_id END) as ready_candidates, AVG(performance_rating) as avg_performance, COUNT(CASE WHEN certification_status = 'Active' THEN 1 END) as active_certifications FROM workday_employee_skills_development WHERE succession_plan_role IS NOT NULL GROUP BY succession_plan_role ORDER BY ready_candidates DESC",
+        "properties": {
+          "displayName": "Succession Pipeline Readiness",
+          "description": "Readiness assessment for succession planning roles"
+        }
+      }
+    ],
+    "enumDefinitions": [
+      {
+        "name": "SkillCategoryEnum",
+        "values": [
+          {
+            "name": "Technical",
+            "value": "Technical"
+          },
+          {
+            "name": "Leadership",
+            "value": "Leadership"
+          },
+          {
+            "name": "Compliance",
+            "value": "Compliance"
+          },
+          {
+            "name": "SoftSkills",
+            "value": "Soft Skills"
+          },
+          {
+            "name": "Digital",
+            "value": "Digital"
+          }
+        ],
+        "properties": {
+          "displayName": "Skill Category",
+          "description": "Categories of skills for development tracking"
+        }
+      },
+      {
+        "name": "ProficiencyLevelEnum",
+        "values": [
+          {
+            "name": "Beginner",
+            "value": "1"
+          },
+          {
+            "name": "Developing",
+            "value": "2"
+          },
+          {
+            "name": "Proficient",
+            "value": "3"
+          },
+          {
+            "name": "Advanced",
+            "value": "4"
+          },
+          {
+            "name": "Expert",
+            "value": "5"
+          }
+        ],
+        "properties": {
+          "displayName": "Proficiency Level",
+          "description": "5-point scale for skill proficiency assessment"
+        }
+      },
+      {
+        "name": "SkillCriticalityEnum",
+        "values": [
+          {
+            "name": "Critical",
+            "value": "Critical"
+          },
+          {
+            "name": "Important",
+            "value": "Important"
+          },
+          {
+            "name": "Beneficial",
+            "value": "Beneficial"
+          }
+        ],
+        "properties": {
+          "displayName": "Skill Criticality",
+          "description": "Criticality levels for skills in relation to job roles"
+        }
+      },
+      {
+        "name": "AssessmentMethodEnum",
+        "values": [
+          {
+            "name": "SelfAssessment",
+            "value": "Self-Assessment"
+          },
+          {
+            "name": "ManagerReview",
+            "value": "Manager Review"
+          },
+          {
+            "name": "Certification",
+            "value": "Certification"
+          },
+          {
+            "name": "PracticalTest",
+            "value": "Practical Test"
+          },
+          {
+            "name": "PeerReview",
+            "value": "Peer Review"
+          }
+        ],
+        "properties": {
+          "displayName": "Assessment Method",
+          "description": "Methods used for skill proficiency assessment"
+        }
+      }
+    ]
+  }

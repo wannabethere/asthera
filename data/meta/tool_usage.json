@@ -1,0 +1,578 @@
+[
+    {
+      "id": "anomaly_detection_pipe",
+      "class_name": "AnomalyPipe",
+      "module": "anomalydetection.py",
+      "description": "Pipeline-style anomaly detection toolkit for time series data with statistical, contextual, and collective anomaly detection methods",
+      "key_features": [
+        "Statistical outlier detection (z-score, IQR, etc.)",
+        "Contextual anomaly detection based on time series patterns",
+        "Collective anomaly detection using machine learning",
+        "Seasonal decomposition and residual analysis",
+        "Change point detection",
+        "Forecast-based anomaly detection",
+        "Ensemble methods for combining approaches"
+      ],
+      "usage_examples": [
+        {
+          "title": "Basic Statistical Outlier Detection",
+          "description": "Detect statistical outliers using z-score method",
+          "code": "import pandas as pd\nfrom anomalydetection import AnomalyPipe, detect_statistical_outliers\n\n# Load data\ndf = pd.read_csv('time_series_data.csv')\n\n# Create pipeline and detect outliers\nanomalies = (\n    AnomalyPipe.from_dataframe(df)\n    | detect_statistical_outliers(\n        columns=['value'],\n        method='zscore',\n        threshold=3.0\n    )\n)\n\n# Get results\nresults = anomalies.data",
+          "use_case": "Quality control in manufacturing data"
+        },
+        {
+          "title": "Contextual Anomaly Detection",
+          "description": "Detect anomalies based on seasonal patterns and trends",
+          "code": "# Detect contextual anomalies with seasonal adjustment\ncontextual_anomalies = (\n    AnomalyPipe.from_dataframe(df)\n    | detect_contextual_anomalies(\n        columns=['sales'],\n        time_column='date',\n        method='residual',\n        model_type='sarimax',\n        seasonal_period=12\n    )\n)\n\nresults = contextual_anomalies.data",
+          "use_case": "Sales anomaly detection with seasonal patterns"
+        },
+        {
+          "title": "Ensemble Anomaly Detection",
+          "description": "Combine multiple detection methods for robust results",
+          "code": "# Apply multiple methods and combine results\nensemble_result = (\n    AnomalyPipe.from_dataframe(df)\n    | batch_detect_anomalies(\n        columns=['metric'],\n        methods=[\n            {'name': 'statistical_outliers', 'params': {'method': 'zscore', 'threshold': 2.5}},\n            {'name': 'contextual_anomalies', 'params': {'time_column': 'date', 'method': 'residual'}}\n        ],\n        ensemble_method='majority'\n    )\n)",
+          "use_case": "Comprehensive anomaly detection for critical systems"
+        }
+      ],
+      "main_functions": [
+        {
+          "name": "detect_statistical_outliers",
+          "description": "Detect outliers using statistical methods",
+          "parameters": {
+            "columns": "Column(s) to analyze",
+            "method": "Method: 'zscore', 'modified_zscore', 'iqr', 'percentile'",
+            "threshold": "Threshold for determining outliers",
+            "window": "Window size for rolling detection",
+            "group_columns": "Columns to group by for panel data"
+          }
+        },
+        {
+          "name": "detect_contextual_anomalies",
+          "description": "Detect anomalies by comparing with expected values",
+          "parameters": {
+            "columns": "Column(s) to analyze",
+            "time_column": "Time/date column",
+            "method": "Method: 'residual', 'prediction_interval', 'changepoint'",
+            "model_type": "Model: 'ewm', 'sarimax', 'decomposition'",
+            "seasonal_period": "Seasonal cycle length"
+          }
+        },
+        {
+          "name": "detect_collective_anomalies",
+          "description": "Detect anomalies using ML methods on multiple features",
+          "parameters": {
+            "columns": "Column(s) for multivariate analysis",
+            "method": "Method: 'isolation_forest', 'lof'",
+            "contamination": "Expected proportion of anomalies"
+          }
+        }
+      ]
+    },
+    {
+      "id": "cohort_analysis_pipe",
+      "class_name": "CohortPipe", 
+      "module": "cohortanalysistools.py",
+      "description": "Pipeline-style cohort analysis tool for customer behavior and retention analysis",
+      "key_features": [
+        "Time-based cohort formation",
+        "Behavioral cohort segmentation", 
+        "Acquisition cohort analysis",
+        "Retention rate calculations",
+        "Lifetime value analysis",
+        "Conversion funnel metrics"
+      ],
+      "usage_examples": [
+        {
+          "title": "Customer Retention Analysis",
+          "description": "Analyze customer retention by signup month",
+          "code": "import pandas as pd\nfrom cohortanalysistools import CohortPipe, form_time_cohorts, calculate_retention\n\n# Load customer data\ndf = pd.read_csv('customer_data.csv')\n\n# Create cohorts and calculate retention\nretention_analysis = (\n    CohortPipe.from_dataframe(df)\n    | form_time_cohorts(\n        date_column='signup_date',\n        time_period='M'\n    )\n    | calculate_retention(\n        cohort_column='cohort',\n        date_column='activity_date', \n        user_id_column='user_id',\n        max_periods=12\n    )\n)\n\n# Get retention matrix\nretention_matrix = retention_analysis.retention_matrices",
+          "use_case": "SaaS customer retention tracking"
+        },
+        {
+          "title": "Behavioral Cohort Analysis",
+          "description": "Segment users by behavior patterns",
+          "code": "# Create behavioral cohorts based on spending\nbehavioral_cohorts = (\n    CohortPipe.from_dataframe(df)\n    | form_behavioral_cohorts(\n        behavior_column='total_spent',\n        conditions={\n            'high_value': ('>', 1000),\n            'medium_value': ('between', 100, 1000),\n            'low_value': ('<=', 100)\n        }\n    )\n    | calculate_lifetime_value(\n        cohort_column='cohort',\n        date_column='purchase_date',\n        user_id_column='user_id',\n        value_column='revenue'\n    )\n)",
+          "use_case": "E-commerce customer value segmentation"
+        }
+      ],
+      "main_functions": [
+        {
+          "name": "form_time_cohorts",
+          "description": "Form cohorts based on time periods",
+          "parameters": {
+            "date_column": "Date column for cohort formation",
+            "time_period": "Period: 'D', 'W', 'M', 'Q', 'Y'",
+            "format_cohorts": "Whether to format as readable strings"
+          }
+        },
+        {
+          "name": "calculate_retention", 
+          "description": "Calculate retention metrics for cohorts",
+          "parameters": {
+            "cohort_column": "Column with cohort information",
+            "date_column": "Activity date column",
+            "user_id_column": "User identifier column",
+            "retention_type": "Type: 'classic', 'rolling', 'unbounded'"
+          }
+        },
+        {
+          "name": "calculate_lifetime_value",
+          "description": "Calculate LTV metrics for cohorts",
+          "parameters": {
+            "value_column": "Revenue/value column",
+            "cumulative": "Whether to show cumulative LTV"
+          }
+        }
+      ]
+    },
+    {
+      "id": "funnel_analysis",
+      "class_name": "FunnelAnalysis",
+      "module": "funnelanalysis.py", 
+      "description": "User funnel analysis using cohort framework for conversion optimization",
+      "key_features": [
+        "Overall funnel analysis",
+        "Time-based funnel performance",
+        "Segment-based funnel comparison", 
+        "User path analysis",
+        "Conversion rate tracking",
+        "Drop-off analysis"
+      ],
+      "usage_examples": [
+        {
+          "title": "Basic Funnel Analysis",
+          "description": "Analyze conversion through signup funnel",
+          "code": "import pandas as pd\nfrom funnelanalysis import analyze_funnel\nfrom cohortanalysistools import CohortPipe\n\n# Load event data\ndf = pd.read_csv('user_events.csv')\n\n# Analyze funnel\nfunnel_result = (\n    CohortPipe.from_dataframe(df)\n    | analyze_funnel(\n        event_column='event_name',\n        user_id_column='user_id',\n        funnel_steps=['landing', 'signup', 'activation', 'purchase'],\n        step_names=['Landing', 'Sign Up', 'Activate', 'Purchase']\n    )\n)\n\n# Get funnel data\nfunnel_data = funnel_result.conversion_funnels['overall_funnel']",
+          "use_case": "E-commerce conversion optimization"
+        },
+        {
+          "title": "Funnel Analysis by Time Period",
+          "description": "Track funnel performance over time",
+          "code": "# Analyze funnel trends over time\ntime_funnel = (\n    CohortPipe.from_dataframe(df)\n    | analyze_funnel_by_time(\n        event_column='event_name',\n        user_id_column='user_id', \n        date_column='event_date',\n        funnel_steps=['view', 'cart', 'checkout', 'purchase'],\n        time_period='M'\n    )\n)\n\nmonthly_funnel = time_funnel.conversion_funnels['time_funnel']",
+          "use_case": "Monthly funnel performance tracking"
+        }
+      ],
+      "main_functions": [
+        {
+          "name": "analyze_funnel",
+          "description": "Analyze overall funnel conversion rates", 
+          "parameters": {
+            "event_column": "Column with event names",
+            "user_id_column": "User identifier",
+            "funnel_steps": "List of events in funnel order",
+            "step_names": "Friendly names for steps"
+          }
+        },
+        {
+          "name": "analyze_funnel_by_segment",
+          "description": "Compare funnel across user segments",
+          "parameters": {
+            "segment_column": "Column with segment information",
+            "min_users": "Minimum users required per segment"
+          }
+        },
+        {
+          "name": "analyze_user_paths",
+          "description": "Analyze actual user paths through funnel",
+          "parameters": {
+            "timestamp_column": "Event timestamp column",
+            "max_path_length": "Maximum steps in a path"
+          }
+        }
+      ]
+    },
+    {
+      "id": "metrics_pipe",
+      "class_name": "MetricsPipe",
+      "module": "metrics_tools.py",
+      "description": "Pipeline-style metrics analysis tool for calculating business and statistical metrics",
+      "key_features": [
+        "Basic metrics (count, sum, mean, etc.)",
+        "Statistical metrics (variance, correlation, etc.)",
+        "Pivot tables and grouping operations",
+        "Rolling and cumulative calculations",
+        "Custom metric functions"
+      ],
+      "usage_examples": [
+        {
+          "title": "Basic Metric Calculations",
+          "description": "Calculate summary statistics for business metrics",
+          "code": "import pandas as pd\nfrom metrics_tools import MetricsPipe, Count, Mean, Sum, Ratio\n\n# Load sales data\ndf = pd.read_csv('sales_data.csv')\n\n# Calculate metrics\nmetrics = (\n    MetricsPipe.from_dataframe(df)\n    | Count('orders', 'total_orders')\n    | Sum('revenue', 'total_revenue') \n    | Mean('order_value', 'avg_order_value')\n    | Ratio('revenue', 'orders', 'revenue_per_order')\n).Execute()\n\nprint(metrics)",
+          "use_case": "Daily sales reporting dashboard"
+        },
+        {
+          "title": "Statistical Analysis",
+          "description": "Perform statistical analysis on metrics",
+          "code": "# Calculate advanced statistics\nstats_analysis = (\n    MetricsPipe.from_dataframe(df)\n    | Variance('revenue')\n    | StandardDeviation('revenue')\n    | Correlation('revenue', 'marketing_spend')\n    | Percentile('revenue', 95)\n).Execute()\n\nprint(stats_analysis)",
+          "use_case": "Revenue variability and correlation analysis"
+        },
+        {
+          "title": "Pivot Table Analysis", 
+          "description": "Create pivot tables for multi-dimensional analysis",
+          "code": "# Create pivot table by region and product\npivot_result = (\n    MetricsPipe.from_dataframe(df)\n    | PivotTable(\n        index='region',\n        columns='product_category', \n        values='revenue',\n        aggfunc='sum'\n    )\n).ShowPivot()\n\nprint(pivot_result)",
+          "use_case": "Regional sales performance analysis"
+        }
+      ],
+      "main_functions": [
+        {
+          "name": "Count/Sum/Mean/etc",
+          "description": "Basic aggregation functions",
+          "parameters": {
+            "variable": "Column to aggregate",
+            "output_name": "Name for output metric"
+          }
+        },
+        {
+          "name": "Ratio",
+          "description": "Calculate ratio between two columns",
+          "parameters": {
+            "numerator": "Numerator column",
+            "denominator": "Denominator column"
+          }
+        },
+        {
+          "name": "PivotTable",
+          "description": "Create pivot tables",
+          "parameters": {
+            "index": "Row grouping columns",
+            "columns": "Column grouping",
+            "values": "Values to aggregate",
+            "aggfunc": "Aggregation function"
+          }
+        }
+      ]
+    },
+    {
+      "id": "moving_averages_pipe",
+      "class_name": "MovingAggrPipe",
+      "module": "movingaverages.py",
+      "description": "Pipeline-style moving aggregation toolkit for time series analysis",
+      "key_features": [
+        "Simple and exponentially weighted moving averages",
+        "Moving variance and standard deviation", 
+        "Moving sums, counts, and custom aggregations",
+        "Moving percentiles and quantiles",
+        "Moving correlation and z-scores",
+        "Time-based and count-based windows"
+      ],
+      "usage_examples": [
+        {
+          "title": "Stock Price Analysis",
+          "description": "Calculate moving averages for stock prices",
+          "code": "import pandas as pd\nfrom movingaverages import MovingAggrPipe, moving_average, moving_variance\n\n# Load stock data\ndf = pd.read_csv('stock_data.csv')\n\n# Calculate moving metrics\nresult = (\n    MovingAggrPipe.from_dataframe(df)\n    | moving_average(\n        columns=['close_price'],\n        window=20,\n        method='simple'\n    )\n    | moving_average(\n        columns=['close_price'], \n        window=50,\n        method='exponential',\n        output_suffix='_ema'\n    )\n    | moving_variance(\n        columns=['close_price'],\n        window=20\n    )\n)\n\nresults_df = result.data",
+          "use_case": "Technical analysis for trading signals"
+        },
+        {
+          "title": "Sales Trend Analysis",
+          "description": "Analyze sales trends with moving statistics",
+          "code": "# Analyze sales trends with grouped data\nsales_analysis = (\n    MovingAggrPipe.from_dataframe(df)\n    | moving_average(\n        columns=['daily_sales'],\n        window=7,\n        method='simple',\n        time_column='date',\n        group_columns=['store_id']\n    )\n    | moving_zscore(\n        columns=['daily_sales'],\n        window=30,\n        group_columns=['store_id']\n    )\n)",
+          "use_case": "Retail sales performance monitoring"
+        }
+      ],
+      "main_functions": [
+        {
+          "name": "moving_average",
+          "description": "Calculate moving averages",
+          "parameters": {
+            "columns": "Columns to analyze",
+            "window": "Window size",
+            "method": "Method: 'simple', 'weighted', 'exponential'",
+            "group_columns": "Grouping columns for panel data"
+          }
+        },
+        {
+          "name": "moving_variance",
+          "description": "Calculate moving variance and std dev",
+          "parameters": {
+            "window": "Window size",
+            "ddof": "Delta degrees of freedom"
+          }
+        },
+        {
+          "name": "moving_correlation",
+          "description": "Calculate moving correlations between column pairs",
+          "parameters": {
+            "column_pairs": "List of column pairs to correlate",
+            "window": "Window size for correlation"
+          }
+        }
+      ]
+    },
+    {
+      "id": "operations_pipe", 
+      "class_name": "OperationsPipe",
+      "module": "operations_tools.py",
+      "description": "Pipeline-style experimental analysis tool for A/B testing and causal inference",
+      "key_features": [
+        "Percent and absolute change calculations",
+        "Mantel-Haenszel estimators",
+        "CUPED variance reduction",
+        "Pre-post analysis",
+        "Bootstrap confidence intervals",
+        "Multiple comparison adjustments"
+      ],
+      "usage_examples": [
+        {
+          "title": "A/B Test Analysis",
+          "description": "Analyze experiment results with statistical rigor",
+          "code": "import pandas as pd\nfrom operations_tools import OperationsPipe, PercentChange, BootstrapCI\n\n# Load experiment data\ndf = pd.read_csv('experiment_data.csv')\n\n# Analyze treatment effects\nresults = (\n    OperationsPipe.from_dataframe(df)\n    | PercentChange(\n        condition_column='treatment_group',\n        baseline='control'\n    )\n    | BootstrapCI(\n        condition_column='treatment_group',\n        baseline='control',\n        metric_column='conversion_rate',\n        n_bootstraps=10000\n    )\n).ShowOperation()\n\nprint(results)",
+          "use_case": "A/B test statistical analysis"
+        },
+        {
+          "title": "CUPED Analysis",
+          "description": "Reduce variance using pre-experiment covariates",
+          "code": "# Apply CUPED for variance reduction\ncuped_results = (\n    OperationsPipe.from_dataframe(df)\n    | CUPED(\n        condition_column='treatment',\n        baseline='control',\n        covariates=['pre_experiment_metric'],\n        stratified_by=['user_segment']\n    )\n).ShowOperation()\n\nprint(cuped_results)",
+          "use_case": "Improving experimental sensitivity"
+        }
+      ],
+      "main_functions": [
+        {
+          "name": "PercentChange",
+          "description": "Calculate percent change vs baseline",
+          "parameters": {
+            "condition_column": "Column with experimental conditions",
+            "baseline": "Baseline condition name"
+          }
+        },
+        {
+          "name": "CUPED",
+          "description": "Apply CUPED variance reduction",
+          "parameters": {
+            "covariates": "Pre-experiment covariates",
+            "stratified_by": "Stratification variables"
+          }
+        },
+        {
+          "name": "BootstrapCI", 
+          "description": "Calculate bootstrap confidence intervals",
+          "parameters": {
+            "metric_column": "Metric to analyze",
+            "confidence": "Confidence level",
+            "n_bootstraps": "Number of bootstrap samples"
+          }
+        }
+      ]
+    },
+    {
+      "id": "risk_analysis_pipe",
+      "class_name": "RiskPipe", 
+      "module": "riskanalysis.py",
+      "description": "Pipeline-style risk analysis toolkit for maximum likelihood estimation and portfolio risk",
+      "key_features": [
+        "Maximum likelihood distribution fitting",
+        "Value at Risk (VaR) and CVaR calculations",
+        "Portfolio risk metrics",
+        "Monte Carlo simulations",
+        "Stress testing scenarios",
+        "Risk attribution analysis"
+      ],
+      "usage_examples": [
+        {
+          "title": "Portfolio Risk Analysis",
+          "description": "Calculate comprehensive risk metrics for investment portfolio",
+          "code": "import pandas as pd\nfrom riskanalysis import RiskPipe, fit_distribution, calculate_var, calculate_portfolio_risk\n\n# Load returns data\ndf = pd.read_csv('portfolio_returns.csv')\n\n# Comprehensive risk analysis\nrisk_analysis = (\n    RiskPipe.from_dataframe(df)\n    | fit_distribution(\n        columns=['stock_returns'],\n        distribution='student_t'\n    )\n    | calculate_var(\n        columns=['stock_returns'],\n        confidence_level=0.05,\n        method='parametric'\n    )\n    | calculate_portfolio_risk(\n        columns=['stock_a', 'stock_b', 'stock_c'],\n        weights=[0.4, 0.4, 0.2]\n    )\n)\n\nrisk_metrics = risk_analysis.risk_metrics",
+          "use_case": "Investment portfolio risk management"
+        },
+        {
+          "title": "Stress Testing",
+          "description": "Perform stress tests under adverse scenarios",
+          "code": "# Stress test portfolio under crisis scenarios\nstress_results = (\n    RiskPipe.from_dataframe(df)\n    | stress_test(\n        columns=['portfolio_returns'],\n        scenarios={\n            'market_crash': {'returns': -0.20, 'volatility': 0.40},\n            'recession': {'returns': -0.10, 'volatility': 0.25}\n        }\n    )\n)\n\nstress_metrics = stress_results.stress_tests",
+          "use_case": "Regulatory stress testing compliance"
+        }
+      ],
+      "main_functions": [
+        {
+          "name": "fit_distribution",
+          "description": "Fit probability distributions using MLE",
+          "parameters": {
+            "columns": "Columns to fit",
+            "distribution": "Distribution: 'normal', 'student_t', 'skewed_normal'",
+            "method": "Estimation method: 'mle', 'moments'"
+          }
+        },
+        {
+          "name": "calculate_var",
+          "description": "Calculate Value at Risk",
+          "parameters": {
+            "confidence_level": "VaR confidence level",
+            "method": "Method: 'historical', 'parametric', 'monte_carlo'"
+          }
+        },
+        {
+          "name": "stress_test",
+          "description": "Perform scenario stress testing",
+          "parameters": {
+            "scenarios": "Dict of stress scenarios",
+            "base_case": "Base case parameters"
+          }
+        }
+      ]
+    },
+    {
+      "id": "segmentation_pipe",
+      "class_name": "SegmentationPipe",
+      "module": "segmentationtools.py", 
+      "description": "Pipeline-style customer segmentation tool using machine learning clustering",
+      "key_features": [
+        "K-means clustering with optimal K selection",
+        "DBSCAN density-based clustering",
+        "Hierarchical clustering",
+        "Rule-based segmentation",
+        "Feature scaling and preprocessing",
+        "Segment profiling and analysis"
+      ],
+      "usage_examples": [
+        {
+          "title": "Customer Segmentation",
+          "description": "Segment customers using behavioral data",
+          "code": "import pandas as pd\nfrom segmentationtools import SegmentationPipe, get_features, run_kmeans, generate_summary\n\n# Load customer data\ndf = pd.read_csv('customer_data.csv')\n\n# Perform customer segmentation\nsegmentation = (\n    SegmentationPipe.from_dataframe(df)\n    | get_features(\n        columns=['recency', 'frequency', 'monetary'],\n        scale_features=True\n    )\n    | run_kmeans(\n        n_clusters=5,\n        find_optimal=True\n    )\n    | generate_summary()\n)\n\nprint(segmentation)",
+          "use_case": "RFM customer segmentation for marketing"
+        },
+        {
+          "title": "Rule-Based Segmentation",
+          "description": "Create segments using business rules",
+          "code": "# Create segments using business logic\nrule_segments = (\n    SegmentationPipe.from_dataframe(df)\n    | run_rule_based(\n        rules={\n            'vip_customers': {\n                'total_spent': ('>', 10000),\n                'frequency': ('>', 50)\n            },\n            'at_risk': {\n                'recency': ('>', 90),\n                'frequency': ('>', 10)\n            }\n        }\n    )\n    | generate_summary()\n)",
+          "use_case": "Customer lifecycle management"
+        }
+      ],
+      "main_functions": [
+        {
+          "name": "get_features",
+          "description": "Extract and preprocess features for clustering",
+          "parameters": {
+            "columns": "Feature columns to use",
+            "scale_features": "Whether to standardize features",
+            "handle_missing": "How to handle missing values"
+          }
+        },
+        {
+          "name": "run_kmeans",
+          "description": "Perform K-means clustering",
+          "parameters": {
+            "n_clusters": "Number of clusters",
+            "find_optimal": "Whether to find optimal K",
+            "max_clusters": "Maximum K to test"
+          }
+        },
+        {
+          "name": "run_rule_based",
+          "description": "Create rule-based segments",
+          "parameters": {
+            "rules": "Dictionary of segment rules"
+          }
+        }
+      ]
+    },
+    {
+      "id": "time_series_pipe",
+      "class_name": "TimeSeriesPipe",
+      "module": "timeseriesanalysis.py",
+      "description": "Pipeline-style time series operations for lead/lag analysis and statistical testing",
+      "key_features": [
+        "Lead and lag value creation",
+        "Variance analysis (rolling, expanding, EWM)",
+        "Distribution analysis and histograms", 
+        "Cumulative distribution functions",
+        "Rolling window operations",
+        "Custom time series transformations"
+      ],
+      "usage_examples": [
+        {
+          "title": "Economic Time Series Analysis",
+          "description": "Analyze economic indicators with leads and lags",
+          "code": "import pandas as pd\nfrom timeseriesanalysis import TimeSeriesPipe, lag, lead, variance_analysis\n\n# Load economic data\ndf = pd.read_csv('economic_data.csv')\n\n# Time series analysis\nanalysis = (\n    TimeSeriesPipe.from_dataframe(df)\n    | lag(\n        columns=['gdp_growth'],\n        periods=4,\n        time_column='quarter'\n    )\n    | lead(\n        columns=['unemployment'],\n        periods=2,\n        time_column='quarter'\n    )\n    | variance_analysis(\n        columns=['inflation'],\n        method='rolling',\n        window=8\n    )\n)\n\nresults = analysis.data",
+          "use_case": "Macroeconomic forecasting and analysis"
+        },
+        {
+          "title": "Distribution Analysis",
+          "description": "Analyze distributions of time series data",
+          "code": "# Analyze return distributions\ndist_analysis = (\n    TimeSeriesPipe.from_dataframe(df)\n    | distribution_analysis(\n        columns=['returns'],\n        bins=20,\n        group_columns=['asset_class']\n    )\n    | cumulative_distribution(\n        columns=['returns'],\n        time_column='date'\n    )\n)\n\nsummary = dist_analysis | get_distribution_summary()",
+          "use_case": "Financial returns distribution analysis"
+        }
+      ],
+      "main_functions": [
+        {
+          "name": "lag/lead",
+          "description": "Create lagged or leading values",
+          "parameters": {
+            "columns": "Columns to lag/lead",
+            "periods": "Number of periods",
+            "time_column": "Time column for sorting",
+            "group_columns": "Grouping for panel data"
+          }
+        },
+        {
+          "name": "variance_analysis", 
+          "description": "Calculate rolling variance metrics",
+          "parameters": {
+            "method": "Method: 'rolling', 'expanding', 'ewm'",
+            "window": "Window size"
+          }
+        },
+        {
+          "name": "distribution_analysis",
+          "description": "Calculate distribution statistics",
+          "parameters": {
+            "bins": "Number of histogram bins",
+            "normalize": "Whether to normalize counts"
+          }
+        }
+      ]
+    },
+    {
+      "id": "trend_analysis_pipe",
+      "class_name": "TrendPipe",
+      "module": "trendanalysistools.py", 
+      "description": "Pipeline-style trend analysis tool for time series decomposition and forecasting",
+      "key_features": [
+        "Time period aggregation",
+        "Growth rate calculations",
+        "Moving averages and smoothing",
+        "Seasonal decomposition",
+        "Statistical trend testing",
+        "Forecasting with confidence intervals"
+      ],
+      "usage_examples": [
+        {
+          "title": "Sales Trend Analysis",
+          "description": "Comprehensive analysis of sales trends and seasonality",
+          "code": "import pandas as pd\nfrom trendanalysistools import TrendPipe, aggregate_by_time, decompose_trend, forecast_metric\n\n# Load sales data\ndf = pd.read_csv('sales_data.csv')\n\n# Comprehensive trend analysis\ntrend_analysis = (\n    TrendPipe.from_dataframe(df)\n    | aggregate_by_time(\n        date_column='sale_date',\n        metric_columns=['revenue', 'units_sold'],\n        time_period='M'\n    )\n    | calculate_growth_rates(\n        window=12,\n        annualize=True\n    )\n    | decompose_trend(\n        metric_column='revenue',\n        model='multiplicative',\n        period=12\n    )\n    | forecast_metric(\n        metric_column='revenue',\n        periods=6,\n        method='holt_winters'\n    )\n)\n\n# Get results\ngrowth_data = trend_analysis.trend_results\nforecasts = trend_analysis.forecasts",
+          "use_case": "Business planning and sales forecasting"
+        },
+        {
+          "title": "Statistical Trend Testing",
+          "description": "Test for statistically significant trends",
+          "code": "# Test for significant trends\ntrend_test = (\n    TrendPipe.from_dataframe(df)\n    | aggregate_by_time(\n        date_column='date',\n        metric_columns=['website_traffic'],\n        time_period='W'\n    )\n    | calculate_statistical_trend(\n        metric_column='website_traffic',\n        test_method='mann_kendall',\n        alpha=0.05\n    )\n    | compare_periods(\n        metric_column='website_traffic',\n        comparison_type='year_over_year'\n    )\n)",
+          "use_case": "Website performance trend validation"
+        }
+      ],
+      "main_functions": [
+        {
+          "name": "aggregate_by_time",
+          "description": "Aggregate metrics by time periods",
+          "parameters": {
+            "date_column": "Date column for aggregation",
+            "metric_columns": "Metrics to aggregate",
+            "time_period": "Period: 'D', 'W', 'M', 'Q', 'Y'",
+            "aggregation": "Aggregation method"
+          }
+        },
+        {
+          "name": "decompose_trend",
+          "description": "Decompose into trend/seasonal/residual",
+          "parameters": {
+            "metric_column": "Column to decompose",
+            "model": "Model: 'additive', 'multiplicative'",
+            "period": "Seasonal period length"
+          }
+        },
+        {
+          "name": "forecast_metric",
+          "description": "Generate forecasts with confidence intervals",
+          "parameters": {
+            "periods": "Forecast horizon",
+            "method": "Method: 'holt_winters', 'linear', 'exponential'"
+          }
+        }
+      ]
+    }
+  ]

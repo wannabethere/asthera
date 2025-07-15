@@ -1,0 +1,103 @@
+{
+    "functions": {
+        "fit_distribution": {
+            "required_params": ["columns"],
+            "optional_params": ["distribution", "method", "confidence_level", "output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that fits probability distributions using MLE in a RiskPipe"
+            },
+            "description": "Fit probability distributions to data using maximum likelihood estimation"
+        },
+        "calculate_var": {
+            "required_params": ["columns"],
+            "optional_params": ["confidence_level", "method", "window", "distribution", "output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates Value at Risk in a RiskPipe"
+            },
+            "description": "Calculate Value at Risk (VaR) using various methods"
+        },
+        "calculate_cvar": {
+            "required_params": ["columns"],
+            "optional_params": ["confidence_level", "method", "output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates Conditional Value at Risk in a RiskPipe"
+            },
+            "description": "Calculate Conditional Value at Risk (CVaR/Expected Shortfall)"
+        },
+        "calculate_portfolio_risk": {
+            "required_params": ["columns"],
+            "optional_params": ["weights", "confidence_level", "method", "output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates portfolio-level risk metrics in a RiskPipe"
+            },
+            "description": "Calculate portfolio risk metrics including diversification effects"
+        },
+        "monte_carlo_simulation": {
+            "required_params": ["columns"],
+            "optional_params": ["n_simulations", "horizon", "method", "distribution", "output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that performs Monte Carlo simulation in a RiskPipe"
+            },
+            "description": "Perform Monte Carlo simulation for risk assessment"
+        },
+        "stress_test": {
+            "required_params": ["columns", "scenarios"],
+            "optional_params": ["base_case", "output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that performs stress testing in a RiskPipe"
+            },
+            "description": "Perform stress testing with specified scenarios"
+        },
+        "rolling_risk_metrics": {
+            "required_params": ["columns"],
+            "optional_params": ["window", "metrics", "confidence_level", "output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates rolling risk metrics in a RiskPipe"
+            },
+            "description": "Calculate rolling risk metrics over time"
+        },
+        "correlation_analysis": {
+            "required_params": ["columns"],
+            "optional_params": ["method", "rolling_window", "output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that performs correlation analysis in a RiskPipe"
+            },
+            "description": "Perform correlation analysis for risk assessment"
+        },
+        "risk_attribution": {
+            "required_params": ["columns", "weights"],
+            "optional_params": ["confidence_level", "output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that performs risk attribution analysis in a RiskPipe"
+            },
+            "description": "Perform risk attribution analysis for portfolio components"
+        },
+        "compare_distributions": {
+            "required_params": ["column"],
+            "optional_params": ["distributions", "output_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that compares multiple distribution fits in a RiskPipe"
+            },
+            "description": "Compare multiple distribution fits and select the best one"
+        },
+        "get_risk_summary": {
+            "required_params": [],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that returns comprehensive risk summary from a RiskPipe"
+            },
+            "description": "Get a summary of all risk analysis results"
+        }
+    }
+}

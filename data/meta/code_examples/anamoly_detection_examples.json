@@ -1,0 +1,162 @@
+[
+    {
+      "page_content": "{\"Question\": \"How do I initialize an anomaly detection pipeline with my pandas DataFrame?\", \"Context\": \"I have a pandas DataFrame with time series data and I want to perform anomaly detection on it.\", \"Code_Example\": \"import pandas as pd\\nfrom anomalydetection import AnomalyPipe\\n\\n# Load your data\\ntime_series_data = pd.read_csv('sensor_data.csv')\\n\\n# Initialize the anomaly pipeline with your data\\nanomaly_pipeline = AnomalyPipe.from_dataframe(time_series_data)\\n\\n# Now the pipeline is ready for anomaly detection\\nprint(\\\"Pipeline initialized with data shape:\\\", anomaly_pipeline.data.shape)\", \"Usage\": \"AnomalyPipe.from_dataframe(df)\"}",
+      "metadata": {
+        "function_name": "AnomalyPipe.from_dataframe",
+        "src_type": "class_method",
+        "category": "initialization",
+        "example_id": 1,
+        "description": "Initialize an anomaly detection pipeline with a DataFrame"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I detect statistical outliers using the z-score method?\", \"Context\": \"I have sensor readings and want to identify values that are more than 3 standard deviations away from the mean.\", \"Code_Example\": \"from anomalydetection import AnomalyPipe, detect_statistical_outliers\\n\\n# Create pipeline with your data\\npipeline = AnomalyPipe.from_dataframe(sensor_df)\\n\\n# Detect outliers using z-score method\\noutliers = pipeline | detect_statistical_outliers(\\n    columns='temperature',\\n    method='zscore',\\n    threshold=3.0\\n)\\n\\n# Check the results\\nprint(f\\\"Total outliers detected: {outliers.data['temperature_outlier_zscore'].sum()}\\\")\\nprint(f\\\"Outlier percentage: {(outliers.data['temperature_outlier_zscore'].sum() / len(outliers.data) * 100):.2f}%\\\")\", \"Usage\": \"detect_statistical_outliers(columns='temperature', method='zscore', threshold=3.0)\"}",
+      "metadata": {
+        "function_name": "detect_statistical_outliers",
+        "src_type": "function",
+        "category": "statistical_detection",
+        "example_id": 2,
+        "description": "Detect statistical outliers using z-score method"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How can I use the IQR method to detect outliers that's more robust to extreme values?\", \"Context\": \"My data has some extreme outliers that might skew the z-score method, so I want to use the IQR method instead.\", \"Code_Example\": \"from anomalydetection import AnomalyPipe, detect_statistical_outliers\\n\\n# Detect outliers using IQR method\\niqr_outliers = pipeline | detect_statistical_outliers(\\n    columns=['cpu_usage', 'memory_usage'],\\n    method='iqr',\\n    threshold=1.5  # Standard IQR threshold\\n)\\n\\n# Compare multiple columns\\nfor col in ['cpu_usage', 'memory_usage']:\\n    outlier_col = f\\\"{col}_outlier_iqr\\\"\\n    outlier_count = iqr_outliers.data[outlier_col].sum()\\n    print(f\\\"{col}: {outlier_count} outliers detected\\\")\", \"Usage\": \"detect_statistical_outliers(columns=['cpu_usage', 'memory_usage'], method='iqr', threshold=1.5)\"}",
+      "metadata": {
+        "function_name": "detect_statistical_outliers",
+        "src_type": "function",
+        "category": "statistical_detection",
+        "example_id": 3,
+        "description": "Detect outliers using robust IQR method"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I detect outliers using a rolling window approach?\", \"Context\": \"I want to detect outliers based on recent data patterns rather than the entire dataset, which is useful for streaming data.\", \"Code_Example\": \"from anomalydetection import AnomalyPipe, detect_statistical_outliers\\n\\n# Detect outliers using rolling window\\nrolling_outliers = pipeline | detect_statistical_outliers(\\n    columns='sensor_value',\\n    method='zscore',\\n    threshold=2.5,\\n    window=50,  # Use last 50 data points\\n    time_column='timestamp'\\n)\\n\\n# This will detect outliers based on the local context of the last 50 points\\nprint(f\\\"Rolling outliers detected: {rolling_outliers.data['sensor_value_outlier_zscore'].sum()}\\\")\\n\\n# Compare with global outlier detection\\nglobal_outliers = pipeline | detect_statistical_outliers(\\n    columns='sensor_value',\\n    method='zscore',\\n    threshold=2.5\\n)\\nprint(f\\\"Global outliers detected: {global_outliers.data['sensor_value_outlier_zscore'].sum()}\\\")\", \"Usage\": \"detect_statistical_outliers(columns='sensor_value', method='zscore', threshold=2.5, window=50, time_column='timestamp')\"}",
+      "metadata": {
+        "function_name": "detect_statistical_outliers",
+        "src_type": "function",
+        "category": "statistical_detection",
+        "example_id": 4,
+        "description": "Detect outliers using rolling window approach"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How can I detect contextual anomalies that consider time series patterns?\", \"Context\": \"I have time series data where values might be normal in one context but anomalous in another, like high website traffic during business hours vs. midnight.\", \"Code_Example\": \"from anomalydetection import AnomalyPipe, detect_contextual_anomalies\\n\\n# Detect contextual anomalies using exponential weighted moving average\\ncontextual_anomalies = pipeline | detect_contextual_anomalies(\\n    columns='website_traffic',\\n    time_column='timestamp',\\n    method='residual',\\n    model_type='ewm',\\n    threshold=2.0,\\n    window=24  # Consider last 24 hours for hourly data\\n)\\n\\n# Check the results\\nprint(f\\\"Contextual anomalies detected: {contextual_anomalies.data['website_traffic_anomaly_residual'].sum()}\\\")\\n\\n# Look at expected vs actual values for anomalies\\nanomalies_df = contextual_anomalies.data[contextual_anomalies.data['website_traffic_anomaly_residual']]\\nprint(anomalies_df[['timestamp', 'website_traffic', 'website_traffic_expected', 'website_traffic_score_residual']].head())\", \"Usage\": \"detect_contextual_anomalies(columns='website_traffic', time_column='timestamp', method='residual', model_type='ewm', threshold=2.0, window=24)\"}",
+      "metadata": {
+        "function_name": "detect_contextual_anomalies",
+        "src_type": "function",
+        "category": "contextual_detection",
+        "example_id": 5,
+        "description": "Detect contextual anomalies using time series patterns"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I use SARIMAX model for contextual anomaly detection with seasonality?\", \"Context\": \"My data has strong seasonal patterns (daily, weekly) and I want to use a more sophisticated model to capture these patterns.\", \"Code_Example\": \"from anomalydetection import AnomalyPipe, detect_contextual_anomalies\\n\\n# Detect anomalies using SARIMAX model with seasonality\\nseasonal_anomalies = pipeline | detect_contextual_anomalies(\\n    columns='daily_sales',\\n    time_column='date',\\n    method='prediction_interval',\\n    model_type='sarimax',\\n    threshold=2.0,\\n    window=60,\\n    seasonal_period=7,  # Weekly seasonality\\n    datetime_format='%Y-%m-%d'\\n)\\n\\n# The model will account for day-of-week patterns\\nprint(f\\\"Seasonal anomalies detected: {seasonal_anomalies.data['daily_sales_anomaly_prediction_interval'].sum()}\\\")\\n\\n# Check anomalies by day of week\\nseasonal_anomalies.data['day_of_week'] = pd.to_datetime(seasonal_anomalies.data['date']).dt.day_name()\\nanomalies_by_day = seasonal_anomalies.data[seasonal_anomalies.data['daily_sales_anomaly_prediction_interval']]['day_of_week'].value_counts()\\nprint(\\\"Anomalies by day of week:\\\")\\nprint(anomalies_by_day)\", \"Usage\": \"detect_contextual_anomalies(columns='daily_sales', time_column='date', method='prediction_interval', model_type='sarimax', threshold=2.0, window=60, seasonal_period=7)\"}",
+      "metadata": {
+        "function_name": "detect_contextual_anomalies",
+        "src_type": "function",
+        "category": "contextual_detection",
+        "example_id": 6,
+        "description": "Use SARIMAX model for seasonal anomaly detection"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How can I detect collective anomalies using machine learning methods?\", \"Context\": \"I have multivariate data where anomalies might not be obvious in individual features but become apparent when considering multiple features together.\", \"Code_Example\": \"from anomalydetection import AnomalyPipe, detect_collective_anomalies\\n\\n# Detect collective anomalies using Isolation Forest\\ncollective_anomalies = pipeline | detect_collective_anomalies(\\n    columns=['cpu_usage', 'memory_usage', 'disk_io', 'network_traffic'],\\n    time_column='timestamp',\\n    method='isolation_forest',\\n    window=100,\\n    contamination=0.05,  # Expect 5% of data to be anomalies\\n    n_estimators=200\\n)\\n\\n# Check the results\\nprint(f\\\"Collective anomalies detected: {collective_anomalies.data['collective_anomaly_isolation_forest'].sum()}\\\")\\n\\n# Compare with Local Outlier Factor\\nlof_anomalies = pipeline | detect_collective_anomalies(\\n    columns=['cpu_usage', 'memory_usage', 'disk_io', 'network_traffic'],\\n    time_column='timestamp',\\n    method='lof',\\n    window=100,\\n    contamination=0.05\\n)\\n\\nprint(f\\\"LOF anomalies detected: {lof_anomalies.data['collective_anomaly_lof'].sum()}\\\")\", \"Usage\": \"detect_collective_anomalies(columns=['cpu_usage', 'memory_usage', 'disk_io', 'network_traffic'], time_column='timestamp', method='isolation_forest', window=100, contamination=0.05)\"}",
+      "metadata": {
+        "function_name": "detect_collective_anomalies",
+        "src_type": "function",
+        "category": "collective_detection",
+        "example_id": 7,
+        "description": "Detect collective anomalies using Isolation Forest"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I perform seasonal decomposition and detect anomalies in residuals?\", \"Context\": \"I want to separate my time series into trend, seasonal, and residual components, then detect anomalies in the residuals.\", \"Code_Example\": \"from anomalydetection import AnomalyPipe, calculate_seasonal_residuals, detect_anomalies_from_residuals\\n\\n# First decompose the time series\\ndecomposed = pipeline | calculate_seasonal_residuals(\\n    columns='monthly_revenue',\\n    mtime_column='date',\\n    mseasonal_period=12,  # Monthly data with yearly seasonality\\n    mmethod='multiplicative'\\n)\\n\\n# Now detect anomalies in the residuals\\nresidual_anomalies = decomposed | detect_anomalies_from_residuals(\\n    columns='monthly_revenue',\\n    method='modified_zscore',\\n    threshold=3.0,\\n    suffix='_residual',\\n    output_suffix='_anomaly'\\n)\\n\\n# Check the decomposition results\\nprint(\\\"Seasonal decomposition completed:\\\")\\nprint(f\\\"Trend values: {decomposed.data['monthly_revenue_trend'].notna().sum()}\\\")\\nprint(f\\\"Seasonal values: {decomposed.data['monthly_revenue_seasonal'].notna().sum()}\\\")\\nprint(f\\\"Residual anomalies: {residual_anomalies.data['monthly_revenue_anomaly'].sum()}\\\")\", \"Usage\": \"calculate_seasonal_residuals(columns='monthly_revenue', mtime_column='date', mseasonal_period=12, mmethod='multiplicative') | detect_anomalies_from_residuals(columns='monthly_revenue', method='modified_zscore', threshold=3.0)\"}",
+      "metadata": {
+        "function_name": "calculate_seasonal_residuals",
+        "src_type": "function",
+        "category": "seasonal_analysis",
+        "example_id": 8,
+        "description": "Perform seasonal decomposition and detect residual anomalies"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How can I detect change points in my time series data?\", \"Context\": \"I want to identify points where the statistical properties of my time series change significantly, like when a system configuration changes.\", \"Code_Example\": \"from anomalydetection import AnomalyPipe, detect_change_points\\n\\n# Detect change points using binary segmentation\\nchange_points = pipeline | detect_change_points(\\n    columns='system_performance',\\n    time_column='timestamp',\\n    min_size=30,  # Minimum 30 points between change points\\n    method='binary_segmentation',\\n    penalty='bic'\\n)\\n\\n# Check detected change points\\ncp_detected = change_points.data[change_points.data['system_performance_changepoint']]\\nprint(f\\\"Change points detected: {len(cp_detected)}\\\")\\nprint(\\\"Change point timestamps:\\\")\\nprint(cp_detected[['timestamp', 'system_performance', 'system_performance_cp_score']].head())\\n\\n# Visualize the data with change points\\nimport matplotlib.pyplot as plt\\nplt.figure(figsize=(12, 6))\\nplt.plot(change_points.data['timestamp'], change_points.data['system_performance'], alpha=0.7)\\ncp_times = cp_detected['timestamp']\\ncp_values = cp_detected['system_performance']\\nplt.scatter(cp_times, cp_values, color='red', s=50, label='Change Points')\\nplt.title('System Performance with Change Points')\\nplt.legend()\\nplt.show()\", \"Usage\": \"detect_change_points(columns='system_performance', time_column='timestamp', min_size=30, method='binary_segmentation', penalty='bic')\"}",
+      "metadata": {
+        "function_name": "detect_change_points",
+        "src_type": "function",
+        "category": "change_point_detection",
+        "example_id": 9,
+        "description": "Detect change points using binary segmentation"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I use forecasting to detect anomalies in future patterns?\", \"Context\": \"I want to forecast my time series and identify current values that deviate significantly from what the model predicts.\", \"Code_Example\": \"from anomalydetection import AnomalyPipe, forecast_and_detect_anomalies\\n\\n# Detect anomalies using ARIMA forecasting\\nforecast_anomalies = pipeline | forecast_and_detect_anomalies(\\n    columns='stock_price',\\n    time_column='date',\\n    forecast_periods=30,\\n    model='arima',\\n    threshold=2.0\\n)\\n\\n# Check forecasting results\\nprint(f\\\"Forecast-based anomalies: {forecast_anomalies.data['stock_price_forecast_anomaly'].sum()}\\\")\\n\\n# Get the forecast for future periods\\nforecasts = forecast_anomalies.forecasts['forecast_anomalies_arima']['stock_price']\\nprint(\\\"Future forecasts:\\\")\\nprint(forecasts.head())\\n\\n# Compare different forecasting models\\nexp_smooth_anomalies = pipeline | forecast_and_detect_anomalies(\\n    columns='stock_price',\\n    time_column='date',\\n    model='exponential_smoothing',\\n    seasonal_period=5,  # Weekly patterns for daily data\\n    threshold=2.0\\n)\\n\\nprint(f\\\"Exponential smoothing anomalies: {exp_smooth_anomalies.data['stock_price_forecast_anomaly'].sum()}\\\")\", \"Usage\": \"forecast_and_detect_anomalies(columns='stock_price', time_column='date', forecast_periods=30, model='arima', threshold=2.0)\"}",
+      "metadata": {
+        "function_name": "forecast_and_detect_anomalies",
+        "src_type": "function",
+        "category": "forecast_detection",
+        "example_id": 10,
+        "description": "Detect anomalies using time series forecasting"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How can I combine multiple anomaly detection methods for better results?\", \"Context\": \"I want to use ensemble methods to combine different anomaly detection approaches and get more robust results.\", \"Code_Example\": \"from anomalydetection import AnomalyPipe, batch_detect_anomalies\\n\\n# Define multiple detection methods\\nmethods = [\\n    {\\n        'name': 'statistical_outliers',\\n        'params': {\\n            'columns': 'sensor_reading',\\n            'method': 'zscore',\\n            'threshold': 2.5\\n        }\\n    },\\n    {\\n        'name': 'contextual_anomalies',\\n        'params': {\\n            'columns': 'sensor_reading',\\n            'time_column': 'timestamp',\\n            'method': 'residual',\\n            'model_type': 'ewm',\\n            'threshold': 2.0\\n        }\\n    },\\n    {\\n        'name': 'collective_anomalies',\\n        'params': {\\n            'columns': ['sensor_reading', 'temperature', 'humidity'],\\n            'time_column': 'timestamp',\\n            'method': 'isolation_forest',\\n            'contamination': 0.05\\n        }\\n    }\\n]\\n\\n# Apply ensemble detection with majority voting\\nensemble_results = pipeline | batch_detect_anomalies(\\n    columns='sensor_reading',\\n    methods=methods,\\n    ensemble_method='majority',\\n    output_suffix='_ensemble_anomaly'\\n)\\n\\nprint(f\\\"Ensemble anomalies (majority vote): {ensemble_results.data['sensor_reading_ensemble_anomaly'].sum()}\\\")\\n\\n# Try different ensemble methods\\nweighted_results = pipeline | batch_detect_anomalies(\\n    columns='sensor_reading',\\n    methods=methods,\\n    ensemble_method='weighted'\\n)\\n\\nprint(f\\\"Ensemble anomalies (weighted): {weighted_results.data['sensor_reading_ensemble_anomaly'].sum()}\\\")\", \"Usage\": \"batch_detect_anomalies(columns='sensor_reading', methods=[{'name': 'statistical_outliers', 'params': {...}}, {'name': 'contextual_anomalies', 'params': {...}}], ensemble_method='majority')\"}",
+      "metadata": {
+        "function_name": "batch_detect_anomalies",
+        "src_type": "function",
+        "category": "ensemble_methods",
+        "example_id": 11,
+        "description": "Combine multiple anomaly detection methods using ensemble"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I get a summary of my anomaly detection results?\", \"Context\": \"After running anomaly detection, I want to understand the overall results, including counts, percentages, and distributions.\", \"Code_Example\": \"from anomalydetection import AnomalyPipe, detect_statistical_outliers, get_anomaly_summary\\n\\n# Run anomaly detection\\noutliers = pipeline | detect_statistical_outliers(\\n    columns=['temperature', 'pressure'],\\n    method='iqr',\\n    threshold=1.5\\n)\\n\\n# Get summary of results\\nsummary = outliers | get_anomaly_summary()\\n\\nprint(\\\"Anomaly Detection Summary:\\\")\\nprint(f\\\"Analysis Type: {summary['analysis_type']}\\\")\\nprint(f\\\"Method: {summary['method']}\\\")\\nprint(f\\\"Total Data Points: {summary['total_points']}\\\")\\nprint(f\\\"Total Anomalies: {summary['total_anomalies']}\\\")\\nprint(f\\\"Overall Anomaly Rate: {summary['total_anomaly_percentage']:.2f}%\\\")\\n\\nprint(\\\"\\\\nAnomalies by Column:\\\")\\nfor col, stats in summary['anomalies_by_column'].items():\\n    print(f\\\"  {col}: {stats['count']} anomalies ({stats['percentage']:.2f}%)\\\")\\n    if stats['score_stats']:\\n        print(f\\\"    Score range: {stats['score_stats']['min_score']:.2f} - {stats['score_stats']['max_score']:.2f}\\\")\\n\\n# Get time distribution if available\\nif 'time_distribution' in summary:\\n    print(\\\"\\\\nTime Distribution:\\\")\\n    for col, dist in summary['time_distribution'].items():\\n        print(f\\\"  {col}: {dict(list(dist.items())[:5])}  # First 5 periods\\\")\", \"Usage\": \"get_anomaly_summary()\"}",
+      "metadata": {
+        "function_name": "get_anomaly_summary",
+        "src_type": "function",
+        "category": "analysis_summary",
+        "example_id": 12,
+        "description": "Get comprehensive summary of anomaly detection results"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How can I identify the most severe anomalies in my data?\", \"Context\": \"I want to find the top anomalies by score to investigate the most significant outliers first.\", \"Code_Example\": \"from anomalydetection import AnomalyPipe, detect_contextual_anomalies, get_top_anomalies\\n\\n# Run contextual anomaly detection\\ncontextual_results = pipeline | detect_contextual_anomalies(\\n    columns='sensor_value',\\n    time_column='timestamp',\\n    method='residual',\\n    model_type='sarimax',\\n    threshold=2.0\\n)\\n\\n# Get top 10 anomalies\\ntop_anomalies = contextual_results | get_top_anomalies(\\n    n=10,\\n    time_column='timestamp'\\n)\\n\\nprint(\\\"Top 10 Anomalies:\\\")\\nprint(top_anomalies[['time', 'metric', 'value', 'expected', 'score']].round(3))\\n\\n# Get top anomalies without time info\\ntop_by_score = contextual_results | get_top_anomalies(n=5)\\n\\nprint(\\\"\\\\nTop 5 by Score:\\\")\\nfor idx, row in top_by_score.iterrows():\\n    print(f\\\"Score: {row['score']:.3f}, Value: {row['value']:.2f}, Expected: {row['expected']:.2f}\\\")\", \"Usage\": \"get_top_anomalies(n=10, time_column='timestamp')\"}",
+      "metadata": {
+        "function_name": "get_top_anomalies",
+        "src_type": "function",
+        "category": "analysis_summary",
+        "example_id": 13,
+        "description": "Identify the most severe anomalies by score"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How can I chain multiple anomaly detection analyses together?\", \"Context\": \"I want to apply multiple different anomaly detection methods in sequence and compare their results.\", \"Code_Example\": \"from anomalydetection import (\\n    AnomalyPipe, \\n    detect_statistical_outliers,\\n    detect_contextual_anomalies,\\n    calculate_seasonal_residuals,\\n    detect_anomalies_from_residuals,\\n    get_anomaly_summary\\n)\\n\\n# Chain multiple analyses together\\ncomprehensive_analysis = (\\n    AnomalyPipe.from_dataframe(time_series_data)\\n    | detect_statistical_outliers(\\n        columns='value',\\n        method='zscore',\\n        threshold=3.0\\n    )\\n    | detect_contextual_anomalies(\\n        columns='value',\\n        time_column='date',\\n        method='residual',\\n        model_type='ewm'\\n    )\\n    | calculate_seasonal_residuals(\\n        columns='value',\\n        mtime_column='date',\\n        mseasonal_period=12\\n    )\\n    | detect_anomalies_from_residuals(\\n        columns='value',\\n        method='modified_zscore'\\n    )\\n)\\n\\n# Now we have results from multiple methods\\nprint(\\\"Statistical outliers:\\\", comprehensive_analysis.data['value_outlier_zscore'].sum())\\nprint(\\\"Contextual anomalies:\\\", comprehensive_analysis.data['value_anomaly_residual'].sum())\\nprint(\\\"Residual anomalies:\\\", comprehensive_analysis.data['value_anomaly'].sum())\\n\\n# Get summary of the latest analysis\\nsummary = comprehensive_analysis | get_anomaly_summary()\\nprint(f\\\"\\\\nFinal analysis summary: {summary['total_anomalies']} anomalies detected\\\")\", \"Usage\": \"AnomalyPipe.from_dataframe(data) | detect_statistical_outliers(...) | detect_contextual_anomalies(...) | calculate_seasonal_residuals(...) | detect_anomalies_from_residuals(...)\"}",
+      "metadata": {
+        "function_name": "multiple",
+        "src_type": "pipeline",
+        "category": "combined_analysis",
+        "example_id": 14,
+        "description": "Chain multiple anomaly detection analyses together"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I handle grouped data for anomaly detection across different categories?\", \"Context\": \"I have data from multiple sensors or categories and want to detect anomalies within each group separately.\", \"Code_Example\": \"from anomalydetection import AnomalyPipe, detect_statistical_outliers, detect_contextual_anomalies\\n\\n# Detect outliers separately for each sensor\\ngrouped_outliers = pipeline | detect_statistical_outliers(\\n    columns='reading',\\n    method='iqr',\\n    threshold=1.5,\\n    group_columns=['sensor_id', 'location']  # Group by sensor and location\\n)\\n\\n# Each sensor/location combination will have its own thresholds\\nprint(\\\"Outliers by group:\\\")\\noutlier_summary = grouped_outliers.data.groupby(['sensor_id', 'location'])['reading_outlier_iqr'].sum()\\nprint(outlier_summary.head())\\n\\n# Contextual anomalies with grouping\\ngrouped_contextual = pipeline | detect_contextual_anomalies(\\n    columns='reading',\\n    time_column='timestamp',\\n    method='residual',\\n    model_type='ewm',\\n    group_columns=['sensor_id']\\n)\\n\\n# Compare anomaly rates across groups\\nanomalies_by_sensor = grouped_contextual.data.groupby('sensor_id').agg({\\n    'reading_anomaly_residual': 'sum',\\n    'reading': 'count'\\n})\\nanomalies_by_sensor['anomaly_rate'] = anomalies_by_sensor['reading_anomaly_residual'] / anomalies_by_sensor['reading']\\nprint(\\\"\\\\nAnomaly rates by sensor:\\\")\\nprint(anomalies_by_sensor.sort_values('anomaly_rate', ascending=False))\", \"Usage\": \"detect_statistical_outliers(columns='reading', method='iqr', threshold=1.5, group_columns=['sensor_id', 'location'])\"}",
+      "metadata": {
+        "function_name": "detect_statistical_outliers",
+        "src_type": "function",
+        "category": "grouped_analysis",
+        "example_id": 15,
+        "description": "Handle grouped data for category-specific anomaly detection"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How can I create custom visualizations from anomaly detection results?\", \"Context\": \"I want to create charts and plots to visualize the detected anomalies and their patterns.\", \"Code_Example\": \"import matplotlib.pyplot as plt\\nimport seaborn as sns\\nfrom anomalydetection import AnomalyPipe, detect_contextual_anomalies\\n\\n# Run anomaly detection\\nresults = (\\n    AnomalyPipe.from_dataframe(time_series_data)\\n    | detect_contextual_anomalies(\\n        columns='temperature',\\n        time_column='timestamp',\\n        method='residual',\\n        model_type='ewm',\\n        threshold=2.0\\n    )\\n)\\n\\n# Create time series plot with anomalies highlighted\\nplt.figure(figsize=(15, 8))\\n\\n# Plot the original data\\nplt.subplot(2, 1, 1)\\nplt.plot(results.data['timestamp'], results.data['temperature'], alpha=0.7, label='Temperature')\\nplt.plot(results.data['timestamp'], results.data['temperature_expected'], color='green', label='Expected')\\n\\n# Highlight anomalies\\nanomalies = results.data[results.data['temperature_anomaly_residual']]\\nplt.scatter(anomalies['timestamp'], anomalies['temperature'], color='red', s=30, label='Anomalies', zorder=5)\\n\\nplt.title('Temperature with Detected Anomalies')\\nplt.legend()\\nplt.grid(True, alpha=0.3)\\n\\n# Plot anomaly scores over time\\nplt.subplot(2, 1, 2)\\nplt.plot(results.data['timestamp'], results.data['temperature_score_residual'], color='orange')\\nplt.axhline(y=2.0, color='red', linestyle='--', label='Threshold')\\nplt.fill_between(results.data['timestamp'], 0, results.data['temperature_score_residual'], \\n                 where=results.data['temperature_anomaly_residual'], alpha=0.3, color='red')\\nplt.title('Anomaly Scores Over Time')\\nplt.ylabel('Anomaly Score')\\nplt.legend()\\nplt.grid(True, alpha=0.3)\\n\\nplt.tight_layout()\\nplt.savefig('anomaly_detection_results.png', dpi=300, bbox_inches='tight')\\nplt.show()\\n\\n# Create distribution plot of anomaly scores\\nplt.figure(figsize=(10, 6))\\nsns.histplot(results.data['temperature_score_residual'], bins=50, alpha=0.7)\\nplt.axvline(x=2.0, color='red', linestyle='--', label='Threshold')\\nplt.title('Distribution of Anomaly Scores')\\nplt.xlabel('Anomaly Score')\\nplt.ylabel('Frequency')\\nplt.legend()\\nplt.show()\", \"Usage\": \"plt.plot(results.data['timestamp'], results.data['temperature']); plt.scatter(anomalies['timestamp'], anomalies['temperature'], color='red', label='Anomalies')\"}",
+      "metadata": {
+        "function_name": "multiple",
+        "src_type": "visualization",
+        "category": "advanced_usage",
+        "example_id": 16,
+        "description": "Create custom visualizations for anomaly detection results"
+      }
+    }
+]

@@ -1,0 +1,878 @@
+[
+    {
+      "query": "Aggregate daily sales data into weekly totals for the past quarter",
+      "function": "aggregate_by_time",
+      "category": "trend_analysis",
+      "inputs": {
+        "date_column": "transaction_date",
+        "metric_columns": ["revenue", "units_sold", "unique_customers"],
+        "time_period": "week",
+        "aggregation": {
+          "revenue": "sum",
+          "units_sold": "sum",
+          "unique_customers": "nunique"
+        },
+        "fill_missing": "zero",
+        "include_current_period": false
+      },
+      "patterns": {
+        "time_patterns": [
+          "(daily)",
+          "(weekly)",
+          "(quarterly)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | aggregate_by_time(date_column='transaction_date', metric_columns=['revenue', 'units_sold', 'unique_customers'], time_period='week', aggregation={'revenue': 'sum', 'units_sold': 'sum', 'unique_customers': 'nunique'}, fill_missing='zero', include_current_period=False)"
+    },
+    {
+      "query": "Convert hourly website traffic data to daily aggregates for the past month",
+      "function": "aggregate_by_time",
+      "category": "trend_analysis",
+      "inputs": {
+        "date_column": "timestamp",
+        "metric_columns": ["visitors", "page_views", "bounce_rate", "avg_session_duration"],
+        "time_period": "day",
+        "aggregation": {
+          "visitors": "sum",
+          "page_views": "sum",
+          "bounce_rate": "mean",
+          "avg_session_duration": "mean"
+        },
+        "datetime_format": "%Y-%m-%d %H:%M:%S"
+      },
+      "patterns": {
+        "time_patterns": [
+          "(hourly)",
+          "(daily)",
+          "(monthly)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | aggregate_by_time(date_column='timestamp', metric_columns=['visitors', 'page_views', 'bounce_rate', 'avg_session_duration'], time_period='day', aggregation={'visitors': 'sum', 'page_views': 'sum', 'bounce_rate': 'mean', 'avg_session_duration': 'mean'}, datetime_format='%Y-%m-%d %H:%M:%S')"
+    },
+    {
+      "query": "Aggregate daily marketing data into monthly performance metrics",
+      "function": "aggregate_by_time",
+      "category": "trend_analysis",
+      "inputs": {
+        "date_column": "date",
+        "metric_columns": ["impressions", "clicks", "conversions", "spend"],
+        "time_period": "month",
+        "aggregation": {
+          "impressions": "sum",
+          "clicks": "sum",
+          "conversions": "sum",
+          "spend": "sum"
+        },
+        "fill_missing": "zero",
+        "time_name": "month_year"
+      },
+      "patterns": {
+        "time_patterns": [
+          "(daily)",
+          "(monthly)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | aggregate_by_time(date_column='date', metric_columns=['impressions', 'clicks', 'conversions', 'spend'], time_period='month', aggregation={'impressions': 'sum', 'clicks': 'sum', 'conversions': 'sum', 'spend': 'sum'}, fill_missing='zero', time_name='month_year')"
+    },
+    {
+      "query": "Convert transaction data to quarterly business performance summary",
+      "function": "aggregate_by_time",
+      "category": "trend_analysis",
+      "inputs": {
+        "date_column": "order_date",
+        "metric_columns": ["revenue", "cost", "profit", "order_count", "avg_order_value"],
+        "time_period": "quarter",
+        "aggregation": {
+          "revenue": "sum",
+          "cost": "sum",
+          "profit": "sum",
+          "order_count": "count",
+          "avg_order_value": "mean"
+        },
+        "include_current_period": true
+      },
+      "patterns": {
+        "time_patterns": [
+          "(quarterly)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | aggregate_by_time(date_column='order_date', metric_columns=['revenue', 'cost', 'profit', 'order_count', 'avg_order_value'], time_period='quarter', aggregation={'revenue': 'sum', 'cost': 'sum', 'profit': 'sum', 'order_count': 'count', 'avg_order_value': 'mean'}, include_current_period=True)"
+    },
+    {
+      "query": "Aggregate customer support ticket data from hourly to weekly resolution",
+      "function": "aggregate_by_time",
+      "category": "trend_analysis",
+      "inputs": {
+        "date_column": "created_at",
+        "metric_columns": ["tickets_created", "tickets_resolved", "avg_resolution_time"],
+        "time_period": "week",
+        "aggregation": {
+          "tickets_created": "sum",
+          "tickets_resolved": "sum",
+          "avg_resolution_time": "mean"
+        },
+        "datetime_format": "%Y-%m-%dT%H:%M:%S"
+      },
+      "patterns": {
+        "time_patterns": [
+          "(hourly)",
+          "(weekly)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | aggregate_by_time(date_column='created_at', metric_columns=['tickets_created', 'tickets_resolved', 'avg_resolution_time'], time_period='week', aggregation={'tickets_created': 'sum', 'tickets_resolved': 'sum', 'avg_resolution_time': 'mean'}, datetime_format='%Y-%m-%dT%H:%M:%S')"
+    },
+    {
+      "query": "Calculate quarter-over-quarter growth rates for user acquisition metrics",
+      "function": "calculate_growth_rates",
+      "category": "trend_analysis",
+      "inputs": {
+        "window": 1,
+        "annualize": false,
+        "method": "percentage"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (growth rates)",
+          "(trend|growth|change) over time"
+        ],
+        "time_patterns": [
+          "(quarterly)"
+        ],
+        "num_patterns": [
+          "(1)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | calculate_growth_rates(window=1, annualize=False, method='percentage')"
+    },
+    {
+      "query": "Compute month-over-month percentage change in key performance indicators",
+      "function": "calculate_growth_rates",
+      "category": "trend_analysis",
+      "inputs": {
+        "window": 1,
+        "annualize": false,
+        "method": "percentage"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (percentage change)",
+          "(trend|growth|change) over time"
+        ],
+        "time_patterns": [
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(1)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | calculate_growth_rates(window=1, annualize=False, method='percentage')"
+    },
+    {
+      "query": "Calculate year-over-year growth rates for revenue by product category",
+      "function": "calculate_growth_rates",
+      "category": "trend_analysis",
+      "inputs": {
+        "window": 4,
+        "annualize": false,
+        "method": "percentage"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (growth rates)",
+          "(trend|growth|change) over time"
+        ],
+        "time_patterns": [
+          "(yearly)"
+        ],
+        "num_patterns": [
+          "(4)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | calculate_growth_rates(window=4, annualize=False, method='percentage')"
+    },
+    {
+      "query": "Compute absolute change in daily active users week-over-week",
+      "function": "calculate_growth_rates",
+      "category": "trend_analysis",
+      "inputs": {
+        "window": 1,
+        "annualize": false,
+        "method": "absolute"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (absolute change)",
+          "(trend|growth|change) over time"
+        ],
+        "time_patterns": [
+          "(daily)",
+          "(weekly)"
+        ],
+        "num_patterns": [
+          "(1)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | calculate_growth_rates(window=1, annualize=False, method='absolute')"
+    },
+    {
+      "query": "Calculate annualized growth rate from quarterly performance data",
+      "function": "calculate_growth_rates",
+      "category": "trend_analysis",
+      "inputs": {
+        "window": 1,
+        "annualize": true,
+        "method": "cagr"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (annualized growth rate)",
+          "(trend|growth|change) over time"
+        ],
+        "time_patterns": [
+          "(quarterly)",
+          "(yearly)"
+        ],
+        "num_patterns": [
+          "(1)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | calculate_growth_rates(window=1, annualize=True, method='cagr')"
+    },
+    {
+      "query": "Smooth weekly sales data using a 4-week moving average",
+      "function": "calculate_moving_average",
+      "category": "trend_analysis",
+      "inputs": {
+        "window": 4,
+        "method": "simple",
+        "center": false
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (moving average)"
+        ],
+        "time_patterns": [
+          "(weekly)"
+        ],
+        "num_patterns": [
+          "(4)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | calculate_moving_average(window=4, method='simple', center=False)"
+    },
+    {
+      "query": "Calculate 7-day exponential moving average of daily website traffic",
+      "function": "calculate_moving_average",
+      "category": "trend_analysis",
+      "inputs": {
+        "window": 7,
+        "method": "exponential",
+        "center": false
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (moving average)"
+        ],
+        "time_patterns": [
+          "(daily)"
+        ],
+        "num_patterns": [
+          "(7)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | calculate_moving_average(window=7, method='exponential', center=False)"
+    },
+    {
+      "query": "Create 3-month weighted moving average of revenue metrics",
+      "function": "calculate_moving_average",
+      "category": "trend_analysis",
+      "inputs": {
+        "window": 3,
+        "method": "weighted",
+        "center": false
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (moving average)"
+        ],
+        "time_patterns": [
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(3)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | calculate_moving_average(window=3, method='weighted', center=False)"
+    },
+    {
+      "query": "Apply centered 5-day moving average to smooth daily metrics",
+      "function": "calculate_moving_average",
+      "category": "trend_analysis",
+      "inputs": {
+        "window": 5,
+        "method": "simple",
+        "center": true
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (moving average)"
+        ],
+        "time_patterns": [
+          "(daily)"
+        ],
+        "num_patterns": [
+          "(5)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | calculate_moving_average(window=5, method='simple', center=True)"
+    },
+    {
+      "query": "Calculate 12-month rolling average of monthly active users",
+      "function": "calculate_moving_average",
+      "category": "trend_analysis",
+      "inputs": {
+        "window": 12,
+        "method": "simple",
+        "center": false
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (rolling average)"
+        ],
+        "time_patterns": [
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(12)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | calculate_moving_average(window=12, method='simple', center=False)"
+    },
+    {
+      "query": "Separate seasonal patterns from overall trend in monthly active users",
+      "function": "decompose_trend",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "monthly_active_users",
+        "model": "multiplicative",
+        "period": 12,
+        "extrapolate_trend": true
+      },
+      "patterns": {
+        "time_patterns": [
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(12)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | decompose_trend(metric_column='monthly_active_users', model='multiplicative', period=12, extrapolate_trend=True)"
+    },
+    {
+      "query": "Decompose daily sales data into trend, seasonal, and residual components",
+      "function": "decompose_trend",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "daily_sales",
+        "model": "additive",
+        "period": 7,
+        "extrapolate_trend": false
+      },
+      "patterns": {
+        "time_patterns": [
+          "(daily)"
+        ],
+        "num_patterns": [
+          "(7)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | decompose_trend(metric_column='daily_sales', model='additive', period=7, extrapolate_trend=False)"
+    },
+    {
+      "query": "Extract seasonal patterns from quarterly revenue data",
+      "function": "decompose_trend",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "quarterly_revenue",
+        "model": "multiplicative",
+        "period": 4,
+        "extrapolate_trend": false
+      },
+      "patterns": {
+        "time_patterns": [
+          "(quarterly)"
+        ],
+        "num_patterns": [
+          "(4)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | decompose_trend(metric_column='quarterly_revenue', model='multiplicative', period=4, extrapolate_trend=False)"
+    },
+    {
+      "query": "Analyze weekly website traffic for trend and seasonality patterns",
+      "function": "decompose_trend",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "weekly_visitors",
+        "model": "additive",
+        "period": 52,
+        "extrapolate_trend": true
+      },
+      "patterns": {
+        "function_patterns": [
+          "(analyze|analysis|examine)"
+        ],
+        "time_patterns": [
+          "(weekly)"
+        ],
+        "num_patterns": [
+          "(52)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | decompose_trend(metric_column='weekly_visitors', model='additive', period=52, extrapolate_trend=True)"
+    },
+    {
+      "query": "Decompose hourly server load into trend and cyclic components",
+      "function": "decompose_trend",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "server_load",
+        "model": "additive",
+        "period": 24,
+        "extrapolate_trend": false
+      },
+      "patterns": {
+        "num_patterns": [
+          "(24)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | decompose_trend(metric_column='server_load', model='additive', period=24, extrapolate_trend=False)"
+    },
+    {
+      "query": "Forecast revenue for the next 3 months based on historical data",
+      "function": "forecast_metric",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "monthly_revenue",
+        "fperiods": 3,
+        "fmethod": "auto_arima",
+        "seasonal_periods": 12,
+        "confidence_interval": 0.9
+      },
+      "patterns": {
+        "time_patterns": [
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(3)",
+          "(12)",
+          "(0.9)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | forecast_metric(metric_column='monthly_revenue', fperiods=3, fmethod='auto_arima', seasonal_periods=12, confidence_interval=0.9)"
+    },
+    {
+      "query": "Predict daily active users for the next 14 days using exponential smoothing",
+      "function": "forecast_metric",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "daily_active_users",
+        "fperiods": 14,
+        "fmethod": "ets",
+        "seasonal_periods": 7,
+        "confidence_interval": 0.95
+      },
+      "patterns": {
+        "time_patterns": [
+          "(daily)"
+        ],
+        "num_patterns": [
+          "(14)",
+          "(7)",
+          "(0.95)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | forecast_metric(metric_column='daily_active_users', fperiods=14, fmethod='ets', seasonal_periods=7, confidence_interval=0.95)"
+    },
+    {
+      "query": "Generate a 6-month forecast of website traffic with 95% confidence intervals",
+      "function": "forecast_metric",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "monthly_visitors",
+        "fperiods": 6,
+        "fmethod": "prophet",
+        "seasonal_periods": 12,
+        "confidence_interval": 0.95
+      },
+      "patterns": {
+        "time_patterns": [
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(6)",
+          "(12)",
+          "(95)%"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | forecast_metric(metric_column='monthly_visitors', fperiods=6, fmethod='prophet', seasonal_periods=12, confidence_interval=0.95)"
+    },
+    {
+      "query": "Forecast quarterly sales for the next year using ARIMA model",
+      "function": "forecast_metric",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "quarterly_sales",
+        "fperiods": 4,
+        "fmethod": "arima",
+        "seasonal_periods": 4,
+        "confidence_interval": 0.8
+      },
+      "patterns": {
+        "time_patterns": [
+          "(quarterly)",
+          "(yearly)"
+        ],
+        "num_patterns": [
+          "(4)",
+          "(0.8)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | forecast_metric(metric_column='quarterly_sales', fperiods=4, fmethod='arima', seasonal_periods=4, confidence_interval=0.8)"
+    },
+    {
+      "query": "Predict hourly website traffic pattern for the next 24 hours",
+      "function": "forecast_metric",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "hourly_visitors",
+        "fperiods": 24,
+        "fmethod": "ets",
+        "seasonal_periods": 24,
+        "confidence_interval": 0.9
+      },
+      "patterns": {
+        "time_patterns": [
+          "(hourly)"
+        ],
+        "num_patterns": [
+          "(24)",
+          "(0.9)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | forecast_metric(metric_column='hourly_visitors', fperiods=24, fmethod='ets', seasonal_periods=24, confidence_interval=0.9)"
+    },
+    {
+      "query": "Test if there's a statistically significant upward trend in daily active users",
+      "function": "calculate_statistical_trend",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "daily_active_users",
+        "test_method": "mann_kendall",
+        "alpha": 0.05,
+        "window": 30
+      },
+      "patterns": {
+        "function_patterns": [
+          "(analyze|analysis|examine) (trend)"
+        ],
+        "time_patterns": [
+          "(daily)"
+        ],
+        "num_patterns": [
+          "(0.05)",
+          "(30)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | calculate_statistical_trend(metric_column='daily_active_users', test_method='mann_kendall', alpha=0.05, window=30)"
+    },
+    {
+      "query": "Determine if the decline in conversion rate is statistically significant",
+      "function": "calculate_statistical_trend",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "conversion_rate",
+        "test_method": "cox_stuart",
+        "alpha": 0.01,
+        "window": 14
+      },
+      "patterns": {
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion rate)"
+        ],
+        "num_patterns": [
+          "(0.01)",
+          "(14)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | calculate_statistical_trend(metric_column='conversion_rate', test_method='cox_stuart', alpha=0.01, window=14)"
+    },
+    {
+      "query": "Analyze the statistical significance of seasonal patterns in quarterly revenue",
+      "function": "calculate_statistical_trend",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "quarterly_revenue",
+        "test_method": "seasonal_decompose",
+        "alpha": 0.05,
+        "window": 12
+      },
+      "patterns": {
+        "function_patterns": [
+          "(analyze|analysis|examine) (significance)"
+        ],
+        "time_patterns": [
+          "(quarterly)"
+        ],
+        "num_patterns": [
+          "(0.05)",
+          "(12)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | calculate_statistical_trend(metric_column='quarterly_revenue', test_method='seasonal_decompose', alpha=0.05, window=12)"
+    },
+    {
+      "query": "Test for sustained growth in monthly active users using linear regression",
+      "function": "calculate_statistical_trend",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "monthly_active_users",
+        "test_method": "linear_regression",
+        "alpha": 0.05,
+        "window": 24
+      },
+      "patterns": {
+        "time_patterns": [
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(0.05)",
+          "(24)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | calculate_statistical_trend(metric_column='monthly_active_users', test_method='linear_regression', alpha=0.05, window=24)"
+    },
+    {
+      "query": "Check if recent fluctuations in daily page views are anomalous",
+      "function": "calculate_statistical_trend",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "daily_page_views",
+        "test_method": "anomaly_detection",
+        "alpha": 0.01,
+        "window": 90
+      },
+      "patterns": {
+        "time_patterns": [
+          "(daily)"
+        ],
+        "num_patterns": [
+          "(0.01)",
+          "(90)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | calculate_statistical_trend(metric_column='daily_page_views', test_method='anomaly_detection', alpha=0.01, window=90)"
+    },
+    {
+      "query": "Compare this month's conversion metrics to same month last year",
+      "function": "compare_periods",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "conversion_rate",
+        "comparison_type": "year_over_year",
+        "n_periods": 1,
+        "aggregation": "mean"
+      },
+      "patterns": {
+        "time_patterns": [
+          "(monthly)",
+          "(yearly)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion metrics)"
+        ],
+        "num_patterns": [
+          "(1)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | compare_periods(metric_column='conversion_rate', comparison_type='year_over_year', n_periods=1, aggregation='mean')"
+    },
+    {
+      "query": "Compare current quarter performance with previous quarter",
+      "function": "compare_periods",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "revenue",
+        "comparison_type": "previous_period",
+        "n_periods": 1,
+        "aggregation": "sum"
+      },
+      "patterns": {
+        "time_patterns": [
+          "(quarterly)"
+        ],
+        "num_patterns": [
+          "(1)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | compare_periods(metric_column='revenue', comparison_type='previous_period', n_periods=1, aggregation='sum')"
+    },
+    {
+      "query": "Analyze this week's metrics compared to 4-week average baseline",
+      "function": "compare_periods",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "engagement_rate",
+        "comparison_type": "rolling_average",
+        "n_periods": 4,
+        "aggregation": "mean"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(analyze|analysis|examine)"
+        ],
+        "time_patterns": [
+          "(weekly)"
+        ],
+        "num_patterns": [
+          "(4)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | compare_periods(metric_column='engagement_rate', comparison_type='rolling_average', n_periods=4, aggregation='mean')"
+    },
+    {
+      "query": "Compare holiday season performance with same period last year",
+      "function": "compare_periods",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "sales",
+        "comparison_type": "year_over_year",
+        "n_periods": 1,
+        "aggregation": "sum"
+      },
+      "patterns": {
+        "time_patterns": [
+          "(yearly)"
+        ],
+        "num_patterns": [
+          "(1)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | compare_periods(metric_column='sales', comparison_type='year_over_year', n_periods=1, aggregation='sum')"
+    },
+    {
+      "query": "Compare current month metrics with 3-month moving average",
+      "function": "compare_periods",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "active_users",
+        "comparison_type": "rolling_average",
+        "n_periods": 3,
+        "aggregation": "mean"
+      },
+      "patterns": {
+        "time_patterns": [
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(3)"
+        ]
+      },
+      "example": "TrendPipe.from_dataframe(df) | compare_periods(metric_column='active_users', comparison_type='rolling_average', n_periods=3, aggregation='mean')"
+    },
+    {
+      "query": "Identify the fastest growing product categories by revenue",
+      "function": "get_top_metrics",
+      "category": "trend_analysis",
+      "inputs": {
+        "n": 5,
+        "metric_type": "growth_rate",
+        "ascending": false
+      },
+      "patterns": {
+        "function_patterns": [
+          "(trend|growth|change) over time"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (revenue)"
+        ],
+        "num_patterns": [
+          "(5)"
+        ]
+      },
+      "example": "get_top_metrics(n=5, metric_type='growth_rate', ascending=False)(TrendPipe.from_dataframe(df))"
+    },
+    {
+      "query": "Find the top 10 fastest growing user segments by engagement",
+      "function": "get_top_metrics",
+      "category": "trend_analysis",
+      "inputs": {
+        "n": 10,
+        "metric_type": "growth_rate",
+        "ascending": false
+      },
+      "patterns": {
+        "num_patterns": [
+          "top (10)"
+        ]
+      },
+      "example": "get_top_metrics(n=10, metric_type='growth_rate', ascending=False)(TrendPipe.from_dataframe(df))"
+    },
+    {
+      "query": "Identify worst performing channels by conversion rate decline",
+      "function": "get_top_metrics",
+      "category": "trend_analysis",
+      "inputs": {
+        "n": 5,
+        "metric_type": "growth_rate",
+        "ascending": true
+      },
+      "patterns": {
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion rate)"
+        ],
+        "num_patterns": [
+          "(5)"
+        ]
+      },
+      "example": "get_top_metrics(n=5, metric_type='growth_rate', ascending=True)(TrendPipe.from_dataframe(df))"
+    },
+    {
+      "query": "Find top 3 regions with highest revenue growth rate",
+      "function": "get_top_metrics",
+      "category": "trend_analysis",
+      "inputs": {
+        "n": 3,
+        "metric_type": "growth_rate",
+        "ascending": false
+      },
+      "patterns": {
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (revenue)"
+        ],
+        "num_patterns": [
+          "top (3)"
+        ]
+      },
+      "example": "get_top_metrics(n=3, metric_type='growth_rate', ascending=False)(TrendPipe.from_dataframe(df))"
+    },
+    {
+      "query": "List 5 products with most significant decline in monthly sales",
+      "function": "get_top_metrics",
+      "category": "trend_analysis",
+      "inputs": {
+        "n": 5,
+        "metric_type": "growth_rate",
+        "ascending": true
+      },
+      "patterns": {
+        "time_patterns": [
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(5)"
+        ]
+      },
+      "example": "get_top_metrics(n=5, metric_type='growth_rate', ascending=True)(TrendPipe.from_dataframe(df))"
+    }
+  ]

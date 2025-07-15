@@ -1,0 +1,1957 @@
+[
+    {
+      "query": "Count total number of transactions per store",
+      "function": "Count",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "transaction_id",
+        "output_name": "transaction_count"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (count|total)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (transactions)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Count\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Count transactions\nresult = pipeline | Count(variable='transaction_id', output_name='transaction_count')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['transaction_count'])"
+    },
+    {
+      "query": "Count the number of active users by day",
+      "function": "Count",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "user_id",
+        "output_name": "daily_active_users"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (count|total)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (active users)"
+        ],
+        "time_patterns": [
+          "(daily)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Count\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Count active users\nresult = pipeline | Count(variable='user_id', output_name='daily_active_users')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['daily_active_users'])"
+    },
+    {
+      "query": "Find the number of unique visitors per page",
+      "function": "Count",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "visitor_id",
+        "output_name": "unique_visitors"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (count|total)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (visitors)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Count\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Count unique visitors\nresult = pipeline | Count(variable='visitor_id', output_name='unique_visitors')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['unique_visitors'])"
+    },
+    {
+      "query": "Count total orders by product category",
+      "function": "Count",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "order_id",
+        "output_name": "order_count"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (count|total)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (orders)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Count\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Count orders\nresult = pipeline | Count(variable='order_id', output_name='order_count')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['order_count'])"
+    },
+    {
+      "query": "Calculate number of support tickets by priority level",
+      "function": "Count",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "ticket_id",
+        "output_name": "ticket_count"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (count|total)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (support tickets)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Count\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Count support tickets\nresult = pipeline | Count(variable='ticket_id', output_name='ticket_count')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['ticket_count'])"
+    },
+    {
+      "query": "Calculate total revenue by product category",
+      "function": "Sum",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "order_amount",
+        "output_name": "total_revenue"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (sum|total)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (revenue)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Sum\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate total revenue\nresult = pipeline | Sum(variable='order_amount', output_name='total_revenue')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['total_revenue'])"
+    },
+    {
+      "query": "Find the sum of all transaction values by customer segment",
+      "function": "Sum",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "transaction_value",
+        "output_name": "total_value"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (sum|total)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (transaction values)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Sum\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate total transaction value\nresult = pipeline | Sum(variable='transaction_value', output_name='total_value')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['total_value'])"
+    },
+    {
+      "query": "Calculate total page views across all marketing campaigns",
+      "function": "Sum",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "page_views",
+        "output_name": "total_page_views"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (sum|total)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (page views)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Sum\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate total page views\nresult = pipeline | Sum(variable='page_views', output_name='total_page_views')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['total_page_views'])"
+    },
+    {
+      "query": "Compute the total ad spend by channel for last month",
+      "function": "Sum",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "spend_amount",
+        "output_name": "total_spend"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (sum|total)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (ad spend)"
+        ],
+        "time_patterns": [
+          "(monthly)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Sum\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate total ad spend\nresult = pipeline | Sum(variable='spend_amount', output_name='total_spend')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['total_spend'])"
+    },
+    {
+      "query": "Sum up all inventory quantities by warehouse location",
+      "function": "Sum",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "quantity",
+        "output_name": "total_inventory"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (sum|total)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (inventory)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Sum\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate total inventory\nresult = pipeline | Sum(variable='quantity', output_name='total_inventory')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['total_inventory'])"
+    },
+    {
+      "query": "Find the highest transaction value in each region",
+      "function": "Max",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "transaction_value",
+        "output_name": "max_transaction"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (max|highest)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (transaction value)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Max\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Find maximum transaction value\nresult = pipeline | Max(variable='transaction_value', output_name='max_transaction')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['max_transaction'])"
+    },
+    {
+      "query": "Identify the maximum order size by product category",
+      "function": "Max",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "order_quantity",
+        "output_name": "max_order_size"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (max|highest)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (order size)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Max\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Find maximum order size\nresult = pipeline | Max(variable='order_quantity', output_name='max_order_size')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['max_order_size'])"
+    },
+    {
+      "query": "Find peak daily active users for each app version",
+      "function": "Max",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "active_users",
+        "output_name": "peak_users"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (max|highest|peak)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (active users)"
+        ],
+        "time_patterns": [
+          "(daily)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Max\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Find peak active users\nresult = pipeline | Max(variable='active_users', output_name='peak_users')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['peak_users'])"
+    },
+    {
+      "query": "Calculate maximum page load time by browser type",
+      "function": "Max",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "load_time_ms",
+        "output_name": "max_load_time"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (max|highest)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (load time)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Max\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Find maximum load time\nresult = pipeline | Max(variable='load_time_ms', output_name='max_load_time')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['max_load_time'])"
+    },
+    {
+      "query": "Identify highest conversion rate by marketing channel",
+      "function": "Max",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "conversion_rate",
+        "output_name": "best_performing_channel"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (max|highest)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion rate)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Max\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Find highest conversion rate\nresult = pipeline | Max(variable='conversion_rate', output_name='best_performing_channel')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['best_performing_channel'])"
+    },
+    {
+      "query": "Find the lowest price point for each product category",
+      "function": "Min",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "price",
+        "output_name": "min_price"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (min|lowest)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (price)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Min\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Find minimum price\nresult = pipeline | Min(variable='price', output_name='min_price')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['min_price'])"
+    },
+    {
+      "query": "Identify minimum order value by customer segment",
+      "function": "Min",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "order_value",
+        "output_name": "min_order_value"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (min|lowest)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (order value)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Min\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Find minimum order value\nresult = pipeline | Min(variable='order_value', output_name='min_order_value')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['min_order_value'])"
+    },
+    {
+      "query": "Calculate lowest daily active users count per month",
+      "function": "Min",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "daily_active_users",
+        "output_name": "min_dau"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (min|lowest)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (active users)"
+        ],
+        "time_patterns": [
+          "(daily)",
+          "(monthly)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Min\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Find minimum daily active users\nresult = pipeline | Min(variable='daily_active_users', output_name='min_dau')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['min_dau'])"
+    },
+    {
+      "query": "Find the shortest session duration by device type",
+      "function": "Min",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "session_duration",
+        "output_name": "min_duration"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (min|lowest|shortest)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (session duration)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Min\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Find minimum session duration\nresult = pipeline | Min(variable='session_duration', output_name='min_duration')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['min_duration'])"
+    },
+    {
+      "query": "Identify minimum conversion rate across all campaigns",
+      "function": "Min",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "conversion_rate",
+        "output_name": "min_conversion"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (min|lowest)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion rate)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Min\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Find minimum conversion rate\nresult = pipeline | Min(variable='conversion_rate', output_name='min_conversion')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['min_conversion'])"
+    },
+    {
+      "query": "Calculate conversion rate as ratio of purchases to website visits",
+      "function": "Ratio",
+      "category": "metricstools",
+      "inputs": {
+        "numerator": "purchases",
+        "denominator": "website_visits",
+        "output_name": "conversion_rate"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (ratio|rate)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion rate)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Ratio\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate conversion rate\nresult = pipeline | Ratio(numerator='purchases', denominator='website_visits', output_name='conversion_rate')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['conversion_rate'])"
+    },
+    {
+      "query": "Compute the click-through rate for each email campaign",
+      "function": "Ratio",
+      "category": "metricstools",
+      "inputs": {
+        "numerator": "clicks",
+        "denominator": "emails_sent",
+        "output_name": "ctr"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (ratio|rate)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (click-through rate)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Ratio\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate click-through rate\nresult = pipeline | Ratio(numerator='clicks', denominator='emails_sent', output_name='ctr')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['ctr'])"
+    },
+    {
+      "query": "Find the revenue per user by subscription tier",
+      "function": "Ratio",
+      "category": "metricstools",
+      "inputs": {
+        "numerator": "revenue",
+        "denominator": "users_count",
+        "output_name": "arpu"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (ratio|per)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (revenue per user)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Ratio\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate revenue per user\nresult = pipeline | Ratio(numerator='revenue', denominator='users_count', output_name='arpu')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['arpu'])"
+    },
+    {
+      "query": "Calculate cost per acquisition for each marketing channel",
+      "function": "Ratio",
+      "category": "metricstools",
+      "inputs": {
+        "numerator": "marketing_spend",
+        "denominator": "new_customers",
+        "output_name": "cpa"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (ratio|per)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (cost per acquisition)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Ratio\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate cost per acquisition\nresult = pipeline | Ratio(numerator='marketing_spend', denominator='new_customers', output_name='cpa')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['cpa'])"
+    },
+    {
+      "query": "Measure the average revenue per order by product category",
+      "function": "Ratio",
+      "category": "metricstools",
+      "inputs": {
+        "numerator": "total_revenue",
+        "denominator": "order_count",
+        "output_name": "arpo"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (average|mean)",
+          "(calculate|compute|find) (ratio|per)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (revenue per order)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Ratio\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate average revenue per order\nresult = pipeline | Ratio(numerator='total_revenue', denominator='order_count', output_name='arpo')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['arpo'])"
+    },
+    {
+      "query": "Calculate the dot product of user engagement score and conversion likelihood",
+      "function": "Dot",
+      "category": "metricstools",
+      "inputs": {
+        "variable1": "engagement_score",
+        "variable2": "conversion_likelihood",
+        "normalize": true,
+        "output_name": "engagement_conversion_score"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (dot product)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Dot\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate normalized dot product\nresult = pipeline | Dot(variable1='engagement_score', variable2='conversion_likelihood', normalize=True, output_name='engagement_conversion_score')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['engagement_conversion_score'])"
+    },
+    {
+      "query": "Compute the similarity between product features and user preferences",
+      "function": "Dot",
+      "category": "metricstools",
+      "inputs": {
+        "variable1": "product_features",
+        "variable2": "user_preferences",
+        "normalize": true,
+        "output_name": "preference_match_score"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (similarity)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Dot\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate similarity score\nresult = pipeline | Dot(variable1='product_features', variable2='user_preferences', normalize=True, output_name='preference_match_score')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['preference_match_score'])"
+    },
+    {
+      "query": "Calculate correlation between ad impressions and click vectors",
+      "function": "Dot",
+      "category": "metricstools",
+      "inputs": {
+        "variable1": "impressions_vector",
+        "variable2": "clicks_vector",
+        "normalize": false,
+        "output_name": "impression_click_correlation"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (correlation)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Dot\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate dot product correlation\nresult = pipeline | Dot(variable1='impressions_vector', variable2='clicks_vector', normalize=False, output_name='impression_click_correlation')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['impression_click_correlation'])"
+    },
+    {
+      "query": "Find dot product between user activity levels and monetization rates",
+      "function": "Dot",
+      "category": "metricstools",
+      "inputs": {
+        "variable1": "activity_level",
+        "variable2": "monetization_rate",
+        "output_name": "activity_monetization_score"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (dot product)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Dot\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate dot product\nresult = pipeline | Dot(variable1='activity_level', variable2='monetization_rate', output_name='activity_monetization_score')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['activity_monetization_score'])"
+    },
+    {
+      "query": "Compute the weighted score between feature usage and customer satisfaction",
+      "function": "Dot",
+      "category": "metricstools",
+      "inputs": {
+        "variable1": "feature_usage",
+        "variable2": "satisfaction_score",
+        "normalize": true,
+        "output_name": "weighted_satisfaction_score"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (score|weighted)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Dot\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate weighted satisfaction score\nresult = pipeline | Dot(variable1='feature_usage', variable2='satisfaction_score', normalize=True, output_name='weighted_satisfaction_score')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['weighted_satisfaction_score'])"
+    },
+    {
+      "query": "Find the top 5 customers by total spend",
+      "function": "Nth",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "customer_id",
+        "n": 5,
+        "sort_by": "total_spend",
+        "ascending": false,
+        "dropna": true
+      },
+      "patterns": {
+        "num_patterns": [
+          "top (5)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Nth\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Find top 5 customers\nresult = pipeline | Nth(variable='customer_id', n=5, sort_by='total_spend', ascending=False, dropna=True)\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['nth_5_customer_id_by_total_spend'])"
+    },
+    {
+      "query": "Identify the 10 worst-performing products by sales volume",
+      "function": "Nth",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "product_id",
+        "n": 10,
+        "sort_by": "sales_volume",
+        "ascending": true,
+        "dropna": true
+      },
+      "patterns": {
+        "num_patterns": [
+          "(10) worst"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Nth\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Find 10 worst products\nresult = pipeline | Nth(variable='product_id', n=10, sort_by='sales_volume', ascending=True, dropna=True)\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['nth_10_product_id_by_sales_volume'])"
+    },
+    {
+      "query": "Get the 3rd most valuable marketing channel by ROI",
+      "function": "Nth",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "channel_name",
+        "n": 3,
+        "sort_by": "roi",
+        "ascending": false
+      },
+      "patterns": {
+        "num_patterns": [
+          "(3)rd"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Nth\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Find 3rd most valuable channel\nresult = pipeline | Nth(variable='channel_name', n=3, sort_by='roi', ascending=False)\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['nth_3_channel_name_by_roi'])"
+    },
+    {
+      "query": "Find the 20 most recent user registrations",
+      "function": "Nth",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "user_id",
+        "n": 20,
+        "sort_by": "registration_date",
+        "ascending": false
+      },
+      "patterns": {
+        "num_patterns": [
+          "(20) most"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Nth\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Find 20 most recent registrations\nresult = pipeline | Nth(variable='user_id', n=20, sort_by='registration_date', ascending=False)\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['nth_20_user_id_by_registration_date'])"
+    },
+    {
+      "query": "Get the bottom 15 pages by average time spent",
+      "function": "Nth",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "page_url",
+        "n": 15,
+        "sort_by": "avg_time_spent",
+        "ascending": true
+      },
+      "patterns": {
+        "num_patterns": [
+          "bottom (15)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Nth\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Find bottom 15 pages\nresult = pipeline | Nth(variable='page_url', n=15, sort_by='avg_time_spent', ascending=True)\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['nth_15_page_url_by_avg_time_spent'])"
+    },
+    {
+      "query": "Calculate the variance in daily order volumes",
+      "function": "Variance",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "daily_orders",
+        "unbiased": true,
+        "output_name": "order_volume_variance"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (variance)"
+        ],
+        "time_patterns": [
+          "(daily)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Variance\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate variance in daily orders\nresult = pipeline | Variance(variable='daily_orders', unbiased=True, output_name='order_volume_variance')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['order_volume_variance'])"
+    },
+    {
+      "query": "Find variance in customer spending across different segments",
+      "function": "Variance",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "customer_spend",
+        "unbiased": true,
+        "output_name": "spend_variance"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (variance)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Variance\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate variance in customer spending\nresult = pipeline | Variance(variable='customer_spend', unbiased=True, output_name='spend_variance')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['spend_variance'])"
+    },
+    {
+      "query": "Compute the variance in page load times by device type",
+      "function": "Variance",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "load_time_ms",
+        "unbiased": false,
+        "output_name": "load_time_variance"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (variance)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Variance\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate variance in load times\nresult = pipeline | Variance(variable='load_time_ms', unbiased=False, output_name='load_time_variance')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['load_time_variance'])"
+    },
+    {
+      "query": "Calculate variance in monthly active users year-over-year",
+      "function": "Variance",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "monthly_active_users",
+        "output_name": "mau_variance"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (variance)"
+        ],
+        "time_patterns": [
+          "(monthly)",
+          "(yearly)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Variance\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate variance in monthly active users\nresult = pipeline | Variance(variable='monthly_active_users', output_name='mau_variance')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['mau_variance'])"
+    },
+    {
+      "query": "Find the variance in conversion rates between different landing pages",
+      "function": "Variance",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "conversion_rate",
+        "unbiased": true,
+        "output_name": "conversion_variance"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (variance)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion rates)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Variance\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate variance in conversion rates\nresult = pipeline | Variance(variable='conversion_rate', unbiased=True, output_name='conversion_variance')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['conversion_variance'])"
+    },
+    {
+      "query": "Calculate standard deviation of session duration by user type",
+      "function": "StandardDeviation",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "session_duration",
+        "unbiased": true,
+        "output_name": "session_duration_std"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (standard deviation)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, StandardDeviation\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate standard deviation of session duration\nresult = pipeline | StandardDeviation(variable='session_duration', unbiased=True, output_name='session_duration_std')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['session_duration_std'])"
+    },
+    {
+      "query": "Find the standard deviation in order values for each product category",
+      "function": "StandardDeviation",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "order_value",
+        "unbiased": true,
+        "output_name": "order_value_std"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (standard deviation)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, StandardDeviation\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate standard deviation of order values\nresult = pipeline | StandardDeviation(variable='order_value', unbiased=True, output_name='order_value_std')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['order_value_std'])"
+    },
+    {
+      "query": "Measure standard deviation of daily page views over the past month",
+      "function": "StandardDeviation",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "daily_page_views",
+        "output_name": "page_view_std"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (standard deviation)"
+        ],
+        "time_patterns": [
+          "(daily)",
+          "(monthly)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, StandardDeviation\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate standard deviation of daily page views\nresult = pipeline | StandardDeviation(variable='daily_page_views', output_name='page_view_std')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['page_view_std'])"
+    },
+    {
+      "query": "Calculate standard deviation in click-through rates across all email campaigns",
+      "function": "StandardDeviation",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "ctr",
+        "unbiased": false,
+        "output_name": "ctr_std"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (standard deviation)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (click-through rates)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, StandardDeviation\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate standard deviation of click-through rates\nresult = pipeline | StandardDeviation(variable='ctr', unbiased=False, output_name='ctr_std')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['ctr_std'])"
+    },
+    {
+      "query": "Find standard deviation of customer lifetime value by acquisition channel",
+      "function": "StandardDeviation",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "customer_ltv",
+        "unbiased": true,
+        "output_name": "ltv_std"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (standard deviation)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, StandardDeviation\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate standard deviation of customer LTV\nresult = pipeline | StandardDeviation(variable='customer_ltv', unbiased=True, output_name='ltv_std')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['ltv_std'])"
+    },
+    {
+      "query": "Calculate coefficient of variation for weekly sales by region",
+      "function": "CV",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "weekly_sales",
+        "unbiased": true,
+        "output_name": "sales_cv"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (coefficient of variation)"
+        ],
+        "time_patterns": [
+          "(weekly)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, CV\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate coefficient of variation for weekly sales\nresult = pipeline | CV(variable='weekly_sales', unbiased=True, output_name='sales_cv')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['sales_cv'])"
+    },
+    {
+      "query": "Find the coefficient of variation in conversion rates across different landing pages",
+      "function": "CV",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "conversion_rate",
+        "output_name": "conversion_cv"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (coefficient of variation)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion rates)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, CV\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate coefficient of variation for conversion rates\nresult = pipeline | CV(variable='conversion_rate', output_name='conversion_cv')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['conversion_cv'])"
+    },
+    {
+      "query": "Compute coefficient of variation for customer spending within each segment",
+      "function": "CV",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "customer_spend",
+        "unbiased": true,
+        "output_name": "spend_cv"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (coefficient of variation)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, CV\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate coefficient of variation for customer spending\nresult = pipeline | CV(variable='customer_spend', unbiased=True, output_name='spend_cv')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['spend_cv'])"
+    },
+    {
+      "query": "Calculate CV of page load times across different browsers",
+      "function": "CV",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "load_time_ms",
+        "output_name": "load_time_cv"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (coefficient of variation|CV)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, CV\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate coefficient of variation for load times\nresult = pipeline | CV(variable='load_time_ms', output_name='load_time_cv')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['load_time_cv'])"
+    },
+    {
+      "query": "Find coefficient of variation for monthly active users by platform",
+      "function": "CV",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "monthly_active_users",
+        "unbiased": false,
+        "output_name": "mau_cv"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (coefficient of variation)"
+        ],
+        "time_patterns": [
+          "(monthly)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, CV\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate coefficient of variation for monthly active users\nresult = pipeline | CV(variable='monthly_active_users', unbiased=False, output_name='mau_cv')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['mau_cv'])"
+    },
+    {
+      "query": "Find correlation between ad spend and sales volume",
+      "function": "Correlation",
+      "category": "metricstools",
+      "inputs": {
+        "variable1": "ad_spend",
+        "variable2": "sales_volume",
+        "output_name": "ad_sales_correlation"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(correlation|relationship) between"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Correlation\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate correlation between ad spend and sales\nresult = pipeline | Correlation(variable1='ad_spend', variable2='sales_volume', output_name='ad_sales_correlation')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['ad_sales_correlation'])"
+    },
+    {
+      "query": "Calculate the correlation between email open rates and conversion rates",
+      "function": "Correlation",
+      "category": "metricstools",
+      "inputs": {
+        "variable1": "open_rate",
+        "variable2": "conversion_rate",
+        "output_name": "open_conversion_correlation"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (correlation)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (correlation)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Correlation\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate correlation between open rates and conversion rates\nresult = pipeline | Correlation(variable1='open_rate', variable2='conversion_rate', output_name='open_conversion_correlation')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['open_conversion_correlation'])"
+    },
+    {
+      "query": "Measure the relationship between page load time and bounce rate",
+      "function": "Correlation",
+      "category": "metricstools",
+      "inputs": {
+        "variable1": "load_time_ms",
+        "variable2": "bounce_rate",
+        "output_name": "load_bounce_correlation"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(correlation|relationship) between"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (relationship)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Correlation\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate correlation between load time and bounce rate\nresult = pipeline | Correlation(variable1='load_time_ms', variable2='bounce_rate', output_name='load_bounce_correlation')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['load_bounce_correlation'])"
+    },
+    {
+      "query": "Compute correlation between customer age and average order value",
+      "function": "Correlation",
+      "category": "metricstools",
+      "inputs": {
+        "variable1": "customer_age",
+        "variable2": "avg_order_value",
+        "output_name": "age_aov_correlation"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (correlation)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Correlation\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate correlation between customer age and order value\nresult = pipeline | Correlation(variable1='customer_age', variable2='avg_order_value', output_name='age_aov_correlation')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['age_aov_correlation'])"
+    },
+    {
+      "query": "Find the correlation between session duration and conversion likelihood",
+      "function": "Correlation",
+      "category": "metricstools",
+      "inputs": {
+        "variable1": "session_duration",
+        "variable2": "conversion_likelihood",
+        "output_name": "duration_conversion_correlation"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(correlation|relationship) between"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Correlation\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate correlation between session duration and conversion likelihood\nresult = pipeline | Correlation(variable1='session_duration', variable2='conversion_likelihood', output_name='duration_conversion_correlation')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['duration_conversion_correlation'])"
+    },
+    {
+      "query": "Calculate covariance between website traffic and sales",
+      "function": "Cov",
+      "category": "metricstools",
+      "inputs": {
+        "variable1": "website_traffic",
+        "variable2": "sales",
+        "output_name": "traffic_sales_covariance"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (covariance)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Cov\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate covariance between traffic and sales\nresult = pipeline | Cov(variable1='website_traffic', variable2='sales', output_name='traffic_sales_covariance')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['traffic_sales_covariance'])"
+    },
+    {
+      "query": "Find the covariance between marketing spend and new user signups",
+      "function": "Cov",
+      "category": "metricstools",
+      "inputs": {
+        "variable1": "marketing_spend",
+        "variable2": "new_signups",
+        "output_name": "spend_signup_covariance"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (covariance)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Cov\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate covariance between marketing spend and signups\nresult = pipeline | Cov(variable1='marketing_spend', variable2='new_signups', output_name='spend_signup_covariance')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['spend_signup_covariance'])"
+    },
+    {
+      "query": "Compute covariance between product price and units sold",
+      "function": "Cov",
+      "category": "metricstools",
+      "inputs": {
+        "variable1": "product_price",
+        "variable2": "units_sold",
+        "output_name": "price_volume_covariance"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (covariance)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Cov\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate covariance between price and units sold\nresult = pipeline | Cov(variable1='product_price', variable2='units_sold', output_name='price_volume_covariance')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['price_volume_covariance'])"
+    },
+    {
+      "query": "Calculate the covariance between page view duration and conversion rates",
+      "function": "Cov",
+      "category": "metricstools",
+      "inputs": {
+        "variable1": "view_duration",
+        "variable2": "conversion_rate",
+        "output_name": "duration_conversion_covariance"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (covariance)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Cov\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate covariance between view duration and conversion rates\nresult = pipeline | Cov(variable1='view_duration', variable2='conversion_rate', output_name='duration_conversion_covariance')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['duration_conversion_covariance'])"
+    },
+    {
+      "query": "Find covariance between customer age and purchase frequency",
+      "function": "Cov",
+      "category": "metricstools",
+      "inputs": {
+        "variable1": "customer_age",
+        "variable2": "purchase_frequency",
+        "output_name": "age_frequency_covariance"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (covariance)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Cov\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate covariance between customer age and purchase frequency\nresult = pipeline | Cov(variable1='customer_age', variable2='purchase_frequency', output_name='age_frequency_covariance')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['age_frequency_covariance'])"
+    },
+    {
+      "query": "Calculate average customer rating by product",
+      "function": "Mean",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "rating",
+        "output_name": "avg_rating"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (average|mean)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (average)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Mean\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate average customer rating\nresult = pipeline | Mean(variable='rating', output_name='avg_rating')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['avg_rating'])"
+    },
+    {
+      "query": "Find the mean session duration for each user segment",
+      "function": "Mean",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "session_duration",
+        "output_name": "mean_duration"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (average|mean)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Mean\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate mean session duration\nresult = pipeline | Mean(variable='session_duration', output_name='mean_duration')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['mean_duration'])"
+    },
+    {
+      "query": "Calculate average order value by marketing channel",
+      "function": "Mean",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "order_value",
+        "output_name": "avg_order_value"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (average|mean)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (average order value)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Mean\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate average order value\nresult = pipeline | Mean(variable='order_value', output_name='avg_order_value')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['avg_order_value'])"
+    },
+    {
+      "query": "Find mean time to conversion for each landing page",
+      "function": "Mean",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "conversion_time",
+        "output_name": "mean_ttc"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (average|mean)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (time to conversion)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Mean\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate mean time to conversion\nresult = pipeline | Mean(variable='conversion_time', output_name='mean_ttc')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['mean_ttc'])"
+    },
+    {
+      "query": "Compute average daily revenue for the past month",
+      "function": "Mean",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "daily_revenue",
+        "output_name": "avg_daily_revenue"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (average|mean)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (daily revenue)"
+        ],
+        "time_patterns": [
+          "(daily)",
+          "(monthly)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Mean\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate average daily revenue\nresult = pipeline | Mean(variable='daily_revenue', output_name='avg_daily_revenue')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['avg_daily_revenue'])"
+    },
+    {
+      "query": "Calculate median transaction value by customer segment",
+      "function": "Median",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "transaction_value",
+        "output_name": "median_transaction"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (median)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Median\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate median transaction value\nresult = pipeline | Median(variable='transaction_value', output_name='median_transaction')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['median_transaction'])"
+    },
+    {
+      "query": "Find the median session duration for mobile users",
+      "function": "Median",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "session_duration",
+        "output_name": "median_duration"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (median)"
+        ],
+        "filter_patterns": [
+          "(for) (mobile) users"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Median\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate median session duration\nresult = pipeline | Median(variable='session_duration', output_name='median_duration')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['median_duration'])"
+    },
+    {
+      "query": "Calculate median time to first purchase by acquisition channel",
+      "function": "Median",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "days_to_purchase",
+        "output_name": "median_time_to_purchase"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (median)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Median\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate median time to first purchase\nresult = pipeline | Median(variable='days_to_purchase', output_name='median_time_to_purchase')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['median_time_to_purchase'])"
+    },
+    {
+      "query": "Compute median daily active users per month",
+      "function": "Median",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "daily_active_users",
+        "output_name": "median_dau"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (median)"
+        ],
+        "time_patterns": [
+          "(daily)",
+          "(monthly)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Median\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate median daily active users\nresult = pipeline | Median(variable='daily_active_users', output_name='median_dau')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['median_dau'])"
+    },
+    {
+      "query": "Find median order value by product category",
+      "function": "Median",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "order_value",
+        "output_name": "median_order_value"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (median)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Median\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate median order value\nresult = pipeline | Median(variable='order_value', output_name='median_order_value')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['median_order_value'])"
+    },
+    {
+      "query": "Calculate the 90th percentile of page load times",
+      "function": "Percentile",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "load_time_ms",
+        "q": 90,
+        "output_name": "p90_load_time"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (percentile|quantile)"
+        ],
+        "num_patterns": [
+          "(90)th"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Percentile\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate 90th percentile of load times\nresult = pipeline | Percentile(variable='load_time_ms', q=90, output_name='p90_load_time')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['p90_load_time'])"
+    },
+    {
+      "query": "Find the 95th percentile of order values by customer segment",
+      "function": "Percentile",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "order_value",
+        "q": 95,
+        "output_name": "p95_order_value"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (percentile|quantile)"
+        ],
+        "num_patterns": [
+          "(95)th"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Percentile\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate 95th percentile of order values\nresult = pipeline | Percentile(variable='order_value', q=95, output_name='p95_order_value')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['p95_order_value'])"
+    },
+    {
+      "query": "Calculate the 75th percentile of session durations by device type",
+      "function": "Percentile",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "session_duration",
+        "q": 75,
+        "output_name": "p75_session_duration"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (percentile|quantile)"
+        ],
+        "num_patterns": [
+          "(75)th"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Percentile\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate 75th percentile of session durations\nresult = pipeline | Percentile(variable='session_duration', q=75, output_name='p75_session_duration')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['p75_session_duration'])"
+    },
+    {
+      "query": "Compute the 99th percentile of customer lifetime value",
+      "function": "Percentile",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "customer_ltv",
+        "q": 99,
+        "output_name": "p99_ltv"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (percentile|quantile)"
+        ],
+        "num_patterns": [
+          "(99)th"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Percentile\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate 99th percentile of customer LTV\nresult = pipeline | Percentile(variable='customer_ltv', q=99, output_name='p99_ltv')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['p99_ltv'])"
+    },
+    {
+      "query": "Find the 25th percentile of time to first conversion by marketing channel",
+      "function": "Percentile",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "time_to_conversion",
+        "q": 25,
+        "output_name": "p25_conversion_time"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (percentile|quantile)"
+        ],
+        "num_patterns": [
+          "(25)th"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Percentile\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate 25th percentile of conversion time\nresult = pipeline | Percentile(variable='time_to_conversion', q=25, output_name='p25_conversion_time')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['p25_conversion_time'])"
+    },
+    {
+      "query": "Create pivot table of revenue by product and region",
+      "function": "PivotTable",
+      "category": "metricstools",
+      "inputs": {
+        "index": "product_name",
+        "columns": "region",
+        "values": "revenue",
+        "aggfunc": "sum",
+        "fill_value": 0
+      },
+      "patterns": {
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (revenue)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, PivotTable\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Create pivot table of revenue by product and region\nresult = pipeline | PivotTable(index='product_name', columns='region', values='revenue', aggfunc='sum', fill_value=0)\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Build a pivot table of conversion rates by device type and marketing channel",
+      "function": "PivotTable",
+      "category": "metricstools",
+      "inputs": {
+        "index": "device_type",
+        "columns": "marketing_channel",
+        "values": "conversion_rate",
+        "aggfunc": "mean",
+        "fill_value": 0,
+        "output_name": "conversion_pivot"
+      },
+      "patterns": {
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion rates)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, PivotTable\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Create pivot table of conversion rates\nresult = pipeline | PivotTable(index='device_type', columns='marketing_channel', values='conversion_rate', aggfunc='mean', fill_value=0, output_name='conversion_pivot')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Create a pivot table showing average order value by customer segment and month",
+      "function": "PivotTable",
+      "category": "metricstools",
+      "inputs": {
+        "index": "customer_segment",
+        "columns": "month",
+        "values": "order_value",
+        "aggfunc": "mean",
+        "output_name": "aov_pivot"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (average|mean)"
+        ],
+        "time_patterns": [
+          "(monthly)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, PivotTable\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Create pivot table of average order value\nresult = pipeline | PivotTable(index='customer_segment', columns='month', values='order_value', aggfunc='mean', output_name='aov_pivot')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Generate pivot table of user counts by signup source and subscription tier",
+      "function": "PivotTable",
+      "category": "metricstools",
+      "inputs": {
+        "index": "signup_source",
+        "columns": "subscription_tier",
+        "values": "user_id",
+        "aggfunc": "count",
+        "fill_value": 0,
+        "output_name": "user_distribution"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (count|total)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, PivotTable\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Create pivot table of user counts\nresult = pipeline | PivotTable(index='signup_source', columns='subscription_tier', values='user_id', aggfunc='count', fill_value=0, output_name='user_distribution')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Build pivot table showing total page views by browser and day of week",
+      "function": "PivotTable",
+      "category": "metricstools",
+      "inputs": {
+        "index": "browser",
+        "columns": "day_of_week",
+        "values": "page_views",
+        "aggfunc": "sum",
+        "fill_value": 0,
+        "output_name": "browser_usage_patterns"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (sum|total)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (page views)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, PivotTable\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Create pivot table of page views\nresult = pipeline | PivotTable(index='browser', columns='day_of_week', values='page_views', aggfunc='sum', fill_value=0, output_name='browser_usage_patterns')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Group sales data by month and calculate total and average order value",
+      "function": "GroupBy",
+      "category": "metricstools",
+      "inputs": {
+        "by": "month",
+        "agg_dict": {
+          "order_value": ["sum", "mean"],
+          "orders": "count"
+        },
+        "output_name": "monthly_sales_metrics"
+      },
+      "patterns": {
+        "time_patterns": [
+          "(monthly)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, GroupBy\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Group sales data by month\nresult = pipeline | GroupBy(by='month', agg_dict={'order_value': ['sum', 'mean'], 'orders': 'count'}, output_name='monthly_sales_metrics')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Group user data by country and calculate average session duration and conversion rate",
+      "function": "GroupBy",
+      "category": "metricstools",
+      "inputs": {
+        "by": "country",
+        "agg_dict": {
+          "session_duration": "mean",
+          "converted": "mean"
+        },
+        "output_name": "country_performance"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (average|mean)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, GroupBy\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Group user data by country\nresult = pipeline | GroupBy(by='country', agg_dict={'session_duration': 'mean', 'converted': 'mean'}, output_name='country_performance')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Group transactions by customer segment and find maximum, minimum, and average value",
+      "function": "GroupBy",
+      "category": "metricstools",
+      "inputs": {
+        "by": "customer_segment",
+        "agg_dict": {
+          "transaction_value": ["max", "min", "mean"],
+          "transaction_id": "count"
+        },
+        "output_name": "segment_transaction_stats"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (max|highest)",
+          "(calculate|compute|find) (min|lowest)",
+          "(calculate|compute|find) (average|mean)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, GroupBy\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Group transactions by customer segment\nresult = pipeline | GroupBy(by='customer_segment', agg_dict={'transaction_value': ['max', 'min', 'mean'], 'transaction_id': 'count'}, output_name='segment_transaction_stats')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Group product data by category and calculate sales metrics",
+      "function": "GroupBy",
+      "category": "metricstools",
+      "inputs": {
+        "by": "product_category",
+        "agg_dict": {
+          "revenue": "sum",
+          "units_sold": "sum",
+          "order_count": "count",
+          "price": ["mean", "median", "std"]
+        },
+        "output_name": "category_performance"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (sum|total)",
+          "(calculate|compute|find) (average|mean)",
+          "(calculate|compute|find) (median)",
+          "(calculate|compute|find) (standard deviation)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (sales metrics)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, GroupBy\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Group product data by category\nresult = pipeline | GroupBy(by='product_category', agg_dict={'revenue': 'sum', 'units_sold': 'sum', 'order_count': 'count', 'price': ['mean', 'median', 'std']}, output_name='category_performance')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Group marketing campaign data by channel and date and calculate ROI metrics",
+      "function": "GroupBy",
+      "category": "metricstools",
+      "inputs": {
+        "by": ["marketing_channel", "date"],
+        "agg_dict": {
+          "spend": "sum",
+          "revenue": "sum",
+          "clicks": "sum",
+          "impressions": "sum",
+          "conversions": "sum"
+        },
+        "output_name": "channel_performance_over_time"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (sum|total)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (ROI metrics)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, GroupBy\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Group marketing campaign data by channel and date\nresult = pipeline | GroupBy(by=['marketing_channel', 'date'], agg_dict={'spend': 'sum', 'revenue': 'sum', 'clicks': 'sum', 'impressions': 'sum', 'conversions': 'sum'}, output_name='channel_performance_over_time')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Filter transactions to only include those above $100",
+      "function": "Filter",
+      "category": "metricstools",
+      "inputs": {
+        "condition": "transaction_amount > 100",
+        "output_name": "high_value_transactions"
+      },
+      "patterns": {
+        "filter_patterns": [
+          "(filter|to) (only include) those above $100"
+        ],
+        "num_patterns": [
+          "(100)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Filter\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Filter high value transactions\nresult = pipeline | Filter(condition=lambda df: df['transaction_amount'] > 100, output_name='high_value_transactions')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Filter user sessions where bounce rate is less than 20%",
+      "function": "Filter",
+      "category": "metricstools",
+      "inputs": {
+        "condition": "bounce_rate < 0.2",
+        "output_name": "engaged_sessions"
+      },
+      "patterns": {
+        "filter_patterns": [
+          "(filter|where) (bounce rate) is less than 20%"
+        ],
+        "num_patterns": [
+          "(20)%"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Filter\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Filter engaged sessions\nresult = pipeline | Filter(condition=lambda df: df['bounce_rate'] < 0.2, output_name='engaged_sessions')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Filter to only include products with more than 50 reviews",
+      "function": "Filter",
+      "category": "metricstools",
+      "inputs": {
+        "condition": "review_count > 50",
+        "output_name": "well_reviewed_products"
+      },
+      "patterns": {
+        "filter_patterns": [
+          "(filter|to) (only include) products with more than 50"
+        ],
+        "num_patterns": [
+          "(50)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Filter\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Filter well-reviewed products\nresult = pipeline | Filter(condition=lambda df: df['review_count'] > 50, output_name='well_reviewed_products')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Filter data to only include mobile users from the US",
+      "function": "Filter",
+      "category": "metricstools",
+      "inputs": {
+        "condition": "device_type == 'mobile' and country == 'US'",
+        "output_name": "us_mobile_users"
+      },
+      "patterns": {
+        "filter_patterns": [
+          "(filter|to) (only include) mobile users from the US"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Filter\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Filter US mobile users\nresult = pipeline | Filter(condition=lambda df: (df['device_type'] == 'mobile') & (df['country'] == 'US'), output_name='us_mobile_users')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Filter conversion events that occurred within the past 7 days",
+      "function": "Filter",
+      "category": "metricstools",
+      "inputs": {
+        "condition": "(current_date - conversion_date).days <= 7",
+        "output_name": "recent_conversions"
+      },
+      "patterns": {
+        "filter_patterns": [
+          "(filter) (conversion events) that occurred within the past 7 days"
+        ],
+        "num_patterns": [
+          "(7) days"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, Filter\nfrom datetime import datetime, timedelta\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Filter recent conversions\ncurrent_date = datetime.now()\nresult = pipeline | Filter(condition=lambda df: (current_date - pd.to_datetime(df['conversion_date'])).dt.days <= 7, output_name='recent_conversions')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Calculate running total of new customer acquisitions by month",
+      "function": "CumulativeSum",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "new_customers",
+        "output_column": "cumulative_customers"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (cumulative|running|total)"
+        ],
+        "time_patterns": [
+          "(monthly)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, CumulativeSum\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate cumulative customer acquisitions\nresult = pipeline | CumulativeSum(variable='new_customers', output_column='cumulative_customers')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Compute cumulative revenue by product category over time",
+      "function": "CumulativeSum",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "revenue",
+        "output_column": "cumulative_revenue"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (cumulative|running|total)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (revenue)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, CumulativeSum\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate cumulative revenue\nresult = pipeline | CumulativeSum(variable='revenue', output_column='cumulative_revenue')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Track cumulative ad spend by channel for budget monitoring",
+      "function": "CumulativeSum",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "ad_spend",
+        "output_column": "total_spend_to_date"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (cumulative|running|total)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (ad spend)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, CumulativeSum\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate cumulative ad spend\nresult = pipeline | CumulativeSum(variable='ad_spend', output_column='total_spend_to_date')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Calculate running total of website visitors by day",
+      "function": "CumulativeSum",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "visitors",
+        "output_column": "cumulative_visitors"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (cumulative|running|total)"
+        ],
+        "time_patterns": [
+          "(daily)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, CumulativeSum\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate cumulative visitors\nresult = pipeline | CumulativeSum(variable='visitors', output_column='cumulative_visitors')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Compute cumulative conversion count by campaign",
+      "function": "CumulativeSum",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "conversions",
+        "output_column": "total_conversions"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (cumulative|running|total)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion count)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, CumulativeSum\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate cumulative conversions\nresult = pipeline | CumulativeSum(variable='conversions', output_column='total_conversions')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Calculate 7-day rolling average of daily active users",
+      "function": "RollingMetric",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "daily_active_users",
+        "window": 7,
+        "function": "mean",
+        "output_column": "rolling_dau"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (rolling average)"
+        ],
+        "time_patterns": [
+          "(daily)"
+        ],
+        "num_patterns": [
+          "(7)-day"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, RollingMetric\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate 7-day rolling average of daily active users\nresult = pipeline | RollingMetric(variable='daily_active_users', window=7, function='mean', output_column='rolling_dau')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Compute 30-day rolling sum of revenue by product",
+      "function": "RollingMetric",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "revenue",
+        "window": 30,
+        "function": "sum",
+        "output_column": "rolling_30d_revenue"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (rolling sum)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (revenue)"
+        ],
+        "num_patterns": [
+          "(30)-day"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, RollingMetric\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate 30-day rolling sum of revenue\nresult = pipeline | RollingMetric(variable='revenue', window=30, function='sum', output_column='rolling_30d_revenue')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Calculate 14-day rolling conversion rate by landing page",
+      "function": "RollingMetric",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "conversion_rate",
+        "window": 14,
+        "function": "mean",
+        "min_periods": 7,
+        "output_column": "rolling_conversion"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (rolling)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion rate)"
+        ],
+        "num_patterns": [
+          "(14)-day",
+          "(7)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, RollingMetric\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate 14-day rolling conversion rate\nresult = pipeline | RollingMetric(variable='conversion_rate', window=14, function='mean', min_periods=7, output_column='rolling_conversion')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Find 90-day rolling maximum of daily orders",
+      "function": "RollingMetric",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "daily_orders",
+        "window": 90,
+        "function": "max",
+        "output_column": "rolling_max_orders"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (rolling maximum)"
+        ],
+        "time_patterns": [
+          "(daily)"
+        ],
+        "num_patterns": [
+          "(90)-day"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, RollingMetric\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate 90-day rolling maximum of daily orders\nresult = pipeline | RollingMetric(variable='daily_orders', window=90, function='max', output_column='rolling_max_orders')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Calculate 28-day rolling median of session duration by device type",
+      "function": "RollingMetric",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "session_duration",
+        "window": 28,
+        "function": "median",
+        "output_column": "rolling_median_duration"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (rolling median)"
+        ],
+        "num_patterns": [
+          "(28)-day"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, RollingMetric\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate 28-day rolling median of session duration\nresult = pipeline | RollingMetric(variable='session_duration', window=28, function='median', output_column='rolling_median_duration')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)"
+    },
+    {
+      "query": "Execute analysis and return all metrics",
+      "function": "Execute",
+      "category": "metricstools",
+      "inputs": {},
+      "example": "from metrics_tools import MetricsPipe, Count, Sum, Execute\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Execute analysis and return all metrics\nresult = pipeline | Count(variable='user_id') | Sum(variable='revenue') | Execute()\n\n# Get all calculated metrics\nmetrics = result\nprint(metrics)"
+    },
+    {
+      "query": "Run the metrics pipeline and show all results",
+      "function": "Execute",
+      "category": "metricstools",
+      "inputs": {},
+      "example": "from metrics_tools import MetricsPipe, Mean, Max, Execute\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Run the metrics pipeline and show all results\nresult = pipeline | Mean(variable='order_value') | Max(variable='session_duration') | Execute()\n\n# Get all calculated metrics\nmetrics = result\nprint(metrics)"
+    },
+    {
+      "query": "Calculate all defined metrics and return the results",
+      "function": "Execute",
+      "category": "metricstools",
+      "inputs": {},
+      "example": "from metrics_tools import MetricsPipe, Count, Sum, Mean, Execute\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate all defined metrics and return the results\nresult = pipeline | Count(variable='transactions') | Sum(variable='revenue') | Mean(variable='order_value') | Execute()\n\n# Get all calculated metrics\nmetrics = result\nprint(metrics)"
+    },
+    {
+      "query": "Process all metrics and generate the complete report",
+      "function": "Execute",
+      "category": "metricstools",
+      "inputs": {},
+      "example": "from metrics_tools import MetricsPipe, Count, Sum, Mean, Max, Execute\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Process all metrics and generate the complete report\nresult = pipeline | Count(variable='users') | Sum(variable='revenue') | Mean(variable='order_value') | Max(variable='session_duration') | Execute()\n\n# Get all calculated metrics\nmetrics = result\nprint(metrics)"
+    },
+    {
+      "query": "Execute the analysis pipeline with all configured metrics",
+      "function": "Execute",
+      "category": "metricstools",
+      "inputs": {},
+      "example": "from metrics_tools import MetricsPipe, Count, Sum, Mean, Median, Execute\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Execute the analysis pipeline with all configured metrics\nresult = pipeline | Count(variable='orders') | Sum(variable='revenue') | Mean(variable='order_value') | Median(variable='session_duration') | Execute()\n\n# Get all calculated metrics\nmetrics = result\nprint(metrics)"
+    },
+    {
+      "query": "Show the pivot table of customer segment performance",
+      "function": "ShowPivot",
+      "category": "metricstools",
+      "inputs": {
+        "pivot_name": "segment_performance"
+      },
+      "example": "from metrics_tools import MetricsPipe, PivotTable, ShowPivot\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Create and show pivot table\nresult = pipeline | PivotTable(index='customer_segment', values='revenue', aggfunc='sum', output_name='segment_performance') | ShowPivot(pivot_name='segment_performance')\n\n# Get the pivot table\npivot_table = result\nprint(pivot_table)"
+    },
+    {
+      "query": "Display the product category by region pivot table",
+      "function": "ShowPivot",
+      "category": "metricstools",
+      "inputs": {
+        "pivot_name": "category_region_pivot"
+      },
+      "example": "from metrics_tools import MetricsPipe, PivotTable, ShowPivot\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Create and show pivot table\nresult = pipeline | PivotTable(index='product_category', columns='region', values='sales', aggfunc='sum', output_name='category_region_pivot') | ShowPivot(pivot_name='category_region_pivot')\n\n# Get the pivot table\npivot_table = result\nprint(pivot_table)"
+    },
+    {
+      "query": "View the last created pivot table",
+      "function": "ShowPivot",
+      "category": "metricstools",
+      "inputs": {},
+      "example": "from metrics_tools import MetricsPipe, PivotTable, ShowPivot\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Create pivot table and view the last created one\nresult = pipeline | PivotTable(index='device_type', values='conversion_rate', aggfunc='mean') | ShowPivot()\n\n# Get the last created pivot table\npivot_table = result\nprint(pivot_table)"
+    },
+    {
+      "query": "Show pivot table of conversion rates by channel and device",
+      "function": "ShowPivot",
+      "category": "metricstools",
+      "inputs": {
+        "pivot_name": "conversion_device_pivot"
+      },
+      "example": "from metrics_tools import MetricsPipe, PivotTable, ShowPivot\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Create and show pivot table\nresult = pipeline | PivotTable(index='marketing_channel', columns='device_type', values='conversion_rate', aggfunc='mean', output_name='conversion_device_pivot') | ShowPivot(pivot_name='conversion_device_pivot')\n\n# Get the pivot table\npivot_table = result\nprint(pivot_table)"
+    },
+    {
+      "query": "Display the pivot table of monthly revenue by product",
+      "function": "ShowPivot",
+      "category": "metricstools",
+      "inputs": {
+        "pivot_name": "product_revenue_pivot"
+      },
+      "patterns": {
+        "time_patterns": [
+          "(monthly)"
+        ]
+      },
+      "example": "from metrics_tools import MetricsPipe, PivotTable, ShowPivot\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Create and show pivot table\nresult = pipeline | PivotTable(index='product_name', columns='month', values='revenue', aggfunc='sum', output_name='product_revenue_pivot') | ShowPivot(pivot_name='product_revenue_pivot')\n\n# Get the pivot table\npivot_table = result\nprint(pivot_table)"
+    },
+    {
+      "query": "Show the current dataframe with all applied transformations",
+      "function": "ShowDataFrame",
+      "category": "metricstools",
+      "inputs": {},
+      "example": "from metrics_tools import MetricsPipe, Filter, ShowDataFrame\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Apply transformations and show the current dataframe\nresult = pipeline | Filter(condition=lambda df: df['revenue'] > 1000) | ShowDataFrame()\n\n# Get the current dataframe\ncurrent_df = result\nprint(current_df)"
+    },
+    {
+      "query": "Display the current dataset after filtering and aggregation",
+      "function": "ShowDataFrame",
+      "category": "metricstools",
+      "inputs": {},
+      "example": "from metrics_tools import MetricsPipe, Filter, GroupBy, ShowDataFrame\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Apply filtering and aggregation, then show the dataset\nresult = pipeline | Filter(condition=lambda df: df['order_value'] > 50) | GroupBy(by='customer_segment', agg_dict={'revenue': 'sum'}) | ShowDataFrame()\n\n# Get the current dataset\ncurrent_dataset = result\nprint(current_dataset)"
+    },
+    {
+      "query": "View the transformed data with all calculated metrics",
+      "function": "ShowDataFrame",
+      "category": "metricstools",
+      "inputs": {},
+      "example": "from metrics_tools import MetricsPipe, CumulativeSum, RollingMetric, ShowDataFrame\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Apply transformations and view the data\nresult = pipeline | CumulativeSum(variable='revenue') | RollingMetric(variable='daily_orders', window=7, function='mean') | ShowDataFrame()\n\n# Get the transformed data\ntransformed_data = result\nprint(transformed_data)"
+    },
+    {
+      "query": "Show the current state of the dataframe in the pipeline",
+      "function": "ShowDataFrame",
+      "category": "metricstools",
+      "inputs": {},
+      "example": "from metrics_tools import MetricsPipe, Filter, ShowDataFrame\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Show the current state of the dataframe in the pipeline\nresult = pipeline | Filter(condition=lambda df: df['country'] == 'US') | ShowDataFrame()\n\n# Get the current state\ncurrent_state = result\nprint(current_state)"
+    },
+    {
+      "query": "Display the processed dataset before final aggregation",
+      "function": "ShowDataFrame",
+      "category": "metricstools",
+      "inputs": {},
+      "example": "from metrics_tools import MetricsPipe, Filter, GroupBy, ShowDataFrame\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Display the processed dataset before final aggregation\nresult = pipeline | Filter(condition=lambda df: df['revenue'] > 0) | GroupBy(by='product_category', agg_dict={'revenue': 'sum'}) | ShowDataFrame()\n\n# Get the processed dataset\nprocessed_dataset = result\nprint(processed_dataset)"
+    }
+  ]

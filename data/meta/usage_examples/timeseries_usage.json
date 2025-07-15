@@ -1,0 +1,589 @@
+[
+    {
+      "query": "Project next week's inventory needs based on current stock levels",
+      "function": "lead",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["stock_level", "sales_rate"],
+        "periods": 7,
+        "time_column": "date",
+        "group_columns": ["warehouse_id", "product_id"],
+        "suffix": "_projected"
+      },
+      "patterns": {
+        "time_patterns": [
+          "(weekly)"
+        ],
+        "num_patterns": [
+          "(7)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | lead(columns=['stock_level', 'sales_rate'], periods=7, time_column='date', group_columns=['warehouse_id', 'product_id'], suffix='_projected')"
+    },
+    {
+      "query": "Forecast product demand for the next 14 days based on historical patterns",
+      "function": "lead",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["demand", "orders_count"],
+        "periods": 14,
+        "time_column": "date",
+        "group_columns": ["product_category", "region"],
+        "suffix": "_forecast"
+      },
+      "patterns": {
+        "time_patterns": [
+          "(daily)"
+        ],
+        "num_patterns": [
+          "(14) days"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | lead(columns=['demand', 'orders_count'], periods=14, time_column='date', group_columns=['product_category', 'region'], suffix='_forecast')"
+    },
+    {
+      "query": "Project future user acquisition numbers for the next month by channel",
+      "function": "lead",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["new_users", "conversion_rate"],
+        "periods": 30,
+        "time_column": "date",
+        "group_columns": ["acquisition_channel"],
+        "suffix": "_projected"
+      },
+      "patterns": {
+        "time_patterns": [
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(30)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | lead(columns=['new_users', 'conversion_rate'], periods=30, time_column='date', group_columns=['acquisition_channel'], suffix='_projected')"
+    },
+    {
+      "query": "Generate projected revenue figures for the next quarter by product line",
+      "function": "lead",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["revenue", "units_sold", "average_price"],
+        "periods": 90,
+        "time_column": "date",
+        "group_columns": ["product_line"],
+        "suffix": "_forecast"
+      },
+      "patterns": {
+        "time_patterns": [
+          "(quarterly)"
+        ],
+        "num_patterns": [
+          "(90)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | lead(columns=['revenue', 'units_sold', 'average_price'], periods=90, time_column='date', group_columns=['product_line'], suffix='_forecast')"
+    },
+    {
+      "query": "Estimate next day's web traffic by hour for capacity planning",
+      "function": "lead",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["visitors", "page_views", "server_load"],
+        "periods": 24,
+        "time_column": "timestamp",
+        "group_columns": ["website_section"],
+        "suffix": "_forecast"
+      },
+      "patterns": {
+        "time_patterns": [
+          "(daily)"
+        ],
+        "num_patterns": [
+          "(24)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | lead(columns=['visitors', 'page_views', 'server_load'], periods=24, time_column='timestamp', group_columns=['website_section'], suffix='_forecast')"
+    },
+    {
+      "query": "Compare current sales with previous week's performance by store",
+      "function": "lag",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["daily_sales", "transaction_count", "average_basket"],
+        "periods": 7,
+        "time_column": "date",
+        "group_columns": ["store_id"],
+        "suffix": "_previous_week"
+      },
+      "patterns": {
+        "time_patterns": [
+          "(daily)",
+          "(weekly)"
+        ],
+        "num_patterns": [
+          "(7)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | lag(columns=['daily_sales', 'transaction_count', 'average_basket'], periods=7, time_column='date', group_columns=['store_id'], suffix='_previous_week')"
+    },
+    {
+      "query": "Calculate month-over-month change in key performance indicators",
+      "function": "lag",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["revenue", "active_users", "acquisition_cost"],
+        "periods": 1,
+        "time_column": "month",
+        "group_columns": ["business_unit"],
+        "suffix": "_prev_month"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (change)"
+        ],
+        "time_patterns": [
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(1)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | lag(columns=['revenue', 'active_users', 'acquisition_cost'], periods=1, time_column='month', group_columns=['business_unit'], suffix='_prev_month')"
+    },
+    {
+      "query": "Compare today's website metrics with performance from 30 days ago",
+      "function": "lag",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["visitors", "bounce_rate", "conversion_rate", "page_views"],
+        "periods": 30,
+        "time_column": "date",
+        "group_columns": ["page_category"],
+        "suffix": "_30d_prior"
+      },
+      "patterns": {
+        "time_patterns": [
+          "(daily)"
+        ],
+        "num_patterns": [
+          "(30) days"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | lag(columns=['visitors', 'bounce_rate', 'conversion_rate', 'page_views'], periods=30, time_column='date', group_columns=['page_category'], suffix='_30d_prior')"
+    },
+    {
+      "query": "Compare quarterly results with the same quarter last year by region",
+      "function": "lag",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["revenue", "expenses", "profit", "customer_count"],
+        "periods": 4,
+        "time_column": "quarter",
+        "group_columns": ["region"],
+        "suffix": "_yoy"
+      },
+      "patterns": {
+        "time_patterns": [
+          "(quarterly)",
+          "(yearly)"
+        ],
+        "num_patterns": [
+          "(4)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | lag(columns=['revenue', 'expenses', 'profit', 'customer_count'], periods=4, time_column='quarter', group_columns=['region'], suffix='_yoy')"
+    },
+    {
+      "query": "Calculate week-over-week change in marketing campaign performance",
+      "function": "lag",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["impressions", "clicks", "conversions", "spend"],
+        "periods": 1,
+        "time_column": "week",
+        "group_columns": ["campaign_id"],
+        "suffix": "_prev_week"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (change)"
+        ],
+        "time_patterns": [
+          "(weekly)"
+        ],
+        "num_patterns": [
+          "(1)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | lag(columns=['impressions', 'clicks', 'conversions', 'spend'], periods=1, time_column='week', group_columns=['campaign_id'], suffix='_prev_week')"
+    },
+    {
+      "query": "Analyze volatility in daily website traffic over the past month",
+      "function": "variance_analysis",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["visitors", "page_views", "conversion_rate"],
+        "method": "rolling",
+        "window": 7,
+        "time_column": "date",
+        "suffix": "_volatility"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(analyze|analysis|examine) (volatility)"
+        ],
+        "time_patterns": [
+          "(daily)",
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(7)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | variance_analysis(columns=['visitors', 'page_views', 'conversion_rate'], method='rolling', window=7, time_column='date', suffix='_volatility')"
+    },
+    {
+      "query": "Calculate standard deviation of sales by product category over time",
+      "function": "variance_analysis",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["sales", "units_sold"],
+        "method": "expanding",
+        "time_column": "date",
+        "group_columns": ["product_category"],
+        "suffix": "_std"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (standard deviation)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | variance_analysis(columns=['sales', 'units_sold'], method='expanding', time_column='date', group_columns=['product_category'], suffix='_std')"
+    },
+    {
+      "query": "Measure weekly fluctuations in customer order volume by region",
+      "function": "variance_analysis",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["order_count", "order_value"],
+        "method": "rolling",
+        "window": 4,
+        "time_column": "week",
+        "group_columns": ["region"],
+        "suffix": "_fluctuation"
+      },
+      "patterns": {
+        "time_patterns": [
+          "(weekly)"
+        ],
+        "num_patterns": [
+          "(4)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | variance_analysis(columns=['order_count', 'order_value'], method='rolling', window=4, time_column='week', group_columns=['region'], suffix='_fluctuation')"
+    },
+    {
+      "query": "Analyze hourly variability in server load for capacity planning",
+      "function": "variance_analysis",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["cpu_usage", "memory_usage", "request_count"],
+        "method": "rolling",
+        "window": 24,
+        "time_column": "timestamp",
+        "group_columns": ["server_id"],
+        "suffix": "_variability"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(analyze|analysis|examine) (variability)"
+        ],
+        "num_patterns": [
+          "(24)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | variance_analysis(columns=['cpu_usage', 'memory_usage', 'request_count'], method='rolling', window=24, time_column='timestamp', group_columns=['server_id'], suffix='_variability')"
+    },
+    {
+      "query": "Measure consistency of marketing performance across campaigns",
+      "function": "variance_analysis",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["impressions", "clicks", "conversions", "ctr", "cvr"],
+        "method": "expanding",
+        "time_column": "date",
+        "group_columns": ["campaign_type"],
+        "suffix": "_consistency"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(measure) (consistency)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | variance_analysis(columns=['impressions', 'clicks', 'conversions', 'ctr', 'cvr'], method='expanding', time_column='date', group_columns=['campaign_type'], suffix='_consistency')"
+    },
+    {
+      "query": "Examine distribution of order values across different sales channels",
+      "function": "distribution_analysis",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["order_value"],
+        "bins": 10,
+        "group_columns": ["sales_channel"],
+        "normalize": true
+      },
+      "patterns": {
+        "function_patterns": [
+          "(analyze|analysis|examine) (distribution)"
+        ],
+        "num_patterns": [
+          "(10)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | distribution_analysis(columns=['order_value'], bins=10, group_columns=['sales_channel'], normalize=True)"
+    },
+    {
+      "query": "Analyze the distribution of page load times by device type",
+      "function": "distribution_analysis",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["load_time_ms"],
+        "bins": 20,
+        "group_columns": ["device_type"],
+        "normalize": false
+      },
+      "patterns": {
+        "function_patterns": [
+          "(analyze|analysis|examine) (distribution)"
+        ],
+        "num_patterns": [
+          "(20)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | distribution_analysis(columns=['load_time_ms'], bins=20, group_columns=['device_type'], normalize=False)"
+    },
+    {
+      "query": "Create histograms of user session durations by user segment",
+      "function": "distribution_analysis",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["session_duration"],
+        "bins": 15,
+        "group_columns": ["user_segment"],
+        "normalize": true
+      },
+      "patterns": {
+        "num_patterns": [
+          "(15)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | distribution_analysis(columns=['session_duration'], bins=15, group_columns=['user_segment'], normalize=True)"
+    },
+    {
+      "query": "Analyze distribution of purchase amounts by customer age group",
+      "function": "distribution_analysis",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["purchase_amount"],
+        "bins": 8,
+        "group_columns": ["age_group"],
+        "normalize": true
+      },
+      "patterns": {
+        "function_patterns": [
+          "(analyze|analysis|examine) (distribution)"
+        ],
+        "num_patterns": [
+          "(8)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | distribution_analysis(columns=['purchase_amount'], bins=8, group_columns=['age_group'], normalize=True)"
+    },
+    {
+      "query": "Compare the distribution of delivery times across different shipping methods",
+      "function": "distribution_analysis",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["delivery_time_hours"],
+        "bins": 12,
+        "group_columns": ["shipping_method"],
+        "normalize": false
+      },
+      "patterns": {
+        "function_patterns": [
+          "(analyze|analysis|examine) (distribution)"
+        ],
+        "num_patterns": [
+          "(12)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | distribution_analysis(columns=['delivery_time_hours'], bins=12, group_columns=['shipping_method'], normalize=False)"
+    },
+    {
+      "query": "Calculate running total of new customer acquisitions by marketing channel",
+      "function": "cumulative_distribution",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["new_customers"],
+        "time_column": "date",
+        "group_columns": ["marketing_channel"],
+        "suffix": "_cumulative"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (running total|cumulative)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | cumulative_distribution(columns=['new_customers'], time_column='date', group_columns=['marketing_channel'], suffix='_cumulative')"
+    },
+    {
+      "query": "Track cumulative revenue by product category since launch",
+      "function": "cumulative_distribution",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["revenue"],
+        "time_column": "date",
+        "group_columns": ["product_category"],
+        "suffix": "_cumulative"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (running total|cumulative)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | cumulative_distribution(columns=['revenue'], time_column='date', group_columns=['product_category'], suffix='_cumulative')"
+    },
+    {
+      "query": "Generate cumulative user registrations by acquisition source over time",
+      "function": "cumulative_distribution",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["new_registrations"],
+        "time_column": "date",
+        "group_columns": ["acquisition_source"],
+        "suffix": "_cumulative"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (running total|cumulative)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | cumulative_distribution(columns=['new_registrations'], time_column='date', group_columns=['acquisition_source'], suffix='_cumulative')"
+    },
+    {
+      "query": "Calculate cumulative spend versus budget by department year-to-date",
+      "function": "cumulative_distribution",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["spend", "budget"],
+        "time_column": "date",
+        "group_columns": ["department"],
+        "suffix": "_ytd"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (running total|cumulative)"
+        ],
+        "time_patterns": [
+          "(yearly)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | cumulative_distribution(columns=['spend', 'budget'], time_column='date', group_columns=['department'], suffix='_ytd')"
+    },
+    {
+      "query": "Track cumulative conversion rate by campaign over duration",
+      "function": "cumulative_distribution",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["conversions", "impressions"],
+        "time_column": "date",
+        "group_columns": ["campaign_id"],
+        "suffix": "_cumulative"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (running total|cumulative)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion rate)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | cumulative_distribution(columns=['conversions', 'impressions'], time_column='date', group_columns=['campaign_id'], suffix='_cumulative')"
+    },
+    {
+      "query": "Apply custom seasonality adjustment to monthly sales data",
+      "function": "custom_calculation",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "func": "lambda df: df.assign(sales_adjusted=df['sales'] / df['seasonal_factor'])"
+      },
+      "patterns": {
+        "time_patterns": [
+          "(monthly)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | custom_calculation(lambda df: df.assign(sales_adjusted=df['sales'] / df['seasonal_factor']))"
+    },
+    {
+      "query": "Calculate moving average convergence divergence (MACD) for sales trends",
+      "function": "custom_calculation",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "func": "lambda df: df.assign(ema12=df['sales'].ewm(span=12).mean(), ema26=df['sales'].ewm(span=26).mean()).assign(macd=lambda d: d['ema12'] - d['ema26'])"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (moving average)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | custom_calculation(lambda df: df.assign(ema12=df['sales'].ewm(span=12).mean(), ema26=df['sales'].ewm(span=26).mean()).assign(macd=lambda d: d['ema12'] - d['ema26']))"
+    },
+    {
+      "query": "Apply logarithmic transformation to skewed sales distribution data",
+      "function": "custom_calculation",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "func": "lambda df: df.assign(log_sales=np.log1p(df['sales']))"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(apply) (transformation)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | custom_calculation(lambda df: df.assign(log_sales=np.log1p(df['sales'])))"
+    },
+    {
+      "query": "Calculate velocity and acceleration of growth metrics over time",
+      "function": "custom_calculation",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "func": "lambda df: df.assign(growth_velocity=df['metric'].diff(), growth_acceleration=df['metric'].diff().diff())"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (velocity|acceleration)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | custom_calculation(lambda df: df.assign(growth_velocity=df['metric'].diff(), growth_acceleration=df['metric'].diff().diff()))"
+    },
+    {
+      "query": "Apply custom weighting to combine multiple performance indicators",
+      "function": "custom_calculation",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "func": "lambda df: df.assign(weighted_score=0.4*df['metric1'] + 0.3*df['metric2'] + 0.2*df['metric3'] + 0.1*df['metric4'])"
+      },
+      "patterns": {
+        "function_patterns": [
+          "(apply) (weighting)"
+        ],
+        "num_patterns": [
+          "(0.4)",
+          "(0.3)",
+          "(0.2)",
+          "(0.1)"
+        ]
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | custom_calculation(lambda df: df.assign(weighted_score=0.4*df['metric1'] + 0.3*df['metric2'] + 0.2*df['metric3'] + 0.1*df['metric4']))"
+    }
+  ]

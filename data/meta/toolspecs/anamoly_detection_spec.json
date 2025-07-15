@@ -1,0 +1,94 @@
+{
+    "functions": {
+        "detect_statistical_outliers": {
+            "required_params": ["columns"],
+            "optional_params": ["method", "threshold", "window", "time_column", "group_columns"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that detects outliers using statistical methods in an AnomalyPipe"
+            },
+            "description": "Detect outliers using statistical methods like z-score, IQR, modified z-score, or percentile"
+        },
+        "detect_contextual_anomalies": {
+            "required_params": ["columns", "time_column"],
+            "optional_params": ["method", "model_type", "threshold", "window", "seasonal_period", "group_columns", "datetime_format"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that detects contextual anomalies in an AnomalyPipe"
+            },
+            "description": "Detect contextual anomalies by comparing actual values with expected values from time series models"
+        },
+        "detect_collective_anomalies": {
+            "required_params": ["columns", "time_column"],
+            "optional_params": ["method", "window", "contamination", "n_estimators", "group_columns", "datetime_format"],
+            "outputs": {
+                "type": "Callable", 
+                "description": "Function that detects collective anomalies in an AnomalyPipe"
+            },
+            "description": "Detect collective anomalies using machine learning methods on multiple features"
+        },
+        "calculate_seasonal_residuals": {
+            "required_params": ["columns", "mtime_column"],
+            "optional_params": ["mseasonal_period", "mmethod", "mgroup_columns", "mdatetime_format"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates seasonal residuals in an AnomalyPipe"
+            },
+            "description": "Calculate residuals after removing seasonal patterns using decomposition"
+        },
+        "detect_anomalies_from_residuals": {
+            "required_params": ["columns"],
+            "optional_params": ["method", "threshold", "suffix", "output_suffix"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that detects anomalies from residuals in an AnomalyPipe"
+            },
+            "description": "Detect anomalies from pre-calculated residuals using statistical methods"
+        },
+        "get_anomaly_summary": {
+            "required_params": [],
+            "optional_params": ["analysis_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that returns a summary of anomalies"
+            },
+            "description": "Generate a summary of detected anomalies including counts, percentages, and distributions"
+        },
+        "get_top_anomalies": {
+            "required_params": [],
+            "optional_params": ["n", "time_column", "analysis_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that returns top anomalies"
+            },
+            "description": "Get the top n anomalies by score with their details"
+        },
+        "detect_change_points": {
+            "required_params": ["columns", "time_column"],
+            "optional_params": ["min_size", "method", "penalty", "group_columns", "datetime_format"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that detects change points in an AnomalyPipe"
+            },
+            "description": "Detect change points in time series data using various algorithms"
+        },
+        "forecast_and_detect_anomalies": {
+            "required_params": ["columns", "time_column"],
+            "optional_params": ["forecast_periods", "model", "threshold", "seasonal_period", "group_columns", "datetime_format"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that forecasts and detects anomalies in an AnomalyPipe"
+            },
+            "description": "Forecast time series and detect anomalies based on forecast errors"
+        },
+        "batch_detect_anomalies": {
+            "required_params": ["columns", "methods"],
+            "optional_params": ["ensemble_method", "output_suffix"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that applies multiple anomaly detection methods in an AnomalyPipe"
+            },
+            "description": "Apply multiple anomaly detection methods and combine results using ensemble techniques"
+        }
+    }
+}

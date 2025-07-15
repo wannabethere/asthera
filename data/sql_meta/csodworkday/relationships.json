@@ -1,0 +1,181 @@
+{
+    "csod_training_records_with_relationships": {
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "VARCHAR",
+          "relationship": {
+            "description": "Foreign key relationship to workday_employee_skills_development.employee_id - enables linking training assignments to skill development outcomes for the same employee",
+            "type": "one-to-many"
+          },
+          "properties": {
+            "displayName": "User ID",
+            "description": "ID of the user or Unique identifier for the employee"
+          }
+        },
+        {
+          "name": "manager_name",
+          "type": "VARCHAR",
+          "relationship": {
+            "description": "Reference relationship to workday_employee_skills_development.manager_name - enables consistent manager-level reporting across training completion and skill development",
+            "type": "reference"
+          },
+          "properties": {
+            "displayName": "Manager Name",
+            "description": "Name of the employee's manager"
+          }
+        },
+        {
+          "name": "curriculum_title",
+          "type": "TEXT",
+          "relationship": {
+            "description": "Foreign key relationship to workday_employee_skills_development.training_curriculum_title - connects training programs to their skill development outcomes",
+            "type": "one-to-many"
+          },
+          "properties": {
+            "displayName": "Curriculum Title",
+            "description": "Title of the curriculum or training program"
+          }
+        },
+        {
+          "name": "division",
+          "type": "VARCHAR",
+          "relationship": {
+            "description": "Reference relationship to workday_employee_skills_development.division - enables division-level cross-analysis of training completion and skill development metrics",
+            "type": "reference"
+          },
+          "properties": {
+            "displayName": "Division",
+            "description": "Business division name or department name that the employee belongs to"
+          }
+        }
+      ]
+    },
+    "workday_employee_skills_development_with_relationships": {
+      "columns": [
+        {
+          "name": "employee_id",
+          "type": "VARCHAR",
+          "relationship": {
+            "description": "Primary foreign key relationship to csod_training_records.user_id - establishes the core employee connection between training activities and skill development outcomes",
+            "type": "many-to-one"
+          },
+          "properties": {
+            "displayName": "Employee ID",
+            "description": "Employee identifier matching CSOD user_id for cross-reference"
+          }
+        },
+        {
+          "name": "manager_id",
+          "type": "VARCHAR",
+          "relationship": {
+            "description": "Hierarchical relationship to workday_employee_skills_development.employee_id - enables manager-employee hierarchy analysis within skills development",
+            "type": "self-referencing"
+          },
+          "properties": {
+            "displayName": "Manager ID",
+            "description": "Manager's employee ID"
+          }
+        },
+        {
+          "name": "manager_name",
+          "type": "VARCHAR",
+          "relationship": {
+            "description": "Reference relationship to csod_training_records.manager_name - enables consistent manager-level analysis across training completion and skill development systems",
+            "type": "reference"
+          },
+          "properties": {
+            "displayName": "Manager Name",
+            "description": "Name of the employee's direct manager"
+          }
+        },
+        {
+          "name": "division",
+          "type": "VARCHAR",
+          "relationship": {
+            "description": "Reference relationship to csod_training_records.division - enables cross-system division-level analysis of training effectiveness and skill development outcomes",
+            "type": "reference"
+          },
+          "properties": {
+            "displayName": "Division",
+            "description": "Business division matching CSOD division for alignment"
+          }
+        },
+        {
+          "name": "training_curriculum_id",
+          "type": "VARCHAR",
+          "relationship": {
+            "description": "Foreign key relationship to training_skill_mapping.curriculum_id - links skill development to specific training curricula through bridge table",
+            "type": "many-to-one"
+          },
+          "properties": {
+            "displayName": "Training Curriculum ID",
+            "description": "ID linking to CSOD curriculum that developed this skill"
+          }
+        },
+        {
+          "name": "training_curriculum_title",
+          "type": "TEXT",
+          "relationship": {
+            "description": "Foreign key relationship to csod_training_records.curriculum_title - directly connects skill development outcomes to the training programs that produced them",
+            "type": "many-to-one"
+          },
+          "properties": {
+            "displayName": "Training Curriculum Title",
+            "description": "Title of training curriculum from CSOD"
+          }
+        }
+      ]
+    },
+    "bridge_table_relationships": {
+      "training_skill_mapping": {
+        "columns": [
+          {
+            "name": "curriculum_title",
+            "type": "VARCHAR",
+            "relationship": {
+              "description": "Foreign key relationship to csod_training_records.curriculum_title - establishes which training programs are mapped to develop specific skills",
+              "type": "many-to-one"
+            },
+            "properties": {
+              "displayName": "Curriculum Title",
+              "description": "Training curriculum that develops the associated skill"
+            }
+          },
+          {
+            "name": "skill_name",
+            "type": "VARCHAR",
+            "relationship": {
+              "description": "Foreign key relationship to workday_employee_skills_development.skill_name - defines which skills are developed by specific training curricula",
+              "type": "many-to-one"
+            },
+            "properties": {
+              "displayName": "Skill Name",
+              "description": "Skill that is developed by the associated curriculum"
+            }
+          }
+        ]
+      }
+    },
+    "relationship_types_explained": {
+      "one-to-many": "One parent record can have multiple child records (e.g., one employee can have many training assignments)",
+      "many-to-one": "Multiple child records relate to one parent record (e.g., many skill assessments relate to one employee)",
+      "many-to-many": "Records can have multiple relationships in both directions (implemented via bridge table)",
+      "reference": "Lookup relationship for dimensional analysis (e.g., division names for grouping)",
+      "self-referencing": "Table references itself (e.g., manager-employee hierarchy within same table)"
+    },
+    "complete_relationship_queries": {
+      "employee_to_skills": {
+        "description": "Join employee training completion with skill development outcomes",
+        "sql": "SELECT c.user_id, c.full_name, c.curriculum_title, c.transcript_status, w.skill_name, w.proficiency_improvement FROM csod_training_records c INNER JOIN workday_employee_skills_development w ON c.user_id = w.employee_id AND c.curriculum_title = w.training_curriculum_title"
+      },
+      "training_effectiveness": {
+        "description": "Analyze training program effectiveness across both completion and skill development",
+        "sql": "SELECT c.curriculum_title, COUNT(c.id) as total_assignments, COUNT(CASE WHEN c.transcript_status = 'Satisfied' THEN 1 END) as completions, AVG(w.proficiency_improvement) as avg_skill_improvement FROM csod_training_records c LEFT JOIN workday_employee_skills_development w ON c.user_id = w.employee_id AND c.curriculum_title = w.training_curriculum_title GROUP BY c.curriculum_title"
+      },
+      "manager_team_analysis": {
+        "description": "Cross-system manager effectiveness analysis",
+        "sql": "SELECT c.manager_name, COUNT(DISTINCT c.user_id) as team_members, AVG(CASE WHEN c.transcript_status = 'Satisfied' THEN 1.0 ELSE 0.0 END) as completion_rate, AVG(w.proficiency_improvement) as avg_skill_improvement FROM csod_training_records c LEFT JOIN workday_employee_skills_development w ON c.user_id = w.employee_id AND c.manager_name = w.manager_name GROUP BY c.manager_name"
+      }
+    }
+  }

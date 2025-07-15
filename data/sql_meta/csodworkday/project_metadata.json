@@ -1,0 +1,35 @@
+{
+  "project_id": "csodworkday",
+  "tables": [
+    {
+      "name": "csod_training_records",
+      "display_name": "CSOD Training Records",
+      "description": "Cornerstone OnDemand training records and completion tracking",
+      "mdl_file": "mdl.json",
+      "ddl_file": "ddl.json"
+    },
+    {
+      "name": "mdl_workday_skill_development",
+      "display_name": "Workday Skill Development",
+      "description": "Catalog of workday skill development and their metadata",
+      "mdl_file": "mdl_workday_skill_development.json",
+      "ddl_file": "ddl_learnings.json"
+    }
+  ],
+  "knowledge_base": [
+    {
+      "name": "csodworkday_knowledge_base",
+      "display_name": "CSOD Workday Knowledge Base",
+      "description": "Knowledge base for CSOD Workday",
+      "file_path": "instructions.json"
+    }
+  ],
+  "examples": [
+    {
+      "name": "csodworkday_examples",
+      "display_name": "CSOD Workday Example",
+      "description": "Example of CSOD Workday",
+      "file_path": "sql_pairs.json"
+    }
+  ]
+}

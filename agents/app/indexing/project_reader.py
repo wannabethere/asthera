@@ -298,7 +298,7 @@ async def main():
     reader = ProjectReader(base_path, persistent_client)
     
     # Test projects
-    test_projects = ["cornerstone", "employee_training"]
+    test_projects = ["csodworkday"]
     
     for project in test_projects:
         try:
