@@ -17,6 +17,9 @@ import os
 from app.utils.cache import get_cache_provider
 from app.utils.sse import publish_update
 from app.core.dependencies import get_llm
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +64,14 @@ class ProjectWorkflowService:
     async def get_semantic_description_for_table(self, add_table_request: AddTableRequest, project_context: ProjectContext) -> Dict[str, Any]:
         """Generate semantic description for a table using the semantics description service"""
         try:
-            from app.agents.semantics_description import SemanticsDescription
+            try:
+                from app.agents.semantics_description import SemanticsDescription
+            except Exception as import_error:
+                import traceback
+                traceback.print_exc()
+                raise import_error
+            
+            
             
             schema_input = add_table_request.schema
             
@@ -98,6 +108,7 @@ class ProjectWorkflowService:
                 )
             )
             
+            
             if result.status == "finished" and result.response:
                 # Return the full response
                 return result.response
@@ -128,8 +139,12 @@ class ProjectWorkflowService:
     async def get_relationship_recommendation_for_table(self, add_table_request: AddTableRequest, project_context: ProjectContext) -> Dict[str, Any]:
         """Generate relationship recommendations for a table using the relationship recommendation service"""
         try:
-            from app.agents.relationship_recommendation import RelationshipRecommendation
-            
+            try:
+                from app.agents.relationship_recommendation import RelationshipRecommendation
+            except Exception as import_error:
+                import traceback
+                traceback.print_exc()
+                raise import_error
             schema_input = add_table_request.schema
             
             # Convert schema input to table data format expected by relationship service
@@ -490,9 +505,11 @@ class ProjectWorkflowService:
             }
         )
         
+        
         # LLM Table Definition (enhanced with semantic description)
         
         documented_table = await self.definition_manager.document_table_schema(schema_input, project_context)
+        
         
         # Attach LLM output to table (customize as needed)
         table.description = documented_table.description

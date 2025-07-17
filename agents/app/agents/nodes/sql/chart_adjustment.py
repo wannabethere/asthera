@@ -14,6 +14,7 @@ from app.core.dependencies import get_llm
 from app.agents.nodes.sql.utils.chart_models import ChartAdjustmentOption,ChartGenerationResults
 from app.settings import get_settings
 from app.core.provider import DocumentStoreProvider
+from app.agents.nodes.sql.utils.chart import create_chart_from_existing_schema
 
 logger = logging.getLogger("lexy-ai-service")
 settings = get_settings()
@@ -25,21 +26,90 @@ SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "utils", "vega-lite-schema
 chart_adjustment_system_prompt = """
 ### TASK ###
 
-You are a data analyst great at visualizing data using vega-lite! Given the user's question, SQL, sample data, sample column values, original vega-lite schema and adjustment options, 
+You are a data analyst great at visualizing data using vega-lite! Given the user's question, SQL, original vega-lite schema and adjustment options, 
 you need to re-generate vega-lite schema in JSON and provide suitable chart type.
-Besides, you need to give a concise and easy-to-understand reasoning to describe why you provide such vega-lite schema based on the question, SQL, sample data, sample column values, original vega-lite schema and adjustment options.
+Besides, you need to give a concise and easy-to-understand reasoning to describe why you provide such vega-lite schema based on the question, SQL,  original vega-lite schema and adjustment options.
+Data is provided and the columns and values are already provided in the vega-lite schema.
+
+### IMPORTANT ###
+You MUST include the data block in your chart_schema response. Copy the data from the input chart schema and include it in your generated chart schema.
 
 {chart_generation_instructions}
 - If you think the adjustment options are not suitable for the data, you can return an empty string for the schema and chart type and give reasoning to explain why.
 
+### CRITICAL INSTRUCTION ###
+
+You MUST respond with ONLY a valid JSON object. Do NOT include:
+- Any text before the JSON
+- Any text after the JSON  
+- Markdown formatting
+- Code blocks
+- Explanations outside the JSON
+- Comments in the JSON (no // or /* */ comments)
+- Trailing commas
+
+Your entire response should be a single JSON object starting with {{ and ending with }}.
+
+### VEGA-LITE SCHEMA RULES ###
+
+1. Encoding channels must be at the top level of the encoding object:
+   - Valid: {{"x": {{"field": "x_field"}}, "y": {{"field": "y_field"}}, "color": {{"field": "color_field"}}}}
+   - Invalid: {{"x": {{"field": "x_field", "xOffset": {{"field": "offset_field"}}}}}}
+
+2. Color scales must be valid JSON:
+   - Valid: {{"scale": {{"domain": ["A", "B"], "range": ["red", "blue"]}}}}
+   - Invalid: {{"scale": {{"domain": ["A", "B"], "range": ["red", "blue"] // comment}}}}
+
+3. xOffset is a separate encoding channel, not nested within other channels
+
 ### OUTPUT FORMAT ###
 
-Please provide your chain of thought reasoning, chart type and the vega-lite schema in JSON format.
-
 {{
-    "reasoning": <REASON_TO_CHOOSE_THE_SCHEMA_IN_STRING_FORMATTED_IN_LANGUAGE_PROVIDED_BY_USER>,
+    "reasoning": "Your reasoning here in plain text",
     "chart_type": "line" | "multi_line" | "bar" | "pie" | "grouped_bar" | "stacked_bar" | "area" | "",
-    "chart_schema": <VEGA_LITE_JSON_SCHEMA>
+    "chart_schema": {{
+        "mark": {{"type": "bar"}},
+        "encoding": {{
+            "x": {{"field": "field_name", "type": "nominal"}},
+            "y": {{"field": "field_name", "type": "quantitative"}},
+            "color": {{"field": "field_name", "type": "nominal"}}
+        }},
+        "data": {{
+            "values": [
+                {{"field1": "value1", "field2": "value2"}},
+                {{"field1": "value3", "field2": "value4"}}
+            ]
+        }}
+    }}
+}}
+
+### EXAMPLES ###
+
+For a bar chart adjustment:
+{{
+    "reasoning": "I will change the bar color to orange as requested",
+    "chart_type": "bar",
+    "chart_schema": {{
+        "mark": {{"type": "bar"}},
+        "encoding": {{
+            "x": {{"field": "Division", "type": "nominal"}},
+            "y": {{"field": "Completed_Trainings", "type": "quantitative"}},
+            "color": {{"field": "Division", "type": "nominal", "scale": {{"range": ["orange"]}}}}
+        }},
+        "data": {{
+            "values": [
+                {{"Division": "Administration", "Completed_Trainings": 2495}},
+                {{"Division": "Sales", "Completed_Trainings": 2482}}
+            ]
+        }}
+    }}
+}}
+
+For no suitable adjustment:
+{{
+    "reasoning": "The requested adjustment is not suitable for this data type",
+    "chart_type": "",
+    "chart_schema": {{}}
 }}
 """
 
@@ -48,8 +118,7 @@ chart_adjustment_user_prompt_template = """
 Original Question: {query}
 Original SQL: {sql}
 Original Vega-Lite Schema: {chart_schema}
-Sample Data: {sample_data}
-Sample Column Values: {sample_column_values}
+Data: {data}
 Language: {language}
 
 Adjustment Option: {adjustment_option}
@@ -92,6 +161,18 @@ class ChartAdjustmentTool:
     @observe(capture_input=False)
     def preprocess_data(self, data: Dict[str, Any]) -> dict:
         """Preprocess chart data"""
+        # Handle case where data might be a list instead of a dictionary
+        if isinstance(data, list):
+            # Convert list to expected dictionary format
+            data = {
+                "data": data,
+                "columns": list(range(len(data[0]))) if data else []
+            }
+        elif not isinstance(data, dict):
+            # Handle other unexpected data types
+            logger.warning(f"Unexpected data type: {type(data)}. Converting to empty structure.")
+            data = {"data": [], "columns": []}
+        
         return self.chart_data_preprocessor.run(data)
 
     @observe(as_type="generation", capture_input=False) 
@@ -104,40 +185,110 @@ class ChartAdjustmentTool:
                 template="{system_prompt}\n\n{user_prompt}"
             )
             
-            # Create LLM chain
-            chain = LLMChain(llm=self.llm, prompt=full_prompt)
+            # Use modern LangChain approach instead of deprecated LLMChain
+            chain = full_prompt | self.llm
             
             # Generate response
-            result = await chain.arun(
-                system_prompt=self.system_prompt,
-                user_prompt=prompt_input
-            )
+            result = await chain.ainvoke({
+                "system_prompt": self.system_prompt,
+                "user_prompt": prompt_input
+            })
             
+            # Extract content from AIMessage
+            if hasattr(result, 'content'):
+                result_content = result.content
+            else:
+                result_content = str(result)
+            print("result_content",result_content)
+            print("result_content type:", type(result_content))
+            print("result_content length:", len(result_content))
             # Ensure the result is a properly formatted JSON string
             try:
                 # First try to parse the raw result
-                parsed_result = orjson.loads(result)
+                parsed_result = orjson.loads(result_content)
                 return {"replies": [orjson.dumps(parsed_result).decode('utf-8')]}
             except orjson.JSONDecodeError:
-                # If parsing fails, try to extract JSON from the text
+                # If parsing fails, try to clean and parse the JSON
                 import re
-                json_match = re.search(r'\{.*\}', result, re.DOTALL)
-                if json_match:
-                    json_str = json_match.group(0)
-                    try:
-                        # Validate the extracted JSON
-                        parsed_result = orjson.loads(json_str)
-                        return {"replies": [orjson.dumps(parsed_result).decode('utf-8')]}
-                    except orjson.JSONDecodeError:
-                        pass
                 
-                # If all parsing attempts fail, return a default structure
-                default_result = {
-                    "reasoning": "Failed to parse LLM response into valid JSON format.",
+                # Clean the JSON string by removing comments and fixing common issues
+                cleaned_json = result_content
+                
+                # Remove JavaScript-style comments (// and /* */)
+                cleaned_json = re.sub(r'//.*?$', '', cleaned_json, flags=re.MULTILINE)  # Remove // comments
+                cleaned_json = re.sub(r'/\*.*?\*/', '', cleaned_json, flags=re.DOTALL)  # Remove /* */ comments
+                
+                # Remove trailing commas before closing braces/brackets
+                cleaned_json = re.sub(r',(\s*[}\]])', r'\1', cleaned_json)
+                
+                # Fix specific invalid Vega-Lite syntax patterns
+                # Remove invalid nested xOffset within other encodings
+                cleaned_json = re.sub(r'"xOffset":\s*\{[^}]*\}(?=\s*,\s*"[^"]*":)', '', cleaned_json)
+                
+                # Fix invalid color scale syntax with comments
+                cleaned_json = re.sub(r'//\s*[^"]*?(?=\s*[}\]])', '', cleaned_json)
+                
+                # Remove any remaining invalid nested structures
+                cleaned_json = re.sub(r'"xOffset":\s*\{[^}]*\}(?=\s*,\s*"[^"]*":)', '', cleaned_json)
+                
+                # Try to parse the cleaned JSON
+                try:
+                    parsed_result = orjson.loads(cleaned_json)
+                    logger.info("Successfully parsed JSON after cleaning")
+                    return {"replies": [orjson.dumps(parsed_result).decode('utf-8')]}
+                except orjson.JSONDecodeError:
+                    pass
+                
+                # If cleaning didn't work, try to extract JSON from the text
+                json_patterns = [
+                    r'\{.*\}',  # Basic JSON object
+                    r'```json\s*(\{.*?\})\s*```',  # JSON in code block
+                    r'```\s*(\{.*?\})\s*```',  # JSON in generic code block
+                ]
+                
+                for pattern in json_patterns:
+                    json_match = re.search(pattern, result_content, re.DOTALL)
+                    if json_match:
+                        json_str = json_match.group(1) if len(json_match.groups()) > 0 else json_match.group(0)
+                        
+                        # Clean the extracted JSON
+                        json_str = re.sub(r'//.*?$', '', json_str, flags=re.MULTILINE)
+                        json_str = re.sub(r'/\*.*?\*/', '', json_str, flags=re.DOTALL)
+                        json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)
+                        
+                        # Fix specific invalid Vega-Lite syntax patterns
+                        json_str = re.sub(r'"xOffset":\s*\{[^}]*\}(?=\s*,\s*"[^"]*":)', '', json_str)
+                        json_str = re.sub(r'//\s*[^"]*?(?=\s*[}\]])', '', json_str)
+                        
+                        try:
+                            # Validate the extracted JSON
+                            parsed_result = orjson.loads(json_str)
+                            logger.info(f"Successfully extracted and cleaned JSON using pattern: {pattern}")
+                            return {"replies": [orjson.dumps(parsed_result).decode('utf-8')]}
+                        except orjson.JSONDecodeError:
+                            continue
+                
+                # If all parsing attempts fail, try to create a structured response from the text
+                logger.warning(f"Failed to parse JSON from LLM response: {result_content}")
+                
+                # Try to extract reasoning from the text (remove markdown and code blocks)
+                cleaned_content = re.sub(r'```.*?```', '', result_content, flags=re.DOTALL)
+                cleaned_content = re.sub(r'#+\s*', '', cleaned_content)  # Remove markdown headers
+                cleaned_content = re.sub(r'\*\*.*?\*\*', '', cleaned_content)  # Remove bold text
+                cleaned_content = re.sub(r'\*.*?\*', '', cleaned_content)  # Remove italic text
+                cleaned_content = re.sub(r'`.*?`', '', cleaned_content)  # Remove inline code
+                
+                reasoning = cleaned_content.strip()
+                if len(reasoning) > 500:  # Truncate if too long
+                    reasoning = reasoning[:500] + "..."
+                
+                # Create a structured response
+                structured_result = {
+                    "reasoning": reasoning,
                     "chart_type": "",
                     "chart_schema": {}
                 }
-                return {"replies": [orjson.dumps(default_result).decode('utf-8')]}
+                return {"replies": [orjson.dumps(structured_result).decode('utf-8')]}
                 
         except Exception as e:
             logger.error(f"Error in chart adjustment generation: {e}")
@@ -160,6 +311,7 @@ class ChartAdjustmentTool:
             generate_result.get("replies"),
             vega_schema,
             sample_data,
+            remove_data_from_chart_schema=False  # Preserve the original data
         )
 
     async def run(
@@ -174,17 +326,19 @@ class ChartAdjustmentTool:
         """Main execution method for chart adjustment"""
         try:
             logger.info("Chart Adjustment pipeline is running...")
+            logger.info(f"Data type: {type(data)}")
+            logger.info(f"Data structure: {data}")
             
             # Step 1: Preprocess data
-            preprocess_result = self.preprocess_data(data)
-            sample_data = preprocess_result.get("sample_data")
-            sample_column_values = preprocess_result.get("sample_column_values")
+            #preprocess_result = self.preprocess_data(data)
+            #sample_data = preprocess_result.get("sample_data", [])
+            #sample_column_values = preprocess_result.get("sample_column_values", {})
             
             # Step 2: Create prompt
             prompt_template = PromptTemplate(
                 input_variables=[
-                    "query", "sql", "chart_schema", "sample_data", 
-                    "sample_column_values", "language", "adjustment_option"
+                    "query", "sql", "chart_schema", 
+                    "language", "adjustment_option"
                 ],
                 template=chart_adjustment_user_prompt_template
             )
@@ -193,22 +347,31 @@ class ChartAdjustmentTool:
                 query=query,
                 sql=sql,
                 chart_schema=chart_schema,
-                sample_data=sample_data,
-                sample_column_values=sample_column_values,
+                data=data,
                 language=language,
                 adjustment_option=adjustment_option
             )
             
             # Step 3: Generate chart adjustment
             generate_result = await self.generate_chart_adjustment(user_prompt)
-            
+            print("generate_result",generate_result)
             # Step 4: Post-process results
+            # Extract data from the LLM-generated chart schema
+            parsed_result = orjson.loads(generate_result.get("replies", [""])[0])
+            llm_chart_schema = parsed_result.get("chart_schema", {})
+            llm_chart_data = llm_chart_schema.get("data", {}).get("values", []) if llm_chart_schema else []
+            
+            logger.info(f"Using data from LLM-generated chart schema: {len(llm_chart_data)} rows")
+            logger.info(f"LLM chart schema data sample: {llm_chart_data[:2] if llm_chart_data else 'No data'}")
+            logger.info(f"LLM chart schema transform: {llm_chart_schema.get('transform', 'No transform')}")
+            logger.info(f"LLM chart schema encoding: {llm_chart_schema.get('encoding', 'No encoding')}")
+            
             final_result = self.post_process(
                 generate_result,
                 self.vega_schema,
-                sample_data
+                llm_chart_data
             )
-            
+            print("final_result",final_result)
             return final_result
             
         except Exception as e:
@@ -239,7 +402,7 @@ class ChartAdjustment:
         return await self.tool.run(
             query=query,
             sql=sql,
-            adjustment=adjustment,
+            adjustment_option=adjustment,
             chart_schema=chart_schema,
             data=data,
             language=language

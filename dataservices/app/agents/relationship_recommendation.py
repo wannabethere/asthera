@@ -6,8 +6,10 @@ import orjson
 from cachetools import TTLCache
 from langchain.agents import Tool
 from langchain.prompts import PromptTemplate
-from langfuse.decorators import observe
+from langfuse import observe
 from pydantic import BaseModel
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableMap
 
 from app.core.dependencies import get_llm
 
@@ -197,24 +199,48 @@ class RelationshipRecommendation:
             columns_info = self._format_columns_info(columns)
 
             # Create prompt for relationship recommendation
-            prompt = PromptTemplate(
-                input_variables=["table_name", "table_description", "columns_info", "language"],
-                template=relationship_recommendation_template
-            )
+            # prompt = PromptTemplate(
+            #     input_variables=["table_name", "table_description", "columns_info", "language"],
+            #     template=relationship_recommendation_template
+            # )
             
-            # Generate relationship recommendations using operator pattern
-            result = await (
-                self.llm
-                | {
-                    "system_prompt": relationship_recommendation_system_prompt,
-                    "user_prompt": prompt.format(
-                        table_name=table_name,
-                        table_description=table_description,
-                        columns_info=columns_info,
-                        language=request.configuration.language or "English"
-                    )
-                }
-            ).invoke()
+            # # Generate relationship recommendations using operator pattern
+            # result = await (
+            #     self.llm
+            #     | {
+            #         "system_prompt": relationship_recommendation_system_prompt,
+            #         "user_prompt": prompt.format(
+            #             table_name=table_name,
+            #             table_description=table_description,
+            #             columns_info=columns_info,
+            #             language=request.configuration.language or "English"
+            #         )
+            #     }
+            # ).invoke()
+            
+            
+            # Format columns information
+            columns_info = self._format_columns_info(columns)
+
+            # Create prompt for semantics description
+            chat_prompt = ChatPromptTemplate.from_messages([
+                ("system", relationship_recommendation_system_prompt),
+                ("human", relationship_recommendation_template)
+            ])
+
+# Runnable chain
+            chain = (
+                RunnableMap({
+                    "table_name": lambda x: table_name,
+                    "table_description": lambda x: table_description,
+                    "columns_info": lambda x: columns_info,
+                    "language": lambda x: request.configuration.language or "English"
+                })
+                | chat_prompt  # Converts into BaseMessages
+                | self.llm      
+            )
+
+            result = await chain.ainvoke({})
 
             # Parse the result
             try:

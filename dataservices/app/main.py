@@ -11,8 +11,9 @@ from app.routers.sql_functions_routers import router as sql_functions_router
 from app.routers.semantics import router as semantics_router
 from app.routers.relationships import router as relationships_router
 from app.routers.recommendations import router as recommendations_router
-
-
+from app.utils.cache import set_cache_provider, InMemoryCacheProvider
+from contextlib import asynccontextmanager
+from dotenv import load_dotenv
  
 from app.utils.sse import add_subscriber, remove_subscriber
 from app.core.session_manager import SessionManager
@@ -20,11 +21,19 @@ from app.core.settings import ServiceConfig
 
 # Initialize session manager at startup
 session_manager = SessionManager(ServiceConfig())
-session_manager.create_tables()
-
-app = FastAPI(title="Data Services API", version="1.0.0")
+# session_manager.create_tables()
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    
+    set_cache_provider(InMemoryCacheProvider())
+    await session_manager.create_tables()
+    yield
+
+app = FastAPI(title="Data Services API", version="1.0.0",lifespan=lifespan)
+
+load_dotenv()
 
 #app.include_router(instruction_router, prefix="/instructions", tags=["Instructions"])
 app.include_router(example_router, prefix="/examples", tags=["Examples"])
@@ -37,6 +46,7 @@ app.include_router(sql_functions_router, prefix="/sql-functions", tags=["SQL Fun
 app.include_router(semantics_router, prefix="/semantics", tags=["Semantics"])
 app.include_router(relationships_router, prefix="/relationships", tags=["Relationships"])
 app.include_router(recommendations_router, prefix="/recommendations", tags=["Recommendations"])
+
 
 @app.get("/")
 def health():

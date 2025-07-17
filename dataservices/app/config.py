@@ -6,4 +6,4 @@ POSTGRES_DB = os.getenv("POSTGRES_DB", "Data_services")
 POSTGRES_USER = os.getenv("POSTGRES_USER", "postgres")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "root")
 
-DATABASE_URL = "postgresql://postgres:root@localhost:5432/Data_services"
+DATABASE_URL = "postgresql+asyncpg://postgres:sriram@localhost:5432/DBService"

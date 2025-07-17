@@ -58,15 +58,46 @@ class VegaLiteChartGenerationAgent:
         
         {chart_generation_instructions}
         
+        ### CRITICAL INSTRUCTION ###
+        
+        You MUST respond with ONLY a valid JSON object. Do NOT include:
+        - Any text before the JSON
+        - Any text after the JSON  
+        - Markdown formatting
+        - Code blocks
+        - Explanations outside the JSON
+        
+        Your entire response should be a single JSON object starting with {{ and ending with }}.
+        
         ### OUTPUT FORMAT ###
-        ***Important***
-        ** Please donot put ```json at the beginning and end of your VEGA-LITE JSON SCHEMA. It will break the JSON parsing.**
-        Please provide your chain of thought reasoning, chart type and the vega-lite schema in JSON format.
         
         {{
             "reasoning": "<REASON_TO_CHOOSE_THE_SCHEMA_IN_STRING_FORMATTED_IN_LANGUAGE_PROVIDED_BY_USER>",
             "chart_type": "line" | "multi_line" | "bar" | "pie" | "grouped_bar" | "stacked_bar" | "area" | "",
             "chart_schema": <VEGA_LITE_JSON_SCHEMA>
+        }}
+        
+        ### EXAMPLES ###
+        
+        For a bar chart:
+        {{
+            "reasoning": "A bar chart is chosen to compare sales across different regions",
+            "chart_type": "bar",
+            "chart_schema": {{
+                "title": "Sales by Region",
+                "mark": {{"type": "bar"}},
+                "encoding": {{
+                    "x": {{"field": "Region", "type": "nominal", "title": "Region"}},
+                    "y": {{"field": "Sales", "type": "quantitative", "title": "Sales"}}
+                }}
+            }}
+        }}
+        
+        For no suitable chart:
+        {{
+            "reasoning": "The data is not suitable for visualization",
+            "chart_type": "",
+            "chart_schema": {{}}
         }}
         """
         
@@ -190,28 +221,91 @@ class VegaLiteChartGenerationAgent:
             else:
                 result_str = str(result)
             
+            logger.info(f"Raw LLM response: {result_str}")
+            
             # Try to parse as JSON to validate
             try:
                 # First try to parse the raw result
                 parsed = orjson.loads(result_str)
+                logger.info(f"Successfully parsed JSON directly: {parsed}")
                 return orjson.dumps(parsed).decode('utf-8')
             except orjson.JSONDecodeError:
                 # If parsing fails, try to extract JSON from the text
                 import re
-                json_match = re.search(r'\{.*\}', result_str, re.DOTALL)
-                if json_match:
+                
+                # Look for JSON blocks in the text
+                json_patterns = [
+                    r'```json\s*(\{.*?\})\s*```',  # JSON code blocks
+                    r'```\s*(\{.*?\})\s*```',      # Generic code blocks
+                    r'(\{.*?\})',                  # Any JSON object
+                ]
+                
+                for pattern in json_patterns:
+                    json_matches = re.findall(pattern, result_str, re.DOTALL)
+                    for match in json_matches:
+                        try:
+                            parsed = orjson.loads(match)
+                            logger.info(f"Successfully parsed JSON from pattern {pattern}: {parsed}")
+                            return orjson.dumps(parsed).decode('utf-8')
+                        except orjson.JSONDecodeError:
+                            continue
+                
+                # If still no success, try to extract the final output section
+                final_output_match = re.search(r'### Final Output:\s*(\{.*?\})', result_str, re.DOTALL)
+                if final_output_match:
                     try:
-                        parsed = orjson.loads(json_match.group())
+                        parsed = orjson.loads(final_output_match.group(1))
+                        logger.info(f"Successfully parsed JSON from final output: {parsed}")
                         return orjson.dumps(parsed).decode('utf-8')
                     except orjson.JSONDecodeError:
                         pass
                 
-                # If all parsing attempts fail, return a default structure
+                # If all parsing attempts fail, try to construct a result from the reasoning
+                logger.warning("Failed to parse JSON from LLM response, constructing from reasoning")
+                
+                # Extract chart type from reasoning
+                chart_type = ""
+                if "grouped bar" in result_str.lower():
+                    chart_type = "grouped_bar"
+                elif "bar" in result_str.lower():
+                    chart_type = "bar"
+                elif "line" in result_str.lower():
+                    chart_type = "line"
+                elif "pie" in result_str.lower():
+                    chart_type = "pie"
+                elif "area" in result_str.lower():
+                    chart_type = "area"
+                
+                # Try to extract chart schema from the reasoning
+                chart_schema = {}
+                schema_match = re.search(r'"chart_schema":\s*(\{.*?\})', result_str, re.DOTALL)
+                if schema_match:
+                    try:
+                        chart_schema = orjson.loads(schema_match.group(1))
+                    except orjson.JSONDecodeError:
+                        pass
+                
+                # Clean up reasoning text
+                reasoning = result_str
+                # Remove markdown formatting
+                reasoning = re.sub(r'###.*?###', '', reasoning, flags=re.DOTALL)
+                reasoning = re.sub(r'\*\*.*?\*\*', '', reasoning)
+                reasoning = re.sub(r'\*.*?\*', '', reasoning)
+                reasoning = re.sub(r'`.*?`', '', reasoning)
+                reasoning = re.sub(r'```.*?```', '', reasoning, flags=re.DOTALL)
+                reasoning = re.sub(r'\{.*?\}', '', reasoning, flags=re.DOTALL)
+                reasoning = re.sub(r'\s+', ' ', reasoning).strip()
+                
+                # Truncate if too long
+                if len(reasoning) > 1000:
+                    reasoning = reasoning[:1000] + "..."
+                
                 default_result = {
-                    "reasoning": result_str,
-                    "chart_type": "",
-                    "chart_schema": {}
+                    "reasoning": reasoning,
+                    "chart_type": chart_type,
+                    "chart_schema": chart_schema
                 }
+                logger.info(f"Constructed result from reasoning: {default_result}")
                 return orjson.dumps(default_result).decode('utf-8')
             
         except Exception as e:

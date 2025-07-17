@@ -9,6 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.orm import Session
 from contextlib import asynccontextmanager
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 logger = logging.getLogger(__name__)
 
 class SessionManager:
@@ -38,33 +39,33 @@ class SessionManager:
         self.config = config
         
         if config:
-            # Database setup
-            self.engine = create_engine(
-                config.database_url,
-                poolclass=StaticPool,
-                echo=config.log_level == "DEBUG"
+            self.engine = create_async_engine(
+            config.database_url,  # Must be 'postgresql+asyncpg://...'
+            echo=config.log_level == "DEBUG"
             )
-            self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+        self.async_session_maker = async_sessionmaker(
+            bind=self.engine,
+            expire_on_commit=False,
+            class_=AsyncSession
+        )
         
-    def create_tables(self):
-        """Create all database tables"""
-        if hasattr(self, 'engine'):
-            Base.metadata.create_all(bind=self.engine)
+    async def create_tables(self):
+        async with self.engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
     
-    def get_db_session(self) -> Session:
-        """Get database session"""
-        if not hasattr(self, 'SessionLocal'):
-            raise RuntimeError("SessionManager not initialized with config")
-        return self.SessionLocal()
+    # def get_db_session(self) -> Session:
+    #     """Get database session"""
+    #     if not hasattr(self, 'SessionLocal'):
+    #         raise RuntimeError("SessionManager not initialized with config")
+    #     return self.SessionLocal()
     
     @asynccontextmanager
     async def get_async_db_session(self):
-        """Async context manager for database session"""
-        session = self.get_db_session()
-        try:
-            yield session
-        finally:
-            session.close()
+        async with self.async_session_maker() as session:
+            try:
+                yield session
+            finally:
+                await session.close()
     
     @classmethod
     def get_instance(cls) -> 'SessionManager':
@@ -178,3 +179,7 @@ class SessionManager:
             for session_id, session in self._sessions.items()
             if not self._is_session_expired(session)
         } 
+    
+
+
+

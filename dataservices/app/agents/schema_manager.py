@@ -64,7 +64,9 @@ class LLMSchemaDocumentationGenerator:
         """Generate comprehensive table documentation"""
         
         # Generate table-level documentation
+       
         table_doc = await self._generate_table_documentation(schema_input, project_context)
+       
         
         # Generate column-level documentation
         column_docs = []
@@ -92,7 +94,7 @@ class LLMSchemaDocumentationGenerator:
     async def _generate_table_documentation(self, schema_input: SchemaInput, 
                                           project_context: ProjectContext) -> Dict[str, Any]:
         """Generate table-level documentation"""
-        
+        print("i am in _generate_table_documentation")
         system_prompt = """You are an expert data architect and business analyst. 
         Generate comprehensive table documentation that bridges technical schema details 
         with business context. Focus on:
@@ -176,7 +178,7 @@ class LLMSchemaDocumentationGenerator:
                     print(f"Extracted JSON parsing also failed: {e2}")
             
             # If all else fails, return a default structure
-            print("Returning default response structure")
+            
             return {
                 "display_name": schema_input.table_name,
                 "description": f"Table {schema_input.table_name}",
@@ -281,7 +283,7 @@ class LLMSchemaDocumentationGenerator:
                 privacy_classification=data.privacy_classification,
                 aggregation_suggestions=data.aggregation_suggestions,
                 filtering_suggestions=data.filtering_suggestions,
-                metadata=data.metadata
+                json_metadata=data.json_metadata
             )
         except Exception as e:
             raise Exception(f"Failed to generate column documentation: {str(e)}")
@@ -289,7 +291,9 @@ class LLMSchemaDocumentationGenerator:
     def _format_columns_for_prompt(self, columns: List[Dict[str, Any]]) -> str:
         """Format columns for LLM prompt using the existing helper utility"""
         formatted = []
+        
         for col in columns:
+            
             # Handle both 'data_type' and 'type' keys for column type
             data_type = col.get('data_type') or col.get('type', 'UNKNOWN')
             col_info = f"- {col['name']} ({data_type})"
@@ -300,6 +304,7 @@ class LLMSchemaDocumentationGenerator:
             if col.get('description'):
                 col_info += f" - {col['description']}"
             formatted.append(col_info)
+        
         return '\n'.join(formatted)
     
     def _extract_sample_values_for_column(self, column_name: str, 

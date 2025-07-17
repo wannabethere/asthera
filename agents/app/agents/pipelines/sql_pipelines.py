@@ -19,6 +19,7 @@ from app.agents.nodes.sql.misleading_assistance import MisleadingAssistance
 from app.agents.nodes.sql.relationship_recommendation import RelationshipRecommendation
 from app.agents.nodes.sql.semantics_description import SemanticsDescription
 from app.agents.nodes.sql.chart_generation import VegaLiteChartGenerationPipeline
+from app.agents.nodes.sql.enhanced_chart_generation import EnhancedVegaLiteChartGenerationPipeline
 from app.agents.nodes.sql.chart_adjustment import ChartAdjustment
 from app.agents.nodes.sql.utils.chart_models import ChartAdjustmentOption
 from app.agents.nodes.sql.powerbi_chart_generation import PowerBIChartGenerationPipeline
@@ -393,7 +394,7 @@ class SQLExpansionPipeline(AgentPipeline):
             }
 
 class ChartGenerationPipeline(AgentPipeline):
-    """Pipeline for chart generation with support for multiple chart types"""
+    """Pipeline for chart generation with support for multiple chart types including enhanced Vega-Lite"""
     
     def __init__(
         self,
@@ -407,7 +408,7 @@ class ChartGenerationPipeline(AgentPipeline):
         super().__init__(
             name="Chart Generation Pipeline",
             version="1.0",
-            description="Generates charts from SQL query results",
+            description="Generates charts from SQL query results with enhanced Vega-Lite support",
             llm=llm,
             retrieval_helper=retrieval_helper,
             document_store_provider=document_store_provider,
@@ -421,8 +422,11 @@ class ChartGenerationPipeline(AgentPipeline):
             self.chart_generator = PowerBIChartGenerationPipeline(llm=llm)
         elif self.chart_config.get("type") == "plotly":
             self.chart_generator = PlotlyChartGenerationPipeline(llm=llm)
-        else:  # Default to Vega-Lite
-            self.chart_generator = VegaLiteChartGenerationPipeline()
+        elif self.chart_config.get("type") == "enhanced_vega_lite":
+            # Use enhanced Vega-Lite pipeline with KPI support
+            self.chart_generator = EnhancedVegaLiteChartGenerationPipeline()
+        else:  # Default to enhanced Vega-Lite for better chart type support
+            self.chart_generator = EnhancedVegaLiteChartGenerationPipeline()
         
     async def run(self, **kwargs) -> Dict[str, Any]:
         query = kwargs.get("query", "")
@@ -469,7 +473,24 @@ class ChartGenerationPipeline(AgentPipeline):
                 },
                 "error": result.get("error")
             }
-        else:  # Vega-Lite
+        elif self.chart_config.get("type") in ["vega_lite", "enhanced_vega_lite"]:
+            # Enhanced Vega-Lite response format
+            return {
+                "success": result.get("success", False),
+                "data": {
+                    "chart_schema": result.get("chart_schema", {}),
+                    "reasoning": result.get("reasoning", ""),
+                    "chart_type": result.get("chart_type", ""),
+                    "exported_json": result.get("exported_json"),
+                    "observable_code": result.get("observable_code"),
+                    "altair_code": result.get("altair_code"),
+                    "chart_summary": result.get("chart_summary"),
+                    "enhanced_metadata": result.get("enhanced_metadata", {}),
+                    "kpi_metadata": result.get("chart_schema", {}).get("kpi_metadata", {})
+                },
+                "error": result.get("error")
+            }
+        else:  # Fallback to basic Vega-Lite
             return {
                 "success": result.get("success", False),
                 "data": {
@@ -513,6 +534,9 @@ class ChartAdjustmentPipeline(AgentPipeline):
             self.chart_adjuster = PowerBIChartGenerationPipeline(llm=llm)
         elif self.chart_config.get("type") == "plotly":
             self.chart_adjuster = PlotlyChartAdjustment()
+        elif self.chart_config.get("type") in ["vega_lite", "enhanced_vega_lite"]:
+            # Use enhanced chart adjustment for better support
+            self.chart_adjuster = ChartAdjustment()
         else:  # Default to Vega-Lite
             self.chart_adjuster = ChartAdjustment()
         
@@ -574,20 +598,23 @@ class ChartAdjustmentPipeline(AgentPipeline):
             # For Vega-Lite, use ChartAdjustmentOption if needed
             if isinstance(adjustment_option, dict):
                 adjustment_option = ChartAdjustmentOption(**adjustment_option)
+            print("adjustment_option",adjustment_option)
             result = await self.chart_adjuster.run(
                 query=query,
                 sql=sql,
-                adjustment_option=adjustment_option,
+                adjustment=adjustment_option,
                 chart_schema=chart_schema,
                 data=data,
                 language=language
             )
             return {
                 "success": result.get("success", False),
-                "data": {
-                    "chart_schema": result.get("chart_schema", {}),
-                    "reasoning": result.get("reasoning", ""),
-                    "chart_type": result.get("chart_type", "")
+                "post_process": {
+                    "results": {
+                        "chart_schema": result.get("chart_schema", {}),
+                        "reasoning": result.get("reasoning", ""),
+                        "chart_type": result.get("chart_type", "")
+                    }
                 },
                 "error": result.get("error")
             }

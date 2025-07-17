@@ -1448,9 +1448,19 @@ Please provide your response in proper Markdown string format.
                 "allow_using_db_schemas_without_pruning": False
             }
         )
+
+        schema_data_new = await self.retrieval_helper.get_table_names_and_schema_contexts(
+            query=query,
+            project_id=project_id,
+            table_retrieval={
+                "table_retrieval_size": 10,
+                "table_column_retrieval_size": 100,
+                "allow_using_db_schemas_without_pruning": False
+            }
+        )
         
-        schema_contexts = schema_data.get("schema_contexts", [])        
-        
+        schema_contexts = schema_data.get("schema_contexts", []) + schema_data_new.get("schema_contexts", [])
+       
         
         expansion_result = await self._expand_sql_internal(query,  original_sql, schema_contexts, reasoning, original_query)
         

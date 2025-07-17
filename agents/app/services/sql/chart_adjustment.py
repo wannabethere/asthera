@@ -47,25 +47,43 @@ class ChartAdjustmentService(BaseService[ChartAdjustmentRequest, ChartAdjustment
 
         try:
             # Execute SQL to get data
-            sql_data = (
-                await self._execute_pipeline(
-                    "sql_executor",
-                    sql=request.sql,
-                    project_id=request.project_id,
-                )
-            )["execute_sql"]["results"]
+            result = await self._execute_pipeline(
+                "sql_execution",
+                sql=request.sql,
+                query=request.query,
+                project_id=request.project_id,
+                configuration={"page": 1, "page_size": 10000}    
+            )
+
+            if result.get("post_process"):
+                sql_data = result["post_process"]['data']            
+            else:
+                return {
+                    "success": False,   
+                    "error": {
+                        "code": "SQL_EXECUTION_ERROR",
+                        "message": "No data returned from SQL execution"
+                    }
+                }
 
             # Generate chart adjustment
             chart_adjustment_result = await self._execute_pipeline(
                 "chart_adjustment",
                 query=request.query,
                 sql=request.sql,
-                adjustment_option=request.adjustment_option.adjustment_option,
+                adjustment_option=request.adjustment_option,
                 chart_schema=request.chart_schema,
                 data=sql_data,
                 language=request.configurations.language,
             )
-            chart_result = chart_adjustment_result["post_process"]["results"]
+            
+            # Handle different result structures
+            if chart_adjustment_result.get("post_process", {}).get("results"):
+                chart_result = chart_adjustment_result["post_process"]["results"]
+            elif chart_adjustment_result.get("data"):
+                chart_result = chart_adjustment_result["data"]
+            else:
+                chart_result = chart_adjustment_result
 
             if not chart_result.get("chart_schema", {}) and not chart_result.get(
                 "reasoning", ""

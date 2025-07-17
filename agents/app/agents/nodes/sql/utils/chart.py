@@ -25,7 +25,9 @@ chart_generation_instructions = """
 - In order to generate the grouped bar chart, you need to follow the given instructions:
     - Disable Stacking: Add "stack": null to the y-encoding.
     - Use xOffset for subcategories to group bars.
-    - Don't use "transform" section.
+    - If you have separate columns for different metrics (e.g., "Assigned_Trainings" and "Completed_Trainings"), use a "transform" section with "fold" to reshape the data.
+    - The xOffset field must be categorical (nominal), not quantitative.
+    - Example: For data with "Assigned" and "Completed" columns, use transform to create "Status" and "Count" fields.
 - In order to generate the pie chart, you need to follow the given instructions:
     - Add {"type": "arc"} to the mark section.
     - Add "theta" encoding to the encoding section.
@@ -197,7 +199,32 @@ chart_generation_instructions = """
     }
 }
 6. Grouped Bar Chart
-- Sample Data:
+- Sample Data (with separate columns):
+[
+    {"Region": "North", "Assigned": 100, "Completed": 80},
+    {"Region": "South", "Assigned": 150, "Completed": 120},
+    {"Region": "East", "Assigned": 200, "Completed": 180},
+    {"Region": "West", "Assigned": 250, "Completed": 220}
+]
+- Chart Schema (using transform to reshape data):
+{
+    "title": "<TITLE_IN_LANGUAGE_PROVIDED_BY_USER>",
+    "mark": {"type": "bar"},
+    "transform": [
+        {
+            "fold": ["Assigned", "Completed"],
+            "as": ["Status", "Count"]
+        }
+    ],
+    "encoding": {
+        "x": {"field": "Region", "type": "nominal", "title": "<TITLE_IN_LANGUAGE_PROVIDED_BY_USER>"},
+        "y": {"field": "Count", "type": "quantitative", "title": "<TITLE_IN_LANGUAGE_PROVIDED_BY_USER>", "stack": null},
+        "xOffset": {"field": "Status", "type": "nominal", "title": "<TITLE_IN_LANGUAGE_PROVIDED_BY_USER>"},
+        "color": {"field": "Status", "type": "nominal", "title": "<TITLE_IN_LANGUAGE_PROVIDED_BY_USER>"}
+    }
+}
+
+- Sample Data (already in long format):
 [
     {"Region": "North", "Product": "A", "Sales": 100},
     {"Region": "North", "Product": "B", "Sales": 150},
@@ -208,13 +235,13 @@ chart_generation_instructions = """
     {"Region": "West", "Product": "A", "Sales": 400},
     {"Region": "West", "Product": "B", "Sales": 450}
 ]
-- Chart Schema:
+- Chart Schema (for long format data):
 {
     "title": "<TITLE_IN_LANGUAGE_PROVIDED_BY_USER>",
     "mark": {"type": "bar"},
     "encoding": {
         "x": {"field": "Region", "type": "nominal", "title": "<TITLE_IN_LANGUAGE_PROVIDED_BY_USER>"},
-        "y": {"field": "Sales", "type": "quantitative", "title": "<TITLE_IN_LANGUAGE_PROVIDED_BY_USER>"},
+        "y": {"field": "Sales", "type": "quantitative", "title": "<TITLE_IN_LANGUAGE_PROVIDED_BY_USER>", "stack": null},
         "xOffset": {"field": "Product", "type": "nominal", "title": "<TITLE_IN_LANGUAGE_PROVIDED_BY_USER>"},
         "color": {"field": "Product", "type": "nominal", "title": "<TITLE_IN_LANGUAGE_PROVIDED_BY_USER>"}
     }
@@ -304,62 +331,241 @@ class ChartGenerationPostProcessor:
         remove_data_from_chart_schema: Optional[bool] = True,
     ) -> Dict[str, Any]:
         """Process LLM output and validate Vega-Lite schema"""
-        try:
-            if isinstance(generation_result, list) and generation_result:
-                result_str = generation_result[0]
-            else:
-                result_str = generation_result
-            
-            parsed_result = orjson.loads(result_str)
-            reasoning = parsed_result.get("reasoning", "")
-            chart_type = parsed_result.get("chart_type", "")
-            
-            if chart_schema := parsed_result.get("chart_schema", {}):
-                # Handle string format chart_schema
-                if isinstance(chart_schema, str):
-                    chart_schema = orjson.loads(chart_schema)
+        
+        if isinstance(generation_result, list) and generation_result:
+            result_str = generation_result[0]
+        else:
+            result_str = generation_result
+        
+        logger.info(f"Post-processor input: {result_str}")
+        
+        parsed_result = orjson.loads(result_str)
+        logger.info(f"Parsed result: {parsed_result}")
+        
+        reasoning = parsed_result.get("reasoning", "")
+        chart_type = parsed_result.get("chart_type", "")
+        chart_schema = parsed_result.get("chart_schema", {})
+        
+        logger.info(f"Extracted chart_schema: {chart_schema}")
+        logger.info(f"Chart schema type: {type(chart_schema)}")
+        
+        if chart_schema:
+            # Handle string format chart_schema
+            if isinstance(chart_schema, str):
+                logger.info("Chart schema is string, parsing...")
+                chart_schema = orjson.loads(chart_schema)
 
-                chart_schema["$schema"] = "https://vega.github.io/schema/vega-lite/v5.json"
+            # Fix common Vega-Lite configuration errors
+            chart_schema = self._fix_common_vega_lite_errors(chart_schema, sample_data)
+
+            chart_schema["$schema"] = "https://vega.github.io/schema/vega-lite/v5.json"
+            
+            # Only set data if it doesn't already exist in the chart schema
+            if "data" not in chart_schema:
                 chart_schema["data"] = {"values": sample_data}
+            else:
+                # Ensure the data structure is correct
+                if "values" not in chart_schema["data"]:
+                    chart_schema["data"]["values"] = sample_data
 
-                # Validate against Vega-Lite schema
+            # Validate against Vega-Lite schema
+            try:
                 validate(chart_schema, schema=vega_schema)
+                logger.info("Schema validation passed")
+            except Exception as validation_error:
+                logger.warning(f"Schema validation failed: {validation_error}")
+                # Continue anyway, don't fail the entire process
 
-                if remove_data_from_chart_schema:
-                    chart_schema["data"]["values"] = []
+            if remove_data_from_chart_schema:
+                chart_schema["data"]["values"] = []
 
-                return {
-                    "chart_schema": chart_schema,
-                    "reasoning": reasoning,
-                    "chart_type": chart_type,
-                    "success": True
-                }
-
-            return {
-                "chart_schema": {},
+            result = {
+                "chart_schema": chart_schema,
                 "reasoning": reasoning,
                 "chart_type": chart_type,
-                "success": False
+                "success": True
             }
+            logger.info(f"Post-processor success result: {result}")
+            return result
+
+        logger.warning("No chart_schema found in parsed result")
+        result = {
+            "chart_schema": {},
+            "reasoning": reasoning,
+            "chart_type": chart_type,
+            "success": False
+        }
+        logger.info(f"Post-processor failure result: {result}")
+        return result
+    
+    def _fix_common_vega_lite_errors(self, chart_schema: Dict[str, Any], sample_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Fix common Vega-Lite configuration errors"""
+        try:
+            encoding = chart_schema.get("encoding", {})
             
-        except ValidationError as e:
-            logger.exception(f"Vega-lite schema is not valid: {e}")
-            return {
-                "chart_schema": {},
-                "reasoning": "",
-                "chart_type": "",
-                "success": False,
-                "error": f"Schema validation failed: {str(e)}"
-            }
+            # Fix 0: Clean up invalid nested structures and comments
+            self._clean_invalid_structures(chart_schema)
+            
+            # Fix 1: Check if xOffset is used with quantitative data (should be categorical)
+            if "xOffset" in encoding:
+                xoffset_field = encoding["xOffset"].get("field", "")
+                xoffset_type = encoding["xOffset"].get("type", "")
+                
+                # Check if the field exists in sample data and is quantitative
+                if sample_data and xoffset_field:
+                    sample_values = [row.get(xoffset_field) for row in sample_data if xoffset_field in row]
+                    if sample_values and all(isinstance(val, (int, float)) or str(val).replace('.', '').replace('-', '').isdigit() for val in sample_values):
+                        logger.warning(f"xOffset field '{xoffset_field}' appears to be quantitative, should be categorical")
+                        
+                        # Check if we have separate columns that could be folded
+                        columns = list(sample_data[0].keys()) if sample_data else []
+                        numeric_columns = []
+                        categorical_columns = []
+                        
+                        for col in columns:
+                            if col != encoding.get("x", {}).get("field", ""):
+                                sample_values = [row.get(col) for row in sample_data if col in row]
+                                if sample_values and all(isinstance(val, (int, float)) or str(val).replace('.', '').replace('-', '').isdigit() for val in sample_values):
+                                    numeric_columns.append(col)
+                                else:
+                                    categorical_columns.append(col)
+                        
+                        # If we have multiple numeric columns, suggest using transform
+                        if len(numeric_columns) >= 2:
+                            logger.info(f"Detected multiple numeric columns: {numeric_columns}. Suggesting transform for grouped bar chart.")
+                            
+                            # Create a transform to fold the numeric columns
+                            chart_schema["transform"] = [{
+                                "fold": numeric_columns,
+                                "as": ["Status", "Count"]
+                            }]
+                            
+                            # Update encoding to use the transformed data
+                            encoding["xOffset"] = {"field": "Status", "type": "nominal"}
+                            encoding["y"] = {"field": "Count", "type": "quantitative"}
+                            encoding["color"] = {"field": "Status", "type": "nominal"}
+                            
+                            # Add stack: null to disable stacking
+                            if "y" in encoding:
+                                encoding["y"]["stack"] = None
+            
+            # Fix 1.5: Preserve existing transforms and ensure encoding matches transformed data
+            if "transform" in chart_schema:
+                transform = chart_schema["transform"]
+                if transform and isinstance(transform, list):
+                    for t in transform:
+                        if isinstance(t, dict) and t.get("fold"):
+                            fold_columns = t.get("fold", [])
+                            as_columns = t.get("as", ["Status", "Count"])
+                            
+                            if len(as_columns) >= 2:
+                                status_field = as_columns[0]
+                                count_field = as_columns[1]
+                                
+                                # Update encoding to use transformed fields
+                                if "xOffset" in encoding:
+                                    encoding["xOffset"]["field"] = status_field
+                                    encoding["xOffset"]["type"] = "nominal"
+                                
+                                if "y" in encoding:
+                                    encoding["y"]["field"] = count_field
+                                    encoding["y"]["type"] = "quantitative"
+                                
+                                if "color" in encoding:
+                                    encoding["color"]["field"] = status_field
+                                    encoding["color"]["type"] = "nominal"
+                                
+                                logger.info(f"Updated encoding to use transformed fields: {status_field}, {count_field}")
+                                
+                                # Skip the automatic transform creation since we already have one
+                                return chart_schema
+            
+            # Fix 2: Ensure stack: null is set for grouped bar charts
+            if "xOffset" in encoding and "y" in encoding:
+                if "stack" not in encoding["y"]:
+                    encoding["y"]["stack"] = None
+            
+            # Fix 3: Ensure proper data types
+            for channel in ["x", "y", "color", "xOffset"]:
+                if channel in encoding:
+                    field = encoding[channel].get("field", "")
+                    if field and sample_data:
+                        sample_values = [row.get(field) for row in sample_data if field in row]
+                        if sample_values:
+                            # Check if values are numeric
+                            is_numeric = all(isinstance(val, (int, float)) or str(val).replace('.', '').replace('-', '').isdigit() for val in sample_values)
+                            
+                            # Set appropriate type if not already set
+                            if "type" not in encoding[channel]:
+                                if is_numeric:
+                                    encoding[channel]["type"] = "quantitative"
+                                else:
+                                    encoding[channel]["type"] = "nominal"
+            
+            # Fix 4: Clean up color scales and remove invalid properties
+            self._fix_color_scales(encoding)
+            
+            return chart_schema
         except Exception as e:
-            logger.exception(f"JSON deserialization failed: {e}")
-            return {
-                "chart_schema": {},
-                "reasoning": "",
-                "chart_type": "",
-                "success": False,
-                "error": str(e)
-            }
+            logger.warning(f"Error fixing Vega-Lite errors: {e}")
+            return chart_schema
+    
+    def _clean_invalid_structures(self, chart_schema: Dict[str, Any]):
+        """Clean up invalid nested structures in the chart schema"""
+        try:
+            encoding = chart_schema.get("encoding", {})
+            
+            # Remove invalid nested xOffset within other encodings
+            for channel in ["x", "y", "color"]:
+                if channel in encoding and isinstance(encoding[channel], dict):
+                    if "xOffset" in encoding[channel]:
+                        logger.warning(f"Removing invalid nested xOffset from {channel} encoding")
+                        del encoding[channel]["xOffset"]
+            
+            # Remove any other invalid nested structures
+            for channel in list(encoding.keys()):
+                if channel not in ["x", "y", "color", "xOffset", "theta", "size", "shape", "text", "tooltip"]:
+                    logger.warning(f"Removing invalid encoding channel: {channel}")
+                    del encoding[channel]
+            
+        except Exception as e:
+            logger.warning(f"Error cleaning invalid structures: {e}")
+    
+    def _fix_color_scales(self, encoding: Dict[str, Any]):
+        """Fix invalid color scale configurations"""
+        try:
+            if "color" in encoding and isinstance(encoding["color"], dict):
+                color_encoding = encoding["color"]
+                
+                # Remove invalid scale configurations
+                if "scale" in color_encoding:
+                    scale = color_encoding["scale"]
+                    
+                    # Remove comments and invalid properties
+                    if isinstance(scale, dict):
+                        # Remove any properties that might contain comments or invalid syntax
+                        invalid_keys = []
+                        for key, value in scale.items():
+                            if isinstance(value, str) and ("//" in value or "/*" in value):
+                                invalid_keys.append(key)
+                        
+                        for key in invalid_keys:
+                            del scale[key]
+                        
+                        # If scale is empty after cleaning, remove it entirely
+                        if not scale:
+                            del color_encoding["scale"]
+                
+                # Ensure color encoding has required fields
+                if "field" not in color_encoding:
+                    logger.warning("Color encoding missing field, removing color encoding")
+                    del encoding["color"]
+                elif "type" not in color_encoding:
+                    # Set default type based on field name
+                    color_encoding["type"] = "nominal"
+                    
+        except Exception as e:
+            logger.warning(f"Error fixing color scales: {e}")
 
 
 # Langchain Tools for Vega-Lite Chart Generation
@@ -496,6 +702,121 @@ chart = alt.Chart({data_variable}).mark_{mark_type}()"""
                     summary["has_temporal_data"] = True
         
         return summary
+
+
+def fix_and_prepare_chart_schema(
+    chart_schema: Dict[str, Any], 
+    data: List[Dict[str, Any]], 
+    remove_data_from_schema: bool = False
+) -> Dict[str, Any]:
+    """
+    Fix common Vega-Lite configuration errors and prepare chart schema with data.
+    This function can be used to bypass the post-processing step and directly
+    fix and prepare chart schemas.
+    
+    Args:
+        chart_schema: The existing chart schema to fix
+        data: The data to include in the chart
+        remove_data_from_schema: Whether to remove data from the final schema
+    
+    Returns:
+        Dict containing the fixed chart schema and metadata
+    """
+    try:
+        # Create a copy to avoid modifying the original
+        fixed_schema = chart_schema.copy()
+        
+        # Ensure $schema is set
+        fixed_schema["$schema"] = "https://vega.github.io/schema/vega-lite/v5.json"
+        
+        # Add data
+        fixed_schema["data"] = {"values": data}
+        
+        # Fix common errors using the same logic as the post-processor
+        post_processor = ChartGenerationPostProcessor()
+        fixed_schema = post_processor._fix_common_vega_lite_errors(fixed_schema, data)
+        
+        # Remove data if requested
+        if remove_data_from_schema:
+            fixed_schema["data"]["values"] = []
+        
+        # Determine chart type from the schema
+        chart_type = ""
+        mark_type = fixed_schema.get("mark", {}).get("type", "")
+        encoding = fixed_schema.get("encoding", {})
+        
+        if mark_type == "bar":
+            if "xOffset" in encoding:
+                chart_type = "grouped_bar"
+            elif encoding.get("y", {}).get("stack") == "zero":
+                chart_type = "stacked_bar"
+            else:
+                chart_type = "bar"
+        elif mark_type == "line":
+            if "color" in encoding and "transform" in fixed_schema:
+                chart_type = "multi_line"
+            else:
+                chart_type = "line"
+        elif mark_type == "arc":
+            chart_type = "pie"
+        elif mark_type == "area":
+            chart_type = "area"
+        
+        return {
+            "chart_schema": fixed_schema,
+            "chart_type": chart_type,
+            "reasoning": f"Chart schema fixed and prepared with {len(data)} data points",
+            "success": True,
+            "data_count": len(data)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fixing chart schema: {e}")
+        return {
+            "chart_schema": chart_schema,
+            "chart_type": "",
+            "reasoning": f"Error fixing chart schema: {str(e)}",
+            "success": False,
+            "error": str(e)
+        }
+
+
+def create_chart_from_existing_schema(
+    chart_schema: Dict[str, Any],
+    data: List[Dict[str, Any]],
+    language: str = "English"
+) -> Dict[str, Any]:
+    """
+    Create a chart result from an existing chart schema and data.
+    This bypasses the LLM generation and post-processing steps.
+    
+    Args:
+        chart_schema: The existing chart schema
+        data: The data to visualize
+        language: The language for titles and labels
+    
+    Returns:
+        Dict containing the chart result
+    """
+    try:
+        # Fix and prepare the chart schema
+        result = fix_and_prepare_chart_schema(chart_schema, data, remove_data_from_schema=False)
+        
+        # Add language-specific metadata
+        result["language"] = language
+        result["chart_format"] = "vega_lite"
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error creating chart from existing schema: {e}")
+        return {
+            "chart_schema": chart_schema,
+            "chart_type": "",
+            "reasoning": f"Error creating chart: {str(e)}",
+            "success": False,
+            "error": str(e)
+        }
 
 
 class ChartExecutionConfig:

@@ -25,7 +25,7 @@ class ServiceConfig:
     """Configuration for the LLM Definition Service"""
     
     # Database configuration
-    database_url: str = "postgresql://user:password@localhost:5432/project_db"
+    database_url: str = "postgresql+asyncpg://postgres:sriram@localhost:5432/DBService"
     
     # LLM configuration
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")

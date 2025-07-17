@@ -28,6 +28,9 @@ def get_session_id(request: Request):
 def get_user_id(request: Request):
     return request.headers.get("X-User-Id") or "demo-user"
 
+from sqlalchemy import text
+
+
 @router.post("/project", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
 async def api_create_project(
     project_data: CreateProjectRequest, 
@@ -38,10 +41,11 @@ async def api_create_project(
     """Create a new project in draft status"""
     try:
         # Check if project already exists
-        existing = await db.execute(
+        result = await db.execute(
             select(Project).where(Project.project_id == project_data.project_id)
         )
-        if existing.scalar_one_or_none():
+        existing = result.scalars().first()
+        if existing:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Project with ID {project_data.project_id} already exists"
@@ -56,11 +60,9 @@ async def api_create_project(
             status='draft',  # Start as draft
             version_locked=True  # Lock version during draft phase
         )
-        
         db.add(project)
         await db.commit()
         await db.refresh(project)
-        
         # Initialize workflow service for this project
         workflow_service = ProjectWorkflowService(user_id, session_id)
         await workflow_service.create_project({
@@ -79,6 +81,7 @@ async def api_create_project(
             status=project.status,
             version_string=project.version_string,
             created_at=project.created_at,
+            is_draft=True if project.status =='draft' else False,
             updated_at=project.updated_at
         )
         
@@ -132,9 +135,16 @@ async def api_add_dataset(
             json_metadata=dataset_data.get("metadata", {})
         )
         
+        
         db.add(dataset)
-        await db.commit()
-        await db.refresh(dataset)
+        try:
+            await db.commit()
+            await db.refresh(dataset)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+        
+
         
         # Update workflow service
         workflow_service = ProjectWorkflowService(user_id, session_id)
@@ -247,8 +257,11 @@ async def api_add_table(
             }
         )
         
+        
         db.add(table)
+        
         await db.commit()
+        
         await db.refresh(table)
         
         # Add columns to the table
@@ -384,7 +397,8 @@ async def get_project_status(
     try:
         project = await db.execute(
             select(Project)
-            .options(selectinload(Project.datasets).selectinload(Dataset.tables))
+            .options(selectinload(Project.datasets).selectinload(Dataset.tables).selectinload(Table.columns),
+            selectinload(Project.tables))
             .where(Project.project_id == project_id)
         )
         project = project.scalar_one_or_none()
@@ -401,7 +415,9 @@ async def get_project_status(
         # Add dataset and table information
         datasets_info = []
         for dataset in project.datasets:
-            dataset_info = {
+            
+            try:
+                dataset_info = {
                 "dataset_id": dataset.dataset_id,
                 "name": dataset.name,
                 "display_name": dataset.display_name,
@@ -418,6 +434,11 @@ async def get_project_status(
                     for table in dataset.tables
                 ]
             }
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+            
+            
             datasets_info.append(dataset_info)
         
         return {
