@@ -1,5 +1,7 @@
 {
   "project_id": "cornerstone",
+  "description": "Cornerstone OnDemand training records and completion tracking",
+  "title": "Cornerstone OnDemand Training",
   "tables": [
     {
       "name": "csod_training_records",

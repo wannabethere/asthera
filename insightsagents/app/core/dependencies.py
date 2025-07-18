@@ -40,7 +40,31 @@ def get_doc_store_provider():
     stores = {
         "usage_examples": DocumentChromaStore(persistent_client=client,collection_name="tools_examples_collection"),
         "function_spec": DocumentChromaStore(persistent_client=client,collection_name="tools_spec_collection"),
-        "insights_store": DocumentChromaStore(persistent_client=client,collection_name="tools_insights_collection")
+        "insights_store": DocumentChromaStore(persistent_client=client,collection_name="tools_insights_collection"), 
+        "db_schema": DocumentChromaStore(
+            persistent_client=client,
+            collection_name="db_schema"
+        ),
+        "sql_pairs": DocumentChromaStore(
+            persistent_client=client,
+            collection_name="sql_pairs"
+        ),
+        "instructions": DocumentChromaStore(
+            persistent_client=client,
+            collection_name="instructions"
+        ),
+        "historical_question": DocumentChromaStore(
+            persistent_client=client,
+            collection_name="historical_question"
+        ),
+        "table_description": DocumentChromaStore(
+            persistent_client=client,
+            collection_name="table_description"
+        ),
+        "project_meta": DocumentChromaStore(
+            persistent_client=client,
+            collection_name="project_meta"
+        )
     }
     
     # Create and return the document store provider

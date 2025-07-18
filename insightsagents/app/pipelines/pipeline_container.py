@@ -15,6 +15,8 @@ from app.pipelines.mlpipelines.stats_pipelines import (
     create_analysis_intent_pipeline,
     create_self_correcting_pipeline_codegen_pipeline
 )
+from app.agents.retrieval.retrieval_helper import RetrievalHelper
+from app.pipelines.retrieval_pipeline import RetrievalPipeline
 
 
 logger = logging.getLogger("lexy-ai-service")
@@ -50,7 +52,7 @@ class PipelineContainer:
         self._llm = get_llm(temperature=0.0, model="gpt-4")
         self._doc_store_provider = get_doc_store_provider()
         self._engine = EngineProvider.get_engine()
-        
+        self._retrieval_helper = RetrievalHelper()
         PipelineContainer._initialized = True
     
     @classmethod
@@ -101,7 +103,7 @@ class PipelineContainer:
                 function_collection=function_collection,
                 example_collection=example_collection,
                 insights_collection=insights_collection,
-                retrieval_helper=None,  # Will be set if needed
+                retrieval_helper=self._retrieval_helper,  # Will be set if needed
                 document_store_provider=self._doc_store_provider,
                 engine=self._engine,
                 pipeline_config={
@@ -145,7 +147,61 @@ class PipelineContainer:
             for name, pipeline in self._pipelines.items():
                 logger.info(f"Initializing pipeline: {name}")
                 await pipeline.initialize()
+            # Initialize retrieval pipelines
+            self._pipelines["historical_question"] = RetrievalPipeline(
+                name="historical_question",
+                version="1.0",
+                description="Historical Question Retrieval Pipeline",
+                llm=self._llm,
+                retrieval_helper=self._retrieval_helper
+            )
+            self._pipelines["historical_question"]._initialized = True
             
+            self._pipelines["sql_pairs"] = RetrievalPipeline(
+                name="sql_pairs",
+                version="1.0",
+                description="SQL Pairs Retrieval Pipeline",
+                llm=self._llm,
+                retrieval_helper=self._retrieval_helper
+            )
+            self._pipelines["sql_pairs"]._initialized = True
+            
+            self._pipelines["instructions"] = RetrievalPipeline(
+                name="instructions",
+                version="1.0",
+                description="Instructions Retrieval Pipeline",
+                llm=self._llm,
+                retrieval_helper=self._retrieval_helper
+            )
+            self._pipelines["instructions"]._initialized = True
+            
+            self._pipelines["database_schemas"] = RetrievalPipeline(
+                name="db_schema",
+                version="1.0",
+                description="Database Schemas Retrieval Pipeline",
+                llm=self._llm,
+                retrieval_helper=self._retrieval_helper
+            )
+            
+            self._pipelines["database_schemas"]._initialized = True
+            
+            self._pipelines["metrics"] = RetrievalPipeline(
+                name="db_schema",
+                version="1.0",
+                description="Database Schemas Retrieval Pipeline",
+                llm=self._llm,
+                retrieval_helper=self._retrieval_helper
+            )
+            self._pipelines["metrics"]._initialized = True
+
+            self._pipelines["views"] = RetrievalPipeline(
+                name="db_schema",
+                version="1.0",
+                description="Database Schemas Retrieval Pipeline",  
+                llm=self._llm,
+                retrieval_helper=self._retrieval_helper
+            )
+            self._pipelines["views"]._initialized = True
             logger.info("All pipelines initialized asynchronously")
             
         except Exception as e:

@@ -28,7 +28,7 @@ session_manager = SessionManager(ServiceConfig())
 async def lifespan(app: FastAPI):
     
     set_cache_provider(InMemoryCacheProvider())
-    await session_manager.create_tables()
+    #await session_manager.create_tables()
     yield
 
 app = FastAPI(title="Data Services API", version="1.0.0",lifespan=lifespan)

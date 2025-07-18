@@ -1240,7 +1240,9 @@ class SelfCorrectingPipelineCodeGenerator:
             result = (MetricsPipe.from_dataframe({dataframe_name})
                      | metrics_function1(param1='value1')
                      | metrics_function2(param2='value2')
-                     | TimeSeriesPipe.from_dataframe()
+                     | to_df()
+
+            result_operations = TimeSeriesPipe.from_dataframe(result)
                      | timeseries_function(param3='value3')
                      | to_df()
             )
@@ -1263,7 +1265,9 @@ class SelfCorrectingPipelineCodeGenerator:
             ```python
             result = (MetricsPipe.from_dataframe(df)
                      | Mean(variable='Transactional value')
-                     | TimeSeriesPipe.from_dataframe()
+                     | to_df()
+            
+            result_operations = TimeSeriesPipe.from_dataframe(result)
                      | variance_analysis(
                          columns=['mean_Transactional value'],
                          method='rolling',
@@ -1277,7 +1281,9 @@ class SelfCorrectingPipelineCodeGenerator:
             ```python
             result = (OperationsPipe.from_dataframe(df)
                      | PercentChange(condition_column='period', baseline='Q1')
-                     | TimeSeriesPipe.from_dataframe()
+                     | to_df()
+            
+            result_operations = TimeSeriesPipe.from_dataframe(result)
                      | variance_analysis(
                          columns=['percent_change'],
                          method='rolling',
