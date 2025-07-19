@@ -27,6 +27,7 @@ from app.agents.nodes.sql.plotly_chart_generation import PlotlyChartGenerationPi
 from app.agents.nodes.sql.plotly_chart_adjustment import PlotlyChartAdjustment, PlotlyChartAdjustmentOption
 from app.agents.nodes.sql.data_assistance import DataAssistanceRequest, DataAssistanceResult
 from app.agents.nodes.sql.data_assistance import DataAssistanceTool
+from app.agents.nodes.sql.sql_suggestor import SQLQuestionSuggestionTool, SQLQuestionSuggestionRequest, SQLQuestionSuggestionResult
 import logging
 
 logger = logging.getLogger("lexy-ai-service")
@@ -1034,6 +1035,113 @@ class SemanticsDescriptionPipeline(AgentPipeline):
             "data": result.response,
             "error": None
         }
+
+class AnalysisAssistancePipeline(AgentPipeline):
+    """Pipeline for analysis assistance (analytical guidance and metric recommendations)"""
+    def __init__(
+        self,
+        llm: ChatOpenAI,
+        retrieval_helper: RetrievalHelper,
+        document_store_provider: Optional[DocumentStoreProvider] = None,
+        engine: Optional[Engine] = None,
+        use_enhanced_agent: bool = True
+    ):
+        super().__init__(
+            name="Analysis Assistance Pipeline",
+            version="1.0",
+            description="Provides analytical guidance and metric recommendations",
+            llm=llm,
+            retrieval_helper=retrieval_helper,
+            document_store_provider=document_store_provider,
+            engine=engine
+        )
+        self.analysis_assistance = DataAssistanceTool(doc_store_provider=document_store_provider, retrieval_helper=retrieval_helper)
+
+    async def run(self, **kwargs) -> Dict[str, Any]:
+        query = kwargs.pop("query", "")
+        db_schemas = kwargs.get("db_schemas", [])
+        language = kwargs.get("language", "English")
+        histories = kwargs.get("histories")
+        configuration = kwargs.get("configuration")
+        project_id = kwargs.get("project_id")
+        timeout = kwargs.get("timeout", 30.0)
+        query_id = kwargs.get("query_id")
+        
+        # Prepare request dataclass
+        request = DataAssistanceRequest(
+            query=query,
+            db_schemas=db_schemas,
+            language=language,
+            histories=histories,
+            configuration=configuration,
+            project_id=project_id,
+            timeout=timeout,
+            query_id=query_id
+        )
+        
+        result: DataAssistanceResult = await self.analysis_assistance.run(request)
+        logger.info(f"analysis assistance result: {result}")
+        return {
+            "success": result.success,
+            "data": result.data,
+            "error": result.error,
+            "metadata": result.metadata
+        }
+
+
+class QuestionSuggestionPipeline(AgentPipeline):
+    """Pipeline for question suggestion (example queries and analysis questions)"""
+    def __init__(
+        self,
+        llm: ChatOpenAI,
+        retrieval_helper: RetrievalHelper,
+        document_store_provider: Optional[DocumentStoreProvider] = None,
+        engine: Optional[Engine] = None,
+        use_enhanced_agent: bool = True
+    ):
+        super().__init__(
+            name="Question Suggestion Pipeline",
+            version="1.0",
+            description="Provides example queries and analysis questions",
+            llm=llm,
+            retrieval_helper=retrieval_helper,
+            document_store_provider=document_store_provider,
+            engine=engine
+        )
+        self.question_suggestion = SQLQuestionSuggestionTool(doc_store_provider=document_store_provider, retrieval_helper=retrieval_helper)
+
+    async def run(self, **kwargs) -> Dict[str, Any]:
+        query = kwargs.pop("query", "")
+        db_schemas = kwargs.get("db_schemas", [])
+        language = kwargs.get("language", "English")
+        histories = kwargs.get("histories")
+        configuration = kwargs.get("configuration")
+        project_id = kwargs.get("project_id")
+        timeout = kwargs.get("timeout", 30.0)
+        query_id = kwargs.get("query_id")
+        
+        # Prepare request dataclass
+        request = SQLQuestionSuggestionRequest(
+            query_id=query_id or "default",
+            query=query,
+            project_id=project_id or "default",
+            language=language,
+            db_schemas=db_schemas,
+            histories=histories,
+            configuration=configuration,
+            timeout=timeout
+        )
+        
+        result: SQLQuestionSuggestionResult = await self.question_suggestion.run(request)
+        logger.info(f"question suggestion result: {result}")
+        return {
+            "success": result.success,
+            "data": result.data,
+            "error": result.error,
+            "metadata": result.metadata,
+            "suggestions": result.suggestions
+        }
+
 
 class DataAssistancePipeline(AgentPipeline):
     """Pipeline for data assistance (schema Q&A)"""

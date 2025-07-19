@@ -142,7 +142,7 @@ class SelfCorrectingPipelineCodeGenerator:
                                    dataframe_name: str = "df",
                                    classification: Optional[Union[Dict[str, Any], AnalysisIntentResult]] = None,
                                    dataset_description: Optional[str] = None,
-                                   columns_description: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+                                   columns_description: Optional[Dict[str, str]] = None) -> Dict[str, Any]: 
         """
         Generate complete pipeline code with self-correction
         
@@ -402,10 +402,16 @@ class SelfCorrectingPipelineCodeGenerator:
             INSTRUCTIONS:
             1. Analyze the context to understand the data analysis task.
             2. Review the function definitions to understand what each function does.
-            3. Evaluate the confidence and feasibility of each suggested function based on their definitions.
-            4. Prioritize functions that are highly confident and feasible.
-            5. Consider if multiple pipelines are needed.
-            6. Return a JSON object with the selected function and its confidence.
+            3. Analyze the dataset and column descriptions to identify available data types and columns.
+            4. IMPORTANT: Use ONLY the actual column names provided in the dataset information. Do not invent column names.
+            5. Map context requirements to actual column names from the dataset description:
+               - If the context mentions "sales", look for columns like "sales_amount", "total_sales", "revenue", etc.
+               - If the context mentions "time" or "date", look for temporal columns
+               - If the context mentions grouping "by region", look for categorical columns that could represent regions
+            6. Evaluate the confidence and feasibility of each suggested function based on their definitions and available data.
+            7. Prioritize functions that are highly confident and feasible with the available data.
+            8. Consider if multiple pipelines are needed based on data requirements.
+            9. Return a JSON object with the selected function and its confidence.
             
             OUTPUT FORMAT:
             {{
@@ -445,6 +451,18 @@ class SelfCorrectingPipelineCodeGenerator:
                 "confidence": 0.90,
                 "reasoning": "Variance is the most relevant and confident function for risk analysis.",
                 "alternative_functions": ["CohortPipe"]
+            }}
+            
+            Example 4 - Column-aware function selection:
+            Context: "Analyze sales performance by region over time"
+            Suggested Functions: ["Mean", "variance_analysis", "aggregate_by_time"]
+            Dataset: "Sales data with regional and temporal information"
+            Columns: {{"sales_amount": "Total sales value", "region": "Sales region", "date": "Transaction date"}}
+            Output: {{
+                "selected_function": "aggregate_by_time",
+                "confidence": 0.95,
+                "reasoning": "aggregate_by_time is the best choice as it can handle both temporal analysis (using 'date' column) and grouping by region, with 'sales_amount' as the target metric.",
+                "alternative_functions": ["Mean", "variance_analysis"]
             }}
             
             Analyze the given context and return the appropriate JSON response.
@@ -546,7 +564,7 @@ class SelfCorrectingPipelineCodeGenerator:
                 search_results = self.function_definition_store.semantic_searches(
                     [function_name], n_results=3
                 )
-
+                print("function_name",function_name)
                 print("search_results",search_results)
                 
                 # Parse the results
@@ -634,15 +652,7 @@ class SelfCorrectingPipelineCodeGenerator:
             "FilterConditions", "PowerAnalysis", "StratifiedSummary", "BootstrapCI",
             "MultiComparisonAdjustment", "ExecuteOperations", "ShowOperation", "ShowComparison"
         ]
-        
-        # Available anomaly detection functions
-        anomaly_functions = [
-            "detect_statistical_outliers", "detect_contextual_anomalies", 
-            "calculate_seasonal_residuals", "detect_anomalies_from_residuals",
-            "forecast_and_detect_anomalies", "batch_detect_anomalies",
-            "get_anomaly_summary", "get_top_anomalies"
-        ]
-        
+         
         # Retrieve function definition for the primary function
         primary_function_definition = await self._retrieve_function_definitions([function_name])
         
@@ -650,7 +660,7 @@ class SelfCorrectingPipelineCodeGenerator:
         detection_prompt = PromptTemplate(
             input_variables=[
                 "context", "function_name", "function_definition", "classification_context", "dataset_context",
-                "metrics_functions", "operations_functions", "anomaly_functions"
+                "metrics_functions", "operations_functions"
             ],
             template="""
             You are an expert function input detector for data analysis pipelines.
@@ -677,14 +687,22 @@ class SelfCorrectingPipelineCodeGenerator:
             AVAILABLE OPERATIONS FUNCTIONS (from operations_tools.py):
             {operations_functions}
             
-            AVAILABLE ANOMALY DETECTION FUNCTIONS:
-            {anomaly_functions}
             
             INSTRUCTIONS:
             1. Analyze the context to understand what data analysis is being requested
             2. Review the primary function definition to understand its parameters and requirements
-            3. Determine the required function inputs for the primary function based on its definition
-            4. Identify the pipeline type for the primary function:
+            3. Analyze the dataset and column descriptions to identify the most appropriate columns for the analysis:
+               - For numeric calculations: Use columns categorized as "Numeric Columns"
+               - For time-based analysis: Use columns categorized as "Temporal Columns" 
+               - For grouping/segmentation: Use columns categorized as "Categorical Columns"
+               - For identification: Use columns categorized as "Identifier Columns"
+            4. IMPORTANT: Use ONLY the actual column names provided in the dataset information. Do not invent column names.
+            5. Map context requirements to actual column names from the dataset description:
+               - If the context mentions "sales", look for columns like "sales_amount", "total_sales", "revenue", etc.
+               - If the context mentions "time" or "date", look for temporal columns
+               - If the context mentions grouping "by region", look for categorical columns that could represent regions
+            6. Determine the required function inputs for the primary function based on its definition and available columns
+            7. Identify the pipeline type for the primary function:
                - TimeSeriesPipe: variance_analysis, lead, lag, etc.
                - MetricsPipe: Variance, Mean, Sum, Count, etc.
                - OperationsPipe: PercentChange, AbsoluteChange, etc.
@@ -694,11 +712,11 @@ class SelfCorrectingPipelineCodeGenerator:
                - AnomalyPipe: detect_statistical_outliers, detect_contextual_anomalies, etc.
                - SegmentPipe: run_kmeans, run_dbscan, etc.
                - TrendsPipe: aggregate_by_time, calculate_growth_rates, etc.
-            5. Determine if multiple pipelines are needed:
+            8. Determine if multiple pipelines are needed:
                 - If primary function is TimeSeriesPipe/CohortPipe/RiskPipe/FunnelPipe/AnomalyPipe/SegmentPipe/TrendsPipe AND additional computations are needed
                 - Create a multi-pipeline approach: MetricsPipe/OperationsPipe first, then primary pipeline
-            6. Consider the classification analysis for additional context
-            7. Return a JSON object with the detected inputs
+            9. Consider the classification analysis for additional context
+            10. Return a JSON object with the detected inputs using actual column names
             
             OUTPUT FORMAT:
             Return ONLY a valid JSON object with the following structure:
@@ -793,6 +811,109 @@ class SelfCorrectingPipelineCodeGenerator:
                 "reasoning": "Need to calculate mean first using MetricsPipe, then detect outliers using AnomalyPipe"
             }}
             
+            Example 5 - Column mapping with dataset description:
+            Context: "Calculate the variance of customer retention rate over time"
+            Function: "variance_analysis"
+            Dataset: "Customer transaction data with retention metrics"
+            Columns: {{"customer_id": "Unique customer identifier", "retention_rate": "Customer retention percentage", "transaction_date": "Date of transaction"}}
+            Output: {{
+                "primary_function_inputs": {{"columns": ["retention_rate"], "method": "rolling", "window": 5}},
+                "additional_computations": [],
+                "pipeline_sequence": ["Analyze variance of retention rate over time"],
+                "multi_pipeline": false,
+                "reasoning": "Using 'retention_rate' column for variance analysis as it's a numeric metric, with 'transaction_date' available for time-based analysis"
+            }}
+            
+            Example 6 - Multi-column analysis with categorization:
+            Context: "Analyze sales performance by product category and region"
+            Function: "Mean"
+            Dataset: "Sales data with product and regional information"
+            Columns: {{"sales_amount": "Total sales value", "product_category": "Product category name", "region": "Sales region", "transaction_date": "Date of transaction"}}
+            Output: {{
+                "primary_function_inputs": {{"variable": "sales_amount"}},
+                "additional_computations": [
+                    {{
+                        "function": "GroupBy",
+                        "inputs": {{"group_columns": ["product_category", "region"]}},
+                        "tool": "metrics_tools"
+                    }}
+                ],
+                "pipeline_sequence": ["Group by product category and region", "Calculate mean sales amount"],
+                "multi_pipeline": false,
+                "reasoning": "Using 'sales_amount' as the target variable for mean calculation, grouped by categorical columns 'product_category' and 'region'"
+            }}
+            
+            Example 7 - Time series with temporal column mapping:
+            Context: "Calculate moving average of revenue over time"
+            Function: "calculate_moving_average"
+            Dataset: "Revenue data with daily timestamps"
+            Columns: {{"revenue": "Daily revenue amount", "date": "Transaction date", "product_id": "Product identifier"}}
+            Output: {{
+                "primary_function_inputs": {{"metric_column": "revenue", "date_column": "date", "window": 7}},
+                "additional_computations": [],
+                "pipeline_sequence": ["Calculate 7-day moving average of revenue"],
+                "multi_pipeline": false,
+                "reasoning": "Using 'revenue' as the metric column and 'date' as the temporal column for time-based moving average calculation"
+            }}
+            
+            Example 8 - Context to column mapping with actual dataset:
+            Context: "Calculate the mean of sales by region"
+            Function: "Mean"
+            Dataset: "Sales transaction data"
+            Columns: {{"sales_amount": "Total sales value", "region_name": "Sales region", "transaction_date": "Date of transaction"}}
+            Output: {{
+                "primary_function_inputs": {{"variable": "sales_amount"}},
+                "additional_computations": [
+                    {{
+                        "function": "GroupBy",
+                        "inputs": {{"group_columns": ["region_name"]}},
+                        "tool": "metrics_tools"
+                    }}
+                ],
+                "pipeline_sequence": ["Group by region_name", "Calculate mean of sales_amount"],
+                "multi_pipeline": false,
+                "reasoning": "Using 'sales_amount' as the target variable for mean calculation, grouped by 'region_name' which represents regions"
+            }}
+            
+            Example 9 - Complex column mapping:
+            Context: "Analyze customer retention over time by product category"
+            Function: "calculate_retention"
+            Dataset: "Customer purchase history"
+            Columns: {{"customer_id": "Unique customer identifier", "product_category": "Product category name", "purchase_date": "Date of purchase", "retention_days": "Days since first purchase"}}
+            Output: {{
+                "primary_function_inputs": {{"customer_column": "customer_id", "date_column": "purchase_date", "group_column": "product_category"}},
+                "additional_computations": [],
+                "pipeline_sequence": ["Calculate customer retention by product category over time"],
+                "multi_pipeline": false,
+                "reasoning": "Using 'customer_id' for customer identification, 'purchase_date' for temporal analysis, and 'product_category' for grouping"
+            }}
+            
+            Example 10 - Anomaly detection with specific function:
+            Context: "Detect anomalies in sales data over time"
+            Function: "detect_collective_anomalies"
+            Dataset: "Sales transaction data with timestamps"
+            Columns: {{"sales_amount": "Total sales value", "transaction_date": "Date of transaction", "region": "Sales region"}}
+            Output: {{
+                "primary_function_inputs": {{"columns": ["sales_amount"], "time_column": "transaction_date", "method": "isolation_forest", "window": 30}},
+                "additional_computations": [],
+                "pipeline_sequence": ["Detect collective anomalies in sales_amount over time"],
+                "multi_pipeline": false,
+                "reasoning": "Using 'sales_amount' as the target column for anomaly detection and 'transaction_date' as the time column for temporal analysis"
+            }}
+            
+            Example 11 - Batch anomaly detection:
+            Context: "Apply multiple anomaly detection methods to identify outliers"
+            Function: "batch_detect_anomalies"
+            Dataset: "Sensor data with multiple metrics"
+            Columns: {{"temperature": "Temperature reading", "pressure": "Pressure reading", "humidity": "Humidity reading", "timestamp": "Time of reading"}}
+            Output: {{
+                "primary_function_inputs": {{"columns": ["temperature", "pressure", "humidity"], "methods": ["isolation_forest", "local_outlier_factor", "one_class_svm"]}},
+                "additional_computations": [],
+                "pipeline_sequence": ["Apply multiple anomaly detection methods to sensor data"],
+                "multi_pipeline": false,
+                "reasoning": "Using all numeric sensor columns for comprehensive anomaly detection with multiple methods"
+            }}
+            
             Now analyze the given context and return the appropriate JSON response.
             """
         )
@@ -815,8 +936,7 @@ class SelfCorrectingPipelineCodeGenerator:
                 "classification_context": classification_context,
                 "dataset_context": dataset_context,
                 "metrics_functions": ", ".join(metrics_functions),
-                "operations_functions": ", ".join(operations_functions),
-                "anomaly_functions": ", ".join(anomaly_functions)
+                "operations_functions": ", ".join(operations_functions)
             })
             
             # Parse the JSON result
@@ -868,6 +988,8 @@ class SelfCorrectingPipelineCodeGenerator:
                 
                 # Filter additional computations to ensure pipeline type consistency
                 detected_inputs = self._filter_additional_computations(detected_inputs, function_name)
+                
+
                 
                 logger.debug(f"Final detected_inputs: {detected_inputs}")
                 return detected_inputs
@@ -1028,7 +1150,7 @@ class SelfCorrectingPipelineCodeGenerator:
     def _format_dataset_context(self, dataset_description: Optional[str], 
                                columns_description: Dict[str, str]) -> str:
         """
-        Format dataset information for code generation prompt
+        Format dataset information for code generation prompt with enhanced column analysis
         """
         parts = []
         
@@ -1036,11 +1158,14 @@ class SelfCorrectingPipelineCodeGenerator:
             parts.append(f"Dataset: {dataset_description}")
         
         if columns_description:
-            parts.append("Columns:")
-            for col, desc in columns_description.items():
-                parts.append(f"  - {col}: {desc}")
-        
+            parts.append("Columns Analysis:")
+            parts.append(json.dumps(columns_description, indent=2))
+            
         return "\n".join(parts) if parts else "No dataset information available."
+    
+
+    
+
     
     def _retrieve_documents(self, query_state: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
         """Retrieve relevant documents from all stores"""

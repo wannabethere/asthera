@@ -125,6 +125,7 @@ class CodeFunctionLoader:
             print(f"data: {json_file_path}")
             if "functions" in data:
                 for func_name, func_data in data["functions"].items():
+                    #print("func_name",func_name)
                     # Create page content from function data
                     page_content = json.dumps({
                         "function_name": func_name,
@@ -282,7 +283,7 @@ class UsageExampleLoader:
                         page_content = json.dumps({
                             "example": example.get("example", ""),
                             "description": example.get("description", ""),
-                            "function_name": example.get("function_name", ""),
+                            "function_name": example.get("function", ""),
                             "category": example.get("category", ""),
                             "input_data": example.get("input_data", {}),
                             "output_data": example.get("output_data", {}),
@@ -293,7 +294,7 @@ class UsageExampleLoader:
                         metadata = {
                             "source_file": str(json_file.name),
                             "type": "usage_example",
-                            "function_name": example.get("function_name", ""),
+                            "function_name": example.get("function", ""),
                             "category": example.get("category", ""),
                             "example_type": example.get("example_type", "")
                         }
@@ -384,7 +385,7 @@ def main():
     print(f"Loaded {len(new_usage_examples)} usage examples")
     
     # Load usage examples into ChromaDB
-    usage_examples_vectorstore.add_documents(new_usage_examples)
+    #usage_examples_vectorstore.add_documents(new_usage_examples)
     print("Usage examples loaded into ChromaDB")
     
     #print("examples",examples)
@@ -433,11 +434,31 @@ def main():
     print("results_insights",results_insights)
     print("results_usage_examples",results_usage_examples)
     print("length of results_usage_examples",len(results_usage_examples))
+    results_functions = functions_vectorstore.semantic_searches(query_texts=["anamoly_detection"], n_results=5)    
+    results_examples = examples_vectorstore.semantic_searches(query_texts=["anamoly_detection"], n_results=5)
+    results_insights = insights_vectorstore.semantic_searches(query_texts=["anamoly_detection"], n_results=5)
+    results_usage_examples = usage_examples_vectorstore.semantic_searches(query_texts=["anamoly_detection"], n_results=5)
+    print("results_functions anamoly_detection",results_functions)
+    print("results_examples anamoly_detection",results_examples)
+    print("results_insights anamoly_detection",results_insights)
+    print("results_usage_examples anamoly_detection",results_usage_examples)
+    print("length of results_usage_examples",len(results_usage_examples))
+
+
+    results_functions = functions_vectorstore.semantic_searches(query_texts=["time_series_analysis"], n_results=5)    
+    results_examples = examples_vectorstore.semantic_searches(query_texts=["time_series_analysis"], n_results=5)
+    results_insights = insights_vectorstore.semantic_searches(query_texts=["time_series_analysis"], n_results=5)
+    results_usage_examples = usage_examples_vectorstore.semantic_searches(query_texts=["time_series_analysis"], n_results=5)
+    print("results_functions time_series_analysis",results_functions)
+    print("results_examples time_series_analysis",results_examples)
+    print("results_insights time_series_analysis",results_insights)
+    print("results_usage_examples time_series_analysis",results_usage_examples)
+    print("length of results_usage_examples",len(results_usage_examples))
     #print(results_examples)
     #print(results_insights)
 
-    os.environ["OPENAI_API_KEY"] = "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"
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
+    #os.environ["OPENAI_API_KEY"] = "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"
+    #llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
     #functions_retrieval_agent = RetrievalFunctionsAgent(functions_vectorstore,llm)
     # Example of accessing document content
     #results_functions,content = functions_retrieval_agent.retrieve(search_query)
@@ -446,12 +467,12 @@ def main():
     
     # Example: Search for usage examples by function name
     print("\n--- Usage Examples Search Demo ---")
-    usage_examples_for_lead = usage_example_loader_new.get_examples_by_function("lead")
-    print(f"Found {len(usage_examples_for_lead)} usage examples for 'lead' function")
+    #usage_examples_for_lead = usage_example_loader_new.get_examples_by_function("lead")
+    #print(f"Found {len(usage_examples_for_lead)} usage examples for 'lead' function")
     
     # Example: Search for usage examples by category
-    usage_examples_by_category = usage_example_loader_new.get_examples_by_category("time_series_analysis")
-    print(f"Found {len(usage_examples_by_category)} usage examples for 'time_series_analysis' category")
+    #usage_examples_by_category = usage_example_loader_new.get_examples_by_category("time_series_analysis")
+    #print(f"Found {len(usage_examples_by_category)} usage examples for 'time_series_analysis' category")
     
 if __name__ == "__main__":
     function_spec = json.loads('"{\\"function_name\\": \\"lead\\", \\"description\\": \\"Create lead (future) values for specified columns\\", \\"inputs\\": {}, \\"required_params\\": [\\"columns\\"], \\"optional_params\\": [\\"periods\\", \\"time_column\\", \\"group_columns\\", \\"suffix\\"], \\"outputs\\": {\\"type\\": \\"Callable\\", \\"description\\": \\"Function that creates lead values in a TimeSeriesPipe\\"}}"')

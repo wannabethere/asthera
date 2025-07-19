@@ -695,8 +695,42 @@ class EnhancedUnifiedPipelineSystem:
                 misleading_result = await self.execute_pipeline(misleading_request)
                 results["misleading_assistance"] = misleading_result
                 
+            elif intent == "ANALYSIS_HELPER":
+                # Handle analysis helper intent
+                results["analysis_helper"] = PipelineResult(
+                    pipeline_type=PipelineType.INTENT_CLASSIFICATION,
+                    success=True,
+                    data={
+                        "intent": "ANALYSIS_HELPER",
+                        "message": "Analysis helper intent detected - providing analytical guidance and metric recommendations",
+                        "suggested_actions": [
+                            "Provide available metrics and KPIs",
+                            "Suggest analysis approaches",
+                            "Recommend relevant data columns"
+                        ]
+                    },
+                    relevance_scoring=RelevanceScoring(enabled=False)
+                )
+                
+            elif intent == "QUESTION_SUGGESTION":
+                # Handle question suggestion intent
+                results["question_suggestion"] = PipelineResult(
+                    pipeline_type=PipelineType.INTENT_CLASSIFICATION,
+                    success=True,
+                    data={
+                        "intent": "QUESTION_SUGGESTION",
+                        "message": "Question suggestion intent detected - providing example queries and analysis questions",
+                        "suggested_actions": [
+                            "Generate example SQL queries",
+                            "Suggest analytical questions",
+                            "Provide data exploration ideas"
+                        ]
+                    },
+                    relevance_scoring=RelevanceScoring(enabled=False)
+                )
+                
             else:
-                # Handle other intents
+                # Handle other intents (GENERAL, USER_GUIDE, etc.)
                 results["general_response"] = PipelineResult(
                     pipeline_type=PipelineType.INTENT_CLASSIFICATION,
                     success=True,

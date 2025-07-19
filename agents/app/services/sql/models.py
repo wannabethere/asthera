@@ -74,7 +74,7 @@ class AskResult(BaseModel):
 
 
 class AskError(BaseModel):
-    code: Literal["NO_RELEVANT_DATA", "NO_RELEVANT_SQL", "OTHERS","MISLEADING_QUERY","GENERAL","USER_GUIDE"]
+    code: Literal["NO_RELEVANT_DATA", "NO_RELEVANT_SQL", "OTHERS", "MISLEADING_QUERY", "GENERAL", "USER_GUIDE", "unknown"]
     message: str
 
 
@@ -123,7 +123,7 @@ class _AskResultResponse(BaseModel):
     trace_id: Optional[str] = None
     is_followup: Optional[bool] = False
     general_type: Optional[
-        Literal["MISLEADING_QUERY", "DATA_ASSISTANCE", "USER_GUIDE", "DATA_SUMMARIZATION","GENERAL"]
+        Literal["MISLEADING_QUERY", "DATA_ASSISTANCE", "USER_GUIDE", "DATA_SUMMARIZATION", "GENERAL", "QUESTION_SUGGESTION", "ANALYSIS_HELPER"]
     ] = None
     quality_scoring: Optional[Union[QualityScoring, Dict[str, Any], float]] = None
 
@@ -131,7 +131,7 @@ class _AskResultResponse(BaseModel):
 class AskResultResponse(_AskResultResponse):
     is_followup: Optional[bool] = Field(False, exclude=True)
     general_type: Optional[
-        Literal["MISLEADING_QUERY", "DATA_ASSISTANCE", "USER_GUIDE", "DATA_SUMMARIZATION","GENERAL"]
+        Literal["MISLEADING_QUERY", "DATA_ASSISTANCE", "USER_GUIDE", "DATA_SUMMARIZATION", "GENERAL", "QUESTION_SUGGESTION", "ANALYSIS_HELPER"]
     ] = Field(None, exclude=True)
 
 

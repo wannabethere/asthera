@@ -26,7 +26,7 @@ intent_classification_system_prompt = """
 ### TASK ###
 You are a great detective, who is great at intent classification.
 First, rephrase the user's question to make it more specific, clear and relevant to the database schema before making the intent classification.
-Second, you need to use rephrased user's question to classify user's intent based on given database schema to one of four conditions: MISLEADING_QUERY, TEXT_TO_SQL, GENERAL, USER_GUIDE. 
+Second, you need to use rephrased user's question to classify user's intent based on given database schema to one of six conditions: MISLEADING_QUERY, TEXT_TO_SQL, GENERAL, USER_GUIDE, ANALYSIS_HELPER, QUESTION_SUGGESTION. 
 Also you should provide reasoning for the classification clearly and concisely within 20 words.
 
 ### INSTRUCTIONS ###
@@ -57,6 +57,43 @@ Also you should provide reasoning for the classification clearly and concisely w
         - "What is the total sales for last quarter?"
         - "Show me all customers who purchased product X."
         - "List the top 10 products by revenue."
+
+- ANALYSIS_HELPER
+    - When to Use:
+        - Select this category when the user is asking for analytical insights, metrics recommendations, or wants to understand what metrics can be calculated from the data.
+        - If the rephrased user's question is asking for suggestions on how to analyze data or what KPIs/metrics are possible.
+        - When the user wants recommendations for data analysis approaches or metric calculations.
+    - Characteristics:
+        - The rephrased user's question seeks analytical guidance or metric recommendations.
+        - The question asks about possible analysis methods, KPIs, or data insights.
+        - The user wants to understand what analytical questions can be answered with the dataset.
+    - Instructions:
+        - MUST include phrases from the user's question that indicate analytical intent in the reasoning output.
+        - MUST mention relevant tables/columns that could be used for metrics calculation.
+    - Examples:
+        - "What metrics can I calculate from this sales data?"
+        - "What are the best KPIs for analyzing customer behavior?"
+        - "How can I measure performance with this dataset?"
+        - "What analytical insights are possible from this data?"
+
+- QUESTION_SUGGESTION
+    - When to Use:
+        - Select this category when the user is asking for suggestions of questions they can ask about the data.
+        - If the rephrased user's question is seeking examples of SQL queries or analytical questions that can be answered with the dataset.
+        - When the user wants to explore what kind of analysis or questions are possible with the available data.
+    - Characteristics:
+        - The rephrased user's question seeks examples of queries or questions that can be asked.
+        - The question asks about what analysis or SQL questions are possible with the dataset.
+        - The user wants inspiration or suggestions for data exploration.
+    - Instructions:
+        - MUST include phrases from the user's question that indicate they want question suggestions.
+        - MUST mention relevant tables/columns that could be used for suggested questions.
+    - Examples:
+        - "What questions can I ask about this data?"
+        - "Give me some example queries for this dataset"
+        - "What kind of analysis questions are possible?"
+        - "Show me interesting questions I can explore with this data"
+
 - GENERAL
     - When to Use:
         - Use this category if the user is seeking general information about the database schema.
@@ -92,7 +129,7 @@ Please provide your response as a JSON object, structured as follows:
 {
     "rephrased_question": "<REPHRASED_USER_QUESTION_IN_STRING_FORMAT>",
     "reasoning": "<CHAIN_OF_THOUGHT_REASONING_BASED_ON_REPHRASED_USER_QUESTION_IN_STRING_FORMAT>",
-    "results": "MISLEADING_QUERY" | "TEXT_TO_SQL" | "GENERAL" | "USER_GUIDE"
+    "results": "MISLEADING_QUERY" | "TEXT_TO_SQL" | "GENERAL" | "USER_GUIDE" | "ANALYSIS_HELPER" | "QUESTION_SUGGESTION"
 }
 """
 
@@ -371,7 +408,7 @@ class IntentClassificationTool:
 
 
 class IntentClassificationResult(BaseModel):
-    results: Literal["MISLEADING_QUERY", "TEXT_TO_SQL", "GENERAL", "USER_GUIDE"]
+    results: Literal["MISLEADING_QUERY", "TEXT_TO_SQL", "GENERAL", "USER_GUIDE", "ANALYSIS_HELPER", "QUESTION_SUGGESTION"]
     rephrased_question: str
     reasoning: str
 
@@ -459,7 +496,7 @@ if __name__ == "__main__":
         )
         
         result = await intent_classifier.run(
-            query="show me the dataset"
+            query="What questions can I ask about this sales data?"
         )
         
         print("Intent Classification Result:")

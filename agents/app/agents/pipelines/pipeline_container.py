@@ -15,7 +15,8 @@ from app.agents.pipelines.sql_pipelines import (
     SQLCorrectionPipeline, SQLExpansionPipeline, ChartGenerationPipeline,
     ChartAdjustmentPipeline, FollowUpSQLReasoningPipeline, FollowUpSQLGenerationPipeline,
     IntentClassificationPipeline, MisleadingAssistancePipeline, RelationshipRecommendationPipeline,
-    SemanticsDescriptionPipeline, DataAssistancePipeline, SQLSummaryPipeline, SQLAnswerPipeline
+    SemanticsDescriptionPipeline, DataAssistancePipeline, AnalysisAssistancePipeline,
+    QuestionSuggestionPipeline, SQLSummaryPipeline, SQLAnswerPipeline
 )
 from app.agents.pipelines.retrieval_pipeline import RetrievalPipeline
 from app.core.engine_provider import EngineProvider
@@ -349,6 +350,22 @@ class PipelineContainer:
             engine=self._engine
         )
         self._pipelines["data_assistance"]._initialized = True
+        # Initialize analysis assistance pipeline
+        self._pipelines["analysis_assistance"] = AnalysisAssistancePipeline(
+            llm=self._llm,
+            retrieval_helper=self._retrieval_helper,
+            document_store_provider=self._doc_store_provider,
+            engine=self._engine
+        )
+        self._pipelines["analysis_assistance"]._initialized = True
+        # Initialize question suggestion pipeline
+        self._pipelines["question_suggestion"] = QuestionSuggestionPipeline(
+            llm=self._llm,
+            retrieval_helper=self._retrieval_helper,
+            document_store_provider=self._doc_store_provider,
+            engine=self._engine
+        )
+        self._pipelines["question_suggestion"]._initialized = True
         # Initialize question recommendation pipeline
         self._pipelines["question_recommendation"] = QuestionRecommendationPipeline(
             name="question_recommendation",

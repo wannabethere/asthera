@@ -397,6 +397,14 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                 return await self._handle_user_guide(
                     query_id, user_query, request, rephrased_question, intent_reasoning
                 )
+            elif intent == "ANALYSIS_HELPER":
+                return await self._handle_analysis_helper(
+                    query_id, user_query, histories, request, db_schemas, rephrased_question, intent_reasoning
+                )
+            elif intent == "QUESTION_SUGGESTION":
+                return await self._handle_question_suggestion(
+                    query_id, user_query, histories, request, db_schemas, rephrased_question, intent_reasoning
+                )
 
             return None
 
@@ -1041,6 +1049,116 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             "metadata": {"type": "GENERAL"},
         }
 
+    async def _handle_analysis_helper(
+        self,
+        query_id: str,
+        user_query: str,
+        histories: List[Dict],
+        request: AskRequest,
+        db_schemas: Dict[str, Any],
+        rephrased_question: str,
+        intent_reasoning: str,
+    ) -> Dict[str, Any]:
+        """Handle analysis helper intent"""
+        try:
+            # Run analysis assistance pipeline
+            result = await self._pipeline_container.get_pipeline("analysis_assistance").run(
+                query=user_query,
+                histories=histories,
+                db_schemas=db_schemas,
+                language=request.configurations.language,
+                query_id=request.query_id,
+            )
+            logger.info(f"analysis helper handling result: {result}")
+            
+            self._update_cache_status(
+                query_id,
+                "finished",
+                AskResultResponse(
+                    status="finished",
+                    type="GENERAL",
+                    rephrased_question=rephrased_question,
+                    intent_reasoning=intent_reasoning,
+                    is_followup=True if histories else False,
+                    general_type="ANALYSIS_HELPER",
+                    metadata={"type": "GENERAL", "data": result.get("data", {})}
+                )
+            )
+
+            return {
+                "status": "finished",
+                "type": "GENERAL",
+                "rephrased_question": rephrased_question,
+                "intent_reasoning": intent_reasoning,
+                "is_followup": True if histories else False,
+                "metadata": {"type": "GENERAL", "data": result.get("data", {})}
+            }
+        except Exception as e:
+            logger.error(f"Error in analysis helper handling: {e}")
+            return {
+                "metadata": {"type": "GENERAL", "error": str(e)},
+                "data": {
+                    "analysis_suggestions": [],
+                    "reasoning": [intent_reasoning] if intent_reasoning else [],
+                    "metrics": []
+                }
+            }
+
+    async def _handle_question_suggestion(
+        self,
+        query_id: str,
+        user_query: str,
+        histories: List[Dict],
+        request: AskRequest,
+        db_schemas: Dict[str, Any],
+        rephrased_question: str,
+        intent_reasoning: str,
+    ) -> Dict[str, Any]:
+        """Handle question suggestion intent"""
+        try:
+            # Run question suggestion pipeline
+            result = await self._pipeline_container.get_pipeline("question_suggestion").run(
+                query=user_query,
+                histories=histories,
+                db_schemas=db_schemas,
+                language=request.configurations.language,
+                query_id=request.query_id,
+            )
+            logger.info(f"question suggestion handling result: {result}")
+            
+            self._update_cache_status(
+                query_id,
+                "finished",
+                AskResultResponse(
+                    status="finished",
+                    type="GENERAL",
+                    rephrased_question=rephrased_question,
+                    intent_reasoning=intent_reasoning,
+                    is_followup=True if histories else False,
+                    general_type="QUESTION_SUGGESTION",
+                    metadata={"type": "GENERAL", "data": result.get("data", {})}
+                )
+            )
+
+            return {
+                "status": "finished",
+                "type": "GENERAL",
+                "rephrased_question": rephrased_question,
+                "intent_reasoning": intent_reasoning,
+                "is_followup": True if histories else False,
+                "metadata": {"type": "GENERAL", "data": result.get("data", {})}
+            }
+        except Exception as e:
+            logger.error(f"Error in question suggestion handling: {e}")
+            return {
+                "metadata": {"type": "GENERAL", "error": str(e)},
+                "data": {
+                    "suggested_questions": [],
+                    "reasoning": [intent_reasoning] if intent_reasoning else [],
+                    "categories": []
+                }
+            }
+
     def _create_response(self, event_id: str, result: Dict[str, Any]) -> AskResultResponse:
         """Create a response object from the processing result"""
         cached_result = self._results_cache.get(event_id)
@@ -1074,6 +1192,10 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                     _pipeline_name = "data_assistance"
                 elif result.get("result", {}).get("general_type") == "MISLEADING_QUERY":
                     _pipeline_name = "misleading_assistance"
+                elif result.get("result", {}).get("general_type") == "ANALYSIS_HELPER":
+                    _pipeline_name = "analysis_assistance"
+                elif result.get("result", {}).get("general_type") == "QUESTION_SUGGESTION":
+                    _pipeline_name = "question_suggestion"
             elif result.get("result", {}).get("status") == "planning":
                 if result.get("result", {}).get("is_followup"):
                     _pipeline_name = "followup_sql_generation_reasoning"

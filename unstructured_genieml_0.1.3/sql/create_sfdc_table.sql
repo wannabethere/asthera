@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS sfdc_opportunities (
+    id VARCHAR(18) PRIMARY KEY,
+    name VARCHAR(255),
+    stage_name VARCHAR(100),
+    close_date DATE,
+    amount DECIMAL(18,2),
+    probability DECIMAL(5,2),
+    forecast_category VARCHAR(50),
+    expected_revenue DECIMAL(18,2),
+    owner_id VARCHAR(20),
+    account_id VARCHAR(18),
+    type VARCHAR(50),
+    lead_source VARCHAR(100),
+    created_date TIMESTAMP,
+    last_modified_date TIMESTAMP,
+    next_step TEXT,
+    is_closed BOOLEAN,
+    is_won BOOLEAN,
+    campaign_id VARCHAR(18) NULL
+); 
