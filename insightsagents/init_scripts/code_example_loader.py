@@ -389,6 +389,7 @@ def main():
     print("Usage examples loaded into ChromaDB")
     
     #print("examples",examples)
+    #usage_examples_vectorstore.add_documents(new_usage_examples)
     #examples_vectorstore.add_documents(usage_examples)
     #functions_vectorstore.add_documents(all_functions)
     #initialize_insights_vectorstore(insights_vectorstore)
