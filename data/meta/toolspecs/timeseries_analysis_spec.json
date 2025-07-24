@@ -1,6 +1,8 @@
 {
     "functions": {
         "lead": {
+            "category": "TimeSeriesPipe",
+            "type_of_operation": "time_shift_operations",
             "required_params": [
                 {"name": "columns", "type": "str or List[str]", "description": "Column(s) to create lead values for"}
             ],
@@ -17,6 +19,8 @@
             "description": "Create lead (future) values for specified columns.\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to create lead values for\nperiods : int, default=1\n    Number of periods to lead\ntime_column : str, optional\n    Time column to sort by before calculating lead values\ngroup_columns : List[str], optional\n    Columns to group by before calculating lead values (for panel data)\nsuffix : str, default='_lead'\n    Suffix to add to the names of lead columns\n\nReturns:\n--------\nCallable\n    Function that creates lead values in a TimeSeriesPipe"
         },
         "lag": {
+            "category": "TimeSeriesPipe",
+            "type_of_operation": "time_shift_operations",
             "required_params": [
                 {"name": "columns", "type": "str or List[str]", "description": "Column(s) to create lag values for"}
             ],
@@ -33,6 +37,8 @@
             "description": "Create lag (past) values for specified columns.\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to create lag values for\nperiods : int, default=1\n    Number of periods to lag\ntime_column : str, optional\n    Time column to sort by before calculating lag values\ngroup_columns : List[str], optional\n    Columns to group by before calculating lag values (for panel data)\nsuffix : str, default='_lag'\n    Suffix to add to the names of lag columns\n\nReturns:\n--------\nCallable\n    Function that creates lag values in a TimeSeriesPipe"
         },
         "variance_analysis": {
+            "category": "TimeSeriesPipe",
+            "type_of_operation": "statistical_analysis",
             "required_params": [
                 {"name": "columns", "type": "str or List[str]", "description": "Column(s) to analyze"}
             ],
@@ -50,6 +56,8 @@
             "description": "Calculate variance and standard deviation for time series data.\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to analyze\nmethod : str, default='rolling'\n    Method to use: 'rolling', 'expanding', or 'ewm' (exponentially weighted moving)\nwindow : int, default=5\n    Window size for rolling calculations (used for 'rolling' and 'ewm' methods)\ntime_column : str, optional\n    Time column to sort by before calculations\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\nsuffix : str, optional\n    Suffix to add to column names (defaults to '_var' and '_std')\n\nReturns:\n--------\nCallable\n    Function that calculates variance in a TimeSeriesPipe"
         },
         "distribution_analysis": {
+            "category": "TimeSeriesPipe",
+            "type_of_operation": "distribution_analysis",
             "required_params": [
                 {"name": "columns", "type": "str or List[str]", "description": "Column(s) to analyze"}
             ],
@@ -65,6 +73,8 @@
             "description": "Calculate distribution statistics and histograms for time series data.\nResults are stored in the pipe's distribution_results attribute.\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to analyze\nbins : int, default=10\n    Number of bins for histogram calculation\ngroup_columns : List[str], optional\n    Columns to group by before analysis (for panel data)\nnormalize : bool, default=False\n    Whether to normalize histogram counts (return proportions)\n\nReturns:\n--------\nCallable\n    Function that analyzes distributions in a TimeSeriesPipe"
         },
         "cumulative_distribution": {
+            "category": "TimeSeriesPipe",
+            "type_of_operation": "distribution_analysis",
             "required_params": [
                 {"name": "columns", "type": "str or List[str]", "description": "Column(s) to analyze"}
             ],
@@ -80,6 +90,8 @@
             "description": "Calculate cumulative distribution (empirical CDF) for specified columns.\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to analyze\ntime_column : str, optional\n    Time column to sort by before calculations\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\nsuffix : str, default='_cdf'\n    Suffix to add to column names\n\nReturns:\n--------\nCallable\n    Function that calculates cumulative distributions in a TimeSeriesPipe"
         },
         "rolling_window": {
+            "category": "TimeSeriesPipe",
+            "type_of_operation": "rolling_window_operations",
             "required_params": [
                 {"name": "columns", "type": "str or List[str]", "description": "Column(s) to analyze"}
             ],
@@ -98,6 +110,8 @@
             "description": "Apply rolling window operations to time series data.\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to analyze\nwindow : int, default=5\n    Window size for rolling calculations\nunit : str, default='daily'\n    Time unit for window: 'daily', 'weekly', 'monthly', or 'yearly'\naggregation : str, default='mean'\n    Aggregation type: 'mean', 'sum', 'std', or 'count'\ntime_column : str, optional\n    Time column to sort by before calculations\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\nsuffix : str, optional\n    Suffix to add to column names (defaults to '_rolling_{aggregation}')\n\nReturns:\n--------\nCallable\n    Function that applies rolling window operations in a TimeSeriesPipe"
         },
         "get_distribution_summary": {
+            "category": "TimeSeriesPipe",
+            "type_of_operation": "analysis_summary",
             "required_params": [],
             "optional_params": [],
             "outputs": {
@@ -107,6 +121,8 @@
             "description": "Return a formatted summary of distribution analysis results\n\nReturns:\n--------\nCallable\n    Function that returns distribution summaries from a TimeSeriesPipe"
         },
         "custom_calculation": {
+            "category": "TimeSeriesPipe",
+            "type_of_operation": "custom_analysis",
             "required_params": [
                 {"name": "func", "type": "Callable", "description": "A function that takes a DataFrame and returns a DataFrame"}
             ],

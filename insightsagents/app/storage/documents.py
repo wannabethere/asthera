@@ -164,7 +164,7 @@ class DocumentVectorstore:
 
             # Sort results by score (lower is better for Chroma)
             formatted_results.sort(key=lambda x: x["score"])
-            logger.info(f"Found {len(formatted_results)} results for query: {query}")
+            #logger.info(f"Found {len(formatted_results)} results for query: {query}")
             return formatted_results
 
         except Exception as e:

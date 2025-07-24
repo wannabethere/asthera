@@ -1,6 +1,8 @@
 {
     "functions": {
         "fit_distribution": {
+            "category": "RiskPipe",
+            "type_of_operation": "distribution_analysis",
             "required_params": [
                 {"name": "columns", "type": "str or List[str]", "description": "Column(s) to fit distributions for"}
             ],
@@ -17,6 +19,8 @@
             "description": "Fit a probability distribution to data using maximum likelihood estimation\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to fit distributions for\ndistribution : str, default='normal'\n    Distribution to fit: 'normal', 'student_t', 'skewed_normal', 'gev'\nmethod : str, default='mle'\n    Estimation method: 'mle' (maximum likelihood), 'moments'\nconfidence_level : float, default=0.95\n    Confidence level for parameter confidence intervals\noutput_name : str, optional\n    Name for the output results\n\nReturns:\n--------\nCallable\n    Function that fits distributions in a RiskPipe"
         },
         "calculate_var": {
+            "category": "RiskPipe",
+            "type_of_operation": "risk_metrics",
             "required_params": [
                 {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate VaR for"}
             ],
@@ -34,6 +38,8 @@
             "description": "Calculate Value at Risk (VaR) for specified columns\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to calculate VaR for\nconfidence_level : float, default=0.05\n    Confidence level (e.g., 0.05 for 5% VaR)\nmethod : str, default='historical'\n    Method: 'historical', 'parametric', 'monte_carlo'\nwindow : int, optional\n    Rolling window size for historical method\ndistribution : str, optional\n    Distribution to use for parametric method\noutput_name : str, optional\n    Name for the output results\n\nReturns:\n--------\nCallable\n    Function that calculates VaR in a RiskPipe"
         },
         "calculate_cvar": {
+            "category": "RiskPipe",
+            "type_of_operation": "risk_metrics",
             "required_params": [
                 {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate CVaR for"}
             ],
@@ -49,6 +55,8 @@
             "description": "Calculate Conditional Value at Risk (CVaR/Expected Shortfall)\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to calculate CVaR for\nconfidence_level : float, default=0.05\n    Confidence level (e.g., 0.05 for 5% CVaR)\nmethod : str, default='historical'\n    Method: 'historical', 'parametric'\noutput_name : str, optional\n    Name for the output results\n\nReturns:\n--------\nCallable\n    Function that calculates CVaR in a RiskPipe"
         },
         "calculate_portfolio_risk": {
+            "category": "RiskPipe",
+            "type_of_operation": "portfolio_analysis",
             "required_params": [
                 {"name": "columns", "type": "List[str]", "description": "Columns representing portfolio components"}
             ],
@@ -65,6 +73,8 @@
             "description": "Calculate portfolio-level risk metrics\n\nParameters:\n-----------\ncolumns : List[str]\n    Columns representing portfolio components\nweights : List[float], optional\n    Portfolio weights (if None, assumes equal weights)\nconfidence_level : float, default=0.05\n    Confidence level for risk metrics\nmethod : str, default='parametric'\n    Method: 'parametric', 'monte_carlo'\noutput_name : str, optional\n    Name for the output results\n\nReturns:\n--------\nCallable\n    Function that calculates portfolio risk in a RiskPipe"
         },
         "monte_carlo_simulation": {
+            "category": "RiskPipe",
+            "type_of_operation": "simulation_analysis",
             "required_params": [
                 {"name": "columns", "type": "str or List[str]", "description": "Column(s) to simulate"}
             ],
@@ -82,6 +92,8 @@
             "description": "Perform Monte Carlo simulation for risk assessment\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to simulate\nn_simulations : int, default=10000\n    Number of simulation paths\nhorizon : int, default=1\n    Time horizon for simulation\nmethod : str, default='bootstrap'\n    Simulation method: 'bootstrap', 'parametric'\ndistribution : str, optional\n    Distribution for parametric method\noutput_name : str, optional\n    Name for the output results\n\nReturns:\n--------\nCallable\n    Function that runs Monte Carlo simulation in a RiskPipe"
         },
         "stress_test": {
+            "category": "RiskPipe",
+            "type_of_operation": "stress_testing",
             "required_params": [
                 {"name": "columns", "type": "str or List[str]", "description": "Column(s) to stress test"},
                 {"name": "scenarios", "type": "Dict[str, Dict[str, float]]", "description": "Stress scenarios (e.g., {'recession': {'returns': -0.1, 'volatility': 0.25}})"}
@@ -97,6 +109,8 @@
             "description": "Perform stress testing with specified scenarios\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to stress test\nscenarios : Dict[str, Dict[str, float]]\n    Stress scenarios (e.g., {'recession': {'returns': -0.1, 'volatility': 0.25}})\nbase_case : Dict[str, float], optional\n    Base case parameters (if None, uses historical data)\noutput_name : str, optional\n    Name for the output results\n\nReturns:\n--------\nCallable\n    Function that performs stress testing in a RiskPipe"
         },
         "rolling_risk_metrics": {
+            "category": "RiskPipe",
+            "type_of_operation": "time_series_analysis",
             "required_params": [
                 {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate rolling metrics for"}
             ],
@@ -113,6 +127,8 @@
             "description": "Calculate rolling risk metrics over time\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to calculate rolling metrics for\nwindow : int, default=252\n    Rolling window size\nmetrics : List[str], default=['volatility', 'var', 'cvar']\n    Metrics to calculate: 'volatility', 'var', 'cvar', 'skewness', 'kurtosis'\nconfidence_level : float, default=0.05\n    Confidence level for VaR/CVaR calculations\noutput_name : str, optional\n    Name for the output results\n\nReturns:\n--------\nCallable\n    Function that calculates rolling risk metrics in a RiskPipe"
         },
         "correlation_analysis": {
+            "category": "RiskPipe",
+            "type_of_operation": "correlation_analysis",
             "required_params": [
                 {"name": "columns", "type": "List[str]", "description": "Columns to analyze correlations for"}
             ],
@@ -128,6 +144,8 @@
             "description": "Perform correlation analysis for risk assessment\n\nParameters:\n-----------\ncolumns : List[str]\n    Columns to analyze correlations for\nmethod : str, default='pearson'\n    Correlation method: 'pearson', 'spearman', 'kendall'\nrolling_window : int, optional\n    Window size for rolling correlations\noutput_name : str, optional\n    Name for the output results\n\nReturns:\n--------\nCallable\n    Function that performs correlation analysis in a RiskPipe"
         },
         "risk_attribution": {
+            "category": "RiskPipe",
+            "type_of_operation": "portfolio_analysis",
             "required_params": [
                 {"name": "columns", "type": "List[str]", "description": "Portfolio components"},
                 {"name": "weights", "type": "List[float]", "description": "Portfolio weights"}
@@ -143,6 +161,8 @@
             "description": "Perform risk attribution analysis\n\nParameters:\n-----------\ncolumns : List[str]\n    Portfolio components\nweights : List[float]\n    Portfolio weights\nconfidence_level : float, default=0.05\n    Confidence level for risk calculations\noutput_name : str, optional\n    Name for the output results\n\nReturns:\n--------\nCallable\n    Function that performs risk attribution in a RiskPipe"
         },
         "compare_distributions": {
+            "category": "RiskPipe",
+            "type_of_operation": "distribution_analysis",
             "required_params": [
                 {"name": "column", "type": "str", "description": "Column to fit distributions for"}
             ],
@@ -157,6 +177,8 @@
             "description": "Compare multiple distribution fits and select the best one\n\nParameters:\n-----------\ncolumn : str\n    Column to fit distributions for\ndistributions : List[str], default=['normal', 'student_t', 'skewed_normal']\n    Distributions to compare\noutput_name : str, optional\n    Name for the output results\n\nReturns:\n--------\nCallable\n    Function that compares distributions in a RiskPipe"
         },
         "get_risk_summary": {
+            "category": "RiskPipe",
+            "type_of_operation": "summary_reporting",
             "required_params": [],
             "optional_params": [],
             "outputs": {

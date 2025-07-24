@@ -1,6 +1,8 @@
 {
     "functions": {
         "aggregate_by_time": {
+            "category": "TrendPipe",
+            "type_of_operation": "time_aggregation",
             "required_params": [
                 {"name": "date_column", "type": "str", "description": "Column containing the date to aggregate by"},
                 {"name": "metric_columns", "type": "List[str]", "description": "Columns containing metrics to analyze"}
@@ -20,6 +22,8 @@
             "description": "Aggregate data by time periods\n\nParameters:\n-----------\ndate_column : str\n    Column containing the date to aggregate by\nmetric_columns : List[str]\n    Columns containing metrics to analyze\ntime_period : str, default='D'\n    Time period for aggregation ('D' for daily, 'W' for weekly, 'M' for monthly, 'Q' for quarterly, 'Y' for yearly)\naggregation : str or Dict[str, str], default='mean'\n    Aggregation method (mean, sum, count, min, max) or dict mapping columns to methods\nfill_missing : bool, default=True\n    Whether to fill in missing time periods with NaN\ninclude_current_period : bool, default=False\n    Whether to include the current (potentially incomplete) time period\ntime_name : str, default='time'\n    Name to use for the time column in the result\ndatetime_format : str, optional\n    Format string for parsing dates if they are not already datetime objects\n\nReturns:\n--------\nCallable\n    Function that aggregates data by time periods"
         },
         "calculate_growth_rates": {
+            "category": "TrendPipe",
+            "type_of_operation": "growth_analysis",
             "required_params": [],
             "optional_params": [
                 {"name": "window", "type": "int", "description": "Window size for growth rate calculation (if None, compare to previous period) (optional)"},
@@ -33,6 +37,8 @@
             "description": "Calculate growth rates for aggregated metrics\n\nParameters:\n-----------\nwindow : int, optional\n    Window size for growth rate calculation (if None, compare to previous period)\nannualize : bool, default=False\n    Whether to annualize growth rates (useful for comparing different time periods)\nmethod : str, default='percentage'\n    Method for calculating growth ('percentage', 'log', or 'cagr')\n\nReturns:\n--------\nCallable\n    Function that calculates growth rates"
         },
         "calculate_moving_average": {
+            "category": "TrendPipe",
+            "type_of_operation": "moving_average_analysis",
             "required_params": [],
             "optional_params": [
                 {"name": "window", "type": "int", "description": "Window size for moving average (default: 7)"},
@@ -46,6 +52,8 @@
             "description": "Calculate moving averages for aggregated metrics\n\nParameters:\n-----------\nwindow : int, default=7\n    Window size for moving average\nmethod : str, default='simple'\n    Method for calculating moving average ('simple', 'weighted', or 'exponential')\ncenter : bool, default=False\n    Whether to center the window (for simple and weighted)\n\nReturns:\n--------\nCallable\n    Function that calculates moving averages"
         },
         "decompose_trend": {
+            "category": "TrendPipe",
+            "type_of_operation": "trend_decomposition",
             "required_params": [
                 {"name": "metric_column", "type": "str", "description": "Column to decompose"}
             ],
@@ -61,6 +69,8 @@
             "description": "Decompose time series into trend, seasonal, and residual components\n\nParameters:\n-----------\nmetric_column : str\n    Column to decompose\nmodel : str, default='additive'\n    Type of seasonal component ('additive' or 'multiplicative')\nperiod : int, optional\n    Number of periods in a seasonal cycle (if None, will be estimated)\nextrapolate_trend : int, optional\n    Number of periods to extrapolate the trend into the future\n\nReturns:\n--------\nCallable\n    Function that decomposes time series"
         },
         "forecast_metric": {
+            "category": "TrendPipe",
+            "type_of_operation": "forecasting",
             "required_params": [
                 {"name": "metric_column", "type": "str", "description": "Column to forecast"}
             ],
@@ -77,6 +87,8 @@
             "description": "Forecast future values of a metric\n\nParameters:\n-----------\nmetric_column : str\n    Column to forecast\nfperiods : int, default=12\n    Number of periods to forecast\nfmethod : str, default='holt_winters'\n    Forecasting method ('holt_winters', 'linear', 'exponential')\nseasonal_periods : int, optional\n    Number of periods in a seasonal cycle (if None, will be estimated)\nconfidence_interval : float, default=0.95\n    Confidence level for prediction intervals\n\nReturns:\n--------\nCallable\n    Function that forecasts future values"
         },
         "calculate_statistical_trend": {
+            "category": "TrendPipe",
+            "type_of_operation": "statistical_trend_analysis",
             "required_params": [
                 {"name": "metric_column", "type": "str", "description": "Column to test for trend"}
             ],
@@ -92,6 +104,8 @@
             "description": "Calculate statistical significance of trends\n\nParameters:\n-----------\nmetric_column : str\n    Column to test for trend\ntest_method : str, default='mann_kendall'\n    Statistical test method ('mann_kendall', 't_test', 'spearman')\nalpha : float, default=0.05\n    Significance level\nwindow : int, optional\n    Window size for rolling trend analysis (if None, test the entire series)\n\nReturns:\n--------\nCallable\n    Function that tests for statistical trends"
         },
         "compare_periods": {
+            "category": "TrendPipe",
+            "type_of_operation": "period_comparison",
             "required_params": [
                 {"name": "metric_column", "type": "str", "description": "Column to compare"}
             ],
@@ -107,6 +121,8 @@
             "description": "Compare metrics between different time periods (e.g., year-over-year, month-over-month)\n\nParameters:\n-----------\nmetric_column : str\n    Column to compare\ncomparison_type : str, default='year_over_year'\n    Type of comparison ('year_over_year', 'month_over_month', 'week_over_week', 'period_over_period')\nn_periods : int, default=1\n    Number of periods to go back for comparison\naggregation : str, default='mean'\n    Method to aggregate values within periods ('mean', 'sum', 'median', 'min', 'max')\n\nReturns:\n--------\nCallable\n    Function that compares metrics between periods"
         },
         "get_top_metrics": {
+            "category": "TrendPipe",
+            "type_of_operation": "metric_ranking",
             "required_params": [],
             "optional_params": [
                 {"name": "n", "type": "int", "description": "Number of top metrics to return (default: 5)"},

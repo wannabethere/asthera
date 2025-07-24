@@ -8,7 +8,8 @@
     },
     "functions": {
         "prepare_clustering_data": {
-            "category": "data_preparation",
+            "category": "KMeansPipe",
+            "type_of_operation": "data_preparation",
             "required_params": ["feature_columns"],
             "optional_params": ["scaling_method", "handle_missing", "remove_outliers", "outlier_method", "outlier_threshold"],
             "outputs": {
@@ -20,7 +21,8 @@
             "outlier_methods": ["iqr", "zscore"]
         },
         "engineer_clustering_features": {
-            "category": "feature_engineering",
+            "category": "KMeansPipe",
+            "type_of_operation": "feature_engineering",
             "required_params": [],
             "optional_params": ["interaction_features", "polynomial_features", "ratio_features", "aggregation_features", "binning_features"],
             "outputs": {
@@ -31,7 +33,8 @@
             "feature_types": ["interactions", "polynomials", "ratios", "aggregations", "binning"]
         },
         "reduce_dimensions": {
-            "category": "dimensionality_reduction",
+            "category": "KMeansPipe",
+            "type_of_operation": "dimensionality_reduction",
             "required_params": ["method"],
             "optional_params": ["n_components", "random_state", "reducer_name"],
             "outputs": {
@@ -42,7 +45,8 @@
             "methods": ["pca", "tsne"]
         },
         "configure_kmeans": {
-            "category": "model_configuration",
+            "category": "KMeansPipe",
+            "type_of_operation": "model_configuration",
             "required_params": [],
             "optional_params": ["n_clusters", "init", "n_init", "max_iter", "tol", "random_state", "algorithm", "model_name"],
             "outputs": {
@@ -54,7 +58,8 @@
             "algorithms": ["lloyd", "elkan"]
         },
         "configure_minibatch_kmeans": {
-            "category": "model_configuration",
+            "category": "KMeansPipe",
+            "type_of_operation": "model_configuration",
             "required_params": [],
             "optional_params": ["n_clusters", "init", "max_iter", "batch_size", "tol", "max_no_improvement", "random_state", "model_name"],
             "outputs": {
@@ -65,7 +70,8 @@
             "advantages": ["memory_efficient", "faster_training", "online_learning"]
         },
         "fit_kmeans": {
-            "category": "training",
+            "category": "KMeansPipe",
+            "type_of_operation": "training",
             "required_params": ["model_name"],
             "optional_params": ["feature_subset"],
             "outputs": {
@@ -75,7 +81,8 @@
             "description": "Train K-means model and assign cluster labels"
         },
         "evaluate_clustering": {
-            "category": "evaluation",
+            "category": "KMeansPipe",
+            "type_of_operation": "evaluation",
             "required_params": ["model_name"],
             "optional_params": ["metrics"],
             "outputs": {
@@ -86,7 +93,8 @@
             "metrics": ["silhouette_score", "calinski_harabasz_score", "davies_bouldin_score", "inertia"]
         },
         "profile_clusters": {
-            "category": "analysis",
+            "category": "KMeansPipe",
+            "type_of_operation": "analysis",
             "required_params": ["model_name"],
             "optional_params": ["profile_columns", "include_categorical"],
             "outputs": {
@@ -97,7 +105,8 @@
             "profile_types": ["numerical_statistics", "categorical_distributions", "centroids"]
         },
         "find_optimal_k": {
-            "category": "optimization",
+            "category": "KMeansPipe",
+            "type_of_operation": "optimization",
             "required_params": [],
             "optional_params": ["k_range", "method", "n_init", "random_state", "analysis_name"],
             "outputs": {
@@ -108,7 +117,8 @@
             "methods": ["elbow", "silhouette", "both"]
         },
         "plot_clusters_2d": {
-            "category": "visualization",
+            "category": "KMeansPipe",
+            "type_of_operation": "visualization",
             "required_params": ["model_name", "x_feature", "y_feature"],
             "optional_params": ["figsize", "show_centers"],
             "outputs": {
@@ -118,7 +128,8 @@
             "description": "Visualize clusters in 2D feature space with centroids"
         },
         "plot_cluster_profiles": {
-            "category": "visualization",
+            "category": "KMeansPipe",
+            "type_of_operation": "visualization",
             "required_params": ["model_name"],
             "optional_params": ["profile_type", "top_k_features", "figsize"],
             "outputs": {
@@ -129,7 +140,8 @@
             "profile_types": ["numerical", "categorical"]
         },
         "plot_elbow_curve": {
-            "category": "visualization",
+            "category": "KMeansPipe",
+            "type_of_operation": "visualization",
             "required_params": [],
             "optional_params": ["analysis_name", "figsize"],
             "outputs": {
@@ -139,7 +151,8 @@
             "description": "Plot elbow curve for optimal k selection using within-cluster sum of squares"
         },
         "plot_silhouette_scores": {
-            "category": "visualization",
+            "category": "KMeansPipe",
+            "type_of_operation": "visualization",
             "required_params": [],
             "optional_params": ["analysis_name", "figsize"],
             "outputs": {
@@ -149,7 +162,8 @@
             "description": "Plot silhouette scores across different k values for cluster quality assessment"
         },
         "save_kmeans_model": {
-            "category": "model_management",
+            "category": "KMeansPipe",
+            "type_of_operation": "model_management",
             "required_params": ["model_name"],
             "optional_params": ["filepath", "include_preprocessing"],
             "outputs": {
@@ -159,7 +173,8 @@
             "description": "Save trained clustering model with preprocessing pipeline and cluster profiles"
         },
         "print_cluster_summary": {
-            "category": "analysis",
+            "category": "KMeansPipe",
+            "type_of_operation": "analysis",
             "required_params": ["model_name"],
             "optional_params": [],
             "outputs": {

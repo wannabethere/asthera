@@ -130,6 +130,8 @@ class CodeFunctionLoader:
                     page_content = json.dumps({
                         "function_name": func_name,
                         "description": func_data.get("description", ""),
+                        "category": func_data.get("category", ""),
+                        "type_of_operation": func_data.get("type_of_operation", ""),
                         "inputs": func_data.get("inputs", {}),
                         "required_params": func_data.get("required_params", {}),
                         "optional_params": func_data.get("optional_params", {}),
@@ -139,7 +141,10 @@ class CodeFunctionLoader:
                     metadata = {
                         "function_name": func_name,
                         "source_file": str(json_file_path),
-                        "type": "function_definition"
+                        "type": "function_definition",
+                        "category": func_data.get("category", ""),
+                        "type_of_operation": func_data.get("type_of_operation", ""),
+                        "description": func_data.get("description", "")
                     }
                   
                     # Create Document
@@ -389,10 +394,10 @@ def main():
     print("Usage examples loaded into ChromaDB")
     
     #print("examples",examples)
-    #usage_examples_vectorstore.add_documents(new_usage_examples)
-    #examples_vectorstore.add_documents(usage_examples)
-    #functions_vectorstore.add_documents(all_functions)
-    #initialize_insights_vectorstore(insights_vectorstore)
+    usage_examples_vectorstore.add_documents(new_usage_examples)
+    examples_vectorstore.add_documents(usage_examples)
+    functions_vectorstore.add_documents(all_functions)
+    initialize_insights_vectorstore(insights_vectorstore)
         
     # Get examples by function
     search_query = "How do I create lead values for multiple columns in panel data with groups?"
@@ -476,7 +481,7 @@ def main():
     #print(f"Found {len(usage_examples_by_category)} usage examples for 'time_series_analysis' category")
     
 if __name__ == "__main__":
-    function_spec = json.loads('"{\\"function_name\\": \\"lead\\", \\"description\\": \\"Create lead (future) values for specified columns\\", \\"inputs\\": {}, \\"required_params\\": [\\"columns\\"], \\"optional_params\\": [\\"periods\\", \\"time_column\\", \\"group_columns\\", \\"suffix\\"], \\"outputs\\": {\\"type\\": \\"Callable\\", \\"description\\": \\"Function that creates lead values in a TimeSeriesPipe\\"}}"')
-    print(type(function_spec))
-    print(json.loads(function_spec))
+    #function_spec = json.loads('"{\\"function_name\\": \\"lead\\", \\"description\\": \\"Create lead (future) values for specified columns\\", \\"inputs\\": {}, \\"required_params\\": [\\"columns\\"], \\"optional_params\\": [\\"periods\\", \\"time_column\\", \\"group_columns\\", \\"suffix\\"], \\"outputs\\": {\\"type\\": \\"Callable\\", \\"description\\": \\"Function that creates lead values in a TimeSeriesPipe\\"}}"')
+    #print(type(function_spec))
+    #print(json.loads(function_spec))
     main()

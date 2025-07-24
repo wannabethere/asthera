@@ -13,11 +13,150 @@ from app.agents.nodes.recommenders.ds_agents import SummarizeDatasetAgent
 from app.agents.models.dsmodels import InsightManagerState
 from app.agents.nodes.mlagents.analysis_intent_classification import AnalysisIntentPlanner
 from app.agents.nodes.mlagents.self_correcting_pipeline_generator import SelfCorrectingPipelineCodeGenerator
+from app.agents.nodes.mlagents.function_retrieval import FunctionRetrieval
 
 settings = get_settings()
 CHROMA_STORE_PATH = settings.CHROMA_STORE_PATH
 
 os.environ["OPENAI_API_KEY"] = "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"
+ # Initialize ChromaDB client and collections
+client = chromadb.PersistentClient(path=CHROMA_STORE_PATH)
+examples_vectorstore = DocumentChromaStore(persistent_client=client, collection_name="tools_examples_collection")
+functions_vectorstore = DocumentChromaStore(persistent_client=client, collection_name="tools_spec_collection")
+insights_vectorstore = DocumentChromaStore(persistent_client=client, collection_name="tools_insights_collection")
+usage_examples_vectorstore = DocumentChromaStore(persistent_client=client, collection_name="usage_examples_collection")
+
+# Initialize LLM
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
+
+
+
+def analyze_question_with_intent_classification(
+    question: str,
+    dataframe: pd.DataFrame,
+    dataframe_description: str = None,
+    dataframe_summary: str = None,
+    columns_description: dict = None,
+    enable_code_generation: bool = False,
+    context: str = None,
+    dataframe_name: str = "Dataset"
+):
+    """
+    Analyze a question using intent classification with optional code generation.
+    
+    Args:
+        question (str): The question to analyze
+        dataframe (pd.DataFrame): The dataframe to analyze
+        dataframe_description (str, optional): Description of the dataframe
+        dataframe_summary (str, optional): Summary of the dataframe
+        columns_description (dict, optional): Description of each column
+        enable_code_generation (bool): Whether to generate code for the analysis
+        context (str, optional): Additional context for code generation
+        dataframe_name (str): Name of the dataframe for code generation
+    
+    Returns:
+        dict: Analysis results including intent classification and optionally generated code
+    """
+    print(f"\n{'='*60}")
+    print(f"Analyzing Question: {question}")
+    print(f"{'='*60}")
+    
+     # Initialize function retrieval
+    retrieval = FunctionRetrieval(llm=llm,function_library_path="/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/meta/all_pipes_functions.json")
+    result = asyncio.run(retrieval.retrieve_relevant_functions(question,dataframe_description,dataframe_summary,columns_description))
+    print("Retrieval functions result",result)
+    
+    # Initialize the intent planner
+    planner = AnalysisIntentPlanner(
+        llm=llm,
+        function_collection=functions_vectorstore,
+        example_collection=examples_vectorstore, 
+        insights_collection=insights_vectorstore
+    )
+    
+    # If dataframe description/summary not provided, generate them
+    if dataframe_description is None or dataframe_summary is None:
+        summarize_agent = SummarizeDatasetAgent()
+        state = InsightManagerState(
+            question=question,
+            context="Data analysis request",
+            goal="Generate insights from the dataset",
+            dataset_path=""
+        )
+        dataframe_summary = summarize_agent.summarize_dataframe(
+            dataframe=dataframe, 
+            question=question, 
+            state=state
+        )
+        dataframe_description = dataframe_description or "Dataset for analysis"
+    
+    # Classify intent
+    print("Classifying intent...")
+    result = asyncio.run(planner.classify_intent(
+        question=question,
+        dataframe_description=dataframe_description,
+        dataframe_summary=dataframe_summary,
+        available_columns=dataframe.columns.tolist()
+    ))
+    
+    # Print intent classification results
+    print(f"\nIntent Classification Results:")
+    print(f"  Feasibility Score: {result.feasibility_score}")
+    print(f"  Can be answered: {result.can_be_answered}")
+    print(f"  Missing columns: {result.missing_columns}")
+    print(f"  Available alternatives: {result.available_alternatives}")
+    print(f"  Data suggestions: {result.data_suggestions}")
+    print(f"  Suggested functions: {result.suggested_functions}")
+    print(f"  Required data columns: {result.required_data_columns}")
+
+    
+    analysis_results = {
+        "question": question,
+        "intent_classification": result,
+        "dataframe_info": {
+            "shape": dataframe.shape,
+            "columns": dataframe.columns.tolist(),
+            "summary": dataframe_summary
+        }
+    }
+    
+    # Generate code if requested
+    if enable_code_generation and result.can_be_answered:
+        print("\nGenerating code...")
+        try:
+            self_correcting_pipeline_code_generator = SelfCorrectingPipelineCodeGenerator(
+                llm=llm,
+                usage_examples_store=usage_examples_vectorstore,
+                code_examples_store=examples_vectorstore,
+                function_definition_store=functions_vectorstore
+            )
+            
+            code_context = context or question
+            
+            code_result = asyncio.run(self_correcting_pipeline_code_generator.generate_pipeline_code(
+                context=code_context,
+                function_name=result.suggested_functions,
+                function_inputs=result.required_data_columns,
+                dataframe_name=dataframe_name,
+                classification=result,
+                dataset_description=dataframe_summary,
+                columns_description=columns_description or {}
+            ))
+            
+            analysis_results["generated_code"] = code_result
+            print(f"Code generation completed successfully!")
+            
+        except Exception as e:
+            print(f"Error during code generation: {str(e)}")
+            analysis_results["code_generation_error"] = str(e)
+    
+    elif enable_code_generation and not result.can_be_answered:
+        print("\nSkipping code generation - question cannot be answered with available data")
+        analysis_results["code_generation_skipped"] = "Question cannot be answered with available data"
+    
+    print(f"\n{'='*60}")
+    return analysis_results
+
 # Example usage of the FunnelAnalysisAgent
 def main():
     print("Funnel Analysis Agent Example Usage")
@@ -43,14 +182,8 @@ def main():
     
     # Step 2: Initialize the agent
     print("\nInitializing Funnel Analysis Agent...")
-    client = chromadb.PersistentClient(path=CHROMA_STORE_PATH)
-    print("client",CHROMA_STORE_PATH)
-    examples_vectorstore  = DocumentChromaStore(persistent_client=client,collection_name="tools_examples_collection")
-    functions_vectorstore  = DocumentChromaStore(persistent_client=client,collection_name="tools_spec_collection")
-    insights_vectorstore  = DocumentChromaStore(persistent_client=client,collection_name="tools_insights_collection")
-    usage_examples_vectorstore = DocumentChromaStore(persistent_client=client,collection_name="usage_examples_collection")
    
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
+   
     summarize_agent = SummarizeDatasetAgent()
     state = InsightManagerState(
             question="How do I analyze funnel performance across different user segments with my event data?",
@@ -107,231 +240,52 @@ def main():
         "Forecasted PO with Line item": "Forecasted Purchase Order number with line item suffix (e.g., 'NEW_PO_2019-', 'NEW_PO_3298-'), providing detailed line-level tracking",
         "Forecasted PO with Line item": "Forecasted Purchase Order number with line item suffix (e.g., 'NEW_PO_2019-', 'NEW_PO_3298-'), providing detailed line-level tracking"
     } 
-    # Initialize with LLM and ChromaDB collections
-    planner = AnalysisIntentPlanner(
-        llm=llm,
-        function_collection=functions_vectorstore,
-        example_collection=examples_vectorstore, 
-        insights_collection=insights_vectorstore
-    )
-
-    self_correcting_pipeline_code_generator = SelfCorrectingPipelineCodeGenerator(
-        llm=llm,
-        usage_examples_store=usage_examples_vectorstore,
-        code_examples_store=examples_vectorstore,
-        function_definition_store=functions_vectorstore
-    )
-    planner.classify_intent("How does the 5-day rolling variance of flux change over time for each group of projects, cost centers, and departments?",)
-    # Classify intent with enhanced LLM-based feasibility assessment
-    result = asyncio.run(planner.classify_intent(
+    
+    # Example usage of the new function
+    print("\n" + "="*80)
+    print("EXAMPLE USAGE OF NEW FUNCTION")
+    print("="*80)
+    
+    # Example 1: Intent classification only
+    print("\n1. Intent classification only:")
+    result1 = analyze_question_with_intent_classification(
         question="How does the 5-day rolling variance of flux change over time for each group of projects, cost centers, and departments?",
+        dataframe=po_df,
         dataframe_description="Financial flux data with project, cost center, and department information",
         dataframe_summary="Dataset contains flux values over time with grouping dimensions",
-        available_columns=po_df.columns.tolist()
-    ))
-    print(f"Intent classification result: {result}")
-    print(f"Feasibility Score: {result.feasibility_score}")
-    print(f"Can be answered: {result.can_be_answered}")
-    print(f"Missing columns: {result.missing_columns}")
-    print(f"Available alternatives: {result.available_alternatives}")
-    print(f"Data suggestions: {result.data_suggestions}")
-    
-    code_result = asyncio.run(self_correcting_pipeline_code_generator.generate_pipeline_code(
-        context="Calculate 5-day rolling variance of transactional values",
-        function_name=result.suggested_functions,
-        function_inputs=result.required_data_columns,
-        dataframe_name="Purchase Orders Data",
-        classification=result,
-        dataset_description=dataframe_description['summary'],
-        columns_description=columns_description
-    ))
-    print(code_result)
-
-    result = asyncio.run(planner.classify_intent(
-        question="Find anamolies in daily spending patterns in daily transactional values that deviate from normal business patterns by region and project",
-        dataframe_description="Financial flux data with project, cost center, and department information",
-        dataframe_summary="Dataset contains flux values over time with grouping dimensions",
-        available_columns=po_df.columns.tolist()
-    ))
-    print(f"Intent classification result: {result}")
-    print(f"Feasibility Score: {result.feasibility_score}")
-    print(f"Can be answered: {result.can_be_answered}")
-    print(f"Missing columns: {result.missing_columns}")
-    print(f"Available alternatives: {result.available_alternatives}")
-    print(f"Data suggestions: {result.data_suggestions}")
-
-    
-    
-    code_result = asyncio.run(self_correcting_pipeline_code_generator.generate_pipeline_code(
-        context="Find anamolies in daily spending patterns in daily transactional values that deviate from normal business patterns by region and project",
-        function_name=result.suggested_functions,
-        function_inputs=result.required_data_columns,
-        dataframe_name="Purchase Orders Data",
-        classification=result,
-        dataset_description=dataframe_description['summary'],
-        columns_description=columns_description
-    ))
-    print(code_result)
-
-
-    result = asyncio.run(planner.classify_intent(
-        question="What are the mean, average daily transactional values that for purchase orders by region and project",
-        dataframe_description="Financial flux data with project, cost center, and department information",
-        dataframe_summary="Dataset contains flux values over time with grouping dimensions",
-        available_columns=po_df.columns.tolist()
-    ))
-    print(f"Intent classification result: {result}")
-    print(f"Feasibility Score: {result.feasibility_score}")
-    print(f"Can be answered: {result.can_be_answered}")
-    print(f"Missing columns: {result.missing_columns}")
-    print(f"Available alternatives: {result.available_alternatives}")
-    print(f"Data suggestions: {result.data_suggestions}")
-
-    
-    
-    code_result = asyncio.run(self_correcting_pipeline_code_generator.generate_pipeline_code(
-        context="What are the mean, average daily transactional values that for purchase orders by region and project over time",
-        function_name=result.suggested_functions,
-        function_inputs=result.required_data_columns,
-        dataframe_name="Purchase Orders Data",
-        classification=result,
-        dataset_description=dataframe_description['summary'],
-        columns_description=columns_description
-    ))
-    print(code_result)
-
-    print("--------------------------------")
-    print("What are the purchase order trends that are missing forecasted values by region, cost center, and project")
-    print("--------------------------------")
-    print("What are the mean, average daily transactional values that for purchase orders by region and project")
-    print("--------------------------------")
-
-    result = asyncio.run(planner.classify_intent(
-        question="What are the mean, average daily transactional values that for purchase orders by region and project",
-        dataframe_description="Financial flux data with project, cost center, and department information",
-        dataframe_summary="Dataset contains flux values over time with grouping dimensions",
-        available_columns=po_df.columns.tolist()
-    ))
-    print(f"Intent classification result: {result}")
-    print(f"Feasibility Score: {result.feasibility_score}")
-    print(f"Can be answered: {result.can_be_answered}")
-    print(f"Missing columns: {result.missing_columns}")
-    print(f"Available alternatives: {result.available_alternatives}")
-    print(f"Data suggestions: {result.data_suggestions}")
-
-    
-    
-    code_result = asyncio.run(self_correcting_pipeline_code_generator.generate_pipeline_code(
-        context="What are the mean, average daily transactional values that for purchase orders by region and project",
-        function_name=result.suggested_functions,
-        function_inputs=result.required_data_columns,
-        dataframe_name="Purchase Orders Data",
-        classification=result,
-        dataset_description=dataframe_description['summary'],
-        columns_description=columns_description
-    ))
-    print(code_result)
-
-
-
-    """
-    response = agent.run(query,dataframe_description=dataframe_description,dataframe_columns=po_df.columns.tolist())
-    print(response)
-    print(f"--- Agent run response for {query} -----------------------------")
-    for key, value in response.items():
-        print(f"{key}: {value} \n  \n")
-
-    print("--------------- Planner run -----------------")
-    """
-    """
-    # Initialize the Self-Correcting Forward Planner
-    planner = SelfCorrectingForwardPlanner(
-        llm=llm,
-        funnel_analysis_agent=agent
+        enable_code_generation=False
     )
     
-    # Define the question to analyze
-    #question = "How do users from different acquisition sources progress through each step of the conversion funnel, and what are the conversion and cumulative conversion rates for each step?"
-    question = "How does the 5-day rolling variance of flux change over time for each group of projects, cost centers, and departments?"
-    print(f"\nAnalyzing question: {question}")
-    
-    
-    # Generate the plan and code
-    print("Generating plan...")
-    result = planner.plan(
-        question=question,
-        dataframe_columns=po_df.columns.tolist(),
-        dataframe_description=dataframe_description
+    # Example 2: Intent classification with code generation
+    print("\n2. Intent classification with code generation:")
+    result2 = analyze_question_with_intent_classification(
+        question="Find anomalies in daily spending patterns in daily transactional values that deviate from normal business patterns by region and project",
+        dataframe=po_df,
+        dataframe_description="Financial flux data with project, cost center, and department information",
+        dataframe_summary="Dataset contains flux values over time with grouping dimensions",
+        columns_description=columns_description,
+        enable_code_generation=False,
+        context="Find anomalies in daily spending patterns",
+        dataframe_name="Purchase Orders Data"
     )
     
-    # Display the results
-    print("\nPlanning Results:")
-    for key, value in result.items():
-        print(f"{key}: {value} \n  \n")
-    print("\nAgent Response:")
-    print("---------------")
-    """
-    
-    # Step 5: Execute the generated code (in a real scenario)
-    print("\nSimulating execution of generated code...")
-    
-    # This would typically come from the agent's response
-    # Here we're hardcoding it for demonstration
-    example_code = """
-    from funneltools import FunnelPipe, analyze_funnel_by_segment
-    
-    # Define funnel steps
-    funnel_steps = ['view_product', 'add_to_cart', 'start_checkout', 'purchase']
-    step_names = ['Product View', 'Add to Cart', 'Checkout', 'Purchase']
-    
-    # Create the funnel analysis pipeline
-    pipeline = (
-        FunnelPipe.from_dataframe(events_df)
-        | analyze_funnel_by_segment(
-            event_column='event_name',
-            user_id_column='user_id',
-            segment_column='user_segment',
-            funnel_steps=funnel_steps,
-            step_names=step_names,
-            min_users=10
-        )
+    # Example 3: Another question with code generation
+    print("\n3. Another question with code generation:")
+    result3 = analyze_question_with_intent_classification(
+        question="What are the mean, average daily transactional values for purchase orders by region and project",
+        dataframe=po_df,
+        dataframe_description="Financial flux data with project, cost center, and department information",
+        dataframe_summary="Dataset contains flux values over time with grouping dimensions",
+        columns_description=columns_description,
+        enable_code_generation=False,
+        context="Calculate mean daily transactional values",
+        dataframe_name="Purchase Orders Data"
     )
     
-    # Get the results
-    results = pipeline.get_results()
-    """
-    
-    #print("\nGenerated Code:")
-    #print(example_code)
-    
-    """
-    # In reality, you would execute the code using exec() or similar
-    # For demonstration, we'll simulate the results
-    print("\nSimulated Analysis Results:")
-    
-    # Simulate segment analysis results
-    segments = ['mobile', 'desktop', 'tablet']
-    print("\nFunnel Performance by Segment:")
-    print("-----------------------------")
-    
-    for segment in segments:
-        print(f"\n{segment.capitalize()} Segment:")
-        
-        # These would be calculated from the actual pipeline in a real scenario
-        conversion_rates = [
-            0.82 if segment == 'desktop' else 0.78 if segment == 'mobile' else 0.72,  # View to Cart
-            0.65 if segment == 'desktop' else 0.57 if segment == 'mobile' else 0.48,  # Cart to Checkout
-            0.48 if segment == 'desktop' else 0.39 if segment == 'mobile' else 0.31   # Checkout to Purchase
-        ]
-        
-        overall = conversion_rates[0] * conversion_rates[1] * conversion_rates[2]
-        
-        print(f"  Step Conversion Rates:")
-        print(f"    Product View → Add to Cart: {conversion_rates[0]:.1%}")
-        print(f"    Add to Cart → Checkout: {conversion_rates[1]:.1%}")
-        print(f"    Checkout → Purchase: {conversion_rates[2]:.1%}")
-        print(f"  Overall Conversion: {overall:.1%}")
-    """
+    print("\n" + "="*80)
+    print("ANALYSIS COMPLETE")
+    print("="*80)
+
 
 def create_sample_event_data(num_users=500):
     """Create a sample event dataset for demonstration"""

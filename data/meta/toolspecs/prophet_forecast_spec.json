@@ -7,7 +7,8 @@
     },
     "functions": {
         "prepare_prophet_data": {
-            "category": "data_preparation",
+            "category": "ProphetPipe",
+            "type_of_operation": "data_preparation",
             "required_params": ["date_column", "value_column"],
             "optional_params": ["date_format", "freq"],
             "outputs": {
@@ -18,7 +19,8 @@
             "data_format": "Prophet requires 'ds' (datestamp) and 'y' (value) columns"
         },
         "add_regressors": {
-            "category": "data_preparation",
+            "category": "ProphetPipe",
+            "type_of_operation": "data_preparation",
             "required_params": ["regressor_columns"],
             "optional_params": ["regressor_data", "prior_scale", "standardize"],
             "outputs": {
@@ -29,7 +31,8 @@
             "regressor_types": ["promotional_effects", "weather", "economic_indicators", "calendar_events"]
         },
         "add_holidays": {
-            "category": "data_preparation",
+            "category": "ProphetPipe",
+            "type_of_operation": "data_preparation",
             "required_params": ["holiday_data"],
             "optional_params": ["holiday_name", "prior_scale", "lower_window", "upper_window"],
             "outputs": {
@@ -40,7 +43,8 @@
             "holiday_formats": ["dataframe", "country_code", "custom_list"]
         },
         "configure_prophet": {
-            "category": "model_configuration",
+            "category": "ProphetPipe",
+            "type_of_operation": "model_configuration",
             "required_params": [],
             "optional_params": ["growth", "seasonality_mode", "changepoint_prior_scale", "seasonality_prior_scale", "holidays_prior_scale", "n_changepoints", "changepoint_range", "yearly_seasonality", "weekly_seasonality", "daily_seasonality", "model_name"],
             "outputs": {
@@ -52,7 +56,8 @@
             "seasonality_modes": ["additive", "multiplicative"]
         },
         "add_custom_seasonality": {
-            "category": "model_configuration",
+            "category": "ProphetPipe",
+            "type_of_operation": "model_configuration",
             "required_params": ["name", "period", "fourier_order"],
             "optional_params": ["prior_scale", "model_name"],
             "outputs": {
@@ -63,7 +68,8 @@
             "common_periods": {"monthly": 30.5, "quarterly": 91.25, "business_quarterly": 65}
         },
         "fit_prophet": {
-            "category": "training",
+            "category": "ProphetPipe",
+            "type_of_operation": "training",
             "required_params": [],
             "optional_params": ["model_name"],
             "outputs": {
@@ -73,7 +79,8 @@
             "description": "Train the Prophet model on historical data"
         },
         "make_forecast": {
-            "category": "forecasting",
+            "category": "ProphetPipe",
+            "type_of_operation": "forecasting",
             "required_params": ["periods"],
             "optional_params": ["freq", "include_history", "model_name", "forecast_name"],
             "outputs": {
@@ -84,7 +91,8 @@
             "freq_options": ["D", "H", "MS", "W", "Q", "Y"]
         },
         "forecast_with_regressors": {
-            "category": "forecasting",
+            "category": "ProphetPipe",
+            "type_of_operation": "forecasting",
             "required_params": ["periods", "regressor_future_values"],
             "optional_params": ["freq", "include_history", "model_name", "forecast_name"],
             "outputs": {
@@ -94,7 +102,8 @@
             "description": "Generate forecasts with future values for external regressors"
         },
         "cross_validate_model": {
-            "category": "evaluation",
+            "category": "ProphetPipe",
+            "type_of_operation": "evaluation",
             "required_params": ["initial", "period", "horizon"],
             "optional_params": ["parallel", "model_name", "cv_name"],
             "outputs": {
@@ -105,7 +114,8 @@
             "time_formats": ["365 days", "730 days", "1 year", "6 months"]
         },
         "calculate_forecast_metrics": {
-            "category": "evaluation",
+            "category": "ProphetPipe",
+            "type_of_operation": "evaluation",
             "required_params": ["forecast_name"],
             "optional_params": ["actual_column", "cutoff_date"],
             "outputs": {
@@ -116,7 +126,8 @@
             "metrics": ["mae", "mse", "rmse", "mape", "coverage"]
         },
         "print_forecast_metrics": {
-            "category": "evaluation",
+            "category": "ProphetPipe",
+            "type_of_operation": "evaluation",
             "required_params": ["forecast_name"],
             "optional_params": [],
             "outputs": {
@@ -126,7 +137,8 @@
             "description": "Print formatted forecast accuracy metrics"
         },
         "plot_forecast": {
-            "category": "visualization",
+            "category": "ProphetPipe",
+            "type_of_operation": "visualization",
             "required_params": ["forecast_name"],
             "optional_params": ["figsize", "show_components"],
             "outputs": {
@@ -136,7 +148,8 @@
             "description": "Visualize forecast results and decomposed components"
         },
         "plot_cross_validation": {
-            "category": "visualization",
+            "category": "ProphetPipe",
+            "type_of_operation": "visualization",
             "required_params": ["cv_name"],
             "optional_params": ["metric", "figsize"],
             "outputs": {
@@ -146,7 +159,8 @@
             "description": "Visualize cross-validation performance across different horizons"
         },
         "save_prophet_model": {
-            "category": "model_management",
+            "category": "ProphetPipe",
+            "type_of_operation": "model_management",
             "required_params": [],
             "optional_params": ["model_name", "filepath"],
             "outputs": {
@@ -156,7 +170,8 @@
             "description": "Save trained Prophet model and configuration to disk"
         },
         "hyperparameter_tuning": {
-            "category": "optimization",
+            "category": "ProphetPipe",
+            "type_of_operation": "optimization",
             "required_params": ["param_grid", "cv_initial", "cv_period", "cv_horizon"],
             "optional_params": ["metric", "model_name"],
             "outputs": {

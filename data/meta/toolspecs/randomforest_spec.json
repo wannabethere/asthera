@@ -7,7 +7,8 @@
     },
     "functions": {
         "generate_numerical_features": {
-            "category": "feature_engineering",
+            "category": "RFPipe",
+            "type_of_operation": "feature_engineering",
             "required_params": ["columns"],
             "optional_params": ["operations", "prefix", "handle_zeros"],
             "outputs": {
@@ -18,7 +19,8 @@
             "operations": ["log", "sqrt", "square", "reciprocal"]
         },
         "generate_categorical_features": {
-            "category": "feature_engineering", 
+            "category": "RFPipe",
+            "type_of_operation": "feature_engineering", 
             "required_params": ["columns"],
             "optional_params": ["encoding_type", "max_categories", "handle_unknown"],
             "outputs": {
@@ -29,7 +31,8 @@
             "encoding_types": ["onehot", "label", "target"]
         },
         "generate_interaction_features": {
-            "category": "feature_engineering",
+            "category": "RFPipe",
+            "type_of_operation": "feature_engineering",
             "required_params": ["column_pairs"], 
             "optional_params": ["operations", "prefix"],
             "outputs": {
@@ -40,7 +43,8 @@
             "operations": ["multiply", "add", "subtract", "divide"]
         },
         "create_binary_labels": {
-            "category": "labeling",
+            "category": "RFPipe",
+            "type_of_operation": "labeling",
             "required_params": ["column", "condition"],
             "optional_params": ["label_column", "positive_label", "negative_label"],
             "outputs": {
@@ -51,7 +55,8 @@
             "condition_formats": [">100", ">=50", "<75", "<=25", "==value"]
         },
         "create_multiclass_labels": {
-            "category": "labeling",
+            "category": "RFPipe",
+            "type_of_operation": "labeling",
             "required_params": ["column", "bins"],
             "optional_params": ["labels", "label_column"],
             "outputs": {
@@ -61,7 +66,8 @@
             "description": "Create multiclass labels by binning continuous variables"
         },
         "select_features": {
-            "category": "feature_selection",
+            "category": "RFPipe",
+            "type_of_operation": "feature_selection",
             "required_params": [],
             "optional_params": ["method", "k", "score_func"],
             "outputs": {
@@ -72,7 +78,8 @@
             "methods": ["kbest", "mutual_info"]
         },
         "train_random_forest": {
-            "category": "training",
+            "category": "RFPipe",
+            "type_of_operation": "training",
             "required_params": [],
             "optional_params": ["test_size", "random_state", "n_estimators", "max_depth", "min_samples_split", "min_samples_leaf", "model_name"],
             "outputs": {
@@ -82,7 +89,8 @@
             "description": "Train a Random Forest classifier with specified parameters"
         },
         "save_model": {
-            "category": "model_management",
+            "category": "RFPipe",
+            "type_of_operation": "model_management",
             "required_params": [],
             "optional_params": ["model_name", "filepath"],
             "outputs": {
@@ -92,7 +100,8 @@
             "description": "Save trained model to disk using joblib"
         },
         "predict": {
-            "category": "inference",
+            "category": "RFPipe",
+            "type_of_operation": "inference",
             "required_params": [],
             "optional_params": ["model_name", "data_split", "prediction_name"],
             "outputs": {
@@ -103,7 +112,8 @@
             "data_splits": ["train", "test", "all"]
         },
         "calculate_metrics": {
-            "category": "evaluation", 
+            "category": "RFPipe",
+            "type_of_operation": "evaluation", 
             "required_params": [],
             "optional_params": ["prediction_name", "model_name", "average"],
             "outputs": {
@@ -114,7 +124,8 @@
             "metrics": ["accuracy", "precision", "recall", "f1_score", "auc_roc", "confusion_matrix"]
         },
         "print_metrics": {
-            "category": "evaluation",
+            "category": "RFPipe",
+            "type_of_operation": "evaluation",
             "required_params": [],
             "optional_params": ["prediction_name", "model_name"],
             "outputs": {

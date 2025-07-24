@@ -45,6 +45,24 @@ class AnalysisIntentResult(BaseModel):
     data_suggestions: Optional[str] = None
 
 
+"""
+Unused for now
+### SPECIFIC ANALYSIS TYPE MAPPING ###
+When user asks about:
+- "variance", "rolling variance", "variance analysis" → classify as time_series_analysis with variance_analysis function
+- "rolling", "moving", "window" calculations → classify as time_series_analysis and look for specific rolling function (variance_analysis, moving_average, etc.)
+- "lead", "lag", "future/past values" → time_series_analysis with lead/lag functions
+- "trend", "growth", "forecast" → trend_analysis
+- "cluster", "segment", "group users" → segmentation_analysis  
+- "retention", "cohort", "lifetime value" → cohort_analysis
+- "funnel", "conversion", "user journey" → funnel_analysis
+- "risk", "VaR", "monte carlo" → risk_analysis
+- "anomaly", "outlier", "anomalies", "outliers" → anomaly_detection with appropriate detection function
+- "sum", "count", "average", "correlation" → metrics_calculation
+- "percent change", "A/B test", "confidence interval" → operations_analysis
+
+"""
+
 # System prompt for intent classification
 ANALYSIS_INTENT_SYSTEM_PROMPT = """
 ### TASK ###
@@ -76,19 +94,6 @@ Fourth, assess whether the question can be answered with the available data.
 - available_alternatives: suggest similar columns that could work
 - data_suggestions: provide advice on data preparation or alternative approaches
 
-### SPECIFIC ANALYSIS TYPE MAPPING ###
-When user asks about:
-- "variance", "rolling variance", "variance analysis" → classify as time_series_analysis with variance_analysis function
-- "rolling", "moving", "window" calculations → classify as time_series_analysis and look for specific rolling function (variance_analysis, moving_average, etc.)
-- "lead", "lag", "future/past values" → time_series_analysis with lead/lag functions
-- "trend", "growth", "forecast" → trend_analysis
-- "cluster", "segment", "group users" → segmentation_analysis  
-- "retention", "cohort", "lifetime value" → cohort_analysis
-- "funnel", "conversion", "user journey" → funnel_analysis
-- "risk", "VaR", "monte carlo" → risk_analysis
-- "anomaly", "outlier", "anomalies", "outliers" → anomaly_detection with appropriate detection function
-- "sum", "count", "average", "correlation" → metrics_calculation
-- "percent change", "A/B test", "confidence interval" → operations_analysis
 
 ### ANALYSIS TYPES ###
 - time_series_analysis: Analyze data patterns over time periods (lead, lag, variance_analysis with rolling windows, distribution analysis)
@@ -111,6 +116,8 @@ Provide your response as a JSON object:
     "confidence_score": 0.0-1.0,
     "rephrased_question": "clear and specific question",
     "suggested_functions": ["function1", "function2", "function3"],
+    "function_categories": ["Use the Category from function definition", "Use the Category from function definition", "Use the Category from function definition"],
+    "function_type_of_operations": ["Use the Type of Operation from function definition", "Use the Type of Operation from function definition", "Use the Type of Operation from function definition"],
     "reasoning": "brief explanation emphasizing specific function matches and data availability",
     "required_data_columns": ["column1", "column2"],
     "clarification_needed": "question if intent unclear or null",
@@ -149,6 +156,8 @@ Based on the user question, available dataframe information, and the retrieved f
 2. Assess whether the question can be answered with the available data
 3. Suggest alternative approaches if exact columns don't exist
 4. Provide suggestions for data preparation if needed
+
+
 
 Consider:
 - Do the available columns support the requested analysis?
@@ -447,9 +456,9 @@ class AnalysisIntentPlanner:
             "specific_matches": []
         }
         
-        # First, check for specific function keyword matches
-        specific_matches = self._extract_specific_function_keywords(question)
-        results["specific_matches"] = specific_matches
+        # First, check for specific function keyword matches -- Lets skip this as it doesnot make sense 
+        #specific_matches = self._extract_specific_function_keywords(question)
+        #results["specific_matches"] = specific_matches
         
         try:
             # Use the question to semantically search for relevant functions
@@ -459,31 +468,6 @@ class AnalysisIntentPlanner:
                     query_texts=[question], 
                     n_results=self.max_functions_to_retrieve
                 )
-                
-                # If we have specific matches, also search for those function names directly
-                if specific_matches:
-                    for func_name in specific_matches:
-                        func_query_result = self.function_collection.semantic_searches(
-                            query_texts=[func_name], 
-                            n_results=2
-                        )
-                        if func_query_result and func_query_result.get("documents"):
-                            # Add these results with higher priority (lower distance scores)
-                            for i, doc in enumerate(func_query_result["documents"][0]):
-                                score = func_query_result["distances"][0][i] if "distances" in func_query_result else 0.0
-                                # Boost priority by reducing score for specific matches
-                                score = score * 0.5  
-                                
-                                try:
-                                    if isinstance(doc, str) and (doc.startswith('{') or doc.startswith('{"')):
-                                        doc = json.loads(doc)
-                                    results["definitions"].append({
-                                        "content": doc,
-                                        "score": score,
-                                        "specific_match": True
-                                    })
-                                except json.JSONDecodeError:
-                                    continue
                 
                 if query_result and query_result.get("documents"):
                     for i, doc in enumerate(query_result["documents"][0]):
@@ -500,7 +484,7 @@ class AnalysisIntentPlanner:
                             })
                         except json.JSONDecodeError:
                             continue
-            
+            print("results",json.dumps(results,indent=2))
             # Similarly retrieve examples and insights
             if self.example_collection:
                 query_result = self.example_collection.semantic_searches(
@@ -560,7 +544,7 @@ class AnalysisIntentPlanner:
         """
         # Sort definitions to prioritize specific matches
         definitions = retrieved_data.get("definitions", [])
-        definitions.sort(key=lambda x: (not x.get("specific_match", False), x.get("score", 1.0)))
+        #definitions.sort(key=lambda x: (not x.get("specific_match", False), x.get("score", 1.0)))
         
         # Format function definitions with priority indication
         definitions_text = ""
@@ -568,22 +552,39 @@ class AnalysisIntentPlanner:
             definitions_text = "Available Functions (ordered by relevance):\n"
             
             # Add specific matches first
-            specific_matches = retrieved_data.get("specific_matches", [])
-            if specific_matches:
-                definitions_text += f"\n🎯 EXACT KEYWORD MATCHES for your question: {', '.join(specific_matches)}\n\n"
+            #specific_matches = retrieved_data.get("specific_matches", [])
+            #if specific_matches:
+            #    definitions_text += f"\n🎯 EXACT KEYWORD MATCHES for your question: {', '.join(specific_matches)}\n\n"
             
             for i, item in enumerate(definitions[:8]):  # Top 8
                 content = item.get("content", {})
                 if isinstance(content, dict):
                     func_name = content.get("function_name", f"Function_{i+1}")
                     description = content.get("description", "No description")
+                    category = content.get("category", "No category")
+                    type_of_operation = content.get("type_of_operation", "No type of operation")
+                    
+                    # Handle parameters more robustly for double-escaped JSON content
                     params = content.get("parameters", {})
+                    required_params = content.get("required_params", [])
+                    optional_params = content.get("optional_params", [])
+                    
+                    # Format parameters section
+                    params_text = ""
+                    if required_params:
+                        params_text += "Required: " + ", ".join([f"{p.get('name', 'param')}" for p in required_params]) + "\n"
+                    if optional_params:
+                        params_text += "Optional: " + ", ".join([f"{p.get('name', 'param')}" for p in optional_params]) + "\n"
+                    if params and not required_params and not optional_params:
+                        # Fallback to direct parameters dict
+                        params_text = f"Parameters: {params}\n"
                     
                     # Mark specific matches
                     priority_marker = "🎯 " if item.get("specific_match", False) else ""
                     
-                    definitions_text += f"- {priority_marker}{func_name}: {description}\n"
-                    definitions_text += f"  Parameters: {params}\n\n"
+                    definitions_text += f"- {priority_marker}{func_name}: {description} ({category} - {type_of_operation}) - Inputs/Outputs -\n"
+                    if params_text:
+                        definitions_text += f"  {params_text}\n"
         
         # Format examples
         examples_text = ""
@@ -775,7 +776,7 @@ class AnalysisIntentPlanner:
             
             # Step 4: Get LLM classification
             llm_response = await self._classify_with_llm(prompt)
-            
+            print("llm_response",llm_response)
             # Step 5: Post-process into structured result
             result = self._post_process_llm_response(llm_response, retrieved_data, available_columns)
             

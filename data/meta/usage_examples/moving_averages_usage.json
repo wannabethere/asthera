@@ -1,0 +1,761 @@
+[
+    {
+      "query": "Calculate 20-day simple moving average for stock price data",
+      "function": "moving_average",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "close_price",
+        "window": 20,
+        "method": "simple"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_average(\n    columns='close_price',\n    window=20,\n    method='simple'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(moving average|sma|simple)",
+          "(20|twenty) (day|period)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (moving average)"
+        ],
+        "num_patterns": [
+          "(20) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate exponential moving average with 12-period window for trend analysis",
+      "function": "moving_average",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "price",
+        "window": 12,
+        "method": "exponential"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_average(\n    columns='price',\n    window=12,\n    method='exponential'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(exponential|ema|weighted)",
+          "(trend|smoothing)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (exponential|ema)"
+        ],
+        "num_patterns": [
+          "(12) (period|window)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate weighted moving average for volume data with 30-day window",
+      "function": "moving_average",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "volume",
+        "window": 30,
+        "method": "weighted"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_average(\n    columns='volume',\n    window=30,\n    method='weighted'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(weighted|wma)",
+          "(volume|trading volume)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (weighted|volume)"
+        ],
+        "num_patterns": [
+          "(30) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving variance and standard deviation for volatility analysis",
+      "function": "moving_variance",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "returns",
+        "window": 30,
+        "var_suffix": "_var",
+        "std_suffix": "_std"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_variance(\n    columns='returns',\n    window=30,\n    var_suffix='_var',\n    std_suffix='_std'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(variance|volatility|standard deviation)",
+          "(rolling|moving)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (variance|volatility)"
+        ],
+        "num_patterns": [
+          "(30) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving sum of daily trading volume over 5-day windows",
+      "function": "moving_sum",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "volume",
+        "window": 5,
+        "output_suffix": "_sum"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_sum(\n    columns='volume',\n    window=5,\n    output_suffix='_sum'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(sum|total|cumulative)",
+          "(volume|trading volume)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (sum|total)"
+        ],
+        "num_patterns": [
+          "(5) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving quantiles (25th, 50th, 75th percentiles) for price distribution",
+      "function": "moving_quantile",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "price",
+        "quantile": [0.25, 0.5, 0.75],
+        "window": 60
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_quantile(\n    columns='price',\n    quantile=[0.25, 0.5, 0.75],\n    window=60\n)",
+      "patterns": {
+        "function_patterns": [
+          "(quantile|percentile|distribution)",
+          "(25th|50th|75th|median)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (quantile|percentile)"
+        ],
+        "num_patterns": [
+          "(60) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving correlation between stock price and volume over 20-day windows",
+      "function": "moving_correlation",
+      "category": "moving_averages",
+      "inputs": {
+        "column_pairs": [("price", "volume")],
+        "window": 20,
+        "output_suffix": "_corr"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_correlation(\n    column_pairs=[('price', 'volume')],\n    window=20,\n    output_suffix='_corr'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(correlation|relationship)",
+          "(price|volume|pair)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (correlation|relationship)"
+        ],
+        "num_patterns": [
+          "(20) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving z-scores for outlier detection with 30-day window",
+      "function": "moving_zscore",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "price",
+        "window": 30,
+        "output_suffix": "_zscore"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_zscore(\n    columns='price',\n    window=30,\n    output_suffix='_zscore'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(z-score|zscore|outlier)",
+          "(standard deviation|normalized)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (z-score|outlier)"
+        ],
+        "num_patterns": [
+          "(30) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Detect turning points (peaks and troughs) in price data with 15-day window",
+      "function": "detect_turning_points",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "price",
+        "window": 15,
+        "threshold": 2.0,
+        "peak_suffix": "_peak",
+        "trough_suffix": "_trough"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | detect_turning_points(\n    columns='price',\n    window=15,\n    threshold=2.0,\n    peak_suffix='_peak',\n    trough_suffix='_trough'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(turning point|peak|trough)",
+          "(local maximum|local minimum)"
+        ],
+        "metrics_patterns": [
+          "(detect|find|identify) (peak|trough|turning point)"
+        ],
+        "num_patterns": [
+          "(15) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving ratio of high price to low price for volatility measurement",
+      "function": "moving_ratio",
+      "category": "moving_averages",
+      "inputs": {
+        "numerator_column": "high_price",
+        "denominator_column": "low_price",
+        "window": 20,
+        "output_column": "high_low_ratio"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_ratio(\n    numerator_column='high_price',\n    denominator_column='low_price',\n    window=20,\n    output_column='high_low_ratio'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(ratio|proportion|relative)",
+          "(high|low|volatility)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (ratio|proportion)"
+        ],
+        "num_patterns": [
+          "(20) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate time-weighted average with exponential decay for recent emphasis",
+      "function": "time_weighted_average",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "price",
+        "window": 30,
+        "decay_factor": 0.9,
+        "output_suffix": "_twa"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | time_weighted_average(\n    columns='price',\n    window=30,\n    decay_factor=0.9,\n    output_suffix='_twa'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(time-weighted|exponential decay)",
+          "(recent|emphasis|weight)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (time-weighted|weighted)"
+        ],
+        "num_patterns": [
+          "(30) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving cumulative sum of daily returns over expanding window",
+      "function": "moving_cumulative",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "returns",
+        "operation": "sum",
+        "window": null,
+        "output_suffix": "_cumsum"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_cumulative(\n    columns='returns',\n    operation='sum',\n    window=None,\n    output_suffix='_cumsum'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(cumulative|running total)",
+          "(expanding|all prior)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (cumulative|running total)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate expanding window mean for long-term trend analysis",
+      "function": "expanding_window",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "price",
+        "operation": "mean",
+        "output_suffix": "_exp_mean"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | expanding_window(\n    columns='price',\n    operation='mean',\n    output_suffix='_exp_mean'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(expanding|all prior|long-term)",
+          "(trend|mean|average)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (expanding|long-term)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving minimum and maximum values for range analysis",
+      "function": "moving_min_max",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "price",
+        "window": 20,
+        "min_suffix": "_min",
+        "max_suffix": "_max"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_min_max(\n    columns='price',\n    window=20,\n    min_suffix='_min',\n    max_suffix='_max'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(minimum|maximum|range)",
+          "(high|low|extreme)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (minimum|maximum|range)"
+        ],
+        "num_patterns": [
+          "(20) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Count positive returns in moving windows for trend strength analysis",
+      "function": "moving_count",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "returns",
+        "condition": "lambda x: x > 0",
+        "window": 30,
+        "output_suffix": "_positive_count"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_count(\n    columns='returns',\n    condition=lambda x: x > 0,\n    window=30,\n    output_suffix='_positive_count'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(count|frequency)",
+          "(positive|negative|condition)"
+        ],
+        "metrics_patterns": [
+          "(count|calculate) (frequency|occurrence)"
+        ],
+        "num_patterns": [
+          "(30) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving percentile rank for relative performance analysis",
+      "function": "moving_percentile_rank",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "returns",
+        "window": 60,
+        "output_suffix": "_rank"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_percentile_rank(\n    columns='returns',\n    window=60,\n    output_suffix='_rank'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(percentile rank|relative position)",
+          "(performance|ranking)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (percentile rank|relative position)"
+        ],
+        "num_patterns": [
+          "(60) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Apply custom skewness function to moving windows for distribution analysis",
+      "function": "moving_aggregate",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "returns",
+        "function": "custom_skewness",
+        "window": 30,
+        "output_suffix": "_skew"
+      },
+      "example": "def custom_skewness(x):\n    if len(x) < 3:\n        return np.nan\n    n = len(x)\n    mean = np.mean(x)\n    std = np.std(x, ddof=1)\n    if std == 0:\n        return 0\n    return (np.sum((x - mean) ** 3) / n) / (std ** 3)\n\nmoving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_aggregate(\n    columns='returns',\n    function=custom_skewness,\n    window=30,\n    output_suffix='_skew'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(custom|user-defined)",
+          "(skewness|kurtosis|distribution)"
+        ],
+        "metrics_patterns": [
+          "(apply|calculate) (custom|user-defined)"
+        ],
+        "num_patterns": [
+          "(30) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving regression coefficients for trend analysis",
+      "function": "moving_regression",
+      "category": "moving_averages",
+      "inputs": {
+        "dependent_column": "price",
+        "independent_columns": "volume",
+        "window": 50,
+        "output_suffix": "_reg"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_regression(\n    dependent_column='price',\n    independent_columns='volume',\n    window=50,\n    output_suffix='_reg'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(regression|coefficient|slope)",
+          "(trend|relationship)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (regression|coefficient)"
+        ],
+        "num_patterns": [
+          "(50) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving averages by sector for grouped analysis",
+      "function": "moving_average",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "price",
+        "window": 20,
+        "method": "simple",
+        "group_columns": ["sector", "market_cap"]
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_average(\n    columns='price',\n    window=20,\n    method='simple',\n    group_columns=['sector', 'market_cap']\n)",
+      "patterns": {
+        "function_patterns": [
+          "(group|sector|category)",
+          "(moving average|sma)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (group|sector)"
+        ],
+        "num_patterns": [
+          "(20) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate time-based moving averages using timestamp column",
+      "function": "moving_average",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "price",
+        "window": 30,
+        "method": "simple",
+        "time_column": "timestamp"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_average(\n    columns='price',\n    window=30,\n    method='simple',\n    time_column='timestamp'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(time-based|timestamp)",
+          "(moving average|sma)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (time-based)"
+        ],
+        "num_patterns": [
+          "(30) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving correlation between multiple stock pairs",
+      "function": "moving_correlation",
+      "category": "moving_averages",
+      "inputs": {
+        "column_pairs": [("stock_a", "stock_b"), ("stock_a", "stock_c"), ("stock_b", "stock_c")],
+        "window": 60,
+        "output_suffix": "_corr"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_correlation(\n    column_pairs=[('stock_a', 'stock_b'), ('stock_a', 'stock_c'), ('stock_b', 'stock_c')],\n    window=60,\n    output_suffix='_corr'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(multiple|pairs|correlation)",
+          "(stock|asset|pair)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (multiple|pairs)"
+        ],
+        "num_patterns": [
+          "(60) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving averages with minimum periods requirement",
+      "function": "moving_average",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "price",
+        "window": 20,
+        "method": "simple",
+        "min_periods": 10
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_average(\n    columns='price',\n    window=20,\n    method='simple',\n    min_periods=10\n)",
+      "patterns": {
+        "function_patterns": [
+          "(minimum periods|min_periods)",
+          "(moving average|sma)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (minimum|periods)"
+        ],
+        "num_patterns": [
+          "(20) (day|period)",
+          "(10) (minimum|periods)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate centered moving averages for symmetric window alignment",
+      "function": "moving_average",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "price",
+        "window": 21,
+        "method": "simple",
+        "center": true
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_average(\n    columns='price',\n    window=21,\n    method='simple',\n    center=True\n)",
+      "patterns": {
+        "function_patterns": [
+          "(centered|symmetric|center)",
+          "(moving average|sma)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (centered|symmetric)"
+        ],
+        "num_patterns": [
+          "(21) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving variance with custom degrees of freedom",
+      "function": "moving_variance",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "returns",
+        "window": 30,
+        "ddof": 0,
+        "var_suffix": "_var",
+        "std_suffix": "_std"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_variance(\n    columns='returns',\n    window=30,\n    ddof=0,\n    var_suffix='_var',\n    std_suffix='_std'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(variance|degrees of freedom|ddof)",
+          "(population|sample)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (variance|degrees of freedom)"
+        ],
+        "num_patterns": [
+          "(30) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving quantiles with custom output suffixes",
+      "function": "moving_quantile",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "price",
+        "quantile": [0.1, 0.9],
+        "window": 50,
+        "output_suffix": "_decile"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_quantile(\n    columns='price',\n    quantile=[0.1, 0.9],\n    window=50,\n    output_suffix='_decile'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(decile|10th|90th)",
+          "(quantile|percentile)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (decile|quantile)"
+        ],
+        "num_patterns": [
+          "(50) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving ratio with zero handling for financial ratios",
+      "function": "moving_ratio",
+      "category": "moving_averages",
+      "inputs": {
+        "numerator_column": "revenue",
+        "denominator_column": "cost",
+        "window": 20,
+        "fill_zeroes": true,
+        "output_column": "profit_margin"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_ratio(\n    numerator_column='revenue',\n    denominator_column='cost',\n    window=20,\n    fill_zeroes=True,\n    output_column='profit_margin'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(ratio|margin|profit)",
+          "(zero|division|handle)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (ratio|margin)"
+        ],
+        "num_patterns": [
+          "(20) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Detect turning points with custom threshold for trend reversal",
+      "function": "detect_turning_points",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "price",
+        "window": 10,
+        "threshold": 5.0,
+        "min_periods": 5
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | detect_turning_points(\n    columns='price',\n    window=10,\n    threshold=5.0,\n    min_periods=5\n)",
+      "patterns": {
+        "function_patterns": [
+          "(turning point|reversal|threshold)",
+          "(trend|change|shift)"
+        ],
+        "metrics_patterns": [
+          "(detect|find) (turning point|reversal)"
+        ],
+        "num_patterns": [
+          "(10) (day|period)",
+          "(5) (percent|threshold)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving regression with multiple independent variables",
+      "function": "moving_regression",
+      "category": "moving_averages",
+      "inputs": {
+        "dependent_column": "price",
+        "independent_columns": ["volume", "market_index"],
+        "window": 60,
+        "intercept": true,
+        "save_coefficients": true,
+        "save_predictions": true,
+        "save_residuals": true
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_regression(\n    dependent_column='price',\n    independent_columns=['volume', 'market_index'],\n    window=60,\n    intercept=True,\n    save_coefficients=True,\n    save_predictions=True,\n    save_residuals=True\n)",
+      "patterns": {
+        "function_patterns": [
+          "(multiple|independent|variables)",
+          "(regression|coefficient)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (multiple|regression)"
+        ],
+        "num_patterns": [
+          "(60) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving percentile rank with time-based grouping",
+      "function": "moving_percentile_rank",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "returns",
+        "window": 30,
+        "time_column": "timestamp",
+        "group_columns": ["sector"],
+        "output_suffix": "_rank"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_percentile_rank(\n    columns='returns',\n    window=30,\n    time_column='timestamp',\n    group_columns=['sector'],\n    output_suffix='_rank'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(percentile rank|relative|group)",
+          "(sector|category|time-based)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (percentile rank|relative)"
+        ],
+        "num_patterns": [
+          "(30) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate time-weighted average with custom decay for momentum analysis",
+      "function": "time_weighted_average",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "momentum",
+        "window": 20,
+        "decay_factor": 0.95,
+        "time_column": "timestamp",
+        "output_suffix": "_twa"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | time_weighted_average(\n    columns='momentum',\n    window=20,\n    decay_factor=0.95,\n    time_column='timestamp',\n    output_suffix='_twa'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(momentum|decay|time-weighted)",
+          "(custom|factor|weight)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (momentum|time-weighted)"
+        ],
+        "num_patterns": [
+          "(20) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving cumulative product for compound growth analysis",
+      "function": "moving_cumulative",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "growth_rate",
+        "operation": "product",
+        "window": 12,
+        "output_suffix": "_cumprod"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_cumulative(\n    columns='growth_rate',\n    operation='product',\n    window=12,\n    output_suffix='_cumprod'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(cumulative product|compound|growth)",
+          "(product|multiplication)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (cumulative product|compound)"
+        ],
+        "num_patterns": [
+          "(12) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate expanding window standard deviation for volatility trend",
+      "function": "expanding_window",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "returns",
+        "operation": "std",
+        "time_column": "timestamp",
+        "output_suffix": "_exp_std"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | expanding_window(\n    columns='returns',\n    operation='std',\n    time_column='timestamp',\n    output_suffix='_exp_std'\n)",
+      "patterns": {
+        "function_patterns": [
+          "(expanding|standard deviation|volatility)",
+          "(trend|long-term)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (expanding|volatility trend)"
+        ]
+      }
+    }
+] 

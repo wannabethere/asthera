@@ -1,6 +1,8 @@
 {
     "functions": {
         "Count": {
+            "category": "MetricsPipe",
+            "type_of_operation": "basic_metrics",
             "required_params": [
                 {"name": "variable", "type": "str", "description": "Column name to count"}
             ],
@@ -14,6 +16,8 @@
             "description": "Count the number of non-null entries in a column\n\nParameters:\n-----------\nvariable : str\n    Column name to count\noutput_name : str, optional\n    Name for the output metric, defaults to 'count_{variable}'\n\nReturns:\n--------\nCallable\n    Function that calculates count from a MetricsPipe"
         },
         "Sum": {
+            "category": "MetricsPipe",
+            "type_of_operation": "basic_metrics",
             "required_params": [
                 {"name": "variable", "type": "str", "description": "Column name to sum"}
             ],
@@ -27,6 +31,8 @@
             "description": "Calculate the sum of a column\n\nParameters:\n-----------\nvariable : str\n    Column name to sum\noutput_name : str, optional\n    Name for the output metric, defaults to 'sum_{variable}'\n\nReturns:\n--------\nCallable\n    Function that calculates sum from a MetricsPipe"
         },
         "Max": {
+            "category": "MetricsPipe",
+            "type_of_operation": "basic_metrics",
             "required_params": [
                 {"name": "variable", "type": "str", "description": "Column name to find maximum"}
             ],
@@ -40,6 +46,8 @@
             "description": "Calculate the maximum value of a column\n\nParameters:\n-----------\nvariable : str\n    Column name to find maximum\noutput_name : str, optional\n    Name for the output metric, defaults to 'max_{variable}'\n\nReturns:\n--------\nCallable\n    Function that calculates maximum from a MetricsPipe"
         },
         "Min": {
+            "category": "MetricsPipe",
+            "type_of_operation": "basic_metrics",
             "required_params": [
                 {"name": "variable", "type": "str", "description": "Column name to find minimum"}
             ],
@@ -53,6 +61,8 @@
             "description": "Calculate the minimum value of a column\n\nParameters:\n-----------\nvariable : str\n    Column name to find minimum\noutput_name : str, optional\n    Name for the output metric, defaults to 'min_{variable}'\n\nReturns:\n--------\nCallable\n    Function that calculates minimum from a MetricsPipe"
         },
         "Ratio": {
+            "category": "MetricsPipe",
+            "type_of_operation": "derived_metrics",
             "required_params": [
                 {"name": "numerator", "type": "str", "description": "Column name for numerator"},
                 {"name": "denominator", "type": "str", "description": "Column name for denominator"}
@@ -67,6 +77,8 @@
             "description": "Calculate the ratio of sums of two columns\n\nParameters:\n-----------\nnumerator : str\n    Column name for numerator\ndenominator : str\n    Column name for denominator\noutput_name : str, optional\n    Name for the output metric, defaults to 'ratio_{numerator}_{denominator}'\n\nReturns:\n--------\nCallable\n    Function that calculates ratio from a MetricsPipe"
         },
         "Dot": {
+            "category": "MetricsPipe",
+            "type_of_operation": "derived_metrics",
             "required_params": [
                 {"name": "variable1", "type": "str", "description": "First column name"},
                 {"name": "variable2", "type": "str", "description": "Second column name"}
@@ -82,6 +94,8 @@
             "description": "Calculate the dot product between two columns\n\nParameters:\n-----------\nvariable1 : str\n    First column name\nvariable2 : str\n    Second column name\nnormalize : bool, default=False\n    Whether to normalize the dot product using the lengths\noutput_name : str, optional\n    Name for the output metric, defaults to 'dot_{variable1}_{variable2}'\n\nReturns:\n--------\nCallable\n    Function that calculates dot product from a MetricsPipe"
         },
         "Nth": {
+            "category": "MetricsPipe",
+            "type_of_operation": "positional_metrics",
             "required_params": [
                 {"name": "variable", "type": "str", "description": "Column to get the value from"},
                 {"name": "n", "type": "int", "description": "Index of the value to retrieve (0-based)"},
@@ -99,6 +113,8 @@
             "description": "Get the nth value of a column after sorting by another column\n\nParameters:\n-----------\nvariable : str\n    Column to get the value from\nn : int\n    Index of the value to retrieve (0-based)\nsort_by : str\n    Column to sort by\nascending : bool, default=True\n    Whether to sort in ascending order\ndropna : bool, default=False\n    Whether to drop NaN values before finding the nth value\noutput_name : str, optional\n    Name for the output metric, defaults to 'nth_{n}_{variable}_by_{sort_by}'\n\nReturns:\n--------\nCallable\n    Function that retrieves the nth value from a MetricsPipe"
         },
         "Variance": {
+            "category": "MetricsPipe",
+            "type_of_operation": "statistical_metrics",
             "required_params": [
                 {"name": "variable", "type": "str", "description": "Column to calculate variance for"}
             ],
@@ -113,6 +129,8 @@
             "description": "Calculate the variance of a column\n\nParameters:\n-----------\nvariable : str\n    Column to calculate variance for\nunbiased : bool, default=True\n    Whether to use the unbiased (sample) estimator\noutput_name : str, optional\n    Name for the output metric, defaults to 'var_{variable}'\n\nReturns:\n--------\nCallable\n    Function that calculates variance from a MetricsPipe"
         },
         "StandardDeviation": {
+            "category": "MetricsPipe",
+            "type_of_operation": "statistical_metrics",
             "required_params": [
                 {"name": "variable", "type": "str", "description": "Column to calculate standard deviation for"}
             ],
@@ -127,6 +145,8 @@
             "description": "Calculate the standard deviation of a column\n\nParameters:\n-----------\nvariable : str\n    Column to calculate standard deviation for\nunbiased : bool, default=True\n    Whether to use the unbiased (sample) estimator\noutput_name : str, optional\n    Name for the output metric, defaults to 'std_{variable}'\n\nReturns:\n--------\nCallable\n    Function that calculates standard deviation from a MetricsPipe"
         },
         "CV": {
+            "category": "MetricsPipe",
+            "type_of_operation": "statistical_metrics",
             "required_params": [
                 {"name": "variable", "type": "str", "description": "Column to calculate coefficient of variation for"}
             ],
@@ -141,6 +161,8 @@
             "description": "Calculate the coefficient of variation of a column\n\nParameters:\n-----------\nvariable : str\n    Column to calculate coefficient of variation for\nunbiased : bool, default=True\n    Whether to use the unbiased standard deviation\noutput_name : str, optional\n    Name for the output metric, defaults to 'cv_{variable}'\n\nReturns:\n--------\nCallable\n    Function that calculates coefficient of variation from a MetricsPipe"
         },
         "Correlation": {
+            "category": "MetricsPipe",
+            "type_of_operation": "statistical_metrics",
             "required_params": [
                 {"name": "variable1", "type": "str", "description": "First column name"},
                 {"name": "variable2", "type": "str", "description": "Second column name"}
@@ -155,6 +177,8 @@
             "description": "Calculate the Pearson correlation between two columns\n\nParameters:\n-----------\nvariable1 : str\n    First column name\nvariable2 : str\n    Second column name\noutput_name : str, optional\n    Name for the output metric, defaults to 'corr_{variable1}_{variable2}'\n\nReturns:\n--------\nCallable\n    Function that calculates correlation from a MetricsPipe"
         },
         "Cov": {
+            "category": "MetricsPipe",
+            "type_of_operation": "statistical_metrics",
             "required_params": [
                 {"name": "variable1", "type": "str", "description": "First column name"},
                 {"name": "variable2", "type": "str", "description": "Second column name"}
@@ -169,6 +193,8 @@
             "description": "Calculate the covariance between two columns\n\nParameters:\n-----------\nvariable1 : str\n    First column name\nvariable2 : str\n    Second column name\noutput_name : str, optional\n    Name for the output metric, defaults to 'cov_{variable1}_{variable2}'\n\nReturns:\n--------\nCallable\n    Function that calculates covariance from a MetricsPipe"
         },
         "Mean": {
+            "category": "MetricsPipe",
+            "type_of_operation": "basic_metrics",
             "required_params": [
                 {"name": "variable", "type": "str", "description": "Column name to calculate mean for"}
             ],
@@ -182,6 +208,8 @@
             "description": "Calculate the mean of a column\n\nParameters:\n-----------\nvariable : str\n    Column name to calculate mean for\noutput_name : str, optional\n    Name for the output metric, defaults to 'mean_{variable}'\n\nReturns:\n--------\nCallable\n    Function that calculates mean from a MetricsPipe"
         },
         "Median": {
+            "category": "MetricsPipe",
+            "type_of_operation": "basic_metrics",
             "required_params": [
                 {"name": "variable", "type": "str", "description": "Column name to calculate median for"}
             ],
@@ -195,6 +223,8 @@
             "description": "Calculate the median of a column\n\nParameters:\n-----------\nvariable : str\n    Column name to calculate median for\noutput_name : str, optional\n    Name for the output metric, defaults to 'median_{variable}'\n\nReturns:\n--------\nCallable\n    Function that calculates median from a MetricsPipe"
         },
         "Percentile": {
+            "category": "MetricsPipe",
+            "type_of_operation": "statistical_metrics",
             "required_params": [
                 {"name": "variable", "type": "str", "description": "Column name to calculate percentile for"},
                 {"name": "q", "type": "float", "description": "Percentile to calculate (0-100)"}
@@ -209,6 +239,8 @@
             "description": "Calculate the specified percentile of a column\n\nParameters:\n-----------\nvariable : str\n    Column name to calculate percentile for\nq : float\n    Percentile to calculate (0-100)\noutput_name : str, optional\n    Name for the output metric, defaults to 'pct{q}_{variable}'\n\nReturns:\n--------\nCallable\n    Function that calculates percentile from a MetricsPipe"
         },
         "PivotTable": {
+            "category": "MetricsPipe",
+            "type_of_operation": "data_aggregation",
             "required_params": [
                 {"name": "index", "type": "str or List[str]", "description": "Column(s) to use as index"}
             ],
@@ -226,6 +258,8 @@
             "description": "Create a pivot table from the data\n\nParameters:\n-----------\nindex : str or List[str]\n    Column(s) to use as index\ncolumns : str or List[str], optional\n    Column(s) to use as columns\nvalues : str or List[str], optional\n    Column(s) to aggregate\naggfunc : str or Dict, default='mean'\n    Aggregation function to use ('mean', 'sum', 'count', etc.)\nfill_value : Any, optional\n    Value to replace missing values with\noutput_name : str, optional\n    Name for the output pivot table\n\nReturns:\n--------\nCallable\n    Function that creates a pivot table from a MetricsPipe"
         },
         "GroupBy": {
+            "category": "MetricsPipe",
+            "type_of_operation": "data_aggregation",
             "required_params": [
                 {"name": "by", "type": "str or List[str]", "description": "Column(s) to group by"},
                 {"name": "agg_dict", "type": "Dict[str, Union[str, List[str]]]", "description": "Dictionary mapping columns to aggregation functions"}
@@ -240,6 +274,8 @@
             "description": "Group the data and apply aggregation functions\n\nParameters:\n-----------\nby : str or List[str]\n    Column(s) to group by\nagg_dict : Dict[str, Union[str, List[str]]]\n    Dictionary mapping columns to aggregation functions\noutput_name : str, optional\n    Name for the output grouped data\n\nReturns:\n--------\nCallable\n    Function that groups data from a MetricsPipe"
         },
         "Filter": {
+            "category": "MetricsPipe",
+            "type_of_operation": "data_filtering",
             "required_params": [
                 {"name": "condition", "type": "Callable", "description": "Function that takes a dataframe and returns a boolean mask"}
             ],
@@ -253,6 +289,8 @@
             "description": "Filter the dataframe based on a condition\n\nParameters:\n-----------\ncondition : Callable\n    Function that takes a dataframe and returns a boolean mask\noutput_name : str, optional\n    Name for the output filtered data\n\nReturns:\n--------\nCallable\n    Function that filters data from a MetricsPipe"
         },
         "CumulativeSum": {
+            "category": "MetricsPipe",
+            "type_of_operation": "time_series_metrics",
             "required_params": [
                 {"name": "variable", "type": "str", "description": "Column to calculate cumulative sum for"}
             ],
@@ -266,6 +304,8 @@
             "description": "Calculate the cumulative sum of a column\n\nParameters:\n-----------\nvariable : str\n    Column to calculate cumulative sum for\noutput_column : str, optional\n    Name for the output column, defaults to 'cum_sum_{variable}'\n\nReturns:\n--------\nCallable\n    Function that calculates cumulative sum from a MetricsPipe"
         },
         "RollingMetric": {
+            "category": "MetricsPipe",
+            "type_of_operation": "time_series_metrics",
             "required_params": [
                 {"name": "variable", "type": "str", "description": "Column to calculate rolling metric for"},
                 {"name": "window", "type": "int", "description": "Size of the rolling window"}
@@ -283,6 +323,8 @@
             "description": "Calculate a rolling metric on a column\n\nParameters:\n-----------\nvariable : str\n    Column to calculate rolling metric for\nwindow : int\n    Size of the rolling window\nfunction : str, default='mean'\n    Function to apply to the rolling window ('mean', 'sum', 'std', etc.)\nmin_periods : int, optional\n    Minimum number of observations required\ncenter : bool, default=False\n    Whether to set the labels at the center of the window\noutput_column : str, optional\n    Name for the output column\n\nReturns:\n--------\nCallable\n    Function that calculates rolling metric from a MetricsPipe"
         },
         "Execute": {
+            "category": "MetricsPipe",
+            "type_of_operation": "execution",
             "required_params": [],
             "optional_params": [],
             "outputs": {
@@ -292,6 +334,8 @@
             "description": "Execute the pipeline and return all calculated metrics\n\nReturns:\n--------\nCallable\n    Function that returns all metrics from a MetricsPipe"
         },
         "ShowPivot": {
+            "category": "MetricsPipe",
+            "type_of_operation": "display",
             "required_params": [],
             "optional_params": [
                 {"name": "pivot_name", "type": "str", "description": "Name of the pivot table to show (optional)"}
@@ -303,6 +347,8 @@
             "description": "Show a specific pivot table or the last created one\n\nParameters:\n-----------\npivot_name : str, optional\n    Name of the pivot table to show\n\nReturns:\n--------\nCallable\n    Function that returns a pivot table from a MetricsPipe"
         },
         "ShowDataFrame": {
+            "category": "MetricsPipe",
+            "type_of_operation": "display",
             "required_params": [],
             "optional_params": [],
             "outputs": {

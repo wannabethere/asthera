@@ -1,0 +1,162 @@
+[
+    {
+      "page_content": "{\"Question\": \"How do I initialize a moving aggregation pipeline with my pandas DataFrame?\", \"Context\": \"I have a pandas DataFrame with time series data and I want to perform moving average calculations on it.\", \"Code_Example\": \"import pandas as pd\\nfrom movingaverages import MovingAggrPipe\\n\\n# Load your data\\ntime_series_data = pd.read_csv('stock_data.csv')\\n\\n# Initialize the moving aggregation pipeline with your data\\nmoving_pipeline = MovingAggrPipe.from_dataframe(time_series_data)\\n\\n# Now the pipeline is ready for moving average calculations\\nprint(\\\"Pipeline initialized with data shape:\\\", moving_pipeline.data.shape)\", \"Usage\": \"MovingAggrPipe.from_dataframe(df)\"}",
+      "metadata": {
+        "function_name": "MovingAggrPipe.from_dataframe",
+        "src_type": "class_method",
+        "category": "initialization",
+        "example_id": 1,
+        "description": "Initialize a moving aggregation pipeline with a DataFrame"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate simple moving averages for my time series data?\", \"Context\": \"I have stock price data and want to calculate a 20-day simple moving average to identify trends.\", \"Code_Example\": \"from movingaverages import MovingAggrPipe, moving_average\\n\\n# Create pipeline with your data\\npipeline = MovingAggrPipe.from_dataframe(stock_df)\\n\\n# Calculate simple moving average\\nsma_results = pipeline | moving_average(\\n    columns='close_price',\\n    window=20,\\n    method='simple'\\n)\\n\\n# Check the results\\nprint(f\\\"Simple moving average calculated for {sma_results.data['close_price_ma'].notna().sum()} data points\\\")\\nprint(f\\\"Latest SMA: {sma_results.data['close_price_ma'].iloc[-1]:.2f}\\\")\\n\\n# Compare with original price\\nlatest_price = sma_results.data['close_price'].iloc[-1]\\nlatest_sma = sma_results.data['close_price_ma'].iloc[-1]\\nprint(f\\\"Current price: {latest_price:.2f}, 20-day SMA: {latest_sma:.2f}\\\")\", \"Usage\": \"moving_average(columns='close_price', window=20, method='simple')\"}",
+      "metadata": {
+        "function_name": "moving_average",
+        "src_type": "function",
+        "category": "basic_moving_averages",
+        "example_id": 2,
+        "description": "Calculate simple moving averages"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How can I calculate exponential and weighted moving averages for more responsive signals?\", \"Context\": \"I want to compare different moving average types - simple, exponential, and weighted - to see which responds faster to price changes.\", \"Code_Example\": \"from movingaverages import MovingAggrPipe, moving_average\\n\\n# Calculate different types of moving averages\\nma_comparison = pipeline | moving_average(\\n    columns='close_price',\\n    window=20,\\n    method='simple',\\n    output_suffix='_sma'\\n) | moving_average(\\n    columns='close_price',\\n    window=20,\\n    method='exponential',\\n    output_suffix='_ema'\\n) | moving_average(\\n    columns='close_price',\\n    window=20,\\n    method='weighted',\\n    output_suffix='_wma'\\n)\\n\\n# Compare responsiveness\\nprint(\\\"Moving Average Comparison:\\\")\\nprint(f\\\"Simple MA: {ma_comparison.data['close_price_sma'].iloc[-1]:.2f}\\\")\\nprint(f\\\"Exponential MA: {ma_comparison.data['close_price_ema'].iloc[-1]:.2f}\\\")\\nprint(f\\\"Weighted MA: {ma_comparison.data['close_price_wma'].iloc[-1]:.2f}\\\")\\n\\n# Calculate responsiveness (how much each MA changed in last 5 periods)\\nfor ma_type in ['sma', 'ema', 'wma']:\\n    col = f\\\"close_price_{ma_type}\\\"\\n    change = ma_comparison.data[col].iloc[-1] - ma_comparison.data[col].iloc[-6]\\n    print(f\\\"{ma_type.upper()} 5-period change: {change:.2f}\\\")\", \"Usage\": \"moving_average(columns='close_price', window=20, method='exponential', output_suffix='_ema')\"}",
+      "metadata": {
+        "function_name": "moving_average",
+        "src_type": "function",
+        "category": "advanced_moving_averages",
+        "example_id": 3,
+        "description": "Compare different moving average types"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate moving variance and standard deviation for volatility analysis?\", \"Context\": \"I want to analyze the volatility of my time series data using rolling variance and standard deviation.\", \"Code_Example\": \"from movingaverages import MovingAggrPipe, moving_variance\\n\\n# Calculate moving variance and standard deviation\\nvolatility_analysis = pipeline | moving_variance(\\n    columns=['close_price', 'volume'],\\n    window=30,\\n    var_suffix='_var',\\n    std_suffix='_std'\\n)\\n\\n# Check volatility metrics\\nprint(\\\"Volatility Analysis:\\\")\\nprint(f\\\"Price variance: {volatility_analysis.data['close_price_var'].iloc[-1]:.2f}\\\")\\nprint(f\\\"Price std dev: {volatility_analysis.data['close_price_std'].iloc[-1]:.2f}\\\")\\nprint(f\\\"Volume variance: {volatility_analysis.data['volume_var'].iloc[-1]:.2f}\\\")\\n\\n# Identify high volatility periods\\nhigh_volatility = volatility_analysis.data[volatility_analysis.data['close_price_std'] > volatility_analysis.data['close_price_std'].quantile(0.9)]\\nprint(f\\\"High volatility periods: {len(high_volatility)} data points\\\")\", \"Usage\": \"moving_variance(columns=['close_price', 'volume'], window=30, var_suffix='_var', std_suffix='_std')\"}",
+      "metadata": {
+        "function_name": "moving_variance",
+        "src_type": "function",
+        "category": "volatility_analysis",
+        "example_id": 4,
+        "description": "Calculate moving variance and standard deviation"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How can I calculate moving quantiles to understand data distribution over time?\", \"Context\": \"I want to track the 25th, 50th, and 75th percentiles of my data over time to understand how the distribution changes.\", \"Code_Example\": \"from movingaverages import MovingAggrPipe, moving_quantile\\n\\n# Calculate moving quantiles\\nquantile_analysis = pipeline | moving_quantile(\\n    columns='close_price',\\n    quantile=[0.25, 0.5, 0.75],\\n    window=60\\n)\\n\\n# Check the distribution metrics\\nprint(\\\"Moving Quantiles (60-day window):\\\")\\nprint(f\\\"25th percentile: {quantile_analysis.data['close_price_q0.25'].iloc[-1]:.2f}\\\")\\nprint(f\\\"50th percentile (median): {quantile_analysis.data['close_price_q0.5'].iloc[-1]:.2f}\\\")\\nprint(f\\\"75th percentile: {quantile_analysis.data['close_price_q0.75'].iloc[-1]:.2f}\\\")\\n\\n# Calculate interquartile range\\niqr = quantile_analysis.data['close_price_q0.75'].iloc[-1] - quantile_analysis.data['close_price_q0.25'].iloc[-1]\\nprint(f\\\"Interquartile Range: {iqr:.2f}\\\")\\n\\n# Identify outliers using IQR method\\ncurrent_price = quantile_analysis.data['close_price'].iloc[-1]\\nif current_price > quantile_analysis.data['close_price_q0.75'].iloc[-1] + 1.5 * iqr:\\n    print(\\\"Current price is above upper outlier threshold\\\")\", \"Usage\": \"moving_quantile(columns='close_price', quantile=[0.25, 0.5, 0.75], window=60)\"}",
+      "metadata": {
+        "function_name": "moving_quantile",
+        "src_type": "function",
+        "category": "distribution_analysis",
+        "example_id": 5,
+        "description": "Calculate moving quantiles for distribution analysis"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate moving correlations between different time series?\", \"Context\": \"I want to track how the correlation between stock price and volume changes over time.\", \"Code_Example\": \"from movingaverages import MovingAggrPipe, moving_correlation\\n\\n# Calculate moving correlation between price and volume\\ncorrelation_analysis = pipeline | moving_correlation(\\n    column_pairs=[('close_price', 'volume'), ('close_price', 'high_price')],\\n    window=30\\n)\\n\\n# Check correlation results\\nprint(\\\"Moving Correlations (30-day window):\\\")\\nprint(f\\\"Price-Volume correlation: {correlation_analysis.data['close_price_volume_corr'].iloc[-1]:.3f}\\\")\\nprint(f\\\"Price-High correlation: {correlation_analysis.data['close_price_high_price_corr'].iloc[-1]:.3f}\\\")\\n\\n# Identify periods of strong correlation\\nstrong_corr = correlation_analysis.data[abs(correlation_analysis.data['close_price_volume_corr']) > 0.7]\\nprint(f\\\"Periods with strong price-volume correlation: {len(strong_corr)} data points\\\")\\n\\n# Check correlation stability\\ncorr_std = correlation_analysis.data['close_price_volume_corr'].std()\\nprint(f\\\"Correlation stability (std dev): {corr_std:.3f}\\\")\", \"Usage\": \"moving_correlation(column_pairs=[('close_price', 'volume'), ('close_price', 'high_price')], window=30)\"}",
+      "metadata": {
+        "function_name": "moving_correlation",
+        "src_type": "function",
+        "category": "correlation_analysis",
+        "example_id": 6,
+        "description": "Calculate moving correlations between time series"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How can I calculate moving z-scores to identify unusual data points?\", \"Context\": \"I want to identify when my data points are unusually high or low relative to recent history using z-scores.\", \"Code_Example\": \"from movingaverages import MovingAggrPipe, moving_zscore\\n\\n# Calculate moving z-scores\\nzscore_analysis = pipeline | moving_zscore(\\n    columns=['close_price', 'volume'],\\n    window=30\\n)\\n\\n# Check current z-scores\\nprint(\\\"Current Z-Scores (30-day window):\\\")\\nprint(f\\\"Price z-score: {zscore_analysis.data['close_price_zscore'].iloc[-1]:.2f}\\\")\\nprint(f\\\"Volume z-score: {zscore_analysis.data['volume_zscore'].iloc[-1]:.2f}\\\")\\n\\n# Identify extreme values\\nextreme_price = abs(zscore_analysis.data['close_price_zscore'].iloc[-1]) > 2\\nextreme_volume = abs(zscore_analysis.data['volume_zscore'].iloc[-1]) > 2\\n\\nif extreme_price:\\n    print(\\\"Price is unusually high/low (>2 std devs from mean)\\\")\\nif extreme_volume:\\n    print(\\\"Volume is unusually high/low (>2 std devs from mean)\\\")\\n\\n# Count extreme events in last 100 periods\\nrecent_extremes = zscore_analysis.data.tail(100)\\nprice_extremes = (abs(recent_extremes['close_price_zscore']) > 2).sum()\\nprint(f\\\"Price extreme events in last 100 periods: {price_extremes}\\\")\", \"Usage\": \"moving_zscore(columns=['close_price', 'volume'], window=30)\"}",
+      "metadata": {
+        "function_name": "moving_zscore",
+        "src_type": "function",
+        "category": "outlier_detection",
+        "example_id": 7,
+        "description": "Calculate moving z-scores for outlier detection"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I detect turning points (peaks and troughs) in my time series data?\", \"Context\": \"I want to identify local peaks and troughs in my data to find potential reversal points.\", \"Code_Example\": \"from movingaverages import MovingAggrPipe, detect_turning_points\\n\\n# Detect turning points\\nturning_points = pipeline | detect_turning_points(\\n    columns='close_price',\\n    window=15,\\n    threshold=2.0  # Minimum 2% change to consider a turning point\\n)\\n\\n# Check turning point results\\npeaks = turning_points.data[turning_points.data['close_price_peak']]\\ntroughs = turning_points.data[turning_points.data['close_price_trough']]\\n\\nprint(f\\\"Peaks detected: {len(peaks)}\\\")\\nprint(f\\\"Troughs detected: {len(troughs)}\\\")\\n\\n# Show recent turning points\\nrecent_peaks = peaks.tail(5)[['timestamp', 'close_price']]\\nrecent_troughs = troughs.tail(5)[['timestamp', 'close_price']]\\n\\nprint(\\\"Recent peaks:\\\")\\nprint(recent_peaks)\\nprint(\\\"Recent troughs:\\\")\\nprint(recent_troughs)\\n\\n# Calculate average time between turning points\\nif len(peaks) > 1:\\n    peak_intervals = peaks['timestamp'].diff().dt.days.mean()\\n    print(f\\\"Average days between peaks: {peak_intervals:.1f}\\\")\", \"Usage\": \"detect_turning_points(columns='close_price', window=15, threshold=2.0)\"}",
+      "metadata": {
+        "function_name": "detect_turning_points",
+        "src_type": "function",
+        "category": "pattern_detection",
+        "example_id": 8,
+        "description": "Detect turning points (peaks and troughs)"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How can I calculate moving ratios between different metrics?\", \"Context\": \"I want to track the ratio of high price to low price over time to measure price volatility.\", \"Code_Example\": \"from movingaverages import MovingAggrPipe, moving_ratio\\n\\n# Calculate moving ratio of high to low price\\nratio_analysis = pipeline | moving_ratio(\\n    numerator_column='high_price',\\n    denominator_column='low_price',\\n    window=20,\\n    output_column='high_low_ratio'\\n)\\n\\n# Check the ratio results\\nprint(\\\"High-Low Price Ratio Analysis:\\\")\\nprint(f\\\"Current ratio: {ratio_analysis.data['high_low_ratio'].iloc[-1]:.3f}\\\")\\nprint(f\\\"Average ratio: {ratio_analysis.data['high_low_ratio'].mean():.3f}\\\")\\n\\n# Identify periods of high volatility (high ratio)\\nhigh_volatility = ratio_analysis.data[ratio_analysis.data['high_low_ratio'] > 1.05]\\nprint(f\\\"High volatility periods: {len(high_volatility)} data points\\\")\\n\\n# Calculate price efficiency ratio (close to high ratio)\\nefficiency_analysis = pipeline | moving_ratio(\\n    numerator_column='close_price',\\n    denominator_column='high_price',\\n    window=20,\\n    output_column='close_high_ratio'\\n)\\n\\nprint(f\\\"Current close/high ratio: {efficiency_analysis.data['close_high_ratio'].iloc[-1]:.3f}\\\")\", \"Usage\": \"moving_ratio(numerator_column='high_price', denominator_column='low_price', window=20, output_column='high_low_ratio')\"}",
+      "metadata": {
+        "function_name": "moving_ratio",
+        "src_type": "function",
+        "category": "ratio_analysis",
+        "example_id": 9,
+        "description": "Calculate moving ratios between metrics"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I calculate time-weighted averages for more recent data emphasis?\", \"Context\": \"I want to calculate moving averages that give more weight to recent observations using exponential decay.\", \"Code_Example\": \"from movingaverages import MovingAggrPipe, time_weighted_average\\n\\n# Calculate time-weighted average with exponential decay\\ntwa_analysis = pipeline | time_weighted_average(\\n    columns='close_price',\\n    window=30,\\n    decay_factor=0.9  # Higher values give more weight to recent data\\n)\\n\\n# Compare with simple moving average\\ncomparison = twa_analysis | moving_average(\\n    columns='close_price',\\n    window=30,\\n    method='simple',\\n    output_suffix='_sma'\\n)\\n\\nprint(\\\"Time-Weighted vs Simple Moving Average:\\\")\\nprint(f\\\"Time-weighted average: {comparison.data['close_price_twa'].iloc[-1]:.2f}\\\")\\nprint(f\\\"Simple moving average: {comparison.data['close_price_sma'].iloc[-1]:.2f}\\\")\\n\\n# Check responsiveness to recent changes\\nrecent_change = comparison.data['close_price'].iloc[-1] - comparison.data['close_price'].iloc[-5]\\ntwa_change = comparison.data['close_price_twa'].iloc[-1] - comparison.data['close_price_twa'].iloc[-5]\\nsma_change = comparison.data['close_price_sma'].iloc[-1] - comparison.data['close_price_sma'].iloc[-5]\\n\\nprint(f\\\"Recent price change: {recent_change:.2f}\\\")\\nprint(f\\\"TWA response: {twa_change:.2f}\\\")\\nprint(f\\\"SMA response: {sma_change:.2f}\\\")\", \"Usage\": \"time_weighted_average(columns='close_price', window=30, decay_factor=0.9)\"}",
+      "metadata": {
+        "function_name": "time_weighted_average",
+        "src_type": "function",
+        "category": "weighted_averages",
+        "example_id": 10,
+        "description": "Calculate time-weighted averages with exponential decay"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How can I apply custom aggregation functions to moving windows?\", \"Context\": \"I want to calculate custom statistics like skewness or kurtosis over moving windows to understand data distribution changes.\", \"Code_Example\": \"import numpy as np\\nfrom movingaverages import MovingAggrPipe, moving_aggregate\\n\\n# Define custom functions\\ndef custom_skewness(x):\\n    if len(x) < 3:\\n        return np.nan\\n    n = len(x)\\n    mean = np.mean(x)\\n    std = np.std(x, ddof=1)\\n    if std == 0:\\n        return 0\\n    return (np.sum((x - mean) ** 3) / n) / (std ** 3)\\n\\ndef custom_kurtosis(x):\\n    if len(x) < 4:\\n        return np.nan\\n    n = len(x)\\n    mean = np.mean(x)\\n    std = np.std(x, ddof=1)\\n    if std == 0:\\n        return 0\\n    return (np.sum((x - mean) ** 4) / n) / (std ** 4) - 3\\n\\n# Apply custom aggregations\\ncustom_analysis = pipeline | moving_aggregate(\\n    columns='close_price',\\n    function=custom_skewness,\\n    window=30,\\n    output_suffix='_skew'\\n) | moving_aggregate(\\n    columns='close_price',\\n    function=custom_kurtosis,\\n    window=30,\\n    output_suffix='_kurt'\\n)\\n\\nprint(\\\"Custom Distribution Metrics:\\\")\\nprint(f\\\"Current skewness: {custom_analysis.data['close_price_skew'].iloc[-1]:.3f}\\\")\\nprint(f\\\"Current kurtosis: {custom_analysis.data['close_price_kurt'].iloc[-1]:.3f}\\\")\\n\\n# Interpret the results\\nskew = custom_analysis.data['close_price_skew'].iloc[-1]\\nif abs(skew) > 0.5:\\n    direction = \\\"right-skewed\\\" if skew > 0 else \\\"left-skewed\\\"\\n    print(f\\\"Distribution is {direction}\\\")\", \"Usage\": \"moving_aggregate(columns='close_price', function=custom_skewness, window=30, output_suffix='_skew')\"}",
+      "metadata": {
+        "function_name": "moving_aggregate",
+        "src_type": "function",
+        "category": "custom_aggregations",
+        "example_id": 11,
+        "description": "Apply custom aggregation functions to moving windows"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I chain multiple moving average analyses together?\", \"Context\": \"I want to apply multiple moving average calculations in sequence to create a comprehensive technical analysis.\", \"Code_Example\": \"from movingaverages import (\\n    MovingAggrPipe, \\n    moving_average,\\n    moving_variance,\\n    moving_zscore,\\n    detect_turning_points\\n)\\n\\n# Chain multiple analyses together\\ncomprehensive_analysis = (\\n    MovingAggrPipe.from_dataframe(stock_data)\\n    | moving_average(\\n        columns='close_price',\\n        window=20,\\n        method='simple',\\n        output_suffix='_sma20'\\n    )\\n    | moving_average(\\n        columns='close_price',\\n        window=50,\\n        method='simple',\\n        output_suffix='_sma50'\\n    )\\n    | moving_variance(\\n        columns='close_price',\\n        window=30,\\n        std_suffix='_std30'\\n    )\\n    | moving_zscore(\\n        columns='close_price',\\n        window=30\\n    )\\n    | detect_turning_points(\\n        columns='close_price',\\n        window=15,\\n        threshold=1.5\\n    )\\n)\\n\\n# Check all calculated metrics\\nprint(\\\"Comprehensive Moving Average Analysis:\\\")\\nprint(f\\\"20-day SMA: {comprehensive_analysis.data['close_price_sma20'].iloc[-1]:.2f}\\\")\\nprint(f\\\"50-day SMA: {comprehensive_analysis.data['close_price_sma50'].iloc[-1]:.2f}\\\")\\nprint(f\\\"30-day Std Dev: {comprehensive_analysis.data['close_price_std30'].iloc[-1]:.2f}\\\")\\nprint(f\\\"Z-score: {comprehensive_analysis.data['close_price_zscore'].iloc[-1]:.2f}\\\")\\n\\n# Check for golden cross (20-day SMA crosses above 50-day SMA)\\ncurrent_20sma = comprehensive_analysis.data['close_price_sma20'].iloc[-1]\\ncurrent_50sma = comprehensive_analysis.data['close_price_sma50'].iloc[-1]\\nprev_20sma = comprehensive_analysis.data['close_price_sma20'].iloc[-2]\\nprev_50sma = comprehensive_analysis.data['close_price_sma50'].iloc[-2]\\n\\nif prev_20sma <= prev_50sma and current_20sma > current_50sma:\\n    print(\\\"Golden Cross detected!\\\")\", \"Usage\": \"MovingAggrPipe.from_dataframe(data) | moving_average(...) | moving_variance(...) | moving_zscore(...) | detect_turning_points(...)\"}",
+      "metadata": {
+        "function_name": "multiple",
+        "src_type": "pipeline",
+        "category": "combined_analysis",
+        "example_id": 12,
+        "description": "Chain multiple moving average analyses together"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I handle grouped data for moving averages across different categories?\", \"Context\": \"I have data from multiple stocks or sectors and want to calculate moving averages within each group separately.\", \"Code_Example\": \"from movingaverages import MovingAggrPipe, moving_average, moving_variance\\n\\n# Calculate moving averages separately for each stock\\ngrouped_analysis = pipeline | moving_average(\\n    columns='close_price',\\n    window=20,\\n    method='simple',\\n    group_columns=['stock_symbol', 'sector']\\n)\\n\\n# Check results by group\\nprint(\\\"Moving Averages by Stock and Sector:\\\")\\nfor group in grouped_analysis.data.groupby(['stock_symbol', 'sector']):\\n    stock, sector = group[0]\\n    group_data = group[1]\\n    latest_ma = group_data['close_price_ma'].iloc[-1]\\n    latest_price = group_data['close_price'].iloc[-1]\\n    print(f\\\"{stock} ({sector}): Price={latest_price:.2f}, 20-day MA={latest_ma:.2f}\\\")\\n\\n# Calculate volatility by sector\\nvolatility_by_sector = pipeline | moving_variance(\\n    columns='close_price',\\n    window=30,\\n    group_columns=['sector'],\\n    std_suffix='_std'\\n)\\n\\n# Compare sector volatility\\nsector_volatility = volatility_by_sector.data.groupby('sector')['close_price_std'].mean()\\nprint(\\\"\\\\nAverage volatility by sector:\\\")\\nprint(sector_volatility.sort_values(ascending=False))\", \"Usage\": \"moving_average(columns='close_price', window=20, method='simple', group_columns=['stock_symbol', 'sector'])\"}",
+      "metadata": {
+        "function_name": "moving_average",
+        "src_type": "function",
+        "category": "grouped_analysis",
+        "example_id": 13,
+        "description": "Handle grouped data for category-specific moving averages"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How can I create custom visualizations from moving average results?\", \"Context\": \"I want to create charts and plots to visualize the moving averages and their relationships with the original data.\", \"Code_Example\": \"import matplotlib.pyplot as plt\\nimport seaborn as sns\\nfrom movingaverages import MovingAggrPipe, moving_average, moving_variance\\n\\n# Run moving average analysis\\nresults = (\\n    MovingAggrPipe.from_dataframe(stock_data)\\n    | moving_average(\\n        columns='close_price',\\n        window=20,\\n        method='simple',\\n        output_suffix='_sma20'\\n    )\\n    | moving_average(\\n        columns='close_price',\\n        window=50,\\n        method='simple',\\n        output_suffix='_sma50'\\n    )\\n    | moving_variance(\\n        columns='close_price',\\n        window=30,\\n        std_suffix='_std'\\n    )\\n)\\n\\n# Create comprehensive visualization\\nfig, axes = plt.subplots(3, 1, figsize=(15, 12))\\n\\n# Plot 1: Price with moving averages\\naxes[0].plot(results.data['timestamp'], results.data['close_price'], alpha=0.7, label='Close Price')\\naxes[0].plot(results.data['timestamp'], results.data['close_price_sma20'], label='20-day SMA', linewidth=2)\\naxes[0].plot(results.data['timestamp'], results.data['close_price_sma50'], label='50-day SMA', linewidth=2)\\naxes[0].set_title('Stock Price with Moving Averages')\\naxes[0].legend()\\naxes[0].grid(True, alpha=0.3)\\n\\n# Plot 2: Volatility (standard deviation)\\naxes[1].plot(results.data['timestamp'], results.data['close_price_std'], color='orange')\\naxes[1].set_title('30-day Rolling Volatility')\\naxes[1].set_ylabel('Standard Deviation')\\naxes[1].grid(True, alpha=0.3)\\n\\n# Plot 3: Price relative to moving averages\\nprice_ratio_20 = results.data['close_price'] / results.data['close_price_sma20']\\nprice_ratio_50 = results.data['close_price'] / results.data['close_price_sma50']\\naxes[2].plot(results.data['timestamp'], price_ratio_20, label='Price/20-day SMA')\\naxes[2].plot(results.data['timestamp'], price_ratio_50, label='Price/50-day SMA')\\naxes[2].axhline(y=1, color='black', linestyle='--', alpha=0.5)\\naxes[2].set_title('Price Relative to Moving Averages')\\naxes[2].set_ylabel('Ratio')\\naxes[2].legend()\\naxes[2].grid(True, alpha=0.3)\\n\\nplt.tight_layout()\\nplt.savefig('moving_average_analysis.png', dpi=300, bbox_inches='tight')\\nplt.show()\\n\\n# Create correlation heatmap of moving averages\\nma_columns = ['close_price_sma20', 'close_price_sma50', 'close_price_std']\\ncorrelation_matrix = results.data[ma_columns].corr()\\n\\nplt.figure(figsize=(8, 6))\\nsns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', center=0)\\nplt.title('Moving Average Correlations')\\nplt.show()\", \"Usage\": \"plt.plot(results.data['timestamp'], results.data['close_price']); plt.plot(results.data['timestamp'], results.data['close_price_sma20'], label='20-day SMA')\"}",
+      "metadata": {
+        "function_name": "multiple",
+        "src_type": "visualization",
+        "category": "advanced_usage",
+        "example_id": 14,
+        "description": "Create custom visualizations for moving average results"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I get a summary of my moving average calculations?\", \"Context\": \"After running multiple moving average analyses, I want to understand the overall results and key statistics.\", \"Code_Example\": \"from movingaverages import MovingAggrPipe, moving_average, moving_variance, moving_zscore\\n\\n# Run comprehensive moving average analysis\\nanalysis = (\\n    MovingAggrPipe.from_dataframe(stock_data)\\n    | moving_average(columns='close_price', window=20, method='simple')\\n    | moving_variance(columns='close_price', window=30)\\n    | moving_zscore(columns='close_price', window=30)\\n)\\n\\n# Get summary of moving metrics\\nprint(\\\"Moving Average Analysis Summary:\\\")\\nfor metric_name, metric_info in analysis.moving_metrics.items():\\n    print(f\\\"- {metric_name}: {metric_info['type']} (columns: {metric_info.get('columns', 'N/A')})\\\")\\n\\n# Get summary statistics for calculated metrics\\nsummary_stats = analysis.data[['close_price_ma', 'close_price_var', 'close_price_std', 'close_price_zscore']].describe()\\nprint(\\\"\\\\nSummary Statistics:\\\")\\nprint(summary_stats)\\n\\n# Check data quality\\ntotal_points = len(analysis.data)\\nvalid_ma = analysis.data['close_price_ma'].notna().sum()\\nvalid_var = analysis.data['close_price_var'].notna().sum()\\nvalid_zscore = analysis.data['close_price_zscore'].notna().sum()\\n\\nprint(f\\\"\\\\nData Quality:\\\")\\nprint(f\\\"Total data points: {total_points}\\\")\\nprint(f\\\"Valid MA values: {valid_ma} ({valid_ma/total_points*100:.1f}%)\\\")\\nprint(f\\\"Valid variance values: {valid_var} ({valid_var/total_points*100:.1f}%)\\\")\\nprint(f\\\"Valid z-score values: {valid_zscore} ({valid_zscore/total_points*100:.1f}%)\\\")\\n\\n# Get current values\\nprint(f\\\"\\\\nCurrent Values:\\\")\\nprint(f\\\"Price: {analysis.data['close_price'].iloc[-1]:.2f}\\\")\\nprint(f\\\"20-day MA: {analysis.data['close_price_ma'].iloc[-1]:.2f}\\\")\\nprint(f\\\"30-day Std Dev: {analysis.data['close_price_std'].iloc[-1]:.2f}\\\")\\nprint(f\\\"Z-score: {analysis.data['close_price_zscore'].iloc[-1]:.2f}\\\")\", \"Usage\": \"analysis.moving_metrics for metric summary; analysis.data.describe() for statistics\"}",
+      "metadata": {
+        "function_name": "multiple",
+        "src_type": "summary",
+        "category": "analysis_summary",
+        "example_id": 15,
+        "description": "Get comprehensive summary of moving average results"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How can I use moving averages for trading signal generation?\", \"Context\": \"I want to create trading signals based on moving average crossovers and other technical indicators.\", \"Code_Example\": \"from movingaverages import MovingAggrPipe, moving_average, moving_variance\\n\\n# Create trading signal analysis\\ntrading_signals = (\\n    MovingAggrPipe.from_dataframe(stock_data)\\n    | moving_average(\\n        columns='close_price',\\n        window=10,\\n        method='simple',\\n        output_suffix='_fast'\\n    )\\n    | moving_average(\\n        columns='close_price',\\n        window=30,\\n        method='simple',\\n        output_suffix='_slow'\\n    )\\n    | moving_variance(\\n        columns='close_price',\\n        window=20,\\n        std_suffix='_volatility'\\n    )\\n)\\n\\n# Generate trading signals\\ndata = trading_signals.data\\ndata['signal'] = 0\\n\\n# Golden cross (fast MA crosses above slow MA)\\ngolden_cross = (data['close_price_fast'] > data['close_price_slow']) & \\n               (data['close_price_fast'].shift(1) <= data['close_price_slow'].shift(1))\\ndata.loc[golden_cross, 'signal'] = 1\\n\\n# Death cross (fast MA crosses below slow MA)\\ndeath_cross = (data['close_price_fast'] < data['close_price_slow']) & \\n              (data['close_price_fast'].shift(1) >= data['close_price_slow'].shift(1))\\ndata.loc[death_cross, 'signal'] = -1\\n\\n# Volatility-based filter\\nlow_volatility = data['close_price_volatility'] < data['close_price_volatility'].quantile(0.3)\\ndata.loc[low_volatility, 'signal'] = 0\\n\\n# Check recent signals\\nrecent_signals = data[data['signal'] != 0].tail(10)\\nprint(\\\"Recent Trading Signals:\\\")\\nfor idx, row in recent_signals.iterrows():\\n    signal_type = \\\"BUY\\\" if row['signal'] == 1 else \\\"SELL\\\"\\n    print(f\\\"{row['timestamp']}: {signal_type} signal at {row['close_price']:.2f}\\\")\\n\\n# Calculate signal performance\\ntotal_signals = (data['signal'] != 0).sum()\\nbuy_signals = (data['signal'] == 1).sum()\\nsell_signals = (data['signal'] == -1).sum()\\n\\nprint(f\\\"\\\\nSignal Summary:\\\")\\nprint(f\\\"Total signals: {total_signals}\\\")\\nprint(f\\\"Buy signals: {buy_signals}\\\")\\nprint(f\\\"Sell signals: {sell_signals}\\\")\", \"Usage\": \"moving_average(columns='close_price', window=10, method='simple', output_suffix='_fast') | moving_average(columns='close_price', window=30, method='simple', output_suffix='_slow')\"}",
+      "metadata": {
+        "function_name": "multiple",
+        "src_type": "trading",
+        "category": "advanced_usage",
+        "example_id": 16,
+        "description": "Use moving averages for trading signal generation"
+      }
+    }
+] 

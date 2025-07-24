@@ -1,6 +1,8 @@
 {
     "functions": {
         "PercentChange": {
+            "category": "OperationsPipe",
+            "type_of_operation": "basic_comparison",
             "required_params": [
                 {"name": "condition_column", "type": "str", "description": "Column containing the condition values"},
                 {"name": "baseline", "type": "str", "description": "The baseline value to compare against"}
@@ -15,6 +17,8 @@
             "description": "Compute the percent change (other - baseline) / baseline\n\nParameters:\n-----------\ncondition_column : str\n    Column containing the condition values\nbaseline : str\n    The baseline value to compare against\noutput_name : str, optional\n    Name for the output operation, defaults to 'pct_change_{condition_column}_vs_{baseline}'\n\nReturns:\n--------\nCallable\n    Function that calculates percent change from an OperationsPipe"
         },
         "AbsoluteChange": {
+            "category": "OperationsPipe",
+            "type_of_operation": "basic_comparison",
             "required_params": [
                 {"name": "condition_column", "type": "str", "description": "Column containing the condition values"},
                 {"name": "baseline", "type": "str", "description": "The baseline value to compare against"}
@@ -29,6 +33,8 @@
             "description": "Compute the absolute change (other - baseline)\n\nParameters:\n-----------\ncondition_column : str\n    Column containing the condition values\nbaseline : str\n    The baseline value to compare against\noutput_name : str, optional\n    Name for the output operation, defaults to 'abs_change_{condition_column}_vs_{baseline}'\n\nReturns:\n--------\nCallable\n    Function that calculates absolute change from an OperationsPipe"
         },
         "MH": {
+            "category": "OperationsPipe",
+            "type_of_operation": "advanced_comparison",
             "required_params": [
                 {"name": "condition_column", "type": "str", "description": "Column containing the condition values"},
                 {"name": "baseline", "type": "str", "description": "The baseline value to compare against"},
@@ -44,6 +50,8 @@
             "description": "Compute the Mantel-Haenszel estimator\n\nParameters:\n-----------\ncondition_column : str\n    Column containing the condition values\nbaseline : str\n    The baseline value to compare against\nstratified_by : str or List[str]\n    Column(s) to stratify by when computing the MH estimator\noutput_name : str, optional\n    Name for the output operation, defaults to 'mh_{condition_column}_vs_{baseline}'\n\nReturns:\n--------\nCallable\n    Function that calculates Mantel-Haenszel estimate from an OperationsPipe"
         },
         "CUPED": {
+            "category": "OperationsPipe",
+            "type_of_operation": "covariate_adjustment",
             "required_params": [
                 {"name": "condition_column", "type": "str", "description": "Column containing the condition values"},
                 {"name": "baseline", "type": "str", "description": "The baseline value to compare against"},
@@ -60,6 +68,8 @@
             "description": "Compute the absolute change adjusted using the CUPED approach\n\nParameters:\n-----------\ncondition_column : str\n    Column containing the condition values\nbaseline : str\n    The baseline value to compare against\ncovariates : str or List[str]\n    Column(s) to use as covariates for adjustment\nstratified_by : str or List[str], optional\n    Column(s) to stratify by when computing the adjustment\noutput_name : str, optional\n    Name for the output operation, defaults to 'cuped_{condition_column}_vs_{baseline}'\n\nReturns:\n--------\nCallable\n    Function that calculates CUPED adjustment from an OperationsPipe"
         },
         "PrePostChange": {
+            "category": "OperationsPipe",
+            "type_of_operation": "covariate_adjustment",
             "required_params": [
                 {"name": "condition_column", "type": "str", "description": "Column containing the condition values"},
                 {"name": "baseline", "type": "str", "description": "The baseline value to compare against"},
@@ -76,6 +86,8 @@
             "description": "Compute the percent change adjusted using the PrePost approach\n\nParameters:\n-----------\ncondition_column : str\n    Column containing the condition values\nbaseline : str\n    The baseline value to compare against\ncovariates : str or List[str]\n    Column(s) to use as pre-treatment covariates\nstratified_by : str or List[str], optional\n    Column(s) to stratify by when computing the adjustment\noutput_name : str, optional\n    Name for the output operation, defaults to 'prepost_{condition_column}_vs_{baseline}'\n\nReturns:\n--------\nCallable\n    Function that calculates PrePost adjustment from an OperationsPipe"
         },
         "FilterConditions": {
+            "category": "OperationsPipe",
+            "type_of_operation": "data_filtering",
             "required_params": [
                 {"name": "conditions", "type": "List[str]", "description": "List of condition values to keep"}
             ],
@@ -89,6 +101,8 @@
             "description": "Filter the data to include only specified conditions\n\nParameters:\n-----------\nconditions : List[str]\n    List of condition values to keep\noutput_name : str, optional\n    Name for the output operation, defaults to 'filtered_conditions'\n\nReturns:\n--------\nCallable\n    Function that filters conditions from an OperationsPipe"
         },
         "PowerAnalysis": {
+            "category": "OperationsPipe",
+            "type_of_operation": "statistical_analysis",
             "required_params": [
                 {"name": "condition_column", "type": "str", "description": "Column containing the condition values"},
                 {"name": "baseline", "type": "str", "description": "The baseline value to compare against"},
@@ -106,6 +120,8 @@
             "description": "Perform power analysis to determine sample size requirements\n\nParameters:\n-----------\ncondition_column : str\n    Column containing the condition values\nbaseline : str\n    The baseline value to compare against\nmetric_column : str\n    The metric to analyze\nalpha : float, default=0.05\n    Significance level\npower : float, default=0.8\n    Desired statistical power\noutput_name : str, optional\n    Name for the output operation, defaults to 'power_analysis_{metric_column}'\n\nReturns:\n--------\nCallable\n    Function that performs power analysis from an OperationsPipe"
         },
         "StratifiedSummary": {
+            "category": "OperationsPipe",
+            "type_of_operation": "data_summarization",
             "required_params": [
                 {"name": "condition_column", "type": "str", "description": "Column containing the condition values"},
                 {"name": "stratified_by", "type": "str or List[str]", "description": "Column(s) to stratify by"}
@@ -121,6 +137,8 @@
             "description": "Create a summary of metrics stratified by specified columns\n\nParameters:\n-----------\ncondition_column : str\n    Column containing the condition values\nstratified_by : str or List[str]\n    Column(s) to stratify by\nmetrics : List[str], optional\n    List of metric columns to include (if None, all numeric columns are used)\noutput_name : str, optional\n    Name for the output operation, defaults to 'stratified_summary'\n\nReturns:\n--------\nCallable\n    Function that creates a stratified summary from an OperationsPipe"
         },
         "BootstrapCI": {
+            "category": "OperationsPipe",
+            "type_of_operation": "statistical_analysis",
             "required_params": [
                 {"name": "condition_column", "type": "str", "description": "Column containing the condition values"},
                 {"name": "baseline", "type": "str", "description": "The baseline value to compare against"},
@@ -139,6 +157,8 @@
             "description": "Calculate bootstrap confidence intervals for the difference in means\n\nParameters:\n-----------\ncondition_column : str\n    Column containing the condition values\nbaseline : str\n    The baseline value to compare against\nmetric_column : str\n    The metric to analyze\nconfidence : float, default=0.95\n    Confidence level for the intervals\nn_bootstraps : int, default=1000\n    Number of bootstrap samples to generate\nstratified_by : str or List[str], optional\n    Column(s) to stratify by when computing the intervals\noutput_name : str, optional\n    Name for the output operation, defaults to 'bootstrap_ci_{metric_column}'\n\nReturns:\n--------\nCallable\n    Function that calculates bootstrap CIs from an OperationsPipe"
         },
         "MultiComparisonAdjustment": {
+            "category": "OperationsPipe",
+            "type_of_operation": "statistical_analysis",
             "required_params": [
                 {"name": "p_value_column", "type": "str", "description": "Column containing the p-values to adjust"}
             ],
@@ -153,6 +173,8 @@
             "description": "Apply multiple comparison adjustment to p-values\n\nParameters:\n-----------\np_value_column : str\n    Column containing the p-values to adjust\nmethod : str, default='bonferroni'\n    Method to use for adjustment ('bonferroni', 'fdr', 'sidak')\noutput_name : str, optional\n    Name for the output operation, defaults to 'adjusted_{method}'\n\nReturns:\n--------\nCallable\n    Function that adjusts p-values from an OperationsPipe"
         },
         "ExecuteOperations": {
+            "category": "OperationsPipe",
+            "type_of_operation": "execution",
             "required_params": [],
             "optional_params": [],
             "outputs": {

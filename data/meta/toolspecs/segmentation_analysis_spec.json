@@ -1,6 +1,8 @@
 {
     "functions": {
         "get_features": {
+            "category": "SegmentationPipe",
+            "type_of_operation": "feature_preparation",
             "required_params": [],
             "optional_params": [
                 {"name": "columns", "type": "List[str]", "description": "List of column names to use as features. If None, all numeric columns will be used (optional)"},
@@ -15,6 +17,8 @@
             "description": "Extract features from dataframe for segmentation\n\nParameters:\n-----------\ncolumns : List[str], optional\n    List of column names to use as features\n    If None, all numeric columns will be used\nid_column : str, optional\n    Column containing IDs to exclude from features\nhandle_missing : bool, default=True\n    Whether to handle missing values\nscale_features : bool, default=True\n    Whether to scale features\n\nReturns:\n--------\nCallable\n    Function that extracts features from a SegmentationPipe"
         },
         "run_kmeans": {
+            "category": "SegmentationPipe",
+            "type_of_operation": "clustering_algorithm",
             "required_params": [],
             "optional_params": [
                 {"name": "n_clusters", "type": "int", "description": "Number of clusters (default: 5)"},
@@ -30,6 +34,8 @@
             "description": "Run KMeans clustering for segmentation\n\nParameters:\n-----------\nn_clusters : int, default=5\n    Number of clusters\nmax_clusters : int, default=10\n    Maximum number of clusters to try if find_optimal=True\nfind_optimal : bool, default=False\n    Whether to find the optimal number of clusters using silhouette score\nrandom_state : int, default=42\n    Random state for reproducibility\nsegment_name : str, default='kmeans'\n    Name to use for this segmentation\n\nReturns:\n--------\nCallable\n    Function that performs KMeans segmentation in a SegmentationPipe"
         },
         "run_dbscan": {
+            "category": "SegmentationPipe",
+            "type_of_operation": "clustering_algorithm",
             "required_params": [],
             "optional_params": [
                 {"name": "eps", "type": "float", "description": "The maximum distance between two samples for one to be considered as neighbors (default: 0.5)"},
@@ -43,6 +49,8 @@
             "description": "Run DBSCAN clustering for segmentation\n\nParameters:\n-----------\neps : float, default=0.5\n    The maximum distance between two samples for one to be considered as neighbors\nmin_samples : int, default=5\n    The number of samples in a neighborhood for a point to be considered a core point\nsegment_name : str, default='dbscan'\n    Name to use for this segmentation\n\nReturns:\n--------\nCallable\n    Function that performs DBSCAN segmentation in a SegmentationPipe"
         },
         "run_hierarchical": {
+            "category": "SegmentationPipe",
+            "type_of_operation": "clustering_algorithm",
             "required_params": [],
             "optional_params": [
                 {"name": "n_clusters", "type": "int", "description": "Number of clusters (default: 5)"},
@@ -56,6 +64,8 @@
             "description": "Run Hierarchical (Agglomerative) clustering for segmentation\n\nParameters:\n-----------\nn_clusters : int, default=5\n    Number of clusters\nlinkage : str, default='ward'\n    Linkage method ('ward', 'complete', 'average', 'single')\nsegment_name : str, default='hierarchical'\n    Name to use for this segmentation\n\nReturns:\n--------\nCallable\n    Function that performs hierarchical segmentation in a SegmentationPipe"
         },
         "run_rule_based": {
+            "category": "SegmentationPipe",
+            "type_of_operation": "rule_based_segmentation",
             "required_params": [
                 {"name": "rules", "type": "Dict[str, Dict]", "description": "Dictionary with segment names as keys and rule conditions as values. Example: {'high_value': {'spending': ('>', 100), 'frequency': ('>', 10)}, 'medium_value': {'spending': ('between', 50, 100)}}"}
             ],
@@ -69,6 +79,8 @@
             "description": "Run rule-based segmentation\n\nParameters:\n-----------\nrules : Dict[str, Dict]\n    Dictionary with segment names as keys and rule conditions as values\n    Example: {\n        'high_value': {'spending': ('>', 100), 'frequency': ('>', 10)},\n        'medium_value': {'spending': ('between', 50, 100)}\n    }\nsegment_name : str, default='rule_based'\n    Name to use for this segmentation\n\nReturns:\n--------\nCallable\n    Function that performs rule-based segmentation in a SegmentationPipe"
         },
         "generate_summary": {
+            "category": "SegmentationPipe",
+            "type_of_operation": "analysis_summary",
             "required_params": [],
             "optional_params": [
                 {"name": "algorithm", "type": "str", "description": "Name of the segmentation algorithm to summarize. If None, uses the current analysis (optional)"}
@@ -80,6 +92,8 @@
             "description": "Generate summary statistics for segments\n\nParameters:\n-----------\nalgorithm : str, optional\n    Name of the segmentation algorithm to summarize\n    If None, uses the current analysis\n\nReturns:\n--------\nCallable\n    Function that generates summary statistics in a SegmentationPipe"
         },
         "get_segment_data": {
+            "category": "SegmentationPipe",
+            "type_of_operation": "data_extraction",
             "required_params": [
                 {"name": "segment_id", "type": "Any", "description": "ID of the segment to extract"}
             ],
@@ -93,6 +107,8 @@
             "description": "Get data for a specific segment\n\nParameters:\n-----------\nsegment_id : Any\n    ID of the segment to extract\nalgorithm : str, optional\n    Name of the segmentation algorithm to use\n    If None, uses the current analysis\n\nReturns:\n--------\nCallable\n    Function that extracts segment data from a SegmentationPipe"
         },
         "compare_algorithms": {
+            "category": "SegmentationPipe",
+            "type_of_operation": "algorithm_comparison",
             "required_params": [],
             "optional_params": [],
             "outputs": {
@@ -102,6 +118,8 @@
             "description": "Compare all segmentation algorithms\n\nReturns:\n--------\nCallable\n    Function that compares segmentation algorithms in a SegmentationPipe"
         },
         "custom_calculation": {
+            "category": "SegmentationPipe",
+            "type_of_operation": "custom_analysis",
             "required_params": [
                 {"name": "func", "type": "Callable", "description": "A function that takes a DataFrame and returns a DataFrame"}
             ],
