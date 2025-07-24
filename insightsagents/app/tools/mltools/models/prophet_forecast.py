@@ -504,6 +504,15 @@ def make_forecast(
         # Create future dataframe
         future = model.make_future_dataframe(periods=periods, freq=freq, include_history=include_history)
         
+        # Add capacity column for logistic growth if needed
+        if model.growth == 'logistic':
+            if 'cap' in new_pipe.data.columns:
+                # Use the same capacity value for all future periods
+                cap_value = new_pipe.data['cap'].iloc[-1]  # Use last historical capacity value
+                future['cap'] = cap_value
+            else:
+                raise ValueError("Logistic growth requires 'cap' column in data")
+        
         # Add regressor values for future periods if needed
         if new_pipe.regressors:
             warnings.warn("Future regressor values needed for forecasting with regressors. "
@@ -513,10 +522,9 @@ def make_forecast(
         forecast = model.predict(future)
         
         # Store forecast
-        if forecast_name is None:
-            forecast_name = f'{model_name}_forecast'
+        final_forecast_name = forecast_name if forecast_name is not None else f'{model_name}_forecast'
         
-        new_pipe.forecasts[forecast_name] = {
+        new_pipe.forecasts[final_forecast_name] = {
             'forecast': forecast,
             'model_name': model_name,
             'periods': periods,
@@ -524,7 +532,7 @@ def make_forecast(
             'include_history': include_history
         }
         
-        new_pipe.current_analysis = f'forecast_{forecast_name}'
+        new_pipe.current_analysis = f'forecast_{final_forecast_name}'
         
         return new_pipe
     
@@ -572,6 +580,15 @@ def forecast_with_regressors(
         # Create future dataframe
         future = model.make_future_dataframe(periods=periods, freq=freq, include_history=include_history)
         
+        # Add capacity column for logistic growth if needed
+        if model.growth == 'logistic':
+            if 'cap' in new_pipe.data.columns:
+                # Use the same capacity value for all future periods
+                cap_value = new_pipe.data['cap'].iloc[-1]  # Use last historical capacity value
+                future['cap'] = cap_value
+            else:
+                raise ValueError("Logistic growth requires 'cap' column in data")
+        
         # Add future regressor values
         if include_history:
             # Get historical regressor values
@@ -597,10 +614,9 @@ def forecast_with_regressors(
         forecast = model.predict(future)
         
         # Store forecast
-        if forecast_name is None:
-            forecast_name = f'{model_name}_forecast_with_regressors'
+        final_forecast_name = forecast_name if forecast_name is not None else f'{model_name}_forecast_with_regressors'
         
-        new_pipe.forecasts[forecast_name] = {
+        new_pipe.forecasts[final_forecast_name] = {
             'forecast': forecast,
             'model_name': model_name,
             'periods': periods,
@@ -609,7 +625,7 @@ def forecast_with_regressors(
             'regressor_future_values': regressor_future_values
         }
         
-        new_pipe.current_analysis = f'forecast_{forecast_name}'
+        new_pipe.current_analysis = f'forecast_{final_forecast_name}'
         
         return new_pipe
     
@@ -671,10 +687,9 @@ def cross_validate_model(
         df_p = performance_metrics(df_cv)
         
         # Store results
-        if cv_name is None:
-            cv_name = f'{model_name}_cv'
+        final_cv_name = cv_name if cv_name is not None else f'{model_name}_cv'
         
-        new_pipe.cross_validation_results[cv_name] = {
+        new_pipe.cross_validation_results[final_cv_name] = {
             'cv_results': df_cv,
             'performance_metrics': df_p,
             'initial': initial,
@@ -682,7 +697,7 @@ def cross_validate_model(
             'horizon': horizon
         }
         
-        new_pipe.current_analysis = f'cross_validate_{cv_name}'
+        new_pipe.current_analysis = f'cross_validate_{final_cv_name}'
         
         return new_pipe
     
@@ -722,9 +737,9 @@ def calculate_forecast_metrics(
         # Get actual data
         if cutoff_date:
             cutoff = pd.to_datetime(cutoff_date)
-            actual_data = new_pipe.original_data[new_pipe.original_data['ds'] > cutoff]
+            actual_data = new_pipe.data[new_pipe.data['ds'] > cutoff]
         else:
-            actual_data = new_pipe.original_data
+            actual_data = new_pipe.data
         
         # Merge forecast with actual
         merged = pd.merge(
@@ -841,18 +856,54 @@ def plot_forecast(
         
         model = pipe.models[model_name]
         
-        # Plot forecast
-        fig1 = model.plot(forecast_df, figsize=figsize)
-        plt.title(f'Forecast: {forecast_name}')
-        plt.tight_layout()
-        plt.show()
+        # Plot forecast with error handling
+        try:
+            fig1 = model.plot(forecast_df, figsize=figsize)
+            plt.title(f'Forecast: {forecast_name}')
+            plt.tight_layout()
+            plt.show()
+        except Exception as e:
+            print(f"Warning: Prophet plotting failed with error: {e}")
+            print("Creating custom forecast plot...")
+            
+            # Create custom plot
+            plt.figure(figsize=figsize)
+            
+            # Plot historical data
+            if 'y' in forecast_df.columns:
+                historical_mask = ~forecast_df['y'].isna()
+                plt.plot(forecast_df.loc[historical_mask, 'ds'], 
+                        forecast_df.loc[historical_mask, 'y'], 
+                        'ko', markersize=3, label='Historical')
+            
+            # Plot forecast
+            plt.plot(forecast_df['ds'], forecast_df['yhat'], 'b-', label='Forecast')
+            
+            # Plot confidence intervals
+            if 'yhat_lower' in forecast_df.columns and 'yhat_upper' in forecast_df.columns:
+                plt.fill_between(forecast_df['ds'], 
+                               forecast_df['yhat_lower'], 
+                               forecast_df['yhat_upper'], 
+                               alpha=0.3, color='blue', label='Confidence Interval')
+            
+            plt.title(f'Forecast: {forecast_name}')
+            plt.xlabel('Date')
+            plt.ylabel('Value')
+            plt.legend()
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            plt.show()
         
         # Plot components if requested
         if show_components:
-            fig2 = model.plot_components(forecast_df, figsize=(12, 8))
-            plt.suptitle(f'Forecast Components: {forecast_name}')
-            plt.tight_layout()
-            plt.show()
+            try:
+                fig2 = model.plot_components(forecast_df, figsize=(12, 8))
+                plt.suptitle(f'Forecast Components: {forecast_name}')
+                plt.tight_layout()
+                plt.show()
+            except Exception as e:
+                print(f"Warning: Prophet component plotting failed with error: {e}")
+                print("Skipping component plot...")
         
         return pipe
     
@@ -888,11 +939,33 @@ def plot_cross_validation(
         cv_data = pipe.cross_validation_results[cv_name]
         df_p = cv_data['performance_metrics']
         
-        # Plot cross-validation metric
-        fig = plot_cross_validation_metric(cv_data['cv_results'], metric=metric, figsize=figsize)
-        plt.title(f'Cross-Validation {metric.upper()}: {cv_name}')
-        plt.tight_layout()
-        plt.show()
+        # Plot cross-validation metric with error handling
+        try:
+            fig = plot_cross_validation_metric(cv_data['cv_results'], metric=metric, figsize=figsize)
+            plt.title(f'Cross-Validation {metric.upper()}: {cv_name}')
+            plt.tight_layout()
+            plt.show()
+        except Exception as e:
+            print(f"Warning: Prophet cross-validation plotting failed with error: {e}")
+            print("Creating custom cross-validation plot...")
+            
+            # Create custom plot
+            plt.figure(figsize=figsize)
+            
+            # Plot metric over time
+            cv_results = cv_data['cv_results']
+            if metric in cv_results.columns:
+                plt.plot(cv_results['ds'], cv_results[metric], 'b-', marker='o', markersize=3)
+                plt.title(f'Cross-Validation {metric.upper()}: {cv_name}')
+                plt.xlabel('Date')
+                plt.ylabel(metric.upper())
+                plt.xticks(rotation=45)
+                plt.grid(True, alpha=0.3)
+                plt.tight_layout()
+                plt.show()
+            else:
+                print(f"Metric '{metric}' not found in cross-validation results.")
+                print(f"Available metrics: {list(cv_results.columns)}")
         
         return pipe
     

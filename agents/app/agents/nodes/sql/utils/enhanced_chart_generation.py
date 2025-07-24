@@ -401,6 +401,10 @@ class EnhancedChartDataPreprocessor:
                 
                 # Suggest chart types based on data analysis
                 suggested_charts = self._suggest_chart_types(columns, data_types, sample_data)
+                logger.info(f"Suggested chart types: {suggested_charts}")
+                logger.info(f"Columns: {columns}")
+                logger.info(f"Data types: {data_types}")
+                logger.info(f"Sample data length: {len(sample_data)}")
             
             return {
                 "sample_data": sample_data,
@@ -466,7 +470,41 @@ class EnhancedChartDataPreprocessor:
         for col_type in data_types.values():
             type_counts[col_type] = type_counts.get(col_type, 0) + 1
         
-        # Suggest based on data type combinations
+        # PRIORITY: Check for single values or small KPI datasets first
+        logger.info(f"Checking for single values: columns={len(columns)}, quantitative_count={type_counts.get('quantitative', 0)}")
+        
+        # Check for all zero values
+        all_zero_values = False
+        if sample_data:
+            numeric_values = []
+            for row in sample_data:
+                for key, value in row.items():
+                    if data_types.get(key) == "quantitative":
+                        try:
+                            if isinstance(value, str):
+                                clean_value = value.replace(',', '').replace('$', '').replace('%', '')
+                                numeric_values.append(float(clean_value))
+                            else:
+                                numeric_values.append(float(value))
+                        except (ValueError, TypeError):
+                            continue
+            
+            # Check if all numeric values are zero
+            if numeric_values and all(val == 0.0 for val in numeric_values):
+                all_zero_values = True
+                logger.info(f"All zero values detected, prioritizing KPI chart")
+        
+        if len(columns) <= 3 and type_counts.get("quantitative", 0) >= 1:
+            # For single values or small datasets with quantitative data, prioritize KPI
+            suggestions.extend(["kpi"])
+            logger.info(f"Added KPI to suggestions for small dataset")
+            
+            # If it's a single value or all zero values, KPI is the primary choice
+            if (len(columns) == 1 and type_counts.get("quantitative", 0) == 1) or all_zero_values:
+                logger.info(f"Single value or all zero values detected, returning only KPI")
+                return ["kpi"]  # Return only KPI for single values or all zero values
+        
+        # Suggest based on data type combinations for larger datasets
         if type_counts.get("quantitative", 0) >= 2:
             suggestions.extend(["scatter", "bubble"])
         
@@ -484,10 +522,6 @@ class EnhancedChartDataPreprocessor:
         
         if type_counts.get("nominal", 0) >= 1:
             suggestions.extend(["text", "rule"])
-        
-        # Suggest KPI chart for single metrics or summary data
-        if len(columns) <= 3 and type_counts.get("quantitative", 0) >= 1:
-            suggestions.extend(["kpi"])
         
         return list(set(suggestions))  # Remove duplicates
 
@@ -558,11 +592,18 @@ class EnhancedChartGenerationPostProcessor:
             
         except Exception as e:
             self.logger.error(f"Error in enhanced post-processing: {e}")
+            # Return a default chart instead of error for UI handling
             return {
-                "chart_schema": {},
-                "reasoning": f"Error in post-processing: {str(e)}",
-                "chart_type": "",
-                "success": False,
+                "chart_schema": {
+                    "title": "Post-Processing Error",
+                    "mark": {"type": "text"},
+                    "encoding": {
+                        "text": {"value": "Unable to process chart due to an error"}
+                    }
+                },
+                "reasoning": f"Post-processing failed: {str(e)}",
+                "chart_type": "text",
+                "success": True,  # Return success so UI can handle gracefully
                 "error": str(e)
             }
     

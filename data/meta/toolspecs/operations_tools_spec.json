@@ -1,103 +1,165 @@
 {
     "functions": {
         "PercentChange": {
-            "required_params": ["condition_column", "baseline"],
-            "optional_params": ["output_name"],
+            "required_params": [
+                {"name": "condition_column", "type": "str", "description": "Column containing the condition values"},
+                {"name": "baseline", "type": "str", "description": "The baseline value to compare against"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output operation, defaults to 'pct_change_{condition_column}_vs_{baseline}' (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that calculates percent change from an OperationsPipe"
+                "description": "Function that calculates percent change from an OperationsPipe."
             },
-            "description": "Compute the percent change (other - baseline) / baseline"
+            "description": "Compute the percent change (other - baseline) / baseline\n\nParameters:\n-----------\ncondition_column : str\n    Column containing the condition values\nbaseline : str\n    The baseline value to compare against\noutput_name : str, optional\n    Name for the output operation, defaults to 'pct_change_{condition_column}_vs_{baseline}'\n\nReturns:\n--------\nCallable\n    Function that calculates percent change from an OperationsPipe"
         },
         "AbsoluteChange": {
-            "required_params": ["condition_column", "baseline"],
-            "optional_params": ["output_name"],
+            "required_params": [
+                {"name": "condition_column", "type": "str", "description": "Column containing the condition values"},
+                {"name": "baseline", "type": "str", "description": "The baseline value to compare against"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output operation, defaults to 'abs_change_{condition_column}_vs_{baseline}' (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that calculates absolute change from an OperationsPipe"
+                "description": "Function that calculates absolute change from an OperationsPipe."
             },
-            "description": "Compute the absolute change (other - baseline)"
+            "description": "Compute the absolute change (other - baseline)\n\nParameters:\n-----------\ncondition_column : str\n    Column containing the condition values\nbaseline : str\n    The baseline value to compare against\noutput_name : str, optional\n    Name for the output operation, defaults to 'abs_change_{condition_column}_vs_{baseline}'\n\nReturns:\n--------\nCallable\n    Function that calculates absolute change from an OperationsPipe"
         },
         "MH": {
-            "required_params": ["condition_column", "baseline", "stratified_by"],
-            "optional_params": ["output_name"],
+            "required_params": [
+                {"name": "condition_column", "type": "str", "description": "Column containing the condition values"},
+                {"name": "baseline", "type": "str", "description": "The baseline value to compare against"},
+                {"name": "stratified_by", "type": "str or List[str]", "description": "Column(s) to stratify by when computing the MH estimator"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output operation, defaults to 'mh_{condition_column}_vs_{baseline}' (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that calculates Mantel-Haenszel estimate from an OperationsPipe"
+                "description": "Function that calculates Mantel-Haenszel estimate from an OperationsPipe."
             },
-            "description": "Compute the Mantel-Haenszel estimator for ratio metrics stratified by specified columns"
+            "description": "Compute the Mantel-Haenszel estimator\n\nParameters:\n-----------\ncondition_column : str\n    Column containing the condition values\nbaseline : str\n    The baseline value to compare against\nstratified_by : str or List[str]\n    Column(s) to stratify by when computing the MH estimator\noutput_name : str, optional\n    Name for the output operation, defaults to 'mh_{condition_column}_vs_{baseline}'\n\nReturns:\n--------\nCallable\n    Function that calculates Mantel-Haenszel estimate from an OperationsPipe"
         },
         "CUPED": {
-            "required_params": ["condition_column", "baseline", "covariates"],
-            "optional_params": ["stratified_by", "output_name"],
+            "required_params": [
+                {"name": "condition_column", "type": "str", "description": "Column containing the condition values"},
+                {"name": "baseline", "type": "str", "description": "The baseline value to compare against"},
+                {"name": "covariates", "type": "str or List[str]", "description": "Column(s) to use as covariates for adjustment"}
+            ],
+            "optional_params": [
+                {"name": "stratified_by", "type": "str or List[str]", "description": "Column(s) to stratify by when computing the adjustment (optional)"},
+                {"name": "output_name", "type": "str", "description": "Name for the output operation, defaults to 'cuped_{condition_column}_vs_{baseline}' (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that calculates CUPED adjustment from an OperationsPipe"
+                "description": "Function that calculates CUPED adjustment from an OperationsPipe."
             },
-            "description": "Compute the absolute change adjusted using the CUPED approach"
+            "description": "Compute the absolute change adjusted using the CUPED approach\n\nParameters:\n-----------\ncondition_column : str\n    Column containing the condition values\nbaseline : str\n    The baseline value to compare against\ncovariates : str or List[str]\n    Column(s) to use as covariates for adjustment\nstratified_by : str or List[str], optional\n    Column(s) to stratify by when computing the adjustment\noutput_name : str, optional\n    Name for the output operation, defaults to 'cuped_{condition_column}_vs_{baseline}'\n\nReturns:\n--------\nCallable\n    Function that calculates CUPED adjustment from an OperationsPipe"
         },
         "PrePostChange": {
-            "required_params": ["condition_column", "baseline", "covariates"],
-            "optional_params": ["stratified_by", "output_name"],
+            "required_params": [
+                {"name": "condition_column", "type": "str", "description": "Column containing the condition values"},
+                {"name": "baseline", "type": "str", "description": "The baseline value to compare against"},
+                {"name": "covariates", "type": "str or List[str]", "description": "Column(s) to use as pre-treatment covariates"}
+            ],
+            "optional_params": [
+                {"name": "stratified_by", "type": "str or List[str]", "description": "Column(s) to stratify by when computing the adjustment (optional)"},
+                {"name": "output_name", "type": "str", "description": "Name for the output operation, defaults to 'prepost_{condition_column}_vs_{baseline}' (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that calculates PrePost adjustment from an OperationsPipe"
+                "description": "Function that calculates PrePost adjustment from an OperationsPipe."
             },
-            "description": "Compute the percent change adjusted using the PrePost approach"
+            "description": "Compute the percent change adjusted using the PrePost approach\n\nParameters:\n-----------\ncondition_column : str\n    Column containing the condition values\nbaseline : str\n    The baseline value to compare against\ncovariates : str or List[str]\n    Column(s) to use as pre-treatment covariates\nstratified_by : str or List[str], optional\n    Column(s) to stratify by when computing the adjustment\noutput_name : str, optional\n    Name for the output operation, defaults to 'prepost_{condition_column}_vs_{baseline}'\n\nReturns:\n--------\nCallable\n    Function that calculates PrePost adjustment from an OperationsPipe"
         },
         "FilterConditions": {
-            "required_params": ["conditions"],
-            "optional_params": ["output_name"],
+            "required_params": [
+                {"name": "conditions", "type": "List[str]", "description": "List of condition values to keep"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output operation, defaults to 'filtered_conditions' (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that filters conditions from an OperationsPipe"
+                "description": "Function that filters conditions from an OperationsPipe."
             },
-            "description": "Filter the data to include only specified conditions"
+            "description": "Filter the data to include only specified conditions\n\nParameters:\n-----------\nconditions : List[str]\n    List of condition values to keep\noutput_name : str, optional\n    Name for the output operation, defaults to 'filtered_conditions'\n\nReturns:\n--------\nCallable\n    Function that filters conditions from an OperationsPipe"
         },
         "PowerAnalysis": {
-            "required_params": ["condition_column", "baseline", "metric_column"],
-            "optional_params": ["alpha", "power", "output_name"],
+            "required_params": [
+                {"name": "condition_column", "type": "str", "description": "Column containing the condition values"},
+                {"name": "baseline", "type": "str", "description": "The baseline value to compare against"},
+                {"name": "metric_column", "type": "str", "description": "The metric to analyze"}
+            ],
+            "optional_params": [
+                {"name": "alpha", "type": "float", "description": "Significance level (default: 0.05)"},
+                {"name": "power", "type": "float", "description": "Desired statistical power (default: 0.8)"},
+                {"name": "output_name", "type": "str", "description": "Name for the output operation, defaults to 'power_analysis_{metric_column}' (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that performs power analysis from an OperationsPipe"
+                "description": "Function that performs power analysis from an OperationsPipe."
             },
-            "description": "Perform power analysis to determine sample size requirements"
+            "description": "Perform power analysis to determine sample size requirements\n\nParameters:\n-----------\ncondition_column : str\n    Column containing the condition values\nbaseline : str\n    The baseline value to compare against\nmetric_column : str\n    The metric to analyze\nalpha : float, default=0.05\n    Significance level\npower : float, default=0.8\n    Desired statistical power\noutput_name : str, optional\n    Name for the output operation, defaults to 'power_analysis_{metric_column}'\n\nReturns:\n--------\nCallable\n    Function that performs power analysis from an OperationsPipe"
         },
         "StratifiedSummary": {
-            "required_params": ["condition_column", "stratified_by"],
-            "optional_params": ["metrics", "output_name"],
+            "required_params": [
+                {"name": "condition_column", "type": "str", "description": "Column containing the condition values"},
+                {"name": "stratified_by", "type": "str or List[str]", "description": "Column(s) to stratify by"}
+            ],
+            "optional_params": [
+                {"name": "metrics", "type": "List[str]", "description": "List of metric columns to include (if None, all numeric columns are used) (optional)"},
+                {"name": "output_name", "type": "str", "description": "Name for the output operation, defaults to 'stratified_summary' (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that creates a stratified summary from an OperationsPipe"
+                "description": "Function that creates a stratified summary from an OperationsPipe."
             },
-            "description": "Create a summary of metrics stratified by specified columns"
+            "description": "Create a summary of metrics stratified by specified columns\n\nParameters:\n-----------\ncondition_column : str\n    Column containing the condition values\nstratified_by : str or List[str]\n    Column(s) to stratify by\nmetrics : List[str], optional\n    List of metric columns to include (if None, all numeric columns are used)\noutput_name : str, optional\n    Name for the output operation, defaults to 'stratified_summary'\n\nReturns:\n--------\nCallable\n    Function that creates a stratified summary from an OperationsPipe"
         },
         "BootstrapCI": {
-            "required_params": ["condition_column", "baseline", "metric_column"],
-            "optional_params": ["confidence", "n_bootstraps", "stratified_by", "output_name"],
+            "required_params": [
+                {"name": "condition_column", "type": "str", "description": "Column containing the condition values"},
+                {"name": "baseline", "type": "str", "description": "The baseline value to compare against"},
+                {"name": "metric_column", "type": "str", "description": "The metric to analyze"}
+            ],
+            "optional_params": [
+                {"name": "confidence", "type": "float", "description": "Confidence level for the intervals (default: 0.95)"},
+                {"name": "n_bootstraps", "type": "int", "description": "Number of bootstrap samples to generate (default: 1000)"},
+                {"name": "stratified_by", "type": "str or List[str]", "description": "Column(s) to stratify by when computing the intervals (optional)"},
+                {"name": "output_name", "type": "str", "description": "Name for the output operation, defaults to 'bootstrap_ci_{metric_column}' (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that calculates bootstrap CIs from an OperationsPipe"
+                "description": "Function that calculates bootstrap CIs from an OperationsPipe."
             },
-            "description": "Calculate bootstrap confidence intervals for the difference in means"
+            "description": "Calculate bootstrap confidence intervals for the difference in means\n\nParameters:\n-----------\ncondition_column : str\n    Column containing the condition values\nbaseline : str\n    The baseline value to compare against\nmetric_column : str\n    The metric to analyze\nconfidence : float, default=0.95\n    Confidence level for the intervals\nn_bootstraps : int, default=1000\n    Number of bootstrap samples to generate\nstratified_by : str or List[str], optional\n    Column(s) to stratify by when computing the intervals\noutput_name : str, optional\n    Name for the output operation, defaults to 'bootstrap_ci_{metric_column}'\n\nReturns:\n--------\nCallable\n    Function that calculates bootstrap CIs from an OperationsPipe"
         },
         "MultiComparisonAdjustment": {
-            "required_params": ["p_value_column"],
-            "optional_params": ["method", "output_name"],
+            "required_params": [
+                {"name": "p_value_column", "type": "str", "description": "Column containing the p-values to adjust"}
+            ],
+            "optional_params": [
+                {"name": "method", "type": "str", "description": "Method to use for adjustment ('bonferroni', 'fdr', 'sidak') (default: 'bonferroni')"},
+                {"name": "output_name", "type": "str", "description": "Name for the output operation, defaults to 'adjusted_{method}' (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that adjusts p-values from an OperationsPipe"
+                "description": "Function that adjusts p-values from an OperationsPipe."
             },
-            "description": "Apply multiple comparison adjustment to p-values"
+            "description": "Apply multiple comparison adjustment to p-values\n\nParameters:\n-----------\np_value_column : str\n    Column containing the p-values to adjust\nmethod : str, default='bonferroni'\n    Method to use for adjustment ('bonferroni', 'fdr', 'sidak')\noutput_name : str, optional\n    Name for the output operation, defaults to 'adjusted_{method}'\n\nReturns:\n--------\nCallable\n    Function that adjusts p-values from an OperationsPipe"
         },
         "ExecuteOperations": {
             "required_params": [],
             "optional_params": [],
             "outputs": {
                 "type": "Dict",
-                "description": "Dictionary of all calculated operations"
+                "description": "Dictionary of all calculated operations."
             },
-            "description": "Execute the operations pipeline and return all calculated operations"
+            "description": "Execute the operations pipeline and return all calculated operations\n\nReturns:\n--------\nCallable\n    Function that returns all operations from an OperationsPipe"
         }
     }
 }

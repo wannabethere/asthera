@@ -1,76 +1,116 @@
 {
     "functions": {
-        "run_kmeans": {
+        "get_features": {
             "required_params": [],
-            "optional_params": ["n_clusters", "algorithm_name", "find_optimal", "max_clusters", "random_state"],
+            "optional_params": [
+                {"name": "columns", "type": "List[str]", "description": "List of column names to use as features. If None, all numeric columns will be used (optional)"},
+                {"name": "id_column", "type": "str", "description": "Column containing IDs to exclude from features (optional)"},
+                {"name": "handle_missing", "type": "bool", "description": "Whether to handle missing values (default: True)"},
+                {"name": "scale_features", "type": "bool", "description": "Whether to scale features (default: True)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that runs KMeans on features in a SegmentPipe"
+                "description": "Function that extracts features from a SegmentationPipe."
             },
-            "description": "Run KMeans clustering"
+            "description": "Extract features from dataframe for segmentation\n\nParameters:\n-----------\ncolumns : List[str], optional\n    List of column names to use as features\n    If None, all numeric columns will be used\nid_column : str, optional\n    Column containing IDs to exclude from features\nhandle_missing : bool, default=True\n    Whether to handle missing values\nscale_features : bool, default=True\n    Whether to scale features\n\nReturns:\n--------\nCallable\n    Function that extracts features from a SegmentationPipe"
+        },
+        "run_kmeans": {
+            "required_params": [],
+            "optional_params": [
+                {"name": "n_clusters", "type": "int", "description": "Number of clusters (default: 5)"},
+                {"name": "max_clusters", "type": "int", "description": "Maximum number of clusters to try if find_optimal=True (default: 10)"},
+                {"name": "find_optimal", "type": "bool", "description": "Whether to find the optimal number of clusters using silhouette score (default: False)"},
+                {"name": "random_state", "type": "int", "description": "Random state for reproducibility (default: 42)"},
+                {"name": "segment_name", "type": "str", "description": "Name to use for this segmentation (default: 'kmeans')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that performs KMeans segmentation in a SegmentationPipe."
+            },
+            "description": "Run KMeans clustering for segmentation\n\nParameters:\n-----------\nn_clusters : int, default=5\n    Number of clusters\nmax_clusters : int, default=10\n    Maximum number of clusters to try if find_optimal=True\nfind_optimal : bool, default=False\n    Whether to find the optimal number of clusters using silhouette score\nrandom_state : int, default=42\n    Random state for reproducibility\nsegment_name : str, default='kmeans'\n    Name to use for this segmentation\n\nReturns:\n--------\nCallable\n    Function that performs KMeans segmentation in a SegmentationPipe"
         },
         "run_dbscan": {
             "required_params": [],
-            "optional_params": ["eps", "min_samples", "algorithm_name"],
+            "optional_params": [
+                {"name": "eps", "type": "float", "description": "The maximum distance between two samples for one to be considered as neighbors (default: 0.5)"},
+                {"name": "min_samples", "type": "int", "description": "The number of samples in a neighborhood for a point to be considered a core point (default: 5)"},
+                {"name": "segment_name", "type": "str", "description": "Name to use for this segmentation (default: 'dbscan')"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that runs DBSCAN on features in a SegmentPipe"
+                "description": "Function that performs DBSCAN segmentation in a SegmentationPipe."
             },
-            "description": "Run DBSCAN clustering"
+            "description": "Run DBSCAN clustering for segmentation\n\nParameters:\n-----------\neps : float, default=0.5\n    The maximum distance between two samples for one to be considered as neighbors\nmin_samples : int, default=5\n    The number of samples in a neighborhood for a point to be considered a core point\nsegment_name : str, default='dbscan'\n    Name to use for this segmentation\n\nReturns:\n--------\nCallable\n    Function that performs DBSCAN segmentation in a SegmentationPipe"
         },
-        "run_hdbscan": {
+        "run_hierarchical": {
             "required_params": [],
-            "optional_params": ["min_cluster_size", "min_samples", "algorithm_name"],
+            "optional_params": [
+                {"name": "n_clusters", "type": "int", "description": "Number of clusters (default: 5)"},
+                {"name": "linkage", "type": "str", "description": "Linkage method ('ward', 'complete', 'average', 'single') (default: 'ward')"},
+                {"name": "segment_name", "type": "str", "description": "Name to use for this segmentation (default: 'hierarchical')"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that runs HDBSCAN on features in a SegmentPipe"
+                "description": "Function that performs hierarchical segmentation in a SegmentationPipe."
             },
-            "description": "Run HDBSCAN clustering"
-        },
-        "run_agglomerative": {
-            "required_params": [],
-            "optional_params": ["n_clusters", "linkage", "algorithm_name"],
-            "outputs": {
-                "type": "Callable",
-                "description": "Function that runs Agglomerative Clustering on features in a SegmentPipe"
-            },
-            "description": "Run Agglomerative Clustering"
+            "description": "Run Hierarchical (Agglomerative) clustering for segmentation\n\nParameters:\n-----------\nn_clusters : int, default=5\n    Number of clusters\nlinkage : str, default='ward'\n    Linkage method ('ward', 'complete', 'average', 'single')\nsegment_name : str, default='hierarchical'\n    Name to use for this segmentation\n\nReturns:\n--------\nCallable\n    Function that performs hierarchical segmentation in a SegmentationPipe"
         },
         "run_rule_based": {
-            "required_params": ["rules"],
-            "optional_params": ["default_segment", "algorithm_name"],
+            "required_params": [
+                {"name": "rules", "type": "Dict[str, Dict]", "description": "Dictionary with segment names as keys and rule conditions as values. Example: {'high_value': {'spending': ('>', 100), 'frequency': ('>', 10)}, 'medium_value': {'spending': ('between', 50, 100)}}"}
+            ],
+            "optional_params": [
+                {"name": "segment_name", "type": "str", "description": "Name to use for this segmentation (default: 'rule_based')"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that runs rule-based segmentation in a SegmentPipe"
+                "description": "Function that performs rule-based segmentation in a SegmentationPipe."
             },
-            "description": "Run rule-based segmentation"
+            "description": "Run rule-based segmentation\n\nParameters:\n-----------\nrules : Dict[str, Dict]\n    Dictionary with segment names as keys and rule conditions as values\n    Example: {\n        'high_value': {'spending': ('>', 100), 'frequency': ('>', 10)},\n        'medium_value': {'spending': ('between', 50, 100)}\n    }\nsegment_name : str, default='rule_based'\n    Name to use for this segmentation\n\nReturns:\n--------\nCallable\n    Function that performs rule-based segmentation in a SegmentationPipe"
         },
         "generate_summary": {
             "required_params": [],
-            "optional_params": ["algorithm"],
+            "optional_params": [
+                {"name": "algorithm", "type": "str", "description": "Name of the segmentation algorithm to summarize. If None, uses the current analysis (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that generates segment summaries"
+                "description": "Function that generates summary statistics in a SegmentationPipe."
             },
-            "description": "Generate summary statistics for segments"
+            "description": "Generate summary statistics for segments\n\nParameters:\n-----------\nalgorithm : str, optional\n    Name of the segmentation algorithm to summarize\n    If None, uses the current analysis\n\nReturns:\n--------\nCallable\n    Function that generates summary statistics in a SegmentationPipe"
         },
         "get_segment_data": {
-            "required_params": ["segment_id"],
-            "optional_params": ["algorithm"],
+            "required_params": [
+                {"name": "segment_id", "type": "Any", "description": "ID of the segment to extract"}
+            ],
+            "optional_params": [
+                {"name": "algorithm", "type": "str", "description": "Name of the segmentation algorithm to use. If None, uses the current analysis (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that retrieves segment data"
+                "description": "Function that extracts segment data from a SegmentationPipe."
             },
-            "description": "Get data for a specific segment"
+            "description": "Get data for a specific segment\n\nParameters:\n-----------\nsegment_id : Any\n    ID of the segment to extract\nalgorithm : str, optional\n    Name of the segmentation algorithm to use\n    If None, uses the current analysis\n\nReturns:\n--------\nCallable\n    Function that extracts segment data from a SegmentationPipe"
         },
         "compare_algorithms": {
             "required_params": [],
             "optional_params": [],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that compares segmentation algorithms"
+                "description": "Function that compares segmentation algorithms in a SegmentationPipe."
             },
-            "description": "Compare results from different segmentation algorithms"
+            "description": "Compare all segmentation algorithms\n\nReturns:\n--------\nCallable\n    Function that compares segmentation algorithms in a SegmentationPipe"
+        },
+        "custom_calculation": {
+            "required_params": [
+                {"name": "func", "type": "Callable", "description": "A function that takes a DataFrame and returns a DataFrame"}
+            ],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that applies the custom calculation in a SegmentationPipe."
+            },
+            "description": "Apply a custom calculation or transformation to the dataframe\n\nParameters:\n-----------\nfunc : Callable\n    A function that takes a DataFrame and returns a DataFrame\n\nReturns:\n--------\nCallable\n    Function that applies the custom calculation in a SegmentationPipe"
         }
     }
 }

@@ -21,7 +21,7 @@ os.environ["OPENAI_API_KEY"] = "sk-proj-lTKa90U98uXyrabG1Ik0lIRu342gCvZHzl2_nOx1
 async def test_chart_generation():
     """Test the chart generation pipeline"""
     try:
-        from app.agents.nodes.sql.chart_generation import create_vega_lite_chart_generation_pipeline
+        from app.agents.nodes.sql.enhanced_chart_generation import create_enhanced_vega_lite_chart_generation_pipeline
         
         # Sample data for testing
         sample_data = {
@@ -35,7 +35,7 @@ async def test_chart_generation():
         }
         
         # Create pipeline
-        pipeline = create_vega_lite_chart_generation_pipeline()
+        pipeline = create_enhanced_vega_lite_chart_generation_pipeline()
         
         # Test chart generation
         result = await pipeline.run(

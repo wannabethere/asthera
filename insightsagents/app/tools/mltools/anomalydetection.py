@@ -90,6 +90,215 @@ class AnomalyPipe:
         pipe = cls()
         pipe.data = df.copy()
         return pipe
+    
+    def to_df(self, analysis_name: Optional[str] = None, include_metadata: bool = False, include_original: bool = True):
+        """
+        Convert the last analysis output to a DataFrame
+        
+        Parameters:
+        -----------
+        analysis_name : str, optional
+            Name of the specific analysis to convert. If None, uses the current_analysis
+        include_metadata : bool, default=False
+            Whether to include metadata columns in the output DataFrame
+        include_original : bool, default=True
+            Whether to include original data columns in the output DataFrame
+            
+        Returns:
+        --------
+        pd.DataFrame
+            DataFrame representation of the analysis results
+            
+        Raises:
+        -------
+        ValueError
+            If no analysis has been performed or the specified analysis doesn't exist
+            
+        Examples:
+        --------
+        >>> # Statistical outliers
+        >>> pipe = (AnomalyPipe.from_dataframe(df)
+        ...         | detect_statistical_outliers('value', 'zscore', 2.5))
+        >>> outlier_df = pipe.to_df()
+        >>> print(outlier_df.head())
+        
+        >>> # Contextual anomalies with metadata
+        >>> pipe = (AnomalyPipe.from_dataframe(df)
+        ...         | detect_contextual_anomalies('value', 'date', 'residual', 'ewm', 2.0))
+        >>> contextual_df = pipe.to_df(include_metadata=True)
+        >>> print(contextual_df.columns)
+        
+        >>> # Only anomaly columns (no original data)
+        >>> anomaly_df = pipe.to_df(include_original=False)
+        >>> print(anomaly_df.columns)
+        """
+        if self.data is None:
+            raise ValueError("No data found. Data must be provided when creating the pipeline.")
+        
+        # Determine which analysis to use
+        if analysis_name is None:
+            if self.current_analysis is None:
+                if not self.anomaly_results:
+                    raise ValueError("No analysis has been performed. Run an analysis first.")
+                # Use the last analysis in anomaly_results
+                analysis_name = list(self.anomaly_results.keys())[-1]
+            else:
+                # Find the analysis that matches current_analysis
+                matching_analyses = [name for name in self.anomaly_results.keys() 
+                                   if name.startswith(self.current_analysis)]
+                if not matching_analyses:
+                    raise ValueError(f"No analysis found for current_analysis: {self.current_analysis}")
+                analysis_name = matching_analyses[0]
+        
+        if analysis_name not in self.anomaly_results:
+            raise ValueError(f"Analysis '{analysis_name}' not found. Available analyses: {list(self.anomaly_results.keys())}")
+        
+        result = self.anomaly_results[analysis_name]
+        analysis_type = result['type']
+        
+        # Get the result DataFrame (contains original data + anomaly detection results)
+        result_df = self.data.copy()
+        
+        # Filter columns based on parameters
+        columns_to_include = []
+        
+        if include_original:
+            # Include original columns (those that don't have analysis-specific suffixes)
+            original_cols = [col for col in result_df.columns 
+                           if not any(suffix in col for suffix in ['_outlier_', '_score_', '_anomaly_', '_expected_', '_forecast_', '_lower_', '_upper_', '_residual_', '_trend_', '_seasonal_', '_change_point_'])]
+            columns_to_include.extend(original_cols)
+        
+        # Include analysis-specific columns
+        analysis_cols = [col for col in result_df.columns 
+                        if any(suffix in col for suffix in ['_outlier_', '_score_', '_anomaly_', '_expected_', '_forecast_', '_lower_', '_upper_', '_residual_', '_trend_', '_seasonal_', '_change_point_'])]
+        columns_to_include.extend(analysis_cols)
+        
+        # Create the output DataFrame
+        output_df = result_df[columns_to_include].copy()
+        
+        # Add metadata if requested
+        if include_metadata:
+            for key, value in result.items():
+                if key != 'type':  # Don't duplicate the type column
+                    output_df[f'metadata_{key}'] = str(value)
+        
+        return output_df
+    
+    def get_anomaly_columns(self, analysis_name: Optional[str] = None):
+        """
+        Get the column names that were created by the anomaly detection analysis
+        
+        Parameters:
+        -----------
+        analysis_name : str, optional
+            Name of the specific analysis. If None, uses the current_analysis
+            
+        Returns:
+        --------
+        List[str]
+            List of column names created by the analysis
+        """
+        if self.data is None:
+            return []
+        
+        # Determine which analysis to use
+        if analysis_name is None:
+            if self.current_analysis is None:
+                if not self.anomaly_results:
+                    return []
+                analysis_name = list(self.anomaly_results.keys())[-1]
+            else:
+                matching_analyses = [name for name in self.anomaly_results.keys() 
+                                   if name.startswith(self.current_analysis)]
+                if not matching_analyses:
+                    return []
+                analysis_name = matching_analyses[0]
+        
+        if analysis_name not in self.anomaly_results:
+            return []
+        
+        # Get analysis-specific columns
+        analysis_cols = [col for col in self.data.columns 
+                        if any(suffix in col for suffix in ['_outlier_', '_score_', '_anomaly_', '_expected_', '_forecast_', '_lower_', '_upper_', '_residual_', '_trend_', '_seasonal_', '_change_point_'])]
+        
+        return analysis_cols
+    
+    def get_anomaly_summary_df(self, analysis_name: Optional[str] = None):
+        """
+        Get a summary DataFrame of detected anomalies
+        
+        Parameters:
+        -----------
+        analysis_name : str, optional
+            Name of the specific analysis. If None, uses the current_analysis
+            
+        Returns:
+        --------
+        pd.DataFrame
+            Summary DataFrame with anomaly statistics
+        """
+        if self.data is None:
+            return pd.DataFrame()
+        
+        # Determine which analysis to use
+        if analysis_name is None:
+            if self.current_analysis is None:
+                if not self.anomaly_results:
+                    return pd.DataFrame()
+                analysis_name = list(self.anomaly_results.keys())[-1]
+            else:
+                matching_analyses = [name for name in self.anomaly_results.keys() 
+                                   if name.startswith(self.current_analysis)]
+                if not matching_analyses:
+                    return pd.DataFrame()
+                analysis_name = matching_analyses[0]
+        
+        if analysis_name not in self.anomaly_results:
+            return pd.DataFrame()
+        
+        result = self.anomaly_results[analysis_name]
+        analysis_type = result['type']
+        
+        # Get anomaly columns
+        anomaly_cols = self.get_anomaly_columns(analysis_name)
+        
+        if not anomaly_cols:
+            return pd.DataFrame()
+        
+        # Create summary
+        summary_data = []
+        
+        for col in anomaly_cols:
+            if '_outlier_' in col or '_anomaly_' in col:
+                # This is an anomaly flag column
+                original_col = col.split('_outlier_')[0] if '_outlier_' in col else col.split('_anomaly_')[0]
+                
+                # Count anomalies
+                anomaly_count = self.data[col].sum() if self.data[col].dtype == bool else (self.data[col] == 1).sum()
+                total_count = len(self.data[col].dropna())
+                anomaly_rate = anomaly_count / total_count if total_count > 0 else 0
+                
+                # Get corresponding score column
+                score_col = col.replace('_outlier_', '_score_').replace('_anomaly_', '_score_')
+                if score_col in self.data.columns:
+                    avg_score = self.data[score_col].mean()
+                    max_score = self.data[score_col].max()
+                else:
+                    avg_score = np.nan
+                    max_score = np.nan
+                
+                summary_data.append({
+                    'original_column': original_col,
+                    'anomaly_column': col,
+                    'anomaly_count': anomaly_count,
+                    'total_count': total_count,
+                    'anomaly_rate': anomaly_rate,
+                    'avg_score': avg_score,
+                    'max_score': max_score,
+                    'analysis_type': analysis_type
+                })
+        
+        return pd.DataFrame(summary_data)
 
 
 def detect_statistical_outliers(

@@ -1,6 +1,6 @@
 # Prophet Pipeline Examples
 
-from prophet_pipeline import (
+from app.tools.mltools.models.prophet_forecast import (
     ProphetPipe,
     prepare_prophet_data,
     add_regressors,

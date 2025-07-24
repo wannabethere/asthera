@@ -90,6 +90,404 @@ class RiskPipe:
         pipe = cls()
         pipe.data = df.copy()
         return pipe
+    
+    def to_df(self, analysis_name: Optional[str] = None, include_metadata: bool = False, include_original: bool = False):
+        """
+        Convert the risk analysis results to a DataFrame
+        
+        Parameters:
+        -----------
+        analysis_name : str, optional
+            Name of the specific analysis to convert. If None, returns the current analysis
+        include_metadata : bool, default=False
+            Whether to include metadata columns in the output DataFrame
+        include_original : bool, default=False
+            Whether to include original data columns in the output DataFrame
+            
+        Returns:
+        --------
+        pd.DataFrame
+            DataFrame representation of the risk analysis results
+            
+        Raises:
+        -------
+        ValueError
+            If no risk analysis has been performed or analysis not found
+            
+        Examples:
+        --------
+        >>> # Basic VaR calculation
+        >>> pipe = (RiskPipe.from_dataframe(df)
+        ...         | calculate_var('returns', 0.05))
+        >>> results_df = pipe.to_df()
+        >>> print(results_df.head())
+        
+        >>> # Specific analysis with metadata
+        >>> results_df = pipe.to_df('var_historical', include_metadata=True)
+        >>> print(results_df.columns)
+        
+        >>> # Current analysis
+        >>> current_df = pipe.to_df()  # Uses current_metric
+        >>> print(current_df.head())
+        """
+        if not any([self.risk_metrics, self.distributions, self.simulations, self.stress_tests]):
+            raise ValueError("No risk analysis has been performed. Run some analysis first.")
+        
+        # Determine which analysis to use
+        if analysis_name is None:
+            if self.current_metric is None:
+                # Use the last analysis from any category
+                all_analyses = {}
+                all_analyses.update(self.risk_metrics)
+                all_analyses.update(self.distributions)
+                all_analyses.update(self.simulations)
+                all_analyses.update(self.stress_tests)
+                if all_analyses:
+                    analysis_name = list(all_analyses.keys())[-1]
+                else:
+                    raise ValueError("No analyses found")
+            else:
+                analysis_name = self.current_metric
+        
+        # Find the analysis in the appropriate category
+        result = None
+        analysis_type = None
+        
+        if analysis_name in self.risk_metrics:
+            result = self.risk_metrics[analysis_name]
+            analysis_type = 'risk_metric'
+        elif analysis_name in self.distributions:
+            result = self.distributions[analysis_name]
+            analysis_type = 'distribution'
+        elif analysis_name in self.simulations:
+            result = self.simulations[analysis_name]
+            analysis_type = 'simulation'
+        elif analysis_name in self.stress_tests:
+            result = self.stress_tests[analysis_name]
+            analysis_type = 'stress_test'
+        else:
+            raise ValueError(f"Analysis '{analysis_name}' not found. Available analyses: {list(self.risk_metrics.keys()) + list(self.distributions.keys()) + list(self.simulations.keys()) + list(self.stress_tests.keys())}")
+        
+        # Convert result to DataFrame based on type
+        if analysis_type == 'risk_metric':
+            return self._risk_metric_to_df(result, analysis_name, include_metadata, include_original)
+        elif analysis_type == 'distribution':
+            return self._distribution_to_df(result, analysis_name, include_metadata, include_original)
+        elif analysis_type == 'simulation':
+            return self._simulation_to_df(result, analysis_name, include_metadata, include_original)
+        elif analysis_type == 'stress_test':
+            return self._stress_test_to_df(result, analysis_name, include_metadata, include_original)
+        else:
+            raise ValueError(f"Unknown analysis type: {analysis_type}")
+    
+    def _risk_metric_to_df(self, result, analysis_name, include_metadata, include_original):
+        """Convert risk metric results to DataFrame"""
+        if isinstance(result, dict) and any(isinstance(v, dict) for v in result.values()):
+            # Multi-column results (e.g., VaR for multiple columns)
+            all_data = []
+            for col, col_result in result.items():
+                if isinstance(col_result, dict):
+                    row = {'column': col}
+                    row.update(col_result)
+                    all_data.append(row)
+            
+            result_df = pd.DataFrame(all_data)
+        else:
+            # Single result (e.g., portfolio risk)
+            if isinstance(result, dict):
+                # Flatten nested dictionaries
+                flattened = self._flatten_dict(result)
+                result_df = pd.DataFrame([flattened])
+            else:
+                result_df = pd.DataFrame([result])
+        
+        # Add metadata if requested
+        if include_metadata:
+            result_df['analysis_name'] = analysis_name
+            result_df['analysis_type'] = 'risk_metric'
+        
+        # Add original data if requested
+        if include_original and self.data is not None:
+            # Merge with original data (this might need adjustment based on specific use case)
+            if include_metadata:
+                result_df['metadata_note'] = 'Original data available separately via pipe.data'
+        
+        return result_df
+    
+    def _distribution_to_df(self, result, analysis_name, include_metadata, include_original):
+        """Convert distribution fit results to DataFrame"""
+        if isinstance(result, dict):
+            # Extract key information
+            row = {
+                'distribution': result.get('distribution', 'unknown'),
+                'log_likelihood': result.get('log_likelihood', np.nan),
+                'aic': result.get('aic', np.nan),
+                'bic': result.get('bic', np.nan)
+            }
+            
+            # Add parameters
+            params = result.get('parameters', {})
+            for param, value in params.items():
+                row[f'param_{param}'] = value
+            
+            # Add confidence intervals if available
+            ci = result.get('confidence_intervals', {})
+            for param, (lower, upper) in ci.items():
+                row[f'ci_{param}_lower'] = lower
+                row[f'ci_{param}_upper'] = upper
+            
+            result_df = pd.DataFrame([row])
+        else:
+            result_df = pd.DataFrame([result])
+        
+        # Add metadata if requested
+        if include_metadata:
+            result_df['analysis_name'] = analysis_name
+            result_df['analysis_type'] = 'distribution'
+        
+        return result_df
+    
+    def _simulation_to_df(self, result, analysis_name, include_metadata, include_original):
+        """Convert simulation results to DataFrame"""
+        if isinstance(result, dict):
+            all_data = []
+            for col, col_result in result.items():
+                if isinstance(col_result, dict):
+                    # Extract simulation statistics
+                    path_stats = col_result.get('path_statistics', {})
+                    row = {
+                        'column': col,
+                        'method': col_result.get('method', 'unknown'),
+                        'horizon': col_result.get('horizon', np.nan),
+                        'n_simulations': col_result.get('n_simulations', np.nan)
+                    }
+                    
+                    # Add path statistics
+                    for stat, values in path_stats.items():
+                        if isinstance(values, np.ndarray):
+                            row[f'path_{stat}_mean'] = np.mean(values)
+                            row[f'path_{stat}_std'] = np.std(values)
+                        else:
+                            row[f'path_{stat}'] = values
+                    
+                    all_data.append(row)
+            
+            result_df = pd.DataFrame(all_data)
+        else:
+            result_df = pd.DataFrame([result])
+        
+        # Add metadata if requested
+        if include_metadata:
+            result_df['analysis_name'] = analysis_name
+            result_df['analysis_type'] = 'simulation'
+        
+        return result_df
+    
+    def _stress_test_to_df(self, result, analysis_name, include_metadata, include_original):
+        """Convert stress test results to DataFrame"""
+        if isinstance(result, dict):
+            all_data = []
+            for col, col_result in result.items():
+                if isinstance(col_result, dict):
+                    base_case = col_result.get('base_case', {})
+                    
+                    # Add base case
+                    row = {
+                        'column': col,
+                        'scenario': 'base_case',
+                        'returns': base_case.get('returns', np.nan),
+                        'volatility': base_case.get('volatility', np.nan)
+                    }
+                    all_data.append(row)
+                    
+                    # Add stress scenarios
+                    for scenario_name, scenario_result in col_result.items():
+                        if scenario_name != 'base_case' and isinstance(scenario_result, dict):
+                            scenario_row = {
+                                'column': col,
+                                'scenario': scenario_name,
+                                'returns': scenario_result.get('parameters', {}).get('returns', np.nan),
+                                'volatility': scenario_result.get('parameters', {}).get('volatility', np.nan),
+                                'var_95': scenario_result.get('var_95', np.nan),
+                                'var_99': scenario_result.get('var_99', np.nan),
+                                'cvar_95': scenario_result.get('cvar_95', np.nan),
+                                'cvar_99': scenario_result.get('cvar_99', np.nan),
+                                'return_impact': scenario_result.get('return_impact', np.nan),
+                                'volatility_impact': scenario_result.get('volatility_impact', np.nan)
+                            }
+                            all_data.append(scenario_row)
+            
+            result_df = pd.DataFrame(all_data)
+        else:
+            result_df = pd.DataFrame([result])
+        
+        # Add metadata if requested
+        if include_metadata:
+            result_df['analysis_name'] = analysis_name
+            result_df['analysis_type'] = 'stress_test'
+        
+        return result_df
+    
+    def _flatten_dict(self, d, parent_key='', sep='_'):
+        """Flatten nested dictionary"""
+        items = []
+        for k, v in d.items():
+            new_key = f"{parent_key}{sep}{k}" if parent_key else k
+            if isinstance(v, dict):
+                items.extend(self._flatten_dict(v, new_key, sep=sep).items())
+            else:
+                items.append((new_key, v))
+        return dict(items)
+    
+    def get_risk_columns(self):
+        """
+        Get the column names that were created by the risk analysis
+        
+        Returns:
+        --------
+        List[str]
+            List of column names created by the risk analysis
+        """
+        if self.data is None:
+            return []
+        
+        # Get risk analysis columns (rolling metrics, etc.)
+        risk_cols = [col for col in self.data.columns 
+                    if any(suffix in col for suffix in ['_rolling_vol', '_rolling_var', '_rolling_cvar', '_rolling_skew', '_rolling_kurt'])]
+        
+        return risk_cols
+    
+    def get_risk_summary_df(self, include_metadata: bool = False):
+        """
+        Get a summary DataFrame of all risk analyses
+        
+        Parameters:
+        -----------
+        include_metadata : bool, default=False
+            Whether to include metadata columns
+            
+        Returns:
+        --------
+        pd.DataFrame
+            Summary DataFrame with risk analysis statistics
+        """
+        summary_data = []
+        
+        # Risk metrics
+        for metric_name, metric_result in self.risk_metrics.items():
+            summary_row = {
+                'analysis_name': metric_name,
+                'type': 'risk_metric',
+                'is_current': metric_name == self.current_metric
+            }
+            
+            if include_metadata:
+                if isinstance(metric_result, dict):
+                    summary_row['keys'] = ', '.join(metric_result.keys())
+                else:
+                    summary_row['result_type'] = str(type(metric_result))
+            
+            summary_data.append(summary_row)
+        
+        # Distributions
+        for dist_name, dist_result in self.distributions.items():
+            summary_row = {
+                'analysis_name': dist_name,
+                'type': 'distribution',
+                'is_current': dist_name == self.current_metric
+            }
+            
+            if include_metadata and isinstance(dist_result, dict):
+                summary_row['distribution'] = dist_result.get('distribution', 'unknown')
+                summary_row['aic'] = dist_result.get('aic', np.nan)
+            
+            summary_data.append(summary_row)
+        
+        # Simulations
+        for sim_name, sim_result in self.simulations.items():
+            summary_row = {
+                'analysis_name': sim_name,
+                'type': 'simulation',
+                'is_current': sim_name == self.current_metric
+            }
+            
+            if include_metadata and isinstance(sim_result, dict):
+                summary_row['columns'] = ', '.join(sim_result.keys())
+            
+            summary_data.append(summary_row)
+        
+        # Stress tests
+        for stress_name, stress_result in self.stress_tests.items():
+            summary_row = {
+                'analysis_name': stress_name,
+                'type': 'stress_test',
+                'is_current': stress_name == self.current_metric
+            }
+            
+            if include_metadata and isinstance(stress_result, dict):
+                summary_row['columns'] = ', '.join(stress_result.keys())
+            
+            summary_data.append(summary_row)
+        
+        return pd.DataFrame(summary_data)
+    
+    def get_analysis_by_type(self, analysis_type: str):
+        """
+        Get all analyses of a specific type
+        
+        Parameters:
+        -----------
+        analysis_type : str
+            Type of analysis to retrieve ('risk_metric', 'distribution', 'simulation', 'stress_test')
+            
+        Returns:
+        --------
+        Dict
+            Dictionary of analyses of the specified type
+        """
+        type_mapping = {
+            'risk_metric': self.risk_metrics,
+            'distribution': self.distributions,
+            'simulation': self.simulations,
+            'stress_test': self.stress_tests
+        }
+        
+        return type_mapping.get(analysis_type, {})
+    
+    def get_current_result(self):
+        """
+        Get the current risk analysis result
+        
+        Returns:
+        --------
+        Any or None
+            The current risk analysis result, or None if no current analysis
+        """
+        if self.current_metric is None:
+            return None
+        
+        # Check in all categories
+        if self.current_metric in self.risk_metrics:
+            return self.risk_metrics[self.current_metric]
+        elif self.current_metric in self.distributions:
+            return self.distributions[self.current_metric]
+        elif self.current_metric in self.simulations:
+            return self.simulations[self.current_metric]
+        elif self.current_metric in self.stress_tests:
+            return self.stress_tests[self.current_metric]
+        else:
+            return None
+    
+    def get_original_data(self):
+        """
+        Get the original data DataFrame
+        
+        Returns:
+        --------
+        pd.DataFrame or None
+            The original data DataFrame, or None if no data was provided
+        """
+        return self.data.copy() if self.data is not None else None
 
 
 def fit_distribution(

@@ -51,6 +51,314 @@ class SegmentationPipe:
         pipe = cls()
         pipe.data = df.copy()
         return pipe
+    
+    def to_df(self, analysis_name: Optional[str] = None, include_metadata: bool = False, include_original: bool = True):
+        """
+        Convert the segmentation results to a DataFrame
+        
+        Parameters:
+        -----------
+        analysis_name : str, optional
+            Name of the specific analysis to convert. If None, returns the current analysis
+        include_metadata : bool, default=False
+            Whether to include metadata columns in the output DataFrame
+        include_original : bool, default=True
+            Whether to include original data columns in the output DataFrame
+            
+        Returns:
+        --------
+        pd.DataFrame
+            DataFrame representation of the segmentation results
+            
+        Raises:
+        -------
+        ValueError
+            If no segmentation has been performed or analysis not found
+            
+        Examples:
+        --------
+        >>> # Basic KMeans segmentation
+        >>> pipe = (SegmentationPipe.from_dataframe(df)
+        ...         | get_features(['spending', 'frequency'])
+        ...         | run_kmeans(5))
+        >>> results_df = pipe.to_df()
+        >>> print(results_df.head())
+        
+        >>> # Specific analysis with metadata
+        >>> results_df = pipe.to_df('kmeans', include_metadata=True)
+        >>> print(results_df.columns)
+        
+        >>> # Current analysis
+        >>> current_df = pipe.to_df()  # Uses current_analysis
+        >>> print(current_df.head())
+        """
+        if not self.segmentation_results:
+            raise ValueError("No segmentation has been performed. Run some analysis first.")
+        
+        # Determine which analysis to use
+        if analysis_name is None:
+            if self.current_analysis is None:
+                # Use the last analysis
+                analysis_name = list(self.segmentation_results.keys())[-1]
+                # Skip summary results
+                while analysis_name.endswith('_summary') and len(self.segmentation_results) > 1:
+                    analysis_name = list(self.segmentation_results.keys())[-2]
+            else:
+                analysis_name = self.current_analysis
+        
+        if analysis_name not in self.segmentation_results:
+            raise ValueError(f"Analysis '{analysis_name}' not found. Available analyses: {list(self.segmentation_results.keys())}")
+        
+        # Get the segmentation result
+        result = self.segmentation_results[analysis_name]
+        
+        # Get the result DataFrame (contains original data + segmentation labels)
+        result_df = self.data.copy()
+        
+        # Filter columns based on parameters
+        columns_to_include = []
+        
+        if include_original:
+            # Include original columns (those that don't have segmentation suffixes)
+            original_cols = [col for col in result_df.columns 
+                           if not any(suffix in col for suffix in ['segment_', '_encoded'])]
+            columns_to_include.extend(original_cols)
+        
+        # Include segmentation columns
+        segmentation_cols = [col for col in result_df.columns 
+                           if any(suffix in col for suffix in ['segment_', '_encoded'])]
+        columns_to_include.extend(segmentation_cols)
+        
+        # Create the output DataFrame
+        output_df = result_df[columns_to_include].copy()
+        
+        # Add metadata if requested
+        if include_metadata:
+            # Add analysis name
+            output_df['analysis_name'] = analysis_name
+            
+            # Add algorithm type
+            if isinstance(result, dict) and 'algorithm' in result:
+                output_df['algorithm'] = result['algorithm']
+            else:
+                output_df['algorithm'] = 'unknown'
+            
+            # Add algorithm-specific metadata
+            if isinstance(result, dict):
+                if result.get('algorithm') == 'kmeans':
+                    output_df['n_clusters'] = result.get('n_clusters', np.nan)
+                    output_df['silhouette_score'] = result.get('silhouette_score', np.nan)
+                    output_df['inertia'] = result.get('inertia', np.nan)
+                elif result.get('algorithm') == 'dbscan':
+                    output_df['eps'] = result.get('eps', np.nan)
+                    output_df['min_samples'] = result.get('min_samples', np.nan)
+                    output_df['n_clusters'] = result.get('n_clusters', np.nan)
+                    output_df['silhouette_score'] = result.get('silhouette_score', np.nan)
+                    output_df['noise_points'] = result.get('noise_points', np.nan)
+                    output_df['noise_percentage'] = result.get('noise_percentage', np.nan)
+                elif result.get('algorithm') == 'hierarchical':
+                    output_df['linkage'] = result.get('linkage', 'unknown')
+                    output_df['n_clusters'] = result.get('n_clusters', np.nan)
+                    output_df['silhouette_score'] = result.get('silhouette_score', np.nan)
+                elif result.get('algorithm') == 'rule_based':
+                    output_df['n_segments'] = result.get('n_segments', np.nan)
+                    output_df['segments'] = str(result.get('segments', []))
+        
+        return output_df
+    
+    def get_segmentation_columns(self):
+        """
+        Get the column names that were created by the segmentation analysis
+        
+        Returns:
+        --------
+        List[str]
+            List of column names created by the segmentation
+        """
+        if self.data is None:
+            return []
+        
+        # Get segmentation columns
+        segmentation_cols = [col for col in self.data.columns 
+                           if any(suffix in col for suffix in ['segment_', '_encoded'])]
+        
+        return segmentation_cols
+    
+    def get_segmentation_summary_df(self, include_metadata: bool = False):
+        """
+        Get a summary DataFrame of all segmentation analyses
+        
+        Parameters:
+        -----------
+        include_metadata : bool, default=False
+            Whether to include metadata columns
+            
+        Returns:
+        --------
+        pd.DataFrame
+            Summary DataFrame with segmentation statistics
+        """
+        if not self.segmentation_results:
+            return pd.DataFrame()
+        
+        summary_data = []
+        
+        for analysis_name, result in self.segmentation_results.items():
+            # Skip summary results to avoid recursion
+            if analysis_name.endswith('_summary'):
+                continue
+            
+            if isinstance(result, dict):
+                algorithm = result.get('algorithm', 'unknown')
+                
+                summary_row = {
+                    'analysis_name': analysis_name,
+                    'algorithm': algorithm,
+                    'is_current': analysis_name == self.current_analysis
+                }
+                
+                # Add algorithm-specific metrics
+                if algorithm == 'kmeans':
+                    summary_row['n_clusters'] = result.get('n_clusters', np.nan)
+                    summary_row['silhouette_score'] = result.get('silhouette_score', np.nan)
+                    summary_row['inertia'] = result.get('inertia', np.nan)
+                elif algorithm == 'dbscan':
+                    summary_row['n_clusters'] = result.get('n_clusters', np.nan)
+                    summary_row['silhouette_score'] = result.get('silhouette_score', np.nan)
+                    summary_row['noise_points'] = result.get('noise_points', np.nan)
+                    summary_row['noise_percentage'] = result.get('noise_percentage', np.nan)
+                elif algorithm == 'hierarchical':
+                    summary_row['n_clusters'] = result.get('n_clusters', np.nan)
+                    summary_row['silhouette_score'] = result.get('silhouette_score', np.nan)
+                    summary_row['linkage'] = result.get('linkage', 'unknown')
+                elif algorithm == 'rule_based':
+                    summary_row['n_segments'] = result.get('n_segments', np.nan)
+                    summary_row['segments'] = str(result.get('segments', []))
+                
+                # Add metadata if requested
+                if include_metadata:
+                    summary_row['result_keys'] = ', '.join(result.keys())
+                
+                summary_data.append(summary_row)
+        
+        return pd.DataFrame(summary_data)
+    
+    def get_analysis_by_type(self, algorithm_type: str):
+        """
+        Get all analyses of a specific algorithm type
+        
+        Parameters:
+        -----------
+        algorithm_type : str
+            Type of algorithm to retrieve ('kmeans', 'dbscan', 'hierarchical', 'rule_based')
+            
+        Returns:
+        --------
+        Dict
+            Dictionary of analyses of the specified type
+        """
+        return {name: result for name, result in self.segmentation_results.items() 
+                if isinstance(result, dict) and result.get('algorithm') == algorithm_type}
+    
+    def get_current_result(self):
+        """
+        Get the current segmentation result
+        
+        Returns:
+        --------
+        Any or None
+            The current segmentation result, or None if no current analysis
+        """
+        if self.current_analysis is None:
+            return None
+        
+        return self.segmentation_results.get(self.current_analysis, None)
+    
+    def get_original_data(self):
+        """
+        Get the original data DataFrame
+        
+        Returns:
+        --------
+        pd.DataFrame or None
+            The original data DataFrame, or None if no data was provided
+        """
+        return self.data.copy() if self.data is not None else None
+    
+    def get_features_data(self):
+        """
+        Get the features data used for segmentation
+        
+        Returns:
+        --------
+        Tuple or None
+            Tuple of (features, feature_columns, scaled_features) or None if no features
+        """
+        if self.features is None:
+            return None
+        
+        return (self.features, self.feature_columns, self.scaled_features)
+    
+    def get_segment_profiles(self, analysis_name: Optional[str] = None):
+        """
+        Get segment profiles for a specific analysis
+        
+        Parameters:
+        -----------
+        analysis_name : str, optional
+            Name of the analysis to get profiles for. If None, uses current analysis
+            
+        Returns:
+        --------
+        Dict or None
+            Dictionary of segment profiles, or None if not available
+        """
+        if analysis_name is None:
+            analysis_name = self.current_analysis
+        
+        if analysis_name is None:
+            return None
+        
+        # Check if summary exists
+        summary_key = f"{analysis_name}_summary"
+        if summary_key in self.segmentation_results:
+            summary = self.segmentation_results[summary_key]
+            return summary.get('segment_profiles', {})
+        
+        return None
+    
+    def get_segment_statistics(self, analysis_name: Optional[str] = None):
+        """
+        Get segment statistics for a specific analysis
+        
+        Parameters:
+        -----------
+        analysis_name : str, optional
+            Name of the analysis to get statistics for. If None, uses current analysis
+            
+        Returns:
+        --------
+        Dict or None
+            Dictionary of segment statistics, or None if not available
+        """
+        if analysis_name is None:
+            analysis_name = self.current_analysis
+        
+        if analysis_name is None:
+            return None
+        
+        # Check if summary exists
+        summary_key = f"{analysis_name}_summary"
+        if summary_key in self.segmentation_results:
+            summary = self.segmentation_results[summary_key]
+            return {
+                'segment_stats': summary.get('segment_stats'),
+                'segment_sizes': summary.get('segment_sizes'),
+                'segment_percentages': summary.get('segment_percentages'),
+                'feature_importance': summary.get('feature_importance')
+            }
+        
+        return None
 
 
 def get_features(

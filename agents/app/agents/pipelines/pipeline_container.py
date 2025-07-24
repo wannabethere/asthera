@@ -324,7 +324,7 @@ class PipelineContainer:
             retrieval_helper=self._retrieval_helper,
             document_store_provider=self._doc_store_provider,
             engine=self._engine,
-            chart_config={"type": "vega_lite"}  # Default to Vega-Lite
+            chart_config={"type": "enhanced_vega_lite"}  # Use enhanced Vega-Lite for KPI support
         )
         self._pipelines["chart_generation"]._initialized = True
         self._pipelines["chart_adjustment"] = ChartAdjustmentPipeline(
@@ -332,7 +332,7 @@ class PipelineContainer:
             retrieval_helper=self._retrieval_helper,
             document_store_provider=self._doc_store_provider,
             engine=self._engine,
-            chart_config={"type": "vega_lite"}  # Default to Vega-Lite
+            chart_config={"type": "enhanced_vega_lite"}  # Use enhanced Vega-Lite for KPI support
         )
         self._pipelines["chart_adjustment"]._initialized = True
         # Initialize assistance pipelines

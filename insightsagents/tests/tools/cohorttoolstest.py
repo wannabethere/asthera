@@ -36,10 +36,15 @@ def main():
     ltv_results = analyze_lifetime_value(events_df, transactions_df)
     print_ltv_results(ltv_results)
     
+    # Test the new to_df() functionality
+    print("\n=== TESTING to_df() FUNCTIONALITY ===")
+    test_results = test_to_df_functionality(events_df, transactions_df)
+    
     return {
         'retention': retention_results,
         'funnel': funnel_results,
-        'ltv': ltv_results
+        'ltv': ltv_results,
+        'test_results': test_results
     }
 
 
@@ -314,6 +319,68 @@ def print_ltv_results(ltv_results):
         print(f"  {cohort}: {size} users")
 
 
+def test_to_df_functionality(events_df, transactions_df):
+    """Test the new to_df() method functionality"""
+    print("\nTesting to_df() method for different analysis types:")
+    
+    # Test 1: Retention analysis to DataFrame
+    print("\n1. Retention Analysis to DataFrame:")
+    retention_pipe = (CohortPipe.from_dataframe(events_df)
+                      | form_time_cohorts('event_date', 'cohort', 'M')
+                      | calculate_retention('cohort', 'event_date', 'user_id', 'M', 6, 'classic'))
+    
+    retention_df = retention_pipe.to_df()
+    print(f"   Retention DataFrame shape: {retention_df.shape}")
+    print(f"   Columns: {list(retention_df.columns)}")
+    print(f"   Sample data:")
+    print(retention_df.head(3))
+    
+    # Test 2: Conversion analysis to DataFrame
+    print("\n2. Conversion Analysis to DataFrame:")
+    conversion_pipe = (CohortPipe.from_dataframe(events_df)
+                       | form_behavioral_cohorts('acquisition_source', 'acquisition_source_cohort')
+                       | calculate_conversion('acquisition_source_cohort', 'event', 'user_id', 
+                                            ['view_homepage', 'search_product', 'view_product', 'add_to_cart', 'begin_checkout', 'complete_purchase'],
+                                            ['Homepage View', 'Product Search', 'Product View', 'Add to Cart', 'Checkout', 'Purchase']))
+    
+    conversion_df = conversion_pipe.to_df()
+    print(f"   Conversion DataFrame shape: {conversion_df.shape}")
+    print(f"   Columns: {list(conversion_df.columns)}")
+    print(f"   Sample data:")
+    print(conversion_df.head(3))
+    
+    # Test 3: LTV analysis to DataFrame
+    print("\n3. LTV Analysis to DataFrame:")
+    ltv_pipe = (CohortPipe.from_dataframe(transactions_df)
+                | form_behavioral_cohorts('value_segment', 'value_segment_cohort')
+                | calculate_lifetime_value('value_segment_cohort', 'transaction_date', 'user_id', 'amount', 'M', 6, True))
+    
+    ltv_df = ltv_pipe.to_df()
+    print(f"   LTV DataFrame shape: {ltv_df.shape}")
+    print(f"   Columns: {list(ltv_df.columns)}")
+    print(f"   Sample data:")
+    print(ltv_df.head(3))
+    
+    # Test 4: With metadata
+    print("\n4. Retention Analysis to DataFrame with metadata:")
+    retention_df_with_meta = retention_pipe.to_df(include_metadata=True)
+    print(f"   Retention DataFrame with metadata shape: {retention_df_with_meta.shape}")
+    print(f"   Columns: {list(retention_df_with_meta.columns)}")
+    print(f"   Sample data:")
+    print(retention_df_with_meta.head(2))
+    
+    # Test 5: Specific analysis name
+    print("\n5. Specific analysis name:")
+    retention_df_specific = retention_pipe.to_df(analysis_name='time_cohorts_retention')
+    print(f"   Specific analysis DataFrame shape: {retention_df_specific.shape}")
+    
+    return {
+        'retention_df': retention_df,
+        'conversion_df': conversion_df,
+        'ltv_df': ltv_df,
+        'retention_df_with_meta': retention_df_with_meta
+    }
+
 if __name__ == "__main__":
     results = main()
     
@@ -344,3 +411,5 @@ if __name__ == "__main__":
         six_month_ltv = ltv_matrix.loc[segment, 'Period 6'] if 'Period 6' in ltv_matrix.columns else ltv_matrix.iloc[0, -1]
         print(f"   {segment.title()} segment 6-month LTV: ${six_month_ltv:.2f}")
     print("   → Action: Increase marketing spend on acquiring high-value customers")
+
+

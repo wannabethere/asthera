@@ -115,6 +115,163 @@ class CohortPipe:
         pipe = cls()
         pipe.data = df.copy()
         return pipe
+    
+    def to_df(self, analysis_name: Optional[str] = None, include_metadata: bool = False):
+        """
+        Convert the last analysis output to a DataFrame
+        
+        Parameters:
+        -----------
+        analysis_name : str, optional
+            Name of the specific analysis to convert. If None, uses the current_analysis
+        include_metadata : bool, default=False
+            Whether to include metadata columns in the output DataFrame
+            
+        Returns:
+        --------
+        pd.DataFrame
+            DataFrame representation of the analysis results
+            
+        Raises:
+        -------
+        ValueError
+            If no analysis has been performed or the specified analysis doesn't exist
+            
+        Examples:
+        --------
+        >>> # Retention analysis
+        >>> pipe = (CohortPipe.from_dataframe(df)
+        ...         | form_time_cohorts('date', 'cohort', 'M')
+        ...         | calculate_retention('cohort', 'date', 'user_id', 'M', 6))
+        >>> retention_df = pipe.to_df()
+        >>> print(retention_df.head())
+        
+        >>> # Conversion analysis with metadata
+        >>> pipe = (CohortPipe.from_dataframe(df)
+        ...         | form_behavioral_cohorts('source', 'cohort')
+        ...         | calculate_conversion('cohort', 'event', 'user_id', ['step1', 'step2']))
+        >>> conversion_df = pipe.to_df(include_metadata=True)
+        >>> print(conversion_df.columns)
+        """
+        if not self.cohort_results:
+            raise ValueError("No analysis has been performed. Run an analysis first.")
+        
+        # Determine which analysis to use
+        if analysis_name is None:
+            if self.current_analysis is None:
+                # Use the last analysis in cohort_results
+                analysis_name = list(self.cohort_results.keys())[-1]
+            else:
+                # Find the analysis that matches current_analysis
+                matching_analyses = [name for name in self.cohort_results.keys() 
+                                   if name.startswith(self.current_analysis)]
+                if not matching_analyses:
+                    raise ValueError(f"No analysis found for current_analysis: {self.current_analysis}")
+                analysis_name = matching_analyses[0]
+        
+        if analysis_name not in self.cohort_results:
+            raise ValueError(f"Analysis '{analysis_name}' not found. Available analyses: {list(self.cohort_results.keys())}")
+        
+        result = self.cohort_results[analysis_name]
+        analysis_type = result['type']
+        
+        if analysis_type == 'retention':
+            return self._retention_to_df(result, include_metadata)
+        elif analysis_type == 'conversion':
+            return self._conversion_to_df(result, include_metadata)
+        elif analysis_type == 'ltv':
+            return self._ltv_to_df(result, include_metadata)
+        else:
+            raise ValueError(f"Unknown analysis type: {analysis_type}")
+    
+    def _retention_to_df(self, result: Dict, include_metadata: bool = False) -> pd.DataFrame:
+        """Convert retention analysis results to DataFrame"""
+        retention_matrix = result['retention_matrix']
+        retention_counts = result['retention_counts']
+        cohort_sizes = result['cohort_sizes']
+        
+        # Create a long-format DataFrame
+        df_list = []
+        
+        for cohort in retention_matrix.index:
+            cohort_size = cohort_sizes.loc[cohort, 'cohort_size'] if cohort in cohort_sizes.index else 0
+            
+            for period_col in retention_matrix.columns:
+                period_num = period_col.replace('Period ', '')
+                retention_rate = retention_matrix.loc[cohort, period_col]
+                user_count = retention_counts.loc[cohort, period_col]
+                
+                row = {
+                    'cohort': cohort,
+                    'period': int(period_num),
+                    'retention_rate': retention_rate,
+                    'user_count': user_count,
+                    'cohort_size': cohort_size
+                }
+                
+                if include_metadata:
+                    row.update({
+                        'analysis_type': 'retention',
+                        'retention_type': result.get('retention_type', 'unknown'),
+                        'time_period': result.get('time_period', 'unknown'),
+                        'cohort_column': result.get('cohort_column', 'unknown')
+                    })
+                
+                df_list.append(row)
+        
+        return pd.DataFrame(df_list)
+    
+    def _conversion_to_df(self, result: Dict, include_metadata: bool = False) -> pd.DataFrame:
+        """Convert conversion analysis results to DataFrame"""
+        # The funnel_data is already a DataFrame, just add metadata if requested
+        df = result['funnel_data'].copy()
+        
+        if include_metadata:
+            df['analysis_type'] = 'conversion'
+            df['event_column'] = result.get('event_column', 'unknown')
+            df['funnel_steps'] = str(result.get('funnel_steps', []))
+            df['include_rates'] = result.get('include_rates', False)
+            df['cumulative'] = result.get('cumulative', False)
+        
+        return df
+    
+    def _ltv_to_df(self, result: Dict, include_metadata: bool = False) -> pd.DataFrame:
+        """Convert LTV analysis results to DataFrame"""
+        ltv_matrix = result['ltv_matrix']
+        ltv_matrix_total = result['ltv_matrix_total']
+        cohort_sizes = result['cohort_sizes']
+        
+        # Create a long-format DataFrame
+        df_list = []
+        
+        for cohort in ltv_matrix.index:
+            cohort_size = cohort_sizes[cohort_sizes[result['cohort_column']] == cohort]['cohort_size'].iloc[0]
+            
+            for period_col in ltv_matrix.columns:
+                period_num = period_col.replace('Period ', '')
+                avg_value = ltv_matrix.loc[cohort, period_col]
+                total_value = ltv_matrix_total.loc[cohort, period_col]
+                
+                row = {
+                    'cohort': cohort,
+                    'period': int(period_num),
+                    'avg_value': avg_value,
+                    'total_value': total_value,
+                    'cohort_size': cohort_size
+                }
+                
+                if include_metadata:
+                    row.update({
+                        'analysis_type': 'ltv',
+                        'value_column': result.get('value_column', 'unknown'),
+                        'time_period': result.get('time_period', 'unknown'),
+                        'cumulative': result.get('cumulative', False),
+                        'cohort_column': result.get('cohort_column', 'unknown')
+                    })
+                
+                df_list.append(row)
+        
+        return pd.DataFrame(df_list)
 
 
 # Cohort formation functions

@@ -1,0 +1,325 @@
+{
+    "functions": {
+        "moving_average": {
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate moving averages for"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 7)"},
+                {"name": "method", "type": "str", "description": "Moving average method: 'simple', 'weighted', 'exponential' (default: 'simple')"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_ma')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving averages in a MovingAggrPipe."
+            },
+            "description": "Calculate moving averages for specified columns\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to calculate moving averages for\nwindow : int, default=7\n    Window size for moving calculations\nmethod : str, default='simple'\n    Moving average method: 'simple', 'weighted', 'exponential'\nmin_periods : int, default=1\n    Minimum number of observations in window required to have a value\ncenter : bool, default=False\n    Set the labels at the center of the window\ntime_column : str, optional\n    Column containing the time/date information for time-based windows\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\noutput_suffix : str, default='_ma'\n    Suffix for output columns\n\nReturns:\n--------\nCallable\n    Function that calculates moving averages in a MovingAggrPipe"
+        },
+        "moving_variance": {
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate moving variance/std for"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 7)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "ddof", "type": "int", "description": "Delta Degrees of Freedom for variance calculation (default: 1)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "var_suffix", "type": "str", "description": "Suffix for variance output columns (default: '_var')"},
+                {"name": "std_suffix", "type": "str", "description": "Suffix for standard deviation output columns (default: '_std')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving variance in a MovingAggrPipe."
+            },
+            "description": "Calculate moving variance and standard deviation for specified columns\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to calculate moving variance/std for\nwindow : int, default=7\n    Window size for moving calculations\nmin_periods : int, default=1\n    Minimum number of observations in window required to have a value\ncenter : bool, default=False\n    Set the labels at the center of the window\nddof : int, default=1\n    Delta Degrees of Freedom for variance calculation\ntime_column : str, optional\n    Column containing the time/date information for time-based windows\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\nvar_suffix : str, default='_var'\n    Suffix for variance output columns\nstd_suffix : str, default='_std'\n    Suffix for standard deviation output columns\n\nReturns:\n--------\nCallable\n    Function that calculates moving variance in a MovingAggrPipe"
+        },
+        "moving_sum": {
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate moving sums for"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 7)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_sum')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving sums in a MovingAggrPipe."
+            },
+            "description": "Calculate moving sums for specified columns\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to calculate moving sums for\nwindow : int, default=7\n    Window size for moving calculations\nmin_periods : int, default=1\n    Minimum number of observations in window required to have a value\ncenter : bool, default=False\n    Set the labels at the center of the window\ntime_column : str, optional\n    Column containing the time/date information for time-based windows\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\noutput_suffix : str, default='_sum'\n    Suffix for output columns\n\nReturns:\n--------\nCallable\n    Function that calculates moving sums in a MovingAggrPipe"
+        },
+        "moving_quantile": {
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate moving quantiles for"},
+                {"name": "quantile", "type": "float or List[float]", "description": "Quantile or quantiles to compute (values between 0 and 1)"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 7)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (if None, uses '_qX' where X is the quantile value) (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving quantiles in a MovingAggrPipe."
+            },
+            "description": "Calculate moving quantiles (percentiles) for specified columns\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to calculate moving quantiles for\nquantile : float or List[float]\n    Quantile or quantiles to compute (values between 0 and 1)\nwindow : int, default=7\n    Window size for moving calculations\nmin_periods : int, default=1\n    Minimum number of observations in window required to have a value\ncenter : bool, default=False\n    Set the labels at the center of the window\ntime_column : str, optional\n    Column containing the time/date information for time-based windows\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\noutput_suffix : str, optional\n    Suffix for output columns (if None, uses '_qX' where X is the quantile value)\n\nReturns:\n--------\nCallable\n    Function that calculates moving quantiles in a MovingAggrPipe"
+        },
+        "moving_correlation": {
+            "required_params": [
+                {"name": "column_pairs", "type": "List[Tuple[str, str]]", "description": "List of tuples containing pairs of columns to calculate correlations for"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 30)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 2)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_corr')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving correlations in a MovingAggrPipe."
+            },
+            "description": "Calculate moving correlations between pairs of columns\n\nParameters:\n-----------\ncolumn_pairs : List[Tuple[str, str]]\n    List of tuples containing pairs of columns to calculate correlations for\nwindow : int, default=30\n    Window size for moving calculations\nmin_periods : int, default=2\n    Minimum number of observations in window required to have a value\ncenter : bool, default=False\n    Set the labels at the center of the window\ntime_column : str, optional\n    Column containing the time/date information for time-based windows\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\noutput_suffix : str, default='_corr'\n    Suffix for output columns\n\nReturns:\n--------\nCallable\n    Function that calculates moving correlations in a MovingAggrPipe"
+        },
+        "moving_zscore": {
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate moving z-scores for"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 7)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_zscore')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving z-scores in a MovingAggrPipe."
+            },
+            "description": "Calculate moving z-scores for specified columns\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to calculate moving z-scores for\nwindow : int, default=7\n    Window size for moving calculations\nmin_periods : int, default=1\n    Minimum number of observations in window required to have a value\ncenter : bool, default=False\n    Set the labels at the center of the window\ntime_column : str, optional\n    Column containing the time/date information for time-based windows\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\noutput_suffix : str, default='_zscore'\n    Suffix for output columns\n\nReturns:\n--------\nCallable\n    Function that calculates moving z-scores in a MovingAggrPipe"
+        },
+        "moving_apply_by_group": {
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to apply the function to"},
+                {"name": "group_column", "type": "str", "description": "Column used to define the groups within each window"},
+                {"name": "function", "type": "Callable", "description": "Function to apply to each group in each window (must accept a DataFrame and return a scalar or Series)"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 7)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_grouped')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that applies custom group-based calculations in a MovingAggrPipe."
+            },
+            "description": "Apply a function by group within a moving window\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to apply the function to\ngroup_column : str\n    Column used to define the groups within each window\nfunction : Callable\n    Function to apply to each group in each window (must accept a DataFrame and return a scalar or Series)\nwindow : int, default=7\n    Window size for moving calculations\nmin_periods : int, default=1\n    Minimum number of observations in window required to have a value\ncenter : bool, default=False\n    Set the labels at the center of the window\ntime_column : str, optional\n    Column containing the time/date information for time-based windows\noutput_suffix : str, default='_grouped'\n    Suffix for output columns\n\nReturns:\n--------\nCallable\n    Function that applies custom group-based calculations in a MovingAggrPipe"
+        },
+        "moving_ratio": {
+            "required_params": [
+                {"name": "numerator_column", "type": "str", "description": "Column to use as numerator"},
+                {"name": "denominator_column", "type": "str", "description": "Column to use as denominator"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 7)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "fill_zeroes", "type": "bool", "description": "Replace division by zero with 0 instead of NaN (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_column", "type": "str", "description": "Name for the output column (if None, uses '{numerator_column}_to_{denominator_column}_ratio') (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving ratios in a MovingAggrPipe."
+            },
+            "description": "Calculate the ratio of sums of two columns within a moving window\n\nParameters:\n-----------\nnumerator_column : str\n    Column to use as numerator\ndenominator_column : str\n    Column to use as denominator\nwindow : int, default=7\n    Window size for moving calculations\nmin_periods : int, default=1\n    Minimum number of observations in window required to have a value\ncenter : bool, default=False\n    Set the labels at the center of the window\nfill_zeroes : bool, default=False\n    Replace division by zero with 0 instead of NaN\ntime_column : str, optional\n    Column containing the time/date information for time-based windows\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\noutput_column : str, optional\n    Name for the output column (if None, uses '{numerator_column}_to_{denominator_column}_ratio')\n\nReturns:\n--------\nCallable\n    Function that calculates moving ratios in a MovingAggrPipe"
+        },
+        "detect_turning_points": {
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to detect turning points for"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for peak/trough detection (points must be highest/lowest in window) (default: 7)"},
+                {"name": "threshold", "type": "float", "description": "Minimum absolute percentage change required to consider a point a turning point (default: 0.0)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to consider a turning point (default: 3)"},
+                {"name": "peak_suffix", "type": "str", "description": "Suffix for peak indicator columns (default: '_peak')"},
+                {"name": "trough_suffix", "type": "str", "description": "Suffix for trough indicator columns (default: '_trough')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that detects turning points in a MovingAggrPipe."
+            },
+            "description": "Detect peaks and troughs (turning points) in time series data\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to detect turning points for\nwindow : int, default=7\n    Window size for peak/trough detection (points must be highest/lowest in window)\nthreshold : float, default=0.0\n    Minimum absolute percentage change required to consider a point a turning point\ntime_column : str, optional\n    Column containing the time/date information for time-based windows\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\nmin_periods : int, default=3\n    Minimum number of observations in window required to consider a turning point\npeak_suffix : str, default='_peak'\n    Suffix for peak indicator columns\ntrough_suffix : str, default='_trough'\n    Suffix for trough indicator columns\n\nReturns:\n--------\nCallable\n    Function that detects turning points in a MovingAggrPipe"
+        },
+        "moving_regression": {
+            "required_params": [
+                {"name": "dependent_column", "type": "str", "description": "Column containing the dependent variable (y)"},
+                {"name": "independent_columns", "type": "str or List[str]", "description": "Column(s) containing the independent variable(s) (X)"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 30)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 5)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "intercept", "type": "bool", "description": "Whether to include an intercept term in the regression (default: True)"},
+                {"name": "save_coefficients", "type": "bool", "description": "Whether to save the regression coefficients (default: True)"},
+                {"name": "save_predictions", "type": "bool", "description": "Whether to save the predicted values (default: True)"},
+                {"name": "save_residuals", "type": "bool", "description": "Whether to save the residuals (default: True)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_reg')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving regressions in a MovingAggrPipe."
+            },
+            "description": "Calculate rolling regression coefficients and statistics\n\nParameters:\n-----------\ndependent_column : str\n    Column containing the dependent variable (y)\nindependent_columns : str or List[str]\n    Column(s) containing the independent variable(s) (X)\nwindow : int, default=30\n    Window size for moving calculations\nmin_periods : int, default=5\n    Minimum number of observations in window required to have a value\ncenter : bool, default=False\n    Set the labels at the center of the window\ntime_column : str, optional\n    Column containing the time/date information for time-based windows\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\nintercept : bool, default=True\n    Whether to include an intercept term in the regression\nsave_coefficients : bool, default=True\n    Whether to save the regression coefficients\nsave_predictions : bool, default=True\n    Whether to save the predicted values\nsave_residuals : bool, default=True\n    Whether to save the residuals\noutput_suffix : str, default='_reg'\n    Suffix for output columns\n\nReturns:\n--------\nCallable\n    Function that calculates moving regressions in a MovingAggrPipe"
+        },
+        "moving_min_max": {
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate moving min/max for"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 7)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "min_suffix", "type": "str", "description": "Suffix for minimum value output columns (default: '_min')"},
+                {"name": "max_suffix", "type": "str", "description": "Suffix for maximum value output columns (default: '_max')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving min/max in a MovingAggrPipe."
+            },
+            "description": "Calculate moving minimum and maximum values for specified columns\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to calculate moving min/max for\nwindow : int, default=7\n    Window size for moving calculations\nmin_periods : int, default=1\n    Minimum number of observations in window required to have a value\ncenter : bool, default=False\n    Set the labels at the center of the window\ntime_column : str, optional\n    Column containing the time/date information for time-based windows\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\nmin_suffix : str, default='_min'\n    Suffix for minimum value output columns\nmax_suffix : str, default='_max'\n    Suffix for maximum value output columns\n\nReturns:\n--------\nCallable\n    Function that calculates moving min/max in a MovingAggrPipe"
+        },
+        "moving_count": {
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to count observations for"}
+            ],
+            "optional_params": [
+                {"name": "condition", "type": "Callable", "description": "Function that takes a series and returns a boolean mask (if None, counts non-NaN values) (optional)"},
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 7)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_count')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving counts in a MovingAggrPipe."
+            },
+            "description": "Calculate moving count of observations or observations meeting a condition\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to count observations for\ncondition : Callable, optional\n    Function that takes a series and returns a boolean mask (if None, counts non-NaN values)\nwindow : int, default=7\n    Window size for moving calculations\nmin_periods : int, default=1\n    Minimum number of observations in window required to have a value\ncenter : bool, default=False\n    Set the labels at the center of the window\ntime_column : str, optional\n    Column containing the time/date information for time-based windows\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\noutput_suffix : str, default='_count'\n    Suffix for output columns\n\nReturns:\n--------\nCallable\n    Function that calculates moving counts in a MovingAggrPipe"
+        },
+        "moving_aggregate": {
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to apply the function to"},
+                {"name": "function", "type": "Callable", "description": "Function to apply to each window (must accept a Series and return a scalar)"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 7)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_agg')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that applies custom aggregation in a MovingAggrPipe."
+            },
+            "description": "Apply a custom aggregation function over a moving window\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to apply the function to\nfunction : Callable\n    Function to apply to each window (must accept a Series and return a scalar)\nwindow : int, default=7\n    Window size for moving calculations\nmin_periods : int, default=1\n    Minimum number of observations in window required to have a value\ncenter : bool, default=False\n    Set the labels at the center of the window\ntime_column : str, optional\n    Column containing the time/date information for time-based windows\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\noutput_suffix : str, default='_agg'\n    Suffix for output columns\n\nReturns:\n--------\nCallable\n    Function that applies custom aggregation in a MovingAggrPipe"
+        },
+        "moving_percentile_rank": {
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate percentile ranks for"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 30)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_rank')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving percentile ranks in a MovingAggrPipe."
+            },
+            "description": "Calculate the percentile rank of each value within a moving window\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to calculate percentile ranks for\nwindow : int, default=30\n    Window size for moving calculations\nmin_periods : int, default=1\n    Minimum number of observations in window required to have a value\ncenter : bool, default=False\n    Set the labels at the center of the window\ntime_column : str, optional\n    Column containing the time/date information for time-based windows\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\noutput_suffix : str, default='_rank'\n    Suffix for output columns\n\nReturns:\n--------\nCallable\n    Function that calculates moving percentile ranks in a MovingAggrPipe"
+        },
+        "time_weighted_average": {
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate time-weighted averages for"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 7)"},
+                {"name": "decay_factor", "type": "float", "description": "Exponential decay factor (higher values give more weight to recent observations) (default: 0.5)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_twa')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates time-weighted averages in a MovingAggrPipe."
+            },
+            "description": "Calculate time-weighted average with exponential decay for specified columns\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to calculate time-weighted averages for\nwindow : int, default=7\n    Window size for moving calculations\ndecay_factor : float, default=0.5\n    Exponential decay factor (higher values give more weight to recent observations)\nmin_periods : int, default=1\n    Minimum number of observations in window required to have a value\ntime_column : str, optional\n    Column containing the time/date information for time-based windows\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\noutput_suffix : str, default='_twa'\n    Suffix for output columns\n\nReturns:\n--------\nCallable\n    Function that calculates time-weighted averages in a MovingAggrPipe"
+        },
+        "moving_cumulative": {
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate moving cumulative metrics for"}
+            ],
+            "optional_params": [
+                {"name": "operation", "type": "str", "description": "Operation to perform: 'sum', 'product', 'max', 'min' (default: 'sum')"},
+                {"name": "window", "type": "int", "description": "Window size for moving calculations. If None, cumulative over all prior data (optional)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns. If None, defaults to '_cum{operation}' (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving cumulative metrics in a MovingAggrPipe."
+            },
+            "description": "Calculate moving cumulative metrics for specified columns\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to calculate moving cumulative metrics for\noperation : str, default='sum'\n    Operation to perform: 'sum', 'product', 'max', 'min'\nwindow : int, optional\n    Window size for moving calculations. If None, cumulative over all prior data\nmin_periods : int, default=1\n    Minimum number of observations in window required to have a value\ntime_column : str, optional\n    Column containing the time/date information for time-based windows\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\noutput_suffix : str, optional\n    Suffix for output columns. If None, defaults to '_cum{operation}'\n\nReturns:\n--------\nCallable\n    Function that calculates moving cumulative metrics in a MovingAggrPipe"
+        },
+        "expanding_window": {
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate expanding window metrics for"}
+            ],
+            "optional_params": [
+                {"name": "operation", "type": "str", "description": "Operation to perform: 'mean', 'sum', 'std', 'var', 'min', 'max', 'count' (default: 'mean')"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for sorting (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns. If None, defaults to '_exp{operation}' (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates expanding window metrics in a MovingAggrPipe."
+            },
+            "description": "Calculate metrics using an expanding window (all prior data)\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to calculate expanding window metrics for\noperation : str, default='mean'\n    Operation to perform: 'mean', 'sum', 'std', 'var', 'min', 'max', 'count'\nmin_periods : int, default=1\n    Minimum number of observations in window required to have a value\ntime_column : str, optional\n    Column containing the time/date information for sorting\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\noutput_suffix : str, optional\n    Suffix for output columns. If None, defaults to '_exp{operation}'\n\nReturns:\n--------\nCallable\n    Function that calculates expanding window metrics in a MovingAggrPipe"
+        }
+    }
+} 

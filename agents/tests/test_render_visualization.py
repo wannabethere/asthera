@@ -25,7 +25,7 @@ async def test_render_visualization_service():
         from app.core.engine_provider import EngineProvider
         from app.core.dependencies import get_llm
         from app.agents.retrieval.retrieval_helper import RetrievalHelper
-        from app.agents.nodes.sql.chart_generation import create_vega_lite_chart_generation_pipeline
+        from app.agents.nodes.sql.enhanced_chart_generation import create_enhanced_vega_lite_chart_generation_pipeline
         from app.agents.nodes.sql.plotly_chart_generation import create_plotly_chart_generation_pipeline
         from app.agents.nodes.sql.powerbi_chart_generation import create_powerbi_chart_generation_pipeline
         from app.agents.pipelines.sql_execution import ChartExecutionPipeline
@@ -39,7 +39,7 @@ async def test_render_visualization_service():
         retrieval_helper = RetrievalHelper()
         
         # Create chart generation pipelines
-        chart_generation_pipeline = create_vega_lite_chart_generation_pipeline()
+        chart_generation_pipeline = create_enhanced_vega_lite_chart_generation_pipeline()
         plotly_chart_generation_pipeline = create_plotly_chart_generation_pipeline(llm)
         powerbi_chart_generation_pipeline = create_powerbi_chart_generation_pipeline(llm)
         

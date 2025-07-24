@@ -1,94 +1,169 @@
 {
     "functions": {
         "detect_statistical_outliers": {
-            "required_params": ["columns"],
-            "optional_params": ["method", "threshold", "window", "time_column", "group_columns"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to analyze for outliers"}
+            ],
+            "optional_params": [
+                {"name": "method", "type": "str", "description": "Method to use: 'zscore', 'modified_zscore', 'iqr', or 'percentile' (default: 'zscore')"},
+                {"name": "threshold", "type": "float", "description": "Threshold for determining outliers: For zscore/modified_zscore: number of standard deviations; For iqr: multiplier of IQR (values outside Q1-threshold*IQR and Q3+threshold*IQR); For percentile: values below/above percentile thresholds (default: 3.0)"},
+                {"name": "window", "type": "int", "description": "Window size for rolling outlier detection (if None, use entire series)"},
+                {"name": "time_column", "type": "str", "description": "Time column to sort by before calculations (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data, optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that detects outliers using statistical methods in an AnomalyPipe"
+                "description": "Function that detects outliers in an AnomalyPipe using statistical methods."
             },
-            "description": "Detect outliers using statistical methods like z-score, IQR, modified z-score, or percentile"
+            "description": "Detect outliers using statistical methods\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to analyze for outliers\nmethod : str, default='zscore'\n    Method to use: 'zscore', 'modified_zscore', 'iqr', or 'percentile'\nthreshold : float, default=3.0\n    Threshold for determining outliers:\n    - For zscore/modified_zscore: number of standard deviations\n    - For iqr: multiplier of IQR (values outside Q1-threshold*IQR and Q3+threshold*IQR)\n    - For percentile: values below/above percentile thresholds\nwindow : int, optional\n    Window size for rolling outlier detection (if None, use entire series)\ntime_column : str, optional\n    Time column to sort by before calculations\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\n\nReturns:\n--------\nCallable\n    Function that detects outliers in an AnomalyPipe"
         },
         "detect_contextual_anomalies": {
-            "required_params": ["columns", "time_column"],
-            "optional_params": ["method", "model_type", "threshold", "window", "seasonal_period", "group_columns", "datetime_format"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to analyze for anomalies"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information"}
+            ],
+            "optional_params": [
+                {"name": "method", "type": "str", "description": "Method to use: 'residual', 'prediction_interval', 'changepoint' (default: 'residual')"},
+                {"name": "model_type", "type": "str", "description": "Model to generate expected values: 'ewm', 'sarimax', 'decomposition' (default: 'ewm')"},
+                {"name": "threshold", "type": "float", "description": "Threshold for determining anomalies (std deviations for residuals, prediction intervals) (default: 3.0)"},
+                {"name": "window", "type": "int", "description": "Window size for rolling model fitting (default: 30)"},
+                {"name": "seasonal_period", "type": "int", "description": "Number of periods in a seasonal cycle (if None, will be estimated)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data, optional)"},
+                {"name": "datetime_format", "type": "str", "description": "Format string for parsing dates if they are not already datetime objects (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that detects contextual anomalies in an AnomalyPipe"
+                "description": "Function that detects contextual anomalies in an AnomalyPipe."
             },
-            "description": "Detect contextual anomalies by comparing actual values with expected values from time series models"
+            "description": "Detect contextual anomalies by comparing actual values with expected values\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to analyze for anomalies\ntime_column : str\n    Column containing the time/date information\nmethod : str, default='residual'\n    Method to use: 'residual', 'prediction_interval', 'changepoint'\nmodel_type : str, default='ewm'\n    Model to generate expected values: 'ewm', 'sarimax', 'decomposition'\nthreshold : float, default=3.0\n    Threshold for determining anomalies (std deviations for residuals, prediction intervals)\nwindow : int, default=30\n    Window size for rolling model fitting\nseasonal_period : int, optional\n    Number of periods in a seasonal cycle (if None, will be estimated)\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\ndatetime_format : str, optional\n    Format string for parsing dates if they are not already datetime objects\n\nReturns:\n--------\nCallable\n    Function that detects contextual anomalies in an AnomalyPipe"
         },
         "detect_collective_anomalies": {
-            "required_params": ["columns", "time_column"],
-            "optional_params": ["method", "window", "contamination", "n_estimators", "group_columns", "datetime_format"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to analyze for anomalies (multiple columns for multivariate analysis)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information"}
+            ],
+            "optional_params": [
+                {"name": "method", "type": "str", "description": "Method to use: 'isolation_forest', 'lof' (default: 'isolation_forest')"},
+                {"name": "window", "type": "int", "description": "Window size for rolling analysis (default: 30)"},
+                {"name": "contamination", "type": "float", "description": "Expected proportion of anomalies in the data (default: 0.05)"},
+                {"name": "n_estimators", "type": "int", "description": "Number of estimators (for tree-based methods, default: 100)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data, optional)"},
+                {"name": "datetime_format", "type": "str", "description": "Format string for parsing dates if they are not already datetime objects (optional)"}
+            ],
             "outputs": {
-                "type": "Callable", 
-                "description": "Function that detects collective anomalies in an AnomalyPipe"
+                "type": "Callable",
+                "description": "Function that detects collective anomalies in an AnomalyPipe."
             },
-            "description": "Detect collective anomalies using machine learning methods on multiple features"
+            "description": "Detect collective anomalies using machine learning methods on multiple features\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to analyze for anomalies (multiple columns for multivariate analysis)\ntime_column : str\n    Column containing the time/date information\nmethod : str, default='isolation_forest'\n    Method to use: 'isolation_forest', 'lof' (Local Outlier Factor)\nwindow : int, default=30\n    Window size for rolling analysis\ncontamination : float, default=0.05\n    Expected proportion of anomalies in the data\nn_estimators : int, default=100\n    Number of estimators (for tree-based methods)\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\ndatetime_format : str, optional\n    Format string for parsing dates if they are not already datetime objects\n\nReturns:\n--------\nCallable\n    Function that detects collective anomalies in an AnomalyPipe"
         },
         "calculate_seasonal_residuals": {
-            "required_params": ["columns", "mtime_column"],
-            "optional_params": ["mseasonal_period", "mmethod", "mgroup_columns", "mdatetime_format"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to analyze"},
+                {"name": "mtime_column", "type": "str", "description": "Column containing the time/date information"}
+            ],
+            "optional_params": [
+                {"name": "mseasonal_period", "type": "int", "description": "Number of periods in a seasonal cycle (if None, will be estimated)"},
+                {"name": "mmethod", "type": "str", "description": "Decomposition method: 'multiplicative' or 'additive' (default: 'multiplicative')"},
+                {"name": "mgroup_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data, optional)"},
+                {"name": "mdatetime_format", "type": "str", "description": "Format string for parsing dates if they are not already datetime objects (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that calculates seasonal residuals in an AnomalyPipe"
+                "description": "Function that calculates seasonal residuals in an AnomalyPipe."
             },
-            "description": "Calculate residuals after removing seasonal patterns using decomposition"
+            "description": "Calculate residuals after removing seasonal patterns\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to analyze\ntime_column : str\n    Column containing the time/date information\nseasonal_period : int, optional\n    Number of periods in a seasonal cycle (if None, will be estimated)\nmethod : str, default='multiplicative'\n    Decomposition method: 'multiplicative' or 'additive'\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\ndatetime_format : str, optional\n    Format string for parsing dates if they are not already datetime objects\n\nReturns:\n--------\nCallable\n    Function that calculates seasonal residuals in an AnomalyPipe"
         },
         "detect_anomalies_from_residuals": {
-            "required_params": ["columns"],
-            "optional_params": ["method", "threshold", "suffix", "output_suffix"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Base column(s) names (will look for {column}{suffix})"}
+            ],
+            "optional_params": [
+                {"name": "method", "type": "str", "description": "Method to use: 'zscore', 'modified_zscore', 'iqr', or 'percentile' (default: 'zscore')"},
+                {"name": "threshold", "type": "float", "description": "Threshold for determining anomalies (default: 3.0)"},
+                {"name": "suffix", "type": "str", "description": "Suffix of columns containing residuals (default: '_residual')"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output anomaly flag columns (default: '_anomaly')"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that detects anomalies from residuals in an AnomalyPipe"
+                "description": "Function that detects anomalies from residuals in an AnomalyPipe."
             },
-            "description": "Detect anomalies from pre-calculated residuals using statistical methods"
+            "description": "Detect anomalies from pre-calculated residuals\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Base column(s) names (will look for {column}{suffix})\nmethod : str, default='zscore'\n    Method to use: 'zscore', 'modified_zscore', 'iqr', or 'percentile'\nthreshold : float, default=3.0\n    Threshold for determining anomalies\nsuffix : str, default='_residual'\n    Suffix of columns containing residuals\noutput_suffix : str, default='_anomaly'\n    Suffix for output anomaly flag columns\n\nReturns:\n--------\nCallable\n    Function that detects anomalies from residuals in an AnomalyPipe"
         },
         "get_anomaly_summary": {
             "required_params": [],
-            "optional_params": ["analysis_name"],
+            "optional_params": [
+                {"name": "analysis_name", "type": "str", "description": "Name of the analysis to summarize (if None, use current analysis)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that returns a summary of anomalies"
+                "description": "Function that returns a summary of anomalies."
             },
-            "description": "Generate a summary of detected anomalies including counts, percentages, and distributions"
+            "description": "Generate a summary of detected anomalies\n\nParameters:\n-----------\nanalysis_name : str, optional\n    Name of the analysis to summarize (if None, use current analysis)\n\nReturns:\n--------\nCallable\n    Function that returns a summary of anomalies"
         },
         "get_top_anomalies": {
             "required_params": [],
-            "optional_params": ["n", "time_column", "analysis_name"],
+            "optional_params": [
+                {"name": "n", "type": "int", "description": "Number of top anomalies to return (default: 10)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information (optional)"},
+                {"name": "analysis_name", "type": "str", "description": "Name of the analysis to use (if None, use current analysis)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that returns top anomalies"
+                "description": "Function that returns top anomalies."
             },
-            "description": "Get the top n anomalies by score with their details"
+            "description": "Get the top n anomalies by score\n\nParameters:\n-----------\nn : int, default=10\n    Number of top anomalies to return\ntime_column : str, optional\n    Column containing the time/date information\nanalysis_name : str, optional\n    Name of the analysis to use (if None, use current analysis)\n\nReturns:\n--------\nCallable\n    Function that returns top anomalies"
         },
         "detect_change_points": {
-            "required_params": ["columns", "time_column"],
-            "optional_params": ["min_size", "method", "penalty", "group_columns", "datetime_format"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to analyze for change points"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information"}
+            ],
+            "optional_params": [
+                {"name": "min_size", "type": "int", "description": "Minimum number of observations between change points (default: 20)"},
+                {"name": "method", "type": "str", "description": "Method: 'binary_segmentation', 'window' or 'pruned_exact' (default: 'binary_segmentation')"},
+                {"name": "penalty", "type": "str", "description": "Penalty for model selection: 'bic', 'aic', 'mbic' (default: 'bic')"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data, optional)"},
+                {"name": "datetime_format", "type": "str", "description": "Format string for parsing dates if they are not already datetime objects (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that detects change points in an AnomalyPipe"
+                "description": "Function that detects change points in an AnomalyPipe."
             },
-            "description": "Detect change points in time series data using various algorithms"
+            "description": "Detect change points in time series data\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to analyze for change points\ntime_column : str\n    Column containing the time/date information\nmin_size : int, default=20\n    Minimum number of observations between change points\nmethod : str, default='binary_segmentation'\n    Method: 'binary_segmentation', 'window' or 'pruned_exact'\npenalty : str, default='bic'\n    Penalty for model selection: 'bic', 'aic', 'mbic'\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\ndatetime_format : str, optional\n    Format string for parsing dates if they are not already datetime objects\n\nReturns:\n--------\nCallable\n    Function that detects change points in an AnomalyPipe"
         },
         "forecast_and_detect_anomalies": {
-            "required_params": ["columns", "time_column"],
-            "optional_params": ["forecast_periods", "model", "threshold", "seasonal_period", "group_columns", "datetime_format"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to forecast and analyze"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information"}
+            ],
+            "optional_params": [
+                {"name": "forecast_periods", "type": "int", "description": "Number of periods to forecast ahead (default: 5)"},
+                {"name": "model", "type": "str", "description": "Forecasting model: 'arima', 'exponential_smoothing', 'sarimax' (default: 'arima')"},
+                {"name": "threshold", "type": "float", "description": "Threshold for anomaly detection (number of std deviations, default: 2.0)"},
+                {"name": "seasonal_period", "type": "int", "description": "Number of periods in a seasonal cycle (if None, will be estimated)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data, optional)"},
+                {"name": "datetime_format", "type": "str", "description": "Format string for parsing dates if they are not already datetime objects (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that forecasts and detects anomalies in an AnomalyPipe"
+                "description": "Function that forecasts and detects anomalies in an AnomalyPipe."
             },
-            "description": "Forecast time series and detect anomalies based on forecast errors"
+            "description": "Forecast time series and detect anomalies based on forecast errors\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to forecast and analyze\ntime_column : str\n    Column containing the time/date information\nforecast_periods : int, default=5\n    Number of periods to forecast ahead\nmodel : str, default='arima'\n    Forecasting model: 'arima', 'exponential_smoothing', 'sarimax'\nthreshold : float, default=2.0\n    Threshold for anomaly detection (number of std deviations)\nseasonal_period : int, optional\n    Number of periods in a seasonal cycle (if None, will be estimated)\ngroup_columns : List[str], optional\n    Columns to group by before calculations (for panel data)\ndatetime_format : str, optional\n    Format string for parsing dates if they are not already datetime objects\n\nReturns:\n--------\nCallable\n    Function that forecasts and detects anomalies in an AnomalyPipe"
         },
         "batch_detect_anomalies": {
-            "required_params": ["columns", "methods"],
-            "optional_params": ["ensemble_method", "output_suffix"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to analyze for anomalies"},
+                {"name": "methods", "type": "List[Dict[str, Any]]", "description": "List of method configurations, each with: - 'name': Method name (e.g., 'statistical_outliers', 'contextual_anomalies') - 'params': Parameters for the method"}
+            ],
+            "optional_params": [
+                {"name": "ensemble_method", "type": "str", "description": "How to combine results: 'any' (union), 'all' (intersection), 'majority', 'weighted' (default: 'any')"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output anomaly flag columns (default: '_ensemble_anomaly')"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that applies multiple anomaly detection methods in an AnomalyPipe"
+                "description": "Function that applies multiple anomaly detection methods in an AnomalyPipe."
             },
-            "description": "Apply multiple anomaly detection methods and combine results using ensemble techniques"
+            "description": "Apply multiple anomaly detection methods and combine results\n\nParameters:\n-----------\ncolumns : str or List[str]\n    Column(s) to analyze for anomalies\nmethods : List[Dict[str, Any]]\n    List of method configurations, each with:\n    - 'name': Method name (e.g., 'statistical_outliers', 'contextual_anomalies')\n    - 'params': Parameters for the method\nensemble_method : str, default='any'\n    How to combine results: 'any' (union), 'all' (intersection), 'majority', 'weighted'\noutput_suffix : str, default='_ensemble_anomaly'\n    Suffix for output anomaly flag columns\n\nReturns:\n--------\nCallable\n    Function that applies multiple anomaly detection methods in an AnomalyPipe"
         }
     }
 }

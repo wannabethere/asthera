@@ -47,6 +47,468 @@ class TrendPipe:
         pipe = cls()
         pipe.data = df.copy()
         return pipe
+    
+    def to_df(self, analysis_name: Optional[str] = None, include_metadata: bool = False, include_original: bool = False):
+        """
+        Convert the trend analysis results to a DataFrame
+        
+        Parameters:
+        -----------
+        analysis_name : str, optional
+            Name of the specific analysis to convert. If None, returns the current analysis
+        include_metadata : bool, default=False
+            Whether to include metadata columns in the output DataFrame
+        include_original : bool, default=False
+            Whether to include original data columns in the output DataFrame
+            
+        Returns:
+        --------
+        pd.DataFrame
+            DataFrame representation of the trend analysis results
+            
+        Raises:
+        -------
+        ValueError
+            If no trend analysis has been performed or analysis not found
+            
+        Examples:
+        --------
+        >>> # Basic time aggregation
+        >>> pipe = (TrendPipe.from_dataframe(df)
+        ...         | aggregate_by_time('date', ['sales', 'revenue'], 'M'))
+        >>> results_df = pipe.to_df()
+        >>> print(results_df.head())
+        
+        >>> # Specific analysis with metadata
+        >>> results_df = pipe.to_df('time', include_metadata=True)
+        >>> print(results_df.columns)
+        
+        >>> # Current analysis
+        >>> current_df = pipe.to_df()  # Uses current_analysis
+        >>> print(current_df.head())
+        """
+        if not any([self.time_aggregations, self.trend_results, self.trend_decompositions, self.forecasts]):
+            raise ValueError("No trend analysis has been performed. Run some analysis first.")
+        
+        # Determine which analysis to use
+        if analysis_name is None:
+            if self.current_analysis is None:
+                # Use the last analysis from any category
+                all_analyses = {}
+                all_analyses.update(self.time_aggregations)
+                all_analyses.update(self.trend_results)
+                all_analyses.update(self.trend_decompositions)
+                all_analyses.update(self.forecasts)
+                if all_analyses:
+                    analysis_name = list(all_analyses.keys())[-1]
+                else:
+                    raise ValueError("No analyses found")
+            else:
+                analysis_name = self.current_analysis
+        
+        # Find the analysis in the appropriate category
+        result = None
+        analysis_type = None
+        
+        if analysis_name in self.time_aggregations:
+            result = self.time_aggregations[analysis_name]
+            analysis_type = 'time_aggregation'
+        elif analysis_name in self.trend_results:
+            result = self.trend_results[analysis_name]
+            analysis_type = 'trend_result'
+        elif analysis_name in self.trend_decompositions:
+            result = self.trend_decompositions[analysis_name]
+            analysis_type = 'trend_decomposition'
+        elif analysis_name in self.forecasts:
+            result = self.forecasts[analysis_name]
+            analysis_type = 'forecast'
+        else:
+            raise ValueError(f"Analysis '{analysis_name}' not found. Available analyses: {list(self.time_aggregations.keys()) + list(self.trend_results.keys()) + list(self.trend_decompositions.keys()) + list(self.forecasts.keys())}")
+        
+        # Convert result to DataFrame based on type
+        if analysis_type == 'time_aggregation':
+            return self._time_aggregation_to_df(result, analysis_name, include_metadata, include_original)
+        elif analysis_type == 'trend_result':
+            return self._trend_result_to_df(result, analysis_name, include_metadata, include_original)
+        elif analysis_type == 'trend_decomposition':
+            return self._trend_decomposition_to_df(result, analysis_name, include_metadata, include_original)
+        elif analysis_type == 'forecast':
+            return self._forecast_to_df(result, analysis_name, include_metadata, include_original)
+        else:
+            raise ValueError(f"Unknown analysis type: {analysis_type}")
+    
+    def _time_aggregation_to_df(self, result, analysis_name, include_metadata, include_original):
+        """Convert time aggregation results to DataFrame"""
+        if isinstance(result, dict) and 'data' in result:
+            result_df = result['data'].copy()
+        else:
+            result_df = pd.DataFrame(result)
+        
+        # Add metadata if requested
+        if include_metadata:
+            result_df['analysis_name'] = analysis_name
+            result_df['analysis_type'] = 'time_aggregation'
+            
+            if isinstance(result, dict):
+                result_df['time_period'] = result.get('time_period', 'unknown')
+                result_df['aggregation'] = str(result.get('aggregation', 'unknown'))
+        
+        return result_df
+    
+    def _trend_result_to_df(self, result, analysis_name, include_metadata, include_original):
+        """Convert trend result to DataFrame"""
+        if isinstance(result, dict) and 'data' in result:
+            result_df = result['data'].copy()
+        else:
+            result_df = pd.DataFrame(result)
+        
+        # Add metadata if requested
+        if include_metadata:
+            result_df['analysis_name'] = analysis_name
+            result_df['analysis_type'] = 'trend_result'
+            
+            if isinstance(result, dict):
+                result_df['result_type'] = result.get('type', 'unknown')
+                result_df['method'] = result.get('method', 'unknown')
+                
+                # Add type-specific metadata
+                if result.get('type') == 'growth':
+                    result_df['window'] = result.get('window', np.nan)
+                    result_df['annualize'] = result.get('annualize', False)
+                    result_df['growth_method'] = result.get('method', 'unknown')
+                elif result.get('type') == 'moving_average':
+                    result_df['window'] = result.get('window', np.nan)
+                    result_df['ma_method'] = result.get('method', 'unknown')
+                    result_df['center'] = result.get('center', False)
+                elif result.get('type') == 'statistical_trend':
+                    result_df['test_method'] = result.get('method', 'unknown')
+                    result_df['trend'] = result.get('trend', 'unknown')
+                    result_df['p_value'] = result.get('p_value', np.nan)
+                    result_df['significant'] = result.get('significant', False)
+                    result_df['slope'] = result.get('slope', np.nan)
+                    result_df['alpha'] = result.get('alpha', np.nan)
+                elif result.get('type') == 'rolling_trend':
+                    result_df['test_method'] = result.get('method', 'unknown')
+                    result_df['window'] = result.get('window', np.nan)
+                    result_df['alpha'] = result.get('alpha', np.nan)
+                elif result.get('type') == 'period_comparison':
+                    result_df['comparison_type'] = result.get('comparison_type', 'unknown')
+                    result_df['n_periods'] = result.get('n_periods', np.nan)
+        
+        return result_df
+    
+    def _trend_decomposition_to_df(self, result, analysis_name, include_metadata, include_original):
+        """Convert trend decomposition results to DataFrame"""
+        if isinstance(result, dict):
+            # Create DataFrame with decomposition components
+            decomposition_data = {}
+            
+            if 'trend' in result:
+                decomposition_data['trend'] = result['trend']
+            if 'seasonal' in result:
+                decomposition_data['seasonal'] = result['seasonal']
+            if 'residual' in result:
+                decomposition_data['residual'] = result['residual']
+            
+            if decomposition_data:
+                result_df = pd.DataFrame(decomposition_data)
+            else:
+                result_df = pd.DataFrame()
+        else:
+            result_df = pd.DataFrame(result)
+        
+        # Add metadata if requested
+        if include_metadata:
+            result_df['analysis_name'] = analysis_name
+            result_df['analysis_type'] = 'trend_decomposition'
+            
+            if isinstance(result, dict):
+                result_df['decomposition_type'] = result.get('type', 'unknown')
+                result_df['metric'] = result.get('metric', 'unknown')
+                result_df['model'] = result.get('model', 'unknown')
+                
+                if result.get('type') == 'seasonal':
+                    result_df['period'] = result.get('period', np.nan)
+                elif result.get('type') == 'linear':
+                    result_df['slope'] = result.get('slope', np.nan)
+                    result_df['intercept'] = result.get('intercept', np.nan)
+        
+        return result_df
+    
+    def _forecast_to_df(self, result, analysis_name, include_metadata, include_original):
+        """Convert forecast results to DataFrame"""
+        if isinstance(result, dict) and 'data' in result:
+            result_df = result['data'].copy()
+        else:
+            result_df = pd.DataFrame(result)
+        
+        # Add metadata if requested
+        if include_metadata:
+            result_df['analysis_name'] = analysis_name
+            result_df['analysis_type'] = 'forecast'
+            
+            if isinstance(result, dict):
+                result_df['forecast_type'] = result.get('type', 'unknown')
+                result_df['forecast_method'] = result.get('method', 'unknown')
+                result_df['metric'] = result.get('metric', 'unknown')
+                result_df['confidence_interval'] = result.get('confidence_interval', np.nan)
+        
+        return result_df
+    
+    def get_trend_columns(self):
+        """
+        Get the column names that were created by the trend analysis
+        
+        Returns:
+        --------
+        List[str]
+            List of column names created by the trend analysis
+        """
+        trend_cols = []
+        
+        # Get columns from time aggregations
+        for agg_name, agg_data in self.time_aggregations.items():
+            if isinstance(agg_data, dict) and 'data' in agg_data:
+                trend_cols.extend(agg_data['data'].columns.tolist())
+        
+        # Get columns from trend results
+        for result_name, result_data in self.trend_results.items():
+            if isinstance(result_data, dict) and 'data' in result_data:
+                trend_cols.extend(result_data['data'].columns.tolist())
+        
+        # Get columns from trend decompositions
+        for decomp_name, decomp_data in self.trend_decompositions.items():
+            if isinstance(decomp_data, dict):
+                if 'trend' in decomp_data:
+                    trend_cols.append(f"{decomp_name}_trend")
+                if 'seasonal' in decomp_data:
+                    trend_cols.append(f"{decomp_name}_seasonal")
+                if 'residual' in decomp_data:
+                    trend_cols.append(f"{decomp_name}_residual")
+        
+        # Get columns from forecasts
+        for forecast_name, forecast_data in self.forecasts.items():
+            if isinstance(forecast_data, dict) and 'data' in forecast_data:
+                trend_cols.extend(forecast_data['data'].columns.tolist())
+        
+        return list(set(trend_cols))  # Remove duplicates
+    
+    def get_trend_summary_df(self, include_metadata: bool = False):
+        """
+        Get a summary DataFrame of all trend analyses
+        
+        Parameters:
+        -----------
+        include_metadata : bool, default=False
+            Whether to include metadata columns
+            
+        Returns:
+        --------
+        pd.DataFrame
+            Summary DataFrame with trend analysis statistics
+        """
+        summary_data = []
+        
+        # Time aggregations
+        for agg_name, agg_data in self.time_aggregations.items():
+            if isinstance(agg_data, dict):
+                summary_row = {
+                    'analysis_name': agg_name,
+                    'type': 'time_aggregation',
+                    'is_current': agg_name == self.current_analysis
+                }
+                
+                if 'data' in agg_data:
+                    summary_row['shape'] = agg_data['data'].shape
+                    summary_row['rows'] = agg_data['data'].shape[0]
+                    summary_row['columns'] = agg_data['data'].shape[1]
+                
+                if include_metadata:
+                    summary_row['time_period'] = agg_data.get('time_period', 'unknown')
+                    summary_row['aggregation'] = str(agg_data.get('aggregation', 'unknown'))
+                
+                summary_data.append(summary_row)
+        
+        # Trend results
+        for result_name, result_data in self.trend_results.items():
+            if isinstance(result_data, dict):
+                summary_row = {
+                    'analysis_name': result_name,
+                    'type': 'trend_result',
+                    'result_type': result_data.get('type', 'unknown'),
+                    'is_current': result_name == self.current_analysis
+                }
+                
+                if 'data' in result_data:
+                    summary_row['shape'] = result_data['data'].shape
+                    summary_row['rows'] = result_data['data'].shape[0]
+                    summary_row['columns'] = result_data['data'].shape[1]
+                
+                if include_metadata:
+                    summary_row['method'] = result_data.get('method', 'unknown')
+                    if result_data.get('type') == 'growth':
+                        summary_row['window'] = result_data.get('window', np.nan)
+                        summary_row['annualize'] = result_data.get('annualize', False)
+                    elif result_data.get('type') == 'moving_average':
+                        summary_row['window'] = result_data.get('window', np.nan)
+                        summary_row['center'] = result_data.get('center', False)
+                    elif result_data.get('type') == 'statistical_trend':
+                        summary_row['trend'] = result_data.get('trend', 'unknown')
+                        summary_row['significant'] = result_data.get('significant', False)
+                        summary_row['p_value'] = result_data.get('p_value', np.nan)
+                
+                summary_data.append(summary_row)
+        
+        # Trend decompositions
+        for decomp_name, decomp_data in self.trend_decompositions.items():
+            if isinstance(decomp_data, dict):
+                summary_row = {
+                    'analysis_name': decomp_name,
+                    'type': 'trend_decomposition',
+                    'decomposition_type': decomp_data.get('type', 'unknown'),
+                    'is_current': decomp_name == self.current_analysis
+                }
+                
+                if include_metadata:
+                    summary_row['metric'] = decomp_data.get('metric', 'unknown')
+                    summary_row['model'] = decomp_data.get('model', 'unknown')
+                    if decomp_data.get('type') == 'seasonal':
+                        summary_row['period'] = decomp_data.get('period', np.nan)
+                    elif decomp_data.get('type') == 'linear':
+                        summary_row['slope'] = decomp_data.get('slope', np.nan)
+                        summary_row['intercept'] = decomp_data.get('intercept', np.nan)
+                
+                summary_data.append(summary_row)
+        
+        # Forecasts
+        for forecast_name, forecast_data in self.forecasts.items():
+            if isinstance(forecast_data, dict):
+                summary_row = {
+                    'analysis_name': forecast_name,
+                    'type': 'forecast',
+                    'forecast_type': forecast_data.get('type', 'unknown'),
+                    'is_current': forecast_name == self.current_analysis
+                }
+                
+                if 'data' in forecast_data:
+                    summary_row['shape'] = forecast_data['data'].shape
+                    summary_row['rows'] = forecast_data['data'].shape[0]
+                    summary_row['columns'] = forecast_data['data'].shape[1]
+                
+                if include_metadata:
+                    summary_row['forecast_method'] = forecast_data.get('method', 'unknown')
+                    summary_row['metric'] = forecast_data.get('metric', 'unknown')
+                    summary_row['confidence_interval'] = forecast_data.get('confidence_interval', np.nan)
+                
+                summary_data.append(summary_row)
+        
+        return pd.DataFrame(summary_data)
+    
+    def get_analysis_by_type(self, analysis_type: str):
+        """
+        Get all analyses of a specific type
+        
+        Parameters:
+        -----------
+        analysis_type : str
+            Type of analysis to retrieve ('time_aggregation', 'trend_result', 'trend_decomposition', 'forecast')
+            
+        Returns:
+        --------
+        Dict
+            Dictionary of analyses of the specified type
+        """
+        type_mapping = {
+            'time_aggregation': self.time_aggregations,
+            'trend_result': self.trend_results,
+            'trend_decomposition': self.trend_decompositions,
+            'forecast': self.forecasts
+        }
+        
+        return type_mapping.get(analysis_type, {})
+    
+    def get_current_result(self):
+        """
+        Get the current trend analysis result
+        
+        Returns:
+        --------
+        Any or None
+            The current trend analysis result, or None if no current analysis
+        """
+        if self.current_analysis is None:
+            return None
+        
+        # Check in all categories
+        if self.current_analysis in self.time_aggregations:
+            return self.time_aggregations[self.current_analysis]
+        elif self.current_analysis in self.trend_results:
+            return self.trend_results[self.current_analysis]
+        elif self.current_analysis in self.trend_decompositions:
+            return self.trend_decompositions[self.current_analysis]
+        elif self.current_analysis in self.forecasts:
+            return self.forecasts[self.current_analysis]
+        else:
+            return None
+    
+    def get_original_data(self):
+        """
+        Get the original data DataFrame
+        
+        Returns:
+        --------
+        pd.DataFrame or None
+            The original data DataFrame, or None if no data was provided
+        """
+        return self.data.copy() if self.data is not None else None
+    
+    def get_time_aggregation_data(self, aggregation_name: Optional[str] = None):
+        """
+        Get time aggregation data
+        
+        Parameters:
+        -----------
+        aggregation_name : str, optional
+            Name of the aggregation to retrieve. If None, returns current aggregation
+            
+        Returns:
+        --------
+        pd.DataFrame or None
+            The time aggregation data, or None if not found
+        """
+        if aggregation_name is None:
+            aggregation_name = self.current_analysis
+        
+        if aggregation_name in self.time_aggregations:
+            agg_data = self.time_aggregations[aggregation_name]
+            if isinstance(agg_data, dict) and 'data' in agg_data:
+                return agg_data['data'].copy()
+        
+        return None
+    
+    def get_forecast_data(self, forecast_name: Optional[str] = None):
+        """
+        Get forecast data
+        
+        Parameters:
+        -----------
+        forecast_name : str, optional
+            Name of the forecast to retrieve. If None, returns current forecast
+            
+        Returns:
+        --------
+        pd.DataFrame or None
+            The forecast data, or None if not found
+        """
+        if forecast_name is None:
+            forecast_name = self.current_analysis
+        
+        if forecast_name in self.forecasts:
+            forecast_data = self.forecasts[forecast_name]
+            if isinstance(forecast_data, dict) and 'data' in forecast_data:
+                return forecast_data['data'].copy()
+        
+        return None
 
 
 def aggregate_by_time(

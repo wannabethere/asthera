@@ -83,6 +83,224 @@ class MovingAggrPipe:
         pipe = cls()
         pipe.data = df.copy()
         return pipe
+    
+    def to_df(self, include_metadata: bool = False, include_original: bool = True):
+        """
+        Convert the moving aggregation results to a DataFrame
+        
+        Parameters:
+        -----------
+        include_metadata : bool, default=False
+            Whether to include metadata columns in the output DataFrame
+        include_original : bool, default=True
+            Whether to include original data columns in the output DataFrame
+            
+        Returns:
+        --------
+        pd.DataFrame
+            DataFrame representation of the moving aggregation results
+            
+        Raises:
+        -------
+        ValueError
+            If no moving aggregation has been performed
+            
+        Examples:
+        --------
+        >>> # Basic moving average
+        >>> pipe = (MovingAggrPipe.from_dataframe(df)
+        ...         | moving_average('value', 7, 'simple'))
+        >>> results_df = pipe.to_df()
+        >>> print(results_df.head())
+        
+        >>> # Multiple moving aggregations with metadata
+        >>> pipe = (MovingAggrPipe.from_dataframe(df)
+        ...         | moving_average('value', 7, 'simple')
+        ...         | moving_variance('value', 14))
+        >>> results_df = pipe.to_df(include_metadata=True)
+        >>> print(results_df.columns)
+        
+        >>> # Only moving aggregation columns (no original data)
+        >>> moving_df = pipe.to_df(include_original=False)
+        >>> print(moving_df.columns)
+        """
+        if self.data is None:
+            raise ValueError("No data found. Data must be provided when creating the pipeline.")
+        
+        if not self.moving_metrics:
+            raise ValueError("No moving aggregation has been performed. Run some analysis first.")
+        
+        # Get the result DataFrame (contains original data + moving aggregation results)
+        result_df = self.data.copy()
+        
+        # Filter columns based on parameters
+        columns_to_include = []
+        
+        if include_original:
+            # Include original columns (those that don't have moving aggregation suffixes)
+            original_cols = [col for col in result_df.columns 
+                           if not any(suffix in col for suffix in ['_ma', '_var', '_std', '_sum', '_q', '_corr', '_zscore', '_grouped', '_ratio', '_peak', '_trough', '_reg', '_min', '_max', '_count', '_agg', '_rank', '_twa', '_cum', '_exp'])]
+            columns_to_include.extend(original_cols)
+        
+        # Include moving aggregation columns
+        moving_cols = [col for col in result_df.columns 
+                      if any(suffix in col for suffix in ['_ma', '_var', '_std', '_sum', '_q', '_corr', '_zscore', '_grouped', '_ratio', '_peak', '_trough', '_reg', '_min', '_max', '_count', '_agg', '_rank', '_twa', '_cum', '_exp'])]
+        columns_to_include.extend(moving_cols)
+        
+        # Create the output DataFrame
+        output_df = result_df[columns_to_include].copy()
+        
+        # Add metadata if requested
+        if include_metadata:
+            for metric_name, metric_info in self.moving_metrics.items():
+                for key, value in metric_info.items():
+                    if key != 'type':  # Don't duplicate the type column
+                        output_df[f'metadata_{metric_name}_{key}'] = str(value)
+        
+        return output_df
+    
+    def get_moving_columns(self):
+        """
+        Get the column names that were created by the moving aggregation analysis
+        
+        Returns:
+        --------
+        List[str]
+            List of column names created by the moving aggregation
+        """
+        if self.data is None:
+            return []
+        
+        # Get moving aggregation columns
+        moving_cols = [col for col in self.data.columns 
+                      if any(suffix in col for suffix in ['_ma', '_var', '_std', '_sum', '_q', '_corr', '_zscore', '_grouped', '_ratio', '_peak', '_trough', '_reg', '_min', '_max', '_count', '_agg', '_rank', '_twa', '_cum', '_exp'])]
+        
+        return moving_cols
+    
+    def get_moving_summary_df(self, include_metadata: bool = False):
+        """
+        Get a summary DataFrame of all moving aggregation metrics
+        
+        Parameters:
+        -----------
+        include_metadata : bool, default=False
+            Whether to include metadata columns
+            
+        Returns:
+        --------
+        pd.DataFrame
+            Summary DataFrame with moving aggregation statistics
+        """
+        if not self.moving_metrics:
+            return pd.DataFrame()
+        
+        summary_data = []
+        
+        for metric_name, metric_info in self.moving_metrics.items():
+            metric_type = metric_info.get('type', 'unknown')
+            
+            # Get columns for this metric
+            if 'columns' in metric_info:
+                columns = metric_info['columns']
+                if isinstance(columns, list):
+                    column_count = len(columns)
+                    column_names = ', '.join(columns)
+                else:
+                    column_count = 1
+                    column_names = str(columns)
+            else:
+                column_count = 0
+                column_names = 'N/A'
+            
+            # Get moving columns for this metric type
+            moving_cols = self.get_moving_columns()
+            metric_moving_cols = [col for col in moving_cols if any(suffix in col for suffix in self._get_suffixes_for_type(metric_type))]
+            
+            summary_row = {
+                'metric_name': metric_name,
+                'type': metric_type,
+                'input_columns': column_names,
+                'input_column_count': column_count,
+                'output_columns': ', '.join(metric_moving_cols),
+                'output_column_count': len(metric_moving_cols)
+            }
+            
+            # Add metric-specific metadata
+            if include_metadata:
+                for key, value in metric_info.items():
+                    if key not in ['type', 'columns']:
+                        summary_row[f'metadata_{key}'] = str(value)
+            
+            summary_data.append(summary_row)
+        
+        return pd.DataFrame(summary_data)
+    
+    def _get_suffixes_for_type(self, metric_type):
+        """
+        Get the suffixes associated with a specific metric type
+        
+        Parameters:
+        -----------
+        metric_type : str
+            Type of moving aggregation metric
+            
+        Returns:
+        --------
+        List[str]
+            List of suffixes for the given metric type
+        """
+        suffix_mapping = {
+            'moving_average': ['_ma'],
+            'moving_variance': ['_var', '_std'],
+            'moving_sum': ['_sum'],
+            'moving_quantile': ['_q'],
+            'moving_correlation': ['_corr'],
+            'moving_zscore': ['_zscore'],
+            'moving_apply_by_group': ['_grouped'],
+            'moving_ratio': ['_ratio'],
+            'turning_points': ['_peak', '_trough'],
+            'moving_regression': ['_reg', '_pred', '_resid', '_r2', '_coef', '_intercept'],
+            'moving_min_max': ['_min', '_max'],
+            'moving_count': ['_count'],
+            'moving_aggregate': ['_agg'],
+            'moving_percentile_rank': ['_rank'],
+            'time_weighted_average': ['_twa'],
+            'moving_cumulative': ['_cum'],
+            'expanding': ['_exp']
+        }
+        
+        return suffix_mapping.get(metric_type, [])
+    
+    def get_current_result(self):
+        """
+        Get the current moving aggregation result
+        
+        Returns:
+        --------
+        Dict
+            The current moving aggregation metadata
+        """
+        if self.current_metric is None:
+            return None
+        
+        return self.moving_metrics.get(self.current_metric, None)
+    
+    def get_metric_by_type(self, metric_type: str):
+        """
+        Get all metrics of a specific type
+        
+        Parameters:
+        -----------
+        metric_type : str
+            Type of moving aggregation metric to retrieve
+            
+        Returns:
+        --------
+        Dict
+            Dictionary of metrics of the specified type
+        """
+        return {name: info for name, info in self.moving_metrics.items() 
+                if info.get('type') == metric_type}
 
 
 def moving_average(

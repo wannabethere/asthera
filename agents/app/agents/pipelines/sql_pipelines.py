@@ -416,14 +416,14 @@ class ChartGenerationPipeline(AgentPipeline):
             engine=engine
         )
         self.use_enhanced_agent = use_enhanced_agent
-        self.chart_config = chart_config or {"type": "vega_lite"}  # Default to Vega-Lite
+        self.chart_config = chart_config or {"type": "enhanced_vega_lite"}  # Default to enhanced Vega-Lite for KPI support
         
         # Initialize appropriate chart generator based on config
         if self.chart_config.get("type") == "powerbi":
             self.chart_generator = PowerBIChartGenerationPipeline(llm=llm)
         elif self.chart_config.get("type") == "plotly":
             self.chart_generator = PlotlyChartGenerationPipeline(llm=llm)
-        elif self.chart_config.get("type") == "enhanced_vega_lite":
+        elif self.chart_config.get("type") in ["vega_lite", "enhanced_vega_lite"]:
             # Use enhanced Vega-Lite pipeline with KPI support
             self.chart_generator = EnhancedVegaLiteChartGenerationPipeline()
         else:  # Default to enhanced Vega-Lite for better chart type support
@@ -528,7 +528,7 @@ class ChartAdjustmentPipeline(AgentPipeline):
             engine=engine
         )
         self.use_enhanced_agent = use_enhanced_agent
-        self.chart_config = chart_config or {"type": "vega_lite"}  # Default to Vega-Lite
+        self.chart_config = chart_config or {"type": "enhanced_vega_lite"}  # Default to enhanced Vega-Lite for KPI support
         
         # Initialize appropriate chart adjuster based on config
         if self.chart_config.get("type") == "powerbi":
@@ -538,7 +538,7 @@ class ChartAdjustmentPipeline(AgentPipeline):
         elif self.chart_config.get("type") in ["vega_lite", "enhanced_vega_lite"]:
             # Use enhanced chart adjustment for better support
             self.chart_adjuster = ChartAdjustment()
-        else:  # Default to Vega-Lite
+        else:  # Default to enhanced Vega-Lite
             self.chart_adjuster = ChartAdjustment()
         
     async def run(self, **kwargs) -> Dict[str, Any]:

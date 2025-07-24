@@ -1,6 +1,6 @@
 # Random Forest Pipeline Examples
 
-from rf_pipeline import (
+from app.tools.mltools.models.randomforest_classifier import (
     RFPipe, 
     generate_numerical_features, 
     generate_categorical_features,

@@ -1,58 +1,96 @@
 {
     "functions": {
         "analyze_funnel": {
-            "required_params": ["event_column", "user_id_column", "funnel_steps"],
-            "optional_params": ["step_names", "max_step_time"],
+            "required_params": [
+                {"name": "event_column", "type": "str", "description": "Column containing event names/types"},
+                {"name": "user_id_column", "type": "str", "description": "Column containing user identifiers"},
+                {"name": "funnel_steps", "type": "List[str]", "description": "List of event names representing steps in the funnel, in order"}
+            ],
+            "optional_params": [
+                {"name": "step_names", "type": "List[str]", "description": "Friendly names for the funnel steps (if None, funnel_steps will be used) (optional)"},
+                {"name": "max_step_time", "type": "int", "description": "Maximum time (in seconds) allowed between steps (if None, no time limit) (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that analyzes a funnel in a CohortPipe"
+                "description": "Function that analyzes a funnel in a CohortPipe."
             },
-            "description": "Analyze a user funnel using the existing CohortPipe framework"
+            "description": "Analyze a user funnel using the existing CohortPipe framework\n\nParameters:\n-----------\nevent_column : str\n    Column containing event names/types\nuser_id_column : str\n    Column containing user identifiers\nfunnel_steps : List[str]\n    List of event names representing steps in the funnel, in order\nstep_names : List[str], optional\n    Friendly names for the funnel steps (if None, funnel_steps will be used)\nmax_step_time : int, optional\n    Maximum time (in seconds) allowed between steps (if None, no time limit)\n\nReturns:\n--------\nCallable\n    Function that analyzes a funnel in a CohortPipe"
         },
         "analyze_funnel_by_time": {
-            "required_params": ["event_column", "user_id_column", "date_column", "funnel_steps"],
-            "optional_params": ["step_names", "time_period", "max_periods", "datetime_format"],
+            "required_params": [
+                {"name": "event_column", "type": "str", "description": "Column containing event names/types"},
+                {"name": "user_id_column", "type": "str", "description": "Column containing user identifiers"},
+                {"name": "date_column", "type": "str", "description": "Column containing dates for cohort formation"},
+                {"name": "funnel_steps", "type": "List[str]", "description": "List of event names representing steps in the funnel, in order"}
+            ],
+            "optional_params": [
+                {"name": "step_names", "type": "List[str]", "description": "Friendly names for the funnel steps (if None, funnel_steps will be used) (optional)"},
+                {"name": "time_period", "type": "str", "description": "Time period for cohort grouping ('D', 'W', 'M', 'Q', 'Y') (default: 'M')"},
+                {"name": "max_periods", "type": "int", "description": "Maximum number of periods to include (default: 12)"},
+                {"name": "datetime_format", "type": "str", "description": "Format string for parsing dates if they are not already datetime objects (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that analyzes funnel by time periods in a CohortPipe"
+                "description": "Function that analyzes funnel by time periods in a CohortPipe."
             },
-            "description": "Analyze funnel performance over time using the existing CohortPipe framework"
+            "description": "Analyze funnel performance over time using the existing CohortPipe framework\n\nParameters:\n-----------\nevent_column : str\n    Column containing event names/types\nuser_id_column : str\n    Column containing user identifiers\ndate_column : str\n    Column containing dates for cohort formation\nfunnel_steps : List[str]\n    List of event names representing steps in the funnel, in order\nstep_names : List[str], optional\n    Friendly names for the funnel steps (if None, funnel_steps will be used)\ntime_period : str, default='M'\n    Time period for cohort grouping ('D', 'W', 'M', 'Q', 'Y')\nmax_periods : int, default=12\n    Maximum number of periods to include\ndatetime_format : str, optional\n    Format string for parsing dates if they are not already datetime objects\n\nReturns:\n--------\nCallable\n    Function that analyzes funnel by time periods in a CohortPipe"
         },
         "analyze_funnel_by_segment": {
-            "required_params": ["event_column", "user_id_column", "segment_column", "funnel_steps"],
-            "optional_params": ["step_names", "min_users"],
+            "required_params": [
+                {"name": "event_column", "type": "str", "description": "Column containing event names/types"},
+                {"name": "user_id_column", "type": "str", "description": "Column containing user identifiers"},
+                {"name": "segment_column", "type": "str", "description": "Column containing segment information to group by"},
+                {"name": "funnel_steps", "type": "List[str]", "description": "List of event names representing steps in the funnel, in order"}
+            ],
+            "optional_params": [
+                {"name": "step_names", "type": "List[str]", "description": "Friendly names for the funnel steps (if None, funnel_steps will be used) (optional)"},
+                {"name": "min_users", "type": "int", "description": "Minimum number of users required for a segment to be included (default: 10)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that analyzes funnel by segments in a CohortPipe"
+                "description": "Function that analyzes funnel by segments in a CohortPipe."
             },
-            "description": "Analyze funnel performance by user segments"
+            "description": "Analyze funnel performance across different user segments using the existing CohortPipe framework\n\nParameters:\n-----------\nevent_column : str\n    Column containing event names/types\nuser_id_column : str\n    Column containing user identifiers\nsegment_column : str\n    Column containing segment information to group by\nfunnel_steps : List[str]\n    List of event names representing steps in the funnel, in order\nstep_names : List[str], optional\n    Friendly names for the funnel steps (if None, funnel_steps will be used)\nmin_users : int, default=10\n    Minimum number of users required for a segment to be included\n\nReturns:\n--------\nCallable\n    Function that analyzes funnel by segments in a CohortPipe"
         },
         "analyze_user_paths": {
-            "required_params": ["event_column", "user_id_column", "timestamp_column", "funnel_steps"],
-            "optional_params": ["step_names", "max_path_length", "min_path_frequency"],
+            "required_params": [
+                {"name": "event_column", "type": "str", "description": "Column containing event names/types"},
+                {"name": "user_id_column", "type": "str", "description": "Column containing user identifiers"},
+                {"name": "timestamp_column", "type": "str", "description": "Column containing event timestamps"},
+                {"name": "funnel_steps", "type": "List[str]", "description": "List of event names representing steps in the funnel, in order"}
+            ],
+            "optional_params": [
+                {"name": "step_names", "type": "List[str]", "description": "Friendly names for the funnel steps (if None, funnel_steps will be used) (optional)"},
+                {"name": "max_path_length", "type": "int", "description": "Maximum number of steps to include in a path (default: 10)"},
+                {"name": "min_path_frequency", "type": "int", "description": "Minimum number of users who must take a path for it to be included (default: 5)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that analyzes user paths through the funnel"
+                "description": "Function that analyzes user paths through the funnel."
             },
-            "description": "Analyze common user paths through the funnel"
+            "description": "Analyze actual paths users take through the funnel (not just the ideal path)\n\nParameters:\n-----------\nevent_column : str\n    Column containing event names/types\nuser_id_column : str\n    Column containing user identifiers\ntimestamp_column : str\n    Column containing event timestamps\nfunnel_steps : List[str]\n    List of event names representing steps in the funnel, in order\nstep_names : List[str], optional\n    Friendly names for the funnel steps (if None, funnel_steps will be used)\nmax_path_length : int, default=10\n    Maximum number of steps to include in a path\nmin_path_frequency : int, default=5\n    Minimum number of users who must take a path for it to be included\n\nReturns:\n--------\nCallable\n    Function that analyzes actual user paths in a CohortPipe"
         },
         "get_funnel_summary": {
             "required_params": [],
             "optional_params": [],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that returns funnel analysis summary"
+                "description": "Function that returns funnel analysis summary."
             },
-            "description": "Get a summary of funnel analysis results"
+            "description": "Return a summary of funnel analysis results\n\nReturns:\n--------\nCallable\n    Function that returns funnel summary from a CohortPipe"
         },
         "compare_segments": {
-            "required_params": ["metric_column"],
-            "optional_params": ["baseline_segment"],
+            "required_params": [
+                {"name": "metric_column", "type": "str", "description": "Column containing the metric to compare (e.g., 'Purchase_rate')"}
+            ],
+            "optional_params": [
+                {"name": "baseline_segment", "type": "str", "description": "Segment to use as the baseline for comparison (if None, use average) (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that compares funnel metrics across segments"
+                "description": "Function that compares funnel metrics across segments."
             },
-            "description": "Compare funnel performance across different segments"
+            "description": "Compare funnel metrics across segments\n\nParameters:\n-----------\nmetric_column : str\n    Column containing the metric to compare (e.g., 'Purchase_rate')\nbaseline_segment : str, optional\n    Segment to use as the baseline for comparison (if None, use average)\n\nReturns:\n--------\nCallable\n    Function that compares segments in a CohortPipe"
         }
     }
 }

@@ -39,6 +39,225 @@ class OperationsPipe:
         pipe = cls()
         pipe.data = df.copy()
         return pipe
+    
+    def to_df(self, operation_name: Optional[str] = None, include_metadata: bool = False, include_original: bool = False):
+        """
+        Convert the operations results to a DataFrame
+        
+        Parameters:
+        -----------
+        operation_name : str, optional
+            Name of the specific operation to convert. If None, returns the current operation
+        include_metadata : bool, default=False
+            Whether to include metadata columns in the output DataFrame
+        include_original : bool, default=False
+            Whether to include original data columns in the output DataFrame
+            
+        Returns:
+        --------
+        pd.DataFrame
+            DataFrame representation of the operations results
+            
+        Raises:
+        -------
+        ValueError
+            If no operations have been performed or operation not found
+            
+        Examples:
+        --------
+        >>> # Basic percent change operation
+        >>> pipe = (OperationsPipe.from_dataframe(df)
+        ...         | PercentChange('condition', 'control'))
+        >>> results_df = pipe.to_df()
+        >>> print(results_df.head())
+        
+        >>> # Specific operation with metadata
+        >>> results_df = pipe.to_df('pct_change_condition_vs_control', include_metadata=True)
+        >>> print(results_df.columns)
+        
+        >>> # Current operation
+        >>> current_df = pipe.to_df()  # Uses current_operation
+        >>> print(current_df.head())
+        """
+        if not self.operations:
+            raise ValueError("No operations have been performed. Run some analysis first.")
+        
+        # Determine which operation to use
+        if operation_name is None:
+            if self.current_operation is None:
+                # Use the last operation
+                operation_name = list(self.operations.keys())[-1]
+            else:
+                operation_name = self.current_operation
+        
+        if operation_name not in self.operations:
+            raise ValueError(f"Operation '{operation_name}' not found. Available operations: {list(self.operations.keys())}")
+        
+        # Get the operation result
+        result_df = self.operations[operation_name].copy()
+        
+        # If include_original is True and we have original data, merge it
+        if include_original and self.data is not None:
+            # This is a bit tricky since operations typically create new DataFrames
+            # We'll add a note about this in the metadata
+            if include_metadata:
+                result_df['metadata_note'] = 'Original data available separately via pipe.data'
+        
+        # Add metadata if requested
+        if include_metadata:
+            # Add operation name
+            result_df['operation_name'] = operation_name
+            
+            # Add operation type based on the name
+            if 'pct_change' in operation_name:
+                result_df['operation_type'] = 'percent_change'
+            elif 'abs_change' in operation_name:
+                result_df['operation_type'] = 'absolute_change'
+            elif 'mh_' in operation_name:
+                result_df['operation_type'] = 'mantel_haenszel'
+            elif 'cuped' in operation_name:
+                result_df['operation_type'] = 'cuped'
+            elif 'prepost' in operation_name:
+                result_df['operation_type'] = 'prepost_change'
+            elif 'power_analysis' in operation_name:
+                result_df['operation_type'] = 'power_analysis'
+            elif 'stratified_summary' in operation_name:
+                result_df['operation_type'] = 'stratified_summary'
+            elif 'bootstrap_ci' in operation_name:
+                result_df['operation_type'] = 'bootstrap_ci'
+            elif 'adjusted_' in operation_name:
+                result_df['operation_type'] = 'multi_comparison_adjustment'
+            else:
+                result_df['operation_type'] = 'unknown'
+        
+        return result_df
+    
+    def get_operations_list(self):
+        """
+        Get a list of all available operations
+        
+        Returns:
+        --------
+        List[str]
+            List of operation names
+        """
+        return list(self.operations.keys())
+    
+    def get_operation_summary_df(self, include_metadata: bool = False):
+        """
+        Get a summary DataFrame of all operations
+        
+        Parameters:
+        -----------
+        include_metadata : bool, default=False
+            Whether to include metadata columns
+            
+        Returns:
+        --------
+        pd.DataFrame
+            Summary DataFrame with operation statistics
+        """
+        if not self.operations:
+            return pd.DataFrame()
+        
+        summary_data = []
+        
+        for op_name, op_result in self.operations.items():
+            # Determine operation type
+            if 'pct_change' in op_name:
+                op_type = 'percent_change'
+            elif 'abs_change' in op_name:
+                op_type = 'absolute_change'
+            elif 'mh_' in op_name:
+                op_type = 'mantel_haenszel'
+            elif 'cuped' in op_name:
+                op_type = 'cuped'
+            elif 'prepost' in op_name:
+                op_type = 'prepost_change'
+            elif 'power_analysis' in op_name:
+                op_type = 'power_analysis'
+            elif 'stratified_summary' in op_name:
+                op_type = 'stratified_summary'
+            elif 'bootstrap_ci' in op_name:
+                op_type = 'bootstrap_ci'
+            elif 'adjusted_' in op_name:
+                op_type = 'multi_comparison_adjustment'
+            else:
+                op_type = 'unknown'
+            
+            summary_row = {
+                'operation_name': op_name,
+                'type': op_type,
+                'shape': op_result.shape,
+                'rows': op_result.shape[0],
+                'columns': op_result.shape[1],
+                'is_current': op_name == self.current_operation
+            }
+            
+            # Add column information
+            if include_metadata:
+                summary_row['column_names'] = ', '.join(op_result.columns.tolist())
+                summary_row['dtypes'] = ', '.join([f"{col}:{dtype}" for col, dtype in op_result.dtypes.items()])
+            
+            summary_data.append(summary_row)
+        
+        return pd.DataFrame(summary_data)
+    
+    def get_operation_by_type(self, operation_type: str):
+        """
+        Get all operations of a specific type
+        
+        Parameters:
+        -----------
+        operation_type : str
+            Type of operation to retrieve ('percent_change', 'absolute_change', 'mantel_haenszel', etc.)
+            
+        Returns:
+        --------
+        Dict
+            Dictionary of operations of the specified type
+        """
+        type_mapping = {
+            'percent_change': 'pct_change',
+            'absolute_change': 'abs_change',
+            'mantel_haenszel': 'mh_',
+            'cuped': 'cuped',
+            'prepost_change': 'prepost',
+            'power_analysis': 'power_analysis',
+            'stratified_summary': 'stratified_summary',
+            'bootstrap_ci': 'bootstrap_ci',
+            'multi_comparison_adjustment': 'adjusted_'
+        }
+        
+        search_term = type_mapping.get(operation_type, operation_type)
+        
+        return {name: result for name, result in self.operations.items() 
+                if search_term in name}
+    
+    def get_current_operation(self):
+        """
+        Get the current operation result
+        
+        Returns:
+        --------
+        pd.DataFrame or None
+            The current operation result DataFrame, or None if no current operation
+        """
+        if self.current_operation is None:
+            return None
+        
+        return self.operations.get(self.current_operation, None)
+    
+    def get_original_data(self):
+        """
+        Get the original data DataFrame
+        
+        Returns:
+        --------
+        pd.DataFrame or None
+            The original data DataFrame, or None if no data was provided
+        """
+        return self.data.copy() if self.data is not None else None
 
 
 # Basic Operations Functions

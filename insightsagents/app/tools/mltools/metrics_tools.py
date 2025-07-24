@@ -38,6 +38,223 @@ class MetricsPipe:
         pipe = cls()
         pipe.data = df.copy()
         return pipe
+    
+    def to_df(self, include_metadata: bool = False, include_pivot_tables: bool = True):
+        """
+        Convert the metrics and pivot tables to a DataFrame
+        
+        Parameters:
+        -----------
+        include_metadata : bool, default=False
+            Whether to include metadata columns in the output DataFrame
+        include_pivot_tables : bool, default=True
+            Whether to include pivot tables in the output
+            
+        Returns:
+        --------
+        pd.DataFrame
+            DataFrame representation of the metrics and pivot tables
+            
+        Raises:
+        -------
+        ValueError
+            If no metrics or pivot tables have been calculated
+            
+        Examples:
+        --------
+        >>> # Basic metrics
+        >>> pipe = (MetricsPipe.from_dataframe(df)
+        ...         | Sum('revenue')
+        ...         | Mean('sales'))
+        >>> metrics_df = pipe.to_df()
+        >>> print(metrics_df)
+        
+        >>> # With pivot tables
+        >>> pipe = (MetricsPipe.from_dataframe(df)
+        ...         | PivotTable('category', 'region', 'sales'))
+        >>> results_df = pipe.to_df(include_pivot_tables=True)
+        >>> print(results_df)
+        
+        >>> # With metadata
+        >>> results_df = pipe.to_df(include_metadata=True)
+        >>> print(results_df.columns)
+        """
+        if not self.metrics and not self.pivot_tables:
+            raise ValueError("No metrics or pivot tables have been calculated. Run some analysis first.")
+        
+        # Create a list to store all data
+        all_data = []
+        
+        # Add metrics as individual rows
+        for metric_name, metric_value in self.metrics.items():
+            row = {
+                'name': metric_name,
+                'type': 'metric',
+                'value': metric_value
+            }
+            
+            if include_metadata:
+                row['metadata'] = f"Calculated metric: {metric_name}"
+            
+            all_data.append(row)
+        
+        # Add pivot tables if requested
+        if include_pivot_tables:
+            for pivot_name, pivot_table in self.pivot_tables.items():
+                # Convert pivot table to long format for easier handling
+                pivot_long = pivot_table.reset_index().melt(
+                    id_vars=pivot_table.index.names if pivot_table.index.names != [None] else [],
+                    var_name='column',
+                    value_name='value'
+                )
+                
+                # Add metadata columns
+                pivot_long['name'] = pivot_name
+                pivot_long['type'] = 'pivot_table'
+                
+                if include_metadata:
+                    pivot_long['metadata'] = f"Pivot table: {pivot_name} (shape: {pivot_table.shape})"
+                
+                all_data.append(pivot_long)
+        
+        # Create the output DataFrame
+        if all_data:
+            # If we have pivot tables, we need to handle the different structures
+            if include_pivot_tables and self.pivot_tables:
+                # Combine metrics and pivot tables
+                metrics_df = pd.DataFrame([row for row in all_data if row['type'] == 'metric'])
+                
+                # For pivot tables, we already have DataFrames, so we need to combine them differently
+                pivot_dfs = [row for row in all_data if row['type'] == 'pivot_table']
+                
+                if metrics_df.empty and pivot_dfs:
+                    # Only pivot tables
+                    return pd.concat(pivot_dfs, ignore_index=True)
+                elif not metrics_df.empty and pivot_dfs:
+                    # Both metrics and pivot tables
+                    # We'll return the metrics DataFrame and store pivot tables separately
+                    result_df = metrics_df.copy()
+                    result_df['pivot_tables'] = [pivot_dfs if i == 0 else None for i in range(len(metrics_df))]
+                    return result_df
+                else:
+                    # Only metrics
+                    return metrics_df
+            else:
+                # Only metrics
+                return pd.DataFrame(all_data)
+        else:
+            return pd.DataFrame()
+    
+    def get_metrics_df(self, include_metadata: bool = False):
+        """
+        Get a DataFrame containing only the calculated metrics
+        
+        Parameters:
+        -----------
+        include_metadata : bool, default=False
+            Whether to include metadata columns
+            
+        Returns:
+        --------
+        pd.DataFrame
+            DataFrame with metrics only
+        """
+        if not self.metrics:
+            return pd.DataFrame()
+        
+        metrics_data = []
+        for metric_name, metric_value in self.metrics.items():
+            row = {
+                'metric_name': metric_name,
+                'value': metric_value,
+                'data_type': type(metric_value).__name__
+            }
+            
+            if include_metadata:
+                row['metadata'] = f"Calculated metric: {metric_name}"
+            
+            metrics_data.append(row)
+        
+        return pd.DataFrame(metrics_data)
+    
+    def get_pivot_tables_dict(self):
+        """
+        Get a dictionary of all pivot tables
+        
+        Returns:
+        --------
+        Dict[str, pd.DataFrame]
+            Dictionary mapping pivot table names to their DataFrames
+        """
+        return self.pivot_tables.copy()
+    
+    def get_current_result(self):
+        """
+        Get the current metric or pivot table result
+        
+        Returns:
+        --------
+        Any
+            The current metric value or pivot table DataFrame
+        """
+        if self.current_metric is None:
+            return None
+        
+        if self.current_metric in self.metrics:
+            return self.metrics[self.current_metric]
+        elif self.current_metric in self.pivot_tables:
+            return self.pivot_tables[self.current_metric]
+        else:
+            return None
+    
+    def get_summary_df(self, include_metadata: bool = False):
+        """
+        Get a summary DataFrame of all calculated metrics and pivot tables
+        
+        Parameters:
+        -----------
+        include_metadata : bool, default=False
+            Whether to include metadata columns
+            
+        Returns:
+        --------
+        pd.DataFrame
+            Summary DataFrame with statistics about metrics and pivot tables
+        """
+        summary_data = []
+        
+        # Summary of metrics
+        if self.metrics:
+            metrics_count = len(self.metrics)
+            numeric_metrics = [v for v in self.metrics.values() if isinstance(v, (int, float)) and not pd.isna(v)]
+            
+            summary_data.append({
+                'type': 'metrics',
+                'count': metrics_count,
+                'numeric_count': len(numeric_metrics),
+                'current_metric': self.current_metric if self.current_metric in self.metrics else None
+            })
+            
+            if include_metadata and numeric_metrics:
+                summary_data[-1].update({
+                    'min_value': min(numeric_metrics),
+                    'max_value': max(numeric_metrics),
+                    'avg_value': sum(numeric_metrics) / len(numeric_metrics)
+                })
+        
+        # Summary of pivot tables
+        if self.pivot_tables:
+            pivot_count = len(self.pivot_tables)
+            pivot_shapes = [f"{pivot.shape[0]}x{pivot.shape[1]}" for pivot in self.pivot_tables.values()]
+            
+            summary_data.append({
+                'type': 'pivot_tables',
+                'count': pivot_count,
+                'shapes': ', '.join(pivot_shapes),
+                'current_pivot': self.current_metric if self.current_metric in self.pivot_tables else None
+            })
+        
+        return pd.DataFrame(summary_data)
 
 
 # Basic Metrics Functions

@@ -43,7 +43,8 @@ class DataSummarizationDemo:
             )
             
             # Create chart generation pipelines (to avoid circular dependency)
-            self.chart_generation_pipeline = create_chart_generation_pipeline()
+            from app.agents.nodes.sql.enhanced_chart_generation import create_enhanced_vega_lite_chart_generation_pipeline
+            self.chart_generation_pipeline = create_enhanced_vega_lite_chart_generation_pipeline()
             self.plotly_chart_generation_pipeline = create_plotly_chart_generation_pipeline(llm=get_llm())
             self.powerbi_chart_generation_pipeline = create_powerbi_chart_generation_pipeline(llm=get_llm())
             
@@ -702,7 +703,8 @@ async def example_data_summarization_with_charts():
     retrieval_helper = RetrievalHelper()  # Your retrieval helper
     
     # Create chart generation pipelines (to avoid circular dependency)
-    chart_generation_pipeline = create_chart_generation_pipeline()
+    from app.agents.nodes.sql.enhanced_chart_generation import create_enhanced_vega_lite_chart_generation_pipeline
+    chart_generation_pipeline = create_enhanced_vega_lite_chart_generation_pipeline()
     plotly_chart_generation_pipeline = create_plotly_chart_generation_pipeline()
     powerbi_chart_generation_pipeline = create_powerbi_chart_generation_pipeline()
     
@@ -793,7 +795,8 @@ async def example_data_summarization_with_status_callback():
     retrieval_helper = RetrievalHelper()
     
     # Create chart generation pipelines
-    chart_generation_pipeline = create_chart_generation_pipeline()
+    from app.agents.nodes.sql.enhanced_chart_generation import create_enhanced_vega_lite_chart_generation_pipeline
+    chart_generation_pipeline = create_enhanced_vega_lite_chart_generation_pipeline()
     plotly_chart_generation_pipeline = create_plotly_chart_generation_pipeline()
     powerbi_chart_generation_pipeline = create_powerbi_chart_generation_pipeline()
     
@@ -895,7 +898,8 @@ async def example_different_chart_formats():
     retrieval_helper = RetrievalHelper()
     
     # Create chart generation pipelines
-    chart_generation_pipeline = create_chart_generation_pipeline()
+    from app.agents.nodes.sql.enhanced_chart_generation import create_enhanced_vega_lite_chart_generation_pipeline
+    chart_generation_pipeline = create_enhanced_vega_lite_chart_generation_pipeline()
     plotly_chart_generation_pipeline = create_plotly_chart_generation_pipeline()
     powerbi_chart_generation_pipeline = create_powerbi_chart_generation_pipeline()
     

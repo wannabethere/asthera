@@ -12,6 +12,9 @@ docker run -d -v ./unstructured-data:/data -p 8015:8000 chromadb/chroma:0.5.13
 find . -type d -name __pycache__ -exec rm -r {} +
 find . -type d -name "__MACOSX" -print0 | xargs -0 rm -rf
 
+
+scp -i ~/Downloads/flowharmonic.pem agents.zip ec2-user@ec2-54-161-71-105.compute-1.amazonaws.com:~/.
+
 https://github.com/llm-d/llm-d
 
  'columns': ['Full_Name', 'User_ID', 'Division', 'Assigned_Date', 'Completed_Date', 'Due_Date', 'is_completed', 'is_satisfied_late']}, 'table_name': 'csod_training_records'}

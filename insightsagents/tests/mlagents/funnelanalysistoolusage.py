@@ -200,10 +200,14 @@ def main():
     ))
     print(code_result)
 
-
+    print("--------------------------------")
+    print("What are the purchase order trends that are missing forecasted values by region, cost center, and project")
+    print("--------------------------------")
+    print("What are the mean, average daily transactional values that for purchase orders by region and project")
+    print("--------------------------------")
 
     result = asyncio.run(planner.classify_intent(
-        question="What are the purchase order trends that are missing forecasted values by region, cost center, and project",
+        question="What are the mean, average daily transactional values that for purchase orders by region and project",
         dataframe_description="Financial flux data with project, cost center, and department information",
         dataframe_summary="Dataset contains flux values over time with grouping dimensions",
         available_columns=po_df.columns.tolist()

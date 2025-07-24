@@ -1,0 +1,208 @@
+{
+    "pipeline_architecture": {
+        "name": "ProphetPipe",
+        "description": "Pipeline-style Prophet time series forecasting with functional composition",
+        "pipe_operator": "|",
+        "initialization": "ProphetPipe.from_dataframe(df)"
+    },
+    "functions": {
+        "prepare_prophet_data": {
+            "category": "data_preparation",
+            "required_params": ["date_column", "value_column"],
+            "optional_params": ["date_format", "freq"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that prepares Prophet data format from a ProphetPipe"
+            },
+            "description": "Convert data to Prophet's required ds/y format with date validation",
+            "data_format": "Prophet requires 'ds' (datestamp) and 'y' (value) columns"
+        },
+        "add_regressors": {
+            "category": "data_preparation",
+            "required_params": ["regressor_columns"],
+            "optional_params": ["regressor_data", "prior_scale", "standardize"],
+            "outputs": {
+                "type": "Callable", 
+                "description": "Function that adds external regressors to a ProphetPipe"
+            },
+            "description": "Add external variables that influence the forecast",
+            "regressor_types": ["promotional_effects", "weather", "economic_indicators", "calendar_events"]
+        },
+        "add_holidays": {
+            "category": "data_preparation",
+            "required_params": ["holiday_data"],
+            "optional_params": ["holiday_name", "prior_scale", "lower_window", "upper_window"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that adds holiday effects to a ProphetPipe"
+            },
+            "description": "Add holiday effects with custom or built-in holiday calendars",
+            "holiday_formats": ["dataframe", "country_code", "custom_list"]
+        },
+        "configure_prophet": {
+            "category": "model_configuration",
+            "required_params": [],
+            "optional_params": ["growth", "seasonality_mode", "changepoint_prior_scale", "seasonality_prior_scale", "holidays_prior_scale", "n_changepoints", "changepoint_range", "yearly_seasonality", "weekly_seasonality", "daily_seasonality", "model_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that configures Prophet model in a ProphetPipe"
+            },
+            "description": "Configure Prophet model parameters and seasonality settings",
+            "growth_options": ["linear", "logistic"],
+            "seasonality_modes": ["additive", "multiplicative"]
+        },
+        "add_custom_seasonality": {
+            "category": "model_configuration",
+            "required_params": ["name", "period", "fourier_order"],
+            "optional_params": ["prior_scale", "model_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that adds custom seasonality to a ProphetPipe"
+            },
+            "description": "Add custom seasonal patterns beyond default yearly/weekly/daily",
+            "common_periods": {"monthly": 30.5, "quarterly": 91.25, "business_quarterly": 65}
+        },
+        "fit_prophet": {
+            "category": "training",
+            "required_params": [],
+            "optional_params": ["model_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that fits Prophet model in a ProphetPipe"
+            },
+            "description": "Train the Prophet model on historical data"
+        },
+        "make_forecast": {
+            "category": "forecasting",
+            "required_params": ["periods"],
+            "optional_params": ["freq", "include_history", "model_name", "forecast_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that generates forecasts from a ProphetPipe"
+            },
+            "description": "Generate future forecasts for specified periods",
+            "freq_options": ["D", "H", "MS", "W", "Q", "Y"]
+        },
+        "forecast_with_regressors": {
+            "category": "forecasting",
+            "required_params": ["periods", "regressor_future_values"],
+            "optional_params": ["freq", "include_history", "model_name", "forecast_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that generates forecasts with regressors from a ProphetPipe"
+            },
+            "description": "Generate forecasts with future values for external regressors"
+        },
+        "cross_validate_model": {
+            "category": "evaluation",
+            "required_params": ["initial", "period", "horizon"],
+            "optional_params": ["parallel", "model_name", "cv_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that performs cross-validation on a ProphetPipe"
+            },
+            "description": "Evaluate model performance using time series cross-validation",
+            "time_formats": ["365 days", "730 days", "1 year", "6 months"]
+        },
+        "calculate_forecast_metrics": {
+            "category": "evaluation",
+            "required_params": ["forecast_name"],
+            "optional_params": ["actual_column", "cutoff_date"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates forecast metrics from a ProphetPipe"
+            },
+            "description": "Calculate forecast accuracy metrics (MAE, RMSE, MAPE, coverage)",
+            "metrics": ["mae", "mse", "rmse", "mape", "coverage"]
+        },
+        "print_forecast_metrics": {
+            "category": "evaluation",
+            "required_params": ["forecast_name"],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that prints forecast metrics from a ProphetPipe"
+            },
+            "description": "Print formatted forecast accuracy metrics"
+        },
+        "plot_forecast": {
+            "category": "visualization",
+            "required_params": ["forecast_name"],
+            "optional_params": ["figsize", "show_components"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that plots forecast from a ProphetPipe"
+            },
+            "description": "Visualize forecast results and decomposed components"
+        },
+        "plot_cross_validation": {
+            "category": "visualization",
+            "required_params": ["cv_name"],
+            "optional_params": ["metric", "figsize"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that plots cross-validation from a ProphetPipe"
+            },
+            "description": "Visualize cross-validation performance across different horizons"
+        },
+        "save_prophet_model": {
+            "category": "model_management",
+            "required_params": [],
+            "optional_params": ["model_name", "filepath"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that saves Prophet model from a ProphetPipe"
+            },
+            "description": "Save trained Prophet model and configuration to disk"
+        },
+        "hyperparameter_tuning": {
+            "category": "optimization",
+            "required_params": ["param_grid", "cv_initial", "cv_period", "cv_horizon"],
+            "optional_params": ["metric", "model_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that performs hyperparameter tuning on a ProphetPipe"
+            },
+            "description": "Optimize Prophet hyperparameters using cross-validation grid search"
+        }
+    },
+    "pipeline_data_structure": {
+        "data": "Main DataFrame with ds/y format and regressors",
+        "original_data": "Original input data before transformation",
+        "models": "Dictionary of configured and fitted Prophet models",
+        "forecasts": "Dictionary of forecast results with metadata",
+        "metrics": "Dictionary of forecast accuracy metrics",
+        "cross_validation_results": "Dictionary of CV results and performance metrics",
+        "holidays": "Dictionary of holiday configurations",
+        "regressors": "Dictionary of regressor configurations",
+        "model_configs": "Dictionary of model parameter configurations"
+    },
+    "typical_pipeline_flow": [
+        "1. Initialize: ProphetPipe.from_dataframe(df)",
+        "2. Data Preparation: prepare_prophet_data",
+        "3. Add External Factors: add_regressors, add_holidays",
+        "4. Model Configuration: configure_prophet, add_custom_seasonality",
+        "5. Training: fit_prophet",
+        "6. Forecasting: make_forecast or forecast_with_regressors",
+        "7. Evaluation: cross_validate_model, calculate_forecast_metrics",
+        "8. Visualization: plot_forecast, plot_cross_validation",
+        "9. Model Management: save_prophet_model"
+    ],
+    "prophet_specific_features": {
+        "growth_models": {
+            "linear": "Unlimited linear growth",
+            "logistic": "Growth with capacity constraints"
+        },
+        "seasonality_detection": {
+            "yearly": "Annual patterns (365.25 days)",
+            "weekly": "Weekly patterns (7 days)", 
+            "daily": "Daily patterns (24 hours)",
+            "custom": "User-defined periods with Fourier terms"
+        },
+        "changepoint_detection": "Automatic detection of trend changes",
+        "uncertainty_intervals": "Prediction intervals for forecast uncertainty",
+        "holiday_effects": "Special event impact modeling",
+        "external_regressors": "Additional variables affecting the forecast"
+    },
+    "example_complete_pipeline": "ProphetPipe.from_dataframe(df) | prepare_prophet_data('date', 'sales') | add_regressors(['marketing_spend']) | add_holidays(holidays_df) | configure_prophet(growth='linear') | fit_prophet() | make_forecast(periods=30) | cross_validate_model('365 days', '90 days', '30 days') | calculate_forecast_metrics('prophet_model_forecast') | plot_forecast('prophet_model_forecast', show_components=True)"
+}

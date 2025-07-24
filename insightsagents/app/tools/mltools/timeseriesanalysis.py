@@ -38,6 +38,310 @@ class TimeSeriesPipe:
         pipe = cls()
         pipe.data = df.copy()
         return pipe
+    
+    def to_df(self, include_metadata: bool = False, include_original: bool = True):
+        """
+        Convert the time series analysis results to a DataFrame
+        
+        Parameters:
+        -----------
+        include_metadata : bool, default=False
+            Whether to include metadata columns in the output DataFrame
+        include_original : bool, default=True
+            Whether to include original data columns in the output DataFrame
+            
+        Returns:
+        --------
+        pd.DataFrame
+            DataFrame representation of the time series analysis results
+            
+        Raises:
+        -------
+        ValueError
+            If no data is available
+            
+        Examples:
+        --------
+        >>> # Basic time series operations
+        >>> pipe = (TimeSeriesPipe.from_dataframe(df)
+        ...         | lag('value', 1)
+        ...         | variance_analysis('value', 'rolling', 5))
+        >>> results_df = pipe.to_df()
+        >>> print(results_df.head())
+        
+        >>> # With metadata
+        >>> results_df = pipe.to_df(include_metadata=True)
+        >>> print(results_df.columns)
+        
+        >>> # Only time series columns (no original data)
+        >>> ts_df = pipe.to_df(include_original=False)
+        >>> print(ts_df.columns)
+        """
+        if self.data is None:
+            raise ValueError("No data found. Data must be provided when creating the pipeline.")
+        
+        # Get the result DataFrame (contains original data + time series analysis results)
+        result_df = self.data.copy()
+        
+        # Filter columns based on parameters
+        columns_to_include = []
+        
+        if include_original:
+            # Include original columns (those that don't have time series suffixes)
+            original_cols = [col for col in result_df.columns 
+                           if not any(suffix in col for suffix in ['_lead', '_lag', '_var', '_std', '_cdf', '_rolling_'])]
+            columns_to_include.extend(original_cols)
+        
+        # Include time series analysis columns
+        ts_cols = [col for col in result_df.columns 
+                  if any(suffix in col for suffix in ['_lead', '_lag', '_var', '_std', '_cdf', '_rolling_'])]
+        columns_to_include.extend(ts_cols)
+        
+        # Create the output DataFrame
+        output_df = result_df[columns_to_include].copy()
+        
+        # Add metadata if requested
+        if include_metadata:
+            # Add information about available analyses
+            if self.distribution_results:
+                output_df['has_distribution_analysis'] = True
+                output_df['distribution_columns'] = ', '.join(self.distribution_results.keys())
+            else:
+                output_df['has_distribution_analysis'] = False
+                output_df['distribution_columns'] = ''
+            
+            if self.test_results:
+                output_df['has_test_results'] = True
+                output_df['test_results'] = str(list(self.test_results.keys()))
+            else:
+                output_df['has_test_results'] = False
+                output_df['test_results'] = ''
+        
+        return output_df
+    
+    def get_timeseries_columns(self):
+        """
+        Get the column names that were created by the time series analysis
+        
+        Returns:
+        --------
+        List[str]
+            List of column names created by the time series analysis
+        """
+        if self.data is None:
+            return []
+        
+        # Get time series analysis columns
+        ts_cols = [col for col in self.data.columns 
+                  if any(suffix in col for suffix in ['_lead', '_lag', '_var', '_std', '_cdf', '_rolling_'])]
+        
+        return ts_cols
+    
+    def get_timeseries_summary_df(self, include_metadata: bool = False):
+        """
+        Get a summary DataFrame of all time series analyses
+        
+        Parameters:
+        -----------
+        include_metadata : bool, default=False
+            Whether to include metadata columns
+            
+        Returns:
+        --------
+        pd.DataFrame
+            Summary DataFrame with time series analysis statistics
+        """
+        if self.data is None:
+            return pd.DataFrame()
+        
+        summary_data = []
+        
+        # Analyze time series columns
+        ts_cols = self.get_timeseries_columns()
+        
+        for col in ts_cols:
+            # Determine analysis type based on suffix
+            if '_lead' in col:
+                analysis_type = 'lead'
+                base_col = col.replace('_lead', '')
+            elif '_lag' in col:
+                analysis_type = 'lag'
+                base_col = col.replace('_lag', '')
+            elif '_var' in col:
+                analysis_type = 'variance'
+                base_col = col.replace('_var', '')
+            elif '_std' in col:
+                analysis_type = 'standard_deviation'
+                base_col = col.replace('_std', '')
+            elif '_cdf' in col:
+                analysis_type = 'cumulative_distribution'
+                base_col = col.replace('_cdf', '')
+            elif '_rolling_' in col:
+                analysis_type = 'rolling_window'
+                base_col = col.split('_rolling_')[0]
+            else:
+                analysis_type = 'unknown'
+                base_col = col
+            
+            summary_row = {
+                'column': col,
+                'base_column': base_col,
+                'analysis_type': analysis_type
+            }
+            
+            # Add column statistics
+            if col in self.data.columns:
+                col_data = self.data[col].dropna()
+                summary_row['non_null_count'] = len(col_data)
+                summary_row['null_count'] = self.data[col].isnull().sum()
+                summary_row['null_percentage'] = (summary_row['null_count'] / len(self.data)) * 100
+                
+                if len(col_data) > 0:
+                    summary_row['mean'] = col_data.mean()
+                    summary_row['std'] = col_data.std()
+                    summary_row['min'] = col_data.min()
+                    summary_row['max'] = col_data.max()
+                else:
+                    summary_row['mean'] = np.nan
+                    summary_row['std'] = np.nan
+                    summary_row['min'] = np.nan
+                    summary_row['max'] = np.nan
+            
+            # Add metadata if requested
+            if include_metadata:
+                summary_row['dtype'] = str(self.data[col].dtype)
+                summary_row['unique_values'] = self.data[col].nunique()
+            
+            summary_data.append(summary_row)
+        
+        return pd.DataFrame(summary_data)
+    
+    def get_analysis_by_type(self, analysis_type: str):
+        """
+        Get all columns of a specific analysis type
+        
+        Parameters:
+        -----------
+        analysis_type : str
+            Type of analysis to retrieve ('lead', 'lag', 'variance', 'standard_deviation', 'cumulative_distribution', 'rolling_window')
+            
+        Returns:
+        --------
+        List[str]
+            List of column names of the specified analysis type
+        """
+        ts_cols = self.get_timeseries_columns()
+        
+        if analysis_type == 'lead':
+            return [col for col in ts_cols if '_lead' in col]
+        elif analysis_type == 'lag':
+            return [col for col in ts_cols if '_lag' in col]
+        elif analysis_type == 'variance':
+            return [col for col in ts_cols if '_var' in col]
+        elif analysis_type == 'standard_deviation':
+            return [col for col in ts_cols if '_std' in col]
+        elif analysis_type == 'cumulative_distribution':
+            return [col for col in ts_cols if '_cdf' in col]
+        elif analysis_type == 'rolling_window':
+            return [col for col in ts_cols if '_rolling_' in col]
+        else:
+            return []
+    
+    def get_distribution_results(self):
+        """
+        Get the distribution analysis results
+        
+        Returns:
+        --------
+        Dict or None
+            The distribution results dictionary, or None if no distribution analysis performed
+        """
+        return self.distribution_results.copy() if self.distribution_results else None
+    
+    def get_test_results(self):
+        """
+        Get the statistical test results
+        
+        Returns:
+        --------
+        Dict or None
+            The test results dictionary, or None if no tests performed
+        """
+        return self.test_results.copy() if self.test_results else None
+    
+    def get_original_data(self):
+        """
+        Get the original data DataFrame
+        
+        Returns:
+        --------
+        pd.DataFrame or None
+            The original data DataFrame, or None if no data was provided
+        """
+        return self.data.copy() if self.data is not None else None
+    
+    def get_distribution_summary_df(self, include_metadata: bool = False):
+        """
+        Get a summary DataFrame of distribution analysis results
+        
+        Parameters:
+        -----------
+        include_metadata : bool, default=False
+            Whether to include metadata columns
+            
+        Returns:
+        --------
+        pd.DataFrame
+            Summary DataFrame with distribution analysis statistics
+        """
+        if not self.distribution_results:
+            return pd.DataFrame()
+        
+        summary_data = []
+        
+        for col, dist_result in self.distribution_results.items():
+            if isinstance(dist_result, dict) and 'stats' in dist_result:
+                # Single distribution (no grouping)
+                stats = dist_result['stats']
+                summary_row = {
+                    'column': col,
+                    'group': 'overall',
+                    'count': stats.get('count', np.nan),
+                    'mean': stats.get('mean', np.nan),
+                    'std': stats.get('std', np.nan),
+                    'min': stats.get('min', np.nan),
+                    'median': stats.get('median', np.nan),
+                    'max': stats.get('max', np.nan)
+                }
+                
+                if include_metadata:
+                    summary_row['has_histogram'] = 'histogram' in dist_result
+                    summary_row['has_bin_edges'] = 'bin_edges' in dist_result
+                
+                summary_data.append(summary_row)
+            else:
+                # Multiple distributions (with grouping)
+                for group, results in dist_result.items():
+                    if isinstance(results, dict) and 'stats' in results:
+                        stats = results['stats']
+                        summary_row = {
+                            'column': col,
+                            'group': group,
+                            'count': stats.get('count', np.nan),
+                            'mean': stats.get('mean', np.nan),
+                            'std': stats.get('std', np.nan),
+                            'min': stats.get('min', np.nan),
+                            'median': stats.get('median', np.nan),
+                            'max': stats.get('max', np.nan)
+                        }
+                        
+                        if include_metadata:
+                            summary_row['has_histogram'] = 'histogram' in results
+                            summary_row['has_bin_edges'] = 'bin_edges' in results
+                        
+                        summary_data.append(summary_row)
+        
+        return pd.DataFrame(summary_data)
 
 
 def lead(

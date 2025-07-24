@@ -1,0 +1,221 @@
+[
+    {
+        "query": "Create log and square root transformations for numerical columns",
+        "function": "generate_numerical_features",
+        "category": "feature_engineering",
+        "inputs": {
+            "columns": ["age", "income", "purchase_amount"],
+            "operations": ["log", "sqrt"],
+            "prefix": "transform_",
+            "handle_zeros": true
+        },
+        "example": "pipeline = RFPipe.from_dataframe(data)\npipeline = pipeline | generate_numerical_features(\n    columns=['age', 'income', 'purchase_amount'],\n    operations=['log', 'sqrt'],\n    prefix='transform_',\n    handle_zeros=True\n)",
+        "patterns": {
+            "function_patterns": ["(transform|engineer|generate) (features|columns)", "(log|sqrt|square) (transformation)"],
+            "column_patterns": ["(numerical|numeric) (features|columns)"]
+        }
+    },
+    {
+        "query": "One-hot encode categorical variables for machine learning",
+        "function": "generate_categorical_features", 
+        "category": "feature_engineering",
+        "inputs": {
+            "columns": ["category", "region", "customer_type"],
+            "encoding_type": "onehot",
+            "max_categories": 15
+        },
+        "example": "pipeline = RFPipe.from_dataframe(data)\npipeline = pipeline | generate_categorical_features(\n    columns=['category', 'region', 'customer_type'],\n    encoding_type='onehot',\n    max_categories=15\n)",
+        "patterns": {
+            "function_patterns": ["(encode|encoding) (categorical)", "(one.hot|onehot) (encoding)"],
+            "column_patterns": ["(categorical|category) (features|columns|variables)"]
+        }
+    },
+    {
+        "query": "Create interaction features between age and income columns", 
+        "function": "generate_interaction_features",
+        "category": "feature_engineering",
+        "inputs": {
+            "column_pairs": [["age", "income"], ["price", "quantity"]],
+            "operations": ["multiply", "divide"],
+            "prefix": "interaction_"
+        },
+        "example": "pipeline = RFPipe.from_dataframe(data)\npipeline = pipeline | generate_interaction_features(\n    column_pairs=[('age', 'income'), ('price', 'quantity')],\n    operations=['multiply', 'divide'],\n    prefix='interaction_'\n)",
+        "patterns": {
+            "function_patterns": ["(interaction|cross) (features)", "(multiply|combine) (features|columns)"],
+            "column_patterns": ["(between|across) (columns|features)"]
+        }
+    },
+    {
+        "query": "Create binary classification labels for high-value customers",
+        "function": "create_binary_labels",
+        "category": "labeling", 
+        "inputs": {
+            "column": "lifetime_value",
+            "condition": ">1000",
+            "label_column": "high_value",
+            "positive_label": "1",
+            "negative_label": "0"
+        },
+        "example": "pipeline = RFPipe.from_dataframe(data)\npipeline = pipeline | create_binary_labels(\n    column='lifetime_value',\n    condition='>1000',\n    label_column='high_value',\n    positive_label='1',\n    negative_label='0'\n)",
+        "patterns": {
+            "function_patterns": ["(binary|two.class) (classification|labels)", "(create|generate) (labels|targets)"],
+            "threshold_patterns": ["(above|below|greater|less) (than|threshold)"]
+        }
+    },
+    {
+        "query": "Segment customers into multiple value tiers based on spending",
+        "function": "create_multiclass_labels",
+        "category": "labeling",
+        "inputs": {
+            "column": "annual_spend",
+            "bins": [0, 100, 500, 1000, 5000],
+            "labels": ["Low", "Medium", "High", "Premium"],
+            "label_column": "customer_tier"
+        },
+        "example": "pipeline = RFPipe.from_dataframe(data)\npipeline = pipeline | create_multiclass_labels(\n    column='annual_spend',\n    bins=[0, 100, 500, 1000, 5000],\n    labels=['Low', 'Medium', 'High', 'Premium'],\n    label_column='customer_tier'\n)",
+        "patterns": {
+            "function_patterns": ["(multiclass|multi.class) (classification|labels)", "(segment|tier|group) (customers|users)"],
+            "binning_patterns": ["(bins|buckets|tiers|segments)"]
+        }
+    },
+    {
+        "query": "Select the top 15 most important features for modeling",
+        "function": "select_features",
+        "category": "feature_selection", 
+        "inputs": {
+            "method": "kbest",
+            "k": 15,
+            "score_func": "f_classif"
+        },
+        "example": "pipeline = RFPipe.from_dataframe(data)\npipeline = pipeline | select_features(\n    method='kbest',\n    k=15,\n    score_func=f_classif\n)",
+        "patterns": {
+            "function_patterns": ["(select|choose|pick) (features)", "(top|best) (features)"],
+            "number_patterns": ["(\\d+) (features|variables)"],
+            "method_patterns": ["(statistical|univariate) (selection)"]
+        }
+    },
+    {
+        "query": "Train a Random Forest with 200 trees and maximum depth of 10",
+        "function": "train_random_forest",
+        "category": "training",
+        "inputs": {
+            "test_size": 0.2,
+            "n_estimators": 200,
+            "max_depth": 10,
+            "min_samples_split": 5,
+            "model_name": "customer_model",
+            "random_state": 42
+        },
+        "example": "pipeline = RFPipe.from_dataframe(data)\npipeline = pipeline | train_random_forest(\n    test_size=0.2,\n    n_estimators=200,\n    max_depth=10,\n    min_samples_split=5,\n    model_name='customer_model',\n    random_state=42\n)",
+        "patterns": {
+            "function_patterns": ["(train|fit|build) (model|classifier)", "(random.forest|rf) (model|classifier)"],
+            "parameter_patterns": ["(\\d+) (trees|estimators)", "(depth|split|leaf) (parameters)"]
+        }
+    },
+    {
+        "query": "Make predictions on the test set using trained model",
+        "function": "predict", 
+        "category": "inference",
+        "inputs": {
+            "model_name": "customer_model",
+            "data_split": "test",
+            "prediction_name": "test_predictions"
+        },
+        "example": "pipeline = RFPipe.from_dataframe(data)\npipeline = pipeline | predict(\n    model_name='customer_model',\n    data_split='test',\n    prediction_name='test_predictions'\n)",
+        "patterns": {
+            "function_patterns": ["(predict|inference|classify)", "(test|validation) (set|data)"],
+            "data_patterns": ["(test|train|validation) (split|set|data)"]
+        }
+    },
+    {
+        "query": "Calculate accuracy, precision, recall and F1-score for model evaluation",
+        "function": "calculate_metrics",
+        "category": "evaluation",
+        "inputs": {
+            "prediction_name": "test_predictions", 
+            "model_name": "customer_model",
+            "average": "weighted"
+        },
+        "example": "pipeline = RFPipe.from_dataframe(data)\npipeline = pipeline | calculate_metrics(\n    prediction_name='test_predictions',\n    model_name='customer_model',\n    average='weighted'\n)",
+        "patterns": {
+            "function_patterns": ["(calculate|compute|evaluate) (metrics|performance)", "(accuracy|precision|recall|f1)"],
+            "metrics_patterns": ["(classification|model) (metrics|evaluation|performance)"]
+        }
+    },
+    {
+        "query": "Save the trained model for production deployment",
+        "function": "save_model",
+        "category": "model_management",
+        "inputs": {
+            "model_name": "customer_model",
+            "filepath": "production_model.joblib"
+        },
+        "example": "pipeline = RFPipe.from_dataframe(data)\npipeline = pipeline | save_model(\n    model_name='customer_model',\n    filepath='production_model.joblib'\n)",
+        "patterns": {
+            "function_patterns": ["(save|export|persist) (model)", "(production|deployment) (model)"],
+            "file_patterns": ["(joblib|pickle|model) (file|format)"]
+        }
+    },
+    {
+        "query": "Print detailed classification metrics and feature importance",
+        "function": "print_metrics",
+        "category": "evaluation",
+        "inputs": {
+            "prediction_name": "test_predictions",
+            "model_name": "customer_model"
+        },
+        "example": "pipeline = RFPipe.from_dataframe(data)\npipeline = pipeline | print_metrics(\n    prediction_name='test_predictions',\n    model_name='customer_model'\n)",
+        "patterns": {
+            "function_patterns": ["(print|display|show) (metrics|results)", "(feature|variable) (importance)"],
+            "output_patterns": ["(formatted|detailed) (output|results)"]
+        }
+    },
+    {
+        "query": "Complete customer churn prediction pipeline with feature engineering",
+        "function": "complete_pipeline",
+        "category": "end_to_end",
+        "inputs": {
+            "data_source": "customer_data.csv",
+            "target": "churn",
+            "features": ["age", "tenure", "monthly_charges", "contract_type"],
+            "model_params": {"n_estimators": 300, "max_depth": 15}
+        },
+        "example": "churn_pipeline = (\n    RFPipe.from_dataframe(customer_data)\n    | generate_numerical_features(['age', 'tenure', 'monthly_charges'], operations=['log', 'sqrt'])\n    | generate_categorical_features(['contract_type', 'payment_method'], encoding_type='onehot')\n    | generate_interaction_features([('age', 'tenure'), ('monthly_charges', 'tenure')])\n    | create_binary_labels('total_charges', '<500', 'churn_risk')\n    | select_features(method='kbest', k=20)\n    | train_random_forest(n_estimators=300, max_depth=15, model_name='churn_model')\n    | predict(model_name='churn_model')\n    | calculate_metrics(model_name='churn_model')\n    | print_metrics(model_name='churn_model')\n    | save_model(model_name='churn_model')\n)",
+        "patterns": {
+            "function_patterns": ["(churn|retention) (prediction|model)", "(customer|user) (churn|retention)"],
+            "pipeline_patterns": ["(complete|full|end.to.end) (pipeline|workflow)"]
+        }
+    },
+    {
+        "query": "Fraud detection model with advanced feature engineering",
+        "function": "complete_pipeline", 
+        "category": "end_to_end",
+        "inputs": {
+            "data_source": "transaction_data.csv",
+            "target": "is_fraud",
+            "features": ["amount", "merchant_category", "time_of_day", "location_risk"],
+            "model_params": {"n_estimators": 500, "max_depth": 20}
+        },
+        "example": "fraud_pipeline = (\n    RFPipe.from_dataframe(transaction_data)\n    | generate_numerical_features(['amount', 'time_of_day'], operations=['log', 'sqrt', 'square'])\n    | generate_categorical_features(['merchant_category', 'card_type'], encoding_type='onehot')\n    | generate_interaction_features([('amount', 'time_of_day'), ('location_risk', 'merchant_category')])\n    | select_features(method='mutual_info', k=25)\n    | train_random_forest(n_estimators=500, max_depth=20, min_samples_leaf=5, model_name='fraud_model')\n    | predict(model_name='fraud_model')\n    | calculate_metrics(model_name='fraud_model')\n    | print_metrics(model_name='fraud_model')\n)",
+        "patterns": {
+            "function_patterns": ["(fraud|anomaly) (detection|model)", "(transaction|payment) (fraud)"],
+            "security_patterns": ["(suspicious|fraudulent) (activity|transaction)"]
+        }
+    },
+    {
+        "query": "Customer segmentation with behavioral features and value prediction",
+        "function": "complete_pipeline",
+        "category": "end_to_end", 
+        "inputs": {
+            "data_source": "customer_behavior.csv",
+            "target": "customer_value_tier",
+            "features": ["session_count", "page_views", "purchase_frequency", "device_type"],
+            "model_params": {"n_estimators": 200, "max_depth": 12}
+        },
+        "example": "segmentation_pipeline = (\n    RFPipe.from_dataframe(customer_behavior)\n    | generate_numerical_features(['session_count', 'page_views', 'purchase_frequency'], operations=['log', 'sqrt'])\n    | generate_categorical_features(['device_type', 'acquisition_channel'], encoding_type='onehot')\n    | generate_interaction_features([('session_count', 'page_views'), ('purchase_frequency', 'avg_order_value')])\n    | create_multiclass_labels('lifetime_value', bins=[0, 100, 500, 1000, float('inf')], labels=['Low', 'Medium', 'High', 'Premium'])\n    | select_features(method='kbest', k=18)\n    | train_random_forest(n_estimators=200, max_depth=12, model_name='segment_model')\n    | predict(model_name='segment_model')\n    | calculate_metrics(model_name='segment_model', average='macro')\n    | print_metrics(model_name='segment_model')\n)",
+        "patterns": {
+            "function_patterns": ["(customer|user) (segmentation|clustering)", "(value|tier) (prediction|classification)"],
+            "business_patterns": ["(behavioral|engagement) (analysis|features)"]
+        }
+    }
+]

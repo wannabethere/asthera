@@ -20,7 +20,7 @@ from app.agents.nodes.sql.utils.chart import ChartExecutionConfig
 from app.core.engine import Engine
 from app.agents.retrieval.retrieval_helper import RetrievalHelper
 from app.core.dependencies import get_llm
-from app.agents.nodes.sql.chart_generation import create_chart_generation_pipeline
+from app.agents.nodes.sql.enhanced_chart_generation import create_enhanced_vega_lite_chart_generation_pipeline
 from app.agents.nodes.sql.plotly_chart_generation import create_plotly_chart_generation_pipeline
 from app.agents.nodes.sql.powerbi_chart_generation import create_powerbi_chart_generation_pipeline
 
@@ -78,7 +78,7 @@ async def example_basic_chart_execution():
     retrieval_helper = RetrievalHelper()
     
     # Create chart generation pipelines
-    chart_generation_pipeline = create_chart_generation_pipeline()
+    chart_generation_pipeline = create_enhanced_vega_lite_chart_generation_pipeline()
     plotly_chart_generation_pipeline = create_plotly_chart_generation_pipeline()
     powerbi_chart_generation_pipeline = create_powerbi_chart_generation_pipeline()
     
@@ -149,7 +149,7 @@ async def example_different_formats():
     retrieval_helper = RetrievalHelper()
     
     # Create chart generation pipelines
-    chart_generation_pipeline = create_chart_generation_pipeline()
+    chart_generation_pipeline = create_enhanced_vega_lite_chart_generation_pipeline()
     plotly_chart_generation_pipeline = create_plotly_chart_generation_pipeline()
     powerbi_chart_generation_pipeline = create_powerbi_chart_generation_pipeline()
     
@@ -282,7 +282,7 @@ async def example_with_custom_configuration():
     retrieval_helper = RetrievalHelper()
     
     # Create chart generation pipelines
-    chart_generation_pipeline = create_chart_generation_pipeline()
+    chart_generation_pipeline = create_enhanced_vega_lite_chart_generation_pipeline()
     plotly_chart_generation_pipeline = create_plotly_chart_generation_pipeline()
     powerbi_chart_generation_pipeline = create_powerbi_chart_generation_pipeline()
     
@@ -352,7 +352,7 @@ async def example_chart_execution_pipeline():
     retrieval_helper = RetrievalHelper()
     
     # Create chart generation pipelines
-    chart_generation_pipeline = create_chart_generation_pipeline()
+    chart_generation_pipeline = create_enhanced_vega_lite_chart_generation_pipeline()
     plotly_chart_generation_pipeline = create_plotly_chart_generation_pipeline()
     powerbi_chart_generation_pipeline = create_powerbi_chart_generation_pipeline()
     

@@ -6,6 +6,7 @@ from langfuse.decorators import observe
 from pydantic import BaseModel
 
 from app.agents.nodes.sql.chart_generation import create_vega_lite_chart_generation_pipeline
+from app.agents.nodes.sql.enhanced_chart_generation import create_enhanced_vega_lite_chart_generation_pipeline
 from app.agents.pipelines.base import Pipeline as BasicPipeline
 from app.agents.pipelines.pipeline_container import PipelineContainer
 from app.services.sql.models import (
@@ -36,7 +37,7 @@ class ChartService(BaseService[ChartRequest, ChartResultResponse]):
         super().__init__(pipelines=pipelines, maxsize=maxsize, ttl=ttl)
         
         # Initialize the chart generation pipeline
-        self._chart_pipeline = create_vega_lite_chart_generation_pipeline()
+        self._chart_pipeline = create_enhanced_vega_lite_chart_generation_pipeline()
         logger.info("Chart service initialized")
 
     @observe(name="Generate Chart")

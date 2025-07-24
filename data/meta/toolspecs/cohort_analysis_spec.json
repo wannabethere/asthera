@@ -1,49 +1,90 @@
 {
     "functions": {
         "form_time_cohorts": {
-            "required_params": ["date_column"],
-            "optional_params": ["cohort_column", "time_period", "format_cohorts", "datetime_format"],
+            "required_params": [
+                {"name": "date_column", "type": "str", "description": "Column containing the date to use for cohort formation"}
+            ],
+            "optional_params": [
+                {"name": "cohort_column", "type": "str", "description": "Name of the column to store cohort information (default: 'cohort')"},
+                {"name": "time_period", "type": "str", "description": "Time period for cohort grouping ('D' for daily, 'W' for weekly, 'M' for monthly, 'Q' for quarterly, 'Y' for yearly) (default: 'M')"},
+                {"name": "format_cohorts", "type": "bool", "description": "Whether to format cohorts as strings (e.g., 'Jan 2023' instead of timestamp) (default: True)"},
+                {"name": "datetime_format", "type": "str", "description": "Format string for parsing dates if they are not already datetime objects (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that forms time-based cohorts from a CohortPipe"
+                "description": "Function that forms time-based cohorts from a CohortPipe."
             },
-            "description": "Form cohorts based on time periods"
+            "description": "Form cohorts based on time periods\n\nParameters:\n-----------\ndate_column : str\n    Column containing the date to use for cohort formation\ncohort_column : str, default='cohort'\n    Name of the column to store cohort information\ntime_period : str, default='M'\n    Time period for cohort grouping ('D' for daily, 'W' for weekly, 'M' for monthly, 'Q' for quarterly, 'Y' for yearly)\nformat_cohorts : bool, default=True\n    Whether to format cohorts as strings (e.g., 'Jan 2023' instead of timestamp)\ndatetime_format : str, optional\n    Format string for parsing dates if they are not already datetime objects\n\nReturns:\n--------\nCallable\n    Function that forms time-based cohorts from a CohortPipe"
         },
         "form_behavioral_cohorts": {
-            "required_params": ["behavior_column"],
-            "optional_params": ["cohort_column", "conditions", "custom_cohorts"],
+            "required_params": [
+                {"name": "behavior_column", "type": "str", "description": "Column containing the behavior to use for cohort formation"}
+            ],
+            "optional_params": [
+                {"name": "cohort_column", "type": "str", "description": "Name of the column to store cohort information (default: 'cohort')"},
+                {"name": "conditions", "type": "Dict[str, Any]", "description": "Dictionary mapping cohort names to conditions (e.g., {'high_value': ('>',100)}) (optional)"},
+                {"name": "custom_cohorts", "type": "Dict[str, Callable]", "description": "Dictionary mapping cohort names to functions that take a dataframe and return a boolean mask (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that forms behavior-based cohorts from a CohortPipe"
+                "description": "Function that forms behavior-based cohorts from a CohortPipe."
             },
-            "description": "Form cohorts based on user behavior"
+            "description": "Form cohorts based on user behavior\n\nParameters:\n-----------\nbehavior_column : str\n    Column containing the behavior to use for cohort formation\ncohort_column : str, default='cohort'\n    Name of the column to store cohort information\nconditions : Dict[str, Any], optional\n    Dictionary mapping cohort names to conditions (e.g., {'high_value': ('>',100)})\ncustom_cohorts : Dict[str, Callable], optional\n    Dictionary mapping cohort names to functions that take a dataframe and return a boolean mask\n\nReturns:\n--------\nCallable\n    Function that forms behavior-based cohorts from a CohortPipe"
         },
         "calculate_retention": {
-            "required_params": ["cohort_column", "date_column", "user_id_column"],
-            "optional_params": ["time_period", "max_periods", "retention_type", "datetime_format"],
+            "required_params": [
+                {"name": "cohort_column", "type": "str", "description": "Column containing cohort information"},
+                {"name": "date_column", "type": "str", "description": "Column containing the date of activity"},
+                {"name": "user_id_column", "type": "str", "description": "Column containing user identifiers"}
+            ],
+            "optional_params": [
+                {"name": "time_period", "type": "str", "description": "Time period for retention calculation ('D', 'W', 'M', 'Q', 'Y') (default: 'M')"},
+                {"name": "max_periods", "type": "int", "description": "Maximum number of periods to calculate retention for (default: 12)"},
+                {"name": "retention_type", "type": "str", "description": "Type of retention to calculate: - 'classic': Users who return in a specific period - 'rolling': Users who return in this period or any later period - 'unbounded': Users who were active at least N times (default: 'classic')"},
+                {"name": "datetime_format", "type": "str", "description": "Format string for parsing dates if they are not already datetime objects (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that calculates retention metrics from a CohortPipe"
+                "description": "Function that calculates retention metrics from a CohortPipe."
             },
-            "description": "Calculate retention metrics for cohorts"
+            "description": "Calculate retention metrics for cohorts\n\nParameters:\n-----------\ncohort_column : str\n    Column containing cohort information\ndate_column : str\n    Column containing the date of activity\nuser_id_column : str\n    Column containing user identifiers\ntime_period : str, default='M'\n    Time period for retention calculation ('D', 'W', 'M', 'Q', 'Y')\nmax_periods : int, default=12\n    Maximum number of periods to calculate retention for\nretention_type : str, default='classic'\n    Type of retention to calculate:\n    - 'classic': Users who return in a specific period\n    - 'rolling': Users who return in this period or any later period\n    - 'unbounded': Users who were active at least N times\ndatetime_format : str, optional\n    Format string for parsing dates if they are not already datetime objects\n\nReturns:\n--------\nCallable\n    Function that calculates retention from a CohortPipe"
         },
         "calculate_conversion": {
-            "required_params": ["cohort_column", "event_column", "user_id_column", "funnel_steps"],
-            "optional_params": ["step_names", "include_rates", "cumulative"],
+            "required_params": [
+                {"name": "cohort_column", "type": "str", "description": "Column containing cohort information"},
+                {"name": "event_column", "type": "str", "description": "Column containing event names/types"},
+                {"name": "user_id_column", "type": "str", "description": "Column containing user identifiers"},
+                {"name": "funnel_steps", "type": "List[str]", "description": "List of event names representing steps in the funnel, in order"}
+            ],
+            "optional_params": [
+                {"name": "step_names", "type": "List[str]", "description": "Friendly names for the funnel steps (if None, funnel_steps will be used) (optional)"},
+                {"name": "include_rates", "type": "bool", "description": "Whether to include conversion rates between steps (default: True)"},
+                {"name": "cumulative", "type": "bool", "description": "Whether to show cumulative conversion from first step (default: True)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that calculates conversion metrics from a CohortPipe"
+                "description": "Function that calculates conversion metrics from a CohortPipe."
             },
-            "description": "Calculate conversion funnel metrics for cohorts"
+            "description": "Calculate conversion funnel metrics for cohorts\n\nParameters:\n-----------\ncohort_column : str\n    Column containing cohort information\nevent_column : str\n    Column containing event names/types\nuser_id_column : str\n    Column containing user identifiers\nfunnel_steps : List[str]\n    List of event names representing steps in the funnel, in order\nstep_names : List[str], optional\n    Friendly names for the funnel steps (if None, funnel_steps will be used)\ninclude_rates : bool, default=True\n    Whether to include conversion rates between steps\ncumulative : bool, default=True\n    Whether to show cumulative conversion from first step\n\nReturns:\n--------\nCallable\n    Function that calculates conversion funnels from a CohortPipe"
         },
         "calculate_lifetime_value": {
-            "required_params": ["cohort_column", "date_column", "user_id_column", "value_column"],
-            "optional_params": ["time_period", "max_periods", "cumulative", "datetime_format"],
+            "required_params": [
+                {"name": "cohort_column", "type": "str", "description": "Column containing cohort information"},
+                {"name": "date_column", "type": "str", "description": "Column containing the date of activity"},
+                {"name": "user_id_column", "type": "str", "description": "Column containing user identifiers"},
+                {"name": "value_column", "type": "str", "description": "Column containing the value (revenue, etc.)"}
+            ],
+            "optional_params": [
+                {"name": "time_period", "type": "str", "description": "Time period for LTV calculation ('D', 'W', 'M', 'Q', 'Y') (default: 'M')"},
+                {"name": "max_periods", "type": "int", "description": "Maximum number of periods to calculate LTV for (default: 12)"},
+                {"name": "cumulative", "type": "bool", "description": "Whether to show cumulative LTV over time (default: True)"},
+                {"name": "datetime_format", "type": "str", "description": "Format string for parsing dates if they are not already datetime objects (optional)"}
+            ],
             "outputs": {
                 "type": "Callable",
-                "description": "Function that calculates lifetime value metrics from a CohortPipe"
+                "description": "Function that calculates lifetime value metrics from a CohortPipe."
             },
-            "description": "Calculate lifetime value metrics for cohorts"
+            "description": "Calculate lifetime value metrics for cohorts\n\nParameters:\n-----------\ncohort_column : str\n    Column containing cohort information\ndate_column : str\n    Column containing the date of activity\nuser_id_column : str\n    Column containing user identifiers\nvalue_column : str\n    Column containing the value (revenue, etc.)\ntime_period : str, default='M'\n    Time period for LTV calculation ('D', 'W', 'M', 'Q', 'Y')\nmax_periods : int, default=12\n    Maximum number of periods to calculate LTV for\ncumulative : bool, default=True\n    Whether to show cumulative LTV over time\ndatetime_format : str, optional\n    Format string for parsing dates if they are not already datetime objects\n\nReturns:\n--------\nCallable\n    Function that calculates LTV from a CohortPipe"
         }
     }
 }

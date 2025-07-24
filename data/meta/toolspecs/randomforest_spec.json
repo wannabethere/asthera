@@ -1,0 +1,153 @@
+{
+    "pipeline_architecture": {
+        "name": "RFPipe",
+        "description": "Pipeline-style Random Forest classifier with functional composition",
+        "pipe_operator": "|",
+        "initialization": "RFPipe.from_dataframe(df)"
+    },
+    "functions": {
+        "generate_numerical_features": {
+            "category": "feature_engineering",
+            "required_params": ["columns"],
+            "optional_params": ["operations", "prefix", "handle_zeros"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that generates numerical features from an RFPipe"
+            },
+            "description": "Generate numerical features using mathematical transformations",
+            "operations": ["log", "sqrt", "square", "reciprocal"]
+        },
+        "generate_categorical_features": {
+            "category": "feature_engineering", 
+            "required_params": ["columns"],
+            "optional_params": ["encoding_type", "max_categories", "handle_unknown"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that generates categorical features from an RFPipe"
+            },
+            "description": "Encode categorical features using various encoding methods",
+            "encoding_types": ["onehot", "label", "target"]
+        },
+        "generate_interaction_features": {
+            "category": "feature_engineering",
+            "required_params": ["column_pairs"], 
+            "optional_params": ["operations", "prefix"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that generates interaction features from an RFPipe"
+            },
+            "description": "Create interaction features between column pairs",
+            "operations": ["multiply", "add", "subtract", "divide"]
+        },
+        "create_binary_labels": {
+            "category": "labeling",
+            "required_params": ["column", "condition"],
+            "optional_params": ["label_column", "positive_label", "negative_label"],
+            "outputs": {
+                "type": "Callable", 
+                "description": "Function that creates binary labels from an RFPipe"
+            },
+            "description": "Create binary classification labels based on conditions",
+            "condition_formats": [">100", ">=50", "<75", "<=25", "==value"]
+        },
+        "create_multiclass_labels": {
+            "category": "labeling",
+            "required_params": ["column", "bins"],
+            "optional_params": ["labels", "label_column"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that creates multiclass labels from an RFPipe"
+            },
+            "description": "Create multiclass labels by binning continuous variables"
+        },
+        "select_features": {
+            "category": "feature_selection",
+            "required_params": [],
+            "optional_params": ["method", "k", "score_func"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that selects features from an RFPipe"
+            },
+            "description": "Select top k features using statistical tests",
+            "methods": ["kbest", "mutual_info"]
+        },
+        "train_random_forest": {
+            "category": "training",
+            "required_params": [],
+            "optional_params": ["test_size", "random_state", "n_estimators", "max_depth", "min_samples_split", "min_samples_leaf", "model_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that trains a Random Forest from an RFPipe"
+            },
+            "description": "Train a Random Forest classifier with specified parameters"
+        },
+        "save_model": {
+            "category": "model_management",
+            "required_params": [],
+            "optional_params": ["model_name", "filepath"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that saves a model from an RFPipe"
+            },
+            "description": "Save trained model to disk using joblib"
+        },
+        "predict": {
+            "category": "inference",
+            "required_params": [],
+            "optional_params": ["model_name", "data_split", "prediction_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that makes predictions from an RFPipe"
+            },
+            "description": "Make predictions using trained model",
+            "data_splits": ["train", "test", "all"]
+        },
+        "calculate_metrics": {
+            "category": "evaluation", 
+            "required_params": [],
+            "optional_params": ["prediction_name", "model_name", "average"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates metrics from an RFPipe"
+            },
+            "description": "Calculate classification metrics (accuracy, precision, recall, f1)",
+            "metrics": ["accuracy", "precision", "recall", "f1_score", "auc_roc", "confusion_matrix"]
+        },
+        "print_metrics": {
+            "category": "evaluation",
+            "required_params": [],
+            "optional_params": ["prediction_name", "model_name"],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that prints metrics from an RFPipe"
+            },
+            "description": "Print formatted classification metrics and feature importance"
+        }
+    },
+    "pipeline_data_structure": {
+        "data": "Main DataFrame with features and labels",
+        "features": "Processed feature matrix",
+        "labels": "Target labels", 
+        "feature_columns": "List of feature column names",
+        "target_column": "Name of target column",
+        "models": "Dictionary of trained models",
+        "predictions": "Dictionary of prediction results",
+        "metrics": "Dictionary of evaluation metrics",
+        "scalers": "Dictionary of fitted scalers",
+        "encoders": "Dictionary of fitted encoders",
+        "feature_selectors": "Dictionary of fitted feature selectors",
+        "train_test_splits": "Dictionary of train/test data splits"
+    },
+    "typical_pipeline_flow": [
+        "1. Initialize: RFPipe.from_dataframe(df)",
+        "2. Feature Engineering: generate_numerical_features, generate_categorical_features",
+        "3. Feature Interactions: generate_interaction_features", 
+        "4. Labeling: create_binary_labels or create_multiclass_labels",
+        "5. Feature Selection: select_features",
+        "6. Training: train_random_forest",
+        "7. Inference: predict",
+        "8. Evaluation: calculate_metrics, print_metrics",
+        "9. Model Management: save_model"
+    ],
+    "example_complete_pipeline": "RFPipe.from_dataframe(df) | generate_numerical_features(['age', 'income']) | generate_categorical_features(['category']) | create_binary_labels('target', '>100') | select_features(k=10) | train_random_forest(n_estimators=200) | predict() | calculate_metrics() | print_metrics()"
+}

@@ -1,0 +1,318 @@
+[
+    {
+        "query": "Prepare customer data for clustering with standard scaling and outlier removal",
+        "function": "prepare_clustering_data",
+        "category": "data_preparation",
+        "inputs": {
+            "feature_columns": ["age", "income", "spending", "frequency", "recency"],
+            "scaling_method": "standard",
+            "handle_missing": "mean",
+            "remove_outliers": true,
+            "outlier_method": "iqr"
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(customer_data)\npipeline = pipeline | prepare_clustering_data(\n    feature_columns=['age', 'income', 'spending', 'frequency', 'recency'],\n    scaling_method='standard',\n    handle_missing='mean',\n    remove_outliers=True,\n    outlier_method='iqr'\n)",
+        "patterns": {
+            "function_patterns": ["(prepare|preprocess|clean) (data|features)", "(clustering|unsupervised) (data|preparation)"],
+            "scaling_patterns": ["(standard|minmax|robust) (scaling|normalization)", "(scale|normalize) (features|data)"],
+            "outlier_patterns": ["(outlier|anomaly) (removal|detection|handling)"]
+        }
+    },
+    {
+        "query": "Create interaction and ratio features for better cluster separation",
+        "function": "engineer_clustering_features",
+        "category": "feature_engineering",
+        "inputs": {
+            "interaction_features": true,
+            "polynomial_features": ["income", "age"],
+            "ratio_features": [["spending", "income"], ["frequency", "recency"]],
+            "binning_features": {"age": 5, "income": 4}
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(data)\npipeline = pipeline | engineer_clustering_features(\n    interaction_features=True,\n    polynomial_features=['income', 'age'],\n    ratio_features=[('spending', 'income'), ('frequency', 'recency')],\n    binning_features={'age': 5, 'income': 4}\n)",
+        "patterns": {
+            "function_patterns": ["(engineer|create|generate) (features)", "(interaction|polynomial|ratio) (features)"],
+            "feature_patterns": ["(clustering|unsupervised) (features)", "(feature|variable) (engineering|creation)"],
+            "transformation_patterns": ["(binning|discretization) (features)", "(polynomial|interaction) (terms)"]
+        }
+    },
+    {
+        "query": "Apply PCA dimensionality reduction for visualization and clustering",
+        "function": "reduce_dimensions",
+        "category": "dimensionality_reduction",
+        "inputs": {
+            "method": "pca",
+            "n_components": 2,
+            "random_state": 42,
+            "reducer_name": "visualization_pca"
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(data)\npipeline = pipeline | reduce_dimensions(\n    method='pca',\n    n_components=2,\n    random_state=42,\n    reducer_name='visualization_pca'\n)",
+        "patterns": {
+            "function_patterns": ["(reduce|compress) (dimensions|dimensionality)", "(pca|tsne) (reduction|transformation)"],
+            "visualization_patterns": ["(2d|3d) (visualization|plotting)", "(dimension|component) (reduction)"],
+            "method_patterns": ["(principal.component|pca) (analysis)", "(t-sne|tsne) (embedding)"]
+        }
+    },
+    {
+        "query": "Configure K-means clustering with 5 clusters and k-means++ initialization",
+        "function": "configure_kmeans",
+        "category": "model_configuration",
+        "inputs": {
+            "n_clusters": 5,
+            "init": "k-means++",
+            "n_init": 20,
+            "max_iter": 300,
+            "random_state": 42,
+            "model_name": "customer_segments"
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(data)\npipeline = pipeline | configure_kmeans(\n    n_clusters=5,\n    init='k-means++',\n    n_init=20,\n    max_iter=300,\n    random_state=42,\n    model_name='customer_segments'\n)",
+        "patterns": {
+            "function_patterns": ["(configure|setup|initialize) (kmeans|k-means|clustering)", "(clustering|unsupervised) (model|algorithm)"],
+            "parameter_patterns": ["(n_clusters|clusters|k)", "(initialization|init) (method)", "(iterations|convergence)"],
+            "kmeans_patterns": ["(k-means|kmeans) (clustering|algorithm)", "(centroid|cluster) (initialization)"]
+        }
+    },
+    {
+        "query": "Set up MiniBatch K-means for large dataset clustering",
+        "function": "configure_minibatch_kmeans",
+        "category": "model_configuration",
+        "inputs": {
+            "n_clusters": 8,
+            "batch_size": 1000,
+            "max_iter": 100,
+            "max_no_improvement": 10,
+            "random_state": 42,
+            "model_name": "large_scale_segments"
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(large_data)\npipeline = pipeline | configure_minibatch_kmeans(\n    n_clusters=8,\n    batch_size=1000,\n    max_iter=100,\n    max_no_improvement=10,\n    random_state=42,\n    model_name='large_scale_segments'\n)",
+        "patterns": {
+            "function_patterns": ["(minibatch|mini-batch) (kmeans|k-means)", "(large.scale|scalable|batch) (clustering)"],
+            "scalability_patterns": ["(large|big) (dataset|data)", "(batch|online) (learning|processing)"],
+            "efficiency_patterns": ["(memory.efficient|fast|scalable) (clustering|algorithm)"]
+        }
+    },
+    {
+        "query": "Train K-means model and assign cluster labels to data points",
+        "function": "fit_kmeans",
+        "category": "training",
+        "inputs": {
+            "model_name": "customer_segments",
+            "feature_subset": ["age", "income", "spending_ratio", "frequency"]
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(data)\npipeline = pipeline | fit_kmeans(\n    model_name='customer_segments',\n    feature_subset=['age', 'income', 'spending_ratio', 'frequency']\n)",
+        "patterns": {
+            "function_patterns": ["(fit|train|learn) (model|clustering|kmeans)", "(cluster|segment) (assignment|labeling)"],
+            "training_patterns": ["(unsupervised|clustering) (learning|training)", "(centroid|cluster) (computation|fitting)"],
+            "assignment_patterns": ["(cluster|label) (assignment|prediction)", "(data|point) (clustering|grouping)"]
+        }
+    },
+    {
+        "query": "Evaluate clustering quality using silhouette and inertia metrics",
+        "function": "evaluate_clustering",
+        "category": "evaluation",
+        "inputs": {
+            "model_name": "customer_segments",
+            "metrics": ["silhouette", "calinski_harabasz", "davies_bouldin", "inertia"]
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(data)\npipeline = pipeline | evaluate_clustering(\n    model_name='customer_segments',\n    metrics=['silhouette', 'calinski_harabasz', 'davies_bouldin', 'inertia']\n)",
+        "patterns": {
+            "function_patterns": ["(evaluate|assess|measure) (clustering|quality|performance)", "(cluster|clustering) (evaluation|metrics)"],
+            "metrics_patterns": ["(silhouette|inertia|calinski|davies) (score|metric)", "(clustering|quality) (metrics|measures)"],
+            "validation_patterns": ["(cluster|clustering) (validation|quality|assessment)"]
+        }
+    },
+    {
+        "query": "Create detailed statistical profiles for each cluster",
+        "function": "profile_clusters",
+        "category": "analysis",
+        "inputs": {
+            "model_name": "customer_segments",
+            "profile_columns": ["age", "income", "spending", "category", "region"],
+            "include_categorical": true
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(data)\npipeline = pipeline | profile_clusters(\n    model_name='customer_segments',\n    profile_columns=['age', 'income', 'spending', 'category', 'region'],\n    include_categorical=True\n)",
+        "patterns": {
+            "function_patterns": ["(profile|characterize|analyze) (clusters|segments)", "(cluster|segment) (profiling|analysis)"],
+            "analysis_patterns": ["(statistical|demographic) (profiling|analysis)", "(cluster|group) (characteristics|summary)"],
+            "business_patterns": ["(customer|segment) (insights|profiling)", "(business|actionable) (insights)"]
+        }
+    },
+    {
+        "query": "Find optimal number of clusters using elbow method and silhouette analysis",
+        "function": "find_optimal_k",
+        "category": "optimization",
+        "inputs": {
+            "k_range": [2, 12],
+            "method": "both",
+            "n_init": 10,
+            "analysis_name": "optimal_clusters"
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(data)\npipeline = pipeline | find_optimal_k(\n    k_range=(2, 12),\n    method='both',\n    n_init=10,\n    analysis_name='optimal_clusters'\n)",
+        "patterns": {
+            "function_patterns": ["(find|determine|optimize) (optimal|best) (k|clusters)", "(elbow|silhouette) (method|analysis)"],
+            "optimization_patterns": ["(optimal|best) (number|k) (clusters|segments)", "(cluster|k) (optimization|selection)"],
+            "method_patterns": ["(elbow|knee) (method|curve)", "(silhouette|coefficient) (analysis|score)"]
+        }
+    },
+    {
+        "query": "Visualize clusters in 2D scatter plot with centroids",
+        "function": "plot_clusters_2d",
+        "category": "visualization",
+        "inputs": {
+            "model_name": "customer_segments",
+            "x_feature": "income",
+            "y_feature": "spending",
+            "figsize": [12, 8],
+            "show_centers": true
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(data)\npipeline = pipeline | plot_clusters_2d(\n    model_name='customer_segments',\n    x_feature='income',\n    y_feature='spending',\n    figsize=(12, 8),\n    show_centers=True\n)",
+        "patterns": {
+            "function_patterns": ["(plot|visualize|chart) (clusters|segments)", "(2d|scatter) (plot|visualization|chart)"],
+            "visualization_patterns": ["(cluster|segment) (visualization|plotting)", "(scatter|point) (plot|chart)"],
+            "feature_patterns": ["(feature|dimension) (space|plot)", "(centroid|center) (visualization)"]
+        }
+    },
+    {
+        "query": "Display cluster profile heatmaps for numerical and categorical features",
+        "function": "plot_cluster_profiles",
+        "category": "visualization",
+        "inputs": {
+            "model_name": "customer_segments",
+            "profile_type": "numerical",
+            "top_k_features": 10,
+            "figsize": [15, 10]
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(data)\npipeline = pipeline | plot_cluster_profiles(\n    model_name='customer_segments',\n    profile_type='numerical',\n    top_k_features=10,\n    figsize=(15, 10)\n)",
+        "patterns": {
+            "function_patterns": ["(plot|display|show) (profiles|characteristics)", "(heatmap|profile) (visualization|plot)"],
+            "profile_patterns": ["(cluster|segment) (profiles|characteristics)", "(numerical|categorical) (features|variables)"],
+            "heatmap_patterns": ["(heatmap|heat.map) (visualization|plot)", "(profile|characteristic) (heatmap)"]
+        }
+    },
+    {
+        "query": "Plot elbow curve to determine optimal number of clusters",
+        "function": "plot_elbow_curve",
+        "category": "visualization",
+        "inputs": {
+            "analysis_name": "optimal_clusters",
+            "figsize": [10, 6]
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(data)\npipeline = pipeline | plot_elbow_curve(\n    analysis_name='optimal_clusters',\n    figsize=(10, 6)\n)",
+        "patterns": {
+            "function_patterns": ["(plot|show|display) (elbow|knee) (curve|method)", "(optimal|best) (k|clusters) (selection)"],
+            "elbow_patterns": ["(elbow|knee) (curve|point|method)", "(inertia|wcss) (curve|plot)"],
+            "optimization_patterns": ["(k|cluster) (selection|optimization)", "(optimal|best) (number|k)"]
+        }
+    },
+    {
+        "query": "Visualize silhouette scores across different k values",
+        "function": "plot_silhouette_scores",
+        "category": "visualization",
+        "inputs": {
+            "analysis_name": "optimal_clusters",
+            "figsize": [12, 6]
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(data)\npipeline = pipeline | plot_silhouette_scores(\n    analysis_name='optimal_clusters',\n    figsize=(12, 6)\n)",
+        "patterns": {
+            "function_patterns": ["(plot|show|display) (silhouette|coefficient) (scores|analysis)", "(cluster|quality) (assessment|evaluation)"],
+            "silhouette_patterns": ["(silhouette|coefficient) (score|analysis|plot)", "(cluster|quality) (metric|measure)"],
+            "evaluation_patterns": ["(clustering|quality) (evaluation|assessment)", "(validation|quality) (metric)"]
+        }
+    },
+    {
+        "query": "Save trained clustering model with preprocessing pipeline",
+        "function": "save_kmeans_model",
+        "category": "model_management",
+        "inputs": {
+            "model_name": "customer_segments",
+            "filepath": "models/customer_clustering_v1.joblib",
+            "include_preprocessing": true
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(data)\npipeline = pipeline | save_kmeans_model(\n    model_name='customer_segments',\n    filepath='models/customer_clustering_v1.joblib',\n    include_preprocessing=True\n)",
+        "patterns": {
+            "function_patterns": ["(save|export|persist) (model|clustering)", "(model|pipeline) (serialization|persistence)"],
+            "deployment_patterns": ["(production|deployment) (model|pipeline)", "(model|clustering) (deployment|serving)"],
+            "file_patterns": ["(joblib|pickle) (file|format)", "(model|pipeline) (storage|persistence)"]
+        }
+    },
+    {
+        "query": "Print comprehensive clustering analysis summary and insights",
+        "function": "print_cluster_summary",
+        "category": "analysis",
+        "inputs": {
+            "model_name": "customer_segments"
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(data)\npipeline = pipeline | print_cluster_summary(\n    model_name='customer_segments'\n)",
+        "patterns": {
+            "function_patterns": ["(print|display|show) (summary|report|insights)", "(cluster|clustering) (summary|analysis|report)"],
+            "reporting_patterns": ["(analysis|clustering) (summary|report)", "(insights|findings) (summary|report)"],
+            "business_patterns": ["(actionable|business) (insights|findings)", "(cluster|segment) (interpretation)"]
+        }
+    },
+    {
+        "query": "Complete customer segmentation pipeline with optimal k selection",
+        "function": "complete_pipeline",
+        "category": "end_to_end",
+        "inputs": {
+            "data_source": "customer_transactions.csv",
+            "features": ["age", "income", "purchase_frequency", "avg_order_value"],
+            "clustering_approach": "standard_kmeans",
+            "optimization": true
+        },
+        "example": "customer_segmentation = (\n    KMeansPipe.from_dataframe(customer_data)\n    | prepare_clustering_data(['age', 'income', 'purchase_frequency', 'avg_order_value'], scaling_method='standard')\n    | engineer_clustering_features(interaction_features=True, ratio_features=[('purchase_frequency', 'avg_order_value')])\n    | find_optimal_k(k_range=(2, 10), method='both')\n    | configure_kmeans(n_clusters=5, model_name='customer_segments')\n    | fit_kmeans('customer_segments')\n    | evaluate_clustering('customer_segments')\n    | profile_clusters('customer_segments')\n    | plot_clusters_2d('customer_segments', 'income', 'avg_order_value')\n    | plot_cluster_profiles('customer_segments', 'numerical')\n    | save_kmeans_model('customer_segments')\n)",
+        "patterns": {
+            "function_patterns": ["(customer|user) (segmentation|clustering)", "(market|behavioral) (segmentation)"],
+            "business_patterns": ["(customer.analytics|crm) (segmentation)", "(marketing|targeted) (segmentation|campaigns)"],
+            "pipeline_patterns": ["(end.to.end|complete|full) (pipeline|workflow)"]
+        }
+    },
+    {
+        "query": "Market research consumer clustering with advanced feature engineering",
+        "function": "complete_pipeline",
+        "category": "end_to_end",
+        "inputs": {
+            "data_source": "consumer_survey.csv",
+            "features": ["lifestyle_scores", "preferences", "demographics"],
+            "dimensionality_reduction": true,
+            "comprehensive_analysis": true
+        },
+        "example": "market_research = (\n    KMeansPipe.from_dataframe(survey_data)\n    | prepare_clustering_data(lifestyle_features + preference_features, scaling_method='minmax')\n    | engineer_clustering_features(interaction_features=False, ratio_features=preference_ratios)\n    | reduce_dimensions(method='pca', n_components=2, reducer_name='viz_pca')\n    | find_optimal_k(k_range=(3, 8), method='both')\n    | configure_kmeans(n_clusters=5, model_name='consumer_segments')\n    | fit_kmeans('consumer_segments')\n    | evaluate_clustering('consumer_segments')\n    | profile_clusters('consumer_segments', include_categorical=True)\n    | plot_clusters_2d('consumer_segments', 'pca_dim_1', 'pca_dim_2')\n    | plot_cluster_profiles('consumer_segments', 'numerical', top_k_features=12)\n    | plot_cluster_profiles('consumer_segments', 'categorical')\n    | print_cluster_summary('consumer_segments')\n)",
+        "patterns": {
+            "function_patterns": ["(market|consumer) (research|segmentation)", "(lifestyle|preference) (clustering|analysis)"],
+            "research_patterns": ["(survey|questionnaire) (analysis|clustering)", "(consumer|market) (insights|segmentation)"],
+            "advanced_patterns": ["(dimensionality.reduction|pca|feature.engineering)", "(comprehensive|advanced) (analysis)"]
+        }
+    },
+    {
+        "query": "Large-scale clustering with MiniBatch K-means for operational efficiency",
+        "function": "complete_pipeline",
+        "category": "end_to_end",
+        "inputs": {
+            "data_source": "large_transaction_log.csv",
+            "n_samples": 100000,
+            "clustering_algorithm": "minibatch_kmeans",
+            "scalability_focus": true
+        },
+        "example": "large_scale_clustering = (\n    KMeansPipe.from_dataframe(large_dataset)\n    | prepare_clustering_data(behavioral_features, scaling_method='robust', remove_outliers=False)\n    | engineer_clustering_features(interaction_features=False, ratio_features=efficiency_ratios)\n    | find_optimal_k(k_range=(5, 15), method='elbow')\n    | configure_minibatch_kmeans(n_clusters=10, batch_size=2000, model_name='large_segments')\n    | fit_kmeans('large_segments')\n    | evaluate_clustering('large_segments', metrics=['silhouette', 'inertia'])\n    | profile_clusters('large_segments')\n    | plot_clusters_2d('large_segments', 'feature_1', 'feature_2')\n    | print_cluster_summary('large_segments')\n    | save_kmeans_model('large_segments')\n)",
+        "patterns": {
+            "function_patterns": ["(large.scale|big.data|scalable) (clustering)", "(minibatch|batch|online) (clustering|learning)"],
+            "scalability_patterns": ["(scalable|efficient|fast) (clustering|algorithm)", "(memory.efficient|batch.processing)"],
+            "performance_patterns": ["(high.performance|optimized|efficient) (clustering|processing)"]
+        }
+    },
+    {
+        "query": "Geographic clustering for delivery route optimization",
+        "function": "complete_pipeline",
+        "category": "end_to_end",
+        "inputs": {
+            "data_source": "delivery_locations.csv",
+            "features": ["latitude", "longitude", "delivery_metrics"],
+            "optimization_goal": "route_efficiency",
+            "geographic_focus": true
+        },
+        "example": "route_optimization = (\n    KMeansPipe.from_dataframe(location_data)\n    | prepare_clustering_data(['latitude', 'longitude', 'delivery_time', 'frequency'], scaling_method='standard')\n    | engineer_clustering_features(interaction_features=True, ratio_features=[('delivery_time', 'frequency')])\n    | find_optimal_k(k_range=(5, 15), method='both')\n    | configure_kmeans(n_clusters=10, model_name='delivery_zones')\n    | fit_kmeans('delivery_zones')\n    | evaluate_clustering('delivery_zones')\n    | profile_clusters('delivery_zones')\n    | plot_clusters_2d('delivery_zones', 'longitude', 'latitude')\n    | plot_cluster_profiles('delivery_zones', 'numerical')\n    | print_cluster_summary('delivery_zones')\n    | save_kmeans_model('delivery_zones', 'delivery_route_clusters.joblib')\n)",
+        "patterns": {
+            "function_patterns": ["(geographic|spatial|location) (clustering)", "(route|delivery|logistics) (optimization)"],
+            "geographic_patterns": ["(latitude|longitude|coordinate) (clustering)", "(spatial|geographic) (analysis|segmentation)"],
+            "optimization_patterns": ["(route|delivery|logistics) (optimization|efficiency)", "(operational|supply.chain) (optimization)"]
+        }
+    }
+]

@@ -131,6 +131,9 @@ def generate_numerical_features(
                 
                 new_pipe.feature_columns.append(new_col_name)
         
+        # Update the dataframe in the pipe after all modifications
+        new_pipe.data = df
+        
         new_pipe.current_analysis = 'numerical_features'
         return new_pipe
     
@@ -180,7 +183,13 @@ def generate_categorical_features(
                 # One-hot encoding
                 encoded_df = pd.get_dummies(df[col], prefix=col, dummy_na=True)
                 df = pd.concat([df, encoded_df], axis=1)
-                new_pipe.feature_columns.extend(encoded_df.columns.tolist())
+                # Only add columns that actually exist in the dataframe
+                for encoded_col in encoded_df.columns:
+                    if encoded_col in df.columns:
+                        new_pipe.feature_columns.append(encoded_col)
+                
+                # Update the dataframe in the pipe
+                new_pipe.data = df
                 
             elif encoding_type == 'label':
                 # Label encoding
@@ -197,7 +206,18 @@ def generate_categorical_features(
                 df[new_col_name] = df[col].map(target_means)
                 new_pipe.feature_columns.append(new_col_name)
         
+        # Update the dataframe in the pipe after all modifications
+        new_pipe.data = df
+        
         new_pipe.current_analysis = 'categorical_features'
+        
+        # Debug: Print feature columns to verify they exist in dataframe
+        missing_columns = [col for col in new_pipe.feature_columns if col not in new_pipe.data.columns]
+        if missing_columns:
+            warnings.warn(f"Feature columns not found in dataframe: {missing_columns}")
+            # Remove missing columns from feature_columns
+            new_pipe.feature_columns = [col for col in new_pipe.feature_columns if col in new_pipe.data.columns]
+        
         return new_pipe
     
     return _generate_categorical_features
@@ -255,6 +275,9 @@ def generate_interaction_features(
                 
                 new_pipe.feature_columns.append(new_col_name)
         
+        # Update the dataframe in the pipe after all modifications
+        new_pipe.data = df
+        
         new_pipe.current_analysis = 'interaction_features'
         return new_pipe
     
@@ -301,16 +324,10 @@ def create_binary_labels(
             raise ValueError(f"Column '{column}' not found in data.")
         
         if isinstance(condition, str):
-            # Parse string condition
-            if condition.startswith('>'):
-                threshold = float(condition[1:])
-                mask = df[column] > threshold
-            elif condition.startswith('>='):
+            # Parse string condition - check longer patterns first
+            if condition.startswith('>='):
                 threshold = float(condition[2:])
                 mask = df[column] >= threshold
-            elif condition.startswith('<'):
-                threshold = float(condition[1:])
-                mask = df[column] < threshold
             elif condition.startswith('<='):
                 threshold = float(condition[2:])
                 mask = df[column] <= threshold
@@ -321,6 +338,12 @@ def create_binary_labels(
                 except ValueError:
                     pass
                 mask = df[column] == value
+            elif condition.startswith('>'):
+                threshold = float(condition[1:])
+                mask = df[column] > threshold
+            elif condition.startswith('<'):
+                threshold = float(condition[1:])
+                mask = df[column] < threshold
             else:
                 raise ValueError(f"Invalid condition format: {condition}")
         
@@ -332,6 +355,8 @@ def create_binary_labels(
         df[label_column] = negative_label
         df.loc[mask, label_column] = positive_label
         
+        # Update the dataframe in the pipe
+        new_pipe.data = df
         new_pipe.target_column = label_column
         new_pipe.current_analysis = 'binary_labels'
         
@@ -377,6 +402,8 @@ def create_multiclass_labels(
         
         df[label_column] = pd.cut(df[column], bins=bins, labels=labels)
         
+        # Update the dataframe in the pipe
+        new_pipe.data = df
         new_pipe.target_column = label_column
         new_pipe.current_analysis = 'multiclass_labels'
         
@@ -414,6 +441,11 @@ def select_features(
         
         new_pipe = pipe.copy()
         df = new_pipe.data
+        
+        # Validate that all feature columns exist in the dataframe
+        missing_columns = [col for col in new_pipe.feature_columns if col not in df.columns]
+        if missing_columns:
+            raise ValueError(f"Feature columns not found in dataframe: {missing_columns}")
         
         X = df[new_pipe.feature_columns]
         y = df[new_pipe.target_column]
@@ -478,6 +510,11 @@ def train_random_forest(
         
         new_pipe = pipe.copy()
         df = new_pipe.data
+        
+        # Validate that all feature columns exist in the dataframe
+        missing_columns = [col for col in new_pipe.feature_columns if col not in df.columns]
+        if missing_columns:
+            raise ValueError(f"Feature columns not found in dataframe: {missing_columns}")
         
         X = df[new_pipe.feature_columns]
         y = df[new_pipe.target_column]
@@ -595,6 +632,10 @@ def predict(
             X = new_pipe.train_test_splits[model_name]['X_train']
             y_true = new_pipe.train_test_splits[model_name]['y_train']
         elif data_split == 'all':
+            # Validate that all feature columns exist in the dataframe
+            missing_columns = [col for col in new_pipe.feature_columns if col not in new_pipe.data.columns]
+            if missing_columns:
+                raise ValueError(f"Feature columns not found in dataframe: {missing_columns}")
             X = new_pipe.data[new_pipe.feature_columns]
             y_true = new_pipe.data[new_pipe.target_column]
         else:
