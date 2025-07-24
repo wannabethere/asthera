@@ -19,12 +19,14 @@ class FunctionMatch(BaseModel):
     usage_description: str
     relevance_score: float
     reasoning: str
+    rephrased_question: str = ""
+    function_definition: Optional[Dict[str, Any]] = None
 
 
 class FunctionRetrievalResult(BaseModel):
     """Result model for function retrieval"""
     top_functions: List[FunctionMatch]
-    rephrased_question: str
+    rephrased_question: str = ""  # Made optional since each function has its own rephrased question
     confidence_score: float
     reasoning: str
     suggested_pipes: List[str]
@@ -114,15 +116,17 @@ class FunctionRetrieval:
     for user questions using a comprehensive function library.
     """
     
-    def __init__(self, llm, function_library_path: Optional[str] = None):
+    def __init__(self, llm, function_library_path: Optional[str] = None, function_collection=None):
         """
         Initialize the Function Retrieval system
         
         Args:
             llm: LangChain LLM instance
             function_library_path: Path to the function library JSON file
+            function_collection: ChromaDB collection for function definitions
         """
         self.llm = llm
+        self.function_collection = function_collection
         
         # Default path to the function library
         if function_library_path is None:
@@ -246,7 +250,8 @@ class FunctionRetrieval:
                     description=func_data.get("description", ""),
                     usage_description=func_data.get("usage_description", ""),
                     relevance_score=float(func_data.get("relevance_score", 0.0)),
-                    reasoning=func_data.get("reasoning", "")
+                    reasoning=func_data.get("reasoning", ""),
+                    rephrased_question=func_data.get("rephrased_question", "")
                 )
                 top_functions.append(function_match)
             
@@ -324,13 +329,45 @@ class FunctionRetrieval:
             # Post-process into structured result
             result = self._post_process_llm_response(llm_response, total_functions)
             
+            # Retrieve function definitions for each top function using their rephrased questions
+            for function_match in result.top_functions:
+                function_definition = None
+                
+                # Try ChromaDB first if available
+                if self.function_collection and function_match.function_name:
+                    function_definition = await self._retrieve_function_definition(function_match.function_name)
+                    if not function_definition:
+                        function_definition = await self._retrieve_function_definition(function_match.rephrased_question)
+                        logger.info(f"Retrieved function definition from JSON library for {function_match.rephrased_question}")
+                    function_definition = function_definition.get("function_definition")
+                    logger.info(f"Retrieved function definition from ChromaDB for {function_match.function_name}")
+                        
+                
+                # Update the function match with the definition
+                if function_definition:
+                    # Create a new FunctionMatch with the updated definition
+                    updated_function_match = FunctionMatch(
+                        function_name=function_match.function_name,
+                        pipe_name=function_match.pipe_name,
+                        description=function_match.description,
+                        usage_description=function_match.usage_description,
+                        relevance_score=function_match.relevance_score,
+                        reasoning=function_match.reasoning,
+                        rephrased_question=function_match.rephrased_question,
+                        function_definition=function_definition
+                    )
+                    # Replace the original function match
+                    result.top_functions[result.top_functions.index(function_match)] = updated_function_match
+                else:
+                    logger.warning(f"No function definition found for {function_match.function_name}")
+            
             return result
             
         except Exception as e:
             logger.error(f"Error in function retrieval: {e}")
             return FunctionRetrievalResult(
                 top_functions=[],
-                rephrased_question=question,
+                rephrased_question="",
                 confidence_score=0.0,
                 reasoning=f"Retrieval error: {str(e)}",
                 suggested_pipes=[],
@@ -402,6 +439,227 @@ class FunctionRetrieval:
                     results.append((pipe_name, func_name, func_info))
         
         return results
+    
+    @observe(capture_input=False)
+    def _retrieve_relevant_functions(self, question: str) -> Dict[str, Any]:
+        """
+        Retrieve relevant function definitions, examples, and insights based on the question
+        
+        Args:
+            question: User's question
+            
+        Returns:
+            Dict containing retrieved function information
+        """
+        results = {
+            "definitions": [],
+            "examples": [],
+            "insights": [],
+            "specific_matches": []
+        }
+        
+        # First, check for specific function keyword matches -- Lets skip this as it doesnot make sense 
+        #specific_matches = self._extract_specific_function_keywords(question)
+        #results["specific_matches"] = specific_matches
+        
+        try:
+            # Use the question to semantically search for relevant functions
+            if self.function_collection:
+                # Search function definitions using the question
+                query_result = self.function_collection.semantic_searches(
+                    query_texts=[question], 
+                    n_results=self.max_functions_to_retrieve
+                )
+                
+                if query_result and query_result.get("documents"):
+                    for i, doc in enumerate(query_result["documents"][0]):
+                        score = query_result["distances"][0][i] if "distances" in query_result else 0.0
+                        
+                        # Parse document
+                        try:
+                            if isinstance(doc, str) and (doc.startswith('{') or doc.startswith('{"')):
+                                doc = json.loads(doc)
+                            results["definitions"].append({
+                                "content": doc,
+                                "score": score,
+                                "specific_match": False
+                            })
+                        except json.JSONDecodeError:
+                            continue
+            print("results",json.dumps(results,indent=2))
+            # Similarly retrieve examples and insights
+            if self.example_collection:
+                query_result = self.example_collection.semantic_searches(
+                    query_texts=[question], 
+                    n_results=5
+                )
+                
+                if query_result and query_result.get("documents"):
+                    for i, doc in enumerate(query_result["documents"][0]):
+                        score = query_result["distances"][0][i] if "distances" in query_result else 0.0
+                        
+                        try:
+                            if isinstance(doc, str) and (doc.startswith('{') or doc.startswith('{"')):
+                                doc = json.loads(doc)
+                            results["examples"].append({
+                                "content": doc,
+                                "score": score
+                            })
+                        except json.JSONDecodeError:
+                            continue
+            
+            if self.insights_collection:
+                query_result = self.insights_collection.semantic_searches(
+                    query_texts=[question], 
+                    n_results=5
+                )
+                
+                if query_result and query_result.get("documents"):
+                    for i, doc in enumerate(query_result["documents"][0]):
+                        score = query_result["distances"][0][i] if "distances" in query_result else 0.0
+                        
+                        try:
+                            if isinstance(doc, str) and (doc.startswith('{') or doc.startswith('{"')):
+                                doc = json.loads(doc)
+                            results["insights"].append({
+                                "content": doc,
+                                "score": score
+                            })
+                        except json.JSONDecodeError:
+                            continue
+                            
+        except Exception as e:
+            logger.error(f"Error retrieving relevant functions: {e}")
+        
+        return results
+    
+    @observe(capture_input=False)
+    async def _retrieve_function_definition(self, rephrased_question: str) -> Optional[Dict[str, Any]]:
+        """
+        Retrieve function definition from ChromaDB using rephrased question
+        
+        Args:
+            rephrased_question: Rephrased question for function definition lookup
+            
+        Returns:
+            Function definition or None if not found
+        """
+        if not self.function_collection:
+            logger.warning("No function collection provided for ChromaDB lookup")
+            return None
+        
+        try:
+            # Query ChromaDB for function definition
+            query_result = self.function_collection.semantic_searches(
+                query_texts=[rephrased_question], 
+                n_results=1
+            )
+            
+            if not query_result or not query_result.get("documents") or len(query_result["documents"][0]) == 0:
+                logger.warning(f"No function definition found for: {rephrased_question}")
+                return None
+            
+            # Parse the document content
+            document = query_result["documents"][0][0]  # First query, first result
+            score = query_result["distances"][0][0] if "distances" in query_result else 0.0
+            
+            # Convert from JSON string if needed
+            if isinstance(document, str) and document.startswith('"') and document.endswith('"'):
+                document = json.loads(document)
+                
+            if isinstance(document, str) and (document.startswith('{') or document.startswith('{"')):
+                document = json.loads(document)
+            
+            return {
+                "function_definition": document,
+                "score": score
+            }
+            
+        except Exception as e:
+            logger.error(f"Error retrieving function definition: {e}")
+            return None
+    
+    @observe(capture_input=False)
+    def _format_retrieved_content(self, retrieved_data: Dict[str, Any]) -> Dict[str, str]:
+        """
+        Format retrieved content for prompt inclusion
+        
+        Args:
+            retrieved_data: Dictionary containing retrieved functions, examples, insights
+            
+        Returns:
+            Formatted strings for prompt
+        """
+        # Sort definitions to prioritize specific matches
+        definitions = retrieved_data.get("definitions", [])
+        #definitions.sort(key=lambda x: (not x.get("specific_match", False), x.get("score", 1.0)))
+        
+        # Format function definitions with priority indication
+        definitions_text = ""
+        if definitions:
+            definitions_text = "Available Functions (ordered by relevance):\n"
+            
+            # Add specific matches first
+            #specific_matches = retrieved_data.get("specific_matches", [])
+            #if specific_matches:
+            #    definitions_text += f"\n🎯 EXACT KEYWORD MATCHES for your question: {', '.join(specific_matches)}\n\n"
+            
+            for i, item in enumerate(definitions[:8]):  # Top 8
+                content = item.get("content", {})
+                if isinstance(content, dict):
+                    func_name = content.get("function_name", f"Function_{i+1}")
+                    description = content.get("description", "No description")
+                    category = content.get("category", "No category")
+                    type_of_operation = content.get("type_of_operation", "No type of operation")
+                    
+                    # Handle parameters more robustly for double-escaped JSON content
+                    params = content.get("parameters", {})
+                    required_params = content.get("required_params", [])
+                    optional_params = content.get("optional_params", [])
+                    
+                    # Format parameters section
+                    params_text = ""
+                    if required_params:
+                        params_text += "Required: " + ", ".join([f"{p.get('name', 'param')}" for p in required_params]) + "\n"
+                    if optional_params:
+                        params_text += "Optional: " + ", ".join([f"{p.get('name', 'param')}" for p in optional_params]) + "\n"
+                    if params and not required_params and not optional_params:
+                        # Fallback to direct parameters dict
+                        params_text = f"Parameters: {params}\n"
+                    
+                    # Mark specific matches
+                    priority_marker = "🎯 " if item.get("specific_match", False) else ""
+                    
+                    definitions_text += f"- {priority_marker}{func_name}: {description} ({category} - {type_of_operation}) - Inputs/Outputs -\n"
+                    if params_text:
+                        definitions_text += f"  {params_text}\n"
+        
+        # Format examples
+        examples_text = ""
+        if retrieved_data.get("examples"):
+            examples_text = "Usage Examples:\n"
+            for i, item in enumerate(retrieved_data["examples"][:3]):  # Top 3
+                content = item.get("content", {})
+                if isinstance(content, dict):
+                    example = content.get("example", content.get("usage", ""))
+                    examples_text += f"Example {i+1}: {example}\n\n"
+        
+        # Format insights
+        insights_text = ""
+        if retrieved_data.get("insights"):
+            insights_text = "Analysis Insights:\n"
+            for i, item in enumerate(retrieved_data["insights"][:3]):  # Top 3
+                content = item.get("content", {})
+                if isinstance(content, dict):
+                    insight = content.get("insight", content.get("tip", ""))
+                    insights_text += f"Insight {i+1}: {insight}\n\n"
+        
+        return {
+            "function_definitions": definitions_text,
+            "function_examples": examples_text,
+            "function_insights": insights_text
+        }
+
 
 
 # Example usage

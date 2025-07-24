@@ -62,7 +62,7 @@ def analyze_question_with_intent_classification(
     print(f"{'='*60}")
     
      # Initialize function retrieval
-    retrieval = FunctionRetrieval(llm=llm,function_library_path="/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/meta/all_pipes_functions.json")
+    retrieval = FunctionRetrieval(llm=llm,function_library_path="/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/meta/all_pipes_functions.json", function_collection=functions_vectorstore)
     result = asyncio.run(retrieval.retrieve_relevant_functions(question,dataframe_description,dataframe_summary,columns_description))
     print("Retrieval functions result",result)
     

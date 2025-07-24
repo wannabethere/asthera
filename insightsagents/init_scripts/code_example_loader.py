@@ -394,9 +394,9 @@ def main():
     print("Usage examples loaded into ChromaDB")
     
     #print("examples",examples)
-    usage_examples_vectorstore.add_documents(new_usage_examples)
-    examples_vectorstore.add_documents(usage_examples)
-    functions_vectorstore.add_documents(all_functions)
+    #usage_examples_vectorstore.add_documents(new_usage_examples)
+    #examples_vectorstore.add_documents(usage_examples)
+    #functions_vectorstore.add_documents(all_functions)
     initialize_insights_vectorstore(insights_vectorstore)
         
     # Get examples by function
@@ -440,10 +440,10 @@ def main():
     print("results_insights",results_insights)
     print("results_usage_examples",results_usage_examples)
     print("length of results_usage_examples",len(results_usage_examples))
-    results_functions = functions_vectorstore.semantic_searches(query_texts=["anamoly_detection"], n_results=5)    
-    results_examples = examples_vectorstore.semantic_searches(query_texts=["anamoly_detection"], n_results=5)
-    results_insights = insights_vectorstore.semantic_searches(query_texts=["anamoly_detection"], n_results=5)
-    results_usage_examples = usage_examples_vectorstore.semantic_searches(query_texts=["anamoly_detection"], n_results=5)
+    results_functions = functions_vectorstore.semantic_searches(query_texts=["mean"], n_results=5)    
+    results_examples = examples_vectorstore.semantic_searches(query_texts=["mean"], n_results=5)
+    results_insights = insights_vectorstore.semantic_searches(query_texts=["mean"], n_results=5)
+    results_usage_examples = usage_examples_vectorstore.semantic_searches(query_texts=["mean"], n_results=5)
     print("results_functions anamoly_detection",results_functions)
     print("results_examples anamoly_detection",results_examples)
     print("results_insights anamoly_detection",results_insights)
@@ -451,10 +451,10 @@ def main():
     print("length of results_usage_examples",len(results_usage_examples))
 
 
-    results_functions = functions_vectorstore.semantic_searches(query_texts=["time_series_analysis"], n_results=5)    
-    results_examples = examples_vectorstore.semantic_searches(query_texts=["time_series_analysis"], n_results=5)
-    results_insights = insights_vectorstore.semantic_searches(query_texts=["time_series_analysis"], n_results=5)
-    results_usage_examples = usage_examples_vectorstore.semantic_searches(query_texts=["time_series_analysis"], n_results=5)
+    results_functions = functions_vectorstore.semantic_searches(query_texts=["GroupBy"], n_results=5)    
+    results_examples = examples_vectorstore.semantic_searches(query_texts=["GroupBy"], n_results=5)
+    results_insights = insights_vectorstore.semantic_searches(query_texts=["GroupBy"], n_results=5)
+    results_usage_examples = usage_examples_vectorstore.semantic_searches(query_texts=["GroupBy"], n_results=5)
     print("results_functions time_series_analysis",results_functions)
     print("results_examples time_series_analysis",results_examples)
     print("results_insights time_series_analysis",results_insights)

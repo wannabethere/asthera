@@ -9,6 +9,7 @@ from langchain.schema import Document
 from langfuse.decorators import observe
 from pydantic import BaseModel
 from app.storage.documents import DocumentChromaStore
+from app.agents.nodes.mlagents.function_retrieval import FunctionRetrieval
 
 logger = logging.getLogger("analysis-intent-planner")
 
@@ -358,6 +359,13 @@ class AnalysisIntentPlanner:
         self.insights_collection = insights_collection
         self.max_functions_to_retrieve = max_functions_to_retrieve
         
+        # Initialize FunctionRetrieval for getting top functions
+        self.function_retrieval = FunctionRetrieval(
+            llm=llm,
+            function_library_path="/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/meta/all_pipes_functions.json",
+            function_collection=function_collection
+        )
+        
         # Core analysis functions to search for
         self.core_functions = [
             # Time series
@@ -438,173 +446,63 @@ class AnalysisIntentPlanner:
         
         return specific_matches
 
-    @observe(capture_input=False)
-    def _retrieve_relevant_functions(self, question: str) -> Dict[str, Any]:
-        """
-        Retrieve relevant function definitions, examples, and insights based on the question
-        
-        Args:
-            question: User's question
-            
-        Returns:
-            Dict containing retrieved function information
-        """
-        results = {
-            "definitions": [],
-            "examples": [],
-            "insights": [],
-            "specific_matches": []
-        }
-        
-        # First, check for specific function keyword matches -- Lets skip this as it doesnot make sense 
-        #specific_matches = self._extract_specific_function_keywords(question)
-        #results["specific_matches"] = specific_matches
-        
-        try:
-            # Use the question to semantically search for relevant functions
-            if self.function_collection:
-                # Search function definitions using the question
-                query_result = self.function_collection.semantic_searches(
-                    query_texts=[question], 
-                    n_results=self.max_functions_to_retrieve
-                )
-                
-                if query_result and query_result.get("documents"):
-                    for i, doc in enumerate(query_result["documents"][0]):
-                        score = query_result["distances"][0][i] if "distances" in query_result else 0.0
-                        
-                        # Parse document
-                        try:
-                            if isinstance(doc, str) and (doc.startswith('{') or doc.startswith('{"')):
-                                doc = json.loads(doc)
-                            results["definitions"].append({
-                                "content": doc,
-                                "score": score,
-                                "specific_match": False
-                            })
-                        except json.JSONDecodeError:
-                            continue
-            print("results",json.dumps(results,indent=2))
-            # Similarly retrieve examples and insights
-            if self.example_collection:
-                query_result = self.example_collection.semantic_searches(
-                    query_texts=[question], 
-                    n_results=5
-                )
-                
-                if query_result and query_result.get("documents"):
-                    for i, doc in enumerate(query_result["documents"][0]):
-                        score = query_result["distances"][0][i] if "distances" in query_result else 0.0
-                        
-                        try:
-                            if isinstance(doc, str) and (doc.startswith('{') or doc.startswith('{"')):
-                                doc = json.loads(doc)
-                            results["examples"].append({
-                                "content": doc,
-                                "score": score
-                            })
-                        except json.JSONDecodeError:
-                            continue
-            
-            if self.insights_collection:
-                query_result = self.insights_collection.semantic_searches(
-                    query_texts=[question], 
-                    n_results=5
-                )
-                
-                if query_result and query_result.get("documents"):
-                    for i, doc in enumerate(query_result["documents"][0]):
-                        score = query_result["distances"][0][i] if "distances" in query_result else 0.0
-                        
-                        try:
-                            if isinstance(doc, str) and (doc.startswith('{') or doc.startswith('{"')):
-                                doc = json.loads(doc)
-                            results["insights"].append({
-                                "content": doc,
-                                "score": score
-                            })
-                        except json.JSONDecodeError:
-                            continue
-                            
-        except Exception as e:
-            logger.error(f"Error retrieving relevant functions: {e}")
-        
-        return results
+
 
     @observe(capture_input=False)
-    def _format_retrieved_content(self, retrieved_data: Dict[str, Any]) -> Dict[str, str]:
+    def _format_retrieved_functions_for_prompt(self, top_functions: List[Any]) -> Dict[str, str]:
         """
-        Format retrieved content for prompt inclusion
+        Format retrieved functions for prompt inclusion
         
         Args:
-            retrieved_data: Dictionary containing retrieved functions, examples, insights
+            top_functions: List of FunctionMatch objects from FunctionRetrieval
             
         Returns:
             Formatted strings for prompt
         """
-        # Sort definitions to prioritize specific matches
-        definitions = retrieved_data.get("definitions", [])
-        #definitions.sort(key=lambda x: (not x.get("specific_match", False), x.get("score", 1.0)))
-        
         # Format function definitions with priority indication
         definitions_text = ""
-        if definitions:
+        if top_functions:
             definitions_text = "Available Functions (ordered by relevance):\n"
             
-            # Add specific matches first
-            #specific_matches = retrieved_data.get("specific_matches", [])
-            #if specific_matches:
-            #    definitions_text += f"\n🎯 EXACT KEYWORD MATCHES for your question: {', '.join(specific_matches)}\n\n"
-            
-            for i, item in enumerate(definitions[:8]):  # Top 8
-                content = item.get("content", {})
-                if isinstance(content, dict):
-                    func_name = content.get("function_name", f"Function_{i+1}")
-                    description = content.get("description", "No description")
-                    category = content.get("category", "No category")
-                    type_of_operation = content.get("type_of_operation", "No type of operation")
+            for i, func in enumerate(top_functions[:8]):  # Top 8
+                # Get function definition if available
+                function_definition = func.function_definition
+                
+                # Format parameters section
+                params_text = ""
+                if function_definition and isinstance(function_definition, dict):
+                    required_params = function_definition.get("required_params", [])
+                    optional_params = function_definition.get("optional_params", [])
+                    parameters = function_definition.get("parameters", {})
                     
-                    # Handle parameters more robustly for double-escaped JSON content
-                    params = content.get("parameters", {})
-                    required_params = content.get("required_params", [])
-                    optional_params = content.get("optional_params", [])
-                    
-                    # Format parameters section
-                    params_text = ""
                     if required_params:
-                        params_text += "Required: " + ", ".join([f"{p.get('name', 'param')}" for p in required_params]) + "\n"
+                        params_text += "Required: " + ", ".join([f"{p.get('name', p) if isinstance(p, dict) else p}" for p in required_params]) + "\n"
                     if optional_params:
-                        params_text += "Optional: " + ", ".join([f"{p.get('name', 'param')}" for p in optional_params]) + "\n"
-                    if params and not required_params and not optional_params:
-                        # Fallback to direct parameters dict
-                        params_text = f"Parameters: {params}\n"
-                    
-                    # Mark specific matches
-                    priority_marker = "🎯 " if item.get("specific_match", False) else ""
-                    
-                    definitions_text += f"- {priority_marker}{func_name}: {description} ({category} - {type_of_operation}) - Inputs/Outputs -\n"
-                    if params_text:
-                        definitions_text += f"  {params_text}\n"
+                        params_text += "Optional: " + ", ".join([f"{p.get('name', p) if isinstance(p, dict) else p}" for p in optional_params]) + "\n"
+                    if parameters and not required_params and not optional_params:
+                        params_text = f"Parameters: {parameters}\n"
+                
+                # Mark high relevance functions
+                priority_marker = "🎯 " if func.relevance_score >= 0.9 else ""
+                
+                definitions_text += f"- {priority_marker}{func.function_name}: {func.description} ({func.pipe_name}) - Relevance: {func.relevance_score:.2f}\n"
+                if params_text:
+                    definitions_text += f"  {params_text}\n"
+                definitions_text += f"  Usage: {func.usage_description[:200]}...\n\n"
         
-        # Format examples
+        # Format examples (using function descriptions as examples)
         examples_text = ""
-        if retrieved_data.get("examples"):
+        if top_functions:
             examples_text = "Usage Examples:\n"
-            for i, item in enumerate(retrieved_data["examples"][:3]):  # Top 3
-                content = item.get("content", {})
-                if isinstance(content, dict):
-                    example = content.get("example", content.get("usage", ""))
-                    examples_text += f"Example {i+1}: {example}\n\n"
+            for i, func in enumerate(top_functions[:3]):  # Top 3
+                examples_text += f"Example {i+1} - {func.function_name}: {func.usage_description[:300]}...\n\n"
         
-        # Format insights
+        # Format insights (using reasoning as insights)
         insights_text = ""
-        if retrieved_data.get("insights"):
+        if top_functions:
             insights_text = "Analysis Insights:\n"
-            for i, item in enumerate(retrieved_data["insights"][:3]):  # Top 3
-                content = item.get("content", {})
-                if isinstance(content, dict):
-                    insight = content.get("insight", content.get("tip", ""))
-                    insights_text += f"Insight {i+1}: {insight}\n\n"
+            for i, func in enumerate(top_functions[:3]):  # Top 3
+                insights_text += f"Insight {i+1} - {func.function_name}: {func.reasoning}\n\n"
         
         return {
             "function_definitions": definitions_text,
@@ -648,7 +546,7 @@ class AnalysisIntentPlanner:
     def _post_process_llm_response(
         self, 
         llm_response: Dict[str, Any], 
-        retrieved_data: Dict[str, Any],
+        function_retrieval_result: Any,
         available_columns: Optional[List[str]] = None
     ) -> AnalysisIntentResult:
         """
@@ -680,13 +578,18 @@ class AnalysisIntentPlanner:
             
             # Extract retrieved function names for context
             retrieved_functions = []
-            for item in retrieved_data.get("definitions", [])[:3]:
-                content = item.get("content", {})
-                if isinstance(content, dict) and "function_name" in content:
-                    retrieved_functions.append(content)
+            for func in function_retrieval_result.top_functions[:3]:
+                retrieved_functions.append({
+                    "function_name": func.function_name,
+                    "pipe_name": func.pipe_name,
+                    "description": func.description,
+                    "usage_description": func.usage_description,
+                    "relevance_score": func.relevance_score,
+                    "function_definition": func.function_definition
+                })
             
-            # Get specific matches
-            specific_matches = retrieved_data.get("specific_matches", [])
+            # Get specific matches (high relevance functions)
+            specific_matches = [func.function_name for func in function_retrieval_result.top_functions if func.relevance_score >= 0.9]
             
             # Validate feasibility assessment with available data
             required_columns = parsed_response.get("required_data_columns", [])
@@ -702,11 +605,14 @@ class AnalysisIntentPlanner:
                     can_be_answered = False
                     feasibility_score = min(feasibility_score, 0.3)
             
+            # Extract suggested functions from the top functions
+            suggested_functions = [func.function_name for func in function_retrieval_result.top_functions[:3]]
+            
             return AnalysisIntentResult(
                 intent_type=parsed_response.get("intent_type", "unclear_intent"),
                 confidence_score=float(parsed_response.get("confidence_score", 0.0)),
                 rephrased_question=parsed_response.get("rephrased_question", ""),
-                suggested_functions=parsed_response.get("suggested_functions", []),
+                suggested_functions=suggested_functions,
                 reasoning=parsed_response.get("reasoning", ""),
                 required_data_columns=required_columns,
                 clarification_needed=parsed_response.get("clarification_needed"),
@@ -750,11 +656,16 @@ class AnalysisIntentPlanner:
             AnalysisIntentResult with classification and suggestions
         """
         try:
-            # Step 1: Retrieve relevant functions using semantic search
-            retrieved_data = self._retrieve_relevant_functions(question)
+            # Step 1: Retrieve relevant functions using the new FunctionRetrieval system
+            function_retrieval_result = await self.function_retrieval.retrieve_relevant_functions(
+                question=question,
+                dataframe_description=dataframe_description,
+                dataframe_summary=dataframe_summary,
+                available_columns=available_columns
+            )
             
-            # Step 2: Format retrieved content for prompt
-            formatted_content = self._format_retrieved_content(retrieved_data)
+            # Step 2: Format the retrieved functions for the prompt
+            formatted_content = self._format_retrieved_functions_for_prompt(function_retrieval_result.top_functions)
             
             # Step 3: Create prompt for LLM
             prompt_template = PromptTemplate(
@@ -778,7 +689,7 @@ class AnalysisIntentPlanner:
             llm_response = await self._classify_with_llm(prompt)
             print("llm_response",llm_response)
             # Step 5: Post-process into structured result
-            result = self._post_process_llm_response(llm_response, retrieved_data, available_columns)
+            result = self._post_process_llm_response(llm_response, function_retrieval_result, available_columns)
             
             # Step 6: Enhanced feasibility assessment using LLM
             if result.required_data_columns and available_columns:
