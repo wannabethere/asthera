@@ -32,7 +32,7 @@ async def submit_job(
     try:
         job_id = await job_queue_service.submit_job(
             job_type=request.job_type,
-            project_id=request.project_id,
+            domain_id=request.domain_id,
             entity_type=request.entity_type,
             entity_id=request.entity_id,
             user_id=request.user_id,
@@ -44,7 +44,7 @@ async def submit_job(
         return JobResponse(
             job_id=job_id,
             job_type=request.job_type,
-            project_id=request.project_id,
+            domain_id=request.domain_id,
             status=JobStatus.PENDING,
             message="Job submitted successfully"
         )
@@ -68,7 +68,7 @@ async def get_job_status(job_id: str):
         return JobStatusResponse(
             job_id=job_data.job_id,
             job_type=job_data.job_type,
-            project_id=job_data.project_id,
+            domain_id=job_data.domain_id,
             status=job_data.status,
             created_at=job_data.created_at,
             started_at=job_data.started_at,
@@ -138,7 +138,7 @@ async def retry_job(job_id: str):
     summary="List jobs with optional filtering"
 )
 async def list_jobs(
-    project_id: Optional[str] = Query(None, description="Filter by project ID"),
+    domain_id: Optional[str] = Query(None, description="Filter by domain ID"),
     job_type: Optional[JobType] = Query(None, description="Filter by job type"),
     status: Optional[JobStatus] = Query(None, description="Filter by job status"),
     limit: int = Query(50, description="Maximum number of jobs to return", ge=1, le=100)
@@ -228,7 +228,7 @@ async def cleanup_old_jobs(
     summary="Handle table update"
 )
 async def handle_table_update(
-    project_id: str,
+    domain_id: str,
     table_id: str,
     user_id: Optional[str] = Query(None),
     session_id: Optional[str] = Query(None)
@@ -236,7 +236,7 @@ async def handle_table_update(
     """Handle table update and submit jobs"""
     try:
         result = await entity_update_service.on_table_updated(
-            project_id=project_id,
+            domain_id=domain_id,
             table_id=table_id,
             user_id=user_id,
             session_id=session_id
@@ -256,7 +256,7 @@ async def handle_table_update(
     summary="Handle column update"
 )
 async def handle_column_update(
-    project_id: str,
+    domain_id: str,
     table_id: str,
     column_id: str,
     user_id: Optional[str] = Query(None),
@@ -265,7 +265,7 @@ async def handle_column_update(
     """Handle column update and submit jobs"""
     try:
         result = await entity_update_service.on_column_updated(
-            project_id=project_id,
+            domain_id=domain_id,
             table_id=table_id,
             column_id=column_id,
             user_id=user_id,
@@ -286,7 +286,7 @@ async def handle_column_update(
     summary="Handle metric update"
 )
 async def handle_metric_update(
-    project_id: str,
+    domain_id: str,
     metric_id: str,
     user_id: Optional[str] = Query(None),
     session_id: Optional[str] = Query(None)
@@ -294,7 +294,7 @@ async def handle_metric_update(
     """Handle metric update and submit jobs"""
     try:
         result = await entity_update_service.on_metric_updated(
-            project_id=project_id,
+            domain_id=domain_id,
             metric_id=metric_id,
             user_id=user_id,
             session_id=session_id
@@ -314,7 +314,7 @@ async def handle_metric_update(
     summary="Handle view update"
 )
 async def handle_view_update(
-    project_id: str,
+    domain_id: str,
     view_id: str,
     user_id: Optional[str] = Query(None),
     session_id: Optional[str] = Query(None)
@@ -322,7 +322,7 @@ async def handle_view_update(
     """Handle view update and submit jobs"""
     try:
         result = await entity_update_service.on_view_updated(
-            project_id=project_id,
+            domain_id=domain_id,
             view_id=view_id,
             user_id=user_id,
             session_id=session_id
@@ -342,7 +342,7 @@ async def handle_view_update(
     summary="Handle calculated column update"
 )
 async def handle_calculated_column_update(
-    project_id: str,
+    domain_id: str,
     calculated_column_id: str,
     user_id: Optional[str] = Query(None),
     session_id: Optional[str] = Query(None)
@@ -350,7 +350,7 @@ async def handle_calculated_column_update(
     """Handle calculated column update and submit jobs"""
     try:
         result = await entity_update_service.on_calculated_column_updated(
-            project_id=project_id,
+            domain_id=domain_id,
             calculated_column_id=calculated_column_id,
             user_id=user_id,
             session_id=session_id
@@ -366,47 +366,47 @@ async def handle_calculated_column_update(
 
 
 @router.post(
-    "/entity-updates/project-commit",
-    summary="Handle project commit"
+    "/entity-updates/domain-commit",
+    summary="Handle domain commit"
 )
-async def handle_project_commit(
-    project_id: str,
+async def handle_domain_commit(
+    domain_id: str,
     user_id: Optional[str] = Query(None),
     session_id: Optional[str] = Query(None)
 ):
-    """Handle project commit and submit post-commit workflow and ChromaDB indexing"""
+    """Handle domain commit and submit post-commit workflow and ChromaDB indexing"""
     try:
-        result = await entity_update_service.on_project_committed(
-            project_id=project_id,
+        result = await entity_update_service.on_domain_committed(
+            domain_id=domain_id,
             user_id=user_id,
             session_id=session_id
         )
         
         return {
-            "message": "Project commit handled successfully",
+            "message": "Domain commit handled successfully",
             "job_ids": result
         }
         
     except Exception as e:
-        raise HTTPException(500, f"Failed to handle project commit: {str(e)}")
+        raise HTTPException(500, f"Failed to handle domain commit: {str(e)}")
 
 
 @router.post(
-    "/chromadb-indexing/{project_id}",
-    summary="Trigger ChromaDB indexing for a project"
+    "/chromadb-indexing/{domain_id}",
+    summary="Trigger ChromaDB indexing for a domain"
 )
 async def trigger_chromadb_indexing(
-    project_id: str,
+    domain_id: str,
     user_id: Optional[str] = Query(None),
     session_id: Optional[str] = Query(None)
 ):
-    """Manually trigger ChromaDB indexing for a project"""
+    """Manually trigger ChromaDB indexing for a domain"""
     try:
         job_id = await job_queue_service.submit_job(
             job_type=JobType.CHROMADB_INDEXING,
-            project_id=project_id,
-            entity_type="project",
-            entity_id=project_id,
+            domain_id=domain_id,
+            entity_type="domain",
+            entity_id=domain_id,
             user_id=user_id,
             session_id=session_id,
             priority=1,
@@ -419,7 +419,7 @@ async def trigger_chromadb_indexing(
         return {
             "message": "ChromaDB indexing job submitted successfully",
             "job_id": job_id,
-            "project_id": project_id
+            "domain_id": domain_id
         }
         
     except Exception as e:

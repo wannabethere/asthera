@@ -3,11 +3,11 @@ import logging
 from typing import Dict, Any, Optional, List
 import hashlib
 import json
+from pydantic import BaseModel
 
 import chromadb
 from langchain_openai import OpenAIEmbeddings
 
-from app.indexing.orchestrator import IndexingOrchestrator
 from app.storage.documents import DocumentChromaStore
 from app.settings import get_settings
 from app.agents.retrieval.instructions import Instructions
@@ -15,7 +15,6 @@ from app.agents.retrieval.historical_question_retrieval import HistoricalQuestio
 from app.agents.retrieval.sql_pairs_retrieval import SqlPairsRetrieval
 from app.agents.retrieval.retrieval import TableRetrieval
 from app.agents.retrieval.preprocess_sql_data import PreprocessSqlData
-from app.agents.nodes.sql.utils.sql_prompts import AskHistory
 from app.core.dependencies import get_doc_store_provider
 from app.utils.cache import InMemoryCache
 
@@ -27,7 +26,9 @@ logging.basicConfig(
 logger = logging.getLogger("genieml-agents")
 settings = get_settings()
 
-
+class History(BaseModel):
+    sql: str
+    question: str
 
 
 
@@ -82,7 +83,7 @@ class RetrievalHelper:
         
         # Initialize SQL data preprocessor
         self.sql_preprocessor = PreprocessSqlData(
-            model="gpt-4",
+            model="gpt-4o-mini",
             max_tokens=100_000,
             max_iterations=1000,
             reduction_step=50
@@ -95,7 +96,7 @@ class RetrievalHelper:
         project_id: str, 
         table_retrieval: dict, 
         query: str, 
-        histories: Optional[list[AskHistory]] = None,
+        histories: Optional[list[History]] = None,
         tables: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """Fetch database schemas for a given project.
@@ -104,7 +105,7 @@ class RetrievalHelper:
             project_id: The project ID to fetch schemas for
             table_retrieval: Dictionary containing table retrieval configuration
             query: The query string to use for schema retrieval
-            histories: Optional list of AskHistory objects for context
+            histories: Optional list of History objects for context
             tables: Optional list of specific tables to retrieve schemas for
             
         Returns:
@@ -518,12 +519,358 @@ class RetrievalHelper:
                 "tables": tables
             }
 
+    async def get_function_definition(
+        self,
+        function_name: str,
+        similarity_threshold: float = 0.7,
+        top_k: int = 3
+    ) -> Dict[str, Any]:
+        """Fetch function definition from ChromaDB.
+        
+        Args:
+            function_name: The function name to search for
+            similarity_threshold: Minimum similarity score for retrieved documents
+            top_k: Maximum number of documents to retrieve
+            
+        Returns:
+            Dictionary containing function definition and metadata
+        """
+        cache_key = hashlib.sha256(json.dumps({
+            'method': 'get_function_definition',
+            'function_name': function_name,
+            'similarity_threshold': similarity_threshold,
+            'top_k': top_k
+        }, sort_keys=True, default=str).encode()).hexdigest()
+        cached = await self.cache.get(cache_key)
+        if cached is not None:
+            return cached
+        
+        try:
+            # Get function specification store
+            function_store = self.document_stores.get("function_spec")
+            if not function_store:
+                logger.warning("Function specification store not available")
+                result = {
+                    "error": "Function specification store not available",
+                    "function_definition": None
+                }
+                return result
+            
+            # Query the function store
+            query_result = function_store.semantic_searches(
+                query_texts=[function_name],
+                n_results=top_k
+            )
+            
+            if not query_result or "documents" not in query_result or len(query_result["documents"][0]) == 0:
+                logger.warning(f"No function definition found for: {function_name}")
+                result = {
+                    "error": f"No function definition found for: {function_name}",
+                    "function_definition": None
+                }
+                return result
+            
+            # Parse the document content
+            document = query_result["documents"][0][0]  # First query, first result
+            score = query_result["distances"][0][0] if "distances" in query_result else 0.0
+            
+            # Convert from JSON string if needed
+            if isinstance(document, str) and document.startswith('"') and document.endswith('"'):
+                document = json.loads(document)
+                
+            if isinstance(document, str) and (document.startswith('{') or document.startswith('{"')):
+                document = json.loads(document)
+            
+            result = {
+                "function_definition": document,
+                "score": score,
+                "function_name": function_name,
+                "similarity_threshold": similarity_threshold,
+                "top_k": top_k
+            }
+            await self.cache.set(cache_key, result, ttl=300)
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error fetching function definition: {str(e)}")
+            result = {
+                "error": str(e),
+                "function_definition": None,
+                "function_name": function_name
+            }
+            await self.cache.set(cache_key, result, ttl=300)
+            return result
+
+    async def get_function_examples(
+        self,
+        function_name: str,
+        similarity_threshold: float = 0.7,
+        top_k: int = 5
+    ) -> Dict[str, Any]:
+        """Fetch function examples from ChromaDB.
+        
+        Args:
+            function_name: The function name to search for examples
+            similarity_threshold: Minimum similarity score for retrieved documents
+            top_k: Maximum number of documents to retrieve
+            
+        Returns:
+            Dictionary containing function examples and metadata
+        """
+        cache_key = hashlib.sha256(json.dumps({
+            'method': 'get_function_examples',
+            'function_name': function_name,
+            'similarity_threshold': similarity_threshold,
+            'top_k': top_k
+        }, sort_keys=True, default=str).encode()).hexdigest()
+        cached = await self.cache.get(cache_key)
+        if cached is not None:
+            return cached
+        
+        try:
+            # Get usage examples store
+            examples_store = self.document_stores.get("usage_examples")
+            if not examples_store:
+                logger.warning("Usage examples store not available")
+                result = {
+                    "error": "Usage examples store not available",
+                    "examples": []
+                }
+                return result
+            
+            # Query the examples store
+            query_result = examples_store.semantic_searches(
+                query_texts=[function_name],
+                n_results=top_k
+            )
+            
+            if not query_result or "documents" not in query_result or len(query_result["documents"][0]) == 0:
+                logger.warning(f"No function examples found for: {function_name}")
+                result = {
+                    "error": f"No function examples found for: {function_name}",
+                    "examples": []
+                }
+                return result
+            
+            # Parse the document content
+            examples = []
+            scores = []
+            
+            for i, document in enumerate(query_result["documents"][0]):
+                score = query_result["distances"][0][i] if "distances" in query_result else 0.0
+                
+                # Convert from JSON string if needed
+                if isinstance(document, str) and document.startswith('"') and document.endswith('"'):
+                    document = json.loads(document)
+                    
+                if isinstance(document, str) and (document.startswith('{') or document.startswith('{"')):
+                    document = json.loads(document)
+                
+                examples.append(document)
+                scores.append(score)
+            
+            result = {
+                "examples": examples,
+                "scores": scores,
+                "avg_score": sum(scores) / len(scores) if scores else 0.0,
+                "total_examples": len(examples),
+                "function_name": function_name,
+                "similarity_threshold": similarity_threshold,
+                "top_k": top_k
+            }
+            if examples:
+                await self.cache.set(cache_key, result, ttl=300)
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error fetching function examples: {str(e)}")
+            result = {
+                "error": str(e),
+                "examples": [],
+                "function_name": function_name
+            }
+            await self.cache.set(cache_key, result, ttl=300)
+            return result
+
+    async def get_function_insights(
+        self,
+        function_name: str,
+        similarity_threshold: float = 0.7,
+        top_k: int = 5
+    ) -> Dict[str, Any]:
+        """Fetch function insights from ChromaDB.
+        
+        Args:
+            function_name: The function name to search for insights
+            similarity_threshold: Minimum similarity score for retrieved documents
+            top_k: Maximum number of documents to retrieve
+            
+        Returns:
+            Dictionary containing function insights and metadata
+        """
+        cache_key = hashlib.sha256(json.dumps({
+            'method': 'get_function_insights',
+            'function_name': function_name,
+            'similarity_threshold': similarity_threshold,
+            'top_k': top_k
+        }, sort_keys=True, default=str).encode()).hexdigest()
+        cached = await self.cache.get(cache_key)
+        if cached is not None:
+            return cached
+        
+        try:
+            # Get insights store
+            insights_store = self.document_stores.get("insights_store")
+            if not insights_store:
+                logger.warning("Insights store not available")
+                result = {
+                    "error": "Insights store not available",
+                    "insights": []
+                }
+                return result
+            
+            # Query the insights store
+            query_result = insights_store.semantic_searches(
+                query_texts=[function_name],
+                n_results=top_k
+            )
+            
+            if not query_result or "documents" not in query_result or len(query_result["documents"][0]) == 0:
+                logger.warning(f"No function insights found for: {function_name}")
+                result = {
+                    "error": f"No function insights found for: {function_name}",
+                    "insights": []
+                }
+                return result
+            
+            # Parse the document content
+            insights = []
+            scores = []
+            
+            for i, document in enumerate(query_result["documents"][0]):
+                score = query_result["distances"][0][i] if "distances" in query_result else 0.0
+                
+                # Convert from JSON string if needed
+                if isinstance(document, str) and document.startswith('"') and document.endswith('"'):
+                    document = json.loads(document)
+                    
+                if isinstance(document, str) and (document.startswith('{') or document.startswith('{"')):
+                    document = json.loads(document)
+                
+                insights.append(document)
+                scores.append(score)
+            
+            result = {
+                "insights": insights,
+                "scores": scores,
+                "avg_score": sum(scores) / len(scores) if scores else 0.0,
+                "total_insights": len(insights),
+                "function_name": function_name,
+                "similarity_threshold": similarity_threshold,
+                "top_k": top_k
+            }
+            if insights:
+                await self.cache.set(cache_key, result, ttl=300)
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error fetching function insights: {str(e)}")
+            result = {
+                "error": str(e),
+                "insights": [],
+                "function_name": function_name
+            }
+            await self.cache.set(cache_key, result, ttl=300)
+            return result
+
+    async def get_function_definition_by_query(
+        self,
+        query: str,
+        similarity_threshold: float = 0.7,
+        top_k: int = 1
+    ) -> Dict[str, Any]:
+        """Fetch function definition from ChromaDB using a query string.
+        
+        Args:
+            query: The query string to search for function definitions
+            similarity_threshold: Minimum similarity score for retrieved documents
+            top_k: Maximum number of documents to retrieve
+            
+        Returns:
+            Dictionary containing function definition and metadata
+        """
+        cache_key = hashlib.sha256(json.dumps({
+            'method': 'get_function_definition_by_query',
+            'query': query,
+            'similarity_threshold': similarity_threshold,
+            'top_k': top_k
+        }, sort_keys=True, default=str).encode()).hexdigest()
+        cached = await self.cache.get(cache_key)
+        if cached is not None:
+            return cached
+        
+        try:
+            # Get function specification store
+            function_store = self.document_stores.get("function_spec")
+            if not function_store:
+                logger.warning("Function specification store not available")
+                result = {
+                    "error": "Function specification store not available",
+                    "function_definition": None
+                }
+                return result
+            
+            # Query the function store
+            query_result = function_store.semantic_searches(
+                query_texts=[query],
+                n_results=top_k
+            )
+            
+            if not query_result or "documents" not in query_result or len(query_result["documents"][0]) == 0:
+                logger.warning(f"No function definition found for query: {query}")
+                result = {
+                    "error": f"No function definition found for query: {query}",
+                    "function_definition": None
+                }
+                return result
+            
+            # Parse the document content
+            document = query_result["documents"][0][0]  # First query, first result
+            score = query_result["distances"][0][0] if "distances" in query_result else 0.0
+            
+            # Convert from JSON string if needed
+            if isinstance(document, str) and document.startswith('"') and document.endswith('"'):
+                document = json.loads(document)
+                
+            if isinstance(document, str) and (document.startswith('{') or document.startswith('{"')):
+                document = json.loads(document)
+            
+            result = {
+                "function_definition": document,
+                "score": score,
+                "query": query,
+                "similarity_threshold": similarity_threshold,
+                "top_k": top_k
+            }
+            await self.cache.set(cache_key, result, ttl=300)
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error fetching function definition by query: {str(e)}")
+            result = {
+                "error": str(e),
+                "function_definition": None,
+                "query": query
+            }
+            await self.cache.set(cache_key, result, ttl=300)
+            return result
+
     async def get_table_names_and_schema_contexts(
         self,
         query: str,
         project_id: str,
         table_retrieval: dict,
-        histories: Optional[list[AskHistory]] = None,
+        histories: Optional[list[History]] = None,
         tables: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """Extract table names and schema contexts from database schemas.
@@ -532,7 +879,7 @@ class RetrievalHelper:
             query: The query string to use for schema retrieval
             project_id: The project ID to fetch schemas for
             table_retrieval: Dictionary containing table retrieval configuration
-            histories: Optional list of AskHistory objects for context
+            histories: Optional list of History objects for context
             tables: Optional list of specific tables to retrieve schemas for
             
         Returns:
@@ -663,6 +1010,52 @@ async def main():
         )
         print("metrics_results: ", metrics_results)
         
+        # Test function definition retrieval
+        logger.info(f"\nTesting function definition retrieval")
+        function_definition_results = await helper.get_function_definition(
+            function_name="variance_analysis",
+            similarity_threshold=0.7,
+            top_k=3
+        )
+        print("function_definition_results: ", function_definition_results)
+        
+        # Test function examples retrieval
+        logger.info(f"\nTesting function examples retrieval")
+        function_examples_results = await helper.get_function_examples(
+            function_name="variance_analysis",
+            similarity_threshold=0.7,
+            top_k=5
+        )
+        print("function_examples_results: ", function_examples_results)
+        
+        # Test function insights retrieval
+        logger.info(f"\nTesting function insights retrieval")
+        function_insights_results = await helper.get_function_insights(
+            function_name="variance_analysis",
+            similarity_threshold=0.7,
+            top_k=5
+        )
+        print("function_insights_results: ", function_insights_results)
+        
+        # Test function definition retrieval by query
+        logger.info(f"\nTesting function definition retrieval by query")
+        function_definition_by_query_results = await helper.get_function_definition_by_query(
+            query="Calculate rolling variance analysis",
+            similarity_threshold=0.7,
+            top_k=1
+        )
+        print("function_definition_by_query_results: ", function_definition_by_query_results)
+        
+        # Test instructions retrieval
+        logger.info(f"\nTesting instructions retrieval")
+        instructions_results = await helper.get_instructions(
+            query="Calculate rolling variance analysis",
+            project_id=test_project_id,
+            similarity_threshold=0.7,
+            top_k=10
+        )
+        print("instructions_results: ", instructions_results)
+        
         # Print results
         logger.info("\nDatabase Schema Retrieval Results:")
         if "error" in schema_results:
@@ -722,6 +1115,8 @@ async def main():
             logger.error(f"Error: {instructions_results['error']}")
         else:
             logger.info(f"Total instructions found: {instructions_results['total_instructions']}")
+            logger.info(f"Project ID: {instructions_results['project_id']}")
+            logger.info(f"Query: {instructions_results['query']}")
             for i, instruction in enumerate(instructions_results['instructions'], 1):
                 logger.info(f"\nInstruction {i}:")
                 logger.info(f"Question: {instruction['question']}")
@@ -766,6 +1161,65 @@ async def main():
                 logger.info(f"\nMetric {i}:")
                 logger.info(f"Metric Name: {metric['metric_name']}")
                 logger.info(f"Metric Value: {metric['metric_value']}")
+        
+        # Print function definition results
+        logger.info("\nFunction Definition Retrieval Results:")
+        if "error" in function_definition_results:
+            logger.error(f"Error: {function_definition_results['error']}")
+        else:
+            logger.info(f"Function Name: {function_definition_results['function_name']}")
+            logger.info(f"Score: {function_definition_results['score']}")
+            if function_definition_results.get('function_definition'):
+                func_def = function_definition_results['function_definition']
+                logger.info(f"Function Definition: {func_def}")
+        
+        # Print function examples results
+        logger.info("\nFunction Examples Retrieval Results:")
+        if "error" in function_examples_results:
+            logger.error(f"Error: {function_examples_results['error']}")
+        else:
+            logger.info(f"Total examples found: {function_examples_results['total_examples']}")
+            logger.info(f"Average score: {function_examples_results['avg_score']}")
+            for i, example in enumerate(function_examples_results['examples'], 1):
+                logger.info(f"\nExample {i}:")
+                logger.info(f"Example: {example}")
+        
+        # Print function insights results
+        logger.info("\nFunction Insights Retrieval Results:")
+        if "error" in function_insights_results:
+            logger.error(f"Error: {function_insights_results['error']}")
+        else:
+            logger.info(f"Total insights found: {function_insights_results['total_insights']}")
+            logger.info(f"Average score: {function_insights_results['avg_score']}")
+            for i, insight in enumerate(function_insights_results['insights'], 1):
+                logger.info(f"\nInsight {i}:")
+                logger.info(f"Insight: {insight}")
+        
+        # Print function definition by query results
+        logger.info("\nFunction Definition by Query Retrieval Results:")
+        if "error" in function_definition_by_query_results:
+            logger.error(f"Error: {function_definition_by_query_results['error']}")
+        else:
+            logger.info(f"Query: {function_definition_by_query_results['query']}")
+            logger.info(f"Score: {function_definition_by_query_results['score']}")
+            if function_definition_by_query_results.get('function_definition'):
+                func_def = function_definition_by_query_results['function_definition']
+                logger.info(f"Function Definition: {func_def}")
+        
+        # Print instructions results
+        logger.info("\nInstructions Retrieval Results:")
+        if "error" in instructions_results:
+            logger.error(f"Error: {instructions_results['error']}")
+        else:
+            logger.info(f"Total instructions found: {instructions_results['total_instructions']}")
+            logger.info(f"Project ID: {instructions_results['project_id']}")
+            logger.info(f"Query: {instructions_results['query']}")
+            for i, instruction in enumerate(instructions_results['instructions'], 1):
+                logger.info(f"\nInstruction {i}:")
+                logger.info(f"Question: {instruction['question']}")
+                logger.info(f"Instruction: {instruction['instruction']}")
+                if instruction['instruction_id']:
+                    logger.info(f"Instruction ID: {instruction['instruction_id']}")
         
     except Exception as e:
         logger.error(f"Error in main: {str(e)}")

@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import Optional, List
 from app.core.session_manager import SessionManager
 from app.service.persistence_service import SQLFunctionPersistenceService
-from app.utils.history import ProjectManager
+from app.utils.history import DomainManager
 from app.schemas.sql_functions_schemas import (
     SQLFunctionCreate,
     SQLFunctionUpdate,
@@ -17,11 +17,11 @@ from app.schemas.sql_functions_schemas import (
 router = APIRouter()
 
 async def get_sql_function_service() -> SQLFunctionPersistenceService:
-    """Get SQL function persistence service with SessionManager and ProjectManager"""
+    """Get SQL function persistence service with SessionManager and DomainManager"""
     session_manager = SessionManager.get_instance()
-    # ProjectManager doesn't need a session for initialization
-    project_manager = ProjectManager(None)
-    return SQLFunctionPersistenceService(session_manager, project_manager)
+    # DomainManager doesn't need a session for initialization
+    domain_manager = DomainManager(None)
+    return SQLFunctionPersistenceService(session_manager, domain_manager)
 
 
 @router.post(
@@ -33,16 +33,16 @@ async def create(
     data: SQLFunctionCreate, 
     service: SQLFunctionPersistenceService = Depends(get_sql_function_service)
 ):
-    """Create a new SQL function with optional project association."""
+    """Create a new SQL function with optional domain association."""
     try:
         # Convert Pydantic model to dict
-        function_data = data.model_dump(exclude={'project_id'})
+        function_data = data.model_dump(exclude={'domain_id'})
         
         # Create function using persistence service
         function_id = await service.persist_sql_function(
             function_data=function_data,
             created_by='api_user',  # TODO: Get from auth context
-            project_id=data.project_id
+            domain_id=data.domain_id
         )
         
         # Retrieve and return the created function
@@ -70,17 +70,17 @@ async def create_batch(
         function_ids = []
         
         for function_data in data.functions:
-            # Use batch project_id if individual function doesn't have one
-            project_id = function_data.project_id or data.project_id
+            # Use batch domain_id if individual function doesn't have one
+            domain_id = function_data.domain_id or data.domain_id
             
             # Convert Pydantic model to dict
-            function_dict = function_data.model_dump(exclude={'project_id'})
+            function_dict = function_data.model_dump(exclude={'domain_id'})
             
             # Create function
             function_id = await service.persist_sql_function(
                 function_data=function_dict,
                 created_by='api_user',  # TODO: Get from auth context
-                project_id=project_id
+                domain_id=domain_id
             )
             function_ids.append(function_id)
         
@@ -103,7 +103,7 @@ async def create_batch(
     summary="List SQL functions with optional filtering.",
 )
 async def list_functions(
-    project_id: Optional[str] = Query(None, description="Filter by project ID"),
+    domain_id: Optional[str] = Query(None, description="Filter by domain ID"),
     name: Optional[str] = Query(None, description="Filter by function name"),
     return_type: Optional[str] = Query(None, description="Filter by return type"),
     service: SQLFunctionPersistenceService = Depends(get_sql_function_service)
@@ -112,9 +112,9 @@ async def list_functions(
     try:
         # Get functions based on filters
         if name:
-            functions = await service.get_sql_functions_by_name(name, project_id)
+            functions = await service.get_sql_functions_by_name(name, domain_id)
         else:
-            functions = await service.get_sql_functions(project_id)
+            functions = await service.get_sql_functions(domain_id)
         
         # Filter by return type if specified
         if return_type:
@@ -126,7 +126,7 @@ async def list_functions(
         return SQLFunctionListResponse(
             functions=function_reads,
             total_count=len(function_reads),
-            project_id=project_id
+            domain_id=domain_id
         )
         
     except Exception as e:
@@ -136,7 +136,7 @@ async def list_functions(
 @router.get(
     "/sql-functions/global",
     response_model=SQLFunctionListResponse,
-    summary="List global SQL functions (not associated with any project).",
+    summary="List global SQL functions (not associated with any domain).",
 )
 async def list_global_functions(
     service: SQLFunctionPersistenceService = Depends(get_sql_function_service)
@@ -149,7 +149,7 @@ async def list_global_functions(
         return SQLFunctionListResponse(
             functions=function_reads,
             total_count=len(function_reads),
-            project_id=None
+            domain_id=None
         )
         
     except Exception as e:
@@ -169,7 +169,7 @@ async def search_functions(
     try:
         functions = await service.search_sql_functions(
             search_term=request.search_term,
-            project_id=request.project_id
+            domain_id=request.domain_id
         )
         
         # Filter by return type if specified
@@ -185,7 +185,7 @@ async def search_functions(
         return SQLFunctionListResponse(
             functions=function_reads,
             total_count=len(function_reads),
-            project_id=request.project_id
+            domain_id=request.domain_id
         )
         
     except Exception as e:
@@ -222,12 +222,12 @@ async def read(
 )
 async def get_summary(
     function_id: Optional[str] = Query(None, description="Function ID (optional)"),
-    project_id: Optional[str] = Query(None, description="Project ID (optional)"),
+    domain_id: Optional[str] = Query(None, description="Domain ID (optional)"),
     service: SQLFunctionPersistenceService = Depends(get_sql_function_service)
 ):
     """Get summary statistics for SQL functions."""
     try:
-        summary = await service.get_sql_function_summary(project_id)
+        summary = await service.get_sql_function_summary(domain_id)
         return SQLFunctionSummary.model_validate(summary)
         
     except Exception as e:
@@ -269,18 +269,18 @@ async def update(
 @router.post(
     "/sql-functions/{function_id}/copy",
     response_model=SQLFunctionRead,
-    summary="Copy a SQL function to another project.",
+    summary="Copy a SQL function to another domain.",
 )
 async def copy_function(
     function_id: str,
     request: SQLFunctionCopyRequest,
     service: SQLFunctionPersistenceService = Depends(get_sql_function_service)
 ):
-    """Copy a SQL function to another project."""
+    """Copy a SQL function to another domain."""
     try:
-        copied_function_id = await service.copy_sql_function_to_project(
+        copied_function_id = await service.copy_sql_function_to_domain(
             function_id=function_id,
-            target_project_id=request.target_project_id,
+            target_domain_id=request.target_domain_id,
             created_by='api_user'  # TODO: Get from auth context
         )
         

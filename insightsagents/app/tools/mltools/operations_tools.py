@@ -2,43 +2,28 @@ import numpy as np
 import pandas as pd
 from typing import List, Dict, Union, Optional, Any, Tuple, Callable
 import warnings
-import numpy as np
+from .base_pipe import BasePipe
 
-class OperationsPipe:
+class OperationsPipe(BasePipe):
     """
     A pipeline-style operations analysis tool that enables functional composition
     with a meterstick-like interface.
     """
     
-    def __init__(self, data=None):
-        """Initialize with optional data"""
-        self.data = data
+    def _initialize_results(self):
+        """Initialize the results storage for operations analysis"""
         self.operations = {}
         self.comparisons = {}
         self.current_operation = None
     
-    def __or__(self, other):
-        """Enable the | (pipe) operator for function composition"""
-        if callable(other):
-            return other(self)
-        raise ValueError(f"Cannot pipe OperationsPipe to {type(other)}")
-    
-    def copy(self):
-        """Create a shallow copy with deep copy of data"""
-        new_pipe = OperationsPipe()
-        if self.data is not None:
-            new_pipe.data = self.data.copy()
-        new_pipe.operations = self.operations.copy()
-        new_pipe.comparisons = self.comparisons.copy()
-        new_pipe.current_operation = self.current_operation
-        return new_pipe
-    
-    @classmethod
-    def from_dataframe(cls, df):
-        """Create an OperationsPipe from a dataframe"""
-        pipe = cls()
-        pipe.data = df.copy()
-        return pipe
+    def _copy_results(self, source_pipe):
+        """Copy results from source pipe to this pipe"""
+        if hasattr(source_pipe, 'operations'):
+            self.operations = source_pipe.operations.copy()
+        if hasattr(source_pipe, 'comparisons'):
+            self.comparisons = source_pipe.comparisons.copy()
+        if hasattr(source_pipe, 'current_operation'):
+            self.current_operation = source_pipe.current_operation
     
     def to_df(self, operation_name: Optional[str] = None, include_metadata: bool = False, include_original: bool = False):
         """
@@ -258,6 +243,65 @@ class OperationsPipe:
             The original data DataFrame, or None if no data was provided
         """
         return self.data.copy() if self.data is not None else None
+    
+    def get_summary(self, **kwargs) -> Dict[str, Any]:
+        """
+        Get a summary of the operations analysis results.
+        
+        Parameters:
+        -----------
+        **kwargs : dict
+            Additional arguments (not used in operations pipe)
+            
+        Returns:
+        --------
+        dict
+            Summary of the operations analysis results
+        """
+        if not self.operations:
+            return {"error": "No operations have been performed"}
+        
+        # Get summary DataFrame
+        summary_df = self.get_operation_summary_df()
+        
+        # Count operations by type
+        operation_types = {}
+        for op_name, op_data in self.operations.items():
+            # Try to infer operation type from name
+            if 'pct_change' in op_name:
+                op_type = 'percent_change'
+            elif 'abs_change' in op_name:
+                op_type = 'absolute_change'
+            elif 'mh_' in op_name:
+                op_type = 'mantel_haenszel'
+            elif 'cuped' in op_name:
+                op_type = 'cuped'
+            elif 'prepost' in op_name:
+                op_type = 'prepost_change'
+            elif 'power' in op_name:
+                op_type = 'power_analysis'
+            elif 'stratified' in op_name:
+                op_type = 'stratified_summary'
+            elif 'bootstrap' in op_name:
+                op_type = 'bootstrap_ci'
+            elif 'multi_comp' in op_name:
+                op_type = 'multi_comparison'
+            else:
+                op_type = 'unknown'
+            
+            operation_types[op_type] = operation_types.get(op_type, 0) + 1
+        
+        return {
+            "total_operations": len(self.operations),
+            "total_comparisons": len(self.comparisons),
+            "available_operations": list(self.operations.keys()),
+            "available_comparisons": list(self.comparisons.keys()),
+            "operation_types": operation_types,
+            "current_operation": self.current_operation,
+            "summary_dataframe": summary_df.to_dict('records') if not summary_df.empty else [],
+            "operations_info": {name: {"shape": data.shape, "columns": list(data.columns)} 
+                              for name, data in self.operations.items()}
+        }
 
 
 # Basic Operations Functions

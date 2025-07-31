@@ -1,7 +1,7 @@
 from app.service.models import GeneratedDefinition, DefinitionType, UserExample
-from app.utils.history import ProjectManager
+from app.utils.history import DomainManager
 from app.schemas.dbmodels import (
-    Metric, View, CalculatedColumn, SQLColumn, Table, Project, 
+    Metric, View, CalculatedColumn, SQLColumn, Table, Domain, 
     SQLFunction, Instruction, KnowledgeBase, Example
 )
 from app.core.session_manager import SessionManager
@@ -18,21 +18,21 @@ logger = logging.getLogger(__name__)
 class DefinitionPersistenceService:
     """Service for persisting generated definitions to database"""
     
-    def __init__(self, session_manager: SessionManager, project_manager: ProjectManager):
+    def __init__(self, session_manager: SessionManager, domain_manager: DomainManager):
         self.session_manager = session_manager
-        self.project_manager = project_manager
+        self.domain_manager = domain_manager
     
     async def persist_definition(self, definition: GeneratedDefinition, 
-                               project_id: str, created_by: str) -> str:
+                               domain_id: str, created_by: str) -> str:
         """Persist generated definition to database"""
         async with self.session_manager.get_async_db_session() as session:
             try:
                 if definition.definition_type == DefinitionType.METRIC:
-                    entity_id = await self._create_metric(session, definition, project_id, created_by)
+                    entity_id = await self._create_metric(session, definition, domain_id, created_by)
                 elif definition.definition_type == DefinitionType.VIEW:
-                    entity_id = await self._create_view(session, definition, project_id, created_by)
+                    entity_id = await self._create_view(session, definition, domain_id, created_by)
                 elif definition.definition_type == DefinitionType.CALCULATED_COLUMN:
-                    entity_id = await self._create_calculated_column(session, definition, project_id, created_by)
+                    entity_id = await self._create_calculated_column(session, definition, domain_id, created_by)
                 else:
                     raise ValueError(f"Unknown definition type: {definition.definition_type}")
                 
@@ -44,10 +44,10 @@ class DefinitionPersistenceService:
                 raise Exception(f"Failed to persist definition: {str(e)}")
     
     async def _create_metric(self, session: Session, definition: GeneratedDefinition, 
-                           project_id: str, created_by: str) -> uuid.UUID:
+                           domain_id: str, created_by: str) -> uuid.UUID:
         """Create metric in database"""
         # Find appropriate table for the metric
-        table = await self._find_primary_table(session, definition.related_tables, project_id)
+        table = await self._find_primary_table(session, definition.related_tables, domain_id)
         
         metric = Metric(
             table_id=table.table_id,
@@ -76,9 +76,9 @@ class DefinitionPersistenceService:
         return metric.metric_id
     
     async def _create_view(self, session: Session, definition: GeneratedDefinition, 
-                          project_id: str, created_by: str) -> uuid.UUID:
+                          domain_id: str, created_by: str) -> uuid.UUID:
         """Create view in database"""
-        table = await self._find_primary_table(session, definition.related_tables, project_id)
+        table = await self._find_primary_table(session, definition.related_tables, domain_id)
         
         view = View(
             table_id=table.table_id,
@@ -105,9 +105,9 @@ class DefinitionPersistenceService:
         return view.view_id
     
     async def _create_calculated_column(self, session: Session, definition: GeneratedDefinition, 
-                                      project_id: str, created_by: str) -> uuid.UUID:
+                                      domain_id: str, created_by: str) -> uuid.UUID:
         """Create calculated column in database"""
-        table = await self._find_primary_table(session, definition.related_tables, project_id)
+        table = await self._find_primary_table(session, definition.related_tables, domain_id)
         
         # Create the SQLColumn with type 'calculated_column'
         column = SQLColumn(
@@ -152,19 +152,19 @@ class DefinitionPersistenceService:
         await session.flush()
         return column.column_id
     
-    async def _find_primary_table(self, session: Session, table_names: List[str], project_id: str) -> Table:
+    async def _find_primary_table(self, session: Session, table_names: List[str], domain_id: str) -> Table:
         """Find the primary table for the definition"""
         if not table_names:
             # Default to first table if none specified
             result = await session.execute(
-                select(Table).where(Table.project_id == project_id).limit(1)
+                select(Table).where(Table.domain_id == domain_id).limit(1)
             )
             table = result.scalar_one_or_none()
         else:
             # Use the first mentioned table
             result = await session.execute(
                 select(Table).where(
-                    Table.project_id == project_id,
+                    Table.domain_id == domain_id,
                     Table.name == table_names[0]
                 )
             )
@@ -176,72 +176,72 @@ class DefinitionPersistenceService:
         return table
 
 
-class ProjectPersistenceService:
-    """Service for persisting project to database"""
+class DomainPersistenceService:
+    """Service for persisting domain to database"""
     
-    def __init__(self, session_manager: SessionManager, project_manager: ProjectManager):
+    def __init__(self, session_manager: SessionManager, domain_manager: DomainManager):
         self.session_manager = session_manager
-        self.project_manager = project_manager
+        self.domain_manager = domain_manager
         
-    async def persist_project(self, project: Project, created_by: str) -> str:
-        """Persist project to database"""
+    async def persist_domain(self, domain: Domain, created_by: str) -> str:
+        """Persist domain to database"""
         async with self.session_manager.get_async_db_session() as session:
             try:
                 # Set the created_by field
-                project.created_by = created_by
+                domain.created_by = created_by
                 
                 # Add to session and commit
-                session.add(project)
+                session.add(domain)
                 await session.commit()
                 
-                return project.project_id
+                return domain.domain_id
                 
             except Exception as e:
                 await session.rollback()
-                raise Exception(f"Failed to persist project: {str(e)}")
+                raise Exception(f"Failed to persist domain: {str(e)}")
     
-    async def update_project(self, project_id: str, updates: Dict[str, Any], 
-                           modified_by: str) -> Project:
-        """Update project in database"""
+    async def update_domain(self, domain_id: str, updates: Dict[str, Any], 
+                           modified_by: str) -> Domain:
+        """Update domain in database"""
         async with self.session_manager.get_async_db_session() as session:
             try:
                 result = await session.execute(
-                    select(Project).where(Project.project_id == project_id)
+                    select(Domain).where(Domain.domain_id == domain_id)
                 )
-                project = result.scalar_one_or_none()
+                domain = result.scalar_one_or_none()
                 
-                if not project:
-                    raise ValueError(f"Project {project_id} not found")
+                if not domain:
+                    raise ValueError(f"Domain {domain_id} not found")
                 
                 # Update fields
                 for key, value in updates.items():
-                    if hasattr(project, key):
-                        setattr(project, key, value)
+                    if hasattr(domain, key):
+                        setattr(domain, key, value)
                 
-                project.last_modified_by = modified_by
-                project.updated_at = datetime.utcnow()
+                domain.last_modified_by = modified_by
+                domain.updated_at = datetime.utcnow()
                 
                 await session.commit()
-                return project
+                return domain
                 
             except Exception as e:
                 await session.rollback()
-                raise Exception(f"Failed to update project: {str(e)}")
+                raise Exception(f"Failed to update domain: {str(e)}")
     
-    async def get_project(self, project_id: str) -> Optional[Project]:
-        """Get project by ID"""
+    async def get_domain(self, domain_id: str) -> Optional[Domain]:
+        """Get domain by ID"""
         async with self.session_manager.get_async_db_session() as session:
             result = await session.execute(
-                select(Project).where(Project.project_id == project_id)
+                select(Domain).where(Domain.domain_id == domain_id)
             )
             return result.scalar_one_or_none()
     
-    async def list_projects(self, status: Optional[str] = None) -> List[Project]:
-        """List projects with optional status filter"""
+    async def list_domains(self, status: Optional[str] = None) -> List[Domain]:
+        """List domains with optional status filter"""
         async with self.session_manager.get_async_db_session() as session:
-            query = select(Project)
+            query = select(Domain)
             if status:
-                query = query.where(Project.status == status)
+                query = query.where(Domain.status == status)
             result = await session.execute(query)
             return result.scalars().all()
 
@@ -249,21 +249,21 @@ class ProjectPersistenceService:
 class UserExamplePersistenceService:
     """Service for persisting user examples to database"""
     
-    def __init__(self, session_manager: SessionManager, project_manager: ProjectManager,
+    def __init__(self, session_manager: SessionManager, domain_manager: DomainManager,
                  sql_pairs_processor=None, instructions_processor=None):
         self.session_manager = session_manager
-        self.project_manager = project_manager
+        self.domain_manager = domain_manager
         self.sql_pairs_processor = sql_pairs_processor
         self.instructions_processor = instructions_processor
     
     async def persist_user_example(self, user_example: UserExample, 
-                                 project_id: str) -> str:
+                                 domain_id: str) -> str:
         """Persist user example to database and optionally index to ChromaDB"""
         async with self.session_manager.get_async_db_session() as session:
             try:
                 # Convert UserExample to Example model
                 example = Example(
-                    project_id=project_id,
+                    domain_id=domain_id,
                     definition_type=user_example.definition_type.value if user_example.definition_type else 'sql_pair',
                     name=user_example.name,
                     question=user_example.description,
@@ -311,7 +311,7 @@ class UserExamplePersistenceService:
                 
                 await self.sql_pairs_processor.run(
                     sql_pairs=[sql_pair_data],
-                    project_id=example.project_id
+                    domain_id=example.domain_id
                 )
                 logger.info(f"Indexed SQL pair to ChromaDB: {example.example_id}")
                 
@@ -329,7 +329,7 @@ class UserExamplePersistenceService:
                 
                 await self.instructions_processor.run(
                     instructions=[instruction],
-                    project_id=example.project_id
+                    domain_id=example.domain_id
                 )
                 logger.info(f"Indexed instruction to ChromaDB: {example.example_id}")
                 
@@ -338,11 +338,11 @@ class UserExamplePersistenceService:
             # Don't raise the exception to avoid failing the database transaction
             # The example is still saved to the database
     
-    async def get_user_examples(self, project_id: str, 
+    async def get_user_examples(self, domain_id: str, 
                               definition_type: Optional[DefinitionType] = None) -> List[Example]:
-        """Get user examples for a project"""
+        """Get user examples for a domain"""
         async with self.session_manager.get_async_db_session() as session:
-            query = select(Example).where(Example.project_id == project_id)
+            query = select(Example).where(Example.domain_id == domain_id)
             
             if definition_type:
                 query = query.where(Example.categories.contains([definition_type.value]))
@@ -410,17 +410,17 @@ class UserExamplePersistenceService:
 class SQLFunctionPersistenceService:
     """Service for persisting SQL functions to database"""
     
-    def __init__(self, session_manager: SessionManager, project_manager: ProjectManager):
+    def __init__(self, session_manager: SessionManager, domain_manager: DomainManager):
         self.session_manager = session_manager
-        self.project_manager = project_manager
+        self.domain_manager = domain_manager
     
     async def persist_sql_function(self, function_data: Dict[str, Any], 
-                                 created_by: str, project_id: Optional[str] = None) -> str:
-        """Persist SQL function to database with optional project_id"""
+                                 created_by: str, domain_id: Optional[str] = None) -> str:
+        """Persist SQL function to database with optional domain_id"""
         async with self.session_manager.get_async_db_session() as session:
             try:
                 sql_function = SQLFunction(
-                    project_id=project_id,
+                    domain_id=domain_id,
                     name=function_data['name'],
                     display_name=function_data.get('display_name'),
                     description=function_data.get('description'),
@@ -441,15 +441,15 @@ class SQLFunctionPersistenceService:
                 raise Exception(f"Failed to persist SQL function: {str(e)}")
     
     async def persist_sql_functions_batch(self, functions_data: List[Dict[str, Any]], 
-                                        created_by: str, project_id: Optional[str] = None) -> List[str]:
-        """Persist multiple SQL functions in batch with optional project_id"""
+                                        created_by: str, domain_id: Optional[str] = None) -> List[str]:
+        """Persist multiple SQL functions in batch with optional domain_id"""
         async with self.session_manager.get_async_db_session() as session:
             try:
                 function_ids = []
                 
                 for function_data in functions_data:
                     sql_function = SQLFunction(
-                        project_id=project_id,
+                        domain_id=domain_id,
                         name=function_data['name'],
                         display_name=function_data.get('display_name'),
                         description=function_data.get('description'),
@@ -471,21 +471,21 @@ class SQLFunctionPersistenceService:
                 await session.rollback()
                 raise Exception(f"Failed to persist SQL functions batch: {str(e)}")
     
-    async def get_sql_functions(self, project_id: Optional[str] = None) -> List[SQLFunction]:
-        """Get all SQL functions, optionally filtered by project_id"""
+    async def get_sql_functions(self, domain_id: Optional[str] = None) -> List[SQLFunction]:
+        """Get all SQL functions, optionally filtered by domain_id"""
         async with self.session_manager.get_async_db_session() as session:
             query = select(SQLFunction)
-            if project_id:
-                query = query.where(SQLFunction.project_id == project_id)
+            if domain_id:
+                query = query.where(SQLFunction.domain_id == domain_id)
             result = await session.execute(query)
             return result.scalars().all()
     
-    async def get_sql_functions_by_name(self, name: str, project_id: Optional[str] = None) -> List[SQLFunction]:
-        """Get SQL functions by name, optionally filtered by project_id"""
+    async def get_sql_functions_by_name(self, name: str, domain_id: Optional[str] = None) -> List[SQLFunction]:
+        """Get SQL functions by name, optionally filtered by domain_id"""
         async with self.session_manager.get_async_db_session() as session:
             query = select(SQLFunction).where(SQLFunction.name == name)
-            if project_id:
-                query = query.where(SQLFunction.project_id == project_id)
+            if domain_id:
+                query = query.where(SQLFunction.domain_id == domain_id)
             result = await session.execute(query)
             return result.scalars().all()
     
@@ -498,22 +498,22 @@ class SQLFunctionPersistenceService:
             return result.scalar_one_or_none()
     
     async def get_global_sql_functions(self) -> List[SQLFunction]:
-        """Get all SQL functions that are not associated with any project (global functions)"""
+        """Get all SQL functions that are not associated with any domain (global functions)"""
         async with self.session_manager.get_async_db_session() as session:
             result = await session.execute(
-                select(SQLFunction).where(SQLFunction.project_id.is_(None))
+                select(SQLFunction).where(SQLFunction.domain_id.is_(None))
             )
             return result.scalars().all()
     
-    async def search_sql_functions(self, search_term: str, project_id: Optional[str] = None) -> List[SQLFunction]:
+    async def search_sql_functions(self, search_term: str, domain_id: Optional[str] = None) -> List[SQLFunction]:
         """Search SQL functions by name or description"""
         async with self.session_manager.get_async_db_session() as session:
             query = select(SQLFunction).where(
                 (SQLFunction.name.ilike(f"%{search_term}%")) |
                 (SQLFunction.description.ilike(f"%{search_term}%"))
             )
-            if project_id:
-                query = query.where(SQLFunction.project_id == project_id)
+            if domain_id:
+                query = query.where(SQLFunction.domain_id == domain_id)
             result = await session.execute(query)
             return result.scalars().all()
     
@@ -565,13 +565,13 @@ class SQLFunctionPersistenceService:
                 await session.rollback()
                 raise Exception(f"Failed to delete SQL function: {str(e)}")
     
-    async def get_sql_function_summary(self, project_id: Optional[str] = None) -> Dict[str, Any]:
-        """Get summary of SQL functions for a project or globally"""
-        functions = await self.get_sql_functions(project_id)
+    async def get_sql_function_summary(self, domain_id: Optional[str] = None) -> Dict[str, Any]:
+        """Get summary of SQL functions for a domain or globally"""
+        functions = await self.get_sql_functions(domain_id)
         
         summary = {
             'total_functions': len(functions),
-            'project_id': project_id,
+            'domain_id': domain_id,
             'return_types': {},
             'recent_functions': [],
             'total_parameters': 0
@@ -598,15 +598,15 @@ class SQLFunctionPersistenceService:
         
         return summary
     
-    async def copy_sql_function_to_project(self, function_id: str, target_project_id: str, 
+    async def copy_sql_function_to_domain(self, function_id: str, target_domain_id: str, 
                                          created_by: str) -> str:
-        """Copy a SQL function to another project"""
+        """Copy a SQL function to another domain"""
         try:
             source_function = await self.get_sql_function(function_id)
             if not source_function:
                 raise ValueError(f"SQL Function {function_id} not found")
             
-            # Create a copy with new project_id
+            # Create a copy with new domain_id
             function_data = {
                 'name': source_function.name,
                 'display_name': source_function.display_name,
@@ -621,7 +621,7 @@ class SQLFunctionPersistenceService:
                 }
             }
             
-            return await self.persist_sql_function(function_data, created_by, target_project_id)
+            return await self.persist_sql_function(function_data, created_by, target_domain_id)
             
         except Exception as e:
             raise Exception(f"Failed to copy SQL function: {str(e)}")
@@ -630,17 +630,17 @@ class SQLFunctionPersistenceService:
 class InstructionPersistenceService:
     """Service for persisting instructions to database"""
     
-    def __init__(self, session_manager: SessionManager, project_manager: ProjectManager):
+    def __init__(self, session_manager: SessionManager, domain_manager: DomainManager):
         self.session_manager = session_manager
-        self.project_manager = project_manager
+        self.domain_manager = domain_manager
     
     async def persist_instruction(self, instruction_data: Dict[str, Any], 
-                                project_id: str, created_by: str) -> str:
+                                domain_id: str, created_by: str) -> str:
         """Persist instruction to database"""
         async with self.session_manager.get_async_db_session() as session:
             try:
                 instruction = Instruction(
-                    project_id=project_id,
+                    domain_id=domain_id,
                     question=instruction_data['question'],
                     instructions=instruction_data['instructions'],
                     sql_query=instruction_data['sql_query'],
@@ -659,7 +659,7 @@ class InstructionPersistenceService:
                 raise Exception(f"Failed to persist instruction: {str(e)}")
     
     async def persist_instructions_batch(self, instructions_data: List[Dict[str, Any]], 
-                                       project_id: str, created_by: str) -> List[str]:
+                                       domain_id: str, created_by: str) -> List[str]:
         """Persist multiple instructions in batch"""
         async with self.session_manager.get_async_db_session() as session:
             try:
@@ -667,7 +667,7 @@ class InstructionPersistenceService:
                 
                 for instruction_data in instructions_data:
                     instruction = Instruction(
-                        project_id=project_id,
+                        domain_id=domain_id,
                         question=instruction_data['question'],
                         instructions=instruction_data['instructions'],
                         sql_query=instruction_data['sql_query'],
@@ -687,11 +687,11 @@ class InstructionPersistenceService:
                 await session.rollback()
                 raise Exception(f"Failed to persist instructions batch: {str(e)}")
     
-    async def get_instructions(self, project_id: str) -> List[Instruction]:
-        """Get all instructions for a project"""
+    async def get_instructions(self, domain_id: str) -> List[Instruction]:
+        """Get all instructions for a domain"""
         async with self.session_manager.get_async_db_session() as session:
             result = await session.execute(
-                select(Instruction).where(Instruction.project_id == project_id)
+                select(Instruction).where(Instruction.domain_id == domain_id)
             )
             return result.scalars().all()
     
@@ -763,17 +763,17 @@ class InstructionPersistenceService:
 class KnowledgeBasePersistenceService:
     """Service for persisting knowledge base entries to database"""
     
-    def __init__(self, session_manager: SessionManager, project_manager: ProjectManager):
+    def __init__(self, session_manager: SessionManager, domain_manager: DomainManager):
         self.session_manager = session_manager
-        self.project_manager = project_manager
+        self.domain_manager = domain_manager
     
     async def persist_knowledge_base_entry(self, kb_data: Dict[str, Any], 
-                                         project_id: str, created_by: str) -> str:
+                                         domain_id: str, created_by: str) -> str:
         """Persist knowledge base entry to database"""
         async with self.session_manager.get_async_db_session() as session:
             try:
                 kb_entry = KnowledgeBase(
-                    project_id=project_id,
+                    domain_id=domain_id,
                     name=kb_data['name'],
                     display_name=kb_data.get('display_name'),
                     description=kb_data.get('description'),
@@ -794,7 +794,7 @@ class KnowledgeBasePersistenceService:
                 raise Exception(f"Failed to persist knowledge base entry: {str(e)}")
     
     async def persist_knowledge_base_batch(self, kb_entries_data: List[Dict[str, Any]], 
-                                         project_id: str, created_by: str) -> List[str]:
+                                         domain_id: str, created_by: str) -> List[str]:
         """Persist multiple knowledge base entries in batch"""
         async with self.session_manager.get_async_db_session() as session:
             try:
@@ -802,7 +802,7 @@ class KnowledgeBasePersistenceService:
                 
                 for kb_data in kb_entries_data:
                     kb_entry = KnowledgeBase(
-                        project_id=project_id,
+                        domain_id=domain_id,
                         name=kb_data['name'],
                         display_name=kb_data.get('display_name'),
                         description=kb_data.get('description'),
@@ -824,11 +824,11 @@ class KnowledgeBasePersistenceService:
                 await session.rollback()
                 raise Exception(f"Failed to persist knowledge base batch: {str(e)}")
     
-    async def get_knowledge_base_entries(self, project_id: str, 
+    async def get_knowledge_base_entries(self, domain_id: str, 
                                        content_type: Optional[str] = None) -> List[KnowledgeBase]:
-        """Get knowledge base entries for a project"""
+        """Get knowledge base entries for a domain"""
         async with self.session_manager.get_async_db_session() as session:
-            query = select(KnowledgeBase).where(KnowledgeBase.project_id == project_id)
+            query = select(KnowledgeBase).where(KnowledgeBase.domain_id == domain_id)
             
             if content_type:
                 query = query.where(KnowledgeBase.content_type == content_type)
@@ -852,12 +852,12 @@ class KnowledgeBasePersistenceService:
             )
             return result.scalar_one_or_none()
     
-    async def search_knowledge_base(self, project_id: str, search_term: str) -> List[KnowledgeBase]:
+    async def search_knowledge_base(self, domain_id: str, search_term: str) -> List[KnowledgeBase]:
         """Search knowledge base entries by content"""
         async with self.session_manager.get_async_db_session() as session:
             result = await session.execute(
                 select(KnowledgeBase).where(
-                    KnowledgeBase.project_id == project_id,
+                    KnowledgeBase.domain_id == domain_id,
                     KnowledgeBase.content.ilike(f"%{search_term}%")
                 )
             )
@@ -911,9 +911,9 @@ class KnowledgeBasePersistenceService:
                 await session.rollback()
                 raise Exception(f"Failed to delete knowledge base entry: {str(e)}")
     
-    async def get_knowledge_base_summary(self, project_id: str) -> Dict[str, Any]:
-        """Get summary of knowledge base for a project"""
-        entries = await self.get_knowledge_base_entries(project_id)
+    async def get_knowledge_base_summary(self, domain_id: str) -> Dict[str, Any]:
+        """Get summary of knowledge base for a domain"""
+        entries = await self.get_knowledge_base_entries(domain_id)
         
         summary = {
             'total_entries': len(entries),
@@ -947,30 +947,30 @@ class KnowledgeBasePersistenceService:
 class PersistenceServiceFactory:
     """Factory class to provide access to all persistence services"""
     
-    def __init__(self, session_manager: SessionManager, project_manager: ProjectManager,
+    def __init__(self, session_manager: SessionManager, domain_manager: DomainManager,
                  sql_pairs_processor=None, instructions_processor=None):
         self.session_manager = session_manager
-        self.project_manager = project_manager
+        self.domain_manager = domain_manager
         self.sql_pairs_processor = sql_pairs_processor
         self.instructions_processor = instructions_processor
         
         # Initialize all services
-        self.definition_service = DefinitionPersistenceService(session_manager, project_manager)
-        self.project_service = ProjectPersistenceService(session_manager, project_manager)
+        self.definition_service = DefinitionPersistenceService(session_manager, domain_manager)
+        self.domain_service = DomainPersistenceService(session_manager, domain_manager)
         self.user_example_service = UserExamplePersistenceService(
-            session_manager, project_manager, sql_pairs_processor, instructions_processor
+            session_manager, domain_manager, sql_pairs_processor, instructions_processor
         )
-        self.sql_function_service = SQLFunctionPersistenceService(session_manager, project_manager)
-        self.instruction_service = InstructionPersistenceService(session_manager, project_manager)
-        self.knowledge_base_service = KnowledgeBasePersistenceService(session_manager, project_manager)
+        self.sql_function_service = SQLFunctionPersistenceService(session_manager, domain_manager)
+        self.instruction_service = InstructionPersistenceService(session_manager, domain_manager)
+        self.knowledge_base_service = KnowledgeBasePersistenceService(session_manager, domain_manager)
     
     def get_definition_service(self) -> DefinitionPersistenceService:
         """Get definition persistence service"""
         return self.definition_service
     
-    def get_project_service(self) -> ProjectPersistenceService:
-        """Get project persistence service"""
-        return self.project_service
+    def get_domain_service(self) -> DomainPersistenceService:
+        """Get domain persistence service"""
+        return self.domain_service
     
     def get_user_example_service(self) -> UserExamplePersistenceService:
         """Get user example persistence service"""
@@ -992,7 +992,7 @@ class PersistenceServiceFactory:
         """Get all services as a dictionary"""
         return {
             'definition': self.definition_service,
-            'project': self.project_service,
+            'domain': self.domain_service,
             'user_example': self.user_example_service,
             'sql_function': self.sql_function_service,
             'instruction': self.instruction_service,
@@ -1010,32 +1010,32 @@ if __name__ == "__main__":
     # session_manager = SessionManager(ServiceConfig())
     # 
     # # Initialize services
-    # project_manager = ProjectManager(None)  # We don't need a session for ProjectManager
-    # factory = PersistenceServiceFactory(session_manager, project_manager)
+    # domain_manager = DomainManager(None)  # We don't need a session for DomainManager
+    # factory = PersistenceServiceFactory(session_manager, domain_manager)
     # 
     # # Use services
-    # project_service = factory.get_project_service()
+    # domain_service = factory.get_domain_service()
     # kb_service = factory.get_knowledge_base_service()
     # 
-    # # Create a project (async)
-    # project = Project(
-    #     project_id='test_project',
-    #     display_name='Test Project',
-    #     description='A test project'
+    # # Create a domain (async)
+    # domain = Domain(
+    #     domain_id='test_domain',
+    #     display_name='Test Domain',
+    #     description='A test domain'
     # )
-    # project_id = await project_service.persist_project(project, 'admin')
+    # domain_id = await domain_service.persist_domain(domain, 'admin')
     # 
     # # Add knowledge base entry (async)
     # kb_data = {
     #     'name': 'business_rules',
     #     'display_name': 'Business Rules',
-    #     'description': 'Project business rules',
+    #     'description': 'Domain business rules',
     #     'content': 'All sales must be above $100',
     #     'content_type': 'text'
     # }
-    # kb_id = await kb_service.persist_knowledge_base_entry(kb_data, project_id, 'admin')
+    # kb_id = await kb_service.persist_knowledge_base_entry(kb_data, domain_id, 'admin')
     # 
-    # print(f"Created project: {project_id}")
+    # print(f"Created domain: {domain_id}")
     # print(f"Created KB entry: {kb_id}")
     
     pass

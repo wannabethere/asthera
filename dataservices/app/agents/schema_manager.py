@@ -34,13 +34,9 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers.string import StrOutputParser
 from langchain_openai import ChatOpenAI
 
-# Import our models
-from app.schemas.dbmodels import (
-    Project, Table
-)
 
 from app.service.models import (
-    ProjectContext, SchemaInput, DocumentedTable, EnhancedColumnDefinition, ColumnDocumentationSchema, ColumnUsageType
+    DomainContext, SchemaInput, DocumentedTable, EnhancedColumnDefinition, ColumnDocumentationSchema, ColumnUsageType
 )
 from app.core.dependencies import get_llm
 
@@ -60,7 +56,7 @@ class LLMSchemaDocumentationGenerator:
         
     
     async def document_table_schema(self, schema_input: SchemaInput, 
-                                  project_context: ProjectContext) -> DocumentedTable:
+                                  project_context: DomainContext) -> DocumentedTable:
         """Generate comprehensive table documentation"""
         
         # Generate table-level documentation
@@ -92,7 +88,7 @@ class LLMSchemaDocumentationGenerator:
         )
     
     async def _generate_table_documentation(self, schema_input: SchemaInput, 
-                                          project_context: ProjectContext) -> Dict[str, Any]:
+                                          domain_context: DomainContext) -> Dict[str, Any]:
         """Generate table-level documentation"""
         print("i am in _generate_table_documentation")
         system_prompt = """You are an expert data architect and business analyst. 
@@ -144,10 +140,10 @@ class LLMSchemaDocumentationGenerator:
             "description": schema_input.table_description if schema_input.table_description else "Not provided",
             "columns": len(schema_input.columns) if schema_input.columns else 0,
             "columnOverview": self._format_columns_for_prompt(schema_input.columns),
-            "domain": project_context.business_domain,
-            "purpose": project_context.purpose,
-            "target_users": ','.join(project_context.target_users),
-            "key_business_concepts": ','.join(project_context.key_business_concepts),
+            "domain": domain_context.business_domain,
+            "purpose": domain_context.purpose,
+            "target_users": ','.join(domain_context.target_users),
+            "key_business_concepts": ','.join(domain_context.key_business_concepts),
             "sample_data": json.dumps(schema_input.sample_data[:3] if schema_input.sample_data else [], indent=2)
         } 
         
@@ -194,7 +190,7 @@ class LLMSchemaDocumentationGenerator:
     
     async def _generate_column_documentation(self, column: Dict[str, Any], 
                                            schema_input: SchemaInput,
-                                           project_context: ProjectContext) -> EnhancedColumnDefinition:
+                                           domain_context: DomainContext) -> EnhancedColumnDefinition:
         """Generate enhanced column documentation using Langchain prompt template"""
         
         # Create the output parser
@@ -258,10 +254,10 @@ class LLMSchemaDocumentationGenerator:
             "existing_description": column.get('description', 'None'),
             "table_name": schema_input.table_name,
             "other_columns": [c['name'] for c in schema_input.columns if c['name'] != column['name']],
-            "business_domain": project_context.business_domain,
-            "purpose": project_context.purpose,
-            "key_concepts": ', '.join(project_context.key_business_concepts),
-            "compliance": ', '.join(project_context.compliance_requirements or []),
+            "business_domain": domain_context.business_domain,
+            "purpose": domain_context.purpose,
+            "key_concepts": ', '.join(domain_context.key_business_concepts),
+            "compliance": ', '.join(domain_context.compliance_requirements or []),
             "sample_values": self._extract_sample_values_for_column(column['name'], schema_input.sample_data)
         }
         
@@ -525,7 +521,7 @@ class SchemaDocumentationUtils:
     @staticmethod
     async def process_and_store_schema(
         documented_table: DocumentedTable,
-        project_context: ProjectContext,
+        domain_context: DomainContext,
         document_store: Any,
         table_doc_store: Any,
         embedder: Any = None
@@ -548,7 +544,7 @@ class SchemaDocumentationUtils:
             
             # Step 2: Convert to MDL format
             print("🔄 Step 2: Converting to MDL format...")
-            mdl_json = SchemaDocumentationUtils.documented_table_to_mdl(documented_table, project_context.project_id)
+            mdl_json = SchemaDocumentationUtils.documented_table_to_mdl(documented_table, domain_context.domain_id)
             print("✅ MDL format generated")
             
             # Step 3: Process MDL using db_schema.py (which handles helper utilities)
@@ -568,13 +564,13 @@ class SchemaDocumentationUtils:
                 embedder=embedder
             )
             
-            result = await table_description.run(mdl_json, project_id=project_context.project_id)
+            result = await table_description.run(mdl_json, project_id=  domain_context.domain_id)
             print(f"✅ TableDescription processed {result.get('documents_written', 0)} documents using helper utilities")
             
             return {
                 "success": True,
                 "documents_written": result.get('documents_written', 0),
-                "project_id": project_context.project_id,
+                "project_id": domain_context.domain_id,
                 "table_name": documented_table.table_name,
                 "documented_table": documented_table,
                 "mdl_json": mdl_json,
@@ -588,13 +584,13 @@ class SchemaDocumentationUtils:
             return {
                 "success": False,
                 "error": str(e),
-                "project_id": project_context.project_id
+                "project_id": domain_context.domain_id
             }
 
     @staticmethod
     async def process_schema_input_and_store(
         schema_input: SchemaInput,
-        project_context: ProjectContext,
+        domain_context: DomainContext,
         document_store: Any,
         embedder: Any = None,
         llm: Any = None
@@ -617,13 +613,13 @@ class SchemaDocumentationUtils:
             # Step 1: Generate schema documentation
             print("🔄 Step 1: Generating schema documentation...")
             schema_manager = LLMSchemaDocumentationGenerator(llm)
-            documented_table = await schema_manager.document_table_schema(schema_input, project_context)
+            documented_table = await schema_manager.document_table_schema(schema_input, domain_context)
             print("✅ Schema documentation generated")
             
             # Step 2: Process and store using the documented table
             return await SchemaDocumentationUtils.process_and_store_schema(
                 documented_table=documented_table,
-                project_context=project_context,
+                domain_context=domain_context,
                 document_store=document_store,
                 embedder=embedder
             )
@@ -635,7 +631,7 @@ class SchemaDocumentationUtils:
             return {
                 "success": False,
                 "error": str(e),
-                "project_id": project_context.project_id
+                "project_id": domain_context.domain_id
             }
 
 

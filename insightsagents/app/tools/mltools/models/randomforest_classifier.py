@@ -12,17 +12,17 @@ from sklearn.metrics import (
 import joblib
 import warnings
 from datetime import datetime
+from ..base_pipe import BasePipe
 
 
-class RFPipe:
+class RFPipe(BasePipe):
     """
     A pipeline-style Random Forest classifier tool that enables functional composition
     with a meterstick-like interface.
     """
     
-    def __init__(self, data=None):
-        """Initialize with optional data"""
-        self.data = data
+    def _initialize_results(self):
+        """Initialize the results storage for Random Forest classification analysis"""
         self.features = None
         self.labels = None
         self.feature_columns = []
@@ -36,37 +36,118 @@ class RFPipe:
         self.current_analysis = None
         self.train_test_splits = {}
     
-    def __or__(self, other):
-        """Enable the | (pipe) operator for function composition"""
-        if callable(other):
-            return other(self)
-        raise ValueError(f"Cannot pipe RFPipe to {type(other)}")
+    def _copy_results(self, source_pipe):
+        """Copy results from source pipe to this pipe"""
+        if hasattr(source_pipe, 'features'):
+            self.features = source_pipe.features.copy() if source_pipe.features is not None else None
+        if hasattr(source_pipe, 'labels'):
+            self.labels = source_pipe.labels.copy() if source_pipe.labels is not None else None
+        if hasattr(source_pipe, 'feature_columns'):
+            self.feature_columns = source_pipe.feature_columns.copy()
+        if hasattr(source_pipe, 'target_column'):
+            self.target_column = source_pipe.target_column
+        if hasattr(source_pipe, 'models'):
+            self.models = source_pipe.models.copy()
+        if hasattr(source_pipe, 'predictions'):
+            self.predictions = source_pipe.predictions.copy()
+        if hasattr(source_pipe, 'metrics'):
+            self.metrics = source_pipe.metrics.copy()
+        if hasattr(source_pipe, 'scalers'):
+            self.scalers = source_pipe.scalers.copy()
+        if hasattr(source_pipe, 'encoders'):
+            self.encoders = source_pipe.encoders.copy()
+        if hasattr(source_pipe, 'feature_selectors'):
+            self.feature_selectors = source_pipe.feature_selectors.copy()
+        if hasattr(source_pipe, 'current_analysis'):
+            self.current_analysis = source_pipe.current_analysis
+        if hasattr(source_pipe, 'train_test_splits'):
+            self.train_test_splits = source_pipe.train_test_splits.copy()
     
-    def copy(self):
-        """Create a shallow copy with deep copy of data"""
-        new_pipe = RFPipe()
-        if self.data is not None:
-            new_pipe.data = self.data.copy()
-        new_pipe.features = self.features.copy() if self.features is not None else None
-        new_pipe.labels = self.labels.copy() if self.labels is not None else None
-        new_pipe.feature_columns = self.feature_columns.copy()
-        new_pipe.target_column = self.target_column
-        new_pipe.models = self.models.copy()
-        new_pipe.predictions = self.predictions.copy()
-        new_pipe.metrics = self.metrics.copy()
-        new_pipe.scalers = self.scalers.copy()
-        new_pipe.encoders = self.encoders.copy()
-        new_pipe.feature_selectors = self.feature_selectors.copy()
-        new_pipe.current_analysis = self.current_analysis
-        new_pipe.train_test_splits = self.train_test_splits.copy()
-        return new_pipe
-    
-    @classmethod
-    def from_dataframe(cls, df):
-        """Create an RFPipe from a dataframe"""
-        pipe = cls()
-        pipe.data = df.copy()
-        return pipe
+    def get_summary(self, **kwargs) -> Dict[str, Any]:
+        """
+        Get a summary of the Random Forest classification analysis results.
+        
+        Parameters:
+        -----------
+        **kwargs : dict
+            Additional arguments (not used in Random Forest classification pipe)
+            
+        Returns:
+        --------
+        dict
+            Summary of the Random Forest classification analysis results
+        """
+        if not any([self.models, self.predictions, self.metrics]):
+            return {"error": "No Random Forest classification analysis has been performed"}
+        
+        # Count analyses by type
+        analysis_types = {
+            'models': len(self.models),
+            'predictions': len(self.predictions),
+            'metrics': len(self.metrics),
+            'scalers': len(self.scalers),
+            'encoders': len(self.encoders),
+            'feature_selectors': len(self.feature_selectors),
+            'train_test_splits': len(self.train_test_splits)
+        }
+        
+        # Get model information
+        models_info = {}
+        for name, model in self.models.items():
+            models_info[name] = {
+                "type": "RandomForestClassifier",
+                "n_estimators": model.get('n_estimators', 'unknown'),
+                "max_depth": model.get('max_depth', 'unknown'),
+                "min_samples_split": model.get('min_samples_split', 'unknown'),
+                "min_samples_leaf": model.get('min_samples_leaf', 'unknown')
+            }
+        
+        # Get metrics summary
+        metrics_summary = {}
+        for name, metric_data in self.metrics.items():
+            if isinstance(metric_data, dict):
+                metrics_summary[name] = {
+                    "accuracy": metric_data.get('accuracy', None),
+                    "precision": metric_data.get('precision', None),
+                    "recall": metric_data.get('recall', None),
+                    "f1_score": metric_data.get('f1_score', None),
+                    "auc_roc": metric_data.get('auc_roc', None)
+                }
+        
+        # Get prediction information
+        predictions_info = {}
+        for name, pred_data in self.predictions.items():
+            predictions_info[name] = {
+                "n_predictions": len(pred_data.get('y_pred', [])),
+                "data_split": pred_data.get('data_split', 'unknown'),
+                "model_name": pred_data.get('model_name', 'unknown')
+            }
+        
+        return {
+            "total_analyses": sum(analysis_types.values()),
+            "feature_columns": self.feature_columns,
+            "target_column": self.target_column,
+            "analysis_types": analysis_types,
+            "current_analysis": self.current_analysis,
+            "available_models": list(self.models.keys()),
+            "available_predictions": list(self.predictions.keys()),
+            "available_metrics": list(self.metrics.keys()),
+            "available_scalers": list(self.scalers.keys()),
+            "available_encoders": list(self.encoders.keys()),
+            "available_feature_selectors": list(self.feature_selectors.keys()),
+            "available_train_test_splits": list(self.train_test_splits.keys()),
+            "models_info": models_info,
+            "metrics_summary": metrics_summary,
+            "predictions_info": predictions_info,
+            "scalers_info": {name: {"type": type(scaler).__name__} 
+                           for name, scaler in self.scalers.items()},
+            "encoders_info": {name: {"type": type(encoder).__name__} 
+                            for name, encoder in self.encoders.items()},
+            "feature_selectors_info": {name: {"type": type(selector).__name__} 
+                                     for name, selector in self.feature_selectors.items()},
+            "train_test_splits_info": {name: {"test_size": split.get('test_size', 'unknown')} 
+                                     for name, split in self.train_test_splits.items()}
+        }
 
 
 # Feature Engineering Functions

@@ -8,10 +8,10 @@ from datetime import datetime
 # DATA MODELS
 # ============================================================================
 
-class ProjectContextModel(BaseModel):
+class DomainContextModel(BaseModel):
     """Business context for schema documentation (Pydantic version)"""
-    project_id: str
-    project_name: str
+    domain_id: str
+    domain_name: str
     business_domain: str
     purpose: str
     target_users: List[str]
@@ -19,18 +19,18 @@ class ProjectContextModel(BaseModel):
     data_sources: Optional[List[str]] = None
     compliance_requirements: Optional[List[str]] = None
 
-class CreateProjectRequest(BaseModel):
-    """Request model for creating projects"""
-    project_id: str = Field(..., description="Project ID")
-    display_name: str = Field(..., description="Display name for the project")
-    description: str = Field(..., description="Description of the project")
-    created_by: str = Field(..., description="User creating the project")
-    context: ProjectContextModel | None = Field(..., description="Business context for the project")
+class CreateDomainRequest(BaseModel):
+    """Request model for creating domains"""
+    domain_id: str = Field(..., description="Domain ID")
+    display_name: str = Field(..., description="Display name for the domain")
+    description: str = Field(..., description="Description of the domain")
+    created_by: str = Field(..., description="User creating the domain")
+    context: DomainContextModel | None = Field(..., description="Business context for the domain")
 
 
 
-class ProjectResponse(BaseModel):
-    project_id: str
+class DomainResponse(BaseModel):
+    domain_id: str
     display_name: str
     description: str | None = None
     created_by: str | None = None
@@ -68,10 +68,10 @@ class SchemaInput:
 
 
 @dataclass
-class ProjectContext:
+class DomainContext:
     """Business context for schema documentation"""
-    project_id: str
-    project_name: str
+    domain_id: str
+    domain_name: str
     business_domain: str
     purpose: str
     target_users: List[str]
@@ -202,19 +202,19 @@ class AddTableRequest(BaseModel):
 
 
 # Import your models (assuming they're in a models.py file)
-# from models import Base, Project, Table, SQLColumn, Metric, View, CalculatedColumn
+# from models import Base, Domain, Table, SQLColumn, Metric, View, CalculatedColumn
 
 # ============================================================================
 # PYDANTIC MODELS FOR API
 # ============================================================================
 
-class ProjectCreate(BaseModel):
-    project_id: str = Field(..., max_length=50)
+class DomainCreate(BaseModel):
+    domain_id: str = Field(..., max_length=50)
     display_name: str = Field(..., max_length=200)
     description: Optional[str] = None
     created_by: str = Field(..., max_length=100)
 
-class ProjectUpdate(BaseModel):
+class DomainUpdate(BaseModel):
     display_name: Optional[str] = Field(None, max_length=200)
     description: Optional[str] = None
 
@@ -266,10 +266,10 @@ class CalculatedColumnCreate(BaseModel):
     json_metadata: Optional[Dict[str, Any]] = Field({}, description="Additional metadata")
 
 # Response models
-class ProjectResponse(BaseModel):
+class DomainResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
-    project_id: str
+    domain_id: str
     display_name: str
     description: Optional[str]
     status: str
@@ -296,7 +296,7 @@ class TableResponse(BaseModel):
 
 class ExampleCreate(BaseModel):
     """Request model for creating examples"""
-    project_id: str = Field(..., description="Project ID")
+    domain_id: str = Field(..., description="Domain ID")
     definition_type: DefinitionType = Field(..., description="Type of definition")
     name: str = Field(..., description="Example name")
     question: str = Field(..., description="Question or description")
@@ -332,7 +332,7 @@ class ExampleRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
     example_id: str
-    project_id: str
+    domain_id: str
     definition_type: str
     name: str
     question: str
@@ -357,7 +357,7 @@ class ExampleRead(BaseModel):
 
 class UserExampleCreate(BaseModel):
     """Request model for creating user examples"""
-    project_id: str = Field(..., description="Project ID")
+    domain_id: str = Field(..., description="Domain ID")
     definition_type: DefinitionType = Field(..., description="Type of definition")
     name: str = Field(..., description="Example name")
     description: str = Field(..., description="Example description")
@@ -380,7 +380,7 @@ class UserExampleRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
     example_id: str
-    project_id: str
+    domain_id: str
     definition_type: str
     name: str
     question: str
@@ -405,7 +405,7 @@ class UserExampleRead(BaseModel):
 
 class InstructionCreate(BaseModel):
     """Request model for creating instructions"""
-    project_id: str = Field(..., description="Project ID")
+    domain_id: str = Field(..., description="Domain ID")
     question: str = Field(..., description="Question or instruction title")
     instructions: str = Field(..., description="Detailed instructions")
     sql_query: str = Field(..., description="SQL query")
@@ -427,7 +427,7 @@ class InstructionRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
     instruction_id: str
-    project_id: str
+    domain_id: str
     question: str
     instructions: str
     sql_query: str
@@ -445,7 +445,7 @@ class InstructionRead(BaseModel):
 
 class KnowledgeBaseCreate(BaseModel):
     """Request model for creating knowledge base entries"""
-    project_id: str = Field(..., description="Project ID")
+    domain_id: str = Field(..., description="Domain ID")
     name: str = Field(..., description="Knowledge base entry name")
     display_name: Optional[str] = Field(None, description="Display name")
     description: Optional[str] = Field(None, description="Description")
@@ -471,7 +471,7 @@ class KnowledgeBaseRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
     kb_id: str
-    project_id: str
+    domain_id: str
     name: str
     display_name: Optional[str]
     description: Optional[str]

@@ -14,11 +14,17 @@ from app.tools.mltools.models.causal_inference import (
     plot_treatment_effects,
     plot_covariate_balance,
     save_causal_model,
+    load_causal_model,
+    add_features,
+    inference,
+    get_inference_results,
     print_causal_summary
 )
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
+import os
+import tempfile
 
 
 # Example 1: A/B Testing for E-commerce Website Feature
@@ -417,10 +423,94 @@ def example_marketing_campaign_analysis():
         # Sensitivity analysis
         | sensitivity_analysis(analysis_name='campaign_sensitivity')
         
+        # Save the trained model
+        | save_causal_model(['all'], 'marketing_campaign_model.joblib')
+        
         # Summary
         | print_causal_summary()
     )
     
+    print("\n=== Loading Saved Model for Additional Analysis ===")
+    
+    # Load the saved model for additional analysis
+    loaded_campaign_model = (
+        CausalPipe.from_dataframe(campaign_data)
+        | load_causal_model('marketing_campaign_model.joblib', 'loaded_campaign_model')
+    )
+    
+    print("Model loaded successfully. Available components:")
+    print(f"- Propensity models: {list(loaded_campaign_model.propensity_models.keys())}")
+    print(f"- Treatment effects: {list(loaded_campaign_model.treatment_effects.keys())}")
+    print(f"- Balance tests: {list(loaded_campaign_model.balance_tests.keys())}")
+    
+    # Add new features to the loaded model
+    campaign_data['high_value_customer'] = (campaign_data['annual_income'] > 100000).astype(int)
+    campaign_data['engagement_income_interaction'] = campaign_data['engagement_score'] * campaign_data['annual_income'] / 1000000
+    
+    # Create new pipeline with additional features
+    enhanced_campaign_analysis = (
+        CausalPipe.from_dataframe(campaign_data)
+        | load_causal_model('marketing_campaign_model.joblib', 'enhanced_model')
+        
+        # Add new features
+        | add_features(
+            feature_columns=['high_value_customer', 'engagement_income_interaction'],
+            feature_type='covariate',
+            feature_name='enhanced_features'
+        )
+        
+        # Re-prepare data with new features
+        | prepare_causal_data(
+            treatment_column='received_campaign',
+            outcome_column='made_purchase',
+            covariate_columns=[
+                'age', 'annual_income', 'previous_purchases_12m', 'engagement_score',
+                'loyalty_years', 'premium_location', 'email_subscriber', 'mobile_app_user',
+                'high_value_customer', 'engagement_income_interaction'
+            ]
+        )
+        
+        # Re-estimate with enhanced features
+        | estimate_propensity_scores(
+            method='random_forest',
+            model_params={'n_estimators': 150, 'random_state': 42},
+            model_name='enhanced_campaign_propensity'
+        )
+        
+        | estimate_treatment_effects(
+            methods=['ate', 'doubly_robust'],
+            outcome_model='random_forest',
+            analysis_name='enhanced_campaign_effects'
+        )
+        
+        # Save enhanced model
+        | save_causal_model(['all'], 'enhanced_marketing_campaign_model.joblib')
+        
+        | print_causal_summary()
+    )
+    
+    # Clean up saved files
+    import os
+    if os.path.exists('marketing_campaign_model.joblib'):
+        os.remove('marketing_campaign_model.joblib')
+    if os.path.exists('enhanced_marketing_campaign_model.joblib'):
+        os.remove('enhanced_marketing_campaign_model.joblib')
+    
+    print("\n=== Model Comparison ===")
+    original_ate = campaign_analysis.treatment_effects['campaign_purchase_effects']['ate']['estimate']
+    enhanced_ate = enhanced_campaign_analysis.treatment_effects['enhanced_campaign_effects']['ate']['estimate']
+    
+    print(f"Original Model ATE: {original_ate:.4f}")
+    print(f"Enhanced Model ATE: {enhanced_ate:.4f}")
+    print(f"Difference: {abs(enhanced_ate - original_ate):.4f}")
+    
+    return {
+        'original_analysis': campaign_analysis,
+        'enhanced_analysis': enhanced_campaign_analysis,
+        'loaded_model': loaded_campaign_model
+    }
+    
+    """
     # Analyze purchase amounts separately (for those who purchased)
     purchased_data = campaign_data[campaign_data['made_purchase'] == 1].copy()
     
@@ -465,7 +555,7 @@ def example_marketing_campaign_analysis():
     print(f"Selection Bias: {naive_purchase_effect - causal_purchase_effect:.4f} ({(naive_purchase_effect - causal_purchase_effect)*100:.2f}%)")
     
     return campaign_analysis
-
+    """
 
 # Example 4: Policy Intervention Evaluation
 def example_policy_intervention_evaluation():
@@ -930,6 +1020,212 @@ def example_advanced_causal_analysis():
     }
 
 
+# Example 6: Complete Pipeline with Save, Load, Add Features, and Inference
+def example_complete_pipeline():
+    """
+    Demonstrates the complete causal inference pipeline including saving, loading,
+    adding features, and performing inference.
+    """
+    print("=== Complete Pipeline Example ===")
+    
+    # Generate synthetic data for demonstration
+    np.random.seed(42)
+    n_samples = 1000
+    
+    # Generate features
+    age = np.random.normal(35, 10, n_samples)
+    income = np.random.lognormal(10, 0.5, n_samples)
+    education = np.random.normal(14, 3, n_samples)
+    health_score = np.random.normal(7, 2, n_samples)
+    
+    # Treatment assignment (confounded)
+    treatment_prob = 1 / (1 + np.exp(-(-2 + 0.01*age + 0.00001*income + 0.1*education)))
+    treatment = np.random.binomial(1, treatment_prob, n_samples)
+    
+    # Outcome (affected by treatment and confounders)
+    outcome = (
+        50 +  # Base outcome
+        5 * treatment +  # True treatment effect
+        0.1 * age +
+        0.00001 * income +
+        0.5 * education +
+        0.3 * health_score +
+        np.random.normal(0, 5, n_samples)
+    )
+    
+    # Create DataFrame
+    data = pd.DataFrame({
+        'age': age,
+        'income': income,
+        'education': education,
+        'health_score': health_score,
+        'treatment': treatment,
+        'outcome': outcome
+    })
+    
+    print("1. Initial Data Preparation and Model Training")
+    print("-" * 50)
+    
+    # Step 1: Initial pipeline with training
+    initial_pipeline = (
+        CausalPipe.from_dataframe(data)
+        | prepare_causal_data(
+            treatment_column='treatment',
+            outcome_column='outcome',
+            covariate_columns=['age', 'income', 'education', 'health_score']
+        )
+        | estimate_propensity_scores(
+            method='logistic',
+            model_name='initial_propensity'
+        )
+        | estimate_treatment_effects(
+            methods=['ate', 'doubly_robust'],
+            analysis_name='initial_effects'
+        )
+    )
+    
+    print("2. Save Trained Model")
+    print("-" * 50)
+    
+    # Step 2: Save the trained model
+    model_filename = 'complete_pipeline_model.joblib'
+    saved_pipeline = initial_pipeline | save_causal_model(['all'], model_filename)
+    print(f"Model saved to: {model_filename}")
+    
+    print("3. Load Model and Add New Features")
+    print("-" * 50)
+    
+    # Step 3: Load the model and add new features
+    # First, add new features to the data
+    data['age_squared'] = data['age'] ** 2
+    data['income_log'] = np.log(data['income'])
+    data['education_income_interaction'] = data['education'] * data['income'] / 10000
+    
+    # Load the model with the updated data
+    loaded_pipeline = (
+        CausalPipe.from_dataframe(data)  # Start with data that includes new features
+        | load_causal_model(model_filename, 'loaded_model')
+    )
+    
+    # Add these new features to the pipeline
+    feature_pipeline = (
+        loaded_pipeline
+        | add_features(
+            feature_columns=['age_squared', 'income_log', 'education_income_interaction'],
+            feature_type='covariate',
+            feature_name='interaction_features'
+        )
+    )
+    
+    print("4. Re-estimate with New Features")
+    print("-" * 50)
+    
+    # Step 4: Re-estimate with new features
+    updated_pipeline = (
+        feature_pipeline
+        | prepare_causal_data(
+            treatment_column='treatment',
+            outcome_column='outcome',
+            covariate_columns=[
+                'age', 'income', 'education', 'health_score',
+                'age_squared', 'income_log', 'education_income_interaction'
+            ]
+        )
+        | estimate_propensity_scores(
+            method='random_forest',
+            model_params={'n_estimators': 100, 'random_state': 42},
+            model_name='updated_propensity'
+        )
+        | estimate_treatment_effects(
+            methods=['ate', 'att', 'doubly_robust'],
+            analysis_name='updated_effects'
+        )
+    )
+    
+    print("5. Perform Inference on New Data")
+    print("-" * 50)
+    
+    # Step 5: Generate new data for inference
+    np.random.seed(123)
+    n_new_samples = 500
+    
+    new_age = np.random.normal(40, 12, n_new_samples)
+    new_income = np.random.lognormal(10.2, 0.6, n_new_samples)
+    new_education = np.random.normal(15, 2.5, n_new_samples)
+    new_health_score = np.random.normal(6.5, 2.5, n_new_samples)
+    
+    new_treatment_prob = 1 / (1 + np.exp(-(-1.5 + 0.02*new_age + 0.00001*new_income + 0.15*new_education)))
+    new_treatment = np.random.binomial(1, new_treatment_prob, n_new_samples)
+    
+    new_outcome = (
+        45 +  # Different base outcome
+        6 * new_treatment +  # Slightly different treatment effect
+        0.12 * new_age +
+        0.00001 * new_income +
+        0.6 * new_education +
+        0.4 * new_health_score +
+        np.random.normal(0, 6, n_new_samples)
+    )
+    
+    new_data = pd.DataFrame({
+        'age': new_age,
+        'income': new_income,
+        'education': new_education,
+        'health_score': new_health_score,
+        'treatment': new_treatment,
+        'outcome': new_outcome,
+        'age_squared': new_age ** 2,
+        'income_log': np.log(new_income),
+        'education_income_interaction': new_education * new_income / 10000
+    })
+    
+    # Perform inference using the trained model
+    inference_pipeline = (
+        CausalPipe.from_dataframe(new_data)
+        | load_causal_model(model_filename, 'inference_model')
+        | inference(
+            inference_type='treatment_effect',
+            confidence_level=0.95,
+            bootstrap_samples=500,
+            inference_name='new_data_inference'
+        )
+    )
+    
+    print("6. Get Inference Results")
+    print("-" * 50)
+    
+    # Get inference results
+    inference_results = get_inference_results()(inference_pipeline)
+    print("Inference Results Summary:")
+    for analysis_name, results in inference_results.items():
+        if isinstance(results, dict) and 'ate' in results:
+            ate_estimate = results['ate']['estimate']
+            print(f"  {analysis_name}: ATE = {ate_estimate:.3f}")
+    
+    print("7. Compare Original vs Updated Models")
+    print("-" * 50)
+    
+    # Compare results
+    original_ate = initial_pipeline.treatment_effects['initial_effects']['ate']['estimate']
+    updated_ate = updated_pipeline.treatment_effects['updated_effects']['ate']['estimate']
+    
+    print(f"Original Model ATE: {original_ate:.3f}")
+    print(f"Updated Model ATE: {updated_ate:.3f}")
+    print(f"Difference: {abs(updated_ate - original_ate):.3f}")
+    
+    # Clean up
+    if os.path.exists(model_filename):
+        os.remove(model_filename)
+        print(f"Cleaned up: {model_filename}")
+    
+    return {
+        'initial_pipeline': initial_pipeline,
+        'updated_pipeline': updated_pipeline,
+        'inference_pipeline': inference_pipeline,
+        'inference_results': inference_results
+    }
+
+
 if __name__ == "__main__":
     print("Running Causal Inference Pipeline Examples...")
     
@@ -946,7 +1242,8 @@ if __name__ == "__main__":
     print("\n" + "="*70)
     print("Example 3: Marketing Campaign Effectiveness")
     print("="*70)
-    marketing_model = example_marketing_campaign_analysis()
+    marketing_results = example_marketing_campaign_analysis()
+    marketing_model = marketing_results['original_analysis']  # Use original for summary
     
     print("\n" + "="*70)
     print("Example 4: Policy Intervention Evaluation - Job Training")
@@ -959,6 +1256,11 @@ if __name__ == "__main__":
     advanced_models = example_advanced_causal_analysis()
     
     print("\n" + "="*70)
+    print("Example 6: Complete Pipeline with Save, Load, Add Features, and Inference")
+    print("="*70)
+    complete_pipeline_results = example_complete_pipeline()
+    
+    print("\n" + "="*70)
     print("CAUSAL INFERENCE SUMMARY")
     print("="*70)
     
@@ -967,7 +1269,8 @@ if __name__ == "__main__":
         ('Education Study', education_model),
         ('Marketing Campaign', marketing_model),
         ('Policy Evaluation', policy_model),
-        ('Advanced Analysis', advanced_models['health_analysis'])
+        ('Advanced Analysis', advanced_models['health_analysis']),
+        ('Complete Pipeline', complete_pipeline_results['initial_pipeline'])
     ]
     
     for name, model in examples:

@@ -1,6 +1,6 @@
 """
-Async Job Queue Service for Project JSON Schemas Processing
-Handles background processing of project updates using configurable storage backend
+Async Job Queue Service for Domain JSON Schemas Processing
+Handles background processing of domain updates using configurable storage backend
 """
 
 import asyncio
@@ -13,7 +13,7 @@ from typing import Dict, Any, List, Optional, Callable, Union
 from dataclasses import dataclass, asdict
 from abc import ABC, abstractmethod
 
-from app.config.settings import get_settings
+from app.core.settings import get_settings
 from app.core.provider import get_cache_provider
 
 logger = logging.getLogger(__name__)
@@ -31,12 +31,12 @@ class JobStatus(Enum):
 
 class JobType(Enum):
     """Job type enumeration"""
-    PROJECT_JSON_TABLES = "project_json_tables"
-    PROJECT_JSON_METRICS = "project_json_metrics"
-    PROJECT_JSON_VIEWS = "project_json_views"
-    PROJECT_JSON_CALCULATED_COLUMNS = "project_json_calculated_columns"
-    PROJECT_JSON_SUMMARY = "project_json_summary"
-    PROJECT_JSON_ALL = "project_json_all"
+    DOMAIN_JSON_TABLES = "domain_json_tables"
+    DOMAIN_JSON_METRICS = "domain_json_metrics"
+    DOMAIN_JSON_VIEWS = "domain_json_views"
+    DOMAIN_JSON_CALCULATED_COLUMNS = "domain_json_calculated_columns"
+    DOMAIN_JSON_SUMMARY = "domain_json_summary"
+    DOMAIN_JSON_ALL = "domain_json_all"
     CHROMADB_INDEXING = "chromadb_indexing"
     POST_COMMIT_WORKFLOW = "post_commit_workflow"
 
@@ -46,7 +46,7 @@ class JobData:
     """Job data structure"""
     job_id: str
     job_type: JobType
-    project_id: str
+    domain_id: str
     entity_type: Optional[str] = None
     entity_id: Optional[str] = None
     user_id: Optional[str] = None
@@ -404,7 +404,7 @@ class JobQueueService:
     async def submit_job(
         self,
         job_type: JobType,
-        project_id: str,
+        domain_id: str,
         entity_type: Optional[str] = None,
         entity_id: Optional[str] = None,
         user_id: Optional[str] = None,
@@ -419,7 +419,7 @@ class JobQueueService:
         job_data = JobData(
             job_id=job_id,
             job_type=job_type,
-            project_id=project_id,
+            domain_id=domain_id,
             entity_type=entity_type,
             entity_id=entity_id,
             user_id=user_id,
@@ -435,7 +435,7 @@ class JobQueueService:
         # Add to queue
         await self.storage.add_job_to_queue(job_id, priority)
         
-        logger.info(f"Submitted job {job_id} of type {job_type.value} for project {project_id}")
+        logger.info(f"Submitted job {job_id} of type {job_type.value} for domain {domain_id}")
         return job_id
     
     async def get_job(self) -> Optional[JobData]:

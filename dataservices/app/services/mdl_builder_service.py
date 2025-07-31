@@ -10,10 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from app.schemas.dbmodels import (
-    Project, Dataset, Table, SQLColumn, Metric, View, 
+    Domain, Dataset, Table, SQLColumn, Metric, View, 
     CalculatedColumn, SQLFunction, Relationship
 )
-from app.service.models import ProjectContext
+from app.service.models import DomainContext
 
 logger = logging.getLogger(__name__)
 
@@ -24,123 +24,123 @@ class MDLBuilderService:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
     
-    async def build_project_mdl(
+    async def build_domain_mdl(
         self, 
-        project_id: str, 
+        domain_id: str, 
         db: AsyncSession,
         include_llm_definitions: bool = True
     ) -> Dict[str, Any]:
         """
-        Build complete MDL definition for a project
+        Build complete MDL definition for a domain
         
         Args:
-            project_id: ID of the project
+            domain_id: ID of the domain
             db: Database session
             include_llm_definitions: Whether to include LLM-generated definitions
             
         Returns:
             Complete MDL definition dictionary
         """
-        self.logger.info(f"Building MDL for project {project_id}")
+        self.logger.info(f"Building MDL for domain {domain_id}")
         
         try:
-            # Get project with all related data
-            project = await self._get_project_with_details(project_id, db)
-            if not project:
-                raise ValueError(f"Project {project_id} not found")
+            # Get domain with all related data
+            domain = await self._get_domain_with_details(domain_id, db)
+            if not domain:
+                raise ValueError(f"Domain {domain_id} not found")
             
             # Build base MDL structure
             mdl = {
-                "project_id": project.project_id,
-                "project_name": project.display_name,
-                "description": project.description,
-                "version": project.version_string,
-                "status": project.status,
-                "created_at": project.created_at.isoformat() if project.created_at else None,
-                "updated_at": project.updated_at.isoformat() if project.updated_at else None,
-                "created_by": project.created_by,
-                "last_modified_by": project.last_modified_by,
+                "domain_id": domain.domain_id,
+                "domain_name": domain.display_name,
+                "description": domain.description,
+                "version": domain.version_string,
+                "status": domain.status,
+                "created_at": domain.created_at.isoformat() if domain.created_at else None,
+                "updated_at": domain.updated_at.isoformat() if domain.updated_at else None,
+                "created_by": domain.created_by,
+                "last_modified_by": domain.last_modified_by,
                 "generated_at": datetime.utcnow().isoformat(),
                 "mdl_version": "1.0",
                 "metadata": {
-                    "business_domain": project.json_metadata.get("context", {}).get("business_domain", "General"),
-                    "target_users": project.json_metadata.get("context", {}).get("target_users", ["Data Analysts"]),
-                    "key_concepts": project.json_metadata.get("context", {}).get("key_business_concepts", []),
-                    "project_type": "data_project",
-                    "total_tables": len(project.tables) if project.tables else 0,
-                    "total_metrics": sum(len(table.metrics) for table in project.tables) if project.tables else 0,
-                    "total_views": sum(len(table.views) for table in project.tables) if project.tables else 0,
+                    "business_domain": domain.json_metadata.get("context", {}).get("business_domain", "General"),
+                    "target_users": domain.json_metadata.get("context", {}).get("target_users", ["Data Analysts"]),
+                    "key_concepts": domain.json_metadata.get("context", {}).get("key_business_concepts", []),
+                    "domain_type": "data_domain",
+                    "total_tables": len(domain.tables) if domain.tables else 0,
+                    "total_metrics": sum(len(table.metrics) for table in domain.tables) if domain.tables else 0,
+                    "total_views": sum(len(table.views) for table in domain.tables) if domain.tables else 0,
                     "total_calculated_columns": sum(
                         len([col for col in table.columns if col.calculated_column]) 
-                        for table in project.tables
-                    ) if project.tables else 0
+                        for table in domain.tables
+                    ) if domain.tables else 0
                 }
             }
             
             # Build tables section
-            mdl["tables"] = await self._build_tables_mdl(project, db, include_llm_definitions)
+            mdl["tables"] = await self._build_tables_mdl(domain, db, include_llm_definitions)
             
             # Build metrics section
-            mdl["metrics"] = await self._build_metrics_mdl(project, db, include_llm_definitions)
+            mdl["metrics"] = await self._build_metrics_mdl(domain, db, include_llm_definitions)
             
             # Build views section
-            mdl["views"] = await self._build_views_mdl(project, db, include_llm_definitions)
+            mdl["views"] = await self._build_views_mdl(domain, db, include_llm_definitions)
             
             # Build calculated columns section
-            mdl["calculated_columns"] = await self._build_calculated_columns_mdl(project, db, include_llm_definitions)
+            mdl["calculated_columns"] = await self._build_calculated_columns_mdl(domain, db, include_llm_definitions)
             
             # Build functions section
-            mdl["functions"] = await self._build_functions_mdl(project, db)
+            mdl["functions"] = await self._build_functions_mdl(domain, db)
             
             # Build relationships section
-            mdl["relationships"] = await self._build_relationships_mdl(project, db)
+            mdl["relationships"] = await self._build_relationships_mdl(domain, db)
             
             # Build enums section (if any)
-            mdl["enums"] = await self._build_enums_mdl(project, db)
+            mdl["enums"] = await self._build_enums_mdl(domain, db)
             
             # Add LLM definitions if available and requested
-            if include_llm_definitions and project.json_metadata:
-                llm_definitions = project.json_metadata.get("llm_definitions", {})
+            if include_llm_definitions and domain.json_metadata:
+                llm_definitions = domain.json_metadata.get("llm_definitions", {})
                 if llm_definitions:
                     mdl["llm_definitions"] = llm_definitions
             
-            self.logger.info(f"Successfully built MDL for project {project_id}")
+            self.logger.info(f"Successfully built MDL for domain {domain_id}")
             return mdl
             
         except Exception as e:
-            self.logger.error(f"Error building MDL for project {project_id}: {str(e)}")
+            self.logger.error(f"Error building MDL for domain {domain_id}: {str(e)}")
             raise
     
-    async def _get_project_with_details(self, project_id: str, db: AsyncSession) -> Optional[Project]:
-        """Get project with all related details"""
+    async def _get_domain_with_details(self, domain_id: str, db: AsyncSession) -> Optional[Domain]:
+        """Get domain with all related details"""
         result = await db.execute(
-            select(Project)
+            select(Domain)
             .options(
-                selectinload(Project.tables)
+                selectinload(Domain.tables)
                 .selectinload(Table.columns)
                 .selectinload(SQLColumn.calculated_column),
-                selectinload(Project.tables)
+                selectinload(Domain.tables)
                 .selectinload(Table.metrics),
-                selectinload(Project.tables)
+                selectinload(Domain.tables)
                 .selectinload(Table.views),
-                selectinload(Project.sql_functions),
-                selectinload(Project.relationships),
-                selectinload(Project.datasets)
+                selectinload(Domain.sql_functions),
+                selectinload(Domain.relationships),
+                selectinload(Domain.datasets)
             )
-            .where(Project.project_id == project_id)
+            .where(Domain.domain_id == domain_id)
         )
         return result.scalar_one_or_none()
     
     async def _build_tables_mdl(
         self, 
-        project: Project, 
+        domain: Domain, 
         db: AsyncSession,
         include_llm_definitions: bool = True
     ) -> List[Dict[str, Any]]:
         """Build tables section of MDL"""
         tables_mdl = []
         
-        for table in project.tables:
+        for table in domain.tables:
             table_mdl = {
                 "table_id": table.table_id,
                 "name": table.name,
@@ -233,14 +233,14 @@ class MDLBuilderService:
     
     async def _build_metrics_mdl(
         self, 
-        project: Project, 
+        domain: Domain, 
         db: AsyncSession,
         include_llm_definitions: bool = True
     ) -> List[Dict[str, Any]]:
         """Build metrics section of MDL"""
         metrics_mdl = []
         
-        for table in project.tables:
+        for table in domain.tables:
             for metric in table.metrics:
                 metric_mdl = {
                     "metric_id": metric.metric_id,
@@ -278,14 +278,14 @@ class MDLBuilderService:
     
     async def _build_views_mdl(
         self, 
-        project: Project, 
+        domain: Domain, 
         db: AsyncSession,
         include_llm_definitions: bool = True
     ) -> List[Dict[str, Any]]:
         """Build views section of MDL"""
         views_mdl = []
         
-        for table in project.tables:
+        for table in domain.tables:
             for view in table.views:
                 view_mdl = {
                     "view_id": view.view_id,
@@ -320,14 +320,14 @@ class MDLBuilderService:
     
     async def _build_calculated_columns_mdl(
         self, 
-        project: Project, 
+        domain: Domain, 
         db: AsyncSession,
         include_llm_definitions: bool = True
     ) -> List[Dict[str, Any]]:
         """Build calculated columns section of MDL"""
         calculated_columns_mdl = []
         
-        for table in project.tables:
+        for table in domain.tables:
             for column in table.columns:
                 if column.calculated_column:
                     calc_column_mdl = {
@@ -360,11 +360,11 @@ class MDLBuilderService:
         
         return calculated_columns_mdl
     
-    async def _build_functions_mdl(self, project: Project, db: AsyncSession) -> List[Dict[str, Any]]:
+    async def _build_functions_mdl(self, domain: Domain, db: AsyncSession) -> List[Dict[str, Any]]:
         """Build functions section of MDL"""
         functions_mdl = []
         
-        for function in project.sql_functions:
+        for function in domain.sql_functions:
             function_mdl = {
                 "function_id": function.function_id,
                 "name": function.name,
@@ -383,11 +383,11 @@ class MDLBuilderService:
         
         return functions_mdl
     
-    async def _build_relationships_mdl(self, project: Project, db: AsyncSession) -> List[Dict[str, Any]]:
+    async def _build_relationships_mdl(self, domain: Domain, db: AsyncSession) -> List[Dict[str, Any]]:
         """Build relationships section of MDL"""
         relationships_mdl = []
         
-        for relationship in project.relationships:
+        for relationship in domain.relationships:
             relationship_mdl = {
                 "relationship_id": relationship.relationship_id,
                 "name": relationship.name,
@@ -418,14 +418,14 @@ class MDLBuilderService:
         
         return relationships_mdl
     
-    async def _build_enums_mdl(self, project: Project, db: AsyncSession) -> List[Dict[str, Any]]:
+    async def _build_enums_mdl(self, domain: Domain, db: AsyncSession) -> List[Dict[str, Any]]:
         """Build enums section of MDL (placeholder for future enum support)"""
         # Currently, the database models don't include enum definitions
         # This is a placeholder for future enum support
         enums_mdl = []
         
         # Extract potential enum values from column metadata
-        for table in project.tables:
+        for table in domain.tables:
             for column in table.columns:
                 if column.json_metadata and column.json_metadata.get("enum_values"):
                     enum_mdl = {
@@ -468,7 +468,7 @@ class MDLBuilderService:
                     .selectinload(SQLColumn.calculated_column),
                     selectinload(Table.metrics),
                     selectinload(Table.views),
-                    selectinload(Table.project),
+                    selectinload(Table.domain),
                     selectinload(Table.dataset)
                 )
                 .where(Table.table_id == table_id)
@@ -485,8 +485,8 @@ class MDLBuilderService:
                 "display_name": table.display_name,
                 "description": table.description,
                 "table_type": table.table_type,
-                "project_id": table.project_id,
-                "project_name": table.project.display_name if table.project else None,
+                "domain_id": table.domain_id,
+                "domain_name": table.domain.display_name if table.domain else None,
                 "dataset_id": table.dataset_id,
                 "dataset_name": table.dataset.name if table.dataset else None,
                 "created_at": table.created_at.isoformat() if table.created_at else None,
@@ -621,7 +621,7 @@ class MDLBuilderService:
                 "success": True,
                 "file_path": str(file_path),
                 "file_size": file_size,
-                "project_id": mdl_data.get("project_id"),
+                "domain_id": mdl_data.get("domain_id"),
                 "generated_at": mdl_data.get("generated_at")
             }
             

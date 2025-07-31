@@ -21,17 +21,20 @@ from app.core.settings import ServiceConfig
 
 # Initialize session manager at startup
 session_manager = SessionManager(ServiceConfig())
-# session_manager.create_tables()
+#asyncio.run()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    
+async def lifespan(app: FastAPI):  
     set_cache_provider(InMemoryCacheProvider())
-    #await session_manager.create_tables()
+    await session_manager.create_tables()
     yield
 
-app = FastAPI(title="Data Services API", version="1.0.0",lifespan=lifespan)
+app = FastAPI(title="Data Services API", version="1.0.0",
+              docs_url="/docs",
+              redoc_url="/redoc",
+              openapi_url="/openapi.json",
+            lifespan=lifespan)
 
 load_dotenv()
 

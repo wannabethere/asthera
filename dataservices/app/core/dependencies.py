@@ -8,7 +8,7 @@ import chromadb
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from app.core.session_manager import SessionManager
 from app.service.persistence_service import PersistenceServiceFactory
-from app.utils.history import ProjectManager
+from app.utils.history import DomainManager
 from app.storage.documents import DocumentChromaStore
 from app.agents.indexing.sql_pairs import SqlPairs
 from app.agents.indexing.instructions import Instructions
@@ -45,7 +45,7 @@ async def get_persistence_factory() -> AsyncGenerator[PersistenceServiceFactory,
     
     # Create a project manager instance
     # Note: ProjectManager might need to be updated to work with async sessions
-    project_manager = ProjectManager(None)  # We'll pass None for now since we're using async sessions
+    project_manager = DomainManager(None)  # We'll pass None for now since we're using async sessions
     
     # Get the processors
     sql_pairs_processor = get_sql_pairs_processor()

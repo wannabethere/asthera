@@ -8,15 +8,15 @@ from app.service.persistence_service import PersistenceServiceFactory
 from app.service.models import (
     InstructionCreate, InstructionUpdate, InstructionRead
 )
-from app.utils.history import ProjectManager
+from app.utils.history import DomainManager
 from app.schemas.dbmodels import Instruction
 
 
 def create_instruction(db: Session, data: InstructionCreate, created_by: str) -> InstructionRead:
     """Create a new instruction using persistence service."""
     # Initialize services
-    project_manager = ProjectManager(db)
-    factory = PersistenceServiceFactory(db, project_manager)
+    domain_manager = DomainManager(db)
+    factory = PersistenceServiceFactory(db, domain_manager)
     instruction_service = factory.get_instruction_service()
     
     # Convert to instruction data format
@@ -29,7 +29,7 @@ def create_instruction(db: Session, data: InstructionCreate, created_by: str) ->
     }
     
     # Persist using the service
-    instruction_id = instruction_service.persist_instruction(instruction_data, data.project_id, created_by)
+    instruction_id = instruction_service.persist_instruction(instruction_data, data.domain_id, created_by)
     
     # Get the created instruction
     instruction = instruction_service.get_instruction_by_id(instruction_id)
@@ -40,8 +40,8 @@ def create_instruction(db: Session, data: InstructionCreate, created_by: str) ->
 def get_instruction(db: Session, instruction_id: str) -> Optional[InstructionRead]:
     """Retrieve an instruction by its ID using persistence service."""
     # Initialize services
-    project_manager = ProjectManager(db)
-    factory = PersistenceServiceFactory(db, project_manager)
+    domain_manager = DomainManager(db)
+    factory = PersistenceServiceFactory(db, domain_manager)
     instruction_service = factory.get_instruction_service()
     
     # Get instruction by ID directly
@@ -55,8 +55,8 @@ def get_instruction(db: Session, instruction_id: str) -> Optional[InstructionRea
 def update_instruction(db: Session, instruction_id: str, data: InstructionUpdate, modified_by: str) -> Optional[InstructionRead]:
     """Update an instruction using persistence service."""
     # Initialize services
-    project_manager = ProjectManager(db)
-    factory = PersistenceServiceFactory(db, project_manager)
+    domain_manager = DomainManager(db)
+    factory = PersistenceServiceFactory(db, domain_manager)
     instruction_service = factory.get_instruction_service()
     
     # Get the instruction by ID
@@ -87,24 +87,24 @@ def update_instruction(db: Session, instruction_id: str, data: InstructionUpdate
 def delete_instruction(db: Session, instruction_id: str) -> bool:
     """Delete an instruction using persistence service."""
     # Initialize services
-    project_manager = ProjectManager(db)
-    factory = PersistenceServiceFactory(db, project_manager)
+    domain_manager = DomainManager(db)
+    factory = PersistenceServiceFactory(db, domain_manager)
     instruction_service = factory.get_instruction_service()
     
     # Delete using the service
     return instruction_service.delete_instruction(instruction_id)
 
 
-def list_instructions(db: Session, project_id: Optional[str] = None) -> List[InstructionRead]:
+def list_instructions(db: Session, domain_id: Optional[str] = None) -> List[InstructionRead]:
     """List instructions using persistence service."""
     # Initialize services
-    project_manager = ProjectManager(db)
-    factory = PersistenceServiceFactory(db, project_manager)
+    domain_manager = DomainManager(db)
+    factory = PersistenceServiceFactory(db, domain_manager)
     instruction_service = factory.get_instruction_service()
     
     # Get instructions
-    if project_id:
-        instructions = instruction_service.get_instructions(project_id)
+    if domain_id:
+        instructions = instruction_service.get_instructions(domain_id)
     else:
         # Get all instructions (not recommended for large datasets)
         instructions = instruction_service.get_instructions("")
@@ -113,11 +113,11 @@ def list_instructions(db: Session, project_id: Optional[str] = None) -> List[Ins
 
 
 def create_instructions_batch(db: Session, instructions_data: List[Dict[str, Any]], 
-                            project_id: str, created_by: str) -> List[str]:
+                            domain_id: str, created_by: str) -> List[str]:
     """Create multiple instructions in batch using persistence service."""
     # Initialize services
-    project_manager = ProjectManager(db)
-    factory = PersistenceServiceFactory(db, project_manager)
+    domain_manager = DomainManager(db)
+    factory = PersistenceServiceFactory(db, domain_manager)
     instruction_service = factory.get_instruction_service()
     
     # Prepare instruction data
@@ -132,20 +132,20 @@ def create_instructions_batch(db: Session, instructions_data: List[Dict[str, Any
         })
     
     # Persist using the service
-    instruction_ids = instruction_service.persist_instructions_batch(formatted_instructions, project_id, created_by)
+    instruction_ids = instruction_service.persist_instructions_batch(formatted_instructions, domain_id, created_by)
     
     return instruction_ids
 
 
-def get_instruction_summary(db: Session, project_id: str) -> Dict[str, Any]:
-    """Get summary of instructions for a project."""
+def get_instruction_summary(db: Session, domain_id: str) -> Dict[str, Any]:
+    """Get summary of instructions for a domain."""
     # Initialize services
-    project_manager = ProjectManager(db)
-    factory = PersistenceServiceFactory(db, project_manager)
+    domain_manager = DomainManager(db)
+    factory = PersistenceServiceFactory(db, domain_manager)
     instruction_service = factory.get_instruction_service()
     
-    # Get all instructions for the project
-    instructions = instruction_service.get_instructions(project_id)
+    # Get all instructions for the domain
+    instructions = instruction_service.get_instructions(domain_id)
     
     summary = {
         'total_instructions': len(instructions),

@@ -49,47 +49,35 @@ import warnings
 from scipy import stats, optimize
 from scipy.stats import norm, t, skewnorm, genextreme
 import scipy.linalg as linalg
+from .base_pipe import BasePipe
 
 
-class RiskPipe:
+class RiskPipe(BasePipe):
     """
     A pipeline-style risk analysis tool that enables functional composition
     with a meterstick-like interface for maximum likelihood and risk calculations.
     """
     
-    def __init__(self, data=None):
-        """Initialize with optional data"""
-        self.data = data
+    def _initialize_results(self):
+        """Initialize the results storage for risk analysis"""
         self.risk_metrics = {}
         self.distributions = {}
         self.simulations = {}
         self.stress_tests = {}
         self.current_metric = None
     
-    def __or__(self, other):
-        """Enable the | (pipe) operator for function composition"""
-        if callable(other):
-            return other(self)
-        raise ValueError(f"Cannot pipe RiskPipe to {type(other)}")
-    
-    def copy(self):
-        """Create a shallow copy with deep copy of data"""
-        new_pipe = RiskPipe()
-        if self.data is not None:
-            new_pipe.data = self.data.copy()
-        new_pipe.risk_metrics = self.risk_metrics.copy()
-        new_pipe.distributions = self.distributions.copy()
-        new_pipe.simulations = self.simulations.copy()
-        new_pipe.stress_tests = self.stress_tests.copy()
-        new_pipe.current_metric = self.current_metric
-        return new_pipe
-    
-    @classmethod
-    def from_dataframe(cls, df):
-        """Create a RiskPipe from a dataframe"""
-        pipe = cls()
-        pipe.data = df.copy()
-        return pipe
+    def _copy_results(self, source_pipe):
+        """Copy results from source pipe to this pipe"""
+        if hasattr(source_pipe, 'risk_metrics'):
+            self.risk_metrics = source_pipe.risk_metrics.copy()
+        if hasattr(source_pipe, 'distributions'):
+            self.distributions = source_pipe.distributions.copy()
+        if hasattr(source_pipe, 'simulations'):
+            self.simulations = source_pipe.simulations.copy()
+        if hasattr(source_pipe, 'stress_tests'):
+            self.stress_tests = source_pipe.stress_tests.copy()
+        if hasattr(source_pipe, 'current_metric'):
+            self.current_metric = source_pipe.current_metric
     
     def to_df(self, analysis_name: Optional[str] = None, include_metadata: bool = False, include_original: bool = False):
         """
@@ -488,6 +476,54 @@ class RiskPipe:
             The original data DataFrame, or None if no data was provided
         """
         return self.data.copy() if self.data is not None else None
+    
+    def get_summary(self, **kwargs) -> Dict[str, Any]:
+        """
+        Get a summary of the risk analysis results.
+        
+        Parameters:
+        -----------
+        **kwargs : dict
+            Additional arguments (not used in risk analysis pipe)
+            
+        Returns:
+        --------
+        dict
+            Summary of the risk analysis results
+        """
+        if not self.risk_metrics and not self.distributions and not self.simulations and not self.stress_tests:
+            return {"error": "No risk analysis has been performed"}
+        
+        # Get summary DataFrame
+        summary_df = self.get_risk_summary_df()
+        
+        # Get risk columns
+        risk_cols = self.get_risk_columns()
+        
+        # Count analyses by type
+        analysis_types = {
+            'risk_metrics': len(self.risk_metrics),
+            'distributions': len(self.distributions),
+            'simulations': len(self.simulations),
+            'stress_tests': len(self.stress_tests)
+        }
+        
+        return {
+            "total_analyses": sum(analysis_types.values()),
+            "total_risk_columns": len(risk_cols),
+            "available_risk_metrics": list(self.risk_metrics.keys()),
+            "available_distributions": list(self.distributions.keys()),
+            "available_simulations": list(self.simulations.keys()),
+            "available_stress_tests": list(self.stress_tests.keys()),
+            "risk_columns": risk_cols,
+            "analysis_types": analysis_types,
+            "current_metric": self.current_metric,
+            "summary_dataframe": summary_df.to_dict('records') if not summary_df.empty else [],
+            "risk_metrics_info": {name: {"type": info.get('type', 'unknown'), "columns": info.get('columns', [])} 
+                                for name, info in self.risk_metrics.items()},
+            "distributions_info": {name: {"distribution": info.get('distribution', 'unknown'), "parameters": list(info.get('parameters', {}).keys())} 
+                                 for name, info in self.distributions.items()}
+        }
 
 
 def fit_distribution(

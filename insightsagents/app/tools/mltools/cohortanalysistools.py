@@ -3,6 +3,7 @@ import pandas as pd
 from typing import List, Dict, Union, Optional, Any, Tuple, Callable
 from datetime import datetime, timedelta
 import warnings
+from .base_pipe import BasePipe
 
 """
 def _period_diff(period_delta, time_period):
@@ -74,15 +75,14 @@ def _period_diff(period_delta, time_period):
             else:
                 return 0
 
-class CohortPipe:
+class CohortPipe(BasePipe):
     """
     A pipeline-style cohort analysis tool that enables functional composition
     with a meterstick-like interface.
     """
     
-    def __init__(self, data=None):
-        """Initialize with optional data"""
-        self.data = data
+    def _initialize_results(self):
+        """Initialize the results storage for cohort analysis"""
         self.cohorts = {}
         self.cohort_results = {}
         self.retention_matrices = {}
@@ -90,31 +90,20 @@ class CohortPipe:
         self.lifecycle_stages = {}
         self.current_analysis = None
     
-    def __or__(self, other):
-        """Enable the | (pipe) operator for function composition"""
-        if callable(other):
-            return other(self)
-        raise ValueError(f"Cannot pipe CohortPipe to {type(other)}")
-    
-    def copy(self):
-        """Create a shallow copy with deep copy of data"""
-        new_pipe = CohortPipe()
-        if self.data is not None:
-            new_pipe.data = self.data.copy()
-        new_pipe.cohorts = self.cohorts.copy()
-        new_pipe.cohort_results = self.cohort_results.copy()
-        new_pipe.retention_matrices = self.retention_matrices.copy()
-        new_pipe.conversion_funnels = self.conversion_funnels.copy()
-        new_pipe.lifecycle_stages = self.lifecycle_stages.copy()
-        new_pipe.current_analysis = self.current_analysis
-        return new_pipe
-    
-    @classmethod
-    def from_dataframe(cls, df):
-        """Create a CohortPipe from a dataframe"""
-        pipe = cls()
-        pipe.data = df.copy()
-        return pipe
+    def _copy_results(self, source_pipe):
+        """Copy results from source pipe to this pipe"""
+        if hasattr(source_pipe, 'cohorts'):
+            self.cohorts = source_pipe.cohorts.copy()
+        if hasattr(source_pipe, 'cohort_results'):
+            self.cohort_results = source_pipe.cohort_results.copy()
+        if hasattr(source_pipe, 'retention_matrices'):
+            self.retention_matrices = source_pipe.retention_matrices.copy()
+        if hasattr(source_pipe, 'conversion_funnels'):
+            self.conversion_funnels = source_pipe.conversion_funnels.copy()
+        if hasattr(source_pipe, 'lifecycle_stages'):
+            self.lifecycle_stages = source_pipe.lifecycle_stages.copy()
+        if hasattr(source_pipe, 'current_analysis'):
+            self.current_analysis = source_pipe.current_analysis
     
     def to_df(self, analysis_name: Optional[str] = None, include_metadata: bool = False):
         """
@@ -272,6 +261,52 @@ class CohortPipe:
                 df_list.append(row)
         
         return pd.DataFrame(df_list)
+    
+    def get_summary(self, analysis_name: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Get a summary of the cohort analysis results.
+        
+        Parameters:
+        -----------
+        analysis_name : str, optional
+            Name of the specific analysis. If None, uses the current_analysis
+            
+        Returns:
+        --------
+        dict
+            Summary of the cohort analysis results
+        """
+        if not self.cohort_results:
+            return {"error": "No analysis has been performed"}
+        
+        # Determine which analysis to use
+        if analysis_name is None:
+            if self.current_analysis is None:
+                analysis_name = list(self.cohort_results.keys())[-1]
+            else:
+                matching_analyses = [name for name in self.cohort_results.keys() 
+                                   if name.startswith(self.current_analysis)]
+                if not matching_analyses:
+                    return {"error": f"No analysis found for current_analysis: {self.current_analysis}"}
+                analysis_name = matching_analyses[0]
+        
+        if analysis_name not in self.cohort_results:
+            return {"error": f"Analysis '{analysis_name}' not found"}
+        
+        result = self.cohort_results[analysis_name]
+        
+        return {
+            "analysis_name": analysis_name,
+            "analysis_type": result.get('type', 'unknown'),
+            "total_analyses": len(self.cohort_results),
+            "available_analyses": list(self.cohort_results.keys()),
+            "total_cohorts": len(self.cohorts),
+            "cohort_types": list(self.cohorts.keys()),
+            "retention_matrices": list(self.retention_matrices.keys()),
+            "conversion_funnels": list(self.conversion_funnels.keys()),
+            "lifecycle_stages": list(self.lifecycle_stages.keys()),
+            "current_analysis": self.current_analysis
+        }
 
 
 # Cohort formation functions

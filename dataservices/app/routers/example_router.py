@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from app.core.dependencies import get_async_db_session, get_session_manager
 from app.service.persistence_service import PersistenceServiceFactory
-from app.utils.history import ProjectManager
+from app.utils.history import DomainManager
 from app.service.models import (
     ExampleCreate, ExampleUpdate, ExampleRead,
     UserExampleCreate, UserExampleUpdate, UserExampleRead,
@@ -29,15 +29,15 @@ async def create(
     user_id: str = Depends(get_user_id),
     db: AsyncSession = Depends(get_async_db_session)
 ):
-    """Create a new example within a project."""
+    """Create a new example within a domain."""
     try:
         # TODO: Get actual user from authentication
         created_by = user_id  # Use the user_id from dependency
         
         # Initialize services
         session_manager = get_session_manager()
-        project_manager = ProjectManager(None)  # Pass None since we're using async sessions
-        factory = PersistenceServiceFactory(session_manager, project_manager)
+        domain_manager = DomainManager(None)  # Pass None since we're using async sessions
+        factory = PersistenceServiceFactory(session_manager, domain_manager)
         user_example_service = factory.get_user_example_service()
         
         # Convert ExampleCreate to UserExample
@@ -57,7 +57,7 @@ async def create(
         )
         
         # Persist using the service
-        example_id = await user_example_service.persist_user_example(user_example, data.project_id)
+        example_id = await user_example_service.persist_user_example(user_example, data.domain_id)
         
         # Get the created example
         example = await user_example_service.get_user_example_by_id(example_id)
@@ -79,8 +79,8 @@ async def read(
     """Retrieve an example by its unique ID."""
     # Initialize services
     session_manager = get_session_manager()
-    project_manager = ProjectManager(None)  # Pass None since we're using async sessions
-    factory = PersistenceServiceFactory(session_manager, project_manager)
+    domain_manager = DomainManager(None)  # Pass None since we're using async sessions
+    factory = PersistenceServiceFactory(session_manager, domain_manager)
     user_example_service = factory.get_user_example_service()
     
     example = await user_example_service.get_user_example_by_id(example_id)
@@ -106,8 +106,8 @@ async def update(
         
         # Initialize services
         session_manager = get_session_manager()
-        project_manager = ProjectManager(None)  # Pass None since we're using async sessions
-        factory = PersistenceServiceFactory(session_manager, project_manager)
+        domain_manager = DomainManager(None)  # Pass None since we're using async sessions
+        factory = PersistenceServiceFactory(session_manager, domain_manager)
         user_example_service = factory.get_user_example_service()
         
         # Get the example by ID
@@ -155,8 +155,8 @@ async def delete(
     """Remove an example from the database."""
     # Initialize services
     session_manager = get_session_manager()
-    project_manager = ProjectManager(None)  # Pass None since we're using async sessions
-    factory = PersistenceServiceFactory(session_manager, project_manager)
+    domain_manager = DomainManager(None)  # Pass None since we're using async sessions
+    factory = PersistenceServiceFactory(session_manager, domain_manager)
     user_example_service = factory.get_user_example_service()
     
     if not await user_example_service.delete_user_example(example_id):
@@ -166,7 +166,7 @@ async def delete(
 
 @router.get("/examples/", response_model=List[ExampleRead], summary="List examples.")
 async def list_all(
-    project_id: Optional[str] = Query(None, description="Filter by project ID"),
+    domain_id: Optional[str] = Query(None, description="Filter by domain ID"),
     definition_type: Optional[DefinitionType] = Query(None, description="Filter by definition type"),
     session_id: str = Depends(get_session_id),
     user_id: str = Depends(get_user_id),
@@ -175,13 +175,13 @@ async def list_all(
     """List examples with optional filtering."""
     # Initialize services
     session_manager = get_session_manager()
-    project_manager = ProjectManager(None)  # Pass None since we're using async sessions
-    factory = PersistenceServiceFactory(session_manager, project_manager)
+    domain_manager = DomainManager(None)  # Pass None since we're using async sessions
+    factory = PersistenceServiceFactory(session_manager, domain_manager)
     user_example_service = factory.get_user_example_service()
     
     # Get examples
-    if project_id:
-        examples = await user_example_service.get_user_examples(project_id, definition_type)
+    if domain_id:
+        examples = await user_example_service.get_user_examples(domain_id, definition_type)
     else:
         examples = await user_example_service.get_user_examples("", definition_type)
     
@@ -199,15 +199,15 @@ async def create_user(
     user_id: str = Depends(get_user_id),
     db: AsyncSession = Depends(get_async_db_session)
 ):
-    """Create a new user example within a project."""
+    """Create a new user example within a domain."""
     try:
         # TODO: Get actual user from authentication
         created_by = data.user_id or user_id  # Use provided user_id or default
         
         # Initialize services
         session_manager = get_session_manager()
-        project_manager = ProjectManager(None)  # Pass None since we're using async sessions
-        factory = PersistenceServiceFactory(session_manager, project_manager)
+        domain_manager = DomainManager(None)  # Pass None since we're using async sessions
+        factory = PersistenceServiceFactory(session_manager, domain_manager)
         user_example_service = factory.get_user_example_service()
         
         # Convert to UserExample
@@ -221,7 +221,7 @@ async def create_user(
         )
         
         # Persist using the service
-        example_id = await user_example_service.persist_user_example(user_example, data.project_id)
+        example_id = await user_example_service.persist_user_example(user_example, data.domain_id)
         
         # Get the created example
         example = await user_example_service.get_user_example_by_id(example_id)
@@ -243,8 +243,8 @@ async def read_user(
     """Retrieve a user example by its unique ID."""
     # Initialize services
     session_manager = get_session_manager()
-    project_manager = ProjectManager(None)  # Pass None since we're using async sessions
-    factory = PersistenceServiceFactory(session_manager, project_manager)
+    domain_manager = DomainManager(None)  # Pass None since we're using async sessions
+    factory = PersistenceServiceFactory(session_manager, domain_manager)
     user_example_service = factory.get_user_example_service()
     
     example = await user_example_service.get_user_example_by_id(example_id)
@@ -270,8 +270,8 @@ async def update_user(
         
         # Initialize services
         session_manager = get_session_manager()
-        project_manager = ProjectManager(None)  # Pass None since we're using async sessions
-        factory = PersistenceServiceFactory(session_manager, project_manager)
+        domain_manager = DomainManager(None)  # Pass None since we're using async sessions
+        factory = PersistenceServiceFactory(session_manager, domain_manager)
         user_example_service = factory.get_user_example_service()
         
         # Prepare updates
@@ -307,8 +307,8 @@ async def delete_user(
     """Remove a user example from the database."""
     # Initialize services
     session_manager = get_session_manager()
-    project_manager = ProjectManager(None)  # Pass None since we're using async sessions
-    factory = PersistenceServiceFactory(session_manager, project_manager)
+    domain_manager = DomainManager(None)  # Pass None since we're using async sessions
+    factory = PersistenceServiceFactory(session_manager, domain_manager)
     user_example_service = factory.get_user_example_service()
     
     if not await user_example_service.delete_user_example(example_id):
@@ -318,7 +318,7 @@ async def delete_user(
 
 @router.get("/user-examples/", response_model=List[UserExampleRead], summary="List user examples.")
 async def list_all_users(
-    project_id: Optional[str] = Query(None, description="Filter by project ID"),
+    domain_id: Optional[str] = Query(None, description="Filter by domain ID"),
     definition_type: Optional[DefinitionType] = Query(None, description="Filter by definition type"),
     session_id: str = Depends(get_session_id),
     user_id: str = Depends(get_user_id),
@@ -327,13 +327,13 @@ async def list_all_users(
     """List user examples with optional filtering."""
     # Initialize services
     session_manager = get_session_manager()
-    project_manager = ProjectManager(None)  # Pass None since we're using async sessions
-    factory = PersistenceServiceFactory(session_manager, project_manager)
+    domain_manager = DomainManager(None)  # Pass None since we're using async sessions
+    factory = PersistenceServiceFactory(session_manager, domain_manager)
     user_example_service = factory.get_user_example_service()
     
     # Get examples
-    if project_id:
-        examples = await user_example_service.get_user_examples(project_id, definition_type)
+    if domain_id:
+        examples = await user_example_service.get_user_examples(domain_id, definition_type)
     else:
         examples = await user_example_service.get_user_examples("", definition_type)
     

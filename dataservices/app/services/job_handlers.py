@@ -1,5 +1,5 @@
 """
-Job Handlers for Project JSON Schemas Processing
+Job Handlers for Domain JSON Schemas Processing
 Handles the actual processing of different job types
 """
 
@@ -9,11 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 from app.services.job_queue_service import JobData, JobType
-from app.services.project_json_service import ProjectJSONService
+from app.service.project_json_service import DomainJSONService
 from app.service.post_commit_service import PostCommitService
 from app.core.session_manager import SessionManager
-from app.utils.history import ProjectManager
-from app.config.settings import get_settings
+from app.utils.history import DomainManager
+from app.core.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -24,174 +24,174 @@ class JobHandlers:
     def __init__(self):
         self.settings = get_settings()
         self.session_manager = SessionManager.get_instance()
-        self.project_manager = ProjectManager(None)
-        self.json_service = ProjectJSONService(self.session_manager, self.project_manager)
+        self.domain_manager = DomainManager(None)
+        self.json_service = DomainJSONService(self.session_manager, self.domain_manager)    
     
-    async def handle_project_json_tables(self, job_data: JobData) -> Dict[str, Any]:
-        """Handle project JSON tables job"""
-        logger.info(f"Processing project JSON tables job {job_data.job_id} for project {job_data.project_id}")
+    async def handle_domain_json_tables(self, job_data: JobData) -> Dict[str, Any]:
+        """Handle domain JSON tables job"""
+        logger.info(f"Processing domain JSON tables job {job_data.job_id} for domain {job_data.domain_id}")
         
         try:
             # Store tables JSON
-            chroma_doc_id = await self.json_service.store_project_tables_json(
-                job_data.project_id, 
+            chroma_doc_id = await self.json_service.store_domain_tables_json(
+                job_data.domain_id, 
                 job_data.user_id or 'system'
             )
             
             result = {
                 "job_id": job_data.job_id,
-                "project_id": job_data.project_id,
+                "domain_id": job_data.domain_id,
                 "job_type": job_data.job_type.value,
                 "chroma_document_id": chroma_doc_id,
                 "status": "completed",
                 "message": "Tables JSON stored successfully"
             }
             
-            logger.info(f"Completed project JSON tables job {job_data.job_id}")
+            logger.info(f"Completed domain JSON tables job {job_data.job_id}")
             return result
             
         except Exception as e:
-            logger.error(f"Failed project JSON tables job {job_data.job_id}: {str(e)}")
+            logger.error(f"Failed domain JSON tables job {job_data.job_id}: {str(e)}")
             raise
     
-    async def handle_project_json_metrics(self, job_data: JobData) -> Dict[str, Any]:
-        """Handle project JSON metrics job"""
-        logger.info(f"Processing project JSON metrics job {job_data.job_id} for project {job_data.project_id}")
+    async def handle_domain_json_metrics(self, job_data: JobData) -> Dict[str, Any]:
+        """Handle domain JSON metrics job"""
+        logger.info(f"Processing domain JSON metrics job {job_data.job_id} for domain {job_data.domain_id}")
         
         try:
             # Store metrics JSON
-            chroma_doc_id = await self.json_service.store_project_metrics_json(
-                job_data.project_id, 
+            chroma_doc_id = await self.json_service.store_domain_metrics_json(
+                job_data.domain_id, 
                 job_data.user_id or 'system'
             )
             
             result = {
                 "job_id": job_data.job_id,
-                "project_id": job_data.project_id,
+                "domain_id": job_data.domain_id,
                 "job_type": job_data.job_type.value,
                 "chroma_document_id": chroma_doc_id,
                 "status": "completed",
                 "message": "Metrics JSON stored successfully"
             }
             
-            logger.info(f"Completed project JSON metrics job {job_data.job_id}")
+            logger.info(f"Completed domain JSON metrics job {job_data.job_id}")
             return result
             
         except Exception as e:
-            logger.error(f"Failed project JSON metrics job {job_data.job_id}: {str(e)}")
+            logger.error(f"Failed domain JSON metrics job {job_data.job_id}: {str(e)}")
             raise
     
-    async def handle_project_json_views(self, job_data: JobData) -> Dict[str, Any]:
-        """Handle project JSON views job"""
-        logger.info(f"Processing project JSON views job {job_data.job_id} for project {job_data.project_id}")
+    async def handle_domain_json_views(self, job_data: JobData) -> Dict[str, Any]:
+        """Handle domain JSON views job"""
+        logger.info(f"Processing domain JSON views job {job_data.job_id} for domain {job_data.domain_id}")
         
         try:
             # Store views JSON
-            chroma_doc_id = await self.json_service.store_project_views_json(
-                job_data.project_id, 
+            chroma_doc_id = await self.json_service.store_domain_views_json(
+                job_data.domain_id, 
                 job_data.user_id or 'system'
             )
             
             result = {
                 "job_id": job_data.job_id,
-                "project_id": job_data.project_id,
+                "domain_id": job_data.domain_id,
                 "job_type": job_data.job_type.value,
                 "chroma_document_id": chroma_doc_id,
                 "status": "completed",
                 "message": "Views JSON stored successfully"
             }
             
-            logger.info(f"Completed project JSON views job {job_data.job_id}")
+            logger.info(f"Completed domain JSON views job {job_data.job_id}")
             return result
             
         except Exception as e:
-            logger.error(f"Failed project JSON views job {job_data.job_id}: {str(e)}")
+            logger.error(f"Failed domain JSON views job {job_data.job_id}: {str(e)}")
             raise
     
-    async def handle_project_json_calculated_columns(self, job_data: JobData) -> Dict[str, Any]:
-        """Handle project JSON calculated columns job"""
-        logger.info(f"Processing project JSON calculated columns job {job_data.job_id} for project {job_data.project_id}")
+    async def handle_domain_json_calculated_columns(self, job_data: JobData) -> Dict[str, Any]:
+        """Handle domain JSON calculated columns job"""
+        logger.info(f"Processing domain JSON calculated columns job {job_data.job_id} for domain {job_data.domain_id}")
         
         try:
             # Store calculated columns JSON
-            chroma_doc_id = await self.json_service.store_project_calculated_columns_json(
-                job_data.project_id, 
+            chroma_doc_id = await self.json_service.store_domain_calculated_columns_json(
+                job_data.domain_id, 
                 job_data.user_id or 'system'
             )
             
             result = {
                 "job_id": job_data.job_id,
-                "project_id": job_data.project_id,
+                "domain_id": job_data.domain_id,
                 "job_type": job_data.job_type.value,
                 "chroma_document_id": chroma_doc_id,
                 "status": "completed",
                 "message": "Calculated columns JSON stored successfully"
             }
             
-            logger.info(f"Completed project JSON calculated columns job {job_data.job_id}")
+            logger.info(f"Completed domain JSON calculated columns job {job_data.job_id}")
             return result
             
         except Exception as e:
-            logger.error(f"Failed project JSON calculated columns job {job_data.job_id}: {str(e)}")
+            logger.error(f"Failed domain JSON calculated columns job {job_data.job_id}: {str(e)}")
             raise
     
-    async def handle_project_json_summary(self, job_data: JobData) -> Dict[str, Any]:
-        """Handle project JSON summary job"""
-        logger.info(f"Processing project JSON summary job {job_data.job_id} for project {job_data.project_id}")
+    async def handle_domain_json_summary(self, job_data: JobData) -> Dict[str, Any]:
+        """Handle domain JSON summary job"""
+        logger.info(f"Processing domain JSON summary job {job_data.job_id} for domain {job_data.domain_id}")
         
         try:
-            # Store project summary JSON
-            chroma_doc_id = await self.json_service.store_project_summary_json(
-                job_data.project_id, 
+            # Store domain summary JSON
+            chroma_doc_id = await self.json_service.store_domain_summary_json(
+                job_data.domain_id, 
                 job_data.user_id or 'system'
             )
             
             result = {
                 "job_id": job_data.job_id,
-                "project_id": job_data.project_id,
+                "domain_id": job_data.domain_id,
                 "job_type": job_data.job_type.value,
                 "chroma_document_id": chroma_doc_id,
                 "status": "completed",
-                "message": "Project summary JSON stored successfully"
+                "message": "Domain summary JSON stored successfully"
             }
             
-            logger.info(f"Completed project JSON summary job {job_data.job_id}")
+            logger.info(f"Completed domain JSON summary job {job_data.job_id}")
             return result
             
         except Exception as e:
-            logger.error(f"Failed project JSON summary job {job_data.job_id}: {str(e)}")
+            logger.error(f"Failed domain JSON summary job {job_data.job_id}: {str(e)}")
             raise
     
-    async def handle_project_json_all(self, job_data: JobData) -> Dict[str, Any]:
-        """Handle project JSON all types job"""
-        logger.info(f"Processing project JSON all types job {job_data.job_id} for project {job_data.project_id}")
+    async def handle_domain_json_all(self, job_data: JobData) -> Dict[str, Any]:
+        """Handle domain JSON all types job"""
+        logger.info(f"Processing domain JSON all types job {job_data.job_id} for domain {job_data.domain_id}")
         
         try:
             # Store all JSON types
-            tables_doc_id = await self.json_service.store_project_tables_json(
-                job_data.project_id, 
+            tables_doc_id = await self.json_service.store_domain_tables_json(
+                job_data.domain_id, 
                 job_data.user_id or 'system'
             )
-            metrics_doc_id = await self.json_service.store_project_metrics_json(
-                job_data.project_id, 
+            metrics_doc_id = await self.json_service.store_domain_metrics_json(
+                job_data.domain_id, 
                 job_data.user_id or 'system'
             )
-            views_doc_id = await self.json_service.store_project_views_json(
-                job_data.project_id, 
+            views_doc_id = await self.json_service.store_domain_views_json(
+                job_data.domain_id, 
                 job_data.user_id or 'system'
             )
-            calc_columns_doc_id = await self.json_service.store_project_calculated_columns_json(
-                job_data.project_id, 
+            calc_columns_doc_id = await self.json_service.store_domain_calculated_columns_json(
+                job_data.domain_id, 
                 job_data.user_id or 'system'
             )
-            summary_doc_id = await self.json_service.store_project_summary_json(
-                job_data.project_id, 
+            summary_doc_id = await self.json_service.store_domain_summary_json(
+                job_data.domain_id, 
                 job_data.user_id or 'system'
             )
             
             result = {
                 "job_id": job_data.job_id,
-                "project_id": job_data.project_id,
+                "domain_id": job_data.domain_id,
                 "job_type": job_data.job_type.value,
                 "chroma_document_ids": {
                     "tables": tables_doc_id,
@@ -201,50 +201,50 @@ class JobHandlers:
                     "summary": summary_doc_id
                 },
                 "status": "completed",
-                "message": "All project JSON types stored successfully"
+                "message": "All domain JSON types stored successfully"
             }
             
-            logger.info(f"Completed project JSON all types job {job_data.job_id}")
+            logger.info(f"Completed domain JSON all types job {job_data.job_id}")
             return result
             
         except Exception as e:
-            logger.error(f"Failed project JSON all types job {job_data.job_id}: {str(e)}")
+            logger.error(f"Failed domain JSON all types job {job_data.job_id}: {str(e)}")
             raise
     
     async def handle_chromadb_indexing(self, job_data: JobData) -> Dict[str, Any]:
         """Handle ChromaDB indexing job using MDL data from LLM definition generation"""
-        logger.info(f"Processing ChromaDB indexing job {job_data.job_id} for project {job_data.project_id}")
+        logger.info(f"Processing ChromaDB indexing job {job_data.job_id} for domain {job_data.domain_id}")
         
         try:
             # Import indexing components
-            from app.indexing.project_meta import ProjectMeta
-            from app.indexing.table_description import TableDescription
-            from app.indexing.db_schema import DBSchema
+            from app.agents.indexing.project_meta import ProjectMeta
+            from app.agents.indexing.table_description import TableDescription
+            from app.agents.indexing.db_schema import DBSchema
             from app.storage.documents import DocumentChromaStore
             from app.core.dependencies import get_doc_store_provider
             from langchain_openai import OpenAIEmbeddings
             from datetime import datetime
             
-            # Get project details from database
+            # Get domain details from database
             async with self.session_manager.get_async_db_session() as db:
-                from app.schemas.dbmodels import Project
+                from app.schemas.dbmodels import Domain
                 from sqlalchemy import select
                 
                 result = await db.execute(
-                    select(Project).where(Project.project_id == job_data.project_id)
+                    select(Domain).where(Domain.domain_id == job_data.domain_id)
                 )
-                project = result.scalar_one_or_none()
+                domain = result.scalar_one_or_none()
                 
-                if not project:
-                    raise ValueError(f"Project {job_data.project_id} not found")
+                if not domain:
+                    raise ValueError(f"Domain {job_data.domain_id} not found")
                 
-                # Get project metadata
-                project_metadata = project.json_metadata or {}
-                llm_definitions = project_metadata.get("llm_definitions", {})
+                # Get domain metadata
+                domain_metadata = domain.json_metadata or {}
+                llm_definitions = domain_metadata.get("llm_definitions", {})
                 mdl_file_path = llm_definitions.get("mdl_file_path")
                 
                 if not mdl_file_path:
-                    raise ValueError(f"No MDL file path found for project {job_data.project_id}")
+                    raise ValueError(f"No MDL file path found for domain {job_data.domain_id}")
                 
                 # Read MDL file
                 import json
@@ -281,25 +281,25 @@ class JobHandlers:
                     embedder=embeddings
                 )
                 
-                # Process project metadata
-                logger.info("Processing project metadata")
+                # Process domain metadata
+                logger.info("Processing domain metadata")
                 project_meta_result = await project_meta_processor.run(
                     mdl_str=json.dumps(mdl_data),
-                    project_id=job_data.project_id
+                    project_id=job_data.domain_id
                 )
                 
                 # Process table descriptions
                 logger.info("Processing table descriptions")
                 table_description_result = await table_description_processor.run(
                     mdl=json.dumps(mdl_data),
-                    project_id=job_data.project_id
+                    project_id=job_data.domain_id
                 )
                 
                 # Process database schema
                 logger.info("Processing database schema")
                 db_schema_result = await db_schema_processor.run(
                     mdl_str=json.dumps(mdl_data),
-                    project_id=job_data.project_id
+                    project_id=job_data.domain_id
                 )
                 
                 # Compile results
@@ -309,9 +309,9 @@ class JobHandlers:
                     "db_schema": db_schema_result
                 }
                 
-                # Update project metadata with indexing results
-                project.json_metadata = project.json_metadata or {}
-                project.json_metadata["chromadb_indexing"] = {
+                # Update domain metadata with indexing results
+                domain.json_metadata = domain.json_metadata or {}
+                domain.json_metadata["chromadb_indexing"] = {
                     "indexed_at": datetime.utcnow().isoformat(),
                     "indexed_by": job_data.user_id or 'system',
                     "results": indexing_results,
@@ -322,7 +322,7 @@ class JobHandlers:
                 
                 result = {
                     "job_id": job_data.job_id,
-                    "project_id": job_data.project_id,
+                    "domain_id": job_data.domain_id,
                     "job_type": job_data.job_type.value,
                     "indexing_results": indexing_results,
                     "status": "completed",
@@ -338,7 +338,7 @@ class JobHandlers:
     
     async def handle_post_commit_workflow(self, job_data: JobData) -> Dict[str, Any]:
         """Handle post-commit workflow job"""
-        logger.info(f"Processing post-commit workflow job {job_data.job_id} for project {job_data.project_id}")
+        logger.info(f"Processing post-commit workflow job {job_data.job_id} for domain {job_data.domain_id}")
         
         try:
             # Create post-commit service
@@ -350,13 +350,13 @@ class JobHandlers:
             # Execute post-commit workflows
             async with self.session_manager.get_async_db_session() as db:
                 results = await post_commit_service.execute_post_commit_workflows(
-                    job_data.project_id, 
+                    job_data.domain_id, 
                     db
                 )
             
             result = {
                 "job_id": job_data.job_id,
-                "project_id": job_data.project_id,
+                "domain_id": job_data.domain_id,
                 "job_type": job_data.job_type.value,
                 "workflow_results": results,
                 "status": "completed",
@@ -380,12 +380,12 @@ def register_job_handlers(job_queue_service):
     from app.services.job_queue_service import JobType
     
     # Register handlers for each job type
-    job_queue_service.register_handler(JobType.PROJECT_JSON_TABLES, job_handlers.handle_project_json_tables)
-    job_queue_service.register_handler(JobType.PROJECT_JSON_METRICS, job_handlers.handle_project_json_metrics)
-    job_queue_service.register_handler(JobType.PROJECT_JSON_VIEWS, job_handlers.handle_project_json_views)
-    job_queue_service.register_handler(JobType.PROJECT_JSON_CALCULATED_COLUMNS, job_handlers.handle_project_json_calculated_columns)
-    job_queue_service.register_handler(JobType.PROJECT_JSON_SUMMARY, job_handlers.handle_project_json_summary)
-    job_queue_service.register_handler(JobType.PROJECT_JSON_ALL, job_handlers.handle_project_json_all)
+    job_queue_service.register_handler(JobType.DOMAIN_JSON_TABLES, job_handlers.handle_domain_json_tables)
+    job_queue_service.register_handler(JobType.DOMAIN_JSON_METRICS, job_handlers.handle_domain_json_metrics)
+    job_queue_service.register_handler(JobType.DOMAIN_JSON_VIEWS, job_handlers.handle_domain_json_views)
+    job_queue_service.register_handler(JobType.DOMAIN_JSON_CALCULATED_COLUMNS, job_handlers.handle_domain_json_calculated_columns)
+    job_queue_service.register_handler(JobType.DOMAIN_JSON_SUMMARY, job_handlers.handle_domain_json_summary)
+    job_queue_service.register_handler(JobType.DOMAIN_JSON_ALL, job_handlers.handle_domain_json_all)
     job_queue_service.register_handler(JobType.CHROMADB_INDEXING, job_handlers.handle_chromadb_indexing)
     job_queue_service.register_handler(JobType.POST_COMMIT_WORKFLOW, job_handlers.handle_post_commit_workflow)
     

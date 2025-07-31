@@ -53,43 +53,29 @@ from statsmodels.tsa.stattools import acf, pacf
 from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
 import warnings
+from .base_pipe import BasePipe
 
 
-class AnomalyPipe:
+class AnomalyPipe(BasePipe):
     """
     A pipeline-style anomaly detection tool that enables functional composition
     with a meterstick-like interface.
     """
     
-    def __init__(self, data=None):
-        """Initialize with optional data"""
-        self.data = data
+    def _initialize_results(self):
+        """Initialize the results storage for anomaly detection"""
         self.anomaly_results = {}
         self.forecasts = {}
         self.current_analysis = None
     
-    def __or__(self, other):
-        """Enable the | (pipe) operator for function composition"""
-        if callable(other):
-            return other(self)
-        raise ValueError(f"Cannot pipe AnomalyPipe to {type(other)}")
-    
-    def copy(self):
-        """Create a shallow copy with deep copy of data"""
-        new_pipe = AnomalyPipe()
-        if self.data is not None:
-            new_pipe.data = self.data.copy()
-        new_pipe.anomaly_results = self.anomaly_results.copy()
-        new_pipe.forecasts = self.forecasts.copy()
-        new_pipe.current_analysis = self.current_analysis
-        return new_pipe
-    
-    @classmethod
-    def from_dataframe(cls, df):
-        """Create an AnomalyPipe from a dataframe"""
-        pipe = cls()
-        pipe.data = df.copy()
-        return pipe
+    def _copy_results(self, source_pipe):
+        """Copy results from source pipe to this pipe"""
+        if hasattr(source_pipe, 'anomaly_results'):
+            self.anomaly_results = source_pipe.anomaly_results.copy()
+        if hasattr(source_pipe, 'forecasts'):
+            self.forecasts = source_pipe.forecasts.copy()
+        if hasattr(source_pipe, 'current_analysis'):
+            self.current_analysis = source_pipe.current_analysis
     
     def to_df(self, analysis_name: Optional[str] = None, include_metadata: bool = False, include_original: bool = True):
         """
@@ -299,6 +285,52 @@ class AnomalyPipe:
                 })
         
         return pd.DataFrame(summary_data)
+    
+    def get_summary(self, analysis_name: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Get a summary of the anomaly detection results.
+        
+        Parameters:
+        -----------
+        analysis_name : str, optional
+            Name of the specific analysis. If None, uses the current_analysis
+            
+        Returns:
+        --------
+        dict
+            Summary of the anomaly detection results
+        """
+        if not self.anomaly_results:
+            return {"error": "No analysis has been performed"}
+        
+        # Determine which analysis to use
+        if analysis_name is None:
+            if self.current_analysis is None:
+                analysis_name = list(self.anomaly_results.keys())[-1]
+            else:
+                matching_analyses = [name for name in self.anomaly_results.keys() 
+                                   if name.startswith(self.current_analysis)]
+                if not matching_analyses:
+                    return {"error": f"No analysis found for current_analysis: {self.current_analysis}"}
+                analysis_name = matching_analyses[0]
+        
+        if analysis_name not in self.anomaly_results:
+            return {"error": f"Analysis '{analysis_name}' not found"}
+        
+        result = self.anomaly_results[analysis_name]
+        
+        # Get summary DataFrame
+        summary_df = self.get_anomaly_summary_df(analysis_name)
+        
+        return {
+            "analysis_name": analysis_name,
+            "analysis_type": result.get('type', 'unknown'),
+            "total_analyses": len(self.anomaly_results),
+            "available_analyses": list(self.anomaly_results.keys()),
+            "summary_dataframe": summary_df.to_dict('records') if not summary_df.empty else [],
+            "anomaly_columns": self.get_anomaly_columns(analysis_name),
+            "has_forecasts": bool(self.forecasts)
+        }
 
 
 def detect_statistical_outliers(

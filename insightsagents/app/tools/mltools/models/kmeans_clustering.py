@@ -18,17 +18,17 @@ from datetime import datetime
 from scipy.cluster.hierarchy import dendrogram, linkage
 from scipy.spatial.distance import pdist
 import itertools
+from ..base_pipe import BasePipe
 
 
-class KMeansPipe:
+class KMeansPipe(BasePipe):
     """
     A pipeline-style K-means clustering tool that enables functional composition
     with a meterstick-like interface.
     """
     
-    def __init__(self, data=None):
-        """Initialize with optional data"""
-        self.data = data
+    def _initialize_results(self):
+        """Initialize the results storage for K-means clustering analysis"""
         self.original_data = None
         self.feature_columns = []
         self.models = {}
@@ -42,39 +42,105 @@ class KMeansPipe:
         self.current_analysis = None
         self.visualization_data = {}
     
-    def __or__(self, other):
-        """Enable the | (pipe) operator for function composition"""
-        if callable(other):
-            return other(self)
-        raise ValueError(f"Cannot pipe KMeansPipe to {type(other)}")
+    def _copy_results(self, source_pipe):
+        """Copy results from source pipe to this pipe"""
+        if hasattr(source_pipe, 'original_data'):
+            self.original_data = source_pipe.original_data.copy() if source_pipe.original_data is not None else None
+        if hasattr(source_pipe, 'feature_columns'):
+            self.feature_columns = source_pipe.feature_columns.copy()
+        if hasattr(source_pipe, 'models'):
+            self.models = source_pipe.models.copy()
+        if hasattr(source_pipe, 'cluster_assignments'):
+            self.cluster_assignments = source_pipe.cluster_assignments.copy()
+        if hasattr(source_pipe, 'cluster_profiles'):
+            self.cluster_profiles = source_pipe.cluster_profiles.copy()
+        if hasattr(source_pipe, 'evaluation_metrics'):
+            self.evaluation_metrics = source_pipe.evaluation_metrics.copy()
+        if hasattr(source_pipe, 'scalers'):
+            self.scalers = source_pipe.scalers.copy()
+        if hasattr(source_pipe, 'dimensionality_reducers'):
+            self.dimensionality_reducers = source_pipe.dimensionality_reducers.copy()
+        if hasattr(source_pipe, 'elbow_analysis'):
+            self.elbow_analysis = source_pipe.elbow_analysis.copy()
+        if hasattr(source_pipe, 'silhouette_analysis'):
+            self.silhouette_analysis = source_pipe.silhouette_analysis.copy()
+        if hasattr(source_pipe, 'current_analysis'):
+            self.current_analysis = source_pipe.current_analysis
+        if hasattr(source_pipe, 'visualization_data'):
+            self.visualization_data = source_pipe.visualization_data.copy()
     
-    def copy(self):
-        """Create a shallow copy with deep copy of data"""
-        new_pipe = KMeansPipe()
-        if self.data is not None:
-            new_pipe.data = self.data.copy()
-        if self.original_data is not None:
-            new_pipe.original_data = self.original_data.copy()
-        new_pipe.feature_columns = self.feature_columns.copy()
-        new_pipe.models = self.models.copy()
-        new_pipe.cluster_assignments = self.cluster_assignments.copy()
-        new_pipe.cluster_profiles = self.cluster_profiles.copy()
-        new_pipe.evaluation_metrics = self.evaluation_metrics.copy()
-        new_pipe.scalers = self.scalers.copy()
-        new_pipe.dimensionality_reducers = self.dimensionality_reducers.copy()
-        new_pipe.elbow_analysis = self.elbow_analysis.copy()
-        new_pipe.silhouette_analysis = self.silhouette_analysis.copy()
-        new_pipe.current_analysis = self.current_analysis
-        new_pipe.visualization_data = self.visualization_data.copy()
-        return new_pipe
-    
-    @classmethod
-    def from_dataframe(cls, df):
-        """Create a KMeansPipe from a dataframe"""
-        pipe = cls()
-        pipe.data = df.copy()
-        pipe.original_data = df.copy()
-        return pipe
+    def get_summary(self, **kwargs) -> Dict[str, Any]:
+        """
+        Get a summary of the K-means clustering analysis results.
+        
+        Parameters:
+        -----------
+        **kwargs : dict
+            Additional arguments (not used in K-means clustering pipe)
+            
+        Returns:
+        --------
+        dict
+            Summary of the K-means clustering analysis results
+        """
+        if not any([self.models, self.cluster_assignments, self.evaluation_metrics]):
+            return {"error": "No K-means clustering analysis has been performed"}
+        
+        # Count analyses by type
+        analysis_types = {
+            'models': len(self.models),
+            'cluster_assignments': len(self.cluster_assignments),
+            'evaluation_metrics': len(self.evaluation_metrics),
+            'cluster_profiles': len(self.cluster_profiles),
+            'scalers': len(self.scalers),
+            'dimensionality_reducers': len(self.dimensionality_reducers),
+            'elbow_analysis': len(self.elbow_analysis),
+            'silhouette_analysis': len(self.silhouette_analysis)
+        }
+        
+        # Get model information
+        models_info = {}
+        for name, model_info in self.models.items():
+            models_info[name] = {
+                "type": model_info.get('type', 'unknown'),
+                "n_clusters": model_info.get('config', {}).get('n_clusters', 'unknown'),
+                "algorithm": model_info.get('config', {}).get('algorithm', 'unknown')
+            }
+        
+        # Get evaluation metrics summary
+        metrics_summary = {}
+        for name, metrics in self.evaluation_metrics.items():
+            metrics_summary[name] = {
+                "silhouette_score": metrics.get('silhouette_score', None),
+                "calinski_harabasz_score": metrics.get('calinski_harabasz_score', None),
+                "davies_bouldin_score": metrics.get('davies_bouldin_score', None),
+                "inertia": metrics.get('inertia', None),
+                "n_clusters": metrics.get('n_clusters', None)
+            }
+        
+        return {
+            "total_analyses": sum(analysis_types.values()),
+            "feature_columns": self.feature_columns,
+            "analysis_types": analysis_types,
+            "current_analysis": self.current_analysis,
+            "available_models": list(self.models.keys()),
+            "available_cluster_assignments": list(self.cluster_assignments.keys()),
+            "available_evaluation_metrics": list(self.evaluation_metrics.keys()),
+            "available_cluster_profiles": list(self.cluster_profiles.keys()),
+            "available_scalers": list(self.scalers.keys()),
+            "available_dimensionality_reducers": list(self.dimensionality_reducers.keys()),
+            "available_elbow_analysis": list(self.elbow_analysis.keys()),
+            "available_silhouette_analysis": list(self.silhouette_analysis.keys()),
+            "models_info": models_info,
+            "evaluation_metrics_summary": metrics_summary,
+            "cluster_assignments_info": {name: {"n_clusters": len(np.unique(assignment.get('labels', [])))} 
+                                       for name, assignment in self.cluster_assignments.items()},
+            "scalers_info": {name: {"type": type(scaler).__name__} 
+                           for name, scaler in self.scalers.items()},
+            "dimensionality_reducers_info": {name: {"method": reducer.get('method', 'unknown'), 
+                                                  "n_components": reducer.get('n_components', 'unknown')} 
+                                           for name, reducer in self.dimensionality_reducers.items()}
+        }
 
 
 # Data Preparation Functions

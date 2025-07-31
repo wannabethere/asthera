@@ -14,6 +14,7 @@ from app.agents.models.dsmodels import InsightManagerState
 from app.agents.nodes.mlagents.analysis_intent_classification import AnalysisIntentPlanner
 from app.agents.nodes.mlagents.self_correcting_pipeline_generator import SelfCorrectingPipelineCodeGenerator
 from app.agents.nodes.mlagents.function_retrieval import FunctionRetrieval
+from app.agents.retrieval.retrieval_helper import RetrievalHelper
 
 settings = get_settings()
 CHROMA_STORE_PATH = settings.CHROMA_STORE_PATH
@@ -28,8 +29,21 @@ usage_examples_vectorstore = DocumentChromaStore(persistent_client=client, colle
 
 # Initialize LLM
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
+retrieval_helper = RetrievalHelper()
 
-
+self_correcting_pipeline_code_generator = SelfCorrectingPipelineCodeGenerator(
+                llm=llm,
+                usage_examples_store=usage_examples_vectorstore,
+                code_examples_store=examples_vectorstore,
+                function_definition_store=functions_vectorstore
+            )
+# Initialize the intent planner
+planner = AnalysisIntentPlanner(
+    llm=llm,
+    function_collection=functions_vectorstore,
+    example_collection=examples_vectorstore, 
+    insights_collection=insights_vectorstore
+)
 
 def analyze_question_with_intent_classification(
     question: str,
@@ -62,17 +76,11 @@ def analyze_question_with_intent_classification(
     print(f"{'='*60}")
     
      # Initialize function retrieval
-    retrieval = FunctionRetrieval(llm=llm,function_library_path="/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/meta/all_pipes_functions.json", function_collection=functions_vectorstore)
+    retrieval = FunctionRetrieval(llm=llm,function_library_path="/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/meta/all_pipes_functions.json")
     result = asyncio.run(retrieval.retrieve_relevant_functions(question,dataframe_description,dataframe_summary,columns_description))
     print("Retrieval functions result",result)
     
-    # Initialize the intent planner
-    planner = AnalysisIntentPlanner(
-        llm=llm,
-        function_collection=functions_vectorstore,
-        example_collection=examples_vectorstore, 
-        insights_collection=insights_vectorstore
-    )
+    
     
     # If dataframe description/summary not provided, generate them
     if dataframe_description is None or dataframe_summary is None:
@@ -108,6 +116,7 @@ def analyze_question_with_intent_classification(
     print(f"  Data suggestions: {result.data_suggestions}")
     print(f"  Suggested functions: {result.suggested_functions}")
     print(f"  Required data columns: {result.required_data_columns}")
+    print(f"  Reasoning plan: {result.reasoning_plan}")
 
     
     analysis_results = {
@@ -124,26 +133,40 @@ def analyze_question_with_intent_classification(
     if enable_code_generation and result.can_be_answered:
         print("\nGenerating code...")
         try:
-            self_correcting_pipeline_code_generator = SelfCorrectingPipelineCodeGenerator(
-                llm=llm,
-                usage_examples_store=usage_examples_vectorstore,
-                code_examples_store=examples_vectorstore,
-                function_definition_store=functions_vectorstore
-            )
-            
             code_context = context or question
             
-            code_result = asyncio.run(self_correcting_pipeline_code_generator.generate_pipeline_code(
-                context=code_context,
-                function_name=result.suggested_functions,
-                function_inputs=result.required_data_columns,
-                dataframe_name=dataframe_name,
-                classification=result,
-                dataset_description=dataframe_summary,
-                columns_description=columns_description or {}
-            ))
+            # Debug: Print the types and values of parameters
+            print(f"Debug - suggested_functions type: {type(result.suggested_functions)}")
+            print(f"Debug - suggested_functions value: {result.suggested_functions}")
+            print(f"Debug - required_data_columns type: {type(result.required_data_columns)}")
+            print(f"Debug - required_data_columns value: {result.required_data_columns}")
+            
+            # Ensure suggested_functions is a list
+            function_names = result.suggested_functions if isinstance(result.suggested_functions, list) else [result.suggested_functions]
+            
+            # Additional debugging for the classification object
+            print(f"Debug - classification type: {type(result)}")
+            print(f"Debug - classification attributes: {dir(result)}")
+            
+            try:
+                code_result = asyncio.run(self_correcting_pipeline_code_generator.generate_pipeline_code(
+                    context=code_context,
+                    function_name=function_names,
+                    function_inputs=result.required_data_columns,
+                    dataframe_name=dataframe_name,
+                    classification=result,
+                    dataset_description=dataframe_summary,
+                    columns_description=columns_description or {}
+                ))
+            except Exception as code_gen_error:
+                print(f"Detailed error in code generation: {str(code_gen_error)}")
+                print(f"Error type: {type(code_gen_error)}")
+                import traceback
+                print(f"Traceback: {traceback.format_exc()}")
+                raise code_gen_error
             
             analysis_results["generated_code"] = code_result
+            print("code_result",analysis_results["generated_code"])
             print(f"Code generation completed successfully!")
             
         except Exception as e:
@@ -248,13 +271,18 @@ def main():
     
     # Example 1: Intent classification only
     print("\n1. Intent classification only:")
+    """
     result1 = analyze_question_with_intent_classification(
         question="How does the 5-day rolling variance of flux change over time for each group of projects, cost centers, and departments?",
         dataframe=po_df,
         dataframe_description="Financial flux data with project, cost center, and department information",
         dataframe_summary="Dataset contains flux values over time with grouping dimensions",
-        enable_code_generation=False
+        enable_code_generation=True,
+        context="Analyze the flux values over time for each group of projects, cost centers, and departments for making better decisions of investment",
+        dataframe_name="Purchase Orders Data"
     )
+    """
+    
     
     # Example 2: Intent classification with code generation
     print("\n2. Intent classification with code generation:")
@@ -264,11 +292,11 @@ def main():
         dataframe_description="Financial flux data with project, cost center, and department information",
         dataframe_summary="Dataset contains flux values over time with grouping dimensions",
         columns_description=columns_description,
-        enable_code_generation=False,
+        enable_code_generation=True,
         context="Find anomalies in daily spending patterns",
         dataframe_name="Purchase Orders Data"
     )
-    
+    """
     # Example 3: Another question with code generation
     print("\n3. Another question with code generation:")
     result3 = analyze_question_with_intent_classification(
@@ -277,12 +305,48 @@ def main():
         dataframe_description="Financial flux data with project, cost center, and department information",
         dataframe_summary="Dataset contains flux values over time with grouping dimensions",
         columns_description=columns_description,
-        enable_code_generation=False,
+        enable_code_generation=True,
         context="Calculate mean daily transactional values",
         dataframe_name="Purchase Orders Data"
     )
+    """
+    import json
     
+    def convert_analysis_intent_result(obj):
+        """Recursively convert AnalysisIntentResult objects to dictionaries"""
+        if hasattr(obj, 'dict') and callable(getattr(obj, 'dict')):
+            # This is an AnalysisIntentResult or similar Pydantic model
+            return obj.dict()
+        elif isinstance(obj, dict):
+            # Recursively process dictionary values
+            return {key: convert_analysis_intent_result(value) for key, value in obj.items()}
+        elif isinstance(obj, list):
+            # Recursively process list items
+            return [convert_analysis_intent_result(item) for item in obj]
+        else:
+            # Return as is for other types
+            return obj
+    
+    print("="*80)
+    """
+    print(f"RESULT for How does the 5-day rolling variance of flux change over time for each group of projects, cost centers, and departments?")
+    print("="*80)
+    result1_serializable = convert_analysis_intent_result(result1)
+    print("result1",json.dumps(result1_serializable,indent=4))
+    print("="*80)
+    """
+    print(f"RESULT for Find anomalies in daily spending patterns in daily transactional values that deviate from normal business patterns by region and project")
+    print("="*80)
+    result2_serializable = convert_analysis_intent_result(result2)
+    print("result2",json.dumps(result2_serializable,indent=4))
+    print("="*80)
+    """
+    print(f"RESULT for What are the mean, average daily transactional values for purchase orders by region and project")
+    print("="*80)
+    result3_serializable = convert_analysis_intent_result(result3)
+    print("result3",json.dumps(result3_serializable,indent=4))
     print("\n" + "="*80)
+    """
     print("ANALYSIS COMPLETE")
     print("="*80)
 
@@ -358,3 +422,17 @@ def create_sample_event_data(num_users=500):
 
 if __name__ == "__main__":
     main()
+    """
+    from app.tools.mltools.metrics_tools import MetricsPipe, GroupBy, Mean
+    
+    
+    result = (
+    MetricsPipe.from_dataframe("Purchase Orders Data")
+    | GroupBy(
+        by=["Date", "Region", "Project"],
+        agg_dict={"Total Transactional value": "sum"},
+    )
+    | Mean(variable="Total Transactional value",
+           output_name="average_daily_transactional_value")
+    ).to_df()
+    """

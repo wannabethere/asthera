@@ -18,7 +18,7 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
 import json
 from app.config import ServiceConfig
-from genieml.dataservices.tests.unusedcode.columnservice import LLMDefinitionService
+from app.
 from app.service.database import SessionLocal, create_db_tables
 
 # Import our services
@@ -29,7 +29,7 @@ from app.service.models import DefinitionType, UserExample, GeneratedDefinition
 # SERVICE FACTORY
 # ============================================================================
 
-class ServiceFactory:
+ass ServiceFactory:
     """Factory for creating service instances"""
     
     def __init__(self, config: ServiceConfig): # No longer needs db_manager

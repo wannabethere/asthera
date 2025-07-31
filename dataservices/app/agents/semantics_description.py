@@ -122,7 +122,7 @@ class SemanticsDescription:
     class Input(BaseModel):
         id: str
         table_data: Dict[str, Any]  # Changed from mdl to table_data
-        project_id: Optional[str] = None  # this is for tracing purpose
+        domain_id: Optional[str] = None  # this is for tracing purpose
         configuration: Optional[Configuration] = Configuration()
 
     class Resource(BaseModel):

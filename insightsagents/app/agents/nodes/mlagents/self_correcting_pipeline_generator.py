@@ -7,6 +7,7 @@ from enum import Enum
 import ast
 from app.storage.documents import DocumentChromaStore
 from .analysis_intent_classification import AnalysisIntentResult
+import logging
 
 class PipelineType(Enum):
     """Supported pipeline types"""
@@ -32,6 +33,11 @@ class CodeQuality(Enum):
     GOOD = "good"
     POOR = "poor"
     INVALID = "invalid"
+
+# Initialize logger at the beginning
+
+logger = logging.getLogger(__name__)
+        
 
 class SelfCorrectingPipelineCodeGenerator:
     """
@@ -148,30 +154,92 @@ class SelfCorrectingPipelineCodeGenerator:
         
         Args:
             context: Natural language description of the task
-            function_name: Primary function to use in the pipeline (can be a string or list of suggested functions)
+            function_name: Fallback function(s) to use if classification.retrieved_functions is not available
+                          (can be a string or list of suggested functions)
             function_inputs: Extracted function inputs (will be enhanced by LLM detection).
                            Can be Dict[str, Any], List[str], or other types (will be converted to dict)
             dataframe_name: Name of the dataframe variable
-            classification: Optional classification results with intent, confidence, etc.
+            classification: Optional classification results with intent, confidence, and retrieved_functions.
+                          If provided and contains retrieved_functions, these will be used instead of function_name
             dataset_description: Optional description of the dataset
             columns_description: Optional dictionary mapping column names to descriptions
             
         Returns:
             Dictionary containing generated code and metadata
         """
-        # Initialize logger at the beginning
-        import logging
-        logger = logging.getLogger(__name__)
         
-        # Detect the best function if function_name is a list
-        if isinstance(function_name, list):
-            original_function_list = function_name
+        # Use existing reasoning plan and retrieved functions from classification if available
+        if classification and hasattr(classification, 'reasoning_plan') and classification.reasoning_plan:
+            # Use the existing reasoning plan and retrieved functions
+            reasoning_plan = classification.reasoning_plan
+            retrieved_functions = classification.retrieved_functions if hasattr(classification, 'retrieved_functions') else []
+            
+            logger.info(f"Using existing reasoning plan with {len(reasoning_plan)} steps")
+            logger.info(f"Using existing retrieved functions: {len(retrieved_functions)} functions")
+            
+            # Extract function names from reasoning plan steps
+            reasoning_plan_functions = []
+            for step in reasoning_plan:
+                if isinstance(step, dict) and 'function_name' in step:
+                    reasoning_plan_functions.append(step['function_name'])
+            
+            # Use reasoning plan functions if available, otherwise use retrieved functions
+            if reasoning_plan_functions:
+                function_name = reasoning_plan_functions
+                logger.info(f"Using functions from reasoning plan: {reasoning_plan_functions}")
+            elif retrieved_functions:
+                # Extract function names from retrieved_functions
+                retrieved_function_names = []
+                for func in retrieved_functions:
+                    if isinstance(func, dict):
+                        func_name = func.get('function_name', '')
+                        if func_name:
+                            retrieved_function_names.append(func_name)
+                    elif isinstance(func, str):
+                        retrieved_function_names.append(func)
+                
+                if retrieved_function_names:
+                    function_name = retrieved_function_names
+                    logger.info(f"Using retrieved_functions from classification: {retrieved_function_names}")
+                else:
+                    # Fallback to function_name parameter
+                    if not isinstance(function_name, list):
+                        function_name = [function_name]
+                    logger.info(f"Using function_name parameter as fallback: {function_name}")
+            else:
+                # Fallback to function_name parameter
+                if not isinstance(function_name, list):
+                    function_name = [function_name]
+                logger.info(f"Using function_name parameter as fallback: {function_name}")
+        else:
+            # Use function_name parameter if no reasoning plan available
+            if not isinstance(function_name, list):
+                function_name = [function_name]
+            logger.info(f"Using function_name parameter: {function_name}")
+        
+        original_function_list = function_name
+        
+        # If we have a reasoning plan, use it directly instead of detecting functions
+        if classification and hasattr(classification, 'reasoning_plan') and classification.reasoning_plan:
+            # Use the reasoning plan to determine the primary function and inputs
+            reasoning_plan_result = self._extract_function_from_reasoning_plan(
+                classification.reasoning_plan, context, classification
+            )
+            selected_function = reasoning_plan_result["selected_function"]
+            function_detection_metadata = reasoning_plan_result["metadata"]
+            detected_inputs = reasoning_plan_result["inputs"]
+            
+            logger.info(f"Using reasoning plan - Selected function: {selected_function}")
+            logger.info(f"Using reasoning plan - Function metadata: {function_detection_metadata}")
+            logger.info(f"Using reasoning plan - Detected inputs: {detected_inputs}")
+        else:
+            # Fallback to original detection logic
             detected_function = await self._detect_best_function(
                 context, function_name, classification, dataset_description, columns_description
             )
             selected_function = detected_function["selected_function"]
             function_detection_metadata = detected_function
-            
+            print("detected_function",detected_function)
             # Validate that a function was selected
             if not selected_function:
                 logger.warning("No function was selected from the list, using the first suggested function")
@@ -179,27 +247,20 @@ class SelfCorrectingPipelineCodeGenerator:
                 function_detection_metadata["selected_function"] = selected_function
                 function_detection_metadata["reasoning"] = "Fallback to first suggested function due to detection failure"
             
-            function_name = selected_function
-        else:
-            function_detection_metadata = {
-                "selected_function": function_name,
-                "confidence": 1.0,
-                "reasoning": "Single function provided",
-                "alternative_functions": []
-            }
+            # Detect function inputs using LLM (including additional computations)
+            detected_inputs = await self._detect_function_inputs(
+                context, selected_function, classification, dataset_description, columns_description
+            )
         
-        # Detect function inputs using LLM (including additional computations)
-        detected_inputs = await self._detect_function_inputs(
-            context, function_name, classification, dataset_description, columns_description
-        )
+        function_name = selected_function
         
         # Debug logging
-        logger.debug(f"Detected function: {function_name}")
-        logger.debug(f"Function detection metadata: {function_detection_metadata}")
-        logger.debug(f"Detected inputs: {detected_inputs}")
-        logger.debug(f"Detected inputs type: {type(detected_inputs)}")
-        logger.debug(f"Function inputs: {function_inputs}")
-        logger.debug(f"Function inputs type: {type(function_inputs)}")
+        logger.info(f"Detected function: {function_name}")
+        logger.info(f"Function detection metadata: {function_detection_metadata}")
+        logger.info(f"Detected inputs: {detected_inputs}")
+        logger.info(f"Detected inputs type: {type(detected_inputs)}")
+        logger.info(f"Function inputs: {function_inputs}")
+        logger.info(f"Function inputs type: {type(function_inputs)}")
         
         # Ensure function_inputs is a dictionary
         if not isinstance(function_inputs, dict):
@@ -221,8 +282,8 @@ class SelfCorrectingPipelineCodeGenerator:
         
         # Merge detected inputs with provided inputs (detected inputs take precedence)
         primary_function_inputs = detected_inputs.get("primary_function_inputs", {})
-        logger.debug(f"Primary function inputs: {primary_function_inputs}")
-        logger.debug(f"Primary function inputs type: {type(primary_function_inputs)}")
+        logger.info(f"Primary function inputs: {primary_function_inputs}")
+        logger.info(f"Primary function inputs type: {type(primary_function_inputs)}")
         
         # Ensure primary_function_inputs is a dictionary
         if isinstance(primary_function_inputs, list):
@@ -262,6 +323,53 @@ class SelfCorrectingPipelineCodeGenerator:
         # Self-correction loop
         for iteration in range(self.max_iterations):
             query_state["iteration"] = iteration
+            
+            # Check if we have a reasoning plan to use directly
+            if classification and hasattr(classification, 'reasoning_plan') and classification.reasoning_plan:
+                # Use reasoning plan directly for code generation
+                logger.info(f"Iteration {iteration}: Using reasoning plan for direct code generation")
+                
+                # Evaluate reasoning plan quality first
+                plan_evaluation = self._evaluate_reasoning_plan_quality(
+                    classification.reasoning_plan, 
+                    "",  # No generated code yet
+                    query_state
+                )
+                
+                logger.info(f"Reasoning plan quality score: {plan_evaluation['quality_score']}")
+                if plan_evaluation['issues']:
+                    logger.info(f"Reasoning plan issues: {plan_evaluation['issues']}")
+                
+                # Adjust reasoning plan if needed
+                if plan_evaluation['quality_score'] < 0.7:
+                    logger.info("Adjusting reasoning plan due to quality issues")
+                    adjusted_plan = self._adjust_reasoning_plan(
+                        classification.reasoning_plan, 
+                        plan_evaluation
+                    )
+                    # Update the classification with adjusted plan
+                    classification.reasoning_plan = adjusted_plan
+                    logger.info(f"Adjusted reasoning plan has {len(adjusted_plan)} steps")
+                
+                # Generate code from (potentially adjusted) reasoning plan
+                generated_code = self._generate_code_from_reasoning_plan(
+                    classification.reasoning_plan, 
+                    dataframe_name, 
+                    classification
+                )
+                
+                # Grade the generated code
+                code_quality = self._grade_code(generated_code, query_state)
+                
+                # If code quality is good, use it; otherwise try LLM generation
+                if code_quality in [CodeQuality.EXCELLENT, CodeQuality.GOOD]:
+                    query_state["final_code"] = generated_code
+                    logger.info("Using code generated from reasoning plan")
+                    break
+                else:
+                    logger.info(f"Reasoning plan code quality was {code_quality}, trying LLM generation")
+                    # Add reasoning plan evaluation to query state for LLM generation
+                    query_state["reasoning_plan_evaluation"] = plan_evaluation
             
             # Step 1: Retrieve documents
             retrieved_docs = self._retrieve_documents(query_state)
@@ -312,6 +420,7 @@ class SelfCorrectingPipelineCodeGenerator:
                 can_be_answered = getattr(classification, 'can_be_answered', True)
                 feasibility_score = getattr(classification, 'feasibility_score', 0.0)
                 clarification_needed = getattr(classification, 'clarification_needed', None)
+                reasoning_plan = getattr(classification, 'reasoning_plan', None)
             else:
                 # Dictionary
                 intent_type = classification.get('intent_type', '')
@@ -324,6 +433,7 @@ class SelfCorrectingPipelineCodeGenerator:
                 can_be_answered = classification.get('can_be_answered', True)
                 feasibility_score = classification.get('feasibility_score', 0.0)
                 clarification_needed = classification.get('clarification_needed')
+                reasoning_plan = classification.get('reasoning_plan', None)
             
             enhanced_parts.append(f"\nIntent Analysis:")
             enhanced_parts.append(f"- Intent Type: {intent_type}")
@@ -351,6 +461,11 @@ class SelfCorrectingPipelineCodeGenerator:
             # Add clarification if needed
             if clarification_needed:
                 enhanced_parts.append(f"- Clarification Needed: {clarification_needed}")
+            
+            # Add reasoning plan as raw JSON if available
+            if reasoning_plan and isinstance(reasoning_plan, list):
+                enhanced_parts.append(f"\nReasoning Plan (JSON):")
+                enhanced_parts.append(json.dumps(reasoning_plan, indent=2))
         
         # Add dataset description
         if dataset_description:
@@ -363,6 +478,205 @@ class SelfCorrectingPipelineCodeGenerator:
                 enhanced_parts.append(f"- {col}: {desc}")
         
         return "\n".join(enhanced_parts)
+    
+    def _extract_function_from_reasoning_plan(self, 
+                                            reasoning_plan: List[Dict[str, Any]], 
+                                            context: str,
+                                            classification: Union[Dict[str, Any], AnalysisIntentResult]) -> Dict[str, Any]:
+        """
+        Extract function and inputs from existing reasoning plan instead of creating new ones
+        
+        Args:
+            reasoning_plan: List of reasoning plan steps
+            context: Original context
+            classification: Classification results
+            
+        Returns:
+            Dictionary with selected function, metadata, and inputs
+        """
+        if not reasoning_plan or not isinstance(reasoning_plan, list):
+            return {
+                "selected_function": "Mean",  # fallback
+                "metadata": {
+                    "selected_function": "Mean",
+                    "confidence": 0.0,
+                    "reasoning": "No reasoning plan available, using fallback",
+                    "alternative_functions": [],
+                    "reasoning_plan_alignment": "No reasoning plan to align with"
+                },
+                "inputs": {
+                    "primary_function_inputs": {},
+                    "additional_computations": [],
+                    "pipeline_sequence": ["Basic analysis"],
+                    "reasoning": "No reasoning plan available",
+                    "reasoning_plan_step_mapping": "No reasoning plan available"
+                }
+            }
+        
+        # Extract functions from reasoning plan steps
+        plan_functions = []
+        for step in reasoning_plan:
+            if isinstance(step, dict) and 'function_name' in step:
+                function_name = step['function_name']
+                # Skip None, "None", or empty function names
+                if function_name and function_name != "None" and function_name != "none":
+                    plan_functions.append(function_name)
+        
+        if not plan_functions:
+            return {
+                "selected_function": "Mean",  # fallback
+                "metadata": {
+                    "selected_function": "Mean",
+                    "confidence": 0.0,
+                    "reasoning": "No functions found in reasoning plan, using fallback",
+                    "alternative_functions": [],
+                    "reasoning_plan_alignment": "No functions in reasoning plan"
+                },
+                "inputs": {
+                    "primary_function_inputs": {},
+                    "additional_computations": [],
+                    "pipeline_sequence": ["Basic analysis"],
+                    "reasoning": "No functions found in reasoning plan",
+                    "reasoning_plan_step_mapping": "No functions in reasoning plan"
+                }
+            }
+        
+        # Select the primary function (first one in the plan)
+        selected_function = plan_functions[0]
+        
+        # Create metadata based on reasoning plan
+        metadata = {
+            "selected_function": selected_function,
+            "confidence": 0.95,  # High confidence since it's from reasoning plan
+            "reasoning": f"Selected {selected_function} from reasoning plan step 1",
+            "alternative_functions": plan_functions[1:] if len(plan_functions) > 1 else [],
+            "reasoning_plan_alignment": f"Directly implements reasoning plan with {len(reasoning_plan)} steps"
+        }
+        
+        # Extract inputs from reasoning plan
+        primary_function_inputs = {}
+        additional_computations = []
+        pipeline_sequence = []
+        
+        for i, step in enumerate(reasoning_plan):
+            if isinstance(step, dict):
+                step_num = step.get('step_number', i + 1)
+                step_title = step.get('step_title', f'Step {step_num}')
+                function_name = step.get('function_name', '')
+                parameter_mapping = step.get('parameter_mapping', {})
+                data_requirements = step.get('data_requirements', [])
+                embedded_function_parameter = step.get('embedded_function_parameter', False)
+                embedded_function_details = step.get('embedded_function_details', {})
+                
+                # Handle None, "None", or "N/A" values
+                if function_name in [None, "None", "none", "N/A"]:
+                    function_name = ""
+                if parameter_mapping in [None, "None", "none", "N/A"]:
+                    parameter_mapping = {}
+                
+                # Add to pipeline sequence
+                pipeline_sequence.append(f"Step {step_num}: {step_title}")
+                
+                # Extract parameters for the primary function (first step)
+                if i == 0 and parameter_mapping:
+                    if isinstance(parameter_mapping, dict):
+                        primary_function_inputs = parameter_mapping.copy()
+                        
+                        # Handle embedded function parameters
+                        if embedded_function_parameter and embedded_function_details:
+                            embedded_function = embedded_function_details.get('embedded_function', '')
+                            embedded_pipe = embedded_function_details.get('embedded_pipe', 'MetricsPipe')
+                            embedded_parameters = embedded_function_details.get('embedded_parameters', {})
+                            
+                            if embedded_function and embedded_pipe:
+                                # Create the embedded function expression
+                                embedded_expr = f"({embedded_pipe}.from_dataframe(df) | {embedded_function}("
+                                
+                                # Add embedded function parameters
+                                embedded_params = []
+                                for key, value in embedded_parameters.items():
+                                    if isinstance(value, str):
+                                        embedded_params.append(f"{key}='{value}'")
+                                    else:
+                                        embedded_params.append(f"{key}={value}")
+                                
+                                embedded_expr += ", ".join(embedded_params)
+                                embedded_expr += ") | to_df())"
+                                
+                                # Add the embedded function to the primary function inputs
+                                primary_function_inputs['function'] = embedded_expr
+                                
+                                logger.info(f"Added embedded function parameter: {embedded_expr}")
+                    else:
+                        logger.warning(f"Parameter mapping is not a dictionary, converting to empty dict: {type(parameter_mapping)} -> {parameter_mapping}")
+                        primary_function_inputs = {}
+                
+                # Add additional computations for subsequent steps (only if not embedded)
+                if i > 0 and function_name and not embedded_function_parameter:
+                    # Ensure parameter_mapping is a dictionary
+                    if isinstance(parameter_mapping, dict):
+                        inputs_for_computation = parameter_mapping
+                    else:
+                        logger.warning(f"Parameter mapping for step {i} is not a dictionary, using empty dict: {type(parameter_mapping)} -> {parameter_mapping}")
+                        inputs_for_computation = {}
+                    
+                    additional_computations.append({
+                        "function": function_name,
+                        "inputs": inputs_for_computation,
+                        "tool": "metrics_tools" if function_name in ["Mean", "Sum", "Count", "Variance"] else "builtin"
+                    })
+        
+        # Create inputs structure
+        inputs = {
+            "primary_function_inputs": primary_function_inputs,
+            "additional_computations": additional_computations,
+            "pipeline_sequence": pipeline_sequence,
+            "multi_pipeline": len(additional_computations) > 0,
+            "first_pipeline_type": "MetricsPipe" if selected_function in ["Mean", "Sum", "Count", "Variance", "GroupBy"] else None,
+            "second_pipeline_type": None,  # Will be determined by the primary function
+            "reasoning": f"Extracted from reasoning plan with {len(reasoning_plan)} steps",
+            "reasoning_plan_step_mapping": f"Maps to {len(reasoning_plan)} reasoning plan steps"
+        }
+        
+        # Check if any step has embedded function parameters
+        has_embedded_functions = any(
+            step.get('embedded_function_parameter', False) 
+            for step in reasoning_plan 
+            if isinstance(step, dict)
+        )
+        
+        if has_embedded_functions:
+            # If we have embedded functions, we don't need separate pipelines
+            inputs["multi_pipeline"] = False
+            inputs["reasoning"] += " (embedded function parameters used)"
+        
+        # Determine second pipeline type if multi-pipeline
+        if inputs["multi_pipeline"] and additional_computations:
+            # Check what type of functions are in additional computations
+            for comp in additional_computations:
+                func_name = comp.get("function", "")
+                if func_name in ["variance_analysis", "lead", "lag"]:
+                    inputs["second_pipeline_type"] = "TimeSeriesPipe"
+                    break
+                elif func_name in ["form_time_cohorts", "calculate_retention"]:
+                    inputs["second_pipeline_type"] = "CohortPipe"
+                    break
+                elif func_name in ["detect_statistical_outliers", "detect_contextual_anomalies"]:
+                    inputs["second_pipeline_type"] = "AnomalyPipe"
+                    break
+                elif func_name in ["run_kmeans", "run_dbscan"]:
+                    inputs["second_pipeline_type"] = "SegmentPipe"
+                    break
+        
+        logger.info(f"Extracted function from reasoning plan: {selected_function}")
+        logger.info(f"Reasoning plan has {len(reasoning_plan)} steps")
+        logger.info(f"Pipeline sequence: {pipeline_sequence}")
+        
+        return {
+            "selected_function": selected_function,
+            "metadata": metadata,
+            "inputs": inputs
+        }
     
     async def _detect_best_function(self, 
                                    context: str,
@@ -377,15 +691,59 @@ class SelfCorrectingPipelineCodeGenerator:
         function_definitions = await self._retrieve_function_definitions(suggested_functions)
         print("function_definitions",function_definitions)
 
+        # Extract retrieved_functions metadata if available
+        retrieved_functions_info = ""
+        if classification and hasattr(classification, 'retrieved_functions') and classification.retrieved_functions:
+            retrieved_functions_info = "\nRETRIEVED FUNCTIONS METADATA:\n"
+            for i, func in enumerate(classification.retrieved_functions, 1):
+                if func.get('function_name') in suggested_functions:
+                    retrieved_functions_info += f"{i}. {func.get('function_name', 'N/A')}:\n"
+                    retrieved_functions_info += f"   - Relevance Score: {func.get('relevance_score', 'N/A')}\n"
+                    retrieved_functions_info += f"   - Description: {func.get('description', 'N/A')}\n"
+                    retrieved_functions_info += f"   - Usage: {func.get('usage_description', 'N/A')}\n"
+                    retrieved_functions_info += f"   - Reasoning: {func.get('reasoning', 'N/A')}\n"
+                    retrieved_functions_info += f"   - Priority: {func.get('priority', 'N/A')}\n"
+                    
+                    # Add required parameters if available
+                    if func.get('required_params'):
+                        retrieved_functions_info += f"   - Required Parameters:\n"
+                        for param in func.get('required_params', []):
+                            param_name = param.get('name', 'N/A')
+                            param_type = param.get('type', 'N/A')
+                            param_desc = param.get('description', 'N/A')
+                            retrieved_functions_info += f"     * {param_name} ({param_type}): {param_desc}\n"
+                    
+                    # Add optional parameters if available
+                    if func.get('optional_params'):
+                        retrieved_functions_info += f"   - Optional Parameters:\n"
+                        for param in func.get('optional_params', []):
+                            param_name = param.get('name', 'N/A')
+                            param_type = param.get('type', 'N/A')
+                            param_desc = param.get('description', 'N/A')
+                            retrieved_functions_info += f"     * {param_name} ({param_type}): {param_desc}\n"
+                    
+                    # Add outputs if available
+                    if func.get('outputs'):
+                        outputs = func.get('outputs', {})
+                        output_type = outputs.get('type', 'N/A')
+                        output_desc = outputs.get('description', 'N/A')
+                        retrieved_functions_info += f"   - Output: {output_type} - {output_desc}\n"
+                    
+                    # Add category if available
+                    if func.get('category'):
+                        retrieved_functions_info += f"   - Category: {func.get('category')}\n"
+                    
+                    retrieved_functions_info += "\n"
+
         detection_prompt = PromptTemplate(
             input_variables=[
-                "context", "suggested_functions", "function_definitions", "classification_context", "dataset_context"
+                "context", "suggested_functions", "function_definitions", "classification_context", "dataset_context", "reasoning_plan_json", "retrieved_functions_info"
             ],
             template="""
             You are an expert function selector for data analysis pipelines.
             
             TASK: From the provided list of suggested functions, select the most appropriate primary function
-            to fulfill the given context. Consider the intent type, confidence, and feasibility.
+            to fulfill the given context. Consider the intent type, confidence, feasibility, and the detailed reasoning plan.
             
             CONTEXT: {context}
             SUGGESTED FUNCTIONS: {suggested_functions}
@@ -399,6 +757,11 @@ class SelfCorrectingPipelineCodeGenerator:
             DATASET INFORMATION:
             {dataset_context}
             
+            REASONING PLAN (JSON):
+            {reasoning_plan_json}
+            
+            {retrieved_functions_info}
+            
             INSTRUCTIONS:
             1. Analyze the context to understand the data analysis task.
             2. Review the function definitions to understand what each function does.
@@ -408,61 +771,83 @@ class SelfCorrectingPipelineCodeGenerator:
                - If the context mentions "sales", look for columns like "sales_amount", "total_sales", "revenue", etc.
                - If the context mentions "time" or "date", look for temporal columns
                - If the context mentions grouping "by region", look for categorical columns that could represent regions
-            6. Evaluate the confidence and feasibility of each suggested function based on their definitions and available data.
-            7. Prioritize functions that are highly confident and feasible with the available data.
-            8. Consider if multiple pipelines are needed based on data requirements.
-            9. Return a JSON object with the selected function and its confidence.
+            6. CRITICAL: Use the reasoning plan to guide function selection:
+               - Review each step in the reasoning plan to understand the analysis approach
+               - Identify which functions are suggested for each step
+               - Prioritize functions that appear in multiple steps or have high relevance
+               - Consider the step-by-step logic and data requirements
+               - Choose functions that align with the expected outcomes described in the plan
+            7. CRITICAL: Use the retrieved functions metadata to prioritize function selection:
+               - Higher relevance scores indicate better matches for the current context
+               - Review the reasoning provided for each function to understand why it was selected
+               - Consider priority levels when multiple functions are available
+               - Functions with higher relevance scores and better reasoning should be preferred
+               - Review required and optional parameters to ensure the function can be used with available data
+               - Consider parameter types and descriptions when selecting functions
+            8. Evaluate the confidence and feasibility of each suggested function based on their definitions, available data, reasoning plan alignment, and retrieved functions metadata.
+            9. Prioritize functions that are highly confident, feasible with the available data, align with the reasoning plan, AND have high relevance scores from the retrieved functions analysis.
+            10. Consider if multiple pipelines are needed based on data requirements and reasoning plan steps.
+            11. Return a JSON object with the selected function and its confidence.
             
             OUTPUT FORMAT:
             {{
                 "selected_function": "function_name",
                 "confidence": 0.0-1.0,
-                "reasoning": "explanation of why this function was selected",
-                "alternative_functions": ["function_name1", "function_name2"]
+                "reasoning": "explanation of why this function was selected, including reasoning plan alignment",
+                "alternative_functions": ["function_name1", "function_name2"],
+                "reasoning_plan_alignment": "how this function aligns with the reasoning plan steps"
             }}
             
             EXAMPLES:
             
-            Example 1 - Simple selection:
+            Example 1 - Simple selection with reasoning plan:
             Context: "Calculate the mean of sales column"
             Suggested Functions: ["Mean", "Sum", "Count"]
+            Reasoning Plan: Step 1 suggests "Mean" function for basic aggregation
             Output: {{
                 "selected_function": "Mean",
                 "confidence": 0.95,
-                "reasoning": "Mean is the most direct and confident function for calculating a single value.",
-                "alternative_functions": ["Sum", "Count"]
+                "reasoning": "Mean is the most direct and confident function for calculating a single value. Aligns with Step 1 of reasoning plan.",
+                "alternative_functions": ["Sum", "Count"],
+                "reasoning_plan_alignment": "Directly matches Step 1 requirement for mean calculation"
             }}
             
-            Example 2 - Multi-pipeline selection:
+            Example 2 - Multi-pipeline selection with reasoning plan:
             Context: "Calculate the mean of transactional value and then analyze its variance over time"
-            Suggested Functions: ["Mean", "Variance", "TimeSeriesPipe"]
+            Suggested Functions: ["Mean", "Variance", "variance_analysis"]
+            Reasoning Plan: Step 1 suggests "Mean" for aggregation, Step 2 suggests "variance_analysis" for time series
             Output: {{
                 "selected_function": "Mean",
                 "confidence": 0.85,
-                "reasoning": "Mean is a necessary first step for variance analysis. TimeSeriesPipe is also needed.",
-                "alternative_functions": ["Variance"]
+                "reasoning": "Mean is a necessary first step for variance analysis. TimeSeriesPipe is also needed. Aligns with Step 1 of reasoning plan.",
+                "alternative_functions": ["Variance"],
+                "reasoning_plan_alignment": "Matches Step 1 requirement for mean calculation, sets up for Step 2 variance analysis"
             }}
             
-            Example 3 - Risk function selection:
+            Example 3 - Risk function selection with reasoning plan:
             Context: "Calculate the variance of customer retention rate"
             Suggested Functions: ["Variance", "CohortPipe"]
+            Reasoning Plan: Step 1 suggests "Variance" for risk assessment
             Output: {{
                 "selected_function": "Variance",
                 "confidence": 0.90,
-                "reasoning": "Variance is the most relevant and confident function for risk analysis.",
-                "alternative_functions": ["CohortPipe"]
+                "reasoning": "Variance is the most relevant and confident function for risk analysis. Directly matches reasoning plan Step 1.",
+                "alternative_functions": ["CohortPipe"],
+                "reasoning_plan_alignment": "Directly implements Step 1 variance calculation requirement"
             }}
             
-            Example 4 - Column-aware function selection:
+            Example 4 - Column-aware function selection with reasoning plan:
             Context: "Analyze sales performance by region over time"
             Suggested Functions: ["Mean", "variance_analysis", "aggregate_by_time"]
             Dataset: "Sales data with regional and temporal information"
             Columns: {{"sales_amount": "Total sales value", "region": "Sales region", "date": "Transaction date"}}
+            Reasoning Plan: Step 1 suggests "aggregate_by_time" for temporal analysis, Step 2 suggests grouping by region
             Output: {{
                 "selected_function": "aggregate_by_time",
                 "confidence": 0.95,
-                "reasoning": "aggregate_by_time is the best choice as it can handle both temporal analysis (using 'date' column) and grouping by region, with 'sales_amount' as the target metric.",
-                "alternative_functions": ["Mean", "variance_analysis"]
+                "reasoning": "aggregate_by_time is the best choice as it can handle both temporal analysis (using 'date' column) and grouping by region, with 'sales_amount' as the target metric. Aligns with reasoning plan steps.",
+                "alternative_functions": ["Mean", "variance_analysis"],
+                "reasoning_plan_alignment": "Implements Step 1 temporal aggregation and sets up for Step 2 regional grouping"
             }}
             
             Analyze the given context and return the appropriate JSON response.
@@ -473,7 +858,10 @@ class SelfCorrectingPipelineCodeGenerator:
         classification_context = self._format_classification_context(classification) if classification else "No classification available"
         
         # Format dataset context
-        dataset_context = self._format_dataset_context(dataset_description, columns_description or {})
+        dataset_context = self._format_dataset_context(dataset_description, columns_description)
+        
+        # Format reasoning plan as JSON
+        reasoning_plan_json = self._format_reasoning_plan_json(classification)
         
         # Create detection chain
         detection_chain = detection_prompt | self.llm | StrOutputParser()
@@ -485,7 +873,9 @@ class SelfCorrectingPipelineCodeGenerator:
                 "suggested_functions": ", ".join(suggested_functions),
                 "function_definitions": function_definitions,
                 "classification_context": classification_context,
-                "dataset_context": dataset_context
+                "dataset_context": dataset_context,
+                "reasoning_plan_json": reasoning_plan_json,
+                "retrieved_functions_info": retrieved_functions_info
             })
             
             # Parse the JSON result
@@ -504,7 +894,7 @@ class SelfCorrectingPipelineCodeGenerator:
                     raise ValueError("Result is not a dictionary")
                 
                 # Ensure required keys exist and have correct types
-                required_keys = ["selected_function", "confidence", "reasoning", "alternative_functions"]
+                required_keys = ["selected_function", "confidence", "reasoning", "alternative_functions", "reasoning_plan_alignment"]
                 
                 for key in required_keys:
                     if key not in detected_function:
@@ -516,6 +906,8 @@ class SelfCorrectingPipelineCodeGenerator:
                             detected_function[key] = ""
                         elif key == "alternative_functions":
                             detected_function[key] = []
+                        elif key == "reasoning_plan_alignment":
+                            detected_function[key] = ""
                 
                 # Ensure alternative_functions is a list
                 if not isinstance(detected_function["alternative_functions"], list):
@@ -530,7 +922,8 @@ class SelfCorrectingPipelineCodeGenerator:
                     "selected_function": "",
                     "confidence": 0.0,
                     "reasoning": f"JSON parsing failed: {str(e)}. Using fallback function.",
-                    "alternative_functions": []
+                    "alternative_functions": [],
+                    "reasoning_plan_alignment": ""
                 }
                 
         except Exception as e:
@@ -539,7 +932,8 @@ class SelfCorrectingPipelineCodeGenerator:
                 "selected_function": "",
                 "confidence": 0.0,
                 "reasoning": f"Function selection failed: {str(e)}. Using fallback function.",
-                "alternative_functions": []
+                "alternative_functions": [],
+                "reasoning_plan_alignment": ""
             }
     
     async def _retrieve_function_definitions(self, function_names: List[str]) -> str:
@@ -660,14 +1054,14 @@ class SelfCorrectingPipelineCodeGenerator:
         detection_prompt = PromptTemplate(
             input_variables=[
                 "context", "function_name", "function_definition", "classification_context", "dataset_context",
-                "metrics_functions", "operations_functions"
+                "metrics_functions", "operations_functions", "reasoning_plan_json"
             ],
             template="""
             You are an expert function input detector for data analysis pipelines.
             
             TASK: Analyze the given context and function name to detect the required function inputs,
             including any additional computations needed (like mean, average, etc.) or whether to use
-            functions from metrics_tools.py or operations_tools.py.
+            functions from metrics_tools.py or operations_tools.py. Use the detailed reasoning plan to guide your decisions.
             
             CONTEXT: {context}
             FUNCTION NAME: {function_name}
@@ -687,22 +1081,30 @@ class SelfCorrectingPipelineCodeGenerator:
             AVAILABLE OPERATIONS FUNCTIONS (from operations_tools.py):
             {operations_functions}
             
+            REASONING PLAN (JSON):
+            {reasoning_plan_json}
             
             INSTRUCTIONS:
             1. Analyze the context to understand what data analysis is being requested
             2. Review the primary function definition to understand its parameters and requirements
-            3. Analyze the dataset and column descriptions to identify the most appropriate columns for the analysis:
+            3. CRITICAL: Use the reasoning plan to guide input detection:
+               - Review each step in the reasoning plan to understand the analysis approach
+               - Identify which step(s) the primary function corresponds to
+               - Use the data requirements and suggested functions from the reasoning plan
+               - Consider the expected outcomes and considerations from the plan
+               - Align your input detection with the step-by-step logic
+            4. Analyze the dataset and column descriptions to identify the most appropriate columns for the analysis:
                - For numeric calculations: Use columns categorized as "Numeric Columns"
                - For time-based analysis: Use columns categorized as "Temporal Columns" 
                - For grouping/segmentation: Use columns categorized as "Categorical Columns"
                - For identification: Use columns categorized as "Identifier Columns"
-            4. IMPORTANT: Use ONLY the actual column names provided in the dataset information. Do not invent column names.
-            5. Map context requirements to actual column names from the dataset description:
+            5. IMPORTANT: Use ONLY the actual column names provided in the dataset information. Do not invent column names.
+            6. Map context requirements to actual column names from the dataset description:
                - If the context mentions "sales", look for columns like "sales_amount", "total_sales", "revenue", etc.
                - If the context mentions "time" or "date", look for temporal columns
                - If the context mentions grouping "by region", look for categorical columns that could represent regions
-            6. Determine the required function inputs for the primary function based on its definition and available columns
-            7. Identify the pipeline type for the primary function:
+            7. Determine the required function inputs for the primary function based on its definition, available columns, and reasoning plan alignment
+            8. Identify the pipeline type for the primary function:
                - TimeSeriesPipe: variance_analysis, lead, lag, etc.
                - MetricsPipe: Variance, Mean, Sum, Count, etc.
                - OperationsPipe: PercentChange, AbsoluteChange, etc.
@@ -712,11 +1114,12 @@ class SelfCorrectingPipelineCodeGenerator:
                - AnomalyPipe: detect_statistical_outliers, detect_contextual_anomalies, etc.
                - SegmentPipe: run_kmeans, run_dbscan, etc.
                - TrendsPipe: aggregate_by_time, calculate_growth_rates, etc.
-            8. Determine if multiple pipelines are needed:
+            9. Determine if multiple pipelines are needed based on reasoning plan steps:
+                - If reasoning plan has multiple steps with different function types
                 - If primary function is TimeSeriesPipe/CohortPipe/RiskPipe/FunnelPipe/AnomalyPipe/SegmentPipe/TrendsPipe AND additional computations are needed
                 - Create a multi-pipeline approach: MetricsPipe/OperationsPipe first, then primary pipeline
-            9. Consider the classification analysis for additional context
-            10. Return a JSON object with the detected inputs using actual column names
+            10. Consider the classification analysis and reasoning plan for additional context
+            11. Return a JSON object with the detected inputs using actual column names and reasoning plan alignment
             
             OUTPUT FORMAT:
             Return ONLY a valid JSON object with the following structure:
@@ -742,40 +1145,28 @@ class SelfCorrectingPipelineCodeGenerator:
                 "multi_pipeline": true | false,
                 "first_pipeline_type": "MetricsPipe" | "OperationsPipe" | null,
                 "second_pipeline_type": "TimeSeriesPipe" | "CohortPipe" | "RiskPipe" | "FunnelPipe" | "AnomalyPipe" | "SegmentPipe" | "TrendsPipe" | null,
-                "reasoning": "explanation of why these inputs were chosen"
+                "reasoning": "explanation of why these inputs were chosen, including reasoning plan alignment",
+                "reasoning_plan_step_mapping": "which reasoning plan steps this implementation covers"
             }}
             
             EXAMPLES:
             
-            Example 1 - Simple metrics:
+            Example 1 - Simple metrics with reasoning plan:
             Context: "Calculate the mean of sales column"
             Function: "Mean"
+            Reasoning Plan: Step 1 suggests "Mean" function for basic aggregation
             Output: {{
                 "primary_function_inputs": {{"variable": "sales"}},
                 "additional_computations": [],
                 "pipeline_sequence": ["Calculate mean of sales"],
-                "reasoning": "Direct mean calculation using metrics_tools Mean function"
+                "reasoning": "Direct mean calculation using metrics_tools Mean function. Aligns with Step 1 of reasoning plan.",
+                "reasoning_plan_step_mapping": "Implements Step 1 mean calculation requirement"
             }}
             
-            Example 2 - Same pipeline type (OperationsPipe):
-            Context: "Calculate the percent change and absolute change compared to baseline"
-            Function: "PercentChange"
-            Output: {{
-                "primary_function_inputs": {{"condition_column": "customer_type", "baseline": "standard"}},
-                "additional_computations": [
-                    {{
-                        "function": "AbsoluteChange",
-                        "inputs": {{"condition_column": "customer_type", "baseline": "standard"}},
-                        "tool": "operations_tools"
-                    }}
-                ],
-                "pipeline_sequence": ["Calculate percent change", "Calculate absolute change"],
-                "reasoning": "Both functions are from OperationsPipe, so they can be chained together"
-            }}
-            
-            Example 3 - Multi-pipeline approach (MetricsPipe first, then TimeSeriesPipe):
+            Example 2 - Multi-pipeline approach with reasoning plan:
             Context: "Calculate the mean of transactional value and then analyze its variance over time"
             Function: "variance_analysis"
+            Reasoning Plan: Step 1 suggests "Mean" for aggregation, Step 2 suggests "variance_analysis" for time series
             Output: {{
                 "primary_function_inputs": {{"columns": ["mean_Transactional value"], "method": "rolling", "window": 5}},
                 "additional_computations": [
@@ -789,129 +1180,38 @@ class SelfCorrectingPipelineCodeGenerator:
                 "multi_pipeline": true,
                 "first_pipeline_type": "MetricsPipe",
                 "second_pipeline_type": "TimeSeriesPipe",
-                "reasoning": "Need to calculate mean first using MetricsPipe, then analyze variance over time using TimeSeriesPipe"
+                "reasoning": "Need to calculate mean first using MetricsPipe (Step 1), then analyze variance over time using TimeSeriesPipe (Step 2). Aligns with reasoning plan steps.",
+                "reasoning_plan_step_mapping": "Step 1: Mean calculation, Step 2: Variance analysis"
             }}
             
-            Example 4 - Anomaly detection with preprocessing (MetricsPipe first, then AnomalyPipe):
-            Context: "Calculate the mean of sales and then detect outliers in the data"
-            Function: "detect_statistical_outliers"
+            Example 2b - Variance + moving_apply_by_group scenario:
+            Context: "Calculate variance of transactional value and apply moving variance by group"
+            Function: "moving_apply_by_group"
+            Reasoning Plan: Step 1 suggests "Variance" calculation, Step 2 suggests "moving_apply_by_group" for time series
             Output: {{
-                "primary_function_inputs": {{"columns": "mean_sales", "method": "zscore", "threshold": 3.0}},
-                "additional_computations": [
-                    {{
-                        "function": "Mean",
-                        "inputs": {{"variable": "sales"}},
-                        "tool": "metrics_tools"
-                    }}
-                ],
-                "pipeline_sequence": ["Calculate mean of sales", "Detect statistical outliers"],
-                "multi_pipeline": true,
-                "first_pipeline_type": "MetricsPipe",
-                "second_pipeline_type": "AnomalyPipe",
-                "reasoning": "Need to calculate mean first using MetricsPipe, then detect outliers using AnomalyPipe"
+                "primary_function_inputs": {{"columns": "Transactional value", "group_column": "Project, Cost center, Department", "window": 5, "min_periods": 1, "time_column": "Date", "output_suffix": "_rolling_variance", "function": "(MetricsPipe.from_dataframe(df) | Variance(variable='Transactional value') | to_df())"}},
+                "additional_computations": [],
+                "pipeline_sequence": ["Apply moving variance by group with embedded Variance calculation"],
+                "multi_pipeline": false,
+                "first_pipeline_type": null,
+                "second_pipeline_type": null,
+                "reasoning": "moving_apply_by_group function parameter should contain the complete Variance pipeline expression. This embeds the MetricsPipe Variance calculation within the TimeSeriesPipe moving_apply_by_group function.",
+                "reasoning_plan_step_mapping": "Step 1 & 2: Combined in single pipeline with embedded function"
             }}
             
-            Example 5 - Column mapping with dataset description:
+            Example 3 - Column mapping with reasoning plan:
             Context: "Calculate the variance of customer retention rate over time"
             Function: "variance_analysis"
             Dataset: "Customer transaction data with retention metrics"
             Columns: {{"customer_id": "Unique customer identifier", "retention_rate": "Customer retention percentage", "transaction_date": "Date of transaction"}}
+            Reasoning Plan: Step 1 suggests data preparation, Step 2 suggests variance analysis using retention_rate
             Output: {{
                 "primary_function_inputs": {{"columns": ["retention_rate"], "method": "rolling", "window": 5}},
                 "additional_computations": [],
                 "pipeline_sequence": ["Analyze variance of retention rate over time"],
                 "multi_pipeline": false,
-                "reasoning": "Using 'retention_rate' column for variance analysis as it's a numeric metric, with 'transaction_date' available for time-based analysis"
-            }}
-            
-            Example 6 - Multi-column analysis with categorization:
-            Context: "Analyze sales performance by product category and region"
-            Function: "Mean"
-            Dataset: "Sales data with product and regional information"
-            Columns: {{"sales_amount": "Total sales value", "product_category": "Product category name", "region": "Sales region", "transaction_date": "Date of transaction"}}
-            Output: {{
-                "primary_function_inputs": {{"variable": "sales_amount"}},
-                "additional_computations": [
-                    {{
-                        "function": "GroupBy",
-                        "inputs": {{"group_columns": ["product_category", "region"]}},
-                        "tool": "metrics_tools"
-                    }}
-                ],
-                "pipeline_sequence": ["Group by product category and region", "Calculate mean sales amount"],
-                "multi_pipeline": false,
-                "reasoning": "Using 'sales_amount' as the target variable for mean calculation, grouped by categorical columns 'product_category' and 'region'"
-            }}
-            
-            Example 7 - Time series with temporal column mapping:
-            Context: "Calculate moving average of revenue over time"
-            Function: "calculate_moving_average"
-            Dataset: "Revenue data with daily timestamps"
-            Columns: {{"revenue": "Daily revenue amount", "date": "Transaction date", "product_id": "Product identifier"}}
-            Output: {{
-                "primary_function_inputs": {{"metric_column": "revenue", "date_column": "date", "window": 7}},
-                "additional_computations": [],
-                "pipeline_sequence": ["Calculate 7-day moving average of revenue"],
-                "multi_pipeline": false,
-                "reasoning": "Using 'revenue' as the metric column and 'date' as the temporal column for time-based moving average calculation"
-            }}
-            
-            Example 8 - Context to column mapping with actual dataset:
-            Context: "Calculate the mean of sales by region"
-            Function: "Mean"
-            Dataset: "Sales transaction data"
-            Columns: {{"sales_amount": "Total sales value", "region_name": "Sales region", "transaction_date": "Date of transaction"}}
-            Output: {{
-                "primary_function_inputs": {{"variable": "sales_amount"}},
-                "additional_computations": [
-                    {{
-                        "function": "GroupBy",
-                        "inputs": {{"group_columns": ["region_name"]}},
-                        "tool": "metrics_tools"
-                    }}
-                ],
-                "pipeline_sequence": ["Group by region_name", "Calculate mean of sales_amount"],
-                "multi_pipeline": false,
-                "reasoning": "Using 'sales_amount' as the target variable for mean calculation, grouped by 'region_name' which represents regions"
-            }}
-            
-            Example 9 - Complex column mapping:
-            Context: "Analyze customer retention over time by product category"
-            Function: "calculate_retention"
-            Dataset: "Customer purchase history"
-            Columns: {{"customer_id": "Unique customer identifier", "product_category": "Product category name", "purchase_date": "Date of purchase", "retention_days": "Days since first purchase"}}
-            Output: {{
-                "primary_function_inputs": {{"customer_column": "customer_id", "date_column": "purchase_date", "group_column": "product_category"}},
-                "additional_computations": [],
-                "pipeline_sequence": ["Calculate customer retention by product category over time"],
-                "multi_pipeline": false,
-                "reasoning": "Using 'customer_id' for customer identification, 'purchase_date' for temporal analysis, and 'product_category' for grouping"
-            }}
-            
-            Example 10 - Anomaly detection with specific function:
-            Context: "Detect anomalies in sales data over time"
-            Function: "detect_collective_anomalies"
-            Dataset: "Sales transaction data with timestamps"
-            Columns: {{"sales_amount": "Total sales value", "transaction_date": "Date of transaction", "region": "Sales region"}}
-            Output: {{
-                "primary_function_inputs": {{"columns": ["sales_amount"], "time_column": "transaction_date", "method": "isolation_forest", "window": 30}},
-                "additional_computations": [],
-                "pipeline_sequence": ["Detect collective anomalies in sales_amount over time"],
-                "multi_pipeline": false,
-                "reasoning": "Using 'sales_amount' as the target column for anomaly detection and 'transaction_date' as the time column for temporal analysis"
-            }}
-            
-            Example 11 - Batch anomaly detection:
-            Context: "Apply multiple anomaly detection methods to identify outliers"
-            Function: "batch_detect_anomalies"
-            Dataset: "Sensor data with multiple metrics"
-            Columns: {{"temperature": "Temperature reading", "pressure": "Pressure reading", "humidity": "Humidity reading", "timestamp": "Time of reading"}}
-            Output: {{
-                "primary_function_inputs": {{"columns": ["temperature", "pressure", "humidity"], "methods": ["isolation_forest", "local_outlier_factor", "one_class_svm"]}},
-                "additional_computations": [],
-                "pipeline_sequence": ["Apply multiple anomaly detection methods to sensor data"],
-                "multi_pipeline": false,
-                "reasoning": "Using all numeric sensor columns for comprehensive anomaly detection with multiple methods"
+                "reasoning": "Using 'retention_rate' column for variance analysis as it's a numeric metric, with 'transaction_date' available for time-based analysis. Aligns with Step 2 of reasoning plan.",
+                "reasoning_plan_step_mapping": "Implements Step 2 variance analysis requirement"
             }}
             
             Now analyze the given context and return the appropriate JSON response.
@@ -922,7 +1222,10 @@ class SelfCorrectingPipelineCodeGenerator:
         classification_context = self._format_classification_context(classification) if classification else "No classification available"
         
         # Format dataset context
-        dataset_context = self._format_dataset_context(dataset_description, columns_description or {})
+        dataset_context = self._format_dataset_context(dataset_description, columns_description)
+        
+        # Format reasoning plan as JSON
+        reasoning_plan_json = self._format_reasoning_plan_json(classification)
         
         # Create detection chain
         detection_chain = detection_prompt | self.llm | StrOutputParser()
@@ -936,7 +1239,8 @@ class SelfCorrectingPipelineCodeGenerator:
                 "classification_context": classification_context,
                 "dataset_context": dataset_context,
                 "metrics_functions": ", ".join(metrics_functions),
-                "operations_functions": ", ".join(operations_functions)
+                "operations_functions": ", ".join(operations_functions),
+                "reasoning_plan_json": reasoning_plan_json
             })
             
             # Parse the JSON result
@@ -956,7 +1260,7 @@ class SelfCorrectingPipelineCodeGenerator:
                 
                 # Ensure required keys exist and have correct types
                 required_keys = ["primary_function_inputs", "additional_computations", "pipeline_sequence", "reasoning"]
-                optional_keys = ["multi_pipeline", "first_pipeline_type", "second_pipeline_type"]
+                optional_keys = ["multi_pipeline", "first_pipeline_type", "second_pipeline_type", "reasoning_plan_step_mapping"]
                 
                 for key in required_keys:
                     if key not in detected_inputs:
@@ -983,6 +1287,8 @@ class SelfCorrectingPipelineCodeGenerator:
                     if key not in detected_inputs:
                         if key == "multi_pipeline":
                             detected_inputs[key] = False
+                        elif key == "reasoning_plan_step_mapping":
+                            detected_inputs[key] = ""
                         else:
                             detected_inputs[key] = None
                 
@@ -992,6 +1298,7 @@ class SelfCorrectingPipelineCodeGenerator:
 
                 
                 logger.debug(f"Final detected_inputs: {detected_inputs}")
+                print("Final detected_inputs: ", detected_inputs)
                 return detected_inputs
                 
             except json.JSONDecodeError as e:
@@ -1001,6 +1308,7 @@ class SelfCorrectingPipelineCodeGenerator:
                     "additional_computations": [],
                     "pipeline_sequence": ["Basic analysis"],
                     "reasoning": f"JSON parsing failed: {str(e)}. Using basic inputs.",
+                    "reasoning_plan_step_mapping": "Unable to map to reasoning plan due to parsing error",
                     "raw_response": result
                 }
                 
@@ -1011,6 +1319,7 @@ class SelfCorrectingPipelineCodeGenerator:
                 "additional_computations": [],
                 "pipeline_sequence": ["Fallback analysis"],
                 "reasoning": f"Detection failed: {str(e)}. Using fallback inputs.",
+                "reasoning_plan_step_mapping": "Unable to map to reasoning plan due to detection failure",
                 "error": str(e)
             }
     
@@ -1147,6 +1456,28 @@ class SelfCorrectingPipelineCodeGenerator:
         
         return "\n".join(parts) if parts else "No classification information available."
     
+    def _format_reasoning_plan_json(self, classification: Optional[Union[Dict[str, Any], AnalysisIntentResult]]) -> str:
+        """
+        Format reasoning plan as JSON for LLM consumption
+        
+        Args:
+            classification: Either a Dict[str, Any] or AnalysisIntentResult object containing
+                           reasoning plan information
+        """
+        if not classification:
+            return "null"
+        
+        # Extract reasoning plan
+        if hasattr(classification, 'reasoning_plan'):
+            reasoning_plan = getattr(classification, 'reasoning_plan', None)
+        else:
+            reasoning_plan = classification.get('reasoning_plan', None)
+        
+        if not reasoning_plan or not isinstance(reasoning_plan, list):
+            return "null"
+        
+        return json.dumps(reasoning_plan, indent=2)
+    
     def _format_dataset_context(self, dataset_description: Optional[str], 
                                columns_description: Dict[str, str]) -> str:
         """
@@ -1162,10 +1493,6 @@ class SelfCorrectingPipelineCodeGenerator:
             parts.append(json.dumps(columns_description, indent=2))
             
         return "\n".join(parts) if parts else "No dataset information available."
-    
-
-    
-
     
     def _retrieve_documents(self, query_state: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
         """Retrieve relevant documents from all stores"""
@@ -1263,6 +1590,107 @@ class SelfCorrectingPipelineCodeGenerator:
         
         return relevant_docs
     
+    def _generate_code_from_reasoning_plan(self, reasoning_plan: List[Dict[str, Any]], 
+                                         dataframe_name: str, 
+                                         classification: Union[Dict[str, Any], AnalysisIntentResult]) -> str:
+        """
+        Generate code directly from the reasoning plan instead of using LLM detection
+        
+        Args:
+            reasoning_plan: List of reasoning plan steps
+            dataframe_name: Name of the dataframe
+            classification: Classification results
+            
+        Returns:
+            Generated pipeline code
+        """
+        if not reasoning_plan or not isinstance(reasoning_plan, list):
+            return self._generate_fallback_code(PipelineType.METRICS, "Mean", {}, dataframe_name)
+        
+        # Handle dataframe names with spaces
+        if ' ' in dataframe_name:
+            formatted_dataframe_name = f'"{dataframe_name}"'
+        else:
+            formatted_dataframe_name = dataframe_name
+        
+        # Generate code based on reasoning plan steps
+        pipeline_code_parts = []
+        
+        for i, step in enumerate(reasoning_plan):
+            if not isinstance(step, dict):
+                continue
+                
+            function_name = step.get('function_name', '')
+            parameter_mapping = step.get('parameter_mapping', {})
+            step_title = step.get('step_title', f'Step {i+1}')
+            
+            # Handle None, "None", or "N/A" values
+            if function_name in [None, "None", "none", "N/A"]:
+                function_name = ""
+            if parameter_mapping in [None, "None", "none", "N/A"]:
+                parameter_mapping = {}
+            
+            # Ensure parameter_mapping is a dictionary
+            if not isinstance(parameter_mapping, dict):
+                logger.warning(f"Parameter mapping in step {i+1} is not a dictionary, converting to empty dict: {type(parameter_mapping)} -> {parameter_mapping}")
+                parameter_mapping = {}
+            
+            # Skip steps with no function name or invalid function names
+            if not function_name or function_name in ["None", "none", "N/A"]:
+                logger.info(f"Skipping step {i+1} with invalid function name: {function_name}")
+                continue
+            
+            # Determine pipeline type for this function
+            pipeline_type = self._detect_pipeline_type(function_name, step_title)
+            
+            # Format parameters
+            formatted_params = []
+            for key, value in parameter_mapping.items():
+                if isinstance(value, str):
+                    formatted_params.append(f"{key}='{value}'")
+                elif isinstance(value, list):
+                    formatted_params.append(f"{key}={value}")
+                else:
+                    formatted_params.append(f"{key}={value}")
+            
+            param_str = ", ".join(formatted_params) if formatted_params else ""
+            
+            # Generate the pipeline step
+            if i == 0:
+                # First step - initialize the pipeline
+                if param_str:
+                    pipeline_code_parts.append(f"""result = (
+    {pipeline_type.value}.from_dataframe({formatted_dataframe_name})
+    | {function_name}({param_str})""")
+                else:
+                    pipeline_code_parts.append(f"""result = (
+    {pipeline_type.value}.from_dataframe({formatted_dataframe_name})
+    | {function_name}()""")
+            else:
+                # Subsequent steps - chain to previous result
+                if param_str:
+                    pipeline_code_parts.append(f"""    | {function_name}({param_str})""")
+                else:
+                    pipeline_code_parts.append(f"""    | {function_name}()""")
+        
+        if not pipeline_code_parts:
+            # Fallback if no valid steps found
+            return self._generate_fallback_code(PipelineType.METRICS, "Mean", {}, dataframe_name)
+        
+        # Check if the first part starts with '|' (indicating missing initialization)
+        if pipeline_code_parts and pipeline_code_parts[0].strip().startswith('|'):
+            # Add the missing initialization
+            pipeline_code_parts.insert(0, f"""result = (
+    {pipeline_type.value}.from_dataframe({formatted_dataframe_name})""")
+        
+        # Join all pipeline steps and add closing parenthesis and to_df()
+        generated_code = "\n".join(pipeline_code_parts) + "\n    ).to_df()"
+        
+        logger.info(f"Generated code from reasoning plan with {len(reasoning_plan)} steps")
+        logger.info(f"Generated code: {generated_code}")
+        
+        return generated_code
+    
     async def _generate_code(self, relevant_docs: Dict[str, List[Dict[str, Any]]], 
                             query_state: Dict[str, Any]) -> str:
         """Generate complete pipeline code"""
@@ -1292,6 +1720,7 @@ class SelfCorrectingPipelineCodeGenerator:
         multi_pipeline = detected_inputs.get("multi_pipeline", False)
         first_pipeline_type = detected_inputs.get("first_pipeline_type")
         second_pipeline_type = detected_inputs.get("second_pipeline_type")
+        reasoning_plan_step_mapping = detected_inputs.get("reasoning_plan_step_mapping", "")
         
         # Format classification context
         classification_context = self._format_classification_context(classification)
@@ -1299,12 +1728,15 @@ class SelfCorrectingPipelineCodeGenerator:
         # Format dataset context
         dataset_context = self._format_dataset_context(dataset_description, columns_description)
         
+        # Format reasoning plan as JSON
+        reasoning_plan_json = self._format_reasoning_plan_json(classification)
+        
         generation_prompt = PromptTemplate(
             input_variables=[
                 "context", "original_context", "function_name", "pipeline_type", "dataframe_name", 
                 "function_inputs", "additional_computations", "pipeline_sequence", "reasoning",
-                "multi_pipeline", "first_pipeline_type", "second_pipeline_type",
-                "docs_context", "classification_context", "dataset_context", "iteration"
+                "multi_pipeline", "first_pipeline_type", "second_pipeline_type", "reasoning_plan_step_mapping",
+                "docs_context", "classification_context", "dataset_context", "reasoning_plan_json", "iteration"
             ],
             template="""
             You are an expert code generator for data analysis pipelines.
@@ -1323,6 +1755,7 @@ class SelfCorrectingPipelineCodeGenerator:
             MULTI-PIPELINE: {multi_pipeline}
             FIRST PIPELINE TYPE: {first_pipeline_type}
             SECOND PIPELINE TYPE: {second_pipeline_type}
+            REASONING PLAN STEP MAPPING: {reasoning_plan_step_mapping}
             
             CLASSIFICATION ANALYSIS:
             {classification_context}
@@ -1330,37 +1763,116 @@ class SelfCorrectingPipelineCodeGenerator:
             DATASET INFORMATION:
             {dataset_context}
             
+            REASONING PLAN (JSON):
+            {reasoning_plan_json}
+            
             RELEVANT DOCUMENTATION:
             {docs_context}
             
             Generate a complete pipeline code that:
             1. Initializes the appropriate Pipe with from_dataframe() based on the primary function type
             2. Chains the primary function with proper parameters based on the classification
-            3. Adds appropriate summary/output functions
-            4. Uses proper Python syntax with pipe operator (|)
-            5. Follows the detected pipeline sequence
-            6. Considers the intent type and suggested functions from classification
+            3. Uses proper Python syntax with pipe operator (|)
+            4. Follows the detected pipeline sequence
+            5. Considers the intent type and suggested functions from classification
+            6. CRITICAL: Aligns with the reasoning plan steps and their expected outcomes
+            7. Uses the reasoning plan step mapping to ensure proper implementation of each step
+            8. CRITICAL: For funnel analysis, use CohortPipe and follow the funnel analysis format
+            9. CRITICAL: For moving_apply_by_group, embed the function parameter as a complete pipeline expression
+            10. CRITICAL: function=(MetricsPipe.from_dataframe(...) | Variance(...) | to_df()) format for moving_apply_by_group
+            
+            CRITICAL SYNTAX REQUIREMENTS:
+            - Ensure all parentheses are properly closed
+            - Use proper indentation for multi-line statements (4 spaces for continued lines)
+            - Use proper string quotes for dataframe names with spaces
+            - Ensure function parameters are properly formatted
+            - Avoid syntax errors like unclosed parentheses or missing commas
+            - CRITICAL: Function parameters that reference function names should NOT be quoted
+            - CRITICAL: function=Variance (correct) NOT function='Variance' (incorrect)
+            - CRITICAL: For funnel analysis, DO NOT use to_df() - return results directly
+            - CRITICAL: For other pipeline types, use ).to_df() at the end
+            - CRITICAL: Use proper indentation with 4 spaces for continued lines
             
             CRITICAL RULES:
             - Create separate pipelines for different pipeline types
             - MetricsPipe and OperationsPipe pipelines should be executed FIRST to prepare data
-            - TimeSeriesPipe, CohortPipe, RiskPipe, FunnelPipe, AnomalyPipe, SegmentPipe, and TrendsPipe pipelines should be executed SECOND on the prepared data
+            - TimeSeriesPipe, CohortPipe (including funnel analysis), RiskPipe, AnomalyPipe, SegmentPipe, and TrendsPipe pipelines should be executed SECOND on the prepared data
             - Each pipeline should stay within its own pipeline type
             - Use the results from the first pipeline as input to the second pipeline
             - Chain the pipelines using the pipe operator (|) between different pipeline types
+            - Follow the reasoning plan step-by-step logic and expected outcomes
+            - Ensure each step in the reasoning plan is properly implemented in the code
+            - CRITICAL: For funnel analysis, use CohortPipe and follow the funnel analysis format without to_df()
+            
+            CRITICAL PIPELINE TYPE SEPARATION RULES:
+            - MetricsPipe functions: Mean, Variance, Sum, Count, Max, Min, StandardDeviation, Correlation, etc.
+            - TimeSeriesPipe functions: variance_analysis, moving_apply_by_group, lead, lag, rolling_mean, etc.
+            - OperationsPipe functions: PercentChange, AbsoluteChange, MH, CUPED, etc.
+            - CohortPipe functions: form_time_cohorts, calculate_retention, analyze_funnel, analyze_funnel_by_time, analyze_funnel_by_segment, analyze_user_paths, etc.
+            - RiskPipe functions: calculate_var, calculate_cvar, etc.
+            - AnomalyPipe functions: detect_statistical_outliers, detect_contextual_anomalies, etc.
+            - SegmentPipe functions: get_features, run_kmeans, run_dbscan, etc.
+            - TrendsPipe functions: aggregate_by_time, calculate_growth_rates, forecast_metric, etc.
+            
+            CRITICAL: For moving_apply_by_group, the function parameter should be a complete pipeline expression
+            CRITICAL: function=(MetricsPipe.from_dataframe(...) | Variance(...) | to_df()) (correct)
+            CRITICAL: NOT separate pipelines (incorrect)
             
             REQUIRED FORMAT:
             
-            For single pipeline type:
+            For single pipeline type (MetricsPipe, TimeSeriesPipe, OperationsPipe, etc.):
             ```python
-            result = (PipeType.from_dataframe({dataframe_name})
-                     | function1(param1='value1')
-                     | function2(param2='value2')
-                     | to_df()
+            result = (
+                PipeType.from_dataframe({dataframe_name})
+                | function1(param1='value1')
+                | function2(param2='value2')
+                ).to_df()
+            ```
+            
+            For funnel analysis (CohortPipe):
+            ```python
+            cohort_pipe = CohortPipe.from_dataframe({dataframe_name})
+            cohort_pipe = cohort_pipe | analyze_funnel(
+                event_column='event_name',
+                user_id_column='user_id',
+                funnel_steps=['step1', 'step2', 'step3'],
+                step_names=['Step 1', 'Step 2', 'Step 3']
             )
             ```
             
-            For multiple pipeline types (Metrics/Operations first, then TimeSeries/Cohort/Risk/Funnel/Anomaly/Segment/Trends):
+            CRITICAL: For funnel analysis, use CohortPipe and DO NOT use to_df() - return results directly.
+            CRITICAL: For other pipeline types, use the parentheses format with to_df().
+            NEVER generate code like this (WRONG):
+            ```python
+            result = TimeSeriesPipe.from_dataframe(result)
+                     | moving_apply_by_group(...)
+                     | to_df()
+            ```
+            
+            CRITICAL FUNCTION PARAMETER RULES:
+            - Function names in parameters should NOT be quoted: function=Variance (correct)
+            - String values should be quoted: columns='Transactional value' (correct)
+            - ).to_df() must be at the end: ).to_df() (correct)
+            - CRITICAL: Use direct method calls, NOT function parameters
+            - CRITICAL: variance(...) (correct) NOT moving_apply_by_group(function='Variance', ...) (incorrect)
+            - CRITICAL: Mean(variable='revenue') (correct) NOT some_function(function='Mean', ...) (incorrect)
+            
+            CORRECT EXAMPLE:
+            ```python
+            result = (TimeSeriesPipe.from_dataframe(result)
+                     | variance(  # Direct method call, not a parameter
+                         columns='Transactional value',
+                         group_column='Project, Cost center, Department',
+                         window=5,
+                         min_periods=1,
+                         time_column='Date',
+                         output_suffix='_rolling_variance'
+                     )
+                     | to_df()  # MUST have parentheses
+            )
+            ```
+            
+            For multiple pipeline types (Metrics/Operations first, then TimeSeries/Cohort/Risk/Anomaly/Segment/Trends):
             ```python
             result = (MetricsPipe.from_dataframe({dataframe_name})
                      | metrics_function1(param1='value1')
@@ -1373,152 +1885,242 @@ class SelfCorrectingPipelineCodeGenerator:
             )
             ```
             
+            For funnel analysis (CohortPipe):
+            ```python
+            cohort_pipe = CohortPipe.from_dataframe({dataframe_name})
+            cohort_pipe = cohort_pipe | analyze_funnel(
+                event_column='event_name',
+                user_id_column='user_id',
+                funnel_steps=['step1', 'step2', 'step3']
+            )
+            ```
+            
+            CRITICAL MULTI-PIPELINE EXAMPLE - Variance + moving_apply_by_group:
+            ```python
+            result = (TimeSeriesPipe.from_dataframe({dataframe_name})
+                     | moving_apply_by_group(
+                         columns='Transactional value',
+                         group_column='Project, Cost center, Department',
+                         function=(MetricsPipe.from_dataframe({dataframe_name})
+                                  | Variance(variable='Transactional value')
+                                  | to_df()),
+                         window=5,
+                         min_periods=1,
+                         time_column='Date',
+                         output_suffix='_rolling_variance'
+                     )
+                     | to_df()
+            )
+            ```
+            
             IMPORTANT: If the dataframe name contains spaces, it must be quoted: from_dataframe("Dataframe Name")
             
             EXAMPLES:
             
-            Example 1 - Single pipeline type (MetricsPipe):
+            Example 1 - Single pipeline type (MetricsPipe) with reasoning plan:
             ```python
-            result = (MetricsPipe.from_dataframe(df)
-                     | Mean(variable='revenue')
-                     | Variance(variable='revenue')
-                     | to_df()
-            )
+            result = (
+                MetricsPipe.from_dataframe(df)
+                | Mean(variable='revenue')
+                | Variance(variable='revenue')
+                ).to_df()
             ```
             
-            Example 2 - Multiple pipeline types (MetricsPipe first, then TimeSeriesPipe):
+            Example 2 - Multiple pipeline types (MetricsPipe first, then TimeSeriesPipe) with reasoning plan:
             ```python
-            result = (MetricsPipe.from_dataframe(df)
-                     | Mean(variable='Transactional value')
-                     | to_df()
+            result = (
+                MetricsPipe.from_dataframe(df)
+                | Mean(variable='Transactional value')
+                ).to_df()
             
-            result_operations = TimeSeriesPipe.from_dataframe(result)
-                     | variance_analysis(
-                         columns=['mean_Transactional value'],
-                         method='rolling',
-                         window=5
-                     )
-                     | to_df()
-            )
+            result_operations = (
+                TimeSeriesPipe.from_dataframe(result)
+                | variance_analysis(
+                    columns=['mean_Transactional value'],
+                    method='rolling',
+                    window=5
+                )
+                ).to_df()
             ```
             
-            Example 3 - Multiple pipeline types (OperationsPipe first, then TimeSeriesPipe):
+            Example 2b - CORRECT way to handle Variance + moving_apply_by_group (function parameter):
             ```python
-            result = (OperationsPipe.from_dataframe(df)
-                     | PercentChange(condition_column='period', baseline='Q1')
-                     | to_df()
+            result = (
+                TimeSeriesPipe.from_dataframe(df)
+                | moving_apply_by_group(
+                    columns='Transactional value',
+                    group_column='Project, Cost center, Department',
+                    function=(MetricsPipe.from_dataframe(df)
+                             | Variance(variable='Transactional value')
+                             ).to_df(),
+                    window=5,
+                    min_periods=1,
+                    time_column='Date',
+                    output_suffix='_rolling_variance'
+                )
+                ).to_df()
+            ```
             
-            result_operations = TimeSeriesPipe.from_dataframe(result)
-                     | variance_analysis(
-                         columns=['percent_change'],
-                         method='rolling',
-                         window=5
-                     )
-                     | to_df()
-            )
+            Example 2c - WRONG way (mixing pipeline types):
+            ```python
+            # ❌ WRONG: Don't do this - mixing MetricsPipe and TimeSeriesPipe functions
+            result = (
+                TimeSeriesPipe.from_dataframe(df)
+                | moving_apply_by_group(
+                    function=Variance,  # ❌ Variance belongs to MetricsPipe, not TimeSeriesPipe
+                    columns='Transactional value',
+                    ...
+                )
+                ).to_df()
+            ```
+            
+            Example 3 - Multiple pipeline types (OperationsPipe first, then TimeSeriesPipe) with reasoning plan:
+            ```python
+            result = (
+                OperationsPipe.from_dataframe(df)
+                | PercentChange(condition_column='period', baseline='Q1')
+                ).to_df()
+            
+            result_operations = (
+                TimeSeriesPipe.from_dataframe(result)
+                | variance_analysis(
+                    columns=['percent_change'],
+                    method='rolling',
+                    window=5
+                )
+                ).to_df()
             ```
             
             Example 4 - Dataframe with spaces:
             ```python
-            result = (TimeSeriesPipe.from_dataframe("Purchase Orders Data")
-                     | variance_analysis(
-                         columns=['Project', 'Transactional value'],
-                         method='rolling',
-                         window=5
-                     )
-                     | to_df()
-            )
+            result = (
+                TimeSeriesPipe.from_dataframe("Purchase Orders Data")
+                | variance_analysis(
+                    columns=['Project', 'Transactional value'],
+                    method='rolling',
+                    window=5
+                )
+                ).to_df()
             ```
             
-            Example 5 - Anomaly detection (MetricsPipe first, then AnomalyPipe):
+            Example 5 - Anomaly detection (MetricsPipe first, then AnomalyPipe) with reasoning plan:
             ```python
-            result_metrics = (MetricsPipe.from_dataframe(df)
-                     | Mean(variable='sales')
-                     | to_df()
+            result_metrics = (
+                MetricsPipe.from_dataframe(df)
+                | Mean(variable='sales')
+                ).to_df()
                      
-            result_pipe = AnomalyPipe.from_dataframe(result_metrics)
-                     | detect_statistical_outliers(
-                         columns='mean_sales',
-                         method='zscore',
-                         threshold=3.0
-                     )
-                     | to_df()
-            )
+            result_pipe = (
+                AnomalyPipe.from_dataframe(result_metrics)
+                | detect_statistical_outliers(
+                    columns='mean_sales',
+                    method='zscore',
+                    threshold=3.0
+                )
+                ).to_df()
             ```
             
-            Example 6 - Single AnomalyPipe:
+            Example 6 - Single AnomalyPipe with reasoning plan:
             ```python
-            result = (AnomalyPipe.from_dataframe(df)
-                     | detect_statistical_outliers(
-                         columns='value',
-                         method='zscore',
-                         threshold=3.0
-                     )
-                     | detect_contextual_anomalies(
-                         columns='value',
-                         time_column='timestamp',
-                         method='residual',
-                         model_type='ewm',
-                         window=30
-                     )
-                     | to_df()
-            )
+            result = (
+                AnomalyPipe.from_dataframe(df)
+                | detect_statistical_outliers(
+                    columns='value',
+                    method='zscore',
+                    threshold=3.0
+                )
+                | detect_contextual_anomalies(
+                    columns='value',
+                    time_column='timestamp',
+                    method='residual',
+                    model_type='ewm',
+                    window=30
+                )
+                ).to_df()
             ```
             
-            Example 7 - Segmentation (MetricsPipe first, then SegmentPipe):
+            Example 7 - Segmentation (MetricsPipe first, then SegmentPipe) with reasoning plan:
             ```python
-            result_metrics = (MetricsPipe.from_dataframe(df)
-                     | Mean(variable='sales')
-                     | to_df()
+            result_metrics = (
+                MetricsPipe.from_dataframe(df)
+                | Mean(variable='sales')
+                ).to_df()
 
-            result_pipe = SegmentPipe.from_dataframe(result_metrics)
-                     | get_features(columns=['mean_sales', 'frequency'])
-                     | run_kmeans(n_clusters=5, find_optimal=True)
-                     | to_df()
-            )
+            result_pipe = (
+                SegmentPipe.from_dataframe(result_metrics)
+                | get_features(columns=['mean_sales', 'frequency'])
+                | run_kmeans(n_clusters=5, find_optimal=True)
+                ).to_df()
             ```
             
-            Example 8 - Single SegmentPipe:
+            Example 8 - Single SegmentPipe with reasoning plan:
             ```python
-            result = (SegmentPipe.from_dataframe(df)
-                     | get_features(columns=['sales', 'frequency', 'recency'])
-                     | run_kmeans(n_clusters=5)
-                     | run_dbscan(eps=0.5, min_samples=5)
-                     | compare_algorithms()
-                     | to_df()
-            )
+            result = (
+                SegmentPipe.from_dataframe(df)
+                | get_features(columns=['sales', 'frequency', 'recency'])
+                | run_kmeans(n_clusters=5)
+                | run_dbscan(eps=0.5, min_samples=5)
+                | compare_algorithms()
+                ).to_df()
             ```
             
-            Example 9 - Trends analysis (MetricsPipe first, then TrendsPipe):
+            Example 9 - Trends analysis (MetricsPipe first, then TrendsPipe) with reasoning plan:
             ```python
-            result_metrics = (MetricsPipe.from_dataframe(df)
-                     | Mean(variable='revenue')
-                     | to_df()
+            result_metrics = (
+                MetricsPipe.from_dataframe(df)
+                | Mean(variable='revenue')
+                ).to_df()
 
-            result_pipe = TrendsPipe.from_dataframe(result_metrics)
-                     | aggregate_by_time(
-                         date_column='date',
-                         metric_columns=['mean_revenue'],
-                         time_period='M'
-                     )
-                     | calculate_growth_rates(window=3)
-                     | forecast_metric(metric_column='mean_revenue', fperiods=6)
-                     | to_df()
+            result_pipe = (
+                TrendsPipe.from_dataframe(result_metrics)
+                | aggregate_by_time(
+                    date_column='date',
+                    metric_columns=['mean_revenue'],
+                    time_period='M'
+                )
+                | calculate_growth_rates(window=3)
+                | forecast_metric(metric_column='mean_revenue', fperiods=6)
+                ).to_df()
+            ```
+            
+            Example 10 - Single TrendsPipe with reasoning plan:
+            ```python
+            result = (
+                TrendsPipe.from_dataframe(df)
+                | aggregate_by_time(
+                    date_column='timestamp',
+                    metric_columns=['sales', 'revenue'],
+                    time_period='D'
+                )
+                | calculate_moving_average(window=7)
+                | decompose_trend(metric_column='sales')
+                | forecast_metric(metric_column='revenue', fperiods=12)
+                ).to_df()
+            ```
+            
+            Example 11 - Funnel analysis (CohortPipe) with reasoning plan:
+            ```python
+            cohort_pipe = CohortPipe.from_dataframe(df)
+            cohort_pipe = cohort_pipe | analyze_funnel(
+                event_column='event_name',
+                user_id_column='user_id',
+                funnel_steps=['home_page_view', 'product_view', 'add_to_cart', 'checkout_started', 'purchase_completed'],
+                step_names=['Homepage', 'Product Page', 'Cart', 'Checkout', 'Purchase'],
+                max_step_time=86400
             )
             ```
             
-            Example 10 - Single TrendsPipe:
+            Example 12 - Funnel analysis by time (CohortPipe) with reasoning plan:
             ```python
-            result = (TrendsPipe.from_dataframe(df)
-                     | aggregate_by_time(
-                         date_column='timestamp',
-                         metric_columns=['sales', 'revenue'],
-                         time_period='D'
-                     )
-                     | calculate_moving_average(window=7)
-                     | decompose_trend(metric_column='sales')
-                     | forecast_metric(metric_column='revenue', fperiods=12)
-                     | to_df()
+            cohort_pipe = CohortPipe.from_dataframe(df)
+            cohort_pipe = cohort_pipe | analyze_funnel_by_time(
+                event_column='event_name',
+                user_id_column='user_id',
+                date_column='event_timestamp',
+                funnel_steps=['product_view', 'add_to_cart', 'checkout_started', 'purchase_completed'],
+                step_names=['View', 'Cart', 'Checkout', 'Purchase'],
+                time_period='week',
+                max_periods=4
             )
             ```
             
@@ -1547,24 +2149,209 @@ class SelfCorrectingPipelineCodeGenerator:
                 "multi_pipeline": multi_pipeline,
                 "first_pipeline_type": first_pipeline_type,
                 "second_pipeline_type": second_pipeline_type,
+                "reasoning_plan_step_mapping": reasoning_plan_step_mapping,
                 "docs_context": docs_context,
                 "classification_context": classification_context,
                 "dataset_context": dataset_context,
+                "reasoning_plan_json": reasoning_plan_json,
                 "iteration": query_state["iteration"]
             })
             
             # Clean up the generated code
             code = self._clean_generated_code(generated_code)
+            
+            # Validate the cleaned code
+            try:
+                ast.parse(code)
+                logger.info("Generated code passed syntax validation")
+            except SyntaxError as e:
+                logger.warning(f"Syntax error in cleaned code: {e}")
+                # Try to fix the code
+                code = self._extract_valid_code_parts(code)
+                logger.info("Attempted to extract valid code parts")
+            
             query_state["code_attempts"].append(code)
             
             return code
             
         except Exception as e:
+            logger.error(f"Error in code generation: {e}")
             fallback_code = self._generate_fallback_code(
                 pipeline_type, function_name, function_inputs, dataframe_name
             )
             query_state["code_attempts"].append(fallback_code)
             return fallback_code
+    
+    def _evaluate_reasoning_plan_quality(self, reasoning_plan: List[Dict[str, Any]], 
+                                       generated_code: str, 
+                                       query_state: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Evaluate the quality of the reasoning plan based on generated code and suggest improvements
+        
+        Args:
+            reasoning_plan: List of reasoning plan steps
+            generated_code: Generated pipeline code
+            query_state: Current query state
+            
+        Returns:
+            Dictionary with evaluation results and suggestions
+        """
+        evaluation = {
+            "quality_score": 0.0,
+            "issues": [],
+            "suggestions": [],
+            "plan_adjustments": []
+        }
+        
+        if not reasoning_plan or not isinstance(reasoning_plan, list):
+            evaluation["issues"].append("No reasoning plan available")
+            evaluation["quality_score"] = 0.0
+            return evaluation
+        
+        # Check if all steps have required fields
+        required_fields = ["step_number", "step_title", "function_name", "parameter_mapping"]
+        for i, step in enumerate(reasoning_plan):
+            if not isinstance(step, dict):
+                evaluation["issues"].append(f"Step {i+1} is not a dictionary")
+                continue
+                
+            missing_fields = [field for field in required_fields if field not in step]
+            if missing_fields:
+                evaluation["issues"].append(f"Step {i+1} missing fields: {missing_fields}")
+        
+        # Check function consistency
+        function_names = []
+        for step in reasoning_plan:
+            if isinstance(step, dict) and 'function_name' in step:
+                function_names.append(step['function_name'])
+        
+        # Check if functions are valid
+        valid_functions = list(self.function_to_pipe.keys())
+        invalid_functions = [func for func in function_names if func not in valid_functions]
+        if invalid_functions:
+            evaluation["issues"].append(f"Invalid functions found: {invalid_functions}")
+            evaluation["suggestions"].append("Replace invalid functions with valid alternatives")
+        
+        # Check pipeline type consistency
+        pipeline_types = []
+        for step in reasoning_plan:
+            if isinstance(step, dict) and 'function_name' in step:
+                func_name = step['function_name']
+                if func_name in self.function_to_pipe:
+                    pipeline_types.append(self.function_to_pipe[func_name])
+        
+        # Check for pipeline type mixing issues
+        if len(set(pipeline_types)) > 1:
+            # Check if it's a valid multi-pipeline pattern
+            valid_multi_patterns = [
+                [PipelineType.METRICS, PipelineType.TIMESERIES],
+                [PipelineType.OPERATIONS, PipelineType.TIMESERIES],
+                [PipelineType.METRICS, PipelineType.COHORT],
+                [PipelineType.OPERATIONS, PipelineType.COHORT],
+                [PipelineType.METRICS, PipelineType.ANOMALY],
+                [PipelineType.OPERATIONS, PipelineType.ANOMALY],
+                [PipelineType.METRICS, PipelineType.SEGMENT],
+                [PipelineType.OPERATIONS, PipelineType.SEGMENT],
+                [PipelineType.METRICS, PipelineType.TRENDS],
+                [PipelineType.OPERATIONS, PipelineType.TRENDS],
+                [PipelineType.METRICS, PipelineType.RISK],
+                [PipelineType.OPERATIONS, PipelineType.RISK],
+            ]
+            
+            is_valid_multi = any(
+                pipeline_types[:2] == pattern[:2] for pattern in valid_multi_patterns
+            )
+            
+            if not is_valid_multi:
+                evaluation["issues"].append("Invalid pipeline type mixing detected")
+                evaluation["suggestions"].append("Ensure proper pipeline type sequencing")
+        
+        # Check parameter consistency
+        for i, step in enumerate(reasoning_plan):
+            if isinstance(step, dict) and 'parameter_mapping' in step:
+                param_mapping = step['parameter_mapping']
+                if not isinstance(param_mapping, dict):
+                    evaluation["issues"].append(f"Step {i+1} parameter_mapping is not a dictionary")
+                else:
+                    # Check for common parameter issues
+                    for key, value in param_mapping.items():
+                        if isinstance(value, str) and len(value) == 0:
+                            evaluation["issues"].append(f"Step {i+1} has empty parameter value for {key}")
+        
+        # Calculate quality score based on issues
+        total_checks = len(reasoning_plan) * 3 + 3  # Basic checks per step + overall checks
+        issue_count = len(evaluation["issues"])
+        evaluation["quality_score"] = max(0.0, 1.0 - (issue_count / total_checks))
+        
+        # Generate suggestions based on issues
+        if evaluation["quality_score"] < 0.7:
+            evaluation["suggestions"].append("Consider simplifying the reasoning plan")
+            evaluation["suggestions"].append("Ensure all functions are from the same pipeline type or follow valid multi-pipeline patterns")
+        
+        return evaluation
+    
+    def _adjust_reasoning_plan(self, reasoning_plan: List[Dict[str, Any]], 
+                             evaluation: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Adjust the reasoning plan based on evaluation results
+        
+        Args:
+            reasoning_plan: Original reasoning plan
+            evaluation: Evaluation results
+            
+        Returns:
+            Adjusted reasoning plan
+        """
+        if not reasoning_plan or not isinstance(reasoning_plan, list):
+            return reasoning_plan
+        
+        adjusted_plan = []
+        
+        for i, step in enumerate(reasoning_plan):
+            if not isinstance(step, dict):
+                continue
+            
+            adjusted_step = step.copy()
+            
+            # Fix missing required fields
+            if 'step_number' not in adjusted_step:
+                adjusted_step['step_number'] = i + 1
+            
+            if 'step_title' not in adjusted_step:
+                adjusted_step['step_title'] = f'Step {i + 1}'
+            
+            if 'function_name' not in adjusted_step:
+                # Try to infer function name from step title
+                title = adjusted_step.get('step_title', '').lower()
+                if 'mean' in title or 'average' in title:
+                    adjusted_step['function_name'] = 'Mean'
+                elif 'group' in title or 'aggregate' in title:
+                    adjusted_step['function_name'] = 'GroupBy'
+                elif 'variance' in title:
+                    adjusted_step['function_name'] = 'Variance'
+                else:
+                    adjusted_step['function_name'] = 'Mean'  # Default fallback
+            
+            if 'parameter_mapping' not in adjusted_step:
+                adjusted_step['parameter_mapping'] = {}
+            
+            # Fix invalid functions
+            if 'function_name' in adjusted_step:
+                func_name = adjusted_step['function_name']
+                if func_name not in self.function_to_pipe:
+                    # Replace with a valid alternative
+                    if 'mean' in func_name.lower() or 'average' in func_name.lower():
+                        adjusted_step['function_name'] = 'Mean'
+                    elif 'group' in func_name.lower():
+                        adjusted_step['function_name'] = 'GroupBy'
+                    elif 'variance' in func_name.lower():
+                        adjusted_step['function_name'] = 'Variance'
+                    else:
+                        adjusted_step['function_name'] = 'Mean'  # Default fallback
+            
+            adjusted_plan.append(adjusted_step)
+        
+        return adjusted_plan
     
     def _grade_code(self, generated_code: str, query_state: Dict[str, Any]) -> CodeQuality:
         """Grade the quality of generated code"""
@@ -1787,32 +2574,312 @@ class SelfCorrectingPipelineCodeGenerator:
         return ",\n                         ".join(formatted_inputs)
     
     def _clean_generated_code(self, code: str) -> str:
-        """Clean and format generated code"""
+        """Clean and format generated code with enhanced error handling"""
+        if not code or not isinstance(code, str):
+            return ""
+        
         # Remove markdown code blocks
         code = re.sub(r'```python\s*', '', code)
         code = re.sub(r'```\s*', '', code)
         
-        # Clean whitespace
+        # Clean whitespace and remove empty lines
         lines = [line.rstrip() for line in code.split('\n') if line.strip()]
         
-        return '\n'.join(lines)
+        if not lines:
+            return ""
+        
+        # Join lines back together
+        code = '\n'.join(lines)
+        
+        # Fix common syntax issues
+        code = self._fix_common_syntax_issues(code)
+        
+        # Validate and try to fix parentheses
+        code = self._fix_parentheses(code)
+        
+        # Check for specific indentation issues before final validation
+        lines = code.split('\n')
+        if len(lines) > 1:
+            # Look for the specific problematic pattern
+            if any('|' in line and line.strip().startswith('|') for line in lines[1:]):
+                # Check if the first line is a pipeline initialization
+                first_line = lines[0].strip()
+                if re.match(r'^\w+\s*=\s*\w+Pipe\.from_dataframe\(', first_line):
+                    logger.info("Detected pipeline indentation issue, attempting to fix")
+                    code = self._extract_valid_code_parts(code)
+        
+        # Final validation - if still has syntax errors, try to generate a minimal valid version
+        try:
+            ast.parse(code)
+            return code
+        except SyntaxError as e:
+            logger.warning(f"Syntax error after cleaning: {e}")
+            # Try to extract valid parts or generate minimal valid code
+            return self._extract_valid_code_parts(code)
+    
+    def _fix_common_syntax_issues(self, code: str) -> str:
+        """Fix common syntax issues in generated code"""
+        # Fix common issues
+        code = re.sub(r'(\w+)\s*\(\s*\)\s*\|', r'\1() |', code)  # Fix empty function calls
+        code = re.sub(r'\|\s*\(\s*\)', '|', code)  # Remove empty parentheses in pipe chains
+        code = re.sub(r'\(\s*\)', '', code)  # Remove standalone empty parentheses
+        
+        # Fix common pipe syntax issues
+        code = re.sub(r'\|\s*\|\s*', ' | ', code)  # Fix double pipes
+        code = re.sub(r'\(\s*\|', '(', code)  # Fix opening parenthesis followed by pipe
+        code = re.sub(r'\|\s*\)', ')', code)  # Fix pipe followed by closing parenthesis
+        
+        # Fix common function call issues
+        code = re.sub(r'(\w+)\s*\(\s*,\s*', r'\1(', code)  # Fix function calls starting with comma
+        code = re.sub(r'\(\s*,\s*', '(', code)  # Fix parentheses starting with comma
+        
+        # Fix to_df() missing parentheses
+        code = re.sub(r'\|\s*to_df\s*(\||\)|$)', r' | to_df()\1', code)
+        code = re.sub(r'^\s*to_df\s*(\||\)|$)', r'to_df()\1', code)
+        
+        # Fix function parameter issues - remove quotes around function names
+        # Pattern: function='Variance' -> function=Variance
+        code = re.sub(r"function\s*=\s*'([^']+)'", r'function=\1', code)
+        code = re.sub(r'function\s*=\s*"([^"]+)"', r'function=\1', code)
+        
+        # Fix function parameters to direct method calls
+        # Pattern: moving_apply_by_group(function=Variance, ...) -> variance(...)
+        # This converts function parameters to direct method calls
+        function_conversions = {
+            'Variance': 'variance',
+            'Mean': 'mean', 
+            'Sum': 'sum',
+            'Count': 'count',
+            'Max': 'max',
+            'Min': 'min',
+            'StandardDeviation': 'std',
+            'Correlation': 'correlation',
+            'Covariance': 'covariance',
+            'Median': 'median',
+            'Percentile': 'percentile'
+        }
+        
+        for func_param, method_name in function_conversions.items():
+            # Pattern: moving_apply_by_group(function=Variance, ...) -> variance(...)
+            pattern = rf'moving_apply_by_group\s*\(\s*function\s*=\s*{func_param}\s*,([^)]*)\)'
+            replacement = rf'{method_name}(\1)'
+            code = re.sub(pattern, replacement, code)
+            
+            # Also handle other wrapper functions
+            pattern2 = rf'(\w+)\s*\(\s*function\s*=\s*{func_param}\s*,([^)]*)\)'
+            replacement2 = rf'{method_name}(\2)'
+            code = re.sub(pattern2, replacement2, code)
+        
+        # CRITICAL: Handle the case where we need to embed MetricsPipe functions as function parameters in TimeSeriesPipe
+        # Pattern: moving_apply_by_group(function=Variance, ...) -> function=(MetricsPipe.from_dataframe(...) | Variance(...) | to_df())
+        for func_param, method_name in function_conversions.items():
+            # Look for moving_apply_by_group with function parameter
+            pattern = rf'moving_apply_by_group\s*\(\s*function\s*=\s*{func_param}\s*,([^)]*)\)'
+            if re.search(pattern, code):
+                # Extract the dataframe name from the context
+                dataframe_match = re.search(r'(\w+Pipe\.from_dataframe\([^)]+\))', code)
+                if dataframe_match:
+                    dataframe_expr = dataframe_match.group(1)
+                    # Convert to embedded function format
+                    replacement = rf'function=({dataframe_expr} | {method_name}(variable=\'Transactional value\') | to_df()),\1'
+                    code = re.sub(pattern, replacement, code)
+                    logger.info(f"Converted function={func_param} to embedded pipeline expression")
+        
+        # Fix other common function parameter issues
+        # Pattern: method='rolling' -> method='rolling' (keep quotes for string values)
+        # But: function=Variance -> function=Variance (no quotes for function names)
+        
+        # Fix missing parentheses in function calls within parameters
+        # Pattern: function=Variance -> function=Variance (already handled above)
+        
+        # Fix pipeline indentation issues - this is the main fix for the reported error
+        # Pattern: result = PipeType.from_dataframe(...)\n         | function(...)\n         | to_df()
+        # Convert to: result = (PipeType.from_dataframe(...)\n                     | function(...)\n                     | to_df()\n                    )
+        lines = code.split('\n')
+        if len(lines) > 1:
+            # Check if we have a pipeline pattern with incorrect indentation
+            pipeline_pattern = re.compile(r'^(\w+)\s*=\s*(\w+Pipe\.from_dataframe\([^)]*\))')
+            first_line_match = pipeline_pattern.match(lines[0].strip())
+            
+            if first_line_match and len(lines) > 1:
+                # Check if subsequent lines start with pipe operators and indentation
+                pipe_lines = []
+                for i, line in enumerate(lines[1:], 1):
+                    stripped = line.strip()
+                    if stripped.startswith('|'):
+                        pipe_lines.append((i, stripped))
+                
+                if pipe_lines:
+                    # Reconstruct the code with proper parentheses and indentation
+                    result_var = first_line_match.group(1)
+                    pipe_init = first_line_match.group(2)
+                    
+                    # Start with opening parenthesis
+                    fixed_lines = [f"{result_var} = ({pipe_init}"]
+                    
+                    # Add pipe operations with proper indentation
+                    for _, pipe_line in pipe_lines:
+                        # Remove the leading | and add proper indentation
+                        pipe_content = pipe_line[1:].strip()
+                        fixed_lines.append(f"                     | {pipe_content}")
+                    
+                    # Close the parentheses
+                    fixed_lines.append("                    )")
+                    
+                    # Join the lines
+                    code = '\n'.join(fixed_lines)
+        
+        return code
+    
+    def _fix_parentheses(self, code: str) -> str:
+        """Fix unclosed or mismatched parentheses"""
+        # Count parentheses
+        open_parens = code.count('(')
+        close_parens = code.count(')')
+        
+        # If we have more opening than closing parentheses, add missing ones
+        if open_parens > close_parens:
+            missing = open_parens - close_parens
+            # Add missing closing parentheses at the end
+            code += ')' * missing
+            logger.info(f"Added {missing} missing closing parentheses")
+        
+        # If we have more closing than opening parentheses, remove extra ones
+        elif close_parens > open_parens:
+            extra = close_parens - open_parens
+            # Remove extra closing parentheses from the end
+            for _ in range(extra):
+                if code.endswith(')'):
+                    code = code[:-1]
+            logger.info(f"Removed {extra} extra closing parentheses")
+        
+        return code
+    
+    def _extract_valid_code_parts(self, code: str) -> str:
+        """Extract valid code parts when full code has syntax errors"""
+        try:
+            # First, try to fix the specific indentation issue we're seeing
+            lines = code.split('\n')
+            if len(lines) > 1:
+                                # Check for the specific pattern: result = (PipeType.from_dataframe(...)\n    | function(...)
+                pipeline_pattern = re.compile(r'^(\w+)\s*=\s*\((\w+Pipe\.from_dataframe\([^)]*\))')
+                first_line_match = pipeline_pattern.match(lines[0].strip())
+                
+                if first_line_match:
+                    result_var = first_line_match.group(1)
+                    pipe_init = first_line_match.group(2)
+                    
+                    # Collect all pipe operations
+                    pipe_operations = []
+                    for line in lines[1:]:
+                        stripped = line.strip()
+                        if stripped.startswith('|'):
+                            # Extract the operation part after the pipe
+                            operation_part = stripped[1:].strip()
+                            pipe_operations.append(operation_part)
+                    
+                    if pipe_operations:
+                        # Reconstruct with proper syntax
+                        fixed_code = f"{result_var} = ({pipe_init}"
+                        for op in pipe_operations:
+                            # Fix common issues in the operation
+                            op = re.sub(r"function\s*=\s*'([^']+)'", r'function=\1', op)
+                            op = re.sub(r'function\s*=\s*"([^"]+)"', r'function=\1', op)
+                            
+                            # Fix function parameters to direct method calls
+                            function_conversions = {
+                                'Variance': 'variance',
+                                'Mean': 'mean', 
+                                'Sum': 'sum',
+                                'Count': 'count',
+                                'Max': 'max',
+                                'Min': 'min',
+                                'StandardDeviation': 'std',
+                                'Correlation': 'correlation',
+                                'Covariance': 'covariance',
+                                'Median': 'median',
+                                'Percentile': 'percentile'
+                            }
+                            
+                            for func_param, method_name in function_conversions.items():
+                                # Pattern: moving_apply_by_group(function=Variance, ...) -> variance(...)
+                                pattern = rf'moving_apply_by_group\s*\(\s*function\s*=\s*{func_param}\s*,([^)]*)\)'
+                                replacement = rf'{method_name}(\1)'
+                                op = re.sub(pattern, replacement, op)
+                                
+                                # Also handle other wrapper functions
+                                pattern2 = rf'(\w+)\s*\(\s*function\s*=\s*{func_param}\s*,([^)]*)\)'
+                                replacement2 = rf'{method_name}(\2)'
+                                op = re.sub(pattern2, replacement2, op)
+                            
+                            fixed_code += f"\n    | {op}"
+                        fixed_code += "\n    ).to_df()"
+                        return fixed_code
+            
+            # Try to find a valid pipeline pattern
+            pipeline_pattern = r'(\w+Pipe\.from_dataframe\([^)]+\)\s*\|\s*\w+\([^)]*\)\s*\|\s*to_df\(\))'
+            match = re.search(pipeline_pattern, code)
+            if match:
+                return f"result = ({match.group(1)})"
+            
+            # Try to extract just the pipeline initialization
+            init_pattern = r'(\w+Pipe\.from_dataframe\([^)]+\))'
+            match = re.search(init_pattern, code)
+            if match:
+                return f"""result = (
+    {match.group(1)}
+    ).to_df()"""
+            
+            # If all else fails, return a basic fallback
+            return """result = (
+    MetricsPipe.from_dataframe(df)
+    ).to_df()"""
+            
+        except Exception as e:
+            logger.error(f"Error extracting valid code parts: {e}")
+            return """result = (
+    MetricsPipe.from_dataframe(df)
+    ).to_df()"""
     
     def _generate_fallback_code(self, pipeline_type: PipelineType, 
                                function_name: str, function_inputs: Dict[str, Any], 
                                dataframe_name: str) -> str:
         """Generate fallback code when main generation fails"""
-        inputs_str = self._format_function_inputs(function_inputs)
-        
-        # Handle dataframe names with spaces
-        if ' ' in dataframe_name:
-            dataframe_name = f'"{dataframe_name}"'
-        
-        return f"""result = ({pipeline_type.value}.from_dataframe({dataframe_name})
-         | {function_name}(
-             {inputs_str}
-         )
-         | ShowDataFrame())
-        """
+        try:
+            inputs_str = self._format_function_inputs(function_inputs)
+            
+            # Handle dataframe names with spaces
+            if ' ' in dataframe_name:
+                dataframe_name = f'"{dataframe_name}"'
+            
+            # Generate a simple, valid fallback code
+            if inputs_str.strip():
+                fallback_code = f"""result = (
+    {pipeline_type.value}.from_dataframe({dataframe_name})
+    | {function_name}({inputs_str})
+    ).to_df()"""
+            else:
+                fallback_code = f"""result = (
+    {pipeline_type.value}.from_dataframe({dataframe_name})
+    | {function_name}()
+    ).to_df()"""
+            
+            # Validate the fallback code
+            try:
+                ast.parse(fallback_code)
+                return fallback_code
+            except SyntaxError:
+                # If even the fallback has syntax errors, return the most basic version
+                return f"""result = (
+    {pipeline_type.value}.from_dataframe({dataframe_name})
+    ).to_df()"""
+                
+        except Exception as e:
+            logger.error(f"Error generating fallback code: {e}")
+            # Return the most basic valid code
+            return f"""result = (
+    MetricsPipe.from_dataframe('df')
+    ).to_df()"""
     
     def _format_final_result(self, query_state: Dict[str, Any]) -> Dict[str, Any]:
         """Format the final result"""

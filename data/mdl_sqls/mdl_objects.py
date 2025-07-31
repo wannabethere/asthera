@@ -629,7 +629,6 @@ class ProjectManager:
             'updated_at': project.updated_at
         }
 
-
 # Example usage and testing
 if __name__ == "__main__":
     from sqlalchemy import create_engine

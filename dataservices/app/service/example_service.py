@@ -10,7 +10,7 @@ from app.service.models import (
     DefinitionType, UserExample
 )
 from app.service.persistence_service import PersistenceServiceFactory
-from app.utils.history import ProjectManager
+from app.utils.history import DomainManager
 from app.schemas.dbmodels import Example
 from app.core.dependencies import get_persistence_factory
 
@@ -40,7 +40,7 @@ async def create_example(example_data: ExampleCreate,
     )
     
     # Persist using async service
-    example_id = await user_example_service.persist_user_example(user_example, example_data.project_id)
+    example_id = await user_example_service.persist_user_example(user_example, example_data.domain_id)
     
     # Get the created example
     example = await user_example_service.get_user_example_by_id(example_id)
@@ -106,14 +106,14 @@ async def delete_example(example_id: str,
 
 
 async def list_examples(factory: PersistenceServiceFactory,
-                       project_id: Optional[str] = None, 
+                       domain_id: Optional[str] = None, 
                        definition_type: Optional[DefinitionType] = None) -> List[ExampleRead]:
     """List examples using persistence service."""
     user_example_service = factory.get_user_example_service()
     
     # Get examples
-    if project_id:
-        examples = await user_example_service.get_user_examples(project_id, definition_type)
+    if domain_id:
+        examples = await user_example_service.get_user_examples(domain_id, definition_type)
     else:
         examples = await user_example_service.get_user_examples("", definition_type)
     
@@ -140,7 +140,7 @@ async def create_user_example(user_example_data: UserExampleCreate,
     )
     
     # Persist using async service
-    example_id = await user_example_service.persist_user_example(user_example, user_example_data.project_id)
+    example_id = await user_example_service.persist_user_example(user_example, user_example_data.domain_id)
     
     # Get the created example
     example = await user_example_service.get_user_example_by_id(example_id)
@@ -200,14 +200,14 @@ async def delete_user_example(example_id: str,
 
 
 async def list_user_examples(factory: PersistenceServiceFactory,
-                           project_id: Optional[str] = None, 
+                           domain_id: Optional[str] = None, 
                            definition_type: Optional[DefinitionType] = None) -> List[UserExampleRead]:
     """List user examples using persistence service."""
     user_example_service = factory.get_user_example_service()
     
     # Get examples
-    if project_id:
-        examples = await user_example_service.get_user_examples(project_id, definition_type)
+    if domain_id:
+        examples = await user_example_service.get_user_examples(domain_id, definition_type)
     else:
         examples = await user_example_service.get_user_examples("", definition_type)
     

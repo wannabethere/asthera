@@ -8,8 +8,8 @@ from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
 import logging
 
-from app.service.project_workflow_service import ProjectWorkflowService
-from app.service.models import AddTableRequest, SchemaInput, ProjectContext
+from app.service.project_workflow_service import DomainWorkflowService
+from app.service.models import AddTableRequest, SchemaInput, DomainContext
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/semantics", tags=["semantics"])
@@ -28,9 +28,9 @@ class TableDescriptionRequest(BaseModel):
     display_name: Optional[str] = None
     description: Optional[str] = None
     columns: List[TableColumnRequest]
-    project_id: Optional[str] = None
+    domain_id: Optional[str] = None
     business_domain: Optional[str] = "General"
-    project_name: Optional[str] = None
+    domain_name: Optional[str] = None
 
 class TableDescriptionResponse(BaseModel):
     id: str
@@ -47,10 +47,10 @@ async def describe_table(request: TableDescriptionRequest):
     semantic description including business context, key columns, and suggested relationships.
     """
     try:
-        # Create project context for the request
-        project_context = ProjectContext(
-            project_id=request.project_id or "default_project",
-            project_name=request.project_name or f"Project for {request.name}",
+        # Create domain context for the request
+        domain_context = DomainContext(
+            domain_id=request.domain_id or "default_domain",
+            domain_name=request.domain_name or f"Domain for {request.name}",
             business_domain=request.business_domain,
             purpose=f"Generate semantic descriptions for {request.name}",
             target_users=["Data Analysts", "Business Users"],
@@ -87,19 +87,19 @@ async def describe_table(request: TableDescriptionRequest):
         )
         
         # Create workflow service instance
-        workflow_service = ProjectWorkflowService(
+        workflow_service = DomainWorkflowService(
             user_id="api_user",
-            session_id=f"semantics_{request.project_id or 'default'}"
+            session_id=f"semantics_{request.domain_id or 'default'}"
         )
         
         # Generate semantic description using workflow service
         semantic_description = await workflow_service.get_semantic_description_for_table(
-            add_table_request, project_context
+            add_table_request, domain_context
         )
         
         # Convert result to response format
         response = TableDescriptionResponse(
-            id=f"table_{request.name}_{request.project_id or 'default'}",
+            id=f"table_{request.name}_{request.domain_id or 'default'}",
             status="finished",
             response=semantic_description,
             error=None

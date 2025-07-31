@@ -1,6 +1,6 @@
 """
 Post-Commit Service
-Executes custom code and workflows when a project is committed
+Executes custom code and workflows when a domain is committed
 """
 
 import asyncio
@@ -9,13 +9,13 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from app.schemas.dbmodels import Project, Dataset, Table, SQLColumn
+from app.schemas.dbmodels import Domain, Dataset, Table, SQLColumn
 from sqlalchemy.orm import selectinload
-from app.service.models import ProjectContext
+from app.service.models import DomainContext
 from app.utils.sse import publish_update
 from app.core.session_manager import SessionManager
-from app.utils.history import ProjectManager
-from app.service.project_json_service import ProjectJSONService
+from app.utils.history import DomainManager
+from app.service.project_json_service import DomainJSONService
 
 logger = logging.getLogger(__name__)
 
@@ -26,22 +26,22 @@ class PostCommitService:
         self.user_id = user_id
         self.session_id = session_id
     
-    async def execute_post_commit_workflows(self, project_id: str, db: AsyncSession) -> Dict[str, Any]:
+    async def execute_post_commit_workflows(self, domain_id: str, db: AsyncSession) -> Dict[str, Any]:
         """
         Execute post-commit workflows for ChromaDB integration via LLM definition generation
-        and project JSON schemas processing
+        and domain JSON schemas processing
         
         Args:
-            project_id: ID of the committed project
+            domain_id: ID of the committed domain
             db: Database session
             
         Returns:
             Dictionary containing execution results
         """
-        logger.info(f"Executing post-commit ChromaDB integration for project {project_id}")
+        logger.info(f"Executing post-commit ChromaDB integration for domain {domain_id}")
         
         results = {
-            "project_id": project_id,
+            "domain_id": domain_id,
             "executed_at": datetime.now().isoformat(),
             "workflows": {},
             "status": "completed",
@@ -50,21 +50,21 @@ class PostCommitService:
         }
         
         try:
-            # Get project details
-            project = await self._get_project_with_details(project_id, db)
-            if not project:
-                raise ValueError(f"Project {project_id} not found")
+            # Get domain details
+            domain = await self._get_domain_with_details(domain_id, db)
+            if not domain:
+                raise ValueError(f"Domain {domain_id} not found")
             
             # Execute immediate workflows
             workflows = [
                 ("chromadb_integration", self._setup_chromadb_integration),
-                ("project_json_schemas", self._process_project_json_schemas)
+                ("domain_json_schemas", self._process_domain_json_schemas)
             ]
             
             for workflow_name, workflow_func in workflows:
                 try:
                     logger.info(f"Executing workflow: {workflow_name}")
-                    workflow_result = await workflow_func(project, db)
+                    workflow_result = await workflow_func(domain, db)
                     results["workflows"][workflow_name] = workflow_result
                     logger.info(f"Completed workflow: {workflow_name}")
                 except Exception as e:
@@ -74,17 +74,17 @@ class PostCommitService:
                     results["workflows"][workflow_name] = {"status": "failed", "error": str(e)}
             
             # Note: ChromaDB indexing job is automatically submitted by entity update service
-            # when project is committed, so we don't need to submit it here
-            logger.info(f"ChromaDB indexing job will be submitted by entity update service for project {project_id}")
+            # when domain is committed, so we don't need to submit it here
+            logger.info(f"ChromaDB indexing job will be submitted by entity update service for domain {domain_id}")
             
             # Publish completion update
             publish_update(self.user_id, self.session_id, {
                 "type": "post_commit_completed",
-                "project_id": project_id,
+                "domain_id": domain_id,
                 "results": results
             })
             
-            logger.info(f"Post-commit ChromaDB integration completed for project {project_id}")
+            logger.info(f"Post-commit ChromaDB integration completed for domain {domain_id}")
             
         except Exception as e:
             error_msg = f"Error executing post-commit ChromaDB integration: {str(e)}"
@@ -95,28 +95,28 @@ class PostCommitService:
             # Publish error update
             publish_update(self.user_id, self.session_id, {
                 "type": "post_commit_failed",
-                "project_id": project_id,
+                "domain_id": domain_id,
                 "error": str(e)
             })
         
         return results
     
-    async def _get_project_with_details(self, project_id: str, db: AsyncSession) -> Optional[Project]:
-        """Get project with all related details"""
+    async def _get_domain_with_details(self, domain_id: str, db: AsyncSession) -> Optional[Domain]:
+        """Get domain with all related details"""
         result = await db.execute(
-            select(Project)
+            select(Domain)
             .options(
-                selectinload(Project.datasets)
+                selectinload(Domain.datasets)
                 .selectinload(Dataset.tables)
                 .selectinload(Table.columns)
             )
-            .where(Project.project_id == project_id)
+            .where(Domain.domain_id == domain_id)
         )
         return result.scalar_one_or_none()
     
-    async def _setup_chromadb_integration(self, project: Project, db: AsyncSession) -> Dict[str, Any]:
+    async def _setup_chromadb_integration(self, domain: Domain, db: AsyncSession) -> Dict[str, Any]:
         """Generate LLM definitions and store in temporary MDL JSON file"""
-        logger.info(f"Generating LLM definitions for project {project.project_id}")
+        logger.info(f"Generating LLM definitions for domain {domain.domain_id}")
         
         results = {
             "mdl_file_created": False,
@@ -133,27 +133,27 @@ class PostCommitService:
             llm = get_llm()
             definition_service = LLMSchemaDocumentationGenerator(llm)
             
-            # Prepare project context for LLM definition generation
-            project_context = ProjectContext(
-                project_id=project.project_id,
-                project_name=project.display_name,
-                business_domain=project.json_metadata.get("context", {}).get("business_domain", "General"),
-                purpose=project.description or "Data project",
-                target_users=project.json_metadata.get("context", {}).get("target_users", ["Data Analysts"]),
-                key_business_concepts=project.json_metadata.get("context", {}).get("key_business_concepts", [])
+            # Prepare domain context for LLM definition generation
+            domain_context = DomainContext(
+                domain_id=domain.domain_id,
+                domain_name=domain.display_name,
+                business_domain=domain.json_metadata.get("context", {}).get("business_domain", "General"),
+                purpose=domain.description or "Data domain",
+                target_users=domain.json_metadata.get("context", {}).get("target_users", ["Data Analysts"]),
+                key_business_concepts=domain.json_metadata.get("context", {}).get("key_business_concepts", [])
             )
             
             # Collect all table definitions
             table_definitions = []
             
             # Process each table for LLM definition generation
-            for dataset in project.datasets:
+            for dataset in domain.datasets:
                 for table in dataset.tables:
                     try:
                         logger.info(f"Generating LLM definitions for table {table.name}")
                         
                         # Generate LLM definitions
-                        table_result = await self._generate_table_definitions(table, project, definition_service, project_context)
+                        table_result = await self._generate_table_definitions(table, domain, definition_service, domain_context)
                         
                         if table_result["success"]:
                             table_definitions.append(table_result["definition"])
@@ -176,18 +176,18 @@ class PostCommitService:
                     mdl_dir = Path("mdl_files")
                     mdl_dir.mkdir(exist_ok=True)
                     
-                    # Create project-specific directory
-                    project_mdl_dir = mdl_dir / project.project_id
-                    project_mdl_dir.mkdir(exist_ok=True)
+                    # Create domain-specific directory
+                    domain_mdl_dir = mdl_dir / domain.domain_id
+                    domain_mdl_dir.mkdir(exist_ok=True)
                     
                     # Create MDL file
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    mdl_filename = f"{project.project_id}_definitions_{timestamp}.json"
-                    mdl_file_path = project_mdl_dir / mdl_filename
+                    mdl_filename = f"{domain.domain_id}_definitions_{timestamp}.json"
+                    mdl_file_path = domain_mdl_dir / mdl_filename
                     
                     # Build complete MDL using the MDL Builder Service
-                    mdl_content = await mdl_builder_service.build_project_mdl(
-                        project_id=project.project_id,
+                    mdl_content = await mdl_builder_service.build_domain_mdl(
+                        domain_id=domain.domain_id,
                         db=db,
                         include_llm_definitions=True
                     )
@@ -202,9 +202,9 @@ class PostCommitService:
                         results["mdl_file_created"] = True
                         results["mdl_file_path"] = str(mdl_file_path)
                         
-                        # Update project metadata
-                        project.json_metadata = project.json_metadata or {}
-                        project.json_metadata["llm_definitions"] = {
+                        # Update domain metadata
+                        domain.json_metadata = domain.json_metadata or {}
+                        domain.json_metadata["llm_definitions"] = {
                             "generated_at": datetime.now().isoformat(),
                             "mdl_file_path": str(mdl_file_path),
                             "definitions_count": results["definitions_generated"],
@@ -213,7 +213,7 @@ class PostCommitService:
                         }
                         
                         await db.commit()
-                        logger.info(f"LLM definitions and MDL file created for project {project.project_id}, indexing queued")
+                        logger.info(f"LLM definitions and MDL file created for domain {domain.domain_id}, indexing queued")
                     else:
                         logger.error(f"Error saving MDL file: {save_result['error']}")
                         results["errors"].append(f"Error saving MDL file: {save_result['error']}")
@@ -230,7 +230,7 @@ class PostCommitService:
         
         return results
     
-    async def _generate_table_definitions(self, table: Table, project: Project, definition_service, project_context: ProjectContext) -> Dict[str, Any]:
+    async def _generate_table_definitions(self, table: Table, domain: Domain, definition_service, domain_context: DomainContext) -> Dict[str, Any]:
         """Generate LLM definitions for a single table"""
         try:
             # Prepare schema input for LLM definition generation
@@ -258,7 +258,7 @@ class PostCommitService:
             )
             
             # Generate LLM definitions using the schema manager service
-            documented_table = await definition_service.document_table_schema(schema_input, project_context)
+            documented_table = await definition_service.document_table_schema(schema_input, domain_context)
             
             # Create definition object for MDL file
             definition = {
@@ -308,9 +308,9 @@ class PostCommitService:
                 "error": str(e)
             }
     
-    async def _process_project_json_schemas(self, project: Project, db: AsyncSession) -> Dict[str, Any]:
-        """Process project JSON schemas and store in ChromaDB + PostgreSQL"""
-        logger.info(f"Processing project JSON schemas for project {project.project_id}")
+    async def _process_domain_json_schemas(self, domain: Domain, db: AsyncSession) -> Dict[str, Any]:
+        """Process domain JSON schemas and store in ChromaDB + PostgreSQL"""
+        logger.info(f"Processing domain JSON schemas for domain {domain.domain_id}")
         
         results = {
             "json_types_processed": [],
@@ -324,68 +324,68 @@ class PostCommitService:
         }
         
         try:
-            # Initialize ProjectJSONService
+            # Initialize DomainJSONService
             session_manager = SessionManager.get_instance()
-            project_manager = ProjectManager(None)
-            json_service = ProjectJSONService(session_manager, project_manager)
+            domain_manager = DomainManager(None)
+            json_service = DomainJSONService(session_manager, domain_manager)
             
             # Process all JSON types
             json_types = [
-                ("tables", json_service.store_project_tables_json),
-                ("metrics", json_service.store_project_metrics_json),
-                ("views", json_service.store_project_views_json),
-                ("calculated_columns", json_service.store_project_calculated_columns_json),
-                ("project_summary", json_service.store_project_summary_json)
+                ("tables", json_service.store_domain_tables_json),
+                ("metrics", json_service.store_domain_metrics_json),
+                ("views", json_service.store_domain_views_json),
+                ("calculated_columns", json_service.store_domain_calculated_columns_json),
+                ("domain_summary", json_service.store_domain_summary_json)
             ]
             
             for json_type, store_func in json_types:
                 try:
-                    logger.info(f"Processing {json_type} JSON for project {project.project_id}")
+                    logger.info(f"Processing {json_type} JSON for domain {domain.domain_id}")
                     
                     # Store JSON in ChromaDB and PostgreSQL
-                    chroma_doc_id = await store_func(project.project_id, self.user_id)
+                    chroma_doc_id = await store_func(domain.domain_id, self.user_id)
                     
                     results["json_types_processed"].append(json_type)
                     results["chroma_document_ids"][json_type] = chroma_doc_id
                     
                     # Update counters based on type
                     if json_type == "tables":
-                        results["tables_processed"] = len(project.datasets[0].tables) if project.datasets else 0
+                        results["tables_processed"] = len(domain.datasets[0].tables) if domain.datasets else 0
                     elif json_type == "metrics":
-                        # Count metrics from project
+                        # Count metrics from domain
                         metrics_count = 0
-                        for dataset in project.datasets:
+                        for dataset in domain.datasets:
                             for table in dataset.tables:
                                 metrics_count += len(table.metrics) if hasattr(table, 'metrics') else 0
                         results["metrics_processed"] = metrics_count
                     elif json_type == "views":
-                        # Count views from project
+                        # Count views from domain
                         views_count = 0
-                        for dataset in project.datasets:
+                        for dataset in domain.datasets:
                             views_count += len(dataset.views) if hasattr(dataset, 'views') else 0
                         results["views_processed"] = views_count
                     elif json_type == "calculated_columns":
-                        # Count calculated columns from project
+                        # Count calculated columns from domain
                         calc_columns_count = 0
-                        for dataset in project.datasets:
+                        for dataset in domain.datasets:
                             for table in dataset.tables:
                                 for column in table.columns:
                                     if hasattr(column, 'calculated_column') and column.calculated_column:
                                         calc_columns_count += 1
                         results["calculated_columns_processed"] = calc_columns_count
-                    elif json_type == "project_summary":
+                    elif json_type == "domain_summary":
                         results["summary_created"] = True
                     
-                    logger.info(f"Successfully processed {json_type} JSON for project {project.project_id}")
+                    logger.info(f"Successfully processed {json_type} JSON for domain {domain.domain_id}")
                     
                 except Exception as e:
                     error_msg = f"Error processing {json_type} JSON: {str(e)}"
                     logger.error(error_msg)
                     results["errors"].append(error_msg)
             
-            # Update project metadata with JSON processing results
-            project.json_metadata = project.json_metadata or {}
-            project.json_metadata["json_schemas_processing"] = {
+            # Update domain metadata with JSON processing results
+            domain.json_metadata = domain.json_metadata or {}
+            domain.json_metadata["json_schemas_processing"] = {
                 "processed_at": datetime.now().isoformat(),
                 "processed_by": self.user_id,
                 "json_types_processed": results["json_types_processed"],
@@ -401,10 +401,10 @@ class PostCommitService:
             
             await db.commit()
             
-            logger.info(f"Project JSON schemas processing completed for project {project.project_id}")
+            logger.info(f"Domain JSON schemas processing completed for domain {domain.domain_id}")
             
         except Exception as e:
-            error_msg = f"Error in project JSON schemas processing: {str(e)}"
+            error_msg = f"Error in domain JSON schemas processing: {str(e)}"
             logger.error(error_msg)
             results["errors"].append(error_msg)
         

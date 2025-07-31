@@ -23,20 +23,20 @@ class EntityUpdateService:
     
     async def on_table_updated(
         self,
-        project_id: str,
+        domain_id: str,
         table_id: str,
         user_id: Optional[str] = None,
         session_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None
     ):
         """Handle table update - submit jobs for tables and summary"""
-        logger.info(f"Table updated: {table_id} in project {project_id}")
+        logger.info(f"Table updated: {table_id} in domain {domain_id}")
         
         try:
             # Submit tables JSON job
             tables_job_id = await self.job_queue.submit_job(
-                job_type=JobType.PROJECT_JSON_TABLES,
-                project_id=project_id,
+                job_type=JobType.DOMAIN_JSON_TABLES,
+                domain_id=domain_id,
                 entity_type="table",
                 entity_id=table_id,
                 user_id=user_id,
@@ -52,8 +52,8 @@ class EntityUpdateService:
             
             # Submit summary job (lower priority)
             summary_job_id = await self.job_queue.submit_job(
-                job_type=JobType.PROJECT_JSON_SUMMARY,
-                project_id=project_id,
+                job_type=JobType.DOMAIN_JSON_SUMMARY,
+                domain_id=domain_id,
                 entity_type="table",
                 entity_id=table_id,
                 user_id=user_id,
@@ -80,7 +80,7 @@ class EntityUpdateService:
     
     async def on_column_updated(
         self,
-        project_id: str,
+        domain_id: str,
         table_id: str,
         column_id: str,
         user_id: Optional[str] = None,
@@ -88,13 +88,13 @@ class EntityUpdateService:
         metadata: Optional[Dict[str, Any]] = None
     ):
         """Handle column update - submit jobs for tables and summary"""
-        logger.info(f"Column updated: {column_id} in table {table_id}, project {project_id}")
+        logger.info(f"Column updated: {column_id} in table {table_id}, domain {domain_id}")
         
         try:
             # Submit tables JSON job (includes columns)
             tables_job_id = await self.job_queue.submit_job(
-                job_type=JobType.PROJECT_JSON_TABLES,
-                project_id=project_id,
+                job_type=JobType.DOMAIN_JSON_TABLES,
+                domain_id=domain_id,
                 entity_type="column",
                 entity_id=column_id,
                 user_id=user_id,
@@ -111,8 +111,8 @@ class EntityUpdateService:
             
             # Submit summary job
             summary_job_id = await self.job_queue.submit_job(
-                job_type=JobType.PROJECT_JSON_SUMMARY,
-                project_id=project_id,
+                job_type=JobType.DOMAIN_JSON_SUMMARY,
+                domain_id=domain_id,
                 entity_type="column",
                 entity_id=column_id,
                 user_id=user_id,
@@ -140,20 +140,20 @@ class EntityUpdateService:
     
     async def on_metric_updated(
         self,
-        project_id: str,
+        domain_id: str,
         metric_id: str,
         user_id: Optional[str] = None,
         session_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None
     ):
         """Handle metric update - submit jobs for metrics and summary"""
-        logger.info(f"Metric updated: {metric_id} in project {project_id}")
+        logger.info(f"Metric updated: {metric_id} in domain {domain_id}")
         
         try:
             # Submit metrics JSON job
             metrics_job_id = await self.job_queue.submit_job(
-                job_type=JobType.PROJECT_JSON_METRICS,
-                project_id=project_id,
+                job_type=JobType.DOMAIN_JSON_METRICS,
+                domain_id=domain_id,
                 entity_type="metric",
                 entity_id=metric_id,
                 user_id=user_id,
@@ -169,8 +169,8 @@ class EntityUpdateService:
             
             # Submit summary job
             summary_job_id = await self.job_queue.submit_job(
-                job_type=JobType.PROJECT_JSON_SUMMARY,
-                project_id=project_id,
+                job_type=JobType.DOMAIN_JSON_SUMMARY,
+                domain_id=domain_id,
                 entity_type="metric",
                 entity_id=metric_id,
                 user_id=user_id,
@@ -197,20 +197,20 @@ class EntityUpdateService:
     
     async def on_view_updated(
         self,
-        project_id: str,
+        domain_id: str,
         view_id: str,
         user_id: Optional[str] = None,
         session_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None
     ):
         """Handle view update - submit jobs for views and summary"""
-        logger.info(f"View updated: {view_id} in project {project_id}")
+        logger.info(f"View updated: {view_id} in domain {domain_id}")
         
         try:
             # Submit views JSON job
             views_job_id = await self.job_queue.submit_job(
-                job_type=JobType.PROJECT_JSON_VIEWS,
-                project_id=project_id,
+                job_type=JobType.DOMAIN_JSON_VIEWS,
+                domain_id=domain_id,
                 entity_type="view",
                 entity_id=view_id,
                 user_id=user_id,
@@ -226,8 +226,8 @@ class EntityUpdateService:
             
             # Submit summary job
             summary_job_id = await self.job_queue.submit_job(
-                job_type=JobType.PROJECT_JSON_SUMMARY,
-                project_id=project_id,
+                job_type=JobType.DOMAIN_JSON_SUMMARY,
+                domain_id=domain_id,
                 entity_type="view",
                 entity_id=view_id,
                 user_id=user_id,
@@ -254,20 +254,20 @@ class EntityUpdateService:
     
     async def on_calculated_column_updated(
         self,
-        project_id: str,
+        domain_id: str,
         calculated_column_id: str,
         user_id: Optional[str] = None,
         session_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None
     ):
         """Handle calculated column update - submit jobs for calculated columns and summary"""
-        logger.info(f"Calculated column updated: {calculated_column_id} in project {project_id}")
+        logger.info(f"Calculated column updated: {calculated_column_id} in domain {domain_id}")
         
         try:
             # Submit calculated columns JSON job
             calc_columns_job_id = await self.job_queue.submit_job(
-                job_type=JobType.PROJECT_JSON_CALCULATED_COLUMNS,
-                project_id=project_id,
+                job_type=JobType.DOMAIN_JSON_CALCULATED_COLUMNS,
+                domain_id=domain_id,
                 entity_type="calculated_column",
                 entity_id=calculated_column_id,
                 user_id=user_id,
@@ -283,8 +283,8 @@ class EntityUpdateService:
             
             # Submit summary job
             summary_job_id = await self.job_queue.submit_job(
-                job_type=JobType.PROJECT_JSON_SUMMARY,
-                project_id=project_id,
+                job_type=JobType.DOMAIN_JSON_SUMMARY,
+                domain_id=domain_id,
                 entity_type="calculated_column",
                 entity_id=calculated_column_id,
                 user_id=user_id,
@@ -309,28 +309,28 @@ class EntityUpdateService:
             logger.error(f"Failed to submit jobs for calculated column update {calculated_column_id}: {str(e)}")
             raise
     
-    async def on_project_committed(
+    async def on_domain_committed(
         self,
-        project_id: str,
+        domain_id: str,
         user_id: Optional[str] = None,
         session_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None
     ):
-        """Handle project commit - submit post-commit workflow and ChromaDB indexing jobs"""
-        logger.info(f"Project committed: {project_id}")
+        """Handle domain commit - submit post-commit workflow and ChromaDB indexing jobs"""
+        logger.info(f"Domain committed: {domain_id}")
         
         try:
             # Submit post-commit workflow job (highest priority)
             workflow_job_id = await self.job_queue.submit_job(
                 job_type=JobType.POST_COMMIT_WORKFLOW,
-                project_id=project_id,
-                entity_type="project",
-                entity_id=project_id,
+                domain_id=domain_id,
+                entity_type="domain",
+                entity_id=domain_id,
                 user_id=user_id,
                 session_id=session_id,
-                priority=0,  # Highest priority for project commits
+                priority=0,  # Highest priority for domain commits
                 metadata={
-                    "update_type": "project_committed",
+                    "update_type": "domain_committed",
                     "committed_at": datetime.utcnow().isoformat(),
                     **(metadata or {})
                 }
@@ -339,14 +339,14 @@ class EntityUpdateService:
             # Submit ChromaDB indexing job (medium priority)
             indexing_job_id = await self.job_queue.submit_job(
                 job_type=JobType.CHROMADB_INDEXING,
-                project_id=project_id,
-                entity_type="project",
-                entity_id=project_id,
+                domain_id=domain_id,
+                entity_type="domain",
+                entity_id=domain_id,
                 user_id=user_id,
                 session_id=session_id,
                 priority=1,  # Medium priority for indexing
                 metadata={
-                    "update_type": "project_committed",
+                    "update_type": "domain_committed",
                     "committed_at": datetime.utcnow().isoformat(),
                     **(metadata or {})
                 }
@@ -361,19 +361,19 @@ class EntityUpdateService:
             }
             
         except Exception as e:
-            logger.error(f"Failed to submit project commit jobs for project {project_id}: {str(e)}")
+            logger.error(f"Failed to submit domain commit jobs for domain {domain_id}: {str(e)}")
             raise
     
     async def on_bulk_update(
         self,
-        project_id: str,
+        domain_id: str,
         entity_updates: List[Dict[str, Any]],
         user_id: Optional[str] = None,
         session_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None
     ):
         """Handle bulk entity updates - submit all jobs at once"""
-        logger.info(f"Bulk update for project {project_id}: {len(entity_updates)} entities")
+        logger.info(f"Bulk update for domain {domain_id}: {len(entity_updates)} entities")
         
         try:
             job_ids = []
@@ -385,28 +385,28 @@ class EntityUpdateService:
                 
                 if entity_type == "table":
                     result = await self.on_table_updated(
-                        project_id, entity_id, user_id, session_id, metadata
+                        domain_id, entity_id, user_id, session_id, metadata
                     )
                     job_ids.extend([result["tables_job_id"], result["summary_job_id"]])
                 elif entity_type == "column":
                     table_id = update.get("table_id")
                     result = await self.on_column_updated(
-                        project_id, table_id, entity_id, user_id, session_id, metadata
+                        domain_id, table_id, entity_id, user_id, session_id, metadata
                     )
                     job_ids.extend([result["tables_job_id"], result["summary_job_id"]])
                 elif entity_type == "metric":
                     result = await self.on_metric_updated(
-                        project_id, entity_id, user_id, session_id, metadata
+                        domain_id, entity_id, user_id, session_id, metadata
                     )
                     job_ids.extend([result["metrics_job_id"], result["summary_job_id"]])
                 elif entity_type == "view":
                     result = await self.on_view_updated(
-                        project_id, entity_id, user_id, session_id, metadata
+                        domain_id, entity_id, user_id, session_id, metadata
                     )
                     job_ids.extend([result["views_job_id"], result["summary_job_id"]])
                 elif entity_type == "calculated_column":
                     result = await self.on_calculated_column_updated(
-                        project_id, entity_id, user_id, session_id, metadata
+                        domain_id, entity_id, user_id, session_id, metadata
                     )
                     job_ids.extend([result["calculated_columns_job_id"], result["summary_job_id"]])
             
@@ -418,7 +418,7 @@ class EntityUpdateService:
             }
             
         except Exception as e:
-            logger.error(f"Failed to submit jobs for bulk update in project {project_id}: {str(e)}")
+            logger.error(f"Failed to submit jobs for bulk update in domain {domain_id}: {str(e)}")
             raise
     
     async def start_worker(self):

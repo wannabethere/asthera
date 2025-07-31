@@ -51,6 +51,7 @@ class SessionManager:
         
     async def create_tables(self):
         async with self.engine.begin() as conn:
+            print("Creating tables...")
             await conn.run_sync(Base.metadata.create_all)
     
     # def get_db_session(self) -> Session:

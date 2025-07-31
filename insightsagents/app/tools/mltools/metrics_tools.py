@@ -2,42 +2,28 @@ import numpy as np
 import pandas as pd
 from typing import List, Dict, Union, Optional, Any, Tuple, Callable
 import warnings
+from .base_pipe import BasePipe
 
-class MetricsPipe:
+class MetricsPipe(BasePipe):
     """
     A pipeline-style metrics analysis tool that enables functional composition
     with a meterstick-like interface.
     """
     
-    def __init__(self, data=None):
-        """Initialize with optional data"""
-        self.data = data
+    def _initialize_results(self):
+        """Initialize the results storage for metrics analysis"""
         self.metrics = {}
         self.pivot_tables = {}
         self.current_metric = None
     
-    def __or__(self, other):
-        """Enable the | (pipe) operator for function composition"""
-        if callable(other):
-            return other(self)
-        raise ValueError(f"Cannot pipe MetricsPipe to {type(other)}")
-    
-    def copy(self):
-        """Create a shallow copy with deep copy of data"""
-        new_pipe = MetricsPipe()
-        if self.data is not None:
-            new_pipe.data = self.data.copy()
-        new_pipe.metrics = self.metrics.copy()
-        new_pipe.pivot_tables = self.pivot_tables.copy()
-        new_pipe.current_metric = self.current_metric
-        return new_pipe
-    
-    @classmethod
-    def from_dataframe(cls, df):
-        """Create a MetricsPipe from a dataframe"""
-        pipe = cls()
-        pipe.data = df.copy()
-        return pipe
+    def _copy_results(self, source_pipe):
+        """Copy results from source pipe to this pipe"""
+        if hasattr(source_pipe, 'metrics'):
+            self.metrics = source_pipe.metrics.copy()
+        if hasattr(source_pipe, 'pivot_tables'):
+            self.pivot_tables = source_pipe.pivot_tables.copy()
+        if hasattr(source_pipe, 'current_metric'):
+            self.current_metric = source_pipe.current_metric
     
     def to_df(self, include_metadata: bool = False, include_pivot_tables: bool = True):
         """
@@ -255,6 +241,38 @@ class MetricsPipe:
             })
         
         return pd.DataFrame(summary_data)
+    
+    def get_summary(self, **kwargs) -> Dict[str, Any]:
+        """
+        Get a summary of the metrics analysis results.
+        
+        Parameters:
+        -----------
+        **kwargs : dict
+            Additional arguments (not used in metrics pipe)
+            
+        Returns:
+        --------
+        dict
+            Summary of the metrics analysis results
+        """
+        if not self.metrics and not self.pivot_tables:
+            return {"error": "No metrics or pivot tables have been calculated"}
+        
+        # Get summary DataFrame
+        summary_df = self.get_summary_df()
+        
+        return {
+            "total_metrics": len(self.metrics),
+            "total_pivot_tables": len(self.pivot_tables),
+            "available_metrics": list(self.metrics.keys()),
+            "available_pivot_tables": list(self.pivot_tables.keys()),
+            "current_metric": self.current_metric,
+            "summary_dataframe": summary_df.to_dict('records') if not summary_df.empty else [],
+            "metrics_values": self.metrics,
+            "pivot_tables_info": {name: {"shape": table.shape, "columns": list(table.columns)} 
+                                for name, table in self.pivot_tables.items()}
+        }
 
 
 # Basic Metrics Functions

@@ -1,43 +1,28 @@
 import pandas as pd
 import numpy as np
-from typing import List, Union, Optional, Callable, Dict, Tuple
+from typing import List, Union, Optional, Callable, Dict, Tuple, Any
 from scipy import stats
+from .base_pipe import BasePipe
 
 
-class TimeSeriesPipe:
+class TimeSeriesPipe(BasePipe):
     """
     A pipeline-style class for time series operations using the pipe pattern.
     """
     
-    def __init__(self, data=None):
-        """Initialize with optional data"""
-        self.data = data
+    def _initialize_results(self):
+        """Initialize the results storage for time series analysis"""
         # Store distribution results when calculating distributions
         self.distribution_results = {}
         # Store statistical test results
         self.test_results = {}
     
-    def __or__(self, other):
-        """Enable the | (pipe) operator for function composition"""
-        if callable(other):
-            return other(self)
-        raise ValueError(f"Cannot pipe TimeSeriesPipe to {type(other)}")
-    
-    def copy(self):
-        """Create a copy with deep copy of data"""
-        new_pipe = TimeSeriesPipe()
-        if self.data is not None:
-            new_pipe.data = self.data.copy()
-        new_pipe.distribution_results = self.distribution_results.copy()
-        new_pipe.test_results = self.test_results.copy()
-        return new_pipe
-    
-    @classmethod
-    def from_dataframe(cls, df):
-        """Create a TimeSeriesPipe from a dataframe"""
-        pipe = cls()
-        pipe.data = df.copy()
-        return pipe
+    def _copy_results(self, source_pipe):
+        """Copy results from source pipe to this pipe"""
+        if hasattr(source_pipe, 'distribution_results'):
+            self.distribution_results = source_pipe.distribution_results.copy()
+        if hasattr(source_pipe, 'test_results'):
+            self.test_results = source_pipe.test_results.copy()
     
     def to_df(self, include_metadata: bool = False, include_original: bool = True):
         """
@@ -342,6 +327,51 @@ class TimeSeriesPipe:
                         summary_data.append(summary_row)
         
         return pd.DataFrame(summary_data)
+    
+    def get_summary(self, **kwargs) -> Dict[str, Any]:
+        """
+        Get a summary of the time series analysis results.
+        
+        Parameters:
+        -----------
+        **kwargs : dict
+            Additional arguments (not used in time series pipe)
+            
+        Returns:
+        --------
+        dict
+            Summary of the time series analysis results
+        """
+        if not self.distribution_results and not self.test_results:
+            return {"error": "No time series analysis has been performed"}
+        
+        # Get summary DataFrames
+        ts_summary_df = self.get_timeseries_summary_df()
+        dist_summary_df = self.get_distribution_summary_df()
+        
+        # Get time series columns
+        ts_cols = self.get_timeseries_columns()
+        
+        # Count analyses by type
+        analysis_types = {
+            'distributions': len(self.distribution_results),
+            'statistical_tests': len(self.test_results)
+        }
+        
+        return {
+            "total_analyses": sum(analysis_types.values()),
+            "total_timeseries_columns": len(ts_cols),
+            "available_distributions": list(self.distribution_results.keys()),
+            "available_tests": list(self.test_results.keys()),
+            "timeseries_columns": ts_cols,
+            "analysis_types": analysis_types,
+            "timeseries_summary_dataframe": ts_summary_df.to_dict('records') if not ts_summary_df.empty else [],
+            "distribution_summary_dataframe": dist_summary_df.to_dict('records') if not dist_summary_df.empty else [],
+            "distribution_results_info": {col: {"type": "distribution", "has_stats": 'stats' in result} 
+                                        for col, result in self.distribution_results.items()},
+            "test_results_info": {name: {"type": "statistical_test"} 
+                                for name in self.test_results.keys()}
+        }
 
 
 def lead(

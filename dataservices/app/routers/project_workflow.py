@@ -1,4 +1,4 @@
-# unstructured/genieml/dataservices/app/routers/project_workflow.py
+# unstructured/genieml/dataservices/app/routers/domain_workflow.py
 
 from fastapi import APIRouter, Depends, Request, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,11 +6,11 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy import select, update, func
 from app.core.dependencies import get_async_db_session, get_session_manager
 from app.service.models import (
-    CreateProjectRequest, ProjectContext, AddTableRequest, 
-    ProjectResponse, TableResponse
+    CreateDomainRequest, DomainContext, AddTableRequest, 
+    DomainResponse, TableResponse
 )
-from app.schemas.dbmodels import Project, Dataset, Table, SQLColumn
-from app.service.project_workflow_service import ProjectWorkflowService
+from app.schemas.dbmodels import Domain, Dataset, Table, SQLColumn
+from app.service.project_workflow_service import DomainWorkflowService
 from fastapi.responses import StreamingResponse
 import asyncio
 import json
@@ -31,65 +31,65 @@ def get_user_id(request: Request):
 from sqlalchemy import text
 
 
-@router.post("/project", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
-async def api_create_project(
-    project_data: CreateProjectRequest, 
+@router.post("/domain", response_model=DomainResponse, status_code=status.HTTP_201_CREATED)
+async def api_create_domain(
+    domain_data: CreateDomainRequest, 
     session_id: str = Depends(get_session_id),
     user_id: str = Depends(get_user_id),
     db: AsyncSession = Depends(get_async_db_session)
 ):
-    """Create a new project in draft status"""
+    """Create a new domain in draft status"""
     try:
-        # Check if project already exists
+        # Check if domain already exists
         result = await db.execute(
-            select(Project).where(Project.project_id == project_data.project_id)
+            select(Domain).where(Domain.domain_id == domain_data.domain_id)
         )
         existing = result.scalars().first()
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Project with ID {project_data.project_id} already exists"
+                detail=f"Domain with ID {domain_data.domain_id} already exists"
             )
         
-        # Create project in draft status
-        project = Project(
-            project_id=project_data.project_id,
-            display_name=project_data.display_name,
-            description=project_data.description,
-            created_by=project_data.created_by,
+        # Create domain in draft status
+        domain = Domain(
+            domain_id=domain_data.domain_id,
+            display_name=domain_data.display_name,
+            description=domain_data.description,
+            created_by=domain_data.created_by,
             status='draft',  # Start as draft
             version_locked=True  # Lock version during draft phase
         )
-        db.add(project)
+        db.add(domain)
         await db.commit()
-        await db.refresh(project)
-        # Initialize workflow service for this project
-        workflow_service = ProjectWorkflowService(user_id, session_id)
-        await workflow_service.create_project({
-            "project_id": project.project_id,
-            "display_name": project.display_name,
-            "description": project.description,
-            "created_by": project.created_by,
-            "context": project_data.context.dict() if project_data.context else None
+        await db.refresh(domain)
+        # Initialize workflow service for this domain
+        workflow_service = DomainWorkflowService(user_id, session_id)
+        await workflow_service.create_domain({
+            "domain_id": domain.domain_id,
+            "display_name": domain.display_name,
+            "description": domain.description,
+            "created_by": domain.created_by,
+            "context": domain_data.context.dict() if domain_data.context else None
         })
         
-        return ProjectResponse(
-            project_id=project.project_id,
-            display_name=project.display_name,
-            description=project.description,
-            created_by=project.created_by,
-            status=project.status,
-            version_string=project.version_string,
-            created_at=project.created_at,
-            is_draft=True if project.status =='draft' else False,
-            updated_at=project.updated_at
+        return DomainResponse(
+            domain_id=domain.domain_id,
+            display_name=domain.display_name,
+            description=domain.description,
+            created_by=domain.created_by,
+            status=domain.status,
+            version_string=domain.version_string,
+            created_at=domain.created_at,
+            is_draft=True if domain.status =='draft' else False,
+            updated_at=domain.updated_at
         )
         
     except Exception as e:
-        logger.error(f"Error creating project: {str(e)}")
+        logger.error(f"Error creating domain: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create project: {str(e)}"
+            detail=f"Failed to create domain: {str(e)}"
         )
 
 @router.post("/dataset", status_code=status.HTTP_201_CREATED)
@@ -99,36 +99,36 @@ async def api_add_dataset(
     user_id: str = Depends(get_user_id),
     db: AsyncSession = Depends(get_async_db_session)
 ):
-    """Add a dataset to a project"""
+    """Add a dataset to a domain"""
     try:
-        project_id = dataset_data.get("project_id")
-        if not project_id:
+        domain_id = dataset_data.get("domain_id")
+        if not domain_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="project_id is required"
+                detail="domain_id is required"
             )
         
-        # Check if project exists and is in draft
-        project = await db.execute(
-            select(Project).where(Project.project_id == project_id)
+        # Check if domain exists and is in draft
+        domain = await db.execute(
+            select(Domain).where(Domain.domain_id == domain_id)
         )
-        project = project.scalar_one_or_none()
+        domain = domain.scalar_one_or_none()
         
-        if not project:
+        if not domain:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Project {project_id} not found"
+                detail=f"Domain {domain_id} not found"
             )
         
-        if project.status != 'draft':
+        if domain.status != 'draft':
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Can only add datasets to draft projects"
+                detail="Can only add datasets to draft domains"
             )
         
         # Create dataset
         dataset = Dataset(
-            project_id=project_id,
+            domain_id=domain_id,
             name=dataset_data.get("name"),
             display_name=dataset_data.get("display_name") or dataset_data.get("name"),
             description=dataset_data.get("description"),
@@ -147,13 +147,13 @@ async def api_add_dataset(
 
         
         # Update workflow service
-        workflow_service = ProjectWorkflowService(user_id, session_id)
+        workflow_service = DomainWorkflowService(user_id, session_id)
         await workflow_service.add_dataset({
             "dataset_id": dataset.dataset_id,
             "name": dataset.name,
             "display_name": dataset.display_name,
             "description": dataset.description,
-            "project_id": project_id
+            "domain_id": domain_id
         })
         
         return {
@@ -161,7 +161,7 @@ async def api_add_dataset(
             "name": dataset.name,
             "display_name": dataset.display_name,
             "description": dataset.description,
-            "project_id": project_id
+            "domain_id": domain_id
         }
         
     except Exception as e:
@@ -174,7 +174,7 @@ async def api_add_dataset(
 @router.post("/table", response_model=TableResponse, status_code=status.HTTP_201_CREATED)
 async def api_add_table(
     add_table_request: AddTableRequest,
-    project_context: ProjectContext,
+    domain_context: DomainContext,
     session_id: str = Depends(get_session_id),
     user_id: str = Depends(get_user_id),
     db: AsyncSession = Depends(get_async_db_session)
@@ -193,50 +193,50 @@ async def api_add_table(
                 detail=f"Dataset {add_table_request.dataset_id} not found"
             )
         
-        # Check if project is in draft
-        project = await db.execute(
-            select(Project).where(Project.project_id == dataset.project_id)
+        # Check if domain is in draft
+        domain = await db.execute(
+            select(Domain).where(Domain.domain_id == dataset.domain_id)
         )
-        project = project.scalar_one_or_none()
+        domain = domain.scalar_one_or_none()
         
-        if not project or project.status != 'draft':
+        if not domain or domain.status != 'draft':
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Can only add tables to draft projects"
+                detail="Can only add tables to draft domains"
             )
         
-        # Check table limit (3-4 tables max per project)
+        # Check table limit (3-4 tables max per domain)
         table_count = await db.execute(
-            select(func.count(Table.table_id)).where(Table.project_id == dataset.project_id)
+            select(func.count(Table.table_id)).where(Table.domain_id == dataset.domain_id)
         )
         table_count = table_count.scalar()
         
         if table_count >= 4:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Project can have maximum 4 tables"
+                detail="Domain can have maximum 4 tables"
             )
         
-        # Check for duplicate table name in the project
+        # Check for duplicate table name in the domain
         existing_table = await db.execute(
             select(Table).where(
-                Table.project_id == dataset.project_id,
+                Table.domain_id == dataset.domain_id,
                 Table.name == add_table_request.schema.table_name
             )
         )
         if existing_table.scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Table '{add_table_request.schema.table_name}' already exists in project"
+                detail=f"Table '{add_table_request.schema.table_name}' already exists in domain"
             )
         
         # Use workflow service to add table with enhanced features
-        workflow_service = ProjectWorkflowService(user_id, session_id)
-        documented_table = await workflow_service.add_table(add_table_request, project_context)
+        workflow_service = DomainWorkflowService(user_id, session_id)
+        documented_table = await workflow_service.add_table(add_table_request, domain_context)
         
         # Create table in database
         table = Table(
-            project_id=dataset.project_id,
+            domain_id=dataset.domain_id,
             dataset_id=add_table_request.dataset_id,
             name=add_table_request.schema.table_name,
             display_name=add_table_request.schema.table_name,
@@ -312,41 +312,41 @@ async def api_commit_workflow(
     user_id: str = Depends(get_user_id),
     db: AsyncSession = Depends(get_async_db_session)
 ):
-    """Commit the workflow and transition project to draft_ready status"""
+    """Commit the workflow and transition domain to draft_ready status"""
     try:
-        workflow_service = ProjectWorkflowService(user_id, session_id)
+        workflow_service = DomainWorkflowService(user_id, session_id)
         state = await workflow_service.commit_workflow(db)
         
-        # Get the project from state
-        project_data = state.get("project")
-        if not project_data:
+        # Get the domain from state
+        domain_data = state.get("domain")
+        if not domain_data:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No project found in workflow state"
+                detail="No domain found in workflow state"
             )
         
-        # Update project status to draft_ready
-        project = await db.execute(
-            select(Project).where(Project.project_id == project_data.get("project_id"))
+        # Update domain status to draft_ready
+        domain = await db.execute(
+            select(Domain).where(Domain.domain_id == domain_data.get("domain_id"))
         )
-        project = project.scalar_one_or_none()
+        domain = domain.scalar_one_or_none()
         
-        if not project:
+        if not domain:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project not found"
+                detail="Domain not found"
             )
         
-        if project.status != 'draft':
+        if domain.status != 'draft':
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Project must be in draft status to commit"
+                detail="Domain must be in draft status to commit"
             )
         
         # Transition to draft_ready
         await db.execute(
-            update(Project)
-            .where(Project.project_id == project.project_id)
+            update(Domain)
+            .where(Domain.domain_id == domain.domain_id)
             .values(
                 status='draft_ready',
                 updated_at=func.now()
@@ -362,10 +362,10 @@ async def api_commit_workflow(
             
             # Execute post-commit workflows in background
             asyncio.create_task(
-                post_commit_service.execute_post_commit_workflows(project.project_id, db)
+                post_commit_service.execute_post_commit_workflows(domain.domain_id, db)
             )
             
-            logger.info(f"Post-commit workflows initiated for project {project.project_id}")
+            logger.info(f"Post-commit workflows initiated for domain {domain.domain_id}")
             
         except Exception as e:
             logger.error(f"Error initiating post-commit workflows: {str(e)}")
@@ -373,7 +373,7 @@ async def api_commit_workflow(
         
         return {
             "message": "Workflow committed successfully",
-            "project_id": project.project_id,
+            "domain_id": domain.domain_id,
             "status": "draft_ready",
             "state": state,
             "post_commit_initiated": True
@@ -388,33 +388,33 @@ async def api_commit_workflow(
             detail=f"Failed to commit workflow: {str(e)}"
         )
 
-@router.get("/project/{project_id}/status")
-async def get_project_status(
-    project_id: str,
+@router.get("/domain/{domain_id}/status")
+async def get_domain_status(
+    domain_id: str,
     db: AsyncSession = Depends(get_async_db_session)
 ):
-    """Get project workflow status"""
+    """Get domain workflow status"""
     try:
-        project = await db.execute(
-            select(Project)
-            .options(selectinload(Project.datasets).selectinload(Dataset.tables).selectinload(Table.columns),
-            selectinload(Project.tables))
-            .where(Project.project_id == project_id)
+        domain = await db.execute(
+            select(Domain)
+            .options(selectinload(Domain.datasets).selectinload(Dataset.tables).selectinload(Table.columns),
+            selectinload(Domain.tables))
+            .where(Domain.domain_id == domain_id)
         )
-        project = project.scalar_one_or_none()
+        domain = domain.scalar_one_or_none()
         
-        if not project:
+        if not domain:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Project {project_id} not found"
+                detail=f"Domain {domain_id} not found"
             )
         
         # Get workflow status
-        workflow_status = project.get_workflow_status()
+        workflow_status = domain.get_workflow_status()
         
         # Add dataset and table information
         datasets_info = []
-        for dataset in project.datasets:
+        for dataset in domain.datasets:
             
             try:
                 dataset_info = {
@@ -442,8 +442,8 @@ async def get_project_status(
             datasets_info.append(dataset_info)
         
         return {
-            "project_id": project.project_id,
-            "display_name": project.display_name,
+            "domain_id": domain.domain_id,
+            "display_name": domain.display_name,
             "workflow_status": workflow_status,
             "datasets": datasets_info,
             "total_datasets": len(datasets_info),
@@ -451,36 +451,36 @@ async def get_project_status(
         }
         
     except Exception as e:
-        logger.error(f"Error getting project status: {str(e)}")
+        logger.error(f"Error getting domain status: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get project status: {str(e)}"
+            detail=f"Failed to get domain status: {str(e)}"
         )
 
-@router.get("/project/{project_id}/post-commit-status")
+@router.get("/domain/{domain_id}/post-commit-status")
 async def get_post_commit_status(
-    project_id: str,
+    domain_id: str,
     db: AsyncSession = Depends(get_async_db_session)
 ):
-    """Get post-commit workflow status for a project"""
+    """Get post-commit workflow status for a domain"""
     try:
-        project = await db.execute(
-            select(Project).where(Project.project_id == project_id)
+        domain = await db.execute(
+            select(Domain).where(Domain.domain_id == domain_id)
         )
-        project = project.scalar_one_or_none()
+        domain = domain.scalar_one_or_none()
         
-        if not project:
+        if not domain:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Project {project_id} not found"
+                detail=f"Domain {domain_id} not found"
             )
         
-        # Extract post-commit information from project metadata
-        metadata = project.json_metadata or {}
+        # Extract post-commit information from domain metadata
+        metadata = domain.json_metadata or {}
         post_commit_info = metadata.get("post_commit", {})
         
         return {
-            "project_id": project_id,
+            "domain_id": domain_id,
             "post_commit_status": post_commit_info.get("status", "not_started"),
             "workflows_completed": post_commit_info.get("workflows_completed", []),
             "last_updated": post_commit_info.get("last_updated"),
@@ -494,30 +494,30 @@ async def get_post_commit_status(
             detail=f"Failed to get post-commit status: {str(e)}"
         )
 
-@router.post("/project/{project_id}/trigger-post-commit")
+@router.post("/domain/{domain_id}/trigger-post-commit")
 async def trigger_post_commit_workflows(
-    project_id: str,
+    domain_id: str,
     session_id: str = Depends(get_session_id),
     user_id: str = Depends(get_user_id),
     db: AsyncSession = Depends(get_async_db_session)
 ):
-    """Manually trigger post-commit workflows for a project"""
+    """Manually trigger post-commit workflows for a domain"""
     try:
-        project = await db.execute(
-            select(Project).where(Project.project_id == project_id)
+        domain = await db.execute(
+            select(Domain).where(Domain.domain_id == domain_id)
         )
-        project = project.scalar_one_or_none()
+        domain = domain.scalar_one_or_none()
         
-        if not project:
+        if not domain:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Project {project_id} not found"
+                detail=f"Domain {domain_id} not found"
             )
         
-        if project.status not in ['draft_ready', 'active']:
+        if domain.status not in ['draft_ready', 'active']:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Post-commit workflows can only be triggered for draft_ready or active projects"
+                detail="Post-commit workflows can only be triggered for draft_ready or active domains"
             )
         
         # Execute post-commit workflows
@@ -526,12 +526,12 @@ async def trigger_post_commit_workflows(
         
         # Execute in background
         asyncio.create_task(
-            post_commit_service.execute_post_commit_workflows(project_id, db)
+            post_commit_service.execute_post_commit_workflows(domain_id, db)
         )
         
         return {
             "message": "Post-commit workflows triggered successfully",
-            "project_id": project_id,
+            "domain_id": domain_id,
             "status": "initiated"
         }
         

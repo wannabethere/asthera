@@ -1,4 +1,4 @@
-# unstructured/genieml/dataservices/app/services/project_workflow_service.py
+# unstructured/genieml/dataservices/app/services/domain_workflow_service.py
 
 from typing import Dict, Optional, Any, List
 from uuid import uuid4
@@ -7,12 +7,11 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 from sqlalchemy import select, update, func
-from pydantic import BaseModel, Field, ConfigDict
-import asyncpg
-from app.service.models import ProjectCreate, TableCreate, ColumnCreate, MetricCreate, ViewCreate, CalculatedColumnCreate, ProjectResponse, TableResponse
-from app.schemas.dbmodels import Project, Table, SQLColumn, Metric, View, CalculatedColumn, Dataset
+
+from app.service.models import MetricCreate, ViewCreate
+from app.schemas.dbmodels import Domain, Table, SQLColumn, Metric, View, CalculatedColumn
 from app.agents.schema_manager import LLMSchemaDocumentationGenerator
-from app.service.models import ProjectContext, SchemaInput, AddTableRequest
+from app.service.models import DomainContext,  AddTableRequest
 import os
 from app.utils.cache import get_cache_provider
 from app.utils.sse import publish_update
@@ -23,7 +22,7 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-class ProjectWorkflowService:
+class DomainWorkflowService:
     def __init__(self, user_id: str, session_id: Optional[str] = None, llm=None):
         self.user_id = user_id
         self.session_id = session_id
@@ -34,25 +33,25 @@ class ProjectWorkflowService:
 
     def _workflow_cache_key(self) -> str:
         if self.session_id:
-            return f"project_workflow:{self.user_id}:{self.session_id}"
-        return f"project_workflow:{self.user_id}"
+            return f"domain_workflow:{self.user_id}:{self.session_id}"
+        return f"domain_workflow:{self.user_id}"
 
     def get_workflow_state(self) -> dict:
         state = self.cache.get(self._workflow_cache_key())
         if state is None:
-            state = {"project": None, "context": None, "datasets": [], "tables": []}
+            state = {"domain": None, "context": None, "datasets": [], "tables": []}
             self.cache.set(self._workflow_cache_key(), state)
         return state
 
     def set_workflow_state(self, state: dict):
         self.cache.set(self._workflow_cache_key(), state)
 
-    async def create_project(self, project_data: dict):
+    async def create_domain(self, domain_data: dict):
         state = self.get_workflow_state()
-        state["project"] = project_data  # or Project(**project_data)
+        state["domain"] = domain_data  # or Domain(**domain_data)
         self.set_workflow_state(state)
         publish_update(self.user_id, self.session_id or "default", state)
-        return state["project"]
+        return state["domain"]
     
     async def add_dataset(self, dataset_data: dict):
         state = self.get_workflow_state()
@@ -61,7 +60,7 @@ class ProjectWorkflowService:
         publish_update(self.user_id, self.session_id or "default", state)
         return state["datasets"]
     
-    async def get_semantic_description_for_table(self, add_table_request: AddTableRequest, project_context: ProjectContext) -> Dict[str, Any]:
+    async def get_semantic_description_for_table(self, add_table_request: AddTableRequest, domain_context: DomainContext) -> Dict[str, Any]:
         """Generate semantic description for a table using the semantics description service"""
         try:
             try:
@@ -102,9 +101,9 @@ class ProjectWorkflowService:
             # Generate description
             result = await semantics_service.describe(
                 SemanticsDescription.Input(
-                    id=f"workflow_table_{schema_input.table_name}_{project_context.project_id}",
+                    id=f"workflow_table_{schema_input.table_name}_{domain_context.domain_id}",
                     table_data=table_data,
-                    project_id=project_context.project_id
+                    domain_id=domain_context.domain_id
                 )
             )
             
@@ -119,7 +118,7 @@ class ProjectWorkflowService:
                     "description": f"Semantic description for {schema_input.table_name}: This table contains {schema_input.table_description or 'data related to the business domain'}. Generated automatically based on table structure and content.",
                     "table_purpose": f"Stores {schema_input.table_description or 'data'} for {schema_input.table_name}",
                     "key_columns": [],
-                    "business_context": f"This table supports the {project_context.business_domain} domain by storing {schema_input.table_description or 'relevant data'}.",
+                    "business_context": f"This table supports the {domain_context.business_domain} domain by storing {schema_input.table_description or 'relevant data'}.",
                     "data_patterns": ["Data storage", "Information management"],
                     "suggested_relationships": []
                 }
@@ -131,12 +130,12 @@ class ProjectWorkflowService:
                 "description": f"Semantic description for {schema_input.table_name}: This table contains {schema_input.table_description or 'data related to the business domain'}. Generated automatically based on table structure and content.",
                 "table_purpose": f"Stores {schema_input.table_description or 'data'} for {schema_input.table_name}",
                 "key_columns": [],
-                "business_context": f"This table supports the {project_context.business_domain} domain by storing {schema_input.table_description or 'relevant data'}.",
+                "business_context": f"This table supports the {domain_context.business_domain} domain by storing {schema_input.table_description or 'relevant data'}.",
                 "data_patterns": ["Data storage", "Information management"],
                 "suggested_relationships": []
             }
         
-    async def get_relationship_recommendation_for_table(self, add_table_request: AddTableRequest, project_context: ProjectContext) -> Dict[str, Any]:
+    async def get_relationship_recommendation_for_table(self, add_table_request: AddTableRequest, domain_context: DomainContext) -> Dict[str, Any]:
         """Generate relationship recommendations for a table using the relationship recommendation service"""
         try:
             try:
@@ -175,9 +174,9 @@ class ProjectWorkflowService:
             # Generate recommendations
             result = await relationship_service.recommend(
                 RelationshipRecommendation.Input(
-                    id=f"workflow_relationships_{schema_input.table_name}_{project_context.project_id}",
+                    id=f"workflow_relationships_{schema_input.table_name}_{domain_context.domain_id}",
                     table_data=table_data,
-                    project_id=project_context.project_id
+                    domain_id=domain_context.domain_id
                 )
             )
             
@@ -215,13 +214,13 @@ class ProjectWorkflowService:
                 }
             }
 
-    async def get_recommendations(self, add_table_request: AddTableRequest, project_context: ProjectContext, recommendation_types: Optional[List[str]] = None) -> Dict[str, Any]:
+    async def get_recommendations(self, add_table_request: AddTableRequest, domain_context: DomainContext, recommendation_types: Optional[List[str]] = None) -> Dict[str, Any]:
         """
         Generate comprehensive recommendations for a table including semantic descriptions and relationships
         
         Args:
             add_table_request: The table request containing schema information
-            project_context: The project context for business domain understanding
+            domain_context: The domain context for business domain understanding
             recommendation_types: List of recommendation types to generate. 
                                 Defaults to ["semantic", "relationships", "optimization"]
         
@@ -233,7 +232,7 @@ class ProjectWorkflowService:
         
         recommendations = {
             "table_name": add_table_request.schema.table_name,
-            "project_id": project_context.project_id,
+            "domain_id": domain_context.domain_id,
             "generated_at": datetime.now().isoformat(),
             "recommendation_types": recommendation_types,
             "results": {}
@@ -243,25 +242,25 @@ class ProjectWorkflowService:
             # Generate semantic description if requested
             if "semantic" in recommendation_types:
                 logger.info(f"Generating semantic description for table {add_table_request.schema.table_name}")
-                semantic_description = await self.get_semantic_description_for_table(add_table_request, project_context)
+                semantic_description = await self.get_semantic_description_for_table(add_table_request, domain_context)
                 recommendations["results"]["semantic_description"] = semantic_description
             
             # Generate relationship recommendations if requested
             if "relationships" in recommendation_types:
                 logger.info(f"Generating relationship recommendations for table {add_table_request.schema.table_name}")
-                relationship_recommendations = await self.get_relationship_recommendation_for_table(add_table_request, project_context)
+                relationship_recommendations = await self.get_relationship_recommendation_for_table(add_table_request, domain_context)
                 recommendations["results"]["relationship_recommendations"] = relationship_recommendations
             
             # Generate optimization recommendations if requested
             if "optimization" in recommendation_types:
                 logger.info(f"Generating optimization recommendations for table {add_table_request.schema.table_name}")
-                optimization_recommendations = await self._generate_optimization_recommendations(add_table_request, project_context)
+                optimization_recommendations = await self._generate_optimization_recommendations(add_table_request, domain_context)
                 recommendations["results"]["optimization_recommendations"] = optimization_recommendations
             
             # Generate data quality recommendations if requested
             if "data_quality" in recommendation_types:
                 logger.info(f"Generating data quality recommendations for table {add_table_request.schema.table_name}")
-                data_quality_recommendations = await self._generate_data_quality_recommendations(add_table_request, project_context)
+                data_quality_recommendations = await self._generate_data_quality_recommendations(add_table_request, domain_context)
                 recommendations["results"]["data_quality_recommendations"] = data_quality_recommendations
             
             # Generate summary and overall recommendations
@@ -276,7 +275,7 @@ class ProjectWorkflowService:
         
         return recommendations
 
-    async def _generate_optimization_recommendations(self, add_table_request: AddTableRequest, project_context: ProjectContext) -> Dict[str, Any]:
+    async def _generate_optimization_recommendations(self, add_table_request: AddTableRequest, domain_context: DomainContext) -> Dict[str, Any]:
         """Generate optimization recommendations for table structure and performance"""
         schema_input = add_table_request.schema
         
@@ -332,7 +331,7 @@ class ProjectWorkflowService:
         
         return recommendations
 
-    async def _generate_data_quality_recommendations(self, add_table_request: AddTableRequest, project_context: ProjectContext) -> Dict[str, Any]:
+    async def _generate_data_quality_recommendations(self, add_table_request: AddTableRequest, domain_context: DomainContext) -> Dict[str, Any]:
         """Generate data quality recommendations for table"""
         schema_input = add_table_request.schema
         
@@ -482,15 +481,15 @@ class ProjectWorkflowService:
         
         return summary
 
-    async def add_table(self, add_table_request: AddTableRequest, project_context: ProjectContext):
+    async def add_table(self, add_table_request: AddTableRequest, domain_context: DomainContext):
         state = self.get_workflow_state()
         schema_input = add_table_request.schema
         
         # Generate semantic description first
-        semantic_description = await self.get_semantic_description_for_table(add_table_request, project_context)
+        semantic_description = await self.get_semantic_description_for_table(add_table_request, domain_context)
         
         # Generate relationship recommendations
-        relationship_recommendations = await self.get_relationship_recommendation_for_table(add_table_request, project_context)
+        relationship_recommendations = await self.get_relationship_recommendation_for_table(add_table_request, domain_context)
         
         table = Table(
             name=schema_input.table_name,
@@ -508,7 +507,7 @@ class ProjectWorkflowService:
         
         # LLM Table Definition (enhanced with semantic description)
         
-        documented_table = await self.definition_manager.document_table_schema(schema_input, project_context)
+        documented_table = await self.definition_manager.document_table_schema(schema_input, domain_context)
         
         
         # Attach LLM output to table (customize as needed)
@@ -526,16 +525,16 @@ class ProjectWorkflowService:
     async def commit_workflow(self, db_session):
         """Commit the workflow state to database and clean up cache"""
         state = self.get_workflow_state()
-        project_data = state.get("project")
-        if not project_data:
-            raise ValueError("No project defined in workflow state.")
+        domain_data = state.get("domain")
+        if not domain_data:
+            raise ValueError("No domain defined in workflow state.")
         
         # The actual database operations are now handled in the router
         # This method just cleans up the workflow state
         self.cache.delete(self._workflow_cache_key())
         publish_update(self.user_id, self.session_id or "default", {
             "status": "committed", 
-            "project": project_data.get("project_id"),
+            "domain": domain_data.get("domain_id"),
             "message": "Workflow committed successfully"
         })
         return state
@@ -544,17 +543,17 @@ class ProjectWorkflowService:
 class MetricsService:
     """Service for managing metrics, views, and calculated columns using LLMDefinitionGenerator"""
     
-    def __init__(self, db: AsyncSession, project_id: str = None):
+    def __init__(self, db: AsyncSession, domain_id: str = None):
         self.db = db
-        self.project_id = project_id
+        self.domain_id = domain_id
         # Initialize LLM Definition Generator
         from app.agents.project_manager import LLMDefinitionGenerator
         self.llm_generator = LLMDefinitionGenerator()
     
-    async def _get_project_context(self, table_id: str) -> Dict[str, Any]:
-        """Get project context for LLM definition generation"""
+    async def _get_domain_context(self, table_id: str) -> Dict[str, Any]:
+        """Get domain context for LLM definition generation"""
         try:
-            # Get table and its project
+            # Get table and its domain
             from sqlalchemy import select
             table = await self.db.execute(
                 select(Table).where(Table.table_id == table_id)
@@ -564,11 +563,11 @@ class MetricsService:
             if not table:
                 raise ValueError(f"Table {table_id} not found")
             
-            project_id = table.project_id
+            domain_id = table.domain_id
             
-            # Get all tables in the project
+            # Get all tables in the domain
             tables = await self.db.execute(
-                select(Table).where(Table.project_id == project_id)
+                select(Table).where(Table.domain_id == domain_id)
             )
             tables = tables.scalars().all()
             
@@ -610,15 +609,15 @@ class MetricsService:
                 for metric in metrics:
                     existing_metrics[metric.name] = metric.description or ""
             
-            # Get project metadata for business context
-            project = await self.db.execute(
-                select(Project).where(Project.project_id == project_id)
+            # Get domain metadata for business context
+            domain = await self.db.execute(
+                select(Domain).where(Domain.domain_id == domain_id)
             )
-            project = project.scalar_one_or_none()
+            domain = domain.scalar_one_or_none()
             
             business_context = {}
-            if project and project.json_metadata:
-                business_context = project.json_metadata.get("business_context", {})
+            if domain and domain.json_metadata:
+                business_context = domain.json_metadata.get("business_context", {})
             
             return {
                 "tables": table_context,
@@ -628,7 +627,7 @@ class MetricsService:
             }
             
         except Exception as e:
-            logger.error(f"Error getting project context: {str(e)}")
+            logger.error(f"Error getting domain context: {str(e)}")
             return {
                 "tables": {},
                 "existing_metrics": {},
@@ -639,8 +638,8 @@ class MetricsService:
     async def add_metric(self, table_id: str, metric_data: MetricCreate, created_by: str) -> Metric:
         """Add metric to table using LLMDefinitionGenerator for enhancement"""
         try:
-            # Get project context
-            context = await self._get_project_context(table_id)
+            # Get domain context
+            context = await self._get_domain_context(table_id)
             
             # Create UserExample for LLM generation
             from app.service.models import UserExample, DefinitionType
@@ -718,8 +717,8 @@ class MetricsService:
     async def add_view(self, table_id: str, view_data: ViewCreate, created_by: str) -> View:
         """Add view to table using LLMDefinitionGenerator for enhancement"""
         try:
-            # Get project context
-            context = await self._get_project_context(table_id)
+            # Get domain context
+            context = await self._get_domain_context(table_id)
             
             # Create UserExample for LLM generation
             from app.service.models import UserExample, DefinitionType
@@ -793,8 +792,8 @@ class MetricsService:
     async def add_calculated_column(self, table_id: str, column_data: dict, created_by: str) -> SQLColumn:
         """Add calculated column using LLMDefinitionGenerator for enhancement"""
         try:
-            # Get project context
-            context = await self._get_project_context(table_id)
+            # Get domain context
+            context = await self._get_domain_context(table_id)
             
             # Create UserExample for LLM generation
             from app.service.models import UserExample, DefinitionType

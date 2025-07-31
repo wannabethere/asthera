@@ -24,36 +24,36 @@ async def get_db_session() -> AsyncSession:
 
 
 @router.get(
-    "/projects/{project_id}/mdl",
-    summary="Get MDL definition for a project"
+    "/domains/{domain_id}/mdl",
+    summary="Get MDL definition for a domain"
 )
-async def get_project_mdl(
-    project_id: str,
+async def get_domain_mdl(
+    domain_id: str,
     include_llm_definitions: bool = Query(True, description="Include LLM-generated definitions"),
     db: AsyncSession = Depends(get_db_session)
 ):
-    """Get complete MDL definition for a project (read-only)"""
+    """Get complete MDL definition for a domain (read-only)"""
     try:
-        logger.info(f"Getting MDL for project {project_id}")
+        logger.info(f"Getting MDL for domain {domain_id}")
         
         # Build MDL
-        mdl_data = await mdl_builder_service.build_project_mdl(
-            project_id=project_id,
+        mdl_data = await mdl_builder_service.build_domain_mdl(
+            domain_id=domain_id,
             db=db,
             include_llm_definitions=include_llm_definitions
         )
         
         return {
             "success": True,
-            "project_id": project_id,
+            "domain_id": domain_id,
             "mdl_data": mdl_data,
             "message": "MDL retrieved successfully"
         }
         
     except ValueError as e:
-        raise HTTPException(404, f"Project not found: {str(e)}")
+        raise HTTPException(404, f"Domain not found: {str(e)}")
     except Exception as e:
-        logger.error(f"Error getting MDL for project {project_id}: {str(e)}")
+        logger.error(f"Error getting MDL for domain {domain_id}: {str(e)}")
         raise HTTPException(500, f"Error getting MDL: {str(e)}")
 
 
@@ -92,28 +92,28 @@ async def get_table_mdl(
 
 
 @router.get(
-    "/projects/{project_id}/mdl/summary",
-    summary="Get MDL summary for a project"
+    "/domains/{domain_id}/mdl/summary",
+    summary="Get MDL summary for a domain"
 )
-async def get_project_mdl_summary(
-    project_id: str,
+async def get_domain_mdl_summary(
+    domain_id: str,
     db: AsyncSession = Depends(get_db_session)
 ):
-    """Get summary of MDL structure for a project"""
+    """Get summary of MDL structure for a domain"""
     try:
-        logger.info(f"Getting MDL summary for project {project_id}")
+        logger.info(f"Getting MDL summary for domain {domain_id}")
         
         # Build MDL without LLM definitions for faster processing
-        mdl_data = await mdl_builder_service.build_project_mdl(
-            project_id=project_id,
+        mdl_data = await mdl_builder_service.build_domain_mdl(
+            domain_id=domain_id,
             db=db,
             include_llm_definitions=False
         )
         
         # Extract summary information
         summary = {
-            "project_id": mdl_data["project_id"],
-            "project_name": mdl_data["project_name"],
+            "domain_id": mdl_data["domain_id"],
+            "domain_name": mdl_data["domain_name"],
             "version": mdl_data["version"],
             "status": mdl_data["status"],
             "generated_at": mdl_data["generated_at"],
@@ -143,40 +143,40 @@ async def get_project_mdl_summary(
         
         return {
             "success": True,
-            "project_id": project_id,
+            "domain_id": domain_id,
             "summary": summary,
             "message": "MDL summary retrieved successfully"
         }
         
     except ValueError as e:
-        raise HTTPException(404, f"Project not found: {str(e)}")
+        raise HTTPException(404, f"Domain not found: {str(e)}")
     except Exception as e:
-        logger.error(f"Error getting MDL summary for project {project_id}: {str(e)}")
+        logger.error(f"Error getting MDL summary for domain {domain_id}: {str(e)}")
         raise HTTPException(500, f"Error getting MDL summary: {str(e)}")
 
 
 @router.get(
-    "/projects/{project_id}/mdl/validate",
-    summary="Validate MDL structure for a project"
+    "/domains/{domain_id}/mdl/validate",
+    summary="Validate MDL structure for a domain"
 )
-async def validate_project_mdl(
-    project_id: str,
+async def validate_domain_mdl(
+    domain_id: str,
     db: AsyncSession = Depends(get_db_session)
 ):
     """Validate MDL structure and return validation results (read-only)"""
     try:
-        logger.info(f"Validating MDL for project {project_id}")
+        logger.info(f"Validating MDL for domain {domain_id}")
         
         # Build MDL
-        mdl_data = await mdl_builder_service.build_project_mdl(
-            project_id=project_id,
+        mdl_data = await mdl_builder_service.build_domain_mdl(
+            domain_id=domain_id,
             db=db,
             include_llm_definitions=True
         )
         
         # Perform validation
         validation_results = {
-            "project_id": project_id,
+            "domain_id": domain_id,
             "is_valid": True,
             "errors": [],
             "warnings": [],
@@ -221,41 +221,41 @@ async def validate_project_mdl(
         
         return {
             "success": True,
-            "project_id": project_id,
+            "domain_id": domain_id,
             "validation": validation_results,
             "message": "MDL validation completed"
         }
         
     except ValueError as e:
-        raise HTTPException(404, f"Project not found: {str(e)}")
+        raise HTTPException(404, f"Domain not found: {str(e)}")
     except Exception as e:
-        logger.error(f"Error validating MDL for project {project_id}: {str(e)}")
+        logger.error(f"Error validating MDL for domain {domain_id}: {str(e)}")
         raise HTTPException(500, f"Error validating MDL: {str(e)}")
 
 
 @router.get(
-    "/projects/{project_id}/mdl/export",
-    summary="Get MDL export data for a project"
+    "/domains/{domain_id}/mdl/export",
+    summary="Get MDL export data for a domain"
 )
-async def get_project_mdl_export(
-    project_id: str,
+async def get_domain_mdl_export(
+    domain_id: str,
     include_llm_definitions: bool = Query(True, description="Include LLM-generated definitions"),
     db: AsyncSession = Depends(get_db_session)
 ):
-    """Get project MDL data for export (read-only)"""
+    """Get domain MDL data for export (read-only)"""
     try:
-        logger.info(f"Getting MDL export data for project {project_id}")
+        logger.info(f"Getting MDL export data for domain {domain_id}")
         
         # Build MDL
-        mdl_data = await mdl_builder_service.build_project_mdl(
-            project_id=project_id,
+        mdl_data = await mdl_builder_service.build_domain_mdl(
+            domain_id=domain_id,
             db=db,
             include_llm_definitions=include_llm_definitions
         )
         
         return {
             "success": True,
-            "project_id": project_id,
+            "domain_id": domain_id,
             "mdl_data": mdl_data,
             "export_info": {
                 "generated_at": mdl_data.get("generated_at"),
@@ -269,9 +269,9 @@ async def get_project_mdl_export(
         }
         
     except ValueError as e:
-        raise HTTPException(404, f"Project not found: {str(e)}")
+        raise HTTPException(404, f"Domain not found: {str(e)}")
     except Exception as e:
-        logger.error(f"Error getting MDL export data for project {project_id}: {str(e)}")
+        logger.error(f"Error getting MDL export data for domain {domain_id}: {str(e)}")
         raise HTTPException(500, f"Error getting MDL export data: {str(e)}")
 
 

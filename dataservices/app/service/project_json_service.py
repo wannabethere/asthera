@@ -1,6 +1,6 @@
 """
-Service for managing project JSON data with ChromaDB integration
-Handles storing and retrieving project JSON data with vector search capabilities
+Service for managing domain JSON data with ChromaDB integration
+Handles storing and retrieving domain JSON data with vector search capabilities
 """
 
 import uuid
@@ -10,37 +10,37 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
-from app.schemas.dbmodels import ProjectJSONStore, Project, Table, Metric, View, SQLColumn, CalculatedColumn
+from app.schemas.dbmodels import DomainJSONStore, Domain, Table, Metric, View, SQLColumn, CalculatedColumn
 from app.storage.chromadb import ChromaDB
 from app.core.session_manager import SessionManager
-from app.utils.history import ProjectManager
+from app.utils.history import DomainManager
 
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class ProjectJSONService:
-    """Service for managing project JSON data with ChromaDB integration"""
+class DomainJSONService:
+    """Service for managing domain JSON data with ChromaDB integration"""
     
-    def __init__(self, session_manager: SessionManager, project_manager: ProjectManager):
+    def __init__(self, session_manager: SessionManager, domain_manager: DomainManager):
         self.session_manager = session_manager
-        self.project_manager = project_manager
+        self.domain_manager = domain_manager
         self.chroma_client = ChromaDB()
-        self.collection_name = "project_json_store"
+        self.collection_name = "domain_json_store"
     
-    async def store_project_tables_json(self, project_id: str, updated_by: str = 'system') -> str:
-        """Store project tables JSON in ChromaDB and PostgreSQL"""
+    async def store_domain_tables_json(self, domain_id: str, updated_by: str = 'system') -> str:
+        """Store domain tables JSON in ChromaDB and PostgreSQL"""
         async with self.session_manager.get_async_db_session() as session:
             try:
-                # Get project and its tables
-                project = await self._get_project(session, project_id)
-                tables = await self._get_project_tables(session, project_id)
+                # Get domain and its tables
+                domain = await self._get_domain(session, domain_id)
+                tables = await self._get_domain_tables(session, domain_id)
                 
                 # Build tables JSON
                 tables_json = {
-                    "project_id": project_id,
-                    "project_name": project.display_name,
+                    "domain_id": domain_id,
+                    "domain_name": domain.display_name,
                     "tables": []
                 }
                 
@@ -87,7 +87,7 @@ class ProjectJSONService:
                     collection_name=self.collection_name,
                     document_content=json.dumps(tables_json, default=str),
                     metadata={
-                        "project_id": project_id,
+                        "domain_id": domain_id,
                         "json_type": "tables",
                         "table_count": len(tables),
                         "total_columns": sum(len(t.columns) for t in tables),
@@ -98,7 +98,7 @@ class ProjectJSONService:
                 # Store reference in PostgreSQL
                 await self._store_json_reference(
                     session=session,
-                    project_id=project_id,
+                    domain_id=domain_id,
                     json_type="tables",
                     chroma_document_id=chroma_doc_id,
                     json_content=tables_json,
@@ -106,25 +106,25 @@ class ProjectJSONService:
                     update_reason="Tables JSON updated"
                 )
                 
-                logger.info(f"Stored tables JSON for project {project_id} with ChromaDB ID: {chroma_doc_id}")
+                logger.info(f"Stored tables JSON for domain {domain_id} with ChromaDB ID: {chroma_doc_id}")
                 return chroma_doc_id
                 
             except Exception as e:
-                logger.error(f"Failed to store tables JSON for project {project_id}: {str(e)}")
+                logger.error(f"Failed to store tables JSON for domain {domain_id}: {str(e)}")
                 raise Exception(f"Failed to store tables JSON: {str(e)}")
     
-    async def store_project_metrics_json(self, project_id: str, updated_by: str = 'system') -> str:
-        """Store project metrics JSON in ChromaDB and PostgreSQL"""
+    async def store_domain_metrics_json(self, domain_id: str, updated_by: str = 'system') -> str:
+        """Store domain metrics JSON in ChromaDB and PostgreSQL"""
         async with self.session_manager.get_async_db_session() as session:
             try:
-                # Get project and its metrics
-                project = await self._get_project(session, project_id)
-                metrics = await self._get_project_metrics(session, project_id)
+                # Get domain and its metrics
+                domain = await self._get_domain(session, domain_id)
+                metrics = await self._get_domain_metrics(session, domain_id)
                 
                 # Build metrics JSON
                 metrics_json = {
-                    "project_id": project_id,
-                    "project_name": project.display_name,
+                    "domain_id": domain_id,
+                    "domain_name": domain.display_name,
                     "metrics": []
                 }
                 
@@ -149,7 +149,7 @@ class ProjectJSONService:
                     collection_name=self.collection_name,
                     document_content=json.dumps(metrics_json, default=str),
                     metadata={
-                        "project_id": project_id,
+                        "domain_id": domain_id,
                         "json_type": "metrics",
                         "metric_count": len(metrics),
                         "updated_at": datetime.utcnow().isoformat()
@@ -159,7 +159,7 @@ class ProjectJSONService:
                 # Store reference in PostgreSQL
                 await self._store_json_reference(
                     session=session,
-                    project_id=project_id,
+                    domain_id=domain_id,
                     json_type="metrics",
                     chroma_document_id=chroma_doc_id,
                     json_content=metrics_json,
@@ -167,25 +167,25 @@ class ProjectJSONService:
                     update_reason="Metrics JSON updated"
                 )
                 
-                logger.info(f"Stored metrics JSON for project {project_id} with ChromaDB ID: {chroma_doc_id}")
+                logger.info(f"Stored metrics JSON for domain {domain_id} with ChromaDB ID: {chroma_doc_id}")
                 return chroma_doc_id
                 
             except Exception as e:
-                logger.error(f"Failed to store metrics JSON for project {project_id}: {str(e)}")
+                logger.error(f"Failed to store metrics JSON for domain {domain_id}: {str(e)}")
                 raise Exception(f"Failed to store metrics JSON: {str(e)}")
     
-    async def store_project_views_json(self, project_id: str, updated_by: str = 'system') -> str:
-        """Store project views JSON in ChromaDB and PostgreSQL"""
+    async def store_domain_views_json(self, domain_id: str, updated_by: str = 'system') -> str:
+        """Store domain views JSON in ChromaDB and PostgreSQL"""
         async with self.session_manager.get_async_db_session() as session:
             try:
-                # Get project and its views
-                project = await self._get_project(session, project_id)
-                views = await self._get_project_views(session, project_id)
+                # Get domain and its views
+                domain = await self._get_domain(session, domain_id)
+                views = await self._get_domain_views(session, domain_id)
                 
                 # Build views JSON
                 views_json = {
-                    "project_id": project_id,
-                    "project_name": project.display_name,
+                    "domain_id": domain_id,
+                    "domain_name": domain.display_name,
                     "views": []
                 }
                 
@@ -208,7 +208,7 @@ class ProjectJSONService:
                     collection_name=self.collection_name,
                     document_content=json.dumps(views_json, default=str),
                     metadata={
-                        "project_id": project_id,
+                        "domain_id": domain_id,
                         "json_type": "views",
                         "view_count": len(views),
                         "updated_at": datetime.utcnow().isoformat()
@@ -218,7 +218,7 @@ class ProjectJSONService:
                 # Store reference in PostgreSQL
                 await self._store_json_reference(
                     session=session,
-                    project_id=project_id,
+                    domain_id=domain_id,
                     json_type="views",
                     chroma_document_id=chroma_doc_id,
                     json_content=views_json,
@@ -226,25 +226,25 @@ class ProjectJSONService:
                     update_reason="Views JSON updated"
                 )
                 
-                logger.info(f"Stored views JSON for project {project_id} with ChromaDB ID: {chroma_doc_id}")
+                logger.info(f"Stored views JSON for domain {domain_id} with ChromaDB ID: {chroma_doc_id}")
                 return chroma_doc_id
                 
             except Exception as e:
-                logger.error(f"Failed to store views JSON for project {project_id}: {str(e)}")
+                logger.error(f"Failed to store views JSON for domain {domain_id}: {str(e)}")
                 raise Exception(f"Failed to store views JSON: {str(e)}")
     
-    async def store_project_calculated_columns_json(self, project_id: str, updated_by: str = 'system') -> str:
-        """Store project calculated columns JSON in ChromaDB and PostgreSQL"""
+    async def store_domain_calculated_columns_json(self, domain_id: str, updated_by: str = 'system') -> str:
+        """Store domain calculated columns JSON in ChromaDB and PostgreSQL"""
         async with self.session_manager.get_async_db_session() as session:
             try:
-                # Get project and its calculated columns
-                project = await self._get_project(session, project_id)
-                calculated_columns = await self._get_project_calculated_columns(session, project_id)
+                # Get domain and its calculated columns
+                domain = await self._get_domain(session, domain_id)
+                calculated_columns = await self._get_domain_calculated_columns(session, domain_id)
                 
                 # Build calculated columns JSON
                 calc_columns_json = {
-                    "project_id": project_id,
-                    "project_name": project.display_name,
+                    "domain_id": domain_id,
+                    "domain_name": domain.display_name,
                     "calculated_columns": []
                 }
                 
@@ -266,7 +266,7 @@ class ProjectJSONService:
                     collection_name=self.collection_name,
                     document_content=json.dumps(calc_columns_json, default=str),
                     metadata={
-                        "project_id": project_id,
+                        "domain_id": domain_id,
                         "json_type": "calculated_columns",
                         "calculated_column_count": len(calculated_columns),
                         "updated_at": datetime.utcnow().isoformat()
@@ -276,7 +276,7 @@ class ProjectJSONService:
                 # Store reference in PostgreSQL
                 await self._store_json_reference(
                     session=session,
-                    project_id=project_id,
+                    domain_id=domain_id,
                     json_type="calculated_columns",
                     chroma_document_id=chroma_doc_id,
                     json_content=calc_columns_json,
@@ -284,31 +284,31 @@ class ProjectJSONService:
                     update_reason="Calculated columns JSON updated"
                 )
                 
-                logger.info(f"Stored calculated columns JSON for project {project_id} with ChromaDB ID: {chroma_doc_id}")
+                logger.info(f"Stored calculated columns JSON for domain {domain_id} with ChromaDB ID: {chroma_doc_id}")
                 return chroma_doc_id
                 
             except Exception as e:
-                logger.error(f"Failed to store calculated columns JSON for project {project_id}: {str(e)}")
+                logger.error(f"Failed to store calculated columns JSON for domain {domain_id}: {str(e)}")
                 raise Exception(f"Failed to store calculated columns JSON: {str(e)}")
     
-    async def store_project_summary_json(self, project_id: str, updated_by: str = 'system') -> str:
-        """Store complete project summary JSON in ChromaDB and PostgreSQL"""
+    async def store_domain_summary_json(self, domain_id: str, updated_by: str = 'system') -> str:
+        """Store complete domain summary JSON in ChromaDB and PostgreSQL"""
         async with self.session_manager.get_async_db_session() as session:
             try:
-                # Get project and all related data
-                project = await self._get_project(session, project_id)
-                tables = await self._get_project_tables(session, project_id)
-                metrics = await self._get_project_metrics(session, project_id)
-                views = await self._get_project_views(session, project_id)
-                calculated_columns = await self._get_project_calculated_columns(session, project_id)
+                # Get domain and all related data
+                domain = await self._get_domain(session, domain_id)
+                tables = await self._get_domain_tables(session, domain_id)
+                metrics = await self._get_domain_metrics(session, domain_id)
+                views = await self._get_domain_views(session, domain_id)
+                calculated_columns = await self._get_domain_calculated_columns(session, domain_id)
                 
-                # Build comprehensive project JSON
-                project_json = {
-                    "project_id": project_id,
-                    "project_name": project.display_name,
-                    "description": project.description,
-                    "status": project.status,
-                    "version": project.version_string,
+                # Build comprehensive domain JSON
+                domain_json = {
+                    "domain_id": domain_id,
+                    "domain_name": domain.display_name,
+                    "description": domain.description,
+                    "status": domain.status,
+                    "version": domain.version_string,
                     "summary": {
                         "table_count": len(tables),
                         "metric_count": len(metrics),
@@ -320,16 +320,16 @@ class ProjectJSONService:
                     "metrics": [{"metric_id": m.metric_id, "name": m.name, "display_name": m.display_name} for m in metrics],
                     "views": [{"view_id": v.view_id, "name": v.name, "display_name": v.display_name} for v in views],
                     "calculated_columns": [{"calculated_column_id": c.calculated_column_id, "column_name": c.column.name if c.column else None} for c in calculated_columns],
-                    "metadata": project.json_metadata
+                    "metadata": domain.json_metadata
                 }
                 
                 # Store in ChromaDB
                 chroma_doc_id = await self._store_in_chromadb(
                     collection_name=self.collection_name,
-                    document_content=json.dumps(project_json, default=str),
+                    document_content=json.dumps(domain_json, default=str),
                     metadata={
-                        "project_id": project_id,
-                        "json_type": "project_summary",
+                        "domain_id": domain_id,
+                        "json_type": "domain_summary",
                         "table_count": len(tables),
                         "metric_count": len(metrics),
                         "view_count": len(views),
@@ -340,31 +340,31 @@ class ProjectJSONService:
                 # Store reference in PostgreSQL
                 await self._store_json_reference(
                     session=session,
-                    project_id=project_id,
-                    json_type="project_summary",
+                    domain_id=domain_id,
+                    json_type="domain_summary",
                     chroma_document_id=chroma_doc_id,
-                    json_content=project_json,
+                    json_content=domain_json,
                     updated_by=updated_by,
-                    update_reason="Project summary JSON updated"
+                    update_reason="Domain summary JSON updated"
                 )
                 
-                logger.info(f"Stored project summary JSON for project {project_id} with ChromaDB ID: {chroma_doc_id}")
+                logger.info(f"Stored domain summary JSON for domain {domain_id} with ChromaDB ID: {chroma_doc_id}")
                 return chroma_doc_id
                 
             except Exception as e:
-                logger.error(f"Failed to store project summary JSON for project {project_id}: {str(e)}")
-                raise Exception(f"Failed to store project summary JSON: {str(e)}")
+                logger.error(f"Failed to store domain summary JSON for domain {domain_id}: {str(e)}")
+                raise Exception(f"Failed to store domain summary JSON: {str(e)}")
     
-    async def get_project_json(self, project_id: str, json_type: str) -> Optional[Dict[str, Any]]:
-        """Get project JSON data by type"""
+    async def get_domain_json(self, domain_id: str, json_type: str) -> Optional[Dict[str, Any]]:
+        """Get domain JSON data by type"""
         async with self.session_manager.get_async_db_session() as session:
             try:
                 # Get the JSON store record
                 result = await session.execute(
-                    select(ProjectJSONStore).where(
-                        ProjectJSONStore.project_id == project_id,
-                        ProjectJSONStore.json_type == json_type,
-                        ProjectJSONStore.is_active == True
+                    select(DomainJSONStore).where(
+                        DomainJSONStore.domain_id == domain_id,
+                        DomainJSONStore.json_type == json_type,
+                        DomainJSONStore.is_active == True
                     )
                 )
                 json_store = result.scalar_one_or_none()
@@ -375,14 +375,14 @@ class ProjectJSONService:
                 return json_store.json_content
                 
             except Exception as e:
-                logger.error(f"Failed to get project JSON for project {project_id}, type {json_type}: {str(e)}")
-                raise Exception(f"Failed to get project JSON: {str(e)}")
+                logger.error(f"Failed to get domain JSON for domain {domain_id}, type {json_type}: {str(e)}")
+                raise Exception(f"Failed to get domain JSON: {str(e)}")
     
-    async def search_project_json(self, project_id: str, search_query: str, json_type: Optional[str] = None, n_results: int = 10) -> List[Dict[str, Any]]:
-        """Search project JSON data using ChromaDB"""
+    async def search_domain_json(self, domain_id: str, search_query: str, json_type: Optional[str] = None, n_results: int = 10) -> List[Dict[str, Any]]:
+        """Search domain JSON data using ChromaDB"""
         try:
             # Build search metadata
-            where_metadata = {"project_id": project_id}
+            where_metadata = {"domain_id": domain_id}
             if json_type:
                 where_metadata["json_type"] = json_type
             
@@ -406,11 +406,11 @@ class ProjectJSONService:
             return results
             
         except Exception as e:
-            logger.error(f"Failed to search project JSON for project {project_id}: {str(e)}")
-            raise Exception(f"Failed to search project JSON: {str(e)}")
+            logger.error(f"Failed to search domain JSON for domain {domain_id}: {str(e)}")
+            raise Exception(f"Failed to search domain JSON: {str(e)}")
     
-    async def update_project_json_on_change(self, project_id: str, entity_type: str, entity_id: str, updated_by: str = 'system') -> List[str]:
-        """Update relevant JSON stores when project entities change"""
+    async def update_domain_json_on_change(self, domain_id: str, entity_type: str, entity_id: str, updated_by: str = 'system') -> List[str]:
+        """Update relevant JSON stores when domain entities change"""
         try:
             updated_doc_ids = []
             
@@ -418,72 +418,72 @@ class ProjectJSONService:
             json_types_to_update = []
             
             if entity_type in ['table', 'column']:
-                json_types_to_update.extend(['tables', 'project_summary'])
+                json_types_to_update.extend(['tables', 'domain_summary'])
             elif entity_type == 'metric':
-                json_types_to_update.extend(['metrics', 'project_summary'])
+                json_types_to_update.extend(['metrics', 'domain_summary'])
             elif entity_type == 'view':
-                json_types_to_update.extend(['views', 'project_summary'])
+                json_types_to_update.extend(['views', 'domain_summary'])
             elif entity_type == 'calculated_column':
-                json_types_to_update.extend(['calculated_columns', 'tables', 'project_summary'])
+                json_types_to_update.extend(['calculated_columns', 'tables', 'domain_summary'])
             
             # Update each JSON type
             for json_type in json_types_to_update:
                 if json_type == 'tables':
-                    doc_id = await self.store_project_tables_json(project_id, updated_by)
+                    doc_id = await self.store_domain_tables_json(domain_id, updated_by)
                 elif json_type == 'metrics':
-                    doc_id = await self.store_project_metrics_json(project_id, updated_by)
+                    doc_id = await self.store_domain_metrics_json(domain_id, updated_by)
                 elif json_type == 'views':
-                    doc_id = await self.store_project_views_json(project_id, updated_by)
+                    doc_id = await self.store_domain_views_json(domain_id, updated_by)
                 elif json_type == 'calculated_columns':
-                    doc_id = await self.store_project_calculated_columns_json(project_id, updated_by)
-                elif json_type == 'project_summary':
-                    doc_id = await self.store_project_summary_json(project_id, updated_by)
+                    doc_id = await self.store_domain_calculated_columns_json(domain_id, updated_by)
+                elif json_type == 'domain_summary':
+                    doc_id = await self.store_domain_summary_json(domain_id, updated_by)
                 
                 updated_doc_ids.append(doc_id)
             
-            logger.info(f"Updated JSON stores for project {project_id}: {json_types_to_update}")
+            logger.info(f"Updated JSON stores for domain {domain_id}: {json_types_to_update}")
             return updated_doc_ids
             
         except Exception as e:
-            logger.error(f"Failed to update project JSON on change for project {project_id}: {str(e)}")
-            raise Exception(f"Failed to update project JSON on change: {str(e)}")
+            logger.error(f"Failed to update domain JSON on change for domain {domain_id}: {str(e)}")
+            raise Exception(f"Failed to update domain JSON on change: {str(e)}")
     
     # Helper methods
-    async def _get_project(self, session: Session, project_id: str) -> Project:
-        """Get project by ID"""
+    async def _get_domain(self, session: Session, domain_id: str) -> Domain:
+        """Get domain by ID"""
         result = await session.execute(
-            select(Project).where(Project.project_id == project_id)
+            select(Domain).where(Domain.domain_id == domain_id)
         )
-        project = result.scalar_one_or_none()
-        if not project:
-            raise ValueError(f"Project {project_id} not found")
-        return project
+        domain = result.scalar_one_or_none()
+        if not domain:
+            raise ValueError(f"Domain {domain_id} not found")
+        return domain
     
-    async def _get_project_tables(self, session: Session, project_id: str) -> List[Table]:
-        """Get all tables for a project"""
+    async def _get_domain_tables(self, session: Session, domain_id: str) -> List[Table]:
+        """Get all tables for a domain"""
         result = await session.execute(
-            select(Table).where(Table.project_id == project_id)
-        )
-        return result.scalars().all()
-    
-    async def _get_project_metrics(self, session: Session, project_id: str) -> List[Metric]:
-        """Get all metrics for a project"""
-        result = await session.execute(
-            select(Metric).join(Table).where(Table.project_id == project_id)
+            select(Table).where(Table.domain_id == domain_id)
         )
         return result.scalars().all()
     
-    async def _get_project_views(self, session: Session, project_id: str) -> List[View]:
-        """Get all views for a project"""
+    async def _get_domain_metrics(self, session: Session, domain_id: str) -> List[Metric]:
+        """Get all metrics for a domain"""
         result = await session.execute(
-            select(View).join(Table).where(Table.project_id == project_id)
+            select(Metric).join(Table).where(Table.domain_id == domain_id)
         )
         return result.scalars().all()
     
-    async def _get_project_calculated_columns(self, session: Session, project_id: str) -> List[CalculatedColumn]:
-        """Get all calculated columns for a project"""
+    async def _get_domain_views(self, session: Session, domain_id: str) -> List[View]:
+        """Get all views for a domain"""
         result = await session.execute(
-            select(CalculatedColumn).join(SQLColumn).join(Table).where(Table.project_id == project_id)
+            select(View).join(Table).where(Table.domain_id == domain_id)
+        )
+        return result.scalars().all()
+    
+    async def _get_domain_calculated_columns(self, session: Session, domain_id: str) -> List[CalculatedColumn]:
+        """Get all calculated columns for a domain"""
+        result = await session.execute(
+            select(CalculatedColumn).join(SQLColumn).join(Table).where(Table.domain_id == domain_id)
         )
         return result.scalars().all()
     
@@ -500,23 +500,23 @@ class ProjectJSONService:
         
         return doc_id
     
-    async def _store_json_reference(self, session: Session, project_id: str, json_type: str, 
+    async def _store_json_reference(self, session: Session, domain_id: str, json_type: str, 
                                    chroma_document_id: str, json_content: Dict[str, Any], 
                                    updated_by: str, update_reason: str) -> None:
         """Store JSON reference in PostgreSQL"""
         # Deactivate existing record if exists
         await session.execute(
-            select(ProjectJSONStore).where(
-                ProjectJSONStore.project_id == project_id,
-                ProjectJSONStore.json_type == json_type,
-                ProjectJSONStore.is_active == True
+            select(DomainJSONStore).where(
+                DomainJSONStore.domain_id == domain_id,
+                DomainJSONStore.json_type == json_type,
+                DomainJSONStore.is_active == True
             )
         )
         existing_record = session.execute(
-            select(ProjectJSONStore).where(
-                ProjectJSONStore.project_id == project_id,
-                ProjectJSONStore.json_type == json_type,
-                ProjectJSONStore.is_active == True
+            select(DomainJSONStore).where(
+                DomainJSONStore.domain_id == domain_id,
+                DomainJSONStore.json_type == json_type,
+                DomainJSONStore.is_active == True
             )
         ).scalar_one_or_none()
         
@@ -525,8 +525,8 @@ class ProjectJSONService:
             existing_record.updated_at = datetime.utcnow()
         
         # Create new record
-        new_record = ProjectJSONStore(
-            project_id=project_id,
+        new_record = DomainJSONStore(
+            domain_id=domain_id,
             chroma_document_id=chroma_document_id,
             json_type=json_type,
             json_content=json_content,

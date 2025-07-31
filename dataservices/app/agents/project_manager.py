@@ -25,12 +25,12 @@ from langchain_core.runnables import RunnablePassthrough
 from app.core.dependencies import get_llm
 # Import our models
 from app.schemas.dbmodels import (
-    Project, Table,  Metric, View, CalculatedColumn, 
+    Domain, Table,  Metric, View, CalculatedColumn, 
     determine_change_type
 )
 from app.schemas.dbmodels import SQLColumn as Columns
 
-from app.utils.history import ProjectManager
+from app.utils.history import DomainManager
 from app.service.models import UserExample,GeneratedDefinition,DefinitionType
 import traceback
 
@@ -40,20 +40,20 @@ class TableMatchingTool(BaseTool):
     name: str = "table_matching"
     description: str = "Matches user descriptions to actual database tables and columns using semantic similarity"
     session: Any
-    project_id: str
+    domain_id: str
     llm: Any = None
     
-    def __init__(self, session: Session, project_id: str, llm=None):
+    def __init__(self, session: Session, domain_id: str, llm=None):
         super().__init__()
         self.session = session
-        self.project_id = project_id
+        self.domain_id = domain_id
         self.llm = llm or get_llm()
     
     async def _arun(self, description: str) -> str:
         """Find matching tables and columns for a description using LLM semantic matching"""
         try:
-            # Get all tables and columns for the project
-            tables = self.session.query(Table).filter(Table.project_id == self.project_id).all()
+            # Get all tables and columns for the domain
+            tables = self.session.query(Table).filter(Table.domain_id == self.domain_id).all()
             
             if not tables:
                 return json.dumps([])
@@ -232,7 +232,7 @@ class LLMDefinitionGenerator:
         """Generate enhanced metric definition from user example"""
         
         system_prompt = """You are an expert data analyst specializing in creating business metrics. 
-        Given a user example and project context, create a comprehensive metric definition including:
+        Given a user example and domain context, create a comprehensive metric definition including:
         1. Enhanced name and display name
         2. Detailed description
         3. Optimized SQL query
@@ -251,7 +251,7 @@ class LLMDefinitionGenerator:
         - SQL: {sql}
         - Context: {additional_context}
         
-        Project Context:
+        Domain Context:
         - Tables: {tables}
         - Existing Metrics: {existing_metrics}
         - Business Context: {business_context}
@@ -299,7 +299,7 @@ class LLMDefinitionGenerator:
         """Generate enhanced view definition from user example"""
         
         system_prompt = """You are an expert database architect specializing in creating analytical views.
-        Given a user example and project context, create a comprehensive view definition that:
+        Given a user example and domain context, create a comprehensive view definition that:
         1. Optimizes data access patterns
         2. Provides clear business value
         3. Follows best practices for view design
@@ -316,7 +316,7 @@ class LLMDefinitionGenerator:
         - SQL: {sql}
         - Context: {additional_context}
         
-        Project Context:
+        Domain Context:
         - Tables: {tables}
         - Data Lineage: {data_lineage}
         - Business Context: {business_context}
@@ -364,7 +364,7 @@ class LLMDefinitionGenerator:
         """Generate enhanced calculated column definition from user example"""
         
         system_prompt = """You are an expert data engineer specializing in calculated columns and derived fields.
-        Given a user example and project context, create a comprehensive calculated column definition that:
+        Given a user example and domain context, create a comprehensive calculated column definition that:
         1. Implements correct business logic
         2. Handles edge cases and null values
         3. Optimizes for performance
@@ -381,7 +381,7 @@ class LLMDefinitionGenerator:
         - SQL: {sql}
         - Context: {additional_context}
         
-        Project Context:
+        Domain Context:
         - Tables: {tables}
         - Data Lineage: {data_lineage}
         - Business Rules: {business_context}
@@ -507,9 +507,9 @@ class LLMDefinitionGenerator:
 class DefinitionValidationService:
     """Service for validating generated definitions"""
     
-    def __init__(self, session: Session, project_id: str):
+    def __init__(self, session: Session, domain_id: str):
         self.session = session
-        self.project_id = project_id
+        self.domain_id = domain_id
     
     def validate_definition(self, definition: GeneratedDefinition) -> Tuple[bool, List[str]]:
         """Validate generated definition and return validation result"""
@@ -517,7 +517,7 @@ class DefinitionValidationService:
         
         # Check name uniqueness
         if not self._is_name_unique(definition):
-            errors.append(f"Name '{definition.name}' already exists in the project")
+            errors.append(f"Name '{definition.name}' already exists in the domain")
         
         # Validate SQL syntax (basic check)
         if not self._validate_sql_syntax(definition.sql_query):
@@ -537,20 +537,20 @@ class DefinitionValidationService:
         return len(errors) == 0, errors
     
     def _is_name_unique(self, definition: GeneratedDefinition) -> bool:
-        """Check if definition name is unique in project"""
+        """Check if definition name is unique in domain"""
         if definition.definition_type == DefinitionType.METRIC:
             existing = self.session.query(Metric).join(Table).filter(
-                Table.project_id == self.project_id,
+                Table.domain_id == self.domain_id,
                 Metric.name == definition.name
             ).first()
         elif definition.definition_type == DefinitionType.VIEW:
             existing = self.session.query(View).join(Table).filter(
-                Table.project_id == self.project_id,
+                Table.domain_id == self.domain_id,
                 View.name == definition.name
             ).first()
         else:  # CALCULATED_COLUMN
             existing = self.session.query(Columns).join(Table).filter(
-                Table.project_id == self.project_id,
+                Table.domain_id == self.domain_id,
                 Columns.name == definition.name,
                 Columns.column_type == 'calculated_column'
             ).first()
@@ -575,7 +575,7 @@ class DefinitionValidationService:
         errors = []
         existing_tables = {
             table.name for table in 
-            self.session.query(Table).filter(Table.project_id == self.project_id).all()
+            self.session.query(Table).filter(Table.domain_id == self.domain_id).all()
         }
         
         for table_name in table_names:
@@ -589,7 +589,7 @@ class DefinitionValidationService:
         errors = []
         existing_columns = {
             column.name for table in 
-            self.session.query(Table).filter(Table.project_id == self.project_id).all()
+            self.session.query(Table).filter(Table.domain_id == self.domain_id).all()
             for column in table.columns
         }
         
@@ -610,7 +610,7 @@ class MDLSchemaGenerator:
     def append_definitions_to_mdl(
         existing_mdl: Dict[str, Any],
         definitions: List[GeneratedDefinition],
-        project_id: str
+        domain_id: str
     ) -> Dict[str, Any]:
         """
         Append LLM-generated definitions to existing MDL schema
@@ -618,7 +618,7 @@ class MDLSchemaGenerator:
         Args:
             existing_mdl: Existing MDL schema dictionary
             definitions: List of GeneratedDefinition objects to append
-            project_id: Project identifier
+            domain_id: Domain identifier
             
         Returns:
             Updated MDL schema dictionary
@@ -661,26 +661,26 @@ class MDLSchemaGenerator:
     def append_definitions_to_mdl_from_context(
         existing_mdl: Dict[str, Any],
         definitions: List[GeneratedDefinition],
-        project_context: Dict[str, Any],
-        project_id: str
+        domain_context: Dict[str, Any],
+        domain_id: str
     ) -> Dict[str, Any]:
         """
-        Append LLM-generated definitions to existing MDL schema with project context
+        Append LLM-generated definitions to existing MDL schema with domain context
         
         Args:
             existing_mdl: Existing MDL schema dictionary
             definitions: List of GeneratedDefinition objects to append
-            project_context: Project context with tables and metadata
-            project_id: Project identifier
+            domain_context: Domain context with tables and metadata
+            domain_id: Domain identifier
             
         Returns:
             Updated MDL schema dictionary
         """
-        # First, ensure all tables from project context are in the MDL
-        updated_mdl = MDLSchemaGenerator._ensure_tables_in_mdl(existing_mdl, project_context)
+        # First, ensure all tables from domain context are in the MDL
+        updated_mdl = MDLSchemaGenerator._ensure_tables_in_mdl(existing_mdl, domain_context)
         
         # Then append the definitions
-        return MDLSchemaGenerator.append_definitions_to_mdl(updated_mdl, definitions, project_id)
+        return MDLSchemaGenerator.append_definitions_to_mdl(updated_mdl, definitions, domain_id)
     
     @staticmethod
     def _convert_metric_to_mdl(definition: GeneratedDefinition) -> Dict[str, Any]:
@@ -838,10 +838,10 @@ class MDLSchemaGenerator:
             mdl["models"].append(new_model)
     
     @staticmethod
-    def _ensure_tables_in_mdl(mdl: Dict[str, Any], project_context: Dict[str, Any]) -> Dict[str, Any]:
-        """Ensure all tables from project context are present in the MDL models"""
+    def _ensure_tables_in_mdl(mdl: Dict[str, Any], domain_context: Dict[str, Any]) -> Dict[str, Any]:
+        """Ensure all tables from domain context are present in the MDL models"""
         
-        tables = project_context.get("tables", {})
+        tables = domain_context.get("tables", {})
         existing_model_names = {model.get("name") for model in mdl.get("models", [])}
         
         for table_name, table_info in tables.items():
@@ -899,25 +899,25 @@ class MDLSchemaGenerator:
     
     @staticmethod
     def create_initial_mdl_from_context(
-        project_context: Dict[str, Any],
-        project_id: str,
+        domain_context: Dict[str, Any],
+        domain_id: str,
         catalog_name: Optional[str] = None,
         schema_name: str = "public"
     ) -> Dict[str, Any]:
         """
-        Create initial MDL schema from project context (tables, existing metrics, etc.)
+        Create initial MDL schema from domain context (tables, existing metrics, etc.)
         This is used when starting with no existing MDL
         
         Args:
-            project_context: Project context dictionary with tables and metadata
-            project_id: Project identifier
+            domain_context: Domain context dictionary with tables and metadata
+            domain_id: Domain identifier
             catalog_name: Catalog name
             schema_name: Schema name
             
         Returns:
             Initial MDL schema dictionary
         """
-        catalog = catalog_name or f"{project_id}_catalog"
+        catalog = catalog_name or f"{domain_id}_catalog"
         
         mdl = {
             "catalog": catalog,
@@ -931,7 +931,7 @@ class MDLSchemaGenerator:
         }
         
         # Convert tables to models
-        tables = project_context.get("tables", {})
+        tables = domain_context.get("tables", {})
         for table_name, table_info in tables.items():
             model = {
                 "name": table_name,
@@ -982,7 +982,7 @@ class MDLSchemaGenerator:
             mdl["models"].append(model)
         
         # Convert existing metrics
-        existing_metrics = project_context.get("existing_metrics", {})
+        existing_metrics = domain_context.get("existing_metrics", {})
         for metric_name, metric_description in existing_metrics.items():
             metric = {
                 "name": metric_name,
@@ -1103,8 +1103,8 @@ class MDLSchemaGenerator:
     async def process_and_store_mdl_with_definitions(
         existing_mdl: Dict[str, Any],
         definitions: List[GeneratedDefinition],
-        project_context: Dict[str, Any],
-        project_id: str,
+        domain_context: Dict[str, Any],
+        domain_id: str,
         document_store: Any,
         table_doc_store: Any,
         embedder: Any = None
@@ -1116,8 +1116,8 @@ class MDLSchemaGenerator:
         Args:
             existing_mdl: Existing MDL schema
             definitions: LLM-generated definitions to append
-            project_context: Project context
-            project_id: Project identifier
+            domain_context: Domain context
+            domain_id: Domain identifier
             document_store: ChromaDB document store for schema documentation
             table_doc_store: ChromaDB document store for table descriptions
             embedder: Optional embedder for generating embeddings
@@ -1126,15 +1126,15 @@ class MDLSchemaGenerator:
             Dictionary with processing results
         """
         try:
-            print(f"🔄 Starting MDL processing workflow for project: {project_id}")
+            print(f"🔄 Starting MDL processing workflow for domain: {domain_id}")
             
             # Step 1: Append definitions to existing MDL
             print("🔄 Step 1: Appending definitions to MDL...")
             updated_mdl = MDLSchemaGenerator.append_definitions_to_mdl_from_context(
                 existing_mdl=existing_mdl,
                 definitions=definitions,
-                project_context=project_context,
-                project_id=project_id
+                domain_context=domain_context,
+                domain_id=domain_id
             )
             print(f"✅ Appended {len(definitions)} definitions to MDL")
             
@@ -1148,7 +1148,7 @@ class MDLSchemaGenerator:
                 return {
                     "success": False,
                     "error": f"MDL validation failed: {errors[0] if errors else 'Unknown error'}",
-                    "project_id": project_id
+                    "domain_id": domain_id
                 }
             print("✅ MDL validation passed")
             
@@ -1166,7 +1166,7 @@ class MDLSchemaGenerator:
             mdl_json = json.dumps(updated_mdl, indent=2)
             
             # Process the MDL
-            result = await table_processor.run(mdl_json, project_id=project_id)
+            result = await table_processor.run(mdl_json, domain_id=domain_id)
             print(f"✅ TableDescription processed {result.get('documents_written', 0)} documents")
             
             # Step 4: Optional: Process with schema_manager.py for enhanced documentation
@@ -1185,7 +1185,7 @@ class MDLSchemaGenerator:
             return {
                 "success": True,
                 "documents_written": result.get('documents_written', 0),
-                "project_id": project_id,
+                "domain_id": domain_id,
                 "mdl_models": len(updated_mdl.get("models", [])),
                 "mdl_views": len(updated_mdl.get("views", [])),
                 "mdl_metrics": len(updated_mdl.get("metrics", [])),
@@ -1200,7 +1200,7 @@ class MDLSchemaGenerator:
             return {
                 "success": False,
                 "error": str(e),
-                "project_id": project_id
+                "domain_id": domain_id
             }
     
     @staticmethod
@@ -1278,10 +1278,10 @@ class DefinitionGenerationExamples:
     """Example usage of the LLM Definition Generator service"""
     
     @staticmethod
-    def ecommerce_project_example():
-        """Example for E-commerce project with comprehensive context"""
+    def ecommerce_domain_example():
+        """Example for E-commerce domain with comprehensive context"""
         
-        # Sample project context
+        # Sample domain context
         context = {
             "tables": {
                 "users": {
@@ -1430,7 +1430,7 @@ class DefinitionGenerationExamples:
     
     @staticmethod
     def financial_services_example():
-        """Example for Financial Services project with regulatory context"""
+        """Example for Financial Services domain with regulatory context"""
         
         context = {
             "tables": {
@@ -1512,9 +1512,9 @@ async def demo_llm_definition_generation(definition_generator: LLMDefinitionGene
     print("=" * 60)
     
     # Get example data
-    context, user_examples = DefinitionGenerationExamples.ecommerce_project_example()
+    context, user_examples = DefinitionGenerationExamples.ecommerce_domain_example()
     
-    print("\n📋 Project Context:")
+    print("\n📋 Domain Context:")
     print(f"  Domain: {context['business_context']['domain']}")
     print(f"  Key Metrics: {', '.join(context['business_context']['key_metrics'])}")
     print(f"  Business Goals: {', '.join(context['business_context']['business_goals'])}")
@@ -1668,18 +1668,18 @@ async def demo_llm_definition_generation(definition_generator: LLMDefinitionGene
     if all_definitions:
         print(f"  📊 Appending {len(all_definitions)} definitions to MDL schema...")
         
-        # Create initial MDL from project context
+        # Create initial MDL from domain context
         initial_mdl = MDLSchemaGenerator.create_initial_mdl_from_context(
-            project_context=context,
-            project_id="ecommerce_demo"
+            domain_context=context,
+            domain_id="ecommerce_demo"
         )
         
         # Append definitions to the existing MDL
         updated_mdl = MDLSchemaGenerator.append_definitions_to_mdl_from_context(
             existing_mdl=initial_mdl,
             definitions=all_definitions,
-            project_context=context,
-            project_id="ecommerce_demo"
+            domain_context=context,
+            domain_id="ecommerce_demo"
         )
         
         # Validate the schema
@@ -1742,7 +1742,7 @@ async def demo_llm_definition_generation(definition_generator: LLMDefinitionGene
         updated_sample_mdl = MDLSchemaGenerator.append_definitions_to_mdl(
             existing_mdl=sample_mdl,
             definitions=all_definitions[:2],  # Just first 2 for demo
-            project_id="ecommerce_demo"
+            domain_id="ecommerce_demo"
         )
         
         print(f"    - After appending: {len(updated_sample_mdl['models'])} models")
@@ -1775,7 +1775,7 @@ async def demo_complete_workflow_integration():
     print("=" * 60)
     
     # Get example data
-    context, user_examples = DefinitionGenerationExamples.ecommerce_project_example()
+    context, user_examples = DefinitionGenerationExamples.ecommerce_domain_example()
     
     # Initialize LLM and generator
     llm = get_llm()
@@ -1831,8 +1831,8 @@ async def demo_complete_workflow_integration():
     updated_mdl = MDLSchemaGenerator.append_definitions_to_mdl_from_context(
         existing_mdl=existing_mdl,
         definitions=definitions,
-        project_context=context,
-        project_id="ecommerce_demo"
+        domain_context=context,
+        domain_id="ecommerce_demo"
     )
     
     print(f"  📊 Updated MDL contains:")
@@ -1900,7 +1900,7 @@ async def demo_complete_workflow_integration():
         import json
         mdl_json = json.dumps(updated_mdl, indent=2)
         
-        result = await table_processor.run(mdl_json, project_id="ecommerce_demo")
+        result = await table_processor.run(mdl_json, domain_id="ecommerce_demo")
         print(f"  ✅ TableDescription processed {result.get('documents_written', 0)} documents")
         
         # Show what was stored
@@ -1927,7 +1927,7 @@ async def demo_complete_workflow_integration():
     print("-" * 40)
     
     print("  🔄 Complete Workflow:")
-    print("    1. schema_manager.py generates initial MDL from project context")
+    print("    1. schema_manager.py generates initial MDL from domain context")
     print("    2. LLMDefinitionGenerator creates enhanced definitions")
     print("    3. MDLSchemaGenerator.append_definitions_to_mdl() merges them")
     print("    4. table_description.py processes and stores the updated MDL")
@@ -1942,8 +1942,8 @@ async def demo_complete_workflow_integration():
     
     print("\n✅ Complete workflow integration demo finished!")
     print(f"Successfully demonstrated integration between:")
-    print(f"  - LLMDefinitionGenerator (project_manager.py)")
-    print(f"  - MDLSchemaGenerator (project_manager.py)")
+    print(f"  - LLMDefinitionGenerator (domain_manager.py)")
+    print(f"  - MDLSchemaGenerator (domain_manager.py)")
     print(f"  - schema_manager.py")
     print(f"  - table_description.py")
 

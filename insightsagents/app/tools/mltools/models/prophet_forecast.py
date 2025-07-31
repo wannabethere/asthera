@@ -10,17 +10,17 @@ import joblib
 import warnings
 from datetime import datetime, timedelta
 import itertools
+from ..base_pipe import BasePipe
 
 
-class ProphetPipe:
+class ProphetPipe(BasePipe):
     """
     A pipeline-style Prophet time series forecasting tool that enables functional composition
     with a meterstick-like interface.
     """
     
-    def __init__(self, data=None):
-        """Initialize with optional data"""
-        self.data = data
+    def _initialize_results(self):
+        """Initialize the results storage for Prophet forecasting analysis"""
         self.models = {}
         self.forecasts = {}
         self.metrics = {}
@@ -31,36 +31,106 @@ class ProphetPipe:
         self.model_configs = {}
         self.original_data = None
     
-    def __or__(self, other):
-        """Enable the | (pipe) operator for function composition"""
-        if callable(other):
-            return other(self)
-        raise ValueError(f"Cannot pipe ProphetPipe to {type(other)}")
+    def _copy_results(self, source_pipe):
+        """Copy results from source pipe to this pipe"""
+        if hasattr(source_pipe, 'models'):
+            self.models = source_pipe.models.copy()
+        if hasattr(source_pipe, 'forecasts'):
+            self.forecasts = source_pipe.forecasts.copy()
+        if hasattr(source_pipe, 'metrics'):
+            self.metrics = source_pipe.metrics.copy()
+        if hasattr(source_pipe, 'cross_validation_results'):
+            self.cross_validation_results = source_pipe.cross_validation_results.copy()
+        if hasattr(source_pipe, 'holidays'):
+            self.holidays = source_pipe.holidays.copy()
+        if hasattr(source_pipe, 'regressors'):
+            self.regressors = source_pipe.regressors.copy()
+        if hasattr(source_pipe, 'current_analysis'):
+            self.current_analysis = source_pipe.current_analysis
+        if hasattr(source_pipe, 'model_configs'):
+            self.model_configs = source_pipe.model_configs.copy()
+        if hasattr(source_pipe, 'original_data'):
+            self.original_data = source_pipe.original_data.copy() if source_pipe.original_data is not None else None
     
-    def copy(self):
-        """Create a shallow copy with deep copy of data"""
-        new_pipe = ProphetPipe()
-        if self.data is not None:
-            new_pipe.data = self.data.copy()
-        if self.original_data is not None:
-            new_pipe.original_data = self.original_data.copy()
-        new_pipe.models = self.models.copy()
-        new_pipe.forecasts = self.forecasts.copy()
-        new_pipe.metrics = self.metrics.copy()
-        new_pipe.cross_validation_results = self.cross_validation_results.copy()
-        new_pipe.holidays = self.holidays.copy()
-        new_pipe.regressors = self.regressors.copy()
-        new_pipe.current_analysis = self.current_analysis
-        new_pipe.model_configs = self.model_configs.copy()
-        return new_pipe
-    
-    @classmethod
-    def from_dataframe(cls, df):
-        """Create a ProphetPipe from a dataframe"""
-        pipe = cls()
-        pipe.data = df.copy()
-        pipe.original_data = df.copy()
-        return pipe
+    def get_summary(self, **kwargs) -> Dict[str, Any]:
+        """
+        Get a summary of the Prophet forecasting analysis results.
+        
+        Parameters:
+        -----------
+        **kwargs : dict
+            Additional arguments (not used in Prophet forecasting pipe)
+            
+        Returns:
+        --------
+        dict
+            Summary of the Prophet forecasting analysis results
+        """
+        if not any([self.models, self.forecasts, self.metrics, self.cross_validation_results]):
+            return {"error": "No Prophet forecasting analysis has been performed"}
+        
+        # Count analyses by type
+        analysis_types = {
+            'models': len(self.models),
+            'forecasts': len(self.forecasts),
+            'metrics': len(self.metrics),
+            'cross_validation_results': len(self.cross_validation_results),
+            'holidays': len(self.holidays),
+            'regressors': len(self.regressors),
+            'model_configs': len(self.model_configs)
+        }
+        
+        # Get model information
+        models_info = {}
+        for name, model in self.models.items():
+            models_info[name] = {
+                "type": "Prophet",
+                "growth": model.get('growth', 'unknown'),
+                "seasonality_mode": model.get('seasonality_mode', 'unknown'),
+                "n_changepoints": model.get('n_changepoints', 'unknown')
+            }
+        
+        # Get forecast information
+        forecasts_info = {}
+        for name, forecast in self.forecasts.items():
+            forecasts_info[name] = {
+                "periods": len(forecast.get('forecast', pd.DataFrame())),
+                "include_history": forecast.get('include_history', False),
+                "model_name": forecast.get('model_name', 'unknown')
+            }
+        
+        # Get metrics summary
+        metrics_summary = {}
+        for name, metric_data in self.metrics.items():
+            if isinstance(metric_data, dict):
+                metrics_summary[name] = {
+                    "mape": metric_data.get('mape', None),
+                    "mae": metric_data.get('mae', None),
+                    "rmse": metric_data.get('rmse', None),
+                    "mdape": metric_data.get('mdape', None)
+                }
+        
+        return {
+            "total_analyses": sum(analysis_types.values()),
+            "analysis_types": analysis_types,
+            "current_analysis": self.current_analysis,
+            "available_models": list(self.models.keys()),
+            "available_forecasts": list(self.forecasts.keys()),
+            "available_metrics": list(self.metrics.keys()),
+            "available_cross_validation_results": list(self.cross_validation_results.keys()),
+            "available_holidays": list(self.holidays.keys()),
+            "available_regressors": list(self.regressors.keys()),
+            "available_model_configs": list(self.model_configs.keys()),
+            "models_info": models_info,
+            "forecasts_info": forecasts_info,
+            "metrics_summary": metrics_summary,
+            "cross_validation_info": {name: {"n_folds": len(cv.get('performance_metrics', []))} 
+                                    for name, cv in self.cross_validation_results.items()},
+            "holidays_info": {name: {"n_holidays": len(holiday.get('holidays', []))} 
+                            for name, holiday in self.holidays.items()},
+            "regressors_info": {name: {"n_regressors": len(regressor.get('regressors', []))} 
+                              for name, regressor in self.regressors.items()}
+        }
 
 
 # Data Preparation Functions

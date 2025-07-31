@@ -15,17 +15,17 @@ from datetime import datetime
 import itertools
 from statsmodels.stats.power import ttest_power, tt_solve_power
 from statsmodels.stats.multitest import multipletests
+from ..base_pipe import BasePipe
 
 
-class CausalPipe:
+class CausalPipe(BasePipe):
     """
     A pipeline-style causal inference tool that enables functional composition
     with a meterstick-like interface for causal analysis and A/B testing.
     """
     
-    def __init__(self, data=None):
-        """Initialize with optional data"""
-        self.data = data
+    def _initialize_results(self):
+        """Initialize the results storage for causal inference analysis"""
         self.original_data = None
         self.treatment_column = None
         self.outcome_column = None
@@ -42,42 +42,185 @@ class CausalPipe:
         self.causal_graphs = {}
         self.instrumental_variables = {}
     
-    def __or__(self, other):
-        """Enable the | (pipe) operator for function composition"""
-        if callable(other):
-            return other(self)
-        raise ValueError(f"Cannot pipe CausalPipe to {type(other)}")
+    def _copy_results(self, source_pipe):
+        """Copy results from source pipe to this pipe"""
+        if hasattr(source_pipe, 'original_data'):
+            self.original_data = source_pipe.original_data.copy() if source_pipe.original_data is not None else None
+        if hasattr(source_pipe, 'treatment_column'):
+            self.treatment_column = source_pipe.treatment_column
+        if hasattr(source_pipe, 'outcome_column'):
+            self.outcome_column = source_pipe.outcome_column
+        if hasattr(source_pipe, 'covariate_columns'):
+            self.covariate_columns = source_pipe.covariate_columns.copy()
+        if hasattr(source_pipe, 'propensity_models'):
+            self.propensity_models = source_pipe.propensity_models.copy()
+        if hasattr(source_pipe, 'outcome_models'):
+            self.outcome_models = source_pipe.outcome_models.copy()
+        if hasattr(source_pipe, 'treatment_effects'):
+            self.treatment_effects = source_pipe.treatment_effects.copy()
+        if hasattr(source_pipe, 'matched_data'):
+            self.matched_data = source_pipe.matched_data.copy()
+        if hasattr(source_pipe, 'balance_tests'):
+            self.balance_tests = source_pipe.balance_tests.copy()
+        if hasattr(source_pipe, 'sensitivity_analysis'):
+            self.sensitivity_analysis = source_pipe.sensitivity_analysis.copy()
+        if hasattr(source_pipe, 'ab_test_results'):
+            self.ab_test_results = source_pipe.ab_test_results.copy()
+        if hasattr(source_pipe, 'power_analysis'):
+            self.power_analysis = source_pipe.power_analysis.copy()
+        if hasattr(source_pipe, 'current_analysis'):
+            self.current_analysis = source_pipe.current_analysis
+        if hasattr(source_pipe, 'causal_graphs'):
+            self.causal_graphs = source_pipe.causal_graphs.copy()
+        if hasattr(source_pipe, 'instrumental_variables'):
+            self.instrumental_variables = source_pipe.instrumental_variables.copy()
     
-    def copy(self):
-        """Create a shallow copy with deep copy of data"""
-        new_pipe = CausalPipe()
-        if self.data is not None:
-            new_pipe.data = self.data.copy()
-        if self.original_data is not None:
-            new_pipe.original_data = self.original_data.copy()
-        new_pipe.treatment_column = self.treatment_column
-        new_pipe.outcome_column = self.outcome_column
-        new_pipe.covariate_columns = self.covariate_columns.copy()
-        new_pipe.propensity_models = self.propensity_models.copy()
-        new_pipe.outcome_models = self.outcome_models.copy()
-        new_pipe.treatment_effects = self.treatment_effects.copy()
-        new_pipe.matched_data = self.matched_data.copy()
-        new_pipe.balance_tests = self.balance_tests.copy()
-        new_pipe.sensitivity_analysis = self.sensitivity_analysis.copy()
-        new_pipe.ab_test_results = self.ab_test_results.copy()
-        new_pipe.power_analysis = self.power_analysis.copy()
-        new_pipe.current_analysis = self.current_analysis
-        new_pipe.causal_graphs = self.causal_graphs.copy()
-        new_pipe.instrumental_variables = self.instrumental_variables.copy()
-        return new_pipe
+    def get_summary(self, **kwargs) -> Dict[str, Any]:
+        """
+        Get a summary of the causal inference analysis results.
+        
+        Parameters:
+        -----------
+        **kwargs : dict
+            Additional arguments (not used in causal inference pipe)
+            
+        Returns:
+        --------
+        dict
+            Summary of the causal inference analysis results
+        """
+        if not any([self.treatment_effects, self.ab_test_results, self.balance_tests, self.propensity_models]):
+            return {"error": "No causal inference analysis has been performed"}
+        
+        # Count analyses by type
+        analysis_types = {
+            'treatment_effects': len(self.treatment_effects),
+            'ab_tests': len(self.ab_test_results),
+            'balance_tests': len(self.balance_tests),
+            'propensity_models': len(self.propensity_models),
+            'matched_data': len(self.matched_data),
+            'sensitivity_analysis': len(self.sensitivity_analysis),
+            'power_analysis': len(self.power_analysis)
+        }
+        
+        # Get treatment distribution if available
+        treatment_dist = None
+        if self.data is not None and self.treatment_column:
+            treatment_dist = self.data[self.treatment_column].value_counts().to_dict()
+        
+        return {
+            "total_analyses": sum(analysis_types.values()),
+            "treatment_column": self.treatment_column,
+            "outcome_column": self.outcome_column,
+            "covariate_columns": self.covariate_columns,
+            "treatment_distribution": treatment_dist,
+            "analysis_types": analysis_types,
+            "current_analysis": self.current_analysis,
+            "available_treatment_effects": list(self.treatment_effects.keys()),
+            "available_ab_tests": list(self.ab_test_results.keys()),
+            "available_balance_tests": list(self.balance_tests.keys()),
+            "available_propensity_models": list(self.propensity_models.keys()),
+            "available_matched_data": list(self.matched_data.keys()),
+            "available_sensitivity_analysis": list(self.sensitivity_analysis.keys()),
+            "available_power_analysis": list(self.power_analysis.keys()),
+            "treatment_effects_info": {name: {"methods": list(effects.keys())} 
+                                     for name, effects in self.treatment_effects.items()},
+            "ab_test_results_info": {name: {"significant": results.get('significant', False), 
+                                          "effect_size": results.get('effect_size', 0)} 
+                                   for name, results in self.ab_test_results.items()},
+            "balance_tests_info": {name: {"balanced_variables": balance.get('n_balanced', 0), 
+                                        "total_variables": balance.get('n_covariates', 0)} 
+                                 for name, balance in self.balance_tests.items()},
+            "propensity_models_info": {name: {"method": model.get('method', 'unknown'), 
+                                            "auc_score": model.get('auc_score', 0)} 
+                                     for name, model in self.propensity_models.items()}
+        }
     
-    @classmethod
-    def from_dataframe(cls, df):
-        """Create a CausalPipe from a dataframe"""
-        pipe = cls()
-        pipe.data = df.copy()
-        pipe.original_data = df.copy()
-        return pipe
+    def to_df(self, include_metadata: bool = False, include_original: bool = True):
+        """
+        Convert the causal inference analysis results to a DataFrame
+        
+        Parameters:
+        -----------
+        include_metadata : bool, default=False
+            Whether to include metadata columns in the output DataFrame
+        include_original : bool, default=True
+            Whether to include original data columns in the output DataFrame
+            
+        Returns:
+        --------
+        pd.DataFrame
+            DataFrame representation of the causal inference analysis results
+            
+        Raises:
+        -------
+        ValueError
+            If no data is available
+        """
+        if self.data is None:
+            raise ValueError("No data found. Data must be provided when creating the pipeline.")
+        
+        # Get the result DataFrame (contains original data + causal analysis results)
+        result_df = self.data.copy()
+        
+        # Filter columns based on parameters
+        columns_to_include = []
+        
+        if include_original:
+            # Include original columns (those that don't have causal analysis suffixes)
+            original_cols = [col for col in result_df.columns 
+                           if not any(suffix in col for suffix in ['_propensity_score', '_matched', '_balance'])]
+            columns_to_include.extend(original_cols)
+        
+        # Include causal analysis columns
+        causal_cols = [col for col in result_df.columns 
+                      if any(suffix in col for suffix in ['_propensity_score', '_matched', '_balance'])]
+        columns_to_include.extend(causal_cols)
+        
+        # Create the output DataFrame
+        output_df = result_df[columns_to_include].copy()
+        
+        # Add metadata if requested
+        if include_metadata:
+            # Add information about available analyses
+            if self.treatment_effects:
+                output_df['has_treatment_effects'] = True
+                output_df['treatment_effect_methods'] = ', '.join(
+                    [method for effects in self.treatment_effects.values() 
+                     for method in effects.keys()]
+                )
+            else:
+                output_df['has_treatment_effects'] = False
+                output_df['treatment_effect_methods'] = ''
+            
+            if self.propensity_models:
+                output_df['has_propensity_models'] = True
+                output_df['propensity_model_names'] = ', '.join(self.propensity_models.keys())
+            else:
+                output_df['has_propensity_models'] = False
+                output_df['propensity_model_names'] = ''
+            
+            if self.ab_test_results:
+                output_df['has_ab_test_results'] = True
+                output_df['ab_test_names'] = ', '.join(self.ab_test_results.keys())
+            else:
+                output_df['has_ab_test_results'] = False
+                output_df['ab_test_names'] = ''
+            
+            if self.balance_tests:
+                output_df['has_balance_tests'] = True
+                output_df['balance_test_names'] = ', '.join(self.balance_tests.keys())
+            else:
+                output_df['has_balance_tests'] = False
+                output_df['balance_test_names'] = ''
+            
+            # Add current analysis information
+            output_df['current_analysis'] = self.current_analysis or 'none'
+            output_df['treatment_column'] = self.treatment_column or 'none'
+            output_df['outcome_column'] = self.outcome_column or 'none'
+            output_df['n_covariates'] = len(self.covariate_columns)
+        
+        return output_df
 
 
 # Data Preparation Functions
@@ -1161,3 +1304,346 @@ def print_causal_summary(
         return pipe
     
     return _print_causal_summary
+
+
+# Model Loading Function
+def load_causal_model(
+    filepath: str,
+    model_name: str = 'loaded_model'
+):
+    """
+    Load a previously saved causal inference model
+    
+    Parameters:
+    -----------
+    filepath : str
+        Path to the saved model file
+    model_name : str
+        Name for the loaded model
+        
+    Returns:
+    --------
+    Callable
+        Function that loads causal models into a CausalPipe
+    """
+    def _load_causal_model(pipe):
+        import joblib
+        
+        try:
+            model_package = joblib.load(filepath)
+            
+            new_pipe = pipe.copy()
+            
+            # Restore model configuration
+            new_pipe.treatment_column = model_package.get('treatment_column')
+            new_pipe.outcome_column = model_package.get('outcome_column')
+            new_pipe.covariate_columns = model_package.get('covariate_columns', [])
+            
+            # Restore model components
+            if 'propensity_models' in model_package:
+                new_pipe.propensity_models = model_package['propensity_models']
+            
+            if 'outcome_models' in model_package:
+                new_pipe.outcome_models = model_package['outcome_models']
+            
+            if 'treatment_effects' in model_package:
+                new_pipe.treatment_effects = model_package['treatment_effects']
+            
+            if 'ab_test_results' in model_package:
+                new_pipe.ab_test_results = model_package['ab_test_results']
+            
+            if 'balance_tests' in model_package:
+                new_pipe.balance_tests = model_package['balance_tests']
+            
+            new_pipe.current_analysis = f'loaded_model_{model_name}'
+            
+            print(f"Successfully loaded causal model from: {filepath}")
+            print(f"Treatment column: {new_pipe.treatment_column}")
+            print(f"Outcome column: {new_pipe.outcome_column}")
+            print(f"Number of covariates: {len(new_pipe.covariate_columns)}")
+            
+            return new_pipe
+            
+        except Exception as e:
+            raise ValueError(f"Failed to load model from {filepath}: {str(e)}")
+    
+    return _load_causal_model
+
+
+# Feature Addition Function
+def add_features(
+    feature_columns: List[str],
+    feature_type: str = 'covariate',
+    feature_name: str = 'additional_features'
+):
+    """
+    Add new features to the causal inference pipeline
+    
+    Parameters:
+    -----------
+    feature_columns : List[str]
+        List of new feature column names to add
+    feature_type : str
+        Type of features ('covariate', 'instrument', 'mediator')
+    feature_name : str
+        Name for the feature addition operation
+        
+    Returns:
+    --------
+    Callable
+        Function that adds features to a CausalPipe
+    """
+    def _add_features(pipe):
+        if pipe.data is None:
+            raise ValueError("No data found. Data must be provided before adding features.")
+        
+        new_pipe = pipe.copy()
+        df = new_pipe.data
+        
+        # Validate that new features exist in the data
+        missing_features = [col for col in feature_columns if col not in df.columns]
+        if missing_features:
+            raise ValueError(f"Missing features in data: {missing_features}")
+        
+        # Add features based on type
+        if feature_type == 'covariate':
+            # Add to covariate columns
+            new_pipe.covariate_columns.extend(feature_columns)
+            print(f"Added {len(feature_columns)} covariates: {feature_columns}")
+            
+        elif feature_type == 'instrument':
+            # Store instrumental variables
+            new_pipe.instrumental_variables[feature_name] = {
+                'columns': feature_columns,
+                'type': 'instrumental_variable'
+            }
+            print(f"Added {len(feature_columns)} instrumental variables: {feature_columns}")
+            
+        elif feature_type == 'mediator':
+            # Store mediator variables
+            if 'mediators' not in new_pipe.__dict__:
+                new_pipe.mediators = {}
+            new_pipe.mediators[feature_name] = {
+                'columns': feature_columns,
+                'type': 'mediator'
+            }
+            print(f"Added {len(feature_columns)} mediators: {feature_columns}")
+        
+        else:
+            raise ValueError(f"Unknown feature type: {feature_type}")
+        
+        new_pipe.current_analysis = f'add_features_{feature_name}'
+        
+        return new_pipe
+    
+    return _add_features
+
+
+# Causal Inference Function
+def inference(
+    inference_type: str = 'treatment_effect',
+    target_population: Optional[str] = None,
+    confidence_level: float = 0.95,
+    bootstrap_samples: int = 1000,
+    inference_name: str = 'causal_inference'
+):
+    """
+    Perform causal inference on new data or existing models
+    
+    Parameters:
+    -----------
+    inference_type : str
+        Type of inference ('treatment_effect', 'counterfactual', 'policy_evaluation')
+    target_population : Optional[str]
+        Target population for inference ('treated', 'control', 'all')
+    confidence_level : float
+        Confidence level for intervals
+    bootstrap_samples : int
+        Number of bootstrap samples for uncertainty quantification
+    inference_name : str
+        Name for the inference analysis
+        
+    Returns:
+    --------
+    Callable
+        Function that performs causal inference from a CausalPipe
+    """
+    def _inference(pipe):
+        if pipe.data is None:
+            raise ValueError("No data found for inference.")
+        
+        if not pipe.propensity_models and not pipe.outcome_models:
+            raise ValueError("No trained models found. Train models before inference.")
+        
+        new_pipe = pipe.copy()
+        df = new_pipe.data
+        
+        inference_results = {}
+        
+        if inference_type == 'treatment_effect':
+            # Estimate treatment effects on new data
+            if 'propensity_score' not in df.columns and pipe.propensity_models:
+                # Re-estimate propensity scores if not available
+                propensity_model_name = list(pipe.propensity_models.keys())[0]
+                propensity_model = pipe.propensity_models[propensity_model_name]['model']
+                
+                X = df[new_pipe.covariate_columns]
+                propensity_scores = propensity_model.predict_proba(X)[:, 1]
+                df['propensity_score'] = propensity_scores
+                new_pipe.data = df
+            
+            # Use existing treatment effect estimation
+            if pipe.treatment_effects:
+                # Apply existing models to new data
+                for analysis_name, effects in pipe.treatment_effects.items():
+                    new_effects = {}
+                    
+                    for method, results in effects.items():
+                        if method == 'ate':
+                            # Simple ATE calculation
+                            treated_outcomes = df[df[new_pipe.treatment_column] == 1][new_pipe.outcome_column]
+                            control_outcomes = df[df[new_pipe.treatment_column] == 0][new_pipe.outcome_column]
+                            
+                            if len(treated_outcomes) > 0 and len(control_outcomes) > 0:
+                                ate_estimate = treated_outcomes.mean() - control_outcomes.mean()
+                                
+                                # Bootstrap confidence interval
+                                bootstrap_ates = []
+                                for _ in range(bootstrap_samples):
+                                    treated_sample = treated_outcomes.sample(n=len(treated_outcomes), replace=True)
+                                    control_sample = control_outcomes.sample(n=len(control_outcomes), replace=True)
+                                    bootstrap_ate = treated_sample.mean() - control_sample.mean()
+                                    bootstrap_ates.append(bootstrap_ate)
+                                
+                                alpha = 1 - confidence_level
+                                ci_lower = np.percentile(bootstrap_ates, 100 * alpha / 2)
+                                ci_upper = np.percentile(bootstrap_ates, 100 * (1 - alpha / 2))
+                                
+                                new_effects['ate'] = {
+                                    'estimate': ate_estimate,
+                                    'confidence_interval': (ci_lower, ci_upper),
+                                    'standard_error': np.std(bootstrap_ates),
+                                    'p_value': 2 * (1 - stats.norm.cdf(abs(ate_estimate / np.std(bootstrap_ates))))
+                                }
+                        
+                        elif method == 'doubly_robust' and 'propensity_score' in df.columns:
+                            # Doubly robust estimation
+                            if new_pipe.outcome_models:
+                                outcome_model_name = list(new_pipe.outcome_models.keys())[0]
+                                treated_model = new_pipe.outcome_models[outcome_model_name].get('treated_model')
+                                control_model = new_pipe.outcome_models[outcome_model_name].get('control_model')
+                                
+                                if treated_model and control_model:
+                                    X = df[new_pipe.covariate_columns]
+                                    T = df[new_pipe.treatment_column]
+                                    Y = df[new_pipe.outcome_column]
+                                    ps = df['propensity_score']
+                                    
+                                    mu1 = treated_model.predict(X)
+                                    mu0 = control_model.predict(X)
+                                    
+                                    dr_component1 = T * (Y - mu1) / ps
+                                    dr_component0 = (1 - T) * (Y - mu0) / (1 - ps)
+                                    dr_ate = (mu1 - mu0 + dr_component1 - dr_component0).mean()
+                                    
+                                    new_effects['doubly_robust'] = {
+                                        'estimate': dr_ate,
+                                        'treated_potential_outcomes': mu1,
+                                        'control_potential_outcomes': mu0
+                                    }
+                    
+                    inference_results[f'inference_{analysis_name}'] = new_effects
+        
+        elif inference_type == 'counterfactual':
+            # Counterfactual analysis
+            if target_population and target_population in ['treated', 'control']:
+                target_data = df[df[new_pipe.treatment_column] == (1 if target_population == 'treated' else 0)]
+                
+                if len(target_data) > 0 and new_pipe.outcome_models:
+                    outcome_model_name = list(new_pipe.outcome_models.keys())[0]
+                    counterfactual_model = new_pipe.outcome_models[outcome_model_name].get(
+                        'control_model' if target_population == 'treated' else 'treated_model'
+                    )
+                    
+                    if counterfactual_model:
+                        X_target = target_data[new_pipe.covariate_columns]
+                        actual_outcomes = target_data[new_pipe.outcome_column]
+                        counterfactual_outcomes = counterfactual_model.predict(X_target)
+                        
+                        inference_results['counterfactual'] = {
+                            'target_population': target_population,
+                            'actual_outcomes': actual_outcomes.values,
+                            'counterfactual_outcomes': counterfactual_outcomes,
+                            'treatment_effect_individual': actual_outcomes.values - counterfactual_outcomes,
+                            'average_treatment_effect': (actual_outcomes.values - counterfactual_outcomes).mean()
+                        }
+        
+        elif inference_type == 'policy_evaluation':
+            # Policy evaluation using instrumental variables
+            if new_pipe.instrumental_variables:
+                iv_name = list(new_pipe.instrumental_variables.keys())[0]
+                iv_columns = new_pipe.instrumental_variables[iv_name]['columns']
+                
+                if all(col in df.columns for col in iv_columns):
+                    # Simple IV estimation
+                    Z = df[iv_columns[0]] if len(iv_columns) == 1 else df[iv_columns].mean(axis=1)
+                    T = df[new_pipe.treatment_column]
+                    Y = df[new_pipe.outcome_column]
+                    
+                    # First stage: T ~ Z
+                    first_stage = LinearRegression()
+                    first_stage.fit(Z.values.reshape(-1, 1), T)
+                    T_hat = first_stage.predict(Z.values.reshape(-1, 1))
+                    
+                    # Second stage: Y ~ T_hat
+                    second_stage = LinearRegression()
+                    second_stage.fit(T_hat.reshape(-1, 1), Y)
+                    
+                    iv_estimate = second_stage.coef_[0]
+                    
+                    inference_results['policy_evaluation'] = {
+                        'instrumental_variable': iv_columns[0],
+                        'iv_estimate': iv_estimate,
+                        'first_stage_r2': first_stage.score(Z.values.reshape(-1, 1), T),
+                        'second_stage_r2': second_stage.score(T_hat.reshape(-1, 1), Y)
+                    }
+        
+        # Store inference results
+        new_pipe.inference_results = inference_results
+        new_pipe.current_analysis = f'inference_{inference_name}'
+        
+        return new_pipe
+    
+    return _inference
+
+
+# Utility function to get inference results
+def get_inference_results(
+    inference_name: Optional[str] = None
+):
+    """
+    Get inference results from the pipeline
+    
+    Parameters:
+    -----------
+    inference_name : Optional[str]
+        Specific inference analysis to retrieve (if None, returns all)
+        
+    Returns:
+    --------
+    Callable
+        Function that retrieves inference results from a CausalPipe
+    """
+    def _get_inference_results(pipe):
+        if not hasattr(pipe, 'inference_results') or not pipe.inference_results:
+            return {"error": "No inference results found. Run inference first."}
+        
+        if inference_name:
+            if inference_name in pipe.inference_results:
+                return pipe.inference_results[inference_name]
+            else:
+                return {"error": f"Inference analysis '{inference_name}' not found"}
+        
+        return pipe.inference_results
+    
+    return _get_inference_results

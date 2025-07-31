@@ -38,9 +38,10 @@ def get_doc_store_provider():
     #client = chromadb.HttpClient(host='ec2-54-161-71-105.compute-1.amazonaws.com', port=8888)
     # Create document stores for SQL-related collections
     stores = {
-        "usage_examples": DocumentChromaStore(persistent_client=client,collection_name="tools_examples_collection"),
+        "usage_examples": DocumentChromaStore(persistent_client=client,collection_name="usage_examples_collection"),
         "function_spec": DocumentChromaStore(persistent_client=client,collection_name="tools_spec_collection"),
         "insights_store": DocumentChromaStore(persistent_client=client,collection_name="tools_insights_collection"), 
+        "examples_store": DocumentChromaStore(persistent_client=client,collection_name="tools_examples_collection"),
         "db_schema": DocumentChromaStore(
             persistent_client=client,
             collection_name="db_schema"

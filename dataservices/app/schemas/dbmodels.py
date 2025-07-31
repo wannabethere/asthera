@@ -46,12 +46,12 @@ class EntityVersionMixin:
     modified_by = Column(String(100))
 
 
-class Project(Base, TimestampMixin):
-    """Main project entity with semantic versioning"""
+class Domain(Base, TimestampMixin):
+    """Main domain entity with semantic versioning"""
 
-    __tablename__ = "projects"
+    __tablename__ = "domains"
 
-    project_id = Column(String(50), primary_key=True)
+    domain_id = Column(String(50), primary_key=True)
     display_name = Column(String(200), nullable=False)
     description = Column(Text)
     created_by = Column(String(100))
@@ -83,32 +83,32 @@ class Project(Base, TimestampMixin):
 
     # Relationships
     datasets = relationship(
-        "Dataset", back_populates="project", cascade="all, delete-orphan"
+        "Dataset", back_populates="domain", cascade="all, delete-orphan"
     )
     tables = relationship(
-        "Table", back_populates="project", cascade="all, delete-orphan"
+        "Table", back_populates="domain", cascade="all, delete-orphan"
     )
     sql_functions = relationship(
-        "SQLFunction", back_populates="project", cascade="all, delete-orphan"
+        "SQLFunction", back_populates="domain", cascade="all, delete-orphan"
     )
     relationships = relationship(
-        "Relationship", back_populates="project", cascade="all, delete-orphan"
+        "Relationship", back_populates="domain", cascade="all, delete-orphan"
     )
     instructions = relationship(
-        "Instruction", back_populates="project", cascade="all, delete-orphan"
+        "Instruction", back_populates="domain", cascade="all, delete-orphan"
     )
     examples = relationship(
-        "Example", back_populates="project", cascade="all, delete-orphan"
+        "Example", back_populates="domain", cascade="all, delete-orphan"
     )
     knowledge_base = relationship(
-        "KnowledgeBase", back_populates="project", cascade="all, delete-orphan"
+        "KnowledgeBase", back_populates="domain", cascade="all, delete-orphan"
     )
     version_history = relationship(
-        "ProjectVersionHistory", back_populates="project", cascade="all, delete-orphan"
+        "DomainVersionHistory", back_populates="domain", cascade="all, delete-orphan"
     )
    
-    #project_histories = relationship(
-    #    "ProjectHistory", back_populates="project", cascade="all, delete-orphan"
+    #domain_histories = relationship(
+    #    "DomainHistory", back_populates="domain", cascade="all, delete-orphan"
     #)
 
     # Enhanced constraints
@@ -117,12 +117,12 @@ class Project(Base, TimestampMixin):
             "status IN ('draft', 'draft_ready', 'review', 'active', 'inactive', 'archived')",
             name="check_status",
         ),
-        Index("idx_projects_status", "status"),
+        Index("idx_domains_status", "status"),
         Index(
-            "idx_projects_version", "major_version", "minor_version", "patch_version"
+            "idx_domains_version", "major_version", "minor_version", "patch_version"
         ),
-        Index("idx_projects_version_locked", "version_locked"),
-        Index("idx_projects_created_at", "created_at"),
+        Index("idx_domains_version_locked", "version_locked"),
+        Index("idx_domains_created_at", "created_at"),
     )
 
     @hybrid_property
@@ -132,12 +132,12 @@ class Project(Base, TimestampMixin):
 
     @hybrid_property
     def is_draft(self) -> bool:
-        """Check if project is in any draft state"""
+        """Check if domain is in any draft state"""
         return self.status in ["draft", "draft_ready"]
 
     @hybrid_property
     def is_published(self) -> bool:
-        """Check if project is published"""
+        """Check if domain is published"""
         return self.status == "active"
 
     @hybrid_property
@@ -161,7 +161,7 @@ class Project(Base, TimestampMixin):
             raise ValueError(f"Cannot transition to draft_ready from {self.status}")
 
         if self.table_count == 0:
-            raise ValueError("Project must have at least one table")
+            raise ValueError("Domain must have at least one table")
 
         self.status = "draft_ready"
         self.draft_completed_at = func.now()
@@ -178,7 +178,7 @@ class Project(Base, TimestampMixin):
         return True
 
     def publish(self, user: str = "system") -> bool:
-        """Publish the project"""
+        """Publish the domain"""
         if self.status not in ["draft_ready", "review"]:
             raise ValueError(f"Cannot publish from {self.status}")
 
@@ -189,7 +189,7 @@ class Project(Base, TimestampMixin):
         return True
 
     def archive(self, user: str = "system") -> bool:
-        """Archive the project"""
+        """Archive the domain"""
         self.status = "archived"
         self.last_modified_by = user
         return True
@@ -202,7 +202,7 @@ class Project(Base, TimestampMixin):
         modified_by: str,
         description: Optional[str] = None,
     ) -> str:
-        """Increment project version based on change type"""
+        """Increment domain version based on change type"""
         old_version = self.version_string
 
         if change_type == "major":
@@ -250,20 +250,20 @@ class Project(Base, TimestampMixin):
             traceback.print_exc()
 
     def __repr__(self):
-        return f"<Project(id='{self.project_id}', name='{self.display_name}', status='{self.status}', version='{self.version_string}')>"
+        return f"<Domain(id='{self.domain_id}', name='{self.display_name}', status='{self.status}', version='{self.version_string}')>"
 
 
-class ProjectVersionHistory(Base, TimestampMixin):
-    """Track all project version changes"""
+class DomainVersionHistory(Base, TimestampMixin):
+    """Track all domain version changes"""
 
-    __tablename__ = "project_version_history"
+    __tablename__ = "domain_version_history"
 
     version_history_id = Column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
-    project_id = Column(
+    domain_id = Column(
         String(50),
-        ForeignKey("projects.project_id", ondelete="CASCADE"),
+        ForeignKey("domains.domain_id", ondelete="CASCADE"),
         nullable=False,
     )
     old_version = Column(String(20))
@@ -275,23 +275,23 @@ class ProjectVersionHistory(Base, TimestampMixin):
     change_description = Column(Text)
 
     # Relationships
-    project = relationship("Project", back_populates="version_history")
+    domain = relationship("Domain", back_populates="version_history")
 
     __table_args__ = (
-        Index("idx_project_version_history_project_id", "project_id"),
-        Index("idx_project_version_history_created_at", "created_at"),
+        Index("idx_domain_version_history_domain_id", "domain_id"),
+        Index("idx_domain_version_history_created_at", "created_at"),
     )
 
 
 class Dataset(Base, TimestampMixin, EntityVersionMixin):
-    """Collections of tables within a project"""
+    """Collections of tables within a domain"""
 
     __tablename__ = "datasets"
 
     dataset_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    project_id = Column(
+    domain_id = Column(
         String(50),
-        ForeignKey("projects.project_id", ondelete="CASCADE"),
+        ForeignKey("domains.domain_id", ondelete="CASCADE"),
         nullable=False,
     )
     name = Column(String(100), nullable=False)
@@ -301,14 +301,14 @@ class Dataset(Base, TimestampMixin, EntityVersionMixin):
     connection_id = Column(UUID(as_uuid=True), ForeignKey("connection_details.id"))
 
     # Relationships
-    project = relationship("Project", back_populates="datasets")
+    domain = relationship("Domain", back_populates="datasets")
     tables = relationship(
         "Table", back_populates="dataset", cascade="all, delete-orphan"
     )
     connection = relationship("ConnectionDetails", back_populates="datasets")
     __table_args__ = (
-        UniqueConstraint("project_id", "name", name="uq_datasets_project_name"),
-        Index("idx_datasets_project_id", "project_id"),
+        UniqueConstraint("domain_id", "name", name="uq_datasets_domain_name"),
+        Index("idx_datasets_domain_id", "domain_id"),
         Index("idx_datasets_entity_version", "entity_version"),
     )
 
@@ -322,9 +322,9 @@ class Table(Base, TimestampMixin, EntityVersionMixin):
     dataset_id = Column(
         String(36), ForeignKey("datasets.dataset_id", ondelete="CASCADE")
     )
-    project_id = Column(
+    domain_id = Column(
         String(50),
-        ForeignKey("projects.project_id", ondelete="CASCADE"),
+        ForeignKey("domains.domain_id", ondelete="CASCADE"),
         nullable=False,
     )
     name = Column(String(100), nullable=False)
@@ -336,7 +336,7 @@ class Table(Base, TimestampMixin, EntityVersionMixin):
     json_metadata = Column(JSONB)
 
     # Relationships
-    project = relationship("Project", back_populates="tables")
+    domain = relationship("Domain", back_populates="tables")
     dataset = relationship("Dataset", back_populates="tables")
     columns = relationship(
         "SQLColumn", back_populates="table", cascade="all, delete-orphan"
@@ -361,8 +361,8 @@ class Table(Base, TimestampMixin, EntityVersionMixin):
             "table_type IN ('table', 'view', 'materialized_view')",
             name="check_table_type",
         ),
-        UniqueConstraint("project_id", "name", name="uq_tables_project_name"),
-        Index("idx_tables_project_id", "project_id"),
+        UniqueConstraint("domain_id", "name", name="uq_tables_domain_name"),
+        Index("idx_tables_domain_id", "domain_id"),
         Index("idx_tables_dataset_id", "dataset_id"),
         Index("idx_tables_entity_version", "entity_version"),
     )
@@ -421,15 +421,15 @@ class SQLColumn(Base, TimestampMixin, EntityVersionMixin):
 
 
 class SQLFunction(Base, TimestampMixin, EntityVersionMixin):
-    """Project-level reusable functions with optional project association"""
+    """Domain-level reusable functions with optional domain association"""
 
     __tablename__ = "sql_functions"
 
     function_id = Column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
-    project_id = Column(
-        String(50), ForeignKey("projects.project_id", ondelete="CASCADE"), nullable=True
+    domain_id = Column(
+        String(50), ForeignKey("domains.domain_id", ondelete="CASCADE"), nullable=True
     )
     name = Column(String(100), nullable=False)
     display_name = Column(String(200))
@@ -440,16 +440,16 @@ class SQLFunction(Base, TimestampMixin, EntityVersionMixin):
     json_metadata = Column(JSONB)
 
     # Relationships
-    project = relationship("Project", back_populates="sql_functions")
+    domain = relationship("Domain", back_populates="sql_functions")
     calculated_columns = relationship("CalculatedColumn", back_populates="function")
 
     __table_args__ = (
-        # Partial unique constraint - only enforce uniqueness when project_id is not null
-        # This allows global functions (project_id = null) to have the same name as project-specific functions
+        # Partial unique constraint - only enforce uniqueness when domain_id is not null
+        # This allows global functions (domain_id = null) to have the same name as domain-specific functions
         UniqueConstraint(
-            "project_id", "name", name="uq_sql_functions_project_name", deferrable=True
+            "domain_id", "name", name="uq_sql_functions_domain_name", deferrable=True
         ),
-        Index("idx_sql_functions_project_id", "project_id"),
+        Index("idx_sql_functions_domain_id", "domain_id"),
         Index("idx_sql_functions_name", "name"),
     )
 
@@ -530,9 +530,9 @@ class Relationship(Base, TimestampMixin, EntityVersionMixin):
     relationship_id = Column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
-    project_id = Column(
+    domain_id = Column(
         String(50),
-        ForeignKey("projects.project_id", ondelete="CASCADE"),
+        ForeignKey("domains.domain_id", ondelete="CASCADE"),
         nullable=False,
     )
     name = Column(String(100))
@@ -550,7 +550,7 @@ class Relationship(Base, TimestampMixin, EntityVersionMixin):
     json_metadata = Column(JSONB)
 
     # Relationships
-    project = relationship("Project", back_populates="relationships")
+    domain = relationship("Domain", back_populates="relationships")
     from_table = relationship(
         "Table", foreign_keys=[from_table_id], back_populates="from_relationships"
     )
@@ -565,7 +565,7 @@ class Relationship(Base, TimestampMixin, EntityVersionMixin):
     )
 
     __table_args__ = (
-        Index("idx_relationships_project_id", "project_id"),
+        Index("idx_relationships_domain_id", "domain_id"),
         Index("idx_relationships_from_table", "from_table_id"),
         Index("idx_relationships_to_table", "to_table_id"),
     )
@@ -579,9 +579,9 @@ class Instruction(Base, TimestampMixin, EntityVersionMixin):
     instruction_id = Column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
-    project_id = Column(
+    domain_id = Column(
         String(50),
-        ForeignKey("projects.project_id", ondelete="CASCADE"),
+        ForeignKey("domains.domain_id", ondelete="CASCADE"),
         nullable=False,
     )
     instruction_type = Column(
@@ -594,10 +594,10 @@ class Instruction(Base, TimestampMixin, EntityVersionMixin):
     json_metadata = Column(JSONB)
 
     # Relationships
-    project = relationship("Project", back_populates="instructions")
+    domain = relationship("Domain", back_populates="instructions")
 
     __table_args__ = (
-        Index("idx_instructions_project_id", "project_id"),
+        Index("idx_instructions_domain_id", "domain_id"),
         CheckConstraint(
             "(sql_query IS NOT NULL AND instruction_type = 'sql_query') OR (instructions IS NOT NULL AND instruction_type = 'instructions')",
             name="check_instruction_type_content",
@@ -611,9 +611,9 @@ class Example(Base, TimestampMixin, EntityVersionMixin):
     __tablename__ = "examples"
 
     example_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    project_id = Column(
+    domain_id = Column(
         String(50),
-        ForeignKey("projects.project_id", ondelete="CASCADE"),
+        ForeignKey("domains.domain_id", ondelete="CASCADE"),
         nullable=False,
     )
     definition_type = Column(
@@ -636,27 +636,27 @@ class Example(Base, TimestampMixin, EntityVersionMixin):
     json_metadata = Column(JSONB)
 
     # Relationships
-    project = relationship("Project", back_populates="examples")
+    domain = relationship("Domain", back_populates="examples")
 
     __table_args__ = (
         CheckConstraint(
             "definition_type IN ('metric', 'view', 'calculated_column', 'sql_pair', 'instruction')",
             name="check_definition_type",
         ),
-        Index("idx_examples_project_id", "project_id"),
+        Index("idx_examples_domain_id", "domain_id"),
         Index("idx_examples_definition_type", "definition_type"),
     )
 
 
 class KnowledgeBase(Base, TimestampMixin, EntityVersionMixin):
-    """Project knowledge base entries"""
+    """Domain knowledge base entries"""
 
     __tablename__ = "knowledge_base"
 
     kb_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    project_id = Column(
+    domain_id = Column(
         String(50),
-        ForeignKey("projects.project_id", ondelete="CASCADE"),
+        ForeignKey("domains.domain_id", ondelete="CASCADE"),
         nullable=False,
     )
     name = Column(String(100), nullable=False)
@@ -668,24 +668,24 @@ class KnowledgeBase(Base, TimestampMixin, EntityVersionMixin):
     json_metadata = Column(JSONB)
 
     # Relationships
-    project = relationship("Project", back_populates="knowledge_base")
+    domain = relationship("Domain", back_populates="knowledge_base")
 
     __table_args__ = (
-        UniqueConstraint("project_id", "name", name="uq_knowledge_base_project_name"),
-        Index("idx_knowledge_base_project_id", "project_id"),
+        UniqueConstraint("domain_id", "name", name="uq_knowledge_base_domain_name"),
+        Index("idx_knowledge_base_domain_id", "domain_id"),
     )
 
 
-class ProjectHistory(Base, TimestampMixin):
+class DomainHistory(Base, TimestampMixin):
     """Track changes and versions"""
 
-    __tablename__ = "project_histories"
+    __tablename__ = "domain_histories"
 
     history_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    project_id = Column(
+    domain_id = Column(
         String(50),
         nullable=False
-        #ForeignKey("projects.project_id", ondelete="CASCADE"),
+        #ForeignKey("domains.domain_id", ondelete="CASCADE"),
         
     )
     table_id = Column(String(36), ForeignKey("tables.table_id"))
@@ -698,17 +698,17 @@ class ProjectHistory(Base, TimestampMixin):
     new_entity_version = Column(Integer)
     changed_by = Column(String(100))
     change_description = Column(Text)
-    project_version_before = Column(String(20))
-    project_version_after = Column(String(20))
+    domain_version_before = Column(String(20))
+    domain_version_after = Column(String(20))
 
     # Relationships
-    project = relationship("Project", back_populates="project_histories")
+    domain = relationship("Domain", back_populates="domain_histories")
     table = relationship("Table")
 
     __table_args__ = (
-        Index("idx_project_histories_project_id", "project_id"),
-        Index("idx_project_histories_entity", "entity_type", "entity_id"),
-        Index("idx_project_histories_changed_at", "created_at"),
+        Index("idx_domain_histories_domain_id", "domain_id"),
+        Index("idx_domain_histories_entity", "entity_type", "entity_id"),
+        Index("idx_domain_histories_changed_at", "created_at"),
     )
 
 
@@ -802,26 +802,26 @@ def determine_change_type(
     return "patch"
 
 
-def update_project_version(session: Session, entity: Any, action: str):
-    """Update project version when any entity is modified"""
-    # Skip if it's a Project entity itself to avoid recursion
-    if isinstance(entity, Project):
+def update_domain_version(session: Session, entity: Any, action: str):
+    """Update domain version when any entity is modified"""
+    # Skip if it's a Domain entity itself to avoid recursion
+    if isinstance(entity, Domain):
         return
 
-    # Get project_id based on entity type
-    project_id = None
+    # Get domain_id based on entity type
+    domain_id = None
     entity_type = entity.__class__.__name__.lower()
     entity_id = None
     modified_by = getattr(entity, "modified_by", "system")
 
-    if hasattr(entity, "project_id"):
-        project_id = entity.project_id
+    if hasattr(entity, "domain_id"):
+        domain_id = entity.domain_id
         entity_id = getattr(entity, f"{entity_type}_id", None)
     elif hasattr(entity, "table_id"):
         # For entities related through table
         table = session.query(Table).filter(Table.table_id == entity.table_id).first()
         if table:
-            project_id = table.project_id
+            domain_id = table.domain_id
             entity_id = getattr(entity, f"{entity_type}_id", None)
     elif hasattr(entity, "column_id"):
         # For calculated_columns
@@ -829,27 +829,27 @@ def update_project_version(session: Session, entity: Any, action: str):
             session.query(Column).filter(Column.column_id == entity.column_id).first()
         )
         if column and column.table:
-            project_id = column.table.project_id
+            domain_id = column.table.domain_id
             entity_id = getattr(entity, f"{entity_type}_id", None)
 
-    # Skip version update for global entities (no project_id) like global SQL functions
-    if not project_id:
+    # Skip version update for global entities (no domain_id) like global SQL functions
+    if not domain_id:
         return
 
-    # Get the project
-    project = session.query(Project).filter(Project.project_id == project_id).first()
-    if not project:
+    # Get the domain
+    domain = session.query(Domain).filter(Domain.domain_id == domain_id).first()
+    if not domain:
         return
 
-    # # Check if project is version locked
-    # if project.version_locked:
-    #     raise ValueError(f"Project {project_id} is version locked. Cannot modify.")
+    # # Check if domain is version locked
+    # if domain.version_locked:
+    #     raise ValueError(f"Domain {domain_id} is version locked. Cannot modify.")
 
-    # Determine change type and update project version
+    # Determine change type and update domain version
     change_type = determine_change_type(entity_type, action)
-    old_version = project.version_string
+    old_version = domain.version_string
 
-    new_version = project.increment_version(
+    new_version = domain.increment_version(
         change_type=change_type,
         entity_type=entity_type,
         entity_id=entity_id,
@@ -857,8 +857,8 @@ def update_project_version(session: Session, entity: Any, action: str):
     )
 
     # Create version history record
-    version_history = ProjectVersionHistory(
-        project_id=project_id,
+    version_history = DomainVersionHistory(
+        domain_id=domain_id,
         old_version=old_version,
         new_version=new_version,
         change_type=change_type,
@@ -876,16 +876,16 @@ def before_flush(session, flush_context, instances):
     """Handle version updates before flush"""
     # Track new, dirty, and deleted objects
     for obj in session.new:
-        if hasattr(obj, "__tablename__") and obj.__tablename__ != "projects":
-            update_project_version(session, obj, "create")
+        if hasattr(obj, "__tablename__") and obj.__tablename__ != "domains":
+            update_domain_version(session, obj, "create")
 
     for obj in session.dirty:
-        if hasattr(obj, "__tablename__") and obj.__tablename__ != "projects":
-            update_project_version(session, obj, "update")
+        if hasattr(obj, "__tablename__") and obj.__tablename__ != "domains":
+            update_domain_version(session, obj, "update")
 
     for obj in session.deleted:
-        if hasattr(obj, "__tablename__") and obj.__tablename__ != "projects":
-            update_project_version(session, obj, "delete")
+        if hasattr(obj, "__tablename__") and obj.__tablename__ != "domains":
+            update_domain_version(session, obj, "delete")
 
 
 # Additional helper models for workflow tracking
@@ -897,9 +897,9 @@ class WorkflowLog(Base, TimestampMixin):
     __tablename__ = "workflow_logs"
 
     log_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    project_id = Column(
+    domain_id = Column(
         String(50),
-        ForeignKey("projects.project_id", ondelete="CASCADE"),
+        ForeignKey("domains.domain_id", ondelete="CASCADE"),
         nullable=False,
     )
     action = Column(
@@ -912,30 +912,30 @@ class WorkflowLog(Base, TimestampMixin):
     json_metadata = Column(JSONB)
 
     # Relationships
-    project = relationship("Project")
+    domain = relationship("Domain")
 
     __table_args__ = (
-        Index("idx_workflow_logs_project_id", "project_id"),
+        Index("idx_workflow_logs_domain_id", "domain_id"),
         Index("idx_workflow_logs_action", "action"),
         Index("idx_workflow_logs_created_at", "created_at"),
     )
 
 
 # Event handlers for workflow logging
-@event.listens_for(Project.status, "set")
+@event.listens_for(Domain.status, "set")
 def log_status_change(target, value, old_value, initiator):
     """Log status changes"""
     if old_value != value and old_value is not None:
         # This would need to be implemented with session context
         print(
-            f"Status changed from {old_value} to {value} for project {target.project_id}"
+            f"Status changed from {old_value} to {value} for domain {target.domain_id}"
         )
 
 
 # Enhanced utility functions
 
 
-def validate_project_transition(project: Project, new_status: str) -> bool:
+def validate_domain_transition(domain: Domain, new_status: str) -> bool:
     """Validate if a status transition is allowed"""
     valid_transitions = {
         "draft": ["draft_ready", "archived"],
@@ -946,53 +946,53 @@ def validate_project_transition(project: Project, new_status: str) -> bool:
         "archived": [],  # Cannot transition from archived
     }
 
-    return new_status in valid_transitions.get(project.status, [])
+    return new_status in valid_transitions.get(domain.status, [])
 
 
-def get_project_completion_score(project: Project) -> float:
-    """Calculate project completion score (0-100)"""
+def get_domain_completion_score(domain: Domain) -> float:
+    """Calculate domain completion score (0-100)"""
     score = 0.0
 
     # Basic structure (40 points)
-    if project.table_count > 0:
+    if domain.table_count > 0:
         score += 20
-    if project.table_count >= 2:
+    if domain.table_count >= 2:
         score += 10
-    if project.description:
+    if domain.description:
         score += 10
 
     # Tables with columns (30 points)
-    if project.tables:
+    if domain.tables:
         tables_with_columns = sum(
-            1 for table in project.tables if table.column_count > 0
+            1 for table in domain.tables if table.column_count > 0
         )
-        score += (tables_with_columns / len(project.tables)) * 30
+        score += (tables_with_columns / len(domain.tables)) * 30
 
     # Semantic descriptions (20 points)
-    if project.tables:
+    if domain.tables:
         tables_with_semantic = sum(
-            1 for table in project.tables if table.has_semantic_description
+            1 for table in domain.tables if table.has_semantic_description
         )
-        score += (tables_with_semantic / len(project.tables)) * 20
+        score += (tables_with_semantic / len(domain.tables)) * 20
 
     # Metrics and views (10 points)
-    total_metrics = sum(len(table.metrics) for table in project.tables if table.metrics)
-    total_views = sum(len(table.views) for table in project.tables if table.views)
+    total_metrics = sum(len(table.metrics) for table in domain.tables if table.metrics)
+    total_views = sum(len(table.views) for table in domain.tables if table.views)
     if total_metrics > 0 or total_views > 0:
         score += 10
 
     return min(score, 100.0)
 
 
-class ProjectJSONStore(Base, TimestampMixin):
-    """Store project JSON data with ChromaDB integration"""
+class DomainJSONStore(Base, TimestampMixin):
+    """Store domain JSON data with ChromaDB integration"""
 
-    __tablename__ = "project_json_store"
+    __tablename__ = "domain_json_store"
 
     store_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    project_id = Column(
+    domain_id = Column(
         String(50),
-        ForeignKey("projects.project_id", ondelete="CASCADE"),
+        ForeignKey("domains.domain_id", ondelete="CASCADE"),
         nullable=False,
     )
 
@@ -1002,7 +1002,7 @@ class ProjectJSONStore(Base, TimestampMixin):
     # JSON data type and content
     json_type = Column(
         String(50), nullable=False
-    )  # 'tables', 'metrics', 'views', 'calculated_columns', 'enums', 'project'
+    )  # 'tables', 'metrics', 'views', 'calculated_columns', 'enums', 'domain'
     json_content = Column(JSONB, nullable=False)
 
     # Metadata
@@ -1012,18 +1012,18 @@ class ProjectJSONStore(Base, TimestampMixin):
     update_reason = Column(Text)
 
     # Relationships
-    project = relationship("Project")
+    domain = relationship("Domain")
 
     __table_args__ = (
-        Index("idx_project_json_store_project_id", "project_id"),
-        Index("idx_project_json_store_type", "json_type"),
-        Index("idx_project_json_store_chroma_id", "chroma_document_id"),
-        Index("idx_project_json_store_active", "is_active"),
-        UniqueConstraint("project_id", "json_type", name="uq_project_json_type"),
+        Index("idx_domain_json_store_domain_id", "domain_id"),
+        Index("idx_domain_json_store_type", "json_type"),
+        Index("idx_domain_json_store_chroma_id", "chroma_document_id"),
+        Index("idx_domain_json_store_active", "is_active"),
+        UniqueConstraint("domain_id", "json_type", name="uq_domain_json_type"),
     )
 
     def __repr__(self):
-        return f"<ProjectJSONStore(id='{self.store_id}', project='{self.project_id}', type='{self.json_type}', chroma_id='{self.chroma_document_id}')>"
+        return f"<DomainJSONStore(id='{self.store_id}', domain='{self.domain_id}', type='{self.json_type}', chroma_id='{self.chroma_document_id}')>"
 
 
 # Example usage and testing
@@ -1032,27 +1032,27 @@ if __name__ == "__main__":
     from sqlalchemy.orm import sessionmaker
 
     # Example database connection (replace with your actual connection string)
-    # engine = create_engine('postgresql://user:password@localhost/project_db')
+    # engine = create_engine('postgresql://user:password@localhost/domain_db')
     # Base.metadata.create_all(engine)
     # Session = sessionmaker(bind=engine)
     # session = Session()
 
     # # Example usage
-    # project_manager = ProjectManager(session)
+    # domain_manager = DomainManager(session)
     #
-    # # Create a project
-    # project = project_manager.create_project(
-    #     project_id='test_project',
-    #     display_name='Test Project',
-    #     description='A test project for demonstration',
+    # # Create a domain
+    # domain = domain_manager.create_domain(
+    #     domain_id='test_domain',
+    #     display_name='Test Domain',
+    #     description='A test domain for demonstration',
     #     created_by='admin'
     # )
     #
-    # print(f"Created project: {project.version_string}")
+    # print(f"Created domain: {domain.version_string}")
     #
     # # Add a table (this will automatically increment version)
     # table = Table(
-    #     project_id='test_project',
+    #     domain_id='test_domain',
     #     name='test_table',
     #     display_name='Test Table',
     #     modified_by='admin'
@@ -1061,11 +1061,11 @@ if __name__ == "__main__":
     # session.commit()
     #
     # # Check updated version
-    # session.refresh(project)
-    # print(f"After adding table: {project.version_string}")
+    # session.refresh(domain)
+    # print(f"After adding table: {domain.version_string}")
     #
-    # # Get project summary
-    # summary = project_manager.get_project_summary('test_project')
-    # print(f"Project summary: {summary}")
+    # # Get domain summary
+    # summary = domain_manager.get_domain_summary('test_domain')
+    # print(f"Domain summary: {summary}")
 
     pass

@@ -9,8 +9,8 @@ from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
 import logging
 
-from app.service.project_workflow_service import ProjectWorkflowService
-from app.service.models import AddTableRequest, SchemaInput, ProjectContext
+from app.service.project_workflow_service import DomainWorkflowService
+from app.service.models import AddTableRequest, SchemaInput, DomainContext
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
@@ -30,14 +30,14 @@ class ComprehensiveRecommendationRequest(BaseModel):
     display_name: Optional[str] = None
     description: Optional[str] = None
     columns: List[TableColumnRequest]
-    project_id: Optional[str] = None
+    domain_id: Optional[str] = None
     business_domain: Optional[str] = "General"
-    project_name: Optional[str] = None
+    domain_name: Optional[str] = None
     recommendation_types: Optional[List[str]] = None
 
 class ComprehensiveRecommendationResponse(BaseModel):
     table_name: str
-    project_id: str
+    domain_id: str
     generated_at: str
     recommendation_types: List[str]
     results: Dict[str, Any]
@@ -60,10 +60,10 @@ async def get_comprehensive_recommendations(request: ComprehensiveRecommendation
     Defaults to ["semantic", "relationships", "optimization"].
     """
     try:
-        # Create project context for the request
-        project_context = ProjectContext(
-            project_id=request.project_id or "default_project",
-            project_name=request.project_name or f"Project for {request.name}",
+        # Create domain context for the request
+        domain_context = DomainContext(
+            domain_id=request.domain_id or "default_domain",
+            domain_name=request.domain_name or f"Domain for {request.name}",
             business_domain=request.business_domain,
             purpose=f"Generate comprehensive recommendations for {request.name}",
             target_users=["Data Analysts", "Business Users", "Developers"],
@@ -101,15 +101,15 @@ async def get_comprehensive_recommendations(request: ComprehensiveRecommendation
         )
         
         # Create workflow service instance
-        workflow_service = ProjectWorkflowService(
+        workflow_service = DomainWorkflowService(
             user_id="api_user",
-            session_id=f"recommendations_{request.project_id or 'default'}"
+            session_id=f"recommendations_{request.domain_id or 'default'}"
         )
         
         # Generate comprehensive recommendations using workflow service
         recommendations = await workflow_service.get_recommendations(
             add_table_request, 
-            project_context,
+            domain_context,
             recommendation_types=request.recommendation_types
         )
         
@@ -128,10 +128,10 @@ async def get_semantic_recommendations(request: ComprehensiveRecommendationReque
     Generate semantic description recommendations for a table structure
     """
     try:
-        # Create project context for the request
-        project_context = ProjectContext(
-            project_id=request.project_id or "default_project",
-            project_name=request.project_name or f"Project for {request.name}",
+        # Create domain context for the request
+        domain_context = DomainContext(
+            domain_id=request.domain_id or "default_domain",
+            domain_name=request.domain_name or f"Domain for {request.name}",
             business_domain=request.business_domain,
             purpose=f"Generate semantic descriptions for {request.name}",
             target_users=["Data Analysts", "Business Users"],
@@ -169,15 +169,15 @@ async def get_semantic_recommendations(request: ComprehensiveRecommendationReque
         )
         
         # Create workflow service instance
-        workflow_service = ProjectWorkflowService(
+        workflow_service = DomainWorkflowService(
             user_id="api_user",
-            session_id=f"semantic_{request.project_id or 'default'}"
+            session_id=f"semantic_{request.domain_id or 'default'}"
         )
         
         # Generate semantic recommendations using workflow service
         recommendations = await workflow_service.get_recommendations(
             add_table_request, 
-            project_context,
+            domain_context,
             recommendation_types=["semantic"]
         )
         
@@ -196,10 +196,10 @@ async def get_relationship_recommendations(request: ComprehensiveRecommendationR
     Generate relationship recommendations for a table structure
     """
     try:
-        # Create project context for the request
-        project_context = ProjectContext(
-            project_id=request.project_id or "default_project",
-            project_name=request.project_name or f"Project for {request.name}",
+        # Create domain context for the request
+        domain_context = DomainContext(
+            domain_id=request.domain_id or "default_domain",
+            domain_name=request.domain_name or f"Domain for {request.name}",
             business_domain=request.business_domain,
             purpose=f"Generate relationship recommendations for {request.name}",
             target_users=["Data Analysts", "Business Users"],
@@ -237,15 +237,15 @@ async def get_relationship_recommendations(request: ComprehensiveRecommendationR
         )
         
         # Create workflow service instance
-        workflow_service = ProjectWorkflowService(
+        workflow_service = DomainWorkflowService(
             user_id="api_user",
-            session_id=f"relationships_{request.project_id or 'default'}"
+            session_id=f"relationships_{request.domain_id or 'default'}"
         )
         
         # Generate relationship recommendations using workflow service
         recommendations = await workflow_service.get_recommendations(
             add_table_request, 
-            project_context,
+            domain_context,
             recommendation_types=["relationships"]
         )
         
@@ -264,10 +264,10 @@ async def get_optimization_recommendations(request: ComprehensiveRecommendationR
     Generate optimization recommendations for a table structure
     """
     try:
-        # Create project context for the request
-        project_context = ProjectContext(
-            project_id=request.project_id or "default_project",
-            project_name=request.project_name or f"Project for {request.name}",
+        # Create domain context for the request
+        domain_context = DomainContext(
+            domain_id=request.domain_id or "default_domain",
+            domain_name=request.domain_name or f"Domain for {request.name}",
             business_domain=request.business_domain,
             purpose=f"Generate optimization recommendations for {request.name}",
             target_users=["Data Analysts", "Developers"],
@@ -305,15 +305,15 @@ async def get_optimization_recommendations(request: ComprehensiveRecommendationR
         )
         
         # Create workflow service instance
-        workflow_service = ProjectWorkflowService(
+        workflow_service = DomainWorkflowService(
             user_id="api_user",
-            session_id=f"optimization_{request.project_id or 'default'}"
+            session_id=f"optimization_{request.domain_id or 'default'}"
         )
         
         # Generate optimization recommendations using workflow service
         recommendations = await workflow_service.get_recommendations(
             add_table_request, 
-            project_context,
+            domain_context,
             recommendation_types=["optimization"]
         )
         

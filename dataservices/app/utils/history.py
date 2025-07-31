@@ -10,54 +10,54 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, Session, validates
 from sqlalchemy.sql import func
 from sqlalchemy.ext.hybrid import hybrid_property
-from app.schemas.dbmodels import Base, TimestampMixin, Project, Table, Column, ProjectVersionHistory
+from app.schemas.dbmodels import Base, TimestampMixin, Domain, Table, Column, DomainVersionHistory
 
 
 # ============================================================================
 # UTILITY CLASSES AND MANAGERS
 # ============================================================================
 
-class ProjectManager:
-    """Utility class for project management operations"""
+class DomainManager:
+    """Utility class for domain management operations"""
     
     def __init__(self, session: Session):
         self.session = session
     
-    def create_project(self, project_id: str, display_name: str, description: str = None, 
-                      created_by: str = 'system') -> Project:
-        """Create a new project"""
-        project = Project(
-            project_id=project_id,
+    def create_domain(self, domain_id: str, display_name: str, description: str = None, 
+                      created_by: str = 'system') -> Domain:
+        """Create a new domain"""
+        domain = Domain(
+            domain_id=domain_id,
             display_name=display_name,
             description=description,
             created_by=created_by,
             last_modified_by=created_by
         )
-        self.session.add(project)
+        self.session.add(domain)
         self.session.commit()
-        return project
+        return domain
     
-    def lock_project_version(self, project_id: str, locked: bool = True, 
+    def lock_domain_version(self, domain_id: str, locked: bool = True, 
                            modified_by: str = 'system') -> bool:
-        """Lock or unlock project version"""
-        project = self.session.query(Project).filter(Project.project_id == project_id).first()
-        if not project:
+        """Lock or unlock domain version"""
+        domain = self.session.query(Domain).filter(Domain.domain_id == domain_id).first()
+        if not domain:
             return False
         
-        project.lock_version(locked)
-        project.last_modified_by = modified_by
+        domain.lock_version(locked)
+        domain.last_modified_by = modified_by
         self.session.commit()
         return True
     
-    def manual_version_increment(self, project_id: str, change_type: str, 
+    def manual_version_increment(self, domain_id: str, change_type: str, 
                                modified_by: str, description: str) -> Optional[str]:
-        """Manually increment project version"""
-        project = self.session.query(Project).filter(Project.project_id == project_id).first()
-        if not project:
+        """Manually increment domain version"""
+        domain = self.session.query(Domain).filter(Domain.domain_id == domain_id).first()
+        if not domain:
             return None
         
-        old_version = project.version_string
-        new_version = project.increment_version(
+        old_version = domain.version_string
+        new_version = domain.increment_version(
             change_type=change_type,
             entity_type='manual',
             entity_id=None,
@@ -65,8 +65,8 @@ class ProjectManager:
         )
         
         # Create version history
-        version_history = ProjectVersionHistory(
-            project_id=project_id,
+        version_history = DomainVersionHistory(
+            domain_id=domain_id,
             old_version=old_version,
             new_version=new_version,
             change_type=change_type,
@@ -79,26 +79,26 @@ class ProjectManager:
         
         return new_version
     
-    def get_project_summary(self, project_id: str) -> Optional[Dict[str, Any]]:
-        """Get comprehensive project summary"""
-        project = self.session.query(Project).filter(Project.project_id == project_id).first()
-        if not project:
+    def get_domain_summary(self, domain_id: str) -> Optional[Dict[str, Any]]:
+        """Get comprehensive domain summary"""
+        domain = self.session.query(Domain).filter(Domain.domain_id == domain_id).first()
+        if not domain:
             return None
         
         return {
-            'project_id': project.project_id,
-            'display_name': project.display_name,
-            'current_version': project.version_string,
-            'version_locked': project.version_locked,
-            'last_modified_by': project.last_modified_by,
-            'last_modified_entity': project.last_modified_entity,
-            'status': project.status,
-            'total_datasets': len(project.datasets),
-            'total_tables': len(project.tables),
-            'total_instructions': len(project.instructions),
-            'total_examples': len(project.examples),
-            'total_knowledge_base': len(project.knowledge_base),
-            'version_changes': len(project.version_history),
-            'created_at': project.created_at,
-            'updated_at': project.updated_at
+            'domain_id': domain.domain_id,
+            'display_name': domain.display_name,
+            'current_version': domain.version_string,
+            'version_locked': domain.version_locked,
+            'last_modified_by': domain.last_modified_by,
+            'last_modified_entity': domain.last_modified_entity,
+            'status': domain.status,
+            'total_datasets': len(domain.datasets),
+            'total_tables': len(domain.tables),
+            'total_instructions': len(domain.instructions),
+            'total_examples': len(domain.examples),
+            'total_knowledge_base': len(domain.knowledge_base),
+            'version_changes': len(domain.version_history),
+            'created_at': domain.created_at,
+            'updated_at': domain.updated_at
         }

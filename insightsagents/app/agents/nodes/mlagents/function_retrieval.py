@@ -8,6 +8,8 @@ from langchain.prompts import PromptTemplate
 from langfuse.decorators import observe
 from pydantic import BaseModel
 
+from app.agents.retrieval.retrieval_helper import RetrievalHelper
+
 logger = logging.getLogger("function-retrieval")
 
 
@@ -21,6 +23,7 @@ class FunctionMatch(BaseModel):
     reasoning: str
     rephrased_question: str = ""
     function_definition: Optional[Dict[str, Any]] = None
+    instructions: Optional[List[Dict[str, Any]]] = None
 
 
 class FunctionRetrievalResult(BaseModel):
@@ -31,6 +34,7 @@ class FunctionRetrievalResult(BaseModel):
     reasoning: str
     suggested_pipes: List[str]
     total_functions_analyzed: int
+    instructions: Optional[List[Dict[str, Any]]] = None
 
 
 # System prompt for function retrieval
@@ -41,6 +45,7 @@ Your goal is to analyze user questions and identify the top 5 most relevant func
 
 ### CRITICAL INSTRUCTIONS ###
 - ANALYZE THE USER QUESTION CAREFULLY: Understand the specific analysis needs, data requirements, and business context
+- CONSIDER RELEVANT INSTRUCTIONS: Pay special attention to any relevant instructions provided, as they contain project-specific guidance and best practices
 - MATCH FUNCTION CAPABILITIES: Consider both function descriptions and usage descriptions to find the best matches
 - PRIORITIZE BY RELEVANCE: Score functions based on how well they address the user's specific needs
 - CONSIDER PIPE CONTEXT: Some functions work better together within the same pipeline
@@ -92,8 +97,10 @@ FUNCTION_RETRIEVAL_USER_PROMPT = """
 ### AVAILABLE FUNCTIONS ###
 {function_library}
 
+{instructions_context}
+
 ### ANALYSIS INSTRUCTION ###
-Based on the user question, dataframe context, and available functions:
+Based on the user question, dataframe context, available functions, and any relevant instructions:
 1. Identify the top 5 most relevant functions for the user's analysis needs
 2. Score each function based on relevance to the user's question
 3. Provide clear reasoning for each function selection
@@ -105,6 +112,7 @@ Consider:
 - Are the function's capabilities well-suited to the user's data context?
 - Would this function work well with the available columns?
 - Is this function part of a pipeline that would be useful for the overall analysis?
+- Do any relevant instructions provide guidance on which functions to prefer or avoid?
 
 Current Time: {current_time}
 """
@@ -116,17 +124,17 @@ class FunctionRetrieval:
     for user questions using a comprehensive function library.
     """
     
-    def __init__(self, llm, function_library_path: Optional[str] = None, function_collection=None):
+    def __init__(self, llm, function_library_path: Optional[str] = None, retrieval_helper: Optional[RetrievalHelper] = None):
         """
         Initialize the Function Retrieval system
         
         Args:
             llm: LangChain LLM instance
             function_library_path: Path to the function library JSON file
-            function_collection: ChromaDB collection for function definitions
+            retrieval_helper: RetrievalHelper instance for accessing function definitions
         """
         self.llm = llm
-        self.function_collection = function_collection
+        self.retrieval_helper = retrieval_helper or RetrievalHelper()
         
         # Default path to the function library
         if function_library_path is None:
@@ -280,7 +288,8 @@ class FunctionRetrieval:
         question: str,
         dataframe_description: str = "",
         dataframe_summary: str = "",
-        available_columns: Optional[List[str]] = None
+        available_columns: Optional[List[str]] = None,
+        project_id: Optional[str] = None
     ) -> FunctionRetrievalResult:
         """
         Main method to retrieve relevant functions for a user question
@@ -290,6 +299,7 @@ class FunctionRetrieval:
             dataframe_description: Description of the dataframe
             dataframe_summary: Summary of the dataframe
             available_columns: List of available columns in the dataframe
+            project_id: Optional project ID for which to retrieve instructions
             
         Returns:
             FunctionRetrievalResult with top functions and rephrased question
@@ -305,11 +315,35 @@ class FunctionRetrieval:
                 for pipe_info in function_library.values()
             )
             
+            # Retrieve instructions first if project_id is provided
+            instructions_context = ""
+            if self.retrieval_helper and project_id:
+                try:
+                    instructions_result = await self.retrieval_helper.get_instructions(
+                        query=question,
+                        project_id=project_id,
+                        similarity_threshold=0.7,
+                        top_k=10
+                    )
+                    
+                    if instructions_result and instructions_result.get("instructions"):
+                        instructions = instructions_result.get("instructions", [])
+                        if instructions:
+                            instructions_context = "\n### RELEVANT INSTRUCTIONS ###\n"
+                            for i, instruction in enumerate(instructions[:5], 1):  # Limit to top 5
+                                instructions_context += f"{i}. Question: {instruction.get('question', 'N/A')}\n"
+                                instructions_context += f"   Instruction: {instruction.get('instruction', 'N/A')}\n\n"
+                            logger.info(f"Retrieved {len(instructions)} instructions for project {project_id}")
+                        else:
+                            logger.warning(f"No instructions found for project {project_id}")
+                except Exception as e:
+                    logger.error(f"Error retrieving instructions: {str(e)}")
+            
             # Create prompt for LLM
             prompt_template = PromptTemplate(
                 input_variables=[
                     "question", "dataframe_description", "dataframe_summary", 
-                    "available_columns", "function_library", "current_time"
+                    "available_columns", "function_library", "instructions_context", "current_time"
                 ],
                 template=FUNCTION_RETRIEVAL_USER_PROMPT
             )
@@ -320,6 +354,7 @@ class FunctionRetrieval:
                 dataframe_summary=dataframe_summary or "No summary available",
                 available_columns=available_columns or [],
                 function_library=formatted_library,
+                instructions_context=instructions_context,
                 current_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             )
             
@@ -333,15 +368,19 @@ class FunctionRetrieval:
             for function_match in result.top_functions:
                 function_definition = None
                 
-                # Try ChromaDB first if available
-                if self.function_collection and function_match.function_name:
-                    function_definition = await self._retrieve_function_definition(function_match.function_name)
-                    if not function_definition:
-                        function_definition = await self._retrieve_function_definition(function_match.rephrased_question)
-                        logger.info(f"Retrieved function definition from JSON library for {function_match.rephrased_question}")
-                    function_definition = function_definition.get("function_definition")
-                    logger.info(f"Retrieved function definition from ChromaDB for {function_match.function_name}")
-                        
+                # Try to get function definition using RetrievalHelper
+                if self.retrieval_helper and function_match.function_name:
+                    # First try with function name
+                    definition_result = await self.retrieval_helper.get_function_definition(function_match.function_name)
+                    if definition_result and definition_result.get("function_definition"):
+                        function_definition = definition_result.get("function_definition")
+                        logger.info(f"Retrieved function definition for {function_match.function_name}")
+                    else:
+                        # Try with rephrased question
+                        definition_result = await self.retrieval_helper.get_function_definition_by_query(function_match.rephrased_question)
+                        if definition_result and definition_result.get("function_definition"):
+                            function_definition = definition_result.get("function_definition")
+                            logger.info(f"Retrieved function definition from rephrased question for {function_match.rephrased_question}")
                 
                 # Update the function match with the definition
                 if function_definition:
@@ -354,7 +393,8 @@ class FunctionRetrieval:
                         relevance_score=function_match.relevance_score,
                         reasoning=function_match.reasoning,
                         rephrased_question=function_match.rephrased_question,
-                        function_definition=function_definition
+                        function_definition=function_definition,
+                        instructions=function_match.instructions
                     )
                     # Replace the original function match
                     result.top_functions[result.top_functions.index(function_match)] = updated_function_match
@@ -371,7 +411,8 @@ class FunctionRetrieval:
                 confidence_score=0.0,
                 reasoning=f"Retrieval error: {str(e)}",
                 suggested_pipes=[],
-                total_functions_analyzed=0
+                total_functions_analyzed=0,
+                instructions=None
             )
     
     def get_function_details(self, function_name: str, pipe_name: str) -> Optional[Dict[str, Any]]:
@@ -439,227 +480,52 @@ class FunctionRetrieval:
                     results.append((pipe_name, func_name, func_info))
         
         return results
-    
-    @observe(capture_input=False)
-    def _retrieve_relevant_functions(self, question: str) -> Dict[str, Any]:
-        """
-        Retrieve relevant function definitions, examples, and insights based on the question
-        
-        Args:
-            question: User's question
-            
-        Returns:
-            Dict containing retrieved function information
-        """
-        results = {
-            "definitions": [],
-            "examples": [],
-            "insights": [],
-            "specific_matches": []
-        }
-        
-        # First, check for specific function keyword matches -- Lets skip this as it doesnot make sense 
-        #specific_matches = self._extract_specific_function_keywords(question)
-        #results["specific_matches"] = specific_matches
-        
-        try:
-            # Use the question to semantically search for relevant functions
-            if self.function_collection:
-                # Search function definitions using the question
-                query_result = self.function_collection.semantic_searches(
-                    query_texts=[question], 
-                    n_results=self.max_functions_to_retrieve
-                )
-                
-                if query_result and query_result.get("documents"):
-                    for i, doc in enumerate(query_result["documents"][0]):
-                        score = query_result["distances"][0][i] if "distances" in query_result else 0.0
-                        
-                        # Parse document
-                        try:
-                            if isinstance(doc, str) and (doc.startswith('{') or doc.startswith('{"')):
-                                doc = json.loads(doc)
-                            results["definitions"].append({
-                                "content": doc,
-                                "score": score,
-                                "specific_match": False
-                            })
-                        except json.JSONDecodeError:
-                            continue
-            print("results",json.dumps(results,indent=2))
-            # Similarly retrieve examples and insights
-            if self.example_collection:
-                query_result = self.example_collection.semantic_searches(
-                    query_texts=[question], 
-                    n_results=5
-                )
-                
-                if query_result and query_result.get("documents"):
-                    for i, doc in enumerate(query_result["documents"][0]):
-                        score = query_result["distances"][0][i] if "distances" in query_result else 0.0
-                        
-                        try:
-                            if isinstance(doc, str) and (doc.startswith('{') or doc.startswith('{"')):
-                                doc = json.loads(doc)
-                            results["examples"].append({
-                                "content": doc,
-                                "score": score
-                            })
-                        except json.JSONDecodeError:
-                            continue
-            
-            if self.insights_collection:
-                query_result = self.insights_collection.semantic_searches(
-                    query_texts=[question], 
-                    n_results=5
-                )
-                
-                if query_result and query_result.get("documents"):
-                    for i, doc in enumerate(query_result["documents"][0]):
-                        score = query_result["distances"][0][i] if "distances" in query_result else 0.0
-                        
-                        try:
-                            if isinstance(doc, str) and (doc.startswith('{') or doc.startswith('{"')):
-                                doc = json.loads(doc)
-                            results["insights"].append({
-                                "content": doc,
-                                "score": score
-                            })
-                        except json.JSONDecodeError:
-                            continue
-                            
-        except Exception as e:
-            logger.error(f"Error retrieving relevant functions: {e}")
-        
-        return results
-    
-    @observe(capture_input=False)
-    async def _retrieve_function_definition(self, rephrased_question: str) -> Optional[Dict[str, Any]]:
-        """
-        Retrieve function definition from ChromaDB using rephrased question
-        
-        Args:
-            rephrased_question: Rephrased question for function definition lookup
-            
-        Returns:
-            Function definition or None if not found
-        """
-        if not self.function_collection:
-            logger.warning("No function collection provided for ChromaDB lookup")
-            return None
-        
-        try:
-            # Query ChromaDB for function definition
-            query_result = self.function_collection.semantic_searches(
-                query_texts=[rephrased_question], 
-                n_results=1
-            )
-            
-            if not query_result or not query_result.get("documents") or len(query_result["documents"][0]) == 0:
-                logger.warning(f"No function definition found for: {rephrased_question}")
-                return None
-            
-            # Parse the document content
-            document = query_result["documents"][0][0]  # First query, first result
-            score = query_result["distances"][0][0] if "distances" in query_result else 0.0
-            
-            # Convert from JSON string if needed
-            if isinstance(document, str) and document.startswith('"') and document.endswith('"'):
-                document = json.loads(document)
-                
-            if isinstance(document, str) and (document.startswith('{') or document.startswith('{"')):
-                document = json.loads(document)
-            
-            return {
-                "function_definition": document,
-                "score": score
-            }
-            
-        except Exception as e:
-            logger.error(f"Error retrieving function definition: {e}")
-            return None
-    
-    @observe(capture_input=False)
-    def _format_retrieved_content(self, retrieved_data: Dict[str, Any]) -> Dict[str, str]:
-        """
-        Format retrieved content for prompt inclusion
-        
-        Args:
-            retrieved_data: Dictionary containing retrieved functions, examples, insights
-            
-        Returns:
-            Formatted strings for prompt
-        """
-        # Sort definitions to prioritize specific matches
-        definitions = retrieved_data.get("definitions", [])
-        #definitions.sort(key=lambda x: (not x.get("specific_match", False), x.get("score", 1.0)))
-        
-        # Format function definitions with priority indication
-        definitions_text = ""
-        if definitions:
-            definitions_text = "Available Functions (ordered by relevance):\n"
-            
-            # Add specific matches first
-            #specific_matches = retrieved_data.get("specific_matches", [])
-            #if specific_matches:
-            #    definitions_text += f"\n🎯 EXACT KEYWORD MATCHES for your question: {', '.join(specific_matches)}\n\n"
-            
-            for i, item in enumerate(definitions[:8]):  # Top 8
-                content = item.get("content", {})
-                if isinstance(content, dict):
-                    func_name = content.get("function_name", f"Function_{i+1}")
-                    description = content.get("description", "No description")
-                    category = content.get("category", "No category")
-                    type_of_operation = content.get("type_of_operation", "No type of operation")
-                    
-                    # Handle parameters more robustly for double-escaped JSON content
-                    params = content.get("parameters", {})
-                    required_params = content.get("required_params", [])
-                    optional_params = content.get("optional_params", [])
-                    
-                    # Format parameters section
-                    params_text = ""
-                    if required_params:
-                        params_text += "Required: " + ", ".join([f"{p.get('name', 'param')}" for p in required_params]) + "\n"
-                    if optional_params:
-                        params_text += "Optional: " + ", ".join([f"{p.get('name', 'param')}" for p in optional_params]) + "\n"
-                    if params and not required_params and not optional_params:
-                        # Fallback to direct parameters dict
-                        params_text = f"Parameters: {params}\n"
-                    
-                    # Mark specific matches
-                    priority_marker = "🎯 " if item.get("specific_match", False) else ""
-                    
-                    definitions_text += f"- {priority_marker}{func_name}: {description} ({category} - {type_of_operation}) - Inputs/Outputs -\n"
-                    if params_text:
-                        definitions_text += f"  {params_text}\n"
-        
-        # Format examples
-        examples_text = ""
-        if retrieved_data.get("examples"):
-            examples_text = "Usage Examples:\n"
-            for i, item in enumerate(retrieved_data["examples"][:3]):  # Top 3
-                content = item.get("content", {})
-                if isinstance(content, dict):
-                    example = content.get("example", content.get("usage", ""))
-                    examples_text += f"Example {i+1}: {example}\n\n"
-        
-        # Format insights
-        insights_text = ""
-        if retrieved_data.get("insights"):
-            insights_text = "Analysis Insights:\n"
-            for i, item in enumerate(retrieved_data["insights"][:3]):  # Top 3
-                content = item.get("content", {})
-                if isinstance(content, dict):
-                    insight = content.get("insight", content.get("tip", ""))
-                    insights_text += f"Insight {i+1}: {insight}\n\n"
-        
-        return {
-            "function_definitions": definitions_text,
-            "function_examples": examples_text,
-            "function_insights": insights_text
-        }
 
+    async def get_function_examples(self, function_name: str) -> Dict[str, Any]:
+        """
+        Get function examples using RetrievalHelper
+        
+        Args:
+            function_name: Name of the function to get examples for
+            
+        Returns:
+            Dictionary containing function examples
+        """
+        if not self.retrieval_helper:
+            return {"error": "RetrievalHelper not available", "examples": []}
+        
+        return await self.retrieval_helper.get_function_examples(function_name)
+
+    async def get_function_insights(self, function_name: str) -> Dict[str, Any]:
+        """
+        Get function insights using RetrievalHelper
+        
+        Args:
+            function_name: Name of the function to get insights for
+            
+        Returns:
+            Dictionary containing function insights
+        """
+        if not self.retrieval_helper:
+            return {"error": "RetrievalHelper not available", "insights": []}
+        
+        return await self.retrieval_helper.get_function_insights(function_name)
+
+    async def get_instructions(self, query: str, project_id: str) -> Dict[str, Any]:
+        """
+        Get instructions using RetrievalHelper
+        
+        Args:
+            query: The query string to search for similar instructions
+            project_id: The project ID to filter results
+            
+        Returns:
+            Dictionary containing instructions
+        """
+        if not self.retrieval_helper:
+            return {"error": "RetrievalHelper not available", "instructions": []}
+        
+        return await self.retrieval_helper.get_instructions(query, project_id)
 
 
 # Example usage
@@ -700,20 +566,23 @@ if __name__ == "__main__":
         '''
         mock_llm.ainvoke = Mock(return_value=mock_response)
         
-        # Initialize function retrieval
-        retrieval = FunctionRetrieval(llm=mock_llm)
+        # Initialize function retrieval with RetrievalHelper
+        retrieval_helper = RetrievalHelper()
+        retrieval = FunctionRetrieval(llm=mock_llm, retrieval_helper=retrieval_helper)
         
         # Test with sample question
         question = "How does the 5-day rolling variance of flux change over time for each group of projects, cost centers, and departments?"
         dataframe_description = "Financial metrics dataset with project performance data"
         dataframe_summary = "Contains 10,000 rows with daily metrics from 2023-2024"
         available_columns = ["flux", "timestamp", "projects", "cost_centers", "departments"]
+        project_id = "test_project"  # Add project_id for instructions retrieval
         
         result = await retrieval.retrieve_relevant_functions(
             question=question,
             dataframe_description=dataframe_description,
             dataframe_summary=dataframe_summary,
-            available_columns=available_columns
+            available_columns=available_columns,
+            project_id=project_id
         )
         
         print(f"Rephrased Question: {result.rephrased_question}")
@@ -721,6 +590,7 @@ if __name__ == "__main__":
         print(f"Reasoning: {result.reasoning}")
         print(f"Suggested Pipes: {result.suggested_pipes}")
         print(f"Total Functions Analyzed: {result.total_functions_analyzed}")
+        print(f"Instructions Retrieved: {len(result.instructions) if result.instructions else 0}")
         
         print("\nTop Functions:")
         for i, func in enumerate(result.top_functions, 1):
@@ -728,6 +598,11 @@ if __name__ == "__main__":
             print(f"   Description: {func.description}")
             print(f"   Reasoning: {func.reasoning}")
             print()
+        
+        # Test instructions retrieval
+        print("\nTesting instructions retrieval...")
+        instructions_result = await retrieval.get_instructions(question, project_id)
+        print(f"Instructions result: {instructions_result}")
         
         return "Test completed successfully!"
     

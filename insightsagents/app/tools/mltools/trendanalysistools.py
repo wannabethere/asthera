@@ -6,47 +6,35 @@ import warnings
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 from scipy import stats
+from .base_pipe import BasePipe
 
 
-class TrendPipe:
+class TrendPipe(BasePipe):
     """
     A pipeline-style trend analysis tool that enables functional composition
     with a meterstick-like interface.
     """
     
-    def __init__(self, data=None):
-        """Initialize with optional data"""
-        self.data = data
+    def _initialize_results(self):
+        """Initialize the results storage for trend analysis"""
         self.time_aggregations = {}
         self.trend_results = {}
         self.trend_decompositions = {}
         self.forecasts = {}
         self.current_analysis = None
     
-    def __or__(self, other):
-        """Enable the | (pipe) operator for function composition"""
-        if callable(other):
-            return other(self)
-        raise ValueError(f"Cannot pipe TrendPipe to {type(other)}")
-    
-    def copy(self):
-        """Create a shallow copy with deep copy of data"""
-        new_pipe = TrendPipe()
-        if self.data is not None:
-            new_pipe.data = self.data.copy()
-        new_pipe.time_aggregations = self.time_aggregations.copy()
-        new_pipe.trend_results = self.trend_results.copy()
-        new_pipe.trend_decompositions = self.trend_decompositions.copy()
-        new_pipe.forecasts = self.forecasts.copy()
-        new_pipe.current_analysis = self.current_analysis
-        return new_pipe
-    
-    @classmethod
-    def from_dataframe(cls, df):
-        """Create a TrendPipe from a dataframe"""
-        pipe = cls()
-        pipe.data = df.copy()
-        return pipe
+    def _copy_results(self, source_pipe):
+        """Copy results from source pipe to this pipe"""
+        if hasattr(source_pipe, 'time_aggregations'):
+            self.time_aggregations = source_pipe.time_aggregations.copy()
+        if hasattr(source_pipe, 'trend_results'):
+            self.trend_results = source_pipe.trend_results.copy()
+        if hasattr(source_pipe, 'trend_decompositions'):
+            self.trend_decompositions = source_pipe.trend_decompositions.copy()
+        if hasattr(source_pipe, 'forecasts'):
+            self.forecasts = source_pipe.forecasts.copy()
+        if hasattr(source_pipe, 'current_analysis'):
+            self.current_analysis = source_pipe.current_analysis
     
     def to_df(self, analysis_name: Optional[str] = None, include_metadata: bool = False, include_original: bool = False):
         """
@@ -509,6 +497,58 @@ class TrendPipe:
                 return forecast_data['data'].copy()
         
         return None
+    
+    def get_summary(self, **kwargs) -> Dict[str, Any]:
+        """
+        Get a summary of the trend analysis results.
+        
+        Parameters:
+        -----------
+        **kwargs : dict
+            Additional arguments (not used in trend analysis pipe)
+            
+        Returns:
+        --------
+        dict
+            Summary of the trend analysis results
+        """
+        if not any([self.time_aggregations, self.trend_results, self.trend_decompositions, self.forecasts]):
+            return {"error": "No trend analysis has been performed"}
+        
+        # Get summary DataFrame
+        summary_df = self.get_trend_summary_df()
+        
+        # Get trend columns
+        trend_cols = self.get_trend_columns()
+        
+        # Count analyses by type
+        analysis_types = {
+            'time_aggregations': len(self.time_aggregations),
+            'trend_results': len(self.trend_results),
+            'trend_decompositions': len(self.trend_decompositions),
+            'forecasts': len(self.forecasts)
+        }
+        
+        return {
+            "total_analyses": sum(analysis_types.values()),
+            "total_trend_columns": len(trend_cols),
+            "available_time_aggregations": list(self.time_aggregations.keys()),
+            "available_trend_results": list(self.trend_results.keys()),
+            "available_trend_decompositions": list(self.trend_decompositions.keys()),
+            "available_forecasts": list(self.forecasts.keys()),
+            "trend_columns": trend_cols,
+            "analysis_types": analysis_types,
+            "current_analysis": self.current_analysis,
+            "summary_dataframe": summary_df.to_dict('records') if not summary_df.empty else [],
+            "time_aggregations_info": {name: {"type": "time_aggregation", "time_period": result.get('time_period', 'unknown')} 
+                                     for name, result in self.time_aggregations.items()},
+            "trend_results_info": {name: {"type": "trend_result"} 
+                                 for name in self.trend_results.keys()},
+            "trend_decompositions_info": {name: {"type": "trend_decomposition", "model": result.get('model', 'unknown')} 
+                                        for name, result in self.trend_decompositions.items()},
+            "forecasts_info": {name: {"type": "forecast", "method": result.get('method', 'unknown')} 
+                             for name, result in self.forecasts.items()}
+        }
 
 
 def aggregate_by_time(

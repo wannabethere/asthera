@@ -6,17 +6,17 @@ from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
 from sklearn.metrics import silhouette_score
 import warnings
 from typing import List, Dict, Union, Optional, Any, Tuple, Callable
+from .base_pipe import BasePipe
 
 
-class SegmentationPipe:
+class SegmentationPipe(BasePipe):
     """
     A pipeline-style segmentation tool that enables functional composition
     with a meterstick-like interface.
     """
     
-    def __init__(self, data=None):
-        """Initialize with optional data"""
-        self.data = data 
+    def _initialize_results(self):
+        """Initialize the results storage for segmentation analysis"""
         self.features = None
         self.feature_columns = None
         self.scaled_features = None
@@ -24,33 +24,20 @@ class SegmentationPipe:
         self.segmentation_results = {}
         self.current_analysis = None
     
-    def __or__(self, other):
-        """Enable the | (pipe) operator for function composition"""
-        if callable(other):
-            return other(self)
-        raise ValueError(f"Cannot pipe SegmentationPipe to {type(other)}")
-    
-    def copy(self):
-        """Create a copy with deep copy of data"""
-        new_pipe = SegmentationPipe()
-        if self.data is not None:
-            new_pipe.data = self.data.copy()
-        if self.features is not None:
-            new_pipe.features = self.features.copy()
-        new_pipe.feature_columns = self.feature_columns
-        if self.scaled_features is not None:
-            new_pipe.scaled_features = self.scaled_features.copy()
-        new_pipe.segments = self.segments.copy()
-        new_pipe.segmentation_results = self.segmentation_results.copy()
-        new_pipe.current_analysis = self.current_analysis
-        return new_pipe
-    
-    @classmethod
-    def from_dataframe(cls, df):
-        """Create a SegmentationPipe from a dataframe"""
-        pipe = cls()
-        pipe.data = df.copy()
-        return pipe
+    def _copy_results(self, source_pipe):
+        """Copy results from source pipe to this pipe"""
+        if hasattr(source_pipe, 'features'):
+            self.features = source_pipe.features.copy() if source_pipe.features is not None else None
+        if hasattr(source_pipe, 'feature_columns'):
+            self.feature_columns = source_pipe.feature_columns
+        if hasattr(source_pipe, 'scaled_features'):
+            self.scaled_features = source_pipe.scaled_features.copy() if source_pipe.scaled_features is not None else None
+        if hasattr(source_pipe, 'segments'):
+            self.segments = source_pipe.segments.copy()
+        if hasattr(source_pipe, 'segmentation_results'):
+            self.segmentation_results = source_pipe.segmentation_results.copy()
+        if hasattr(source_pipe, 'current_analysis'):
+            self.current_analysis = source_pipe.current_analysis
     
     def to_df(self, analysis_name: Optional[str] = None, include_metadata: bool = False, include_original: bool = True):
         """
@@ -359,6 +346,57 @@ class SegmentationPipe:
             }
         
         return None
+    
+    def get_summary(self, **kwargs) -> Dict[str, Any]:
+        """
+        Get a summary of the segmentation analysis results.
+        
+        Parameters:
+        -----------
+        **kwargs : dict
+            Additional arguments (not used in segmentation pipe)
+            
+        Returns:
+        --------
+        dict
+            Summary of the segmentation analysis results
+        """
+        if not self.segmentation_results:
+            return {"error": "No segmentation has been performed"}
+        
+        # Get summary DataFrame
+        summary_df = self.get_segmentation_summary_df()
+        
+        # Get segmentation columns
+        seg_cols = self.get_segmentation_columns()
+        
+        # Count analyses by algorithm type
+        algorithm_types = {}
+        for result_name in self.segmentation_results.keys():
+            if result_name.endswith('_summary'):
+                algorithm_name = result_name.replace('_summary', '')
+                algorithm_types[algorithm_name] = algorithm_types.get(algorithm_name, 0) + 1
+        
+        # Get segment profiles and statistics
+        segment_profiles = self.get_segment_profiles()
+        segment_stats = self.get_segment_statistics()
+        
+        return {
+            "total_analyses": len(self.segmentation_results),
+            "total_segmentation_columns": len(seg_cols),
+            "available_analyses": list(self.segmentation_results.keys()),
+            "segmentation_columns": seg_cols,
+            "algorithm_types": algorithm_types,
+            "current_analysis": self.current_analysis,
+            "has_features": self.features is not None,
+            "feature_columns": self.feature_columns,
+            "has_scaled_features": self.scaled_features is not None,
+            "segment_profiles": segment_profiles,
+            "segment_statistics": segment_stats,
+            "summary_dataframe": summary_df.to_dict('records') if not summary_df.empty else [],
+            "analyses_info": {name: {"type": "segmentation", "algorithm": name.split('_')[0] if '_' in name else name} 
+                            for name in self.segmentation_results.keys()}
+        }
 
 
 def get_features(

@@ -48,41 +48,26 @@ import numpy as np
 import pandas as pd
 from typing import List, Dict, Union, Optional, Any, Tuple, Callable
 import warnings
+from .base_pipe import BasePipe
 
 
-class MovingAggrPipe:
+class MovingAggrPipe(BasePipe):
     """
     A pipeline-style moving aggregation tool that enables functional composition
     with a meterstick-like interface.
     """
     
-    def __init__(self, data=None):
-        """Initialize with optional data"""
-        self.data = data
+    def _initialize_results(self):
+        """Initialize the results storage for moving aggregation"""
         self.moving_metrics = {}
         self.current_metric = None
     
-    def __or__(self, other):
-        """Enable the | (pipe) operator for function composition"""
-        if callable(other):
-            return other(self)
-        raise ValueError(f"Cannot pipe MovingAggrPipe to {type(other)}")
-    
-    def copy(self):
-        """Create a shallow copy with deep copy of data"""
-        new_pipe = MovingAggrPipe()
-        if self.data is not None:
-            new_pipe.data = self.data.copy()
-        new_pipe.moving_metrics = self.moving_metrics.copy()
-        new_pipe.current_metric = self.current_metric
-        return new_pipe
-    
-    @classmethod
-    def from_dataframe(cls, df):
-        """Create a MovingAggrPipe from a dataframe"""
-        pipe = cls()
-        pipe.data = df.copy()
-        return pipe
+    def _copy_results(self, source_pipe):
+        """Copy results from source pipe to this pipe"""
+        if hasattr(source_pipe, 'moving_metrics'):
+            self.moving_metrics = source_pipe.moving_metrics.copy()
+        if hasattr(source_pipe, 'current_metric'):
+            self.current_metric = source_pipe.current_metric
     
     def to_df(self, include_metadata: bool = False, include_original: bool = True):
         """
@@ -301,6 +286,47 @@ class MovingAggrPipe:
         """
         return {name: info for name, info in self.moving_metrics.items() 
                 if info.get('type') == metric_type}
+    
+    def get_summary(self, **kwargs) -> Dict[str, Any]:
+        """
+        Get a summary of the moving aggregation results.
+        
+        Parameters:
+        -----------
+        **kwargs : dict
+            Additional arguments (not used in moving aggregation pipe)
+            
+        Returns:
+        --------
+        dict
+            Summary of the moving aggregation results
+        """
+        if not self.moving_metrics:
+            return {"error": "No moving aggregation has been performed"}
+        
+        # Get summary DataFrame
+        summary_df = self.get_moving_summary_df()
+        
+        # Get moving columns
+        moving_cols = self.get_moving_columns()
+        
+        # Count metrics by type
+        metric_types = {}
+        for metric_info in self.moving_metrics.values():
+            metric_type = metric_info.get('type', 'unknown')
+            metric_types[metric_type] = metric_types.get(metric_type, 0) + 1
+        
+        return {
+            "total_metrics": len(self.moving_metrics),
+            "total_moving_columns": len(moving_cols),
+            "available_metrics": list(self.moving_metrics.keys()),
+            "moving_columns": moving_cols,
+            "metric_types": metric_types,
+            "current_metric": self.current_metric,
+            "summary_dataframe": summary_df.to_dict('records') if not summary_df.empty else [],
+            "metrics_info": {name: {"type": info.get('type'), "columns": info.get('columns', [])} 
+                           for name, info in self.moving_metrics.items()}
+        }
 
 
 def moving_average(
