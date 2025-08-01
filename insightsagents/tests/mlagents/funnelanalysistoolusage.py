@@ -271,7 +271,7 @@ def main():
     
     # Example 1: Intent classification only
     print("\n1. Intent classification only:")
-    """
+    
     result1 = analyze_question_with_intent_classification(
         question="How does the 5-day rolling variance of flux change over time for each group of projects, cost centers, and departments?",
         dataframe=po_df,
@@ -281,7 +281,7 @@ def main():
         context="Analyze the flux values over time for each group of projects, cost centers, and departments for making better decisions of investment",
         dataframe_name="Purchase Orders Data"
     )
-    """
+    
     
     
     # Example 2: Intent classification with code generation
@@ -296,7 +296,7 @@ def main():
         context="Find anomalies in daily spending patterns",
         dataframe_name="Purchase Orders Data"
     )
-    """
+    
     # Example 3: Another question with code generation
     print("\n3. Another question with code generation:")
     result3 = analyze_question_with_intent_classification(
@@ -309,7 +309,20 @@ def main():
         context="Calculate mean daily transactional values",
         dataframe_name="Purchase Orders Data"
     )
-    """
+
+    # Example 3: Another question with code generation
+    print("\n4. Another question with code generation:")
+    result4= analyze_question_with_intent_classification(
+        question="What are the daily trends of transactional values, forecasted values, and forecasted PO with line item for purchase orders by region and project",
+        dataframe=po_df,
+        dataframe_description="Financial flux data with project, cost center, and department information",
+        dataframe_summary="Dataset contains flux values over time with grouping dimensions",
+        columns_description=columns_description,
+        enable_code_generation=True,
+        context="Calculate mean daily transactional values",
+        dataframe_name="Purchase Orders Data"
+    )
+   
     import json
     
     def convert_analysis_intent_result(obj):
@@ -328,25 +341,31 @@ def main():
             return obj
     
     print("="*80)
-    """
+    
     print(f"RESULT for How does the 5-day rolling variance of flux change over time for each group of projects, cost centers, and departments?")
     print("="*80)
     result1_serializable = convert_analysis_intent_result(result1)
     print("result1",json.dumps(result1_serializable,indent=4))
     print("="*80)
-    """
+    
     print(f"RESULT for Find anomalies in daily spending patterns in daily transactional values that deviate from normal business patterns by region and project")
     print("="*80)
     result2_serializable = convert_analysis_intent_result(result2)
     print("result2",json.dumps(result2_serializable,indent=4))
     print("="*80)
-    """
+    
     print(f"RESULT for What are the mean, average daily transactional values for purchase orders by region and project")
     print("="*80)
     result3_serializable = convert_analysis_intent_result(result3)
     print("result3",json.dumps(result3_serializable,indent=4))
     print("\n" + "="*80)
-    """
+    
+    print(f"RESULT for What are the daily trends of transactional values, forecasted values, and forecasted PO with line item for purchase orders by region and project")
+    print("="*80)
+    result4_serializable = convert_analysis_intent_result(result4)
+    print("result4",json.dumps(result4_serializable,indent=4))
+    print("\n" + "="*80)
+    
     print("ANALYSIS COMPLETE")
     print("="*80)
 

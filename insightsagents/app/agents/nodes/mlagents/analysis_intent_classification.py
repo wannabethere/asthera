@@ -76,12 +76,12 @@ Fifth, create a detailed step-by-step reasoning plan for the analysis.
 - Rephrase the question to be more specific and actionable
 - Classify intent based on the MOST SPECIFIC analysis type that matches the question
 - Provide clear reasoning for your classification (within 30 words)
-- Suggest 2-3 most relevant functions from the retrieved options
+- Suggest most relevant functions from the retrieved options
 - Identify required data columns based on function specifications
 - Assess feasibility: can_be_answered (true/false) and feasibility_score (0.0-1.0)
 - If columns are missing, suggest alternatives from available data
 - If intent is unclear, provide helpful clarification questions
-- CREATE DETAILED REASONING PLAN: Provide a step-by-step plan that considers data preparation, analysis approach, and expected outcomes
+- CREATE DETAILED REASONING PLAN: Provide a step-by-step plan that considers data preparation, analysis approach, and expected outcomes. Please consider the best of order of the operations for the given analysis question.
 - For the reasoning plan, assume the data is clean and ready to be used for analysis. 
 - Data preparation steps included should only be used for the purposes of transforming data to be used for analysis.
 
@@ -1508,6 +1508,7 @@ Perform the following three tasks in order:
    - unsupported_analysis: Requested analysis is not supported by available functions
 
 3. **CREATE REASONING PLAN**: Develop a step-by-step reasoning plan that outlines the logical approach to answer the question. Focus on the analysis methodology and data processing steps without specifying exact function names.
+4. **Order the steps in the reasoning plan**: Please consider the best order of the steps for the given analysis question.
 
 ### OUTPUT FORMAT ###
 Provide your response as a JSON object:
@@ -1668,6 +1669,437 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
                 "reasoning_plan": []
             }
 
+    def _create_enhanced_query_for_function_selection(
+        self,
+        question: str,
+        rephrased_question: str,
+        intent_type: str,
+        reasoning_plan: List[Dict[str, Any]],
+        confidence_score: float
+    ) -> str:
+        """
+        Create an enhanced query for function selection that incorporates Step 1 reasoning.
+        
+        Args:
+            question: Original user question
+            rephrased_question: Rephrased question from Step 1
+            intent_type: Intent classification from Step 1
+            reasoning_plan: Step-by-step reasoning plan from Step 1
+            confidence_score: Confidence score from Step 1
+            
+        Returns:
+            Enhanced query string that incorporates reasoning for better function selection
+        """
+        # Start with the rephrased question as it's more specific
+        enhanced_query = f"Question: {rephrased_question}\n"
+        
+        # Add intent type context
+        enhanced_query += f"Analysis Type: {intent_type}\n"
+        
+        # Add confidence context
+        if confidence_score >= 0.8:
+            enhanced_query += "High confidence analysis - looking for precise, specialized functions.\n"
+        elif confidence_score >= 0.6:
+            enhanced_query += "Medium confidence analysis - looking for flexible, adaptable functions.\n"
+        else:
+            enhanced_query += "Low confidence analysis - looking for general-purpose, exploratory functions.\n"
+        
+        # Incorporate reasoning plan steps
+        if reasoning_plan:
+            enhanced_query += "\nRequired Analysis Steps:\n"
+            for step in reasoning_plan:
+                step_num = step.get("step_number", "?")
+                step_title = step.get("step_title", "Unknown Step")
+                step_desc = step.get("step_description", "")
+                data_reqs = step.get("data_requirements", [])
+                expected_outcome = step.get("expected_outcome", "")
+                
+                enhanced_query += f"Step {step_num}: {step_title}\n"
+                if step_desc:
+                    enhanced_query += f"  Description: {step_desc}\n"
+                if data_reqs:
+                    enhanced_query += f"  Data Requirements: {', '.join(data_reqs)}\n"
+                if expected_outcome:
+                    enhanced_query += f"  Expected Outcome: {expected_outcome}\n"
+                enhanced_query += "\n"
+        
+        # Add specific function requirements based on intent type
+        intent_specific_requirements = {
+            "time_series_analysis": "Need functions for temporal data processing, rolling windows, time-based aggregations",
+            "trend_analysis": "Need functions for growth rate calculations, trend detection, forecasting",
+            "segmentation_analysis": "Need functions for clustering, grouping, segment identification",
+            "cohort_analysis": "Need functions for cohort formation, retention calculations, time-based grouping",
+            "funnel_analysis": "Need functions for conversion tracking, path analysis, funnel visualization",
+            "risk_analysis": "Need functions for statistical risk measures, volatility analysis, distribution fitting",
+            "anomaly_detection": "Need functions for outlier detection, statistical anomaly identification",
+            "metrics_calculation": "Need functions for statistical aggregations, KPI calculations, summary statistics",
+            "operations_analysis": "Need functions for statistical testing, experimental analysis, A/B testing"
+        }
+        
+        if intent_type in intent_specific_requirements:
+            enhanced_query += f"Specific Requirements: {intent_specific_requirements[intent_type]}\n"
+        
+        logger.info(f"Created enhanced query incorporating Step 1 reasoning:")
+        logger.info(f"  - Original question: {question}")
+        logger.info(f"  - Enhanced query length: {len(enhanced_query)} characters")
+        logger.info(f"  - Incorporated {len(reasoning_plan)} reasoning steps")
+        
+        return enhanced_query
+
+    def _enhance_function_selection_with_reasoning(
+        self,
+        function_details: List[Dict[str, Any]],
+        reasoning_plan: List[Dict[str, Any]],
+        intent_type: str,
+        confidence_score: float
+    ) -> List[Dict[str, Any]]:
+        """
+        Enhance function selection by incorporating reasoning plan insights.
+        
+        Args:
+            function_details: List of function details from FunctionRetrieval
+            reasoning_plan: Step-by-step reasoning plan from Step 1
+            intent_type: Intent classification from Step 1
+            confidence_score: Confidence score from Step 1
+            
+        Returns:
+            Enhanced list of function details with reasoning-based adjustments
+        """
+        if not reasoning_plan:
+            logger.info("No reasoning plan available, returning original function selection")
+            return function_details
+        
+        # Create a mapping of reasoning step requirements to function categories
+        step_requirements = {}
+        for step in reasoning_plan:
+            step_title = step.get("step_title", "").lower()
+            step_desc = step.get("step_description", "").lower()
+            data_reqs = step.get("data_requirements", [])
+            expected_outcome = step.get("expected_outcome", "").lower()
+            
+            # Identify what type of functions this step needs
+            step_needs = []
+            
+            # Data preparation steps
+            if any(keyword in step_title or keyword in step_desc for keyword in 
+                   ["data preparation", "data cleaning", "data preprocessing", "data validation"]):
+                step_needs.extend(["data_cleaning", "data_validation", "data_transformation"])
+            
+            # Aggregation steps
+            if any(keyword in step_title or keyword in step_desc for keyword in 
+                   ["aggregate", "summarize", "group", "calculate metrics"]):
+                step_needs.extend(["aggregation", "grouping", "metrics_calculation"])
+            
+            # Statistical analysis steps
+            if any(keyword in step_title or keyword in step_desc for keyword in 
+                   ["statistical", "correlation", "regression", "hypothesis"]):
+                step_needs.extend(["statistical_analysis", "correlation", "regression"])
+            
+            # Time series steps
+            if any(keyword in step_title or keyword in step_desc for keyword in 
+                   ["time series", "temporal", "rolling", "moving average"]):
+                step_needs.extend(["time_series", "temporal_analysis"])
+            
+            # Clustering/segmentation steps
+            if any(keyword in step_title or keyword in step_desc for keyword in 
+                   ["cluster", "segment", "group", "classification"]):
+                step_needs.extend(["clustering", "segmentation", "classification"])
+            
+            # Visualization steps
+            if any(keyword in step_title or keyword in step_desc for keyword in 
+                   ["visualize", "plot", "chart", "graph"]):
+                step_needs.extend(["visualization", "plotting"])
+            
+            step_requirements[step.get("step_number", len(step_requirements) + 1)] = step_needs
+        
+        # Score functions based on reasoning plan alignment
+        enhanced_functions = []
+        for func in function_details:
+            func_name = func.get("function_name", "").lower()
+            func_desc = func.get("description", "").lower()
+            func_category = func.get("category", "").lower()
+            original_score = func.get("relevance_score", 0.0)
+            
+            # Calculate reasoning alignment score
+            reasoning_score = 0.0
+            reasoning_matches = []
+            
+            for step_num, step_needs in step_requirements.items():
+                for need in step_needs:
+                    # Check if function matches this step's needs
+                    if (need in func_name or need in func_desc or need in func_category or
+                        any(keyword in func_name or keyword in func_desc for keyword in need.split("_"))):
+                        reasoning_score += 0.2  # Boost for each matching step
+                        reasoning_matches.append(f"Step {step_num}: {need}")
+            
+            # Apply confidence-based adjustments
+            if confidence_score >= 0.8:
+                # High confidence: prioritize specialized functions
+                if reasoning_score > 0:
+                    reasoning_score *= 1.5
+            elif confidence_score < 0.6:
+                # Low confidence: prioritize general-purpose functions
+                if reasoning_score == 0:
+                    reasoning_score += 0.1  # Small boost for general functions
+            
+            # Combine original score with reasoning score
+            combined_score = original_score + reasoning_score
+            
+            # Create enhanced function detail
+            enhanced_func = func.copy()
+            enhanced_func["reasoning_alignment_score"] = reasoning_score
+            enhanced_func["combined_score"] = combined_score
+            enhanced_func["reasoning_matches"] = reasoning_matches
+            enhanced_func["step_applicability"] = [match.split(": ")[0] for match in reasoning_matches]
+            
+            enhanced_functions.append(enhanced_func)
+        
+        # Sort by combined score (highest first)
+        enhanced_functions.sort(key=lambda x: x.get("combined_score", 0.0), reverse=True)
+        
+        logger.info(f"Enhanced function selection with reasoning:")
+        logger.info(f"  - Original functions: {len(function_details)}")
+        logger.info(f"  - Enhanced functions: {len(enhanced_functions)}")
+        logger.info(f"  - Reasoning steps considered: {len(step_requirements)}")
+        
+        # Log top functions with reasoning alignment
+        for i, func in enumerate(enhanced_functions[:3]):
+            logger.info(f"  Top {i+1}: {func.get('function_name')} "
+                       f"(original: {func.get('relevance_score', 0.0):.2f}, "
+                       f"reasoning: {func.get('reasoning_alignment_score', 0.0):.2f}, "
+                       f"combined: {func.get('combined_score', 0.0):.2f})")
+            if func.get("reasoning_matches"):
+                logger.info(f"    Matches: {', '.join(func.get('reasoning_matches', []))}")
+        
+        return enhanced_functions
+
+    def _assess_analysis_complexity(
+        self,
+        functions: List[Dict[str, Any]],
+        reasoning_plan: List[Dict[str, Any]]
+    ) -> str:
+        """Assess the complexity of the analysis based on selected functions and reasoning plan."""
+        if not functions:
+            return "unknown"
+        
+        # Count different types of operations
+        complexity_factors = {
+            "data_prep": 0,
+            "statistical": 0,
+            "machine_learning": 0,
+            "visualization": 0,
+            "time_series": 0
+        }
+        
+        for func in functions:
+            func_name = func.get("function_name", "").lower()
+            func_category = func.get("category", "").lower()
+            
+            if any(keyword in func_name for keyword in ["clean", "preprocess", "validate", "transform"]):
+                complexity_factors["data_prep"] += 1
+            if any(keyword in func_name for keyword in ["statistical", "correlation", "regression", "test"]):
+                complexity_factors["statistical"] += 1
+            if any(keyword in func_name for keyword in ["cluster", "kmeans", "dbscan", "ml"]):
+                complexity_factors["machine_learning"] += 1
+            if any(keyword in func_name for keyword in ["plot", "visualize", "chart", "graph"]):
+                complexity_factors["visualization"] += 1
+            if any(keyword in func_name for keyword in ["time", "temporal", "rolling", "moving"]):
+                complexity_factors["time_series"] += 1
+        
+        # Assess complexity based on factors
+        total_factors = sum(complexity_factors.values())
+        reasoning_steps = len(reasoning_plan)
+        
+        if total_factors >= 8 or reasoning_steps >= 6:
+            return "high"
+        elif total_factors >= 4 or reasoning_steps >= 3:
+            return "medium"
+        else:
+            return "low"
+
+    def _estimate_execution_time(
+        self,
+        functions: List[Dict[str, Any]],
+        reasoning_plan: List[Dict[str, Any]]
+    ) -> str:
+        """Estimate execution time based on selected functions and reasoning plan."""
+        if not functions:
+            return "unknown"
+        
+        # Base time estimates for different function types
+        time_estimates = {
+            "data_prep": 30,  # seconds
+            "statistical": 60,
+            "machine_learning": 120,
+            "visualization": 45,
+            "time_series": 90
+        }
+        
+        total_estimated_time = 0
+        
+        for func in functions:
+            func_name = func.get("function_name", "").lower()
+            
+            if any(keyword in func_name for keyword in ["clean", "preprocess", "validate"]):
+                total_estimated_time += time_estimates["data_prep"]
+            elif any(keyword in func_name for keyword in ["statistical", "correlation", "regression"]):
+                total_estimated_time += time_estimates["statistical"]
+            elif any(keyword in func_name for keyword in ["cluster", "kmeans", "dbscan"]):
+                total_estimated_time += time_estimates["machine_learning"]
+            elif any(keyword in func_name for keyword in ["plot", "visualize", "chart"]):
+                total_estimated_time += time_estimates["visualization"]
+            elif any(keyword in func_name for keyword in ["time", "temporal", "rolling"]):
+                total_estimated_time += time_estimates["time_series"]
+            else:
+                total_estimated_time += 45  # Default estimate
+        
+        # Add time for reasoning plan steps
+        total_estimated_time += len(reasoning_plan) * 30
+        
+        if total_estimated_time < 120:
+            return f"{total_estimated_time}s"
+        elif total_estimated_time < 300:
+            return f"{total_estimated_time//60}m {total_estimated_time%60}s"
+        else:
+            return f"{total_estimated_time//60}m"
+
+    def _identify_potential_issues(
+        self,
+        functions: List[Dict[str, Any]],
+        reasoning_plan: List[Dict[str, Any]]
+    ) -> List[str]:
+        """Identify potential issues with the selected functions and reasoning plan."""
+        issues = []
+        
+        if not functions:
+            issues.append("No functions selected")
+            return issues
+        
+        # Check for missing data preparation
+        has_data_prep = any("clean" in f.get("function_name", "").lower() or 
+                           "preprocess" in f.get("function_name", "").lower() 
+                           for f in functions)
+        
+        if not has_data_prep and len(reasoning_plan) > 2:
+            issues.append("No data preparation functions selected for multi-step analysis")
+        
+        # Check for function dependencies
+        ml_functions = [f for f in functions if any(keyword in f.get("function_name", "").lower() 
+                                                   for keyword in ["cluster", "kmeans", "dbscan"])]
+        if ml_functions and not any("scale" in f.get("function_name", "").lower() or 
+                                   "normalize" in f.get("function_name", "").lower() 
+                                   for f in functions):
+            issues.append("Machine learning functions selected without data scaling/normalization")
+        
+        # Check reasoning plan coverage
+        covered_steps = len([f for f in functions if f.get("reasoning_matches")])
+        if covered_steps < len(reasoning_plan) * 0.5:
+            issues.append(f"Low reasoning plan coverage: {covered_steps}/{len(reasoning_plan)} steps covered")
+        
+        return issues
+
+    def _generate_recommendations(
+        self,
+        functions: List[Dict[str, Any]],
+        reasoning_plan: List[Dict[str, Any]],
+        intent_type: str
+    ) -> List[str]:
+        """Generate recommendations based on selected functions and reasoning plan."""
+        recommendations = []
+        
+        if not functions:
+            recommendations.append("Consider adding basic data exploration functions")
+            return recommendations
+        
+        # Check for visualization
+        has_visualization = any("plot" in f.get("function_name", "").lower() or 
+                               "visualize" in f.get("function_name", "").lower() 
+                               for f in functions)
+        
+        if not has_visualization:
+            recommendations.append("Consider adding visualization functions for better insights")
+        
+        # Check for statistical validation
+        has_statistical = any("statistical" in f.get("function_name", "").lower() or 
+                             "test" in f.get("function_name", "").lower() 
+                             for f in functions)
+        
+        if not has_statistical and intent_type in ["trend_analysis", "segmentation_analysis"]:
+            recommendations.append("Consider adding statistical validation functions")
+        
+        # Check reasoning plan alignment
+        alignment_score = sum(f.get("reasoning_alignment_score", 0.0) for f in functions) / len(functions)
+        if alignment_score < 0.3:
+            recommendations.append("Consider reviewing function selection for better reasoning plan alignment")
+        
+        return recommendations
+
+    def _select_fallback_functions_with_reasoning(
+        self,
+        intent_type: str,
+        reasoning_plan: List[Dict[str, Any]],
+        confidence_score: float
+    ) -> List[str]:
+        """Select fallback functions using reasoning plan when FunctionRetrieval fails."""
+        fallback_functions = []
+        
+        # Base functions by intent type
+        intent_functions = {
+            "metrics_calculation": ["Mean", "Sum", "Count", "GroupBy", "PivotTable"],
+            "time_series_analysis": ["moving_average", "variance_analysis", "aggregate_by_time", "rolling_statistics"],
+            "trend_analysis": ["calculate_growth_rates", "calculate_moving_average", "forecast_metric", "trend_detection"],
+            "segmentation_analysis": ["run_kmeans", "run_dbscan", "run_rule_based", "hierarchical_clustering"],
+            "cohort_analysis": ["calculate_retention", "form_time_cohorts", "calculate_conversion", "cohort_analysis"],
+            "funnel_analysis": ["analyze_funnel", "analyze_user_paths", "compare_segments", "funnel_visualization"],
+            "risk_analysis": ["calculate_var", "monte_carlo_simulation", "fit_distribution", "risk_metrics"],
+            "anomaly_detection": ["detect_statistical_outliers", "detect_contextual_anomalies", "isolation_forest"],
+            "operations_analysis": ["PercentChange", "BootstrapCI", "PowerAnalysis", "statistical_testing"]
+        }
+        
+        # Start with intent-based functions
+        if intent_type in intent_functions:
+            fallback_functions.extend(intent_functions[intent_type])
+        else:
+            fallback_functions.extend(["Mean", "Sum", "Count", "GroupBy", "PivotTable"])
+        
+        # Enhance with reasoning plan insights
+        if reasoning_plan:
+            for step in reasoning_plan:
+                step_title = step.get("step_title", "").lower()
+                step_desc = step.get("step_description", "").lower()
+                
+                # Add functions based on step requirements
+                if any(keyword in step_title or keyword in step_desc for keyword in 
+                       ["data preparation", "data cleaning", "data preprocessing"]):
+                    fallback_functions.extend(["data_cleaning", "data_validation", "data_transformation"])
+                
+                if any(keyword in step_title or keyword in step_desc for keyword in 
+                       ["visualize", "plot", "chart", "graph"]):
+                    fallback_functions.extend(["create_visualization", "plot_data", "chart_generation"])
+                
+                if any(keyword in step_title or keyword in step_desc for keyword in 
+                       ["statistical", "correlation", "regression"]):
+                    fallback_functions.extend(["correlation_analysis", "regression_analysis", "statistical_testing"])
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_functions = []
+        for func in fallback_functions:
+            if func not in seen:
+                seen.add(func)
+                unique_functions.append(func)
+        
+        # Adjust based on confidence score
+        if confidence_score < 0.6:
+            # Low confidence: add more general-purpose functions
+            general_functions = ["data_exploration", "summary_statistics", "basic_visualization"]
+            for func in general_functions:
+                if func not in seen:
+                    unique_functions.append(func)
+        
+        logger.info(f"Selected {len(unique_functions)} fallback functions using reasoning plan")
+        return unique_functions
+
     async def _step2_function_selection_and_planning(
         self,
         step1_output: Dict[str, Any],
@@ -1703,91 +2135,113 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
             logger.info(f"Step 1 output - Intent: {intent_type}, Confidence: {confidence_score}")
             logger.info(f"Step 1 output - Reasoning plan steps: {len(reasoning_plan)}")
             
-            # Use FunctionRetrieval to get relevant functions
+            # Get functions for each step in the reasoning plan
             try:
-                function_retrieval_result = await self.function_retrieval.retrieve_relevant_functions(
-                    question=question,
-                    dataframe_description=dataframe_description,
-                    dataframe_summary=dataframe_summary,
-                    available_columns=available_columns,
-                    project_id=project_id
-                )
-                
-                logger.info(f"FunctionRetrieval completed successfully:")
-                logger.info(f"  - Retrieved {len(function_retrieval_result.top_functions)} functions")
-                logger.info(f"  - Confidence score: {function_retrieval_result.confidence_score}")
-                logger.info(f"  - Suggested pipes: {function_retrieval_result.suggested_pipes}")
-                
-                # Convert FunctionRetrievalResult to the expected format
-                function_names = []
-                function_details = []
+                all_functions = []
+                function_names_set = set()
                 specific_matches = []
                 
-                for func_match in function_retrieval_result.top_functions:
-                    function_names.append(func_match.function_name)
+                logger.info(f"Processing {len(reasoning_plan)} reasoning plan steps for function retrieval")
+                
+                for step in reasoning_plan:
+                    step_title = step.get("step_title", "")
+                    step_desc = step.get("step_description", "")
+                    step_num = step.get("step_number", 0)
+                    function_name = step.get("function_name", "")
                     
-                    # Create function detail with complete specification
-                    function_detail = {
-                        "function_name": func_match.function_name,
-                        "pipe_name": func_match.pipe_name,
-                        "description": func_match.description,
-                        "usage_description": func_match.usage_description,
-                        "relevance_score": func_match.relevance_score,
-                        "reasoning": func_match.reasoning,
-                        "priority": 1,  # Default priority, could be enhanced later
-                        "step_applicability": [],  # Could be enhanced based on reasoning plan
-                        "data_requirements": [],  # Could be extracted from function definition
-                        "expected_output": ""  # Could be enhanced based on function definition
-                    }
+                    # Create query for this step
+                    step_query = f"Step {step_num}: {step_title} - {step_desc}"
                     
-                    # Add complete function definition if available
-                    if func_match.function_definition:
-                        # Extract required and optional parameters from function definition
-                        function_def = func_match.function_definition
-                        
-                        # Add required parameters
-                        if "required_params" in function_def:
-                            function_detail["required_params"] = function_def["required_params"]
-                        else:
-                            function_detail["required_params"] = []
-                        
-                        # Add optional parameters
-                        if "optional_params" in function_def:
-                            function_detail["optional_params"] = function_def["optional_params"]
-                        else:
-                            function_detail["optional_params"] = []
-                        
-                        # Add outputs
-                        if "outputs" in function_def:
-                            function_detail["outputs"] = function_def["outputs"]
-                        else:
-                            function_detail["outputs"] = {}
-                        
-                        # Add category
-                        if "category" in function_def:
-                            function_detail["category"] = function_def["category"]
-                        
-                        # Add any other fields from the function definition
-                        for key, value in function_def.items():
-                            if key not in ["required_params", "optional_params", "outputs", "category"]:
-                                function_detail[key] = value
-                        
-                        logger.info(f"Added complete function definition for {func_match.function_name}")
-                    else:
-                        logger.warning(f"No function definition found for {func_match.function_name}")
+                    logger.info(f"Retrieving functions for Step {step_num}: {step_title}")
                     
-                    function_details.append(function_detail)
-                    
-                    # Mark as specific match if high relevance
-                    if func_match.relevance_score >= 0.9:
-                        specific_matches.append(func_match.function_name)
+                    try:
+                        # Get functions for this specific step
+                        step_function_result = await self.function_retrieval.retrieve_relevant_functions(
+                            question=step_query,
+                            dataframe_description=dataframe_description,
+                            dataframe_summary=dataframe_summary,
+                            available_columns=available_columns,
+                            project_id=project_id
+                        )
+                        
+                        logger.info(f"Step {step_num} retrieved {len(step_function_result.top_functions)} functions")
+                        
+                        # Add functions from this step (avoiding duplicates)
+                        for func_match in step_function_result.top_functions:
+                            if func_match.function_name not in function_names_set:
+                                function_names_set.add(func_match.function_name)
+                                
+                                # Create function detail
+                                function_detail = {
+                                    "function_name": func_match.function_name,
+                                    "pipe_name": func_match.pipe_name,
+                                    "description": func_match.description,
+                                    "usage_description": func_match.usage_description,
+                                    "relevance_score": func_match.relevance_score,
+                                    "reasoning": func_match.reasoning,
+                                    "priority": 1,
+                                    "step_applicability": [f"Step {step_num}"],
+                                    "data_requirements": step.get("data_requirements", []),
+                                    "expected_output": step.get("expected_output", ""),
+                                    "source_step": step_num,
+                                    "source_step_title": step_title
+                                }
+                                
+                                # Add complete function definition if available
+                                if func_match.function_definition:
+                                    function_def = func_match.function_definition
+                                    
+                                    # Add required parameters
+                                    if "required_params" in function_def:
+                                        function_detail["required_params"] = function_def["required_params"]
+                                    else:
+                                        function_detail["required_params"] = []
+                                    
+                                    # Add optional parameters
+                                    if "optional_params" in function_def:
+                                        function_detail["optional_params"] = function_def["optional_params"]
+                                    else:
+                                        function_detail["optional_params"] = []
+                                    
+                                    # Add outputs
+                                    if "outputs" in function_def:
+                                        function_detail["outputs"] = function_def["outputs"]
+                                    else:
+                                        function_detail["outputs"] = {}
+                                    
+                                    # Add category
+                                    if "category" in function_def:
+                                        function_detail["category"] = function_def["category"]
+                                    
+                                    # Add any other fields from the function definition
+                                    for key, value in function_def.items():
+                                        if key not in ["required_params", "optional_params", "outputs", "category"]:
+                                            function_detail[key] = value
+                                
+                                all_functions.append(function_detail)
+                                
+                                # Mark as specific match if high relevance
+                                if func_match.relevance_score >= 0.9:
+                                    specific_matches.append(func_match.function_name)
+                                
+                                logger.info(f"Added function {func_match.function_name} for Step {step_num}: {step_title}")
+                            
+                    except Exception as e:
+                        logger.warning(f"Failed to get functions for Step {step_num}: {e}")
+                        continue
                 
                 # Sort by relevance score (highest first)
-                function_details.sort(key=lambda x: x.get("relevance_score", 0.0), reverse=True)
+                all_functions.sort(key=lambda x: x.get("relevance_score", 0.0), reverse=True)
                 
-                # Take top 5 functions
-                top_functions = function_details[:5]
+                # Take top functions (up to 8)
+                max_functions = min(8, len(all_functions))
+                top_functions = all_functions[:max_functions]
                 top_function_names = [func["function_name"] for func in top_functions]
+                
+                logger.info(f"FunctionRetrieval completed successfully:")
+                logger.info(f"  - Retrieved {len(all_functions)} total functions from {len(reasoning_plan)} steps")
+                logger.info(f"  - Selected {len(top_function_names)} top functions")
+                logger.info(f"  - Specific matches: {specific_matches}")
                 
                 logger.info(f"Step 2 completed successfully:")
                 logger.info(f"  - Selected {len(top_function_names)} functions")
@@ -1798,39 +2252,27 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
                     "function_names": top_function_names,
                     "function_details": top_functions,
                     "specific_matches": specific_matches,
-                    "total_selected": len(function_retrieval_result.top_functions),
-                    "analysis_complexity": "medium",  # Could be enhanced based on function types
-                    "estimated_execution_time": "unknown",  # Could be enhanced based on function complexity
-                    "potential_issues": [],  # Could be enhanced based on function requirements
-                    "recommendations": [],  # Could be enhanced based on function capabilities
-                    "function_selection_reasoning": function_retrieval_result.reasoning
+                    "total_selected": len(all_functions),
+                    "analysis_complexity": self._assess_analysis_complexity(top_functions, reasoning_plan),
+                    "estimated_execution_time": self._estimate_execution_time(top_functions, reasoning_plan),
+                    "potential_issues": self._identify_potential_issues(top_functions, reasoning_plan),
+                    "recommendations": self._generate_recommendations(top_functions, reasoning_plan, intent_type),
+                    "function_selection_reasoning": f"Retrieved functions from {len(reasoning_plan)} reasoning plan steps",
+                    "reasoning_plan_alignment": {
+                        "steps_covered": len(set(func.get("source_step", 0) for func in top_functions)),
+                        "total_steps": len(reasoning_plan),
+                        "alignment_score": len(set(func.get("source_step", 0) for func in top_functions)) / len(reasoning_plan) if reasoning_plan else 0.0
+                    }
                 }
                 
             except Exception as retrieval_error:
                 logger.warning(f"FunctionRetrieval failed: {retrieval_error}")
-                # Return fallback result - since reasoning plan no longer contains function names,
-                # we'll use a basic set of common functions based on the intent type
-                fallback_functions = []
-                if intent_type == "metrics_calculation":
-                    fallback_functions = ["Mean", "Sum", "Count", "GroupBy"]
-                elif intent_type == "time_series_analysis":
-                    fallback_functions = ["moving_average", "variance_analysis", "aggregate_by_time"]
-                elif intent_type == "trend_analysis":
-                    fallback_functions = ["calculate_growth_rates", "calculate_moving_average", "forecast_metric"]
-                elif intent_type == "segmentation_analysis":
-                    fallback_functions = ["run_kmeans", "run_dbscan", "run_rule_based"]
-                elif intent_type == "cohort_analysis":
-                    fallback_functions = ["calculate_retention", "form_time_cohorts", "calculate_conversion"]
-                elif intent_type == "funnel_analysis":
-                    fallback_functions = ["analyze_funnel", "analyze_user_paths", "compare_segments"]
-                elif intent_type == "risk_analysis":
-                    fallback_functions = ["calculate_var", "monte_carlo_simulation", "fit_distribution"]
-                elif intent_type == "anomaly_detection":
-                    fallback_functions = ["detect_statistical_outliers", "detect_contextual_anomalies"]
-                elif intent_type == "operations_analysis":
-                    fallback_functions = ["PercentChange", "BootstrapCI", "PowerAnalysis"]
-                else:
-                    fallback_functions = ["Mean", "Sum", "Count", "GroupBy", "PivotTable"]
+                # Return fallback result - use reasoning plan to guide function selection
+                fallback_functions = self._select_fallback_functions_with_reasoning(
+                    intent_type=intent_type,
+                    reasoning_plan=reasoning_plan,
+                    confidence_score=confidence_score
+                )
                 
                 # Take first 5 functions
                 unique_functions = fallback_functions[:5]
@@ -1840,11 +2282,16 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
                     "function_details": [],
                     "specific_matches": [],
                     "total_selected": len(unique_functions),
-                    "analysis_complexity": "medium",
+                    "analysis_complexity": self._assess_analysis_complexity([], reasoning_plan),
                     "estimated_execution_time": "unknown",
                     "potential_issues": ["FunctionRetrieval failed, using fallback"],
                     "recommendations": ["Verify function selection manually"],
-                    "function_selection_reasoning": f"Fallback selection due to FunctionRetrieval error: {str(retrieval_error)}"
+                    "function_selection_reasoning": f"Fallback selection due to FunctionRetrieval error: {str(retrieval_error)}",
+                    "reasoning_plan_alignment": {
+                        "steps_covered": 0,
+                        "total_steps": len(reasoning_plan),
+                        "alignment_score": 0.0
+                    }
                 }
             
         except Exception as e:
@@ -1858,7 +2305,12 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
                 "estimated_execution_time": "unknown",
                 "potential_issues": [f"Step 2 error: {str(e)}"],
                 "recommendations": ["Check system configuration"],
-                "function_selection_reasoning": f"Error in Step 2: {str(e)}"
+                "function_selection_reasoning": f"Error in Step 2: {str(e)}",
+                "reasoning_plan_alignment": {
+                    "steps_covered": 0,
+                    "total_steps": 0,
+                    "alignment_score": 0.0
+                }
             }
 
     async def _step3_pipeline_reasoning_planning(
@@ -1964,6 +2416,7 @@ Create a detailed pipeline reasoning plan that:
 7. **HANDLE EMBEDDED FUNCTION PARAMETERS**: For functions like moving_apply_by_group that accept function parameters, specify when to use embedded pipeline expressions
 
 **CRITICAL**: The specific function matches are EXACT matches for the user's question. You MUST use these functions in your pipeline reasoning plan, especially for the main analysis steps.
+**CRITICAL**: If after the replan step the order is incorrect, please consider the best order of the steps for the given analysis question.
 
 **CRITICAL EMBEDDED FUNCTION PARAMETER RULES**:
 - For function input callable, if applicable, the function parameter should contain a complete pipeline expression
