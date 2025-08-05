@@ -350,7 +350,7 @@ class SelfCorrectingPipelineCodeGenerator:
                 # Adjust reasoning plan if needed
                 if plan_evaluation['quality_score'] < 0.7:
                     logger.info("Adjusting reasoning plan due to quality issues")
-                    adjusted_plan = self._adjust_reasoning_plan(
+                    adjusted_plan = await self._adjust_reasoning_plan(
                         classification.reasoning_plan, 
                         plan_evaluation
                     )
@@ -2773,10 +2773,10 @@ result = (
         
         return evaluation
     
-    def _adjust_reasoning_plan(self, reasoning_plan: List[Dict[str, Any]], 
-                             evaluation: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def _adjust_reasoning_plan(self, reasoning_plan: List[Dict[str, Any]], 
+                                   evaluation: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
-        Adjust the reasoning plan based on evaluation results
+        Adjust the reasoning plan based on evaluation results using LLM and available stores
         
         Args:
             reasoning_plan: Original reasoning plan
@@ -2788,6 +2788,303 @@ result = (
         if not reasoning_plan or not isinstance(reasoning_plan, list):
             return reasoning_plan
         
+        # Create a query state for retrieval
+        query_state = {
+            "context": "reasoning plan adjustment",
+            "function_name": "reasoning_plan_adjustment",
+            "dataframe_name": "df"
+        }
+        
+        # Retrieve relevant documents for reasoning plan adjustment
+        retrieved_docs = await self._retrieve_documents_for_reasoning_adjustment(reasoning_plan, evaluation)
+        
+        # Use LLM to adjust the reasoning plan
+        adjusted_plan = await self._adjust_reasoning_plan_with_llm(
+            reasoning_plan, evaluation, retrieved_docs
+        )
+        
+        return adjusted_plan
+    
+    async def _retrieve_documents_for_reasoning_adjustment(self, reasoning_plan: List[Dict[str, Any]], 
+                                                         evaluation: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Retrieve relevant documents for reasoning plan adjustment
+        """
+        retrieved_docs = {}
+        
+        # Extract function names from reasoning plan
+        function_names = []
+        for step in reasoning_plan:
+            if isinstance(step, dict) and 'function_name' in step:
+                function_names.append(step['function_name'])
+        
+        # Create queries for retrieval
+        queries = []
+        if function_names:
+            queries.extend(function_names)
+        
+        # Add evaluation issues as queries
+        if 'issues' in evaluation:
+            for issue in evaluation['issues']:
+                queries.append(issue)
+        
+        # Add suggestions as queries
+        if 'suggestions' in evaluation:
+            for suggestion in evaluation['suggestions']:
+                queries.append(suggestion)
+        
+        # Retrieve from usage examples store
+        if self.usage_examples_store and queries:
+            try:
+                usage_results = self.usage_examples_store.semantic_searches(
+                    queries[:3], n_results=5  # Limit to first 3 queries
+                )
+                retrieved_docs["usage_examples"] = self._parse_retrieval_results(usage_results)
+            except Exception as e:
+                print(f"Error retrieving from usage examples store: {e}")
+        
+        # Retrieve from code examples store
+        if self.code_examples_store and queries:
+            try:
+                code_results = self.code_examples_store.semantic_searches(
+                    queries[:3], n_results=5
+                )
+                retrieved_docs["code_examples"] = self._parse_retrieval_results(code_results)
+            except Exception as e:
+                print(f"Error retrieving from code examples store: {e}")
+        
+        # Retrieve from function definition store
+        if self.function_definition_store and function_names:
+            try:
+                func_results = self.function_definition_store.semantic_searches(
+                    function_names[:3], n_results=3
+                )
+                retrieved_docs["function_definitions"] = self._parse_retrieval_results(func_results)
+            except Exception as e:
+                print(f"Error retrieving from function definition store: {e}")
+        
+        return retrieved_docs
+    
+    async def _adjust_reasoning_plan_with_llm(self, reasoning_plan: List[Dict[str, Any]], 
+                                            evaluation: Dict[str, Any], 
+                                            retrieved_docs: Dict[str, List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
+        """
+        Use LLM to adjust reasoning plan based on evaluation and retrieved documents
+        """
+        # Format the reasoning plan for LLM
+        reasoning_plan_json = json.dumps(reasoning_plan, indent=2)
+        evaluation_json = json.dumps(evaluation, indent=2)
+        
+        # Format retrieved documents
+        docs_context = self._format_documents_for_reasoning_adjustment(retrieved_docs)
+        
+        # Create adjustment prompt
+        adjustment_prompt = PromptTemplate(
+            input_variables=["reasoning_plan", "evaluation", "docs_context"],
+            template="""
+            You are an expert at adjusting reasoning plans for data analysis pipelines.
+            
+            CURRENT REASONING PLAN:
+            {reasoning_plan}
+            
+            EVALUATION RESULTS:
+            {evaluation}
+            
+            RELEVANT DOCUMENTS AND EXAMPLES:
+            {docs_context}
+            
+            TASK: Adjust the reasoning plan to fix the identified issues and improve quality.
+            
+            REQUIREMENTS:
+            1. Fix missing required fields (step_number, step_title, function_name, parameter_mapping)
+            2. Replace invalid functions with appropriate alternatives from the available function library
+            3. Ensure proper pipeline type consistency
+            4. Fix parameter mapping issues
+            5. Maintain the logical flow and intent of the original plan
+            6. Use only functions that are available in the function library
+            
+            AVAILABLE FUNCTION TYPES (from the documents):
+            - MetricsPipe functions: GroupBy, Mean, Sum, Count, StandardDeviation, Variance, Max, Min, Median, Percentile, Correlation
+            - TimeSeriesPipe functions: TimeSeries, Rolling, Lag, Lead, SeasonalDecompose, TrendAnalysis
+            - CohortPipe functions: Cohort, Retention, Churn, LifetimeValue
+            - SegmentPipe functions: Segment, Cluster, RFM, Behavioral
+            - AnomalyPipe functions: Anomaly, Outlier, ZScore, IsolationForest
+            - TrendsPipe functions: Trend, Growth, Seasonality, Cyclical
+            - RiskPipe functions: Risk, VaR, ExpectedShortfall, Volatility
+            - MovingAggrPipe functions: MovingAverage, MovingSum, MovingStd, MovingVariance
+            - OperationsPipe functions: Filter, Sort, Join, Union, Intersection
+            - FunnelPipe functions: Funnel, Conversion, Dropoff
+            
+            Return a JSON array of adjusted reasoning plan steps. Each step should have:
+            - step_number: sequential number
+            - step_title: descriptive title
+            - function_name: valid function name from the library
+            - parameter_mapping: dictionary of parameters
+            
+            EXAMPLE OUTPUT:
+            [
+                {
+                    "step_number": 1,
+                    "step_title": "Group data by region and project",
+                    "function_name": "GroupBy",
+                    "parameter_mapping": {
+                        "by": ["Region", "Project"],
+                        "agg_dict": {"Transactional value": "sum"}
+                    }
+                },
+                {
+                    "step_number": 2,
+                    "step_title": "Calculate mean daily transactional values",
+                    "function_name": "Mean",
+                    "parameter_mapping": {
+                        "variable": "Transactional value",
+                        "output_name": "average_daily_transactional_value"
+                    }
+                }
+            ]
+            
+            ADJUSTED REASONING PLAN:
+            """
+        )
+        
+        adjustment_chain = adjustment_prompt | self.llm | StrOutputParser()
+        
+        try:
+            # Get LLM adjustment
+            adjusted_plan_str = await adjustment_chain.ainvoke({
+                "reasoning_plan": reasoning_plan_json,
+                "evaluation": evaluation_json,
+                "docs_context": docs_context
+            })
+            
+            # Parse the adjusted plan
+            adjusted_plan = self._parse_adjusted_reasoning_plan(adjusted_plan_str)
+            
+            # Validate the adjusted plan
+            if not adjusted_plan or not isinstance(adjusted_plan, list):
+                print("LLM adjustment failed, falling back to basic fixes")
+                return self._apply_basic_reasoning_plan_fixes(reasoning_plan)
+            
+            return adjusted_plan
+            
+        except Exception as e:
+            print(f"Error in LLM-based reasoning plan adjustment: {e}")
+            # Fall back to basic fixes
+            return self._apply_basic_reasoning_plan_fixes(reasoning_plan)
+    
+    def _format_documents_for_reasoning_adjustment(self, retrieved_docs: Dict[str, List[Dict[str, Any]]]) -> str:
+        """
+        Format retrieved documents for reasoning plan adjustment
+        """
+        if not retrieved_docs:
+            return "No relevant documents available."
+        
+        formatted_docs = []
+        
+        for doc_type, documents in retrieved_docs.items():
+            if not documents:
+                continue
+                
+            formatted_docs.append(f"\n{doc_type.upper()}:")
+            
+            for i, doc in enumerate(documents[:3]):  # Limit to 3 docs per type
+                try:
+                    if isinstance(doc, dict):
+                        content = doc.get('content', doc.get('page_content', str(doc)))
+                    else:
+                        content = str(doc)
+                    
+                    # Truncate long content
+                    if len(content) > 500:
+                        content = content[:500] + "..."
+                    
+                    formatted_docs.append(f"  {i+1}. {content}")
+                except Exception as e:
+                    print(f"Error formatting document {i} in {doc_type}: {e}")
+        
+        return "\n".join(formatted_docs) if formatted_docs else "No relevant documents available."
+    
+    def _parse_adjusted_reasoning_plan(self, adjusted_plan_str: str) -> List[Dict[str, Any]]:
+        """
+        Parse the LLM-adjusted reasoning plan from string to list of dictionaries
+        """
+        try:
+            # Try to extract JSON from the response
+            # Look for JSON array pattern
+            import re
+            
+            # Find JSON array in the response
+            json_match = re.search(r'\[.*\]', adjusted_plan_str, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(0)
+                adjusted_plan = json.loads(json_str)
+                
+                # Validate the structure
+                if isinstance(adjusted_plan, list):
+                    validated_plan = []
+                    for step in adjusted_plan:
+                        if isinstance(step, dict):
+                            # Ensure required fields
+                            validated_step = {
+                                "step_number": step.get("step_number", 1),
+                                "step_title": step.get("step_title", "Step"),
+                                "function_name": step.get("function_name", "Mean"),
+                                "parameter_mapping": step.get("parameter_mapping", {})
+                            }
+                            validated_plan.append(validated_step)
+                    
+                    return validated_plan
+            
+            # If JSON parsing fails, try to extract individual steps
+            return self._extract_steps_from_text(adjusted_plan_str)
+            
+        except Exception as e:
+            print(f"Error parsing adjusted reasoning plan: {e}")
+            return []
+    
+    def _extract_steps_from_text(self, text: str) -> List[Dict[str, Any]]:
+        """
+        Extract reasoning plan steps from text when JSON parsing fails
+        """
+        steps = []
+        lines = text.split('\n')
+        current_step = {}
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            
+            # Look for step patterns
+            if 'step_number' in line.lower() or 'step_title' in line.lower():
+                if current_step:
+                    steps.append(current_step)
+                current_step = {}
+            
+            # Extract key-value pairs
+            if ':' in line:
+                key, value = line.split(':', 1)
+                key = key.strip().strip('"{}').lower()
+                value = value.strip().strip('"{}')
+                
+                if key == 'step_number':
+                    current_step['step_number'] = int(value) if value.isdigit() else 1
+                elif key == 'step_title':
+                    current_step['step_title'] = value
+                elif key == 'function_name':
+                    current_step['function_name'] = value
+                elif key == 'parameter_mapping':
+                    current_step['parameter_mapping'] = {}
+        
+        if current_step:
+            steps.append(current_step)
+        
+        return steps
+    
+    def _apply_basic_reasoning_plan_fixes(self, reasoning_plan: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Apply basic fixes to reasoning plan when LLM adjustment fails
+        """
         adjusted_plan = []
         
         for i, step in enumerate(reasoning_plan):
@@ -2804,33 +3101,10 @@ result = (
                 adjusted_step['step_title'] = f'Step {i + 1}'
             
             if 'function_name' not in adjusted_step:
-                # Try to infer function name from step title
-                title = adjusted_step.get('step_title', '').lower()
-                if 'mean' in title or 'average' in title:
-                    adjusted_step['function_name'] = 'Mean'
-                elif 'group' in title or 'aggregate' in title:
-                    adjusted_step['function_name'] = 'GroupBy'
-                elif 'variance' in title:
-                    adjusted_step['function_name'] = 'Variance'
-                else:
-                    adjusted_step['function_name'] = 'Mean'  # Default fallback
+                adjusted_step['function_name'] = 'Mean'  # Default fallback
             
             if 'parameter_mapping' not in adjusted_step:
                 adjusted_step['parameter_mapping'] = {}
-            
-            # Fix invalid functions
-            if 'function_name' in adjusted_step:
-                func_name = adjusted_step['function_name']
-                if func_name not in self.function_to_pipe:
-                    # Replace with a valid alternative
-                    if 'mean' in func_name.lower() or 'average' in func_name.lower():
-                        adjusted_step['function_name'] = 'Mean'
-                    elif 'group' in func_name.lower():
-                        adjusted_step['function_name'] = 'GroupBy'
-                    elif 'variance' in func_name.lower():
-                        adjusted_step['function_name'] = 'Variance'
-                    else:
-                        adjusted_step['function_name'] = 'Mean'  # Default fallback
             
             adjusted_plan.append(adjusted_step)
         

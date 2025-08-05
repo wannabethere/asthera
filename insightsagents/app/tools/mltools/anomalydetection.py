@@ -162,8 +162,12 @@ class AnomalyPipe(BasePipe):
         # Create the output DataFrame
         output_df = result_df[columns_to_include].copy()
         
+        # Ensure we always return a DataFrame
+        if output_df is None:
+            output_df = pd.DataFrame()
+        
         # Add metadata if requested
-        if include_metadata:
+        if include_metadata and not output_df.empty:
             for key, value in result.items():
                 if key != 'type':  # Don't duplicate the type column
                     output_df[f'metadata_{key}'] = str(value)
@@ -372,7 +376,7 @@ def detect_statistical_outliers(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert columns to list if it's a string
         cols = [columns] if isinstance(columns, str) else columns
@@ -705,7 +709,7 @@ def detect_contextual_anomalies(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert columns to list if it's a string
         cols = [columns] if isinstance(columns, str) else columns
@@ -1085,7 +1089,7 @@ def detect_collective_anomalies(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert columns to list if it's a string
         cols = [columns] if isinstance(columns, str) else columns
@@ -1289,7 +1293,7 @@ def calculate_seasonal_residuals(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         seasonal_period = mseasonal_period
         time_column = mtime_column
         method = mmethod
@@ -1544,7 +1548,7 @@ def detect_anomalies_from_residuals(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert columns to list if it's a string
         cols = [columns] if isinstance(columns, str) else columns
@@ -2004,7 +2008,7 @@ def detect_change_points(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert columns to list if it's a string
         cols = [columns] if isinstance(columns, str) else columns
@@ -2388,7 +2392,7 @@ def forecast_and_detect_anomalies(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert columns to list if it's a string
         cols = [columns] if isinstance(columns, str) else columns
@@ -3028,7 +3032,7 @@ def batch_detect_anomalies(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert columns to list if it's a string
         cols = [columns] if isinstance(columns, str) else columns

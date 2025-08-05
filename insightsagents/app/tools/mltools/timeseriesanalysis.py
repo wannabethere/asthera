@@ -68,6 +68,10 @@ class TimeSeriesPipe(BasePipe):
         # Get the result DataFrame (contains original data + time series analysis results)
         result_df = self.data.copy()
         
+        # Ensure we always return a DataFrame, even if empty
+        if result_df is None:
+            result_df = pd.DataFrame()
+        
         # Filter columns based on parameters
         columns_to_include = []
         
@@ -86,7 +90,7 @@ class TimeSeriesPipe(BasePipe):
         output_df = result_df[columns_to_include].copy()
         
         # Add metadata if requested
-        if include_metadata:
+        if include_metadata and not output_df.empty:
             # Add information about available analyses
             if self.distribution_results:
                 output_df['has_distribution_analysis'] = True
@@ -179,7 +183,7 @@ class TimeSeriesPipe(BasePipe):
                 col_data = self.data[col].dropna()
                 summary_row['non_null_count'] = len(col_data)
                 summary_row['null_count'] = self.data[col].isnull().sum()
-                summary_row['null_percentage'] = (summary_row['null_count'] / len(self.data)) * 100
+                summary_row['null_percentage'] = (summary_row['null_count'] / len(self.data)) * 100 if len(self.data) > 0 else 0
                 
                 if len(col_data) > 0:
                     summary_row['mean'] = col_data.mean()
@@ -191,11 +195,23 @@ class TimeSeriesPipe(BasePipe):
                     summary_row['std'] = np.nan
                     summary_row['min'] = np.nan
                     summary_row['max'] = np.nan
+            else:
+                # Handle case where column doesn't exist
+                summary_row['non_null_count'] = 0
+                summary_row['null_count'] = 0
+                summary_row['null_percentage'] = 0
+                summary_row['mean'] = np.nan
+                summary_row['std'] = np.nan
+                summary_row['min'] = np.nan
+                summary_row['max'] = np.nan
             
             # Add metadata if requested
-            if include_metadata:
+            if include_metadata and col in self.data.columns:
                 summary_row['dtype'] = str(self.data[col].dtype)
                 summary_row['unique_values'] = self.data[col].nunique()
+            elif include_metadata:
+                summary_row['dtype'] = 'unknown'
+                summary_row['unique_values'] = 0
             
             summary_data.append(summary_row)
         
@@ -238,10 +254,10 @@ class TimeSeriesPipe(BasePipe):
         
         Returns:
         --------
-        Dict or None
-            The distribution results dictionary, or None if no distribution analysis performed
+        Dict
+            The distribution results dictionary, or empty dict if no distribution analysis performed
         """
-        return self.distribution_results.copy() if self.distribution_results else None
+        return self.distribution_results.copy() if self.distribution_results else {}
     
     def get_test_results(self):
         """
@@ -249,10 +265,10 @@ class TimeSeriesPipe(BasePipe):
         
         Returns:
         --------
-        Dict or None
-            The test results dictionary, or None if no tests performed
+        Dict
+            The test results dictionary, or empty dict if no tests performed
         """
-        return self.test_results.copy() if self.test_results else None
+        return self.test_results.copy() if self.test_results else {}
     
     def get_original_data(self):
         """
@@ -260,10 +276,10 @@ class TimeSeriesPipe(BasePipe):
         
         Returns:
         --------
-        pd.DataFrame or None
-            The original data DataFrame, or None if no data was provided
+        pd.DataFrame
+            The original data DataFrame, or empty DataFrame if no data was provided
         """
-        return self.data.copy() if self.data is not None else None
+        return self.data.copy() if self.data is not None else pd.DataFrame()
     
     def get_distribution_summary_df(self, include_metadata: bool = False):
         """
@@ -304,7 +320,7 @@ class TimeSeriesPipe(BasePipe):
                     summary_row['has_bin_edges'] = 'bin_edges' in dist_result
                 
                 summary_data.append(summary_row)
-            else:
+            elif isinstance(dist_result, dict):
                 # Multiple distributions (with grouping)
                 for group, results in dist_result.items():
                     if isinstance(results, dict) and 'stats' in results:
@@ -358,6 +374,20 @@ class TimeSeriesPipe(BasePipe):
             'statistical_tests': len(self.test_results)
         }
         
+        # Safely get distribution results info
+        distribution_results_info = {}
+        for col, result in self.distribution_results.items():
+            if isinstance(result, dict):
+                distribution_results_info[col] = {
+                    "type": "distribution", 
+                    "has_stats": 'stats' in result
+                }
+        
+        # Safely get test results info
+        test_results_info = {}
+        for name in self.test_results.keys():
+            test_results_info[name] = {"type": "statistical_test"}
+        
         return {
             "total_analyses": sum(analysis_types.values()),
             "total_timeseries_columns": len(ts_cols),
@@ -367,10 +397,8 @@ class TimeSeriesPipe(BasePipe):
             "analysis_types": analysis_types,
             "timeseries_summary_dataframe": ts_summary_df.to_dict('records') if not ts_summary_df.empty else [],
             "distribution_summary_dataframe": dist_summary_df.to_dict('records') if not dist_summary_df.empty else [],
-            "distribution_results_info": {col: {"type": "distribution", "has_stats": 'stats' in result} 
-                                        for col, result in self.distribution_results.items()},
-            "test_results_info": {name: {"type": "statistical_test"} 
-                                for name in self.test_results.keys()}
+            "distribution_results_info": distribution_results_info,
+            "test_results_info": test_results_info
         }
 
 
@@ -407,7 +435,7 @@ def lead(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert columns to list if it's a string
         cols = [columns] if isinstance(columns, str) else columns
@@ -477,7 +505,7 @@ def lag(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert columns to list if it's a string
         cols = [columns] if isinstance(columns, str) else columns
@@ -550,7 +578,7 @@ def variance_analysis(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert columns to list if it's a string
         cols = [columns] if isinstance(columns, str) else columns
@@ -676,7 +704,7 @@ def distribution_analysis(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert columns to list if it's a string
         cols = [columns] if isinstance(columns, str) else columns
@@ -798,7 +826,7 @@ def cumulative_distribution(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert columns to list if it's a string
         cols = [columns] if isinstance(columns, str) else columns
@@ -860,15 +888,21 @@ def get_distribution_summary():
             if isinstance(dist_results, dict) and 'stats' in dist_results:
                 # Single distribution (no grouping)
                 summaries[col] = pd.DataFrame(dist_results['stats'], index=[0])
-            else:
+            elif isinstance(dist_results, dict):
                 # Multiple distributions (with grouping)
                 group_stats = {}
                 for group, results in dist_results.items():
-                    if 'stats' in results:
+                    if isinstance(results, dict) and 'stats' in results:
                         group_stats[group] = results['stats']
                 
                 if group_stats:
                     summaries[col] = pd.DataFrame(group_stats).T
+                else:
+                    # Return empty DataFrame if no valid stats found
+                    summaries[col] = pd.DataFrame()
+            else:
+                # Return empty DataFrame for invalid results
+                summaries[col] = pd.DataFrame()
         
         return summaries
     
@@ -894,7 +928,7 @@ def custom_calculation(func: Callable):
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Apply the custom function
         new_pipe.data = func(df)
@@ -944,7 +978,7 @@ def rolling_window(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert columns to list if it's a string
         cols = [columns] if isinstance(columns, str) else columns

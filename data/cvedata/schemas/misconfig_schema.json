@@ -1,0 +1,64 @@
+{
+    "$schema": "https://repo-srv01.corp.balbix.com/de_f1/delta-raw2store/-/blob/main/delta_raw2store/misconfig/model.py",
+    "type": "object",
+    "properties": {
+        "nuid": {
+            "type": "int"
+        },
+        "dev_id": {
+            "type": "int"
+        },
+        "vuln_id": {
+            "type": "str"
+        },
+        "vuln_category": {
+            "type": "str"
+        },
+        "misconfig_category": {
+            "type": "str"
+        },
+        "vuln_description": {
+            "type": "str"
+        },
+        "vuln_severity": {
+            "type": "int"
+        },
+        "vuln_evidence": {
+            "type": "str"
+        },
+        "last_observed": {
+            "type": "str"
+        },
+        "first_observed": {
+            "type": "str"
+        },
+        "vuln_data_sources": {
+            "type": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                }
+            }
+        },
+        "is_stale": {
+            "type": "bool"
+        },
+        "raw_created_at": {
+            "type": "time"
+        },
+        "store_created_at": {
+            "type": "time"
+        },
+        "store_updated_at": {
+            "type": "time"
+        },
+        "process_id": {
+            "type": "str"
+        }
+    },
+    "required": [
+        "nuid",
+        "dev_id",
+        "vuln_data_sources"
+    ]
+}

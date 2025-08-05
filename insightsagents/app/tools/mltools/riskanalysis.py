@@ -189,15 +189,19 @@ class RiskPipe(BasePipe):
             else:
                 result_df = pd.DataFrame([result])
         
+        # Ensure we always return a DataFrame
+        if result_df is None:
+            result_df = pd.DataFrame()
+        
         # Add metadata if requested
-        if include_metadata:
+        if include_metadata and not result_df.empty:
             result_df['analysis_name'] = analysis_name
             result_df['analysis_type'] = 'risk_metric'
         
         # Add original data if requested
         if include_original and self.data is not None:
             # Merge with original data (this might need adjustment based on specific use case)
-            if include_metadata:
+            if include_metadata and not result_df.empty:
                 result_df['metadata_note'] = 'Original data available separately via pipe.data'
         
         return result_df
@@ -228,8 +232,12 @@ class RiskPipe(BasePipe):
         else:
             result_df = pd.DataFrame([result])
         
+        # Ensure we always return a DataFrame
+        if result_df is None:
+            result_df = pd.DataFrame()
+        
         # Add metadata if requested
-        if include_metadata:
+        if include_metadata and not result_df.empty:
             result_df['analysis_name'] = analysis_name
             result_df['analysis_type'] = 'distribution'
         
@@ -264,8 +272,12 @@ class RiskPipe(BasePipe):
         else:
             result_df = pd.DataFrame([result])
         
+        # Ensure we always return a DataFrame
+        if result_df is None:
+            result_df = pd.DataFrame()
+        
         # Add metadata if requested
-        if include_metadata:
+        if include_metadata and not result_df.empty:
             result_df['analysis_name'] = analysis_name
             result_df['analysis_type'] = 'simulation'
         
@@ -309,8 +321,12 @@ class RiskPipe(BasePipe):
         else:
             result_df = pd.DataFrame([result])
         
+        # Ensure we always return a DataFrame
+        if result_df is None:
+            result_df = pd.DataFrame()
+        
         # Add metadata if requested
-        if include_metadata:
+        if include_metadata and not result_df.empty:
             result_df['analysis_name'] = analysis_name
             result_df['analysis_type'] = 'stress_test'
         
@@ -448,11 +464,11 @@ class RiskPipe(BasePipe):
         
         Returns:
         --------
-        Any or None
-            The current risk analysis result, or None if no current analysis
+        Any
+            The current risk analysis result, or empty dict if no current analysis
         """
         if self.current_metric is None:
-            return None
+            return {}
         
         # Check in all categories
         if self.current_metric in self.risk_metrics:
@@ -464,7 +480,7 @@ class RiskPipe(BasePipe):
         elif self.current_metric in self.stress_tests:
             return self.stress_tests[self.current_metric]
         else:
-            return None
+            return {}
     
     def get_original_data(self):
         """
@@ -472,10 +488,10 @@ class RiskPipe(BasePipe):
         
         Returns:
         --------
-        pd.DataFrame or None
-            The original data DataFrame, or None if no data was provided
+        pd.DataFrame
+            The original data DataFrame, or empty DataFrame if no data was provided
         """
-        return self.data.copy() if self.data is not None else None
+        return self.data.copy() if self.data is not None else pd.DataFrame()
     
     def get_summary(self, **kwargs) -> Dict[str, Any]:
         """
@@ -559,7 +575,7 @@ def fit_distribution(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert columns to list if it's a string
         cols = [columns] if isinstance(columns, str) else columns
@@ -740,7 +756,7 @@ def calculate_var(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert columns to list if it's a string
         cols = [columns] if isinstance(columns, str) else columns
@@ -875,7 +891,7 @@ def calculate_cvar(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert columns to list if it's a string
         cols = [columns] if isinstance(columns, str) else columns
@@ -975,7 +991,7 @@ def calculate_portfolio_risk(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Check if columns exist
         for col in columns:
@@ -1120,7 +1136,7 @@ def monte_carlo_simulation(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert columns to list if it's a string
         cols = [columns] if isinstance(columns, str) else columns
@@ -1242,7 +1258,7 @@ def stress_test(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert columns to list if it's a string
         cols = [columns] if isinstance(columns, str) else columns
@@ -1348,7 +1364,7 @@ def rolling_risk_metrics(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data.copy()
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert columns to list if it's a string
         cols = [columns] if isinstance(columns, str) else columns
@@ -1427,7 +1443,7 @@ def correlation_analysis(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Check if columns exist
         for col in columns:
@@ -1506,7 +1522,7 @@ def risk_attribution(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Check if columns exist
         for col in columns:
@@ -1626,7 +1642,7 @@ def compare_distributions(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         if column not in df.columns:
             raise ValueError(f"Column '{column}' not found in data")

@@ -131,6 +131,83 @@ class ProphetPipe(BasePipe):
             "regressors_info": {name: {"n_regressors": len(regressor.get('regressors', []))} 
                               for name, regressor in self.regressors.items()}
         }
+    
+    def to_df(self, **kwargs) -> pd.DataFrame:
+        """
+        Convert the Prophet forecasting analysis results to a DataFrame.
+        
+        Parameters:
+        -----------
+        **kwargs : dict
+            Additional arguments:
+            - include_forecasts: bool, whether to include forecast data (default: True)
+            - include_metrics: bool, whether to include evaluation metrics (default: False)
+            - include_history: bool, whether to include historical data (default: True)
+            - forecast_name: str, specific forecast to include (default: None, includes all)
+            
+        Returns:
+        --------
+        pd.DataFrame
+            DataFrame representation of the Prophet analysis results
+            
+        Raises:
+        -------
+        ValueError
+            If no data is available
+        """
+        if self.data is None:
+            raise ValueError("No data available. Run analysis first.")
+        
+        # Get parameters
+        include_forecasts = kwargs.get('include_forecasts', True)
+        include_metrics = kwargs.get('include_metrics', False)
+        include_history = kwargs.get('include_history', True)
+        forecast_name = kwargs.get('forecast_name', None)
+        
+        # Start with the original data
+        result_df = self.data.copy()
+        
+        # Add forecast data if requested
+        if include_forecasts and self.forecasts:
+            if forecast_name:
+                if forecast_name in self.forecasts:
+                    forecast_data = self.forecasts[forecast_name]['forecast']
+                    # Merge forecast with original data
+                    result_df = pd.merge(result_df, forecast_data, on='ds', how='outer', suffixes=('', f'_{forecast_name}'))
+            else:
+                # Add all forecasts
+                for name, forecast_info in self.forecasts.items():
+                    forecast_data = forecast_info['forecast']
+                    # Merge forecast with original data
+                    result_df = pd.merge(result_df, forecast_data, on='ds', how='outer', suffixes=('', f'_{name}'))
+        
+        # Add metrics if requested
+        if include_metrics and self.metrics:
+            metrics_data = {}
+            if forecast_name:
+                if forecast_name in self.metrics:
+                    metrics = self.metrics[forecast_name]
+                    for metric_name, value in metrics.items():
+                        if isinstance(value, (int, float)):
+                            metrics_data[f'{forecast_name}_{metric_name}'] = [value] * len(result_df)
+            else:
+                # Add all metrics
+                for name, metrics in self.metrics.items():
+                    for metric_name, value in metrics.items():
+                        if isinstance(value, (int, float)):
+                            metrics_data[f'{name}_{metric_name}'] = [value] * len(result_df)
+            
+            # Add metrics as columns
+            for col_name, values in metrics_data.items():
+                result_df[col_name] = values
+        
+        # Filter historical data if requested
+        if not include_history:
+            # Keep only forecast periods (where y is NaN but yhat is not)
+            if 'yhat' in result_df.columns:
+                result_df = result_df[result_df['y'].isna() & result_df['yhat'].notna()]
+        
+        return result_df
 
 
 # Data Preparation Functions
@@ -1191,3 +1268,526 @@ def hyperparameter_tuning(
         return new_pipe
     
     return _hyperparameter_tuning
+
+
+def load_prophet_model(
+    filepath: str,
+    model_name: str = 'loaded_model'
+):
+    """
+    Load a previously saved Prophet forecasting model
+    
+    Parameters:
+    -----------
+    filepath : str
+        Path to the saved model file
+    model_name : str
+        Name for the loaded model
+        
+    Returns:
+    --------
+    Callable
+        Function that loads Prophet models into a ProphetPipe
+    """
+    def _load_prophet_model(pipe):
+        try:
+            model_package = joblib.load(filepath)
+            
+            new_pipe = pipe.copy()
+            
+            # Restore model
+            new_pipe.models[model_name] = model_package['model']
+            
+            # Restore configuration
+            if 'config' in model_package:
+                new_pipe.model_configs[model_name] = model_package['config']
+            
+            # Restore regressors
+            if 'regressors' in model_package:
+                new_pipe.regressors = model_package['regressors']
+            
+            # Restore holidays
+            if 'holidays' in model_package:
+                new_pipe.holidays = model_package['holidays']
+            
+            new_pipe.current_analysis = f'loaded_model_{model_name}'
+            
+            print(f"Successfully loaded Prophet model from: {filepath}")
+            print(f"Model name: {model_name}")
+            if 'config' in model_package:
+                config = model_package['config']
+                print(f"Growth: {config.get('growth', 'unknown')}")
+                print(f"Seasonality mode: {config.get('seasonality_mode', 'unknown')}")
+                print(f"Number of changepoints: {config.get('n_changepoints', 'unknown')}")
+            print(f"Number of regressors: {len(model_package.get('regressors', {}))}")
+            print(f"Number of holiday groups: {len(model_package.get('holidays', {}))}")
+            
+            return new_pipe
+            
+        except Exception as e:
+            raise ValueError(f"Failed to load model from {filepath}: {str(e)}")
+    
+    return _load_prophet_model
+
+
+def add_features(
+    feature_columns: List[str],
+    feature_type: str = 'regressor',
+    feature_name: str = 'additional_features'
+):
+    """
+    Add new features to the Prophet forecasting pipeline
+    
+    Parameters:
+    -----------
+    feature_columns : List[str]
+        List of new feature column names to add
+    feature_type : str
+        Type of features ('regressor', 'external', 'derived')
+    feature_name : str
+        Name for the feature addition operation
+        
+    Returns:
+    --------
+    Callable
+        Function that adds features to a ProphetPipe
+    """
+    def _add_features(pipe):
+        if pipe.data is None:
+            raise ValueError("No data found. Data must be provided before adding features.")
+        
+        new_pipe = pipe.copy()
+        df = new_pipe.data
+        
+        # Validate that new features exist in the data
+        missing_features = [col for col in feature_columns if col not in df.columns]
+        if missing_features:
+            raise ValueError(f"Missing features in data: {missing_features}")
+        
+        # Add features based on type
+        if feature_type == 'regressor':
+            # Add as regressors for Prophet models
+            for col in feature_columns:
+                new_pipe.regressors[col] = {
+                    'prior_scale': 10.0,
+                    'standardize': 'auto'
+                }
+            print(f"Added {len(feature_columns)} regressor features: {feature_columns}")
+            
+        elif feature_type == 'external':
+            # Store external features (not used directly by Prophet but available for analysis)
+            if not hasattr(new_pipe, 'external_features'):
+                new_pipe.external_features = {}
+            new_pipe.external_features[feature_name] = {
+                'columns': feature_columns,
+                'type': 'external'
+            }
+            print(f"Added {len(feature_columns)} external features: {feature_columns}")
+            
+        elif feature_type == 'derived':
+            # Store derived features (computed from existing features)
+            if not hasattr(new_pipe, 'derived_features'):
+                new_pipe.derived_features = {}
+            new_pipe.derived_features[feature_name] = {
+                'columns': feature_columns,
+                'type': 'derived'
+            }
+            print(f"Added {len(feature_columns)} derived features: {feature_columns}")
+        
+        else:
+            raise ValueError(f"Unknown feature type: {feature_type}")
+        
+        new_pipe.current_analysis = f'add_features_{feature_name}'
+        
+        return new_pipe
+    
+    return _add_features
+
+
+def retrain_prophet_model(
+    model_name: str,
+    new_data: Optional[pd.DataFrame] = None,
+    update_config: Optional[Dict] = None,
+    retrain_name: str = 'retrained_model'
+):
+    """
+    Retrain a Prophet model with new data or updated configuration
+    
+    Parameters:
+    -----------
+    model_name : str
+        Name of the existing model to retrain
+    new_data : Optional[pd.DataFrame]
+        New data to use for retraining (if None, uses existing data)
+    update_config : Optional[Dict]
+        Updated configuration parameters for the model
+    retrain_name : str
+        Name for the retrained model
+        
+    Returns:
+    --------
+    Callable
+        Function that retrains Prophet models from a ProphetPipe
+    """
+    def _retrain_prophet_model(pipe):
+        if model_name not in pipe.models:
+            raise ValueError(f"Model '{model_name}' not found for retraining.")
+        
+        new_pipe = pipe.copy()
+        
+        # Get the original model configuration
+        original_config = new_pipe.model_configs.get(model_name, {}).copy()
+        
+        # Update configuration if provided
+        if update_config:
+            original_config.update(update_config)
+        
+        # Determine data to use for retraining
+        if new_data is not None:
+            retrain_data = new_data.copy()
+            
+            # Ensure data has required columns (ds, y)
+            if 'ds' not in retrain_data.columns or 'y' not in retrain_data.columns:
+                raise ValueError("New data must have 'ds' and 'y' columns for Prophet")
+            
+            # Convert ds to datetime if needed
+            if not pd.api.types.is_datetime64_any_dtype(retrain_data['ds']):
+                retrain_data['ds'] = pd.to_datetime(retrain_data['ds'])
+            
+            # Sort by date
+            retrain_data = retrain_data.sort_values('ds').reset_index(drop=True)
+        else:
+            retrain_data = new_pipe.data
+            if retrain_data is None:
+                raise ValueError("No data available for retraining.")
+        
+        # Create new model with updated configuration
+        retrained_model = Prophet(
+            growth=original_config.get('growth', 'linear'),
+            seasonality_mode=original_config.get('seasonality_mode', 'additive'),
+            changepoint_prior_scale=original_config.get('changepoint_prior_scale', 0.05),
+            seasonality_prior_scale=original_config.get('seasonality_prior_scale', 10.0),
+            holidays_prior_scale=original_config.get('holidays_prior_scale', 10.0),
+            n_changepoints=original_config.get('n_changepoints', 25),
+            changepoint_range=original_config.get('changepoint_range', 0.8),
+            yearly_seasonality=original_config.get('yearly_seasonality', 'auto'),
+            weekly_seasonality=original_config.get('weekly_seasonality', 'auto'),
+            daily_seasonality=original_config.get('daily_seasonality', 'auto')
+        )
+        
+        # Add holidays if any
+        for holiday_key, holiday_config in new_pipe.holidays.items():
+            retrained_model.holidays = holiday_config['holidays_df']
+        
+        # Add regressors if any
+        for regressor, config in new_pipe.regressors.items():
+            if regressor in retrain_data.columns:
+                retrained_model.add_regressor(
+                    regressor,
+                    prior_scale=config['prior_scale'],
+                    standardize=config['standardize']
+                )
+        
+        # Fit the retrained model
+        retrained_model.fit(retrain_data)
+        
+        # Store the retrained model
+        new_pipe.models[retrain_name] = retrained_model
+        new_pipe.model_configs[retrain_name] = original_config
+        
+        # Update data if using new data
+        if new_data is not None:
+            new_pipe.data = retrain_data
+        
+        new_pipe.current_analysis = f'retrain_{retrain_name}'
+        
+        print(f"Successfully retrained model '{model_name}' as '{retrain_name}'")
+        print(f"Growth: {original_config.get('growth', 'linear')}")
+        print(f"Seasonality mode: {original_config.get('seasonality_mode', 'additive')}")
+        print(f"Number of changepoints: {original_config.get('n_changepoints', 25)}")
+        print(f"Data points: {len(retrain_data)}")
+        print(f"Date range: {retrain_data['ds'].min()} to {retrain_data['ds'].max()}")
+        
+        return new_pipe
+    
+    return _retrain_prophet_model
+
+
+def predict_forecast(
+    model_name: str,
+    periods: int,
+    freq: str = 'D',
+    include_history: bool = True,
+    regressor_future_values: Optional[Dict[str, Union[List, pd.Series, np.ndarray]]] = None,
+    prediction_name: str = 'forecast_prediction'
+):
+    """
+    Generate forecasts using a trained Prophet model
+    
+    Parameters:
+    -----------
+    model_name : str
+        Name of the trained model to use for prediction
+    periods : int
+        Number of periods to forecast
+    freq : str
+        Frequency of forecasts
+    include_history : bool
+        Whether to include historical period in forecast
+    regressor_future_values : Optional[Dict[str, Union[List, pd.Series, np.ndarray]]]
+        Future values for regressors if the model uses them
+    prediction_name : str
+        Name for the prediction results
+        
+    Returns:
+    --------
+    Callable
+        Function that generates forecasts from a ProphetPipe
+    """
+    def _predict_forecast(pipe):
+        if model_name not in pipe.models:
+            raise ValueError(f"Model '{model_name}' not found for prediction.")
+        
+        new_pipe = pipe.copy()
+        model = new_pipe.models[model_name]
+        
+        # Create future dataframe
+        future = model.make_future_dataframe(periods=periods, freq=freq, include_history=include_history)
+        
+        # Add capacity column for logistic growth if needed
+        if model.growth == 'logistic':
+            if new_pipe.data is not None and 'cap' in new_pipe.data.columns:
+                # Use the same capacity value for all future periods
+                cap_value = new_pipe.data['cap'].iloc[-1]  # Use last historical capacity value
+                future['cap'] = cap_value
+            else:
+                raise ValueError("Logistic growth requires 'cap' column in data")
+        
+        # Add regressor values for future periods if needed
+        if regressor_future_values:
+            if include_history:
+                # Get historical regressor values
+                historical_length = len(new_pipe.data) if new_pipe.data is not None else 0
+                
+                for regressor, future_values in regressor_future_values.items():
+                    if regressor not in new_pipe.regressors:
+                        warnings.warn(f"Regressor '{regressor}' not in model. Skipping.")
+                        continue
+                    
+                    # Historical values
+                    historical_values = new_pipe.data[regressor].values if new_pipe.data is not None and regressor in new_pipe.data.columns else [0] * historical_length
+                    
+                    # Combine historical and future
+                    all_values = list(historical_values) + list(future_values)
+                    future[regressor] = all_values[:len(future)]
+            else:
+                # Only future values
+                for regressor, future_values in regressor_future_values.items():
+                    future[regressor] = future_values
+        elif new_pipe.regressors:
+            warnings.warn("Model has regressors but no future values provided. "
+                         "Forecast may be incomplete.")
+        
+        # Generate forecast
+        forecast = model.predict(future)
+        
+        # Store prediction results
+        if not hasattr(new_pipe, 'predictions'):
+            new_pipe.predictions = {}
+        
+        new_pipe.predictions[prediction_name] = {
+            'forecast': forecast,
+            'model_name': model_name,
+            'periods': periods,
+            'freq': freq,
+            'include_history': include_history,
+            'regressor_future_values': regressor_future_values
+        }
+        
+        new_pipe.current_analysis = f'prediction_{prediction_name}'
+        
+        print(f"Successfully generated forecast for {periods} periods")
+        print(f"Model used: {model_name}")
+        print(f"Frequency: {freq}")
+        print(f"Include history: {include_history}")
+        if regressor_future_values:
+            print(f"Regressors used: {list(regressor_future_values.keys())}")
+        
+        return new_pipe
+    
+    return _predict_forecast
+
+
+def get_prediction_results(
+    prediction_name: Optional[str] = None
+):
+    """
+    Get prediction results from the pipeline
+    
+    Parameters:
+    -----------
+    prediction_name : Optional[str]
+        Specific prediction to retrieve (if None, returns all)
+        
+    Returns:
+    --------
+    Callable
+        Function that retrieves prediction results from a ProphetPipe
+    """
+    def _get_prediction_results(pipe):
+        if not hasattr(pipe, 'predictions') or not pipe.predictions:
+            return {"error": "No prediction results found. Run predict_forecast first."}
+        
+        if prediction_name:
+            if prediction_name in pipe.predictions:
+                return pipe.predictions[prediction_name]
+            else:
+                return {"error": f"Prediction '{prediction_name}' not found"}
+        
+        return pipe.predictions
+    
+    return _get_prediction_results
+
+
+def update_forecast_with_new_data(
+    model_name: str,
+    new_data: pd.DataFrame,
+    periods: int,
+    freq: str = 'D',
+    include_history: bool = True,
+    update_name: str = 'updated_forecast'
+):
+    """
+    Update a forecast with new data by retraining and generating new predictions
+    
+    Parameters:
+    -----------
+    model_name : str
+        Name of the existing model to update
+    new_data : pd.DataFrame
+        New data to incorporate
+    periods : int
+        Number of periods to forecast
+    freq : str
+        Frequency of forecasts
+    include_history : bool
+        Whether to include historical period in forecast
+    update_name : str
+        Name for the updated forecast
+        
+    Returns:
+    --------
+    Callable
+        Function that updates forecasts with new data from a ProphetPipe
+    """
+    def _update_forecast_with_new_data(pipe):
+        if model_name not in pipe.models:
+            raise ValueError(f"Model '{model_name}' not found for updating.")
+        
+        new_pipe = pipe.copy()
+        
+        # Retrain model with new data
+        new_pipe = new_pipe | retrain_prophet_model(
+            model_name=model_name,
+            new_data=new_data,
+            retrain_name=f"{model_name}_updated"
+        )
+        
+        # Generate new forecast
+        new_pipe = new_pipe | predict_forecast(
+            model_name=f"{model_name}_updated",
+            periods=periods,
+            freq=freq,
+            include_history=include_history,
+            prediction_name=update_name
+        )
+        
+        new_pipe.current_analysis = f'update_forecast_{update_name}'
+        
+        print(f"Successfully updated forecast with new data")
+        print(f"Original model: {model_name}")
+        print(f"Updated model: {model_name}_updated")
+        print(f"New forecast: {update_name}")
+        
+        return new_pipe
+    
+    return _update_forecast_with_new_data
+
+
+def print_prophet_summary(
+    model_name: Optional[str] = None
+):
+    """
+    Print comprehensive Prophet analysis summary
+    
+    Parameters:
+    -----------
+    model_name : Optional[str]
+        Specific model to summarize (if None, summarizes all)
+        
+    Returns:
+    --------
+    Callable
+        Function that prints Prophet summary from a ProphetPipe
+    """
+    def _print_prophet_summary(pipe):
+        print(f"\n=== Prophet Forecasting Analysis Summary ===")
+        
+        if pipe.data is not None:
+            print(f"Data points: {len(pipe.data)}")
+            print(f"Date range: {pipe.data['ds'].min()} to {pipe.data['ds'].max()}")
+        
+        # Model information
+        if pipe.models:
+            print(f"\n=== Models ===")
+            for name, model in pipe.models.items():
+                if model_name is None or name == model_name:
+                    print(f"\nModel: {name}")
+                    if name in pipe.model_configs:
+                        config = pipe.model_configs[name]
+                        print(f"  Growth: {config.get('growth', 'unknown')}")
+                        print(f"  Seasonality mode: {config.get('seasonality_mode', 'unknown')}")
+                        print(f"  Changepoints: {config.get('n_changepoints', 'unknown')}")
+                        print(f"  Changepoint prior scale: {config.get('changepoint_prior_scale', 'unknown')}")
+        
+        # Forecasts information
+        if pipe.forecasts:
+            print(f"\n=== Forecasts ===")
+            for name, forecast in pipe.forecasts.items():
+                print(f"\nForecast: {name}")
+                print(f"  Model: {forecast.get('model_name', 'unknown')}")
+                print(f"  Periods: {forecast.get('periods', 'unknown')}")
+                print(f"  Frequency: {forecast.get('freq', 'unknown')}")
+                print(f"  Include history: {forecast.get('include_history', 'unknown')}")
+        
+        # Metrics information
+        if pipe.metrics:
+            print(f"\n=== Metrics ===")
+            for name, metrics in pipe.metrics.items():
+                if isinstance(metrics, dict):
+                    print(f"\nMetrics: {name}")
+                    if 'mae' in metrics:
+                        print(f"  MAE: {metrics['mae']:.4f}")
+                    if 'rmse' in metrics:
+                        print(f"  RMSE: {metrics['rmse']:.4f}")
+                    if 'mape' in metrics:
+                        print(f"  MAPE: {metrics['mape']:.2f}%")
+                    if 'coverage' in metrics:
+                        print(f"  Coverage: {metrics['coverage']:.1f}%")
+        
+        # Regressors information
+        if pipe.regressors:
+            print(f"\n=== Regressors ===")
+            for name, config in pipe.regressors.items():
+                print(f"  {name}: prior_scale={config.get('prior_scale', 'unknown')}")
+        
+        # Holidays information
+        if pipe.holidays:
+            print(f"\n=== Holidays ===")
+            for name, config in pipe.holidays.items():
+                n_holidays = len(config.get('holidays_df', []))
+                print(f"  {name}: {n_holidays} holidays")
+        
+        return pipe
+    
+    return _print_prophet_summary

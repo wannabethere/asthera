@@ -12,7 +12,14 @@ from app.tools.mltools.models.randomforest_classifier import (
     predict,
     calculate_metrics,
     print_metrics,
-    save_model
+    save_model,
+    save_rf_model,
+    load_rf_model,
+    add_features,
+    retrain_rf_model,
+    predict_on_new_data,
+    get_new_prediction_results,
+    print_rf_summary
 )
 import pandas as pd
 import numpy as np
@@ -446,6 +453,758 @@ def example_production_pipeline():
     return production_pipeline
 
 
+
+
+# Example 6: Model Management - Save and Load
+def example_model_management():
+    """
+    Demonstrate model saving and loading functionality
+    """
+    # Generate sample data
+    np.random.seed(42)
+    n_samples = 1000
+    
+    management_data = pd.DataFrame({
+        'customer_id': range(n_samples),
+        'age': np.random.randint(18, 80, n_samples),
+        'income': np.random.lognormal(10, 0.5, n_samples),
+        'credit_score': np.random.normal(700, 100, n_samples),
+        'payment_history': np.random.choice(['excellent', 'good', 'fair', 'poor'], n_samples),
+        'loan_amount': np.random.gamma(2, 50000, n_samples),
+        'employment_length': np.random.randint(0, 20, n_samples),
+        'debt_to_income': np.random.uniform(0.1, 0.8, n_samples),
+        'default_risk': np.random.choice([0, 1], n_samples, p=[0.8, 0.2])
+    })
+    
+    # Create and save model
+    print("Creating and saving model...")
+    saved_model = (
+        RFPipe.from_dataframe(management_data)
+        
+        # Generate features
+        | generate_numerical_features(
+            columns=['age', 'income', 'credit_score', 'loan_amount', 'employment_length', 'debt_to_income'],
+            operations=['log', 'sqrt']
+        )
+        
+        | generate_categorical_features(
+            columns=['payment_history'],
+            encoding_type='onehot'
+        )
+        
+        | generate_interaction_features(
+            column_pairs=[('income', 'loan_amount'), ('credit_score', 'debt_to_income')],
+            operations=['multiply', 'divide']
+        )
+        
+        # Set target
+        | create_binary_labels(
+            column='default_risk',
+            condition='==1',
+            label_column='default'
+        )
+        
+        # Feature selection
+        | select_features(method='kbest', k=15)
+        
+        # Train model
+        | train_random_forest(
+            test_size=0.2,
+            n_estimators=200,
+            max_depth=10,
+            model_name='management_model'
+        )
+        
+        # Make predictions
+        | predict(model_name='management_model', data_split='test')
+        
+        # Calculate metrics
+        | calculate_metrics(model_name='management_model')
+        
+        # Save model with preprocessing
+        | save_rf_model(
+            model_name='management_model',
+            filepath='test_management_rf_model.joblib',
+            include_preprocessing=True
+        )
+    )
+    
+    # Load model in new pipeline
+    print("\nLoading model in new pipeline...")
+    
+    # Load the model first
+    loaded_model = (
+        RFPipe.from_dataframe(management_data.head(100))  # Use first 100 samples as new data
+        
+        # Load saved model
+        | load_rf_model(
+            filepath='test_management_rf_model.joblib',
+            model_name='loaded_management_model'
+        )
+    )
+    
+    # Make predictions on new data (the predict_on_new_data function will handle missing features)
+    loaded_model = (
+        loaded_model
+        | predict_on_new_data(
+            model_name='loaded_management_model',
+            new_data=management_data.head(100),  # Use raw data, let the function handle preprocessing
+            prediction_name='loaded_model_predictions'
+        )
+        
+        # Print summary
+        | print_rf_summary('loaded_management_model')
+    )
+    
+    # Get prediction results separately (since it returns a dict, not a pipe)
+    prediction_results = get_new_prediction_results('loaded_model_predictions')(loaded_model)
+    
+    # Compare original and loaded models
+    print("\nComparing original and loaded models...")
+    original_metrics = saved_model.metrics.get('management_model_test_predictions', {})
+    loaded_results = loaded_model.new_predictions.get('loaded_model_predictions', {})
+    
+    if original_metrics and loaded_results:
+        print(f"Original model accuracy: {original_metrics.get('accuracy', 'N/A')}")
+        print(f"Loaded model predictions: {len(loaded_results.get('predictions', []))}")
+    
+    return loaded_model
+
+
+# Example 7: Feature Management and Addition
+def example_feature_management():
+    """
+    Demonstrate adding new features to Random Forest models
+    """
+    # Generate sample data with multiple features
+    np.random.seed(123)
+    n_samples = 1500
+    
+    feature_data = pd.DataFrame({
+        'customer_id': range(n_samples),
+        'age': np.random.randint(18, 75, n_samples),
+        'income': np.random.lognormal(10, 0.6, n_samples),
+        'credit_score': np.random.normal(650, 120, n_samples),
+        'payment_history': np.random.choice(['excellent', 'good', 'fair', 'poor'], n_samples),
+        'loan_amount': np.random.gamma(2, 60000, n_samples),
+        'employment_length': np.random.randint(0, 25, n_samples),
+        'debt_to_income': np.random.uniform(0.1, 0.9, n_samples),
+        'education_level': np.random.choice(['high_school', 'bachelor', 'master', 'phd'], n_samples),
+        'home_ownership': np.random.choice(['own', 'rent', 'mortgage'], n_samples),
+        'loan_purpose': np.random.choice(['home', 'car', 'education', 'business', 'personal'], n_samples),
+        'default_risk': np.random.choice([0, 1], n_samples, p=[0.75, 0.25])
+    })
+    
+    # Feature management pipeline
+    print("Creating model with initial features...")
+    feature_model = (
+        RFPipe.from_dataframe(feature_data)
+        
+        # Generate initial numerical features
+        | generate_numerical_features(
+            columns=['age', 'income', 'credit_score'],
+            operations=['log', 'sqrt'],
+            prefix='initial_'
+        )
+        
+        # Generate initial categorical features
+        | generate_categorical_features(
+            columns=['payment_history'],
+            encoding_type='onehot'
+        )
+        
+        # Set target
+        | create_binary_labels(
+            column='default_risk',
+            condition='==1',
+            label_column='default'
+        )
+        
+        # Train initial model
+        | train_random_forest(
+            test_size=0.2,
+            n_estimators=150,
+            max_depth=8,
+            model_name='initial_feature_model'
+        )
+        
+        # Evaluate initial model
+        | predict(model_name='initial_feature_model', data_split='test')
+        | calculate_metrics(model_name='initial_feature_model')
+    )
+    
+    print("\nAdding new features...")
+    
+    # Create derived features first
+    feature_model.data['income_to_loan_ratio'] = feature_model.data['income'] / (feature_model.data['loan_amount'] + 1e-8)
+    feature_model.data['credit_age_ratio'] = feature_model.data['credit_score'] / (feature_model.data['age'] + 1e-8)
+    
+    # Add new features
+    feature_model = (
+        feature_model
+        
+        # Add new numerical features
+        | add_features(
+            feature_columns=['loan_amount', 'employment_length', 'debt_to_income'],
+            feature_type='classification',
+            feature_name='additional_numerical'
+        )
+        
+        # Add new categorical features
+        | add_features(
+            feature_columns=['education_level', 'home_ownership', 'loan_purpose'],
+            feature_type='classification',
+            feature_name='additional_categorical'
+        )
+        
+        # Add derived features (computed from existing features)
+        | add_features(
+            feature_columns=['income_to_loan_ratio', 'credit_age_ratio'],
+            feature_type='derived',
+            feature_name='derived_features'
+        )
+        
+        # Add auxiliary features (for analysis but not classification)
+        | add_features(
+            feature_columns=['customer_id'],
+            feature_type='auxiliary',
+            feature_name='auxiliary_data'
+        )
+    )
+    
+    print("\nRetraining model with enhanced features...")
+    # Retrain with enhanced features
+    feature_model = (
+        feature_model
+        
+        # Generate features for new columns
+        | generate_numerical_features(
+            columns=['loan_amount', 'employment_length', 'debt_to_income', 'income_to_loan_ratio', 'credit_age_ratio'],
+            operations=['log', 'sqrt'],
+            prefix='enhanced_'
+        )
+        
+        | generate_categorical_features(
+            columns=['education_level', 'home_ownership', 'loan_purpose'],
+            encoding_type='onehot'
+        )
+        
+        # Feature selection
+        | select_features(method='kbest', k=20)
+        
+        # Train enhanced model
+        | train_random_forest(
+            test_size=0.2,
+            n_estimators=200,
+            max_depth=12,
+            model_name='enhanced_feature_model'
+        )
+        
+        # Evaluate enhanced model
+        | predict(model_name='enhanced_feature_model', data_split='test')
+        | calculate_metrics(model_name='enhanced_feature_model')
+        
+        # Compare models
+        | print_metrics(model_name='initial_feature_model')
+        | print_metrics(model_name='enhanced_feature_model')
+        
+        # Print comprehensive summary
+        | print_rf_summary()
+    )
+    
+    return feature_model
+
+
+# Example 8: Model Retraining and Updates
+def example_model_retraining():
+    """
+    Demonstrate model retraining with new data and updated configurations
+    """
+    # Generate initial training data
+    np.random.seed(456)
+    initial_samples = 800
+    
+    initial_data = pd.DataFrame({
+        'customer_id': range(initial_samples),
+        'age': np.random.randint(18, 70, initial_samples),
+        'income': np.random.lognormal(10, 0.5, initial_samples),
+        'credit_score': np.random.normal(700, 100, initial_samples),
+        'payment_history': np.random.choice(['excellent', 'good', 'fair'], initial_samples),
+        'loan_amount': np.random.gamma(2, 50000, initial_samples),
+        'employment_length': np.random.randint(1, 15, initial_samples),
+        'debt_to_income': np.random.uniform(0.1, 0.6, initial_samples),
+        'default_risk': np.random.choice([0, 1], initial_samples, p=[0.85, 0.15])
+    })
+    
+    # Create initial model
+    print("Creating initial model...")
+    retrain_model = (
+        RFPipe.from_dataframe(initial_data)
+        
+        # Generate features
+        | generate_numerical_features(
+            columns=['age', 'income', 'credit_score', 'loan_amount', 'employment_length', 'debt_to_income'],
+            operations=['log', 'sqrt']
+        )
+        
+        | generate_categorical_features(
+            columns=['payment_history'],
+            encoding_type='onehot'
+        )
+        
+        # Set target
+        | create_binary_labels(
+            column='default_risk',
+            condition='==1',
+            label_column='default'
+        )
+        
+        # Feature selection
+        | select_features(method='kbest', k=12)
+        
+        # Train initial model
+        | train_random_forest(
+            test_size=0.2,
+            n_estimators=100,
+            max_depth=8,
+            model_name='initial_model'
+        )
+        
+        # Evaluate initial model
+        | predict(model_name='initial_model', data_split='test')
+        | calculate_metrics(model_name='initial_model')
+    )
+    
+    # Generate new data with different patterns
+    print("\nGenerating new data with updated patterns...")
+    new_samples = 600
+    
+    new_data = pd.DataFrame({
+        'customer_id': range(initial_samples, initial_samples + new_samples),
+        'age': np.random.randint(20, 75, new_samples),  # Slightly different age distribution
+        'income': np.random.lognormal(10.2, 0.6, new_samples),  # Higher income trend
+        'credit_score': np.random.normal(720, 110, new_samples),  # Higher credit scores
+        'payment_history': np.random.choice(['excellent', 'good', 'fair', 'poor'], new_samples, p=[0.4, 0.3, 0.2, 0.1]),
+        'loan_amount': np.random.gamma(2.2, 55000, new_samples),  # Higher loan amounts
+        'employment_length': np.random.randint(0, 20, new_samples),
+        'debt_to_income': np.random.uniform(0.15, 0.7, new_samples),  # Higher debt ratios
+        'default_risk': np.random.choice([0, 1], new_samples, p=[0.8, 0.2])  # Slightly higher default rate
+    })
+    
+    # Create the target column for new data (same as in training)
+    new_data['default'] = (new_data['default_risk'] == 1).astype(int)
+    
+    # Retrain with new data
+    print("\nRetraining model with new data...")
+    retrain_model = (
+        retrain_model
+        
+        # Retrain with new data
+        | retrain_rf_model(
+            model_name='initial_model',
+            new_data=new_data,
+            retrain_name='retrained_model'
+        )
+        
+        # Evaluate retrained model
+        | calculate_metrics('retrained_model_predictions')
+    )
+    
+    # Retrain with updated configuration
+    print("\nRetraining with updated configuration...")
+    retrain_model = (
+        retrain_model
+        
+        # Retrain with updated parameters
+        | retrain_rf_model(
+            model_name='retrained_model',
+            update_config={
+                'n_estimators': 300,  # More trees
+                'max_depth': 15,      # Deeper trees
+                'min_samples_split': 5,  # More conservative splitting
+                'min_samples_leaf': 3    # More conservative leaf size
+            },
+            retrain_name='optimized_model'
+        )
+        
+        # Evaluate optimized model
+        | calculate_metrics('optimized_model_predictions')
+        
+        # Compare all models
+        | print_metrics(model_name='initial_model')
+        | print_metrics('retrained_model_predictions')
+        | print_metrics('optimized_model_predictions')
+        
+        # Print comprehensive summary
+        | print_rf_summary()
+    )
+    
+    return retrain_model
+
+
+# Example 9: Advanced Prediction on New Data
+def example_advanced_prediction():
+    """
+    Demonstrate advanced prediction capabilities with different scenarios
+    """
+    # Generate comprehensive dataset
+    np.random.seed(789)
+    n_samples = 2000
+    
+    prediction_data = pd.DataFrame({
+        'customer_id': range(n_samples),
+        'age': np.random.randint(18, 80, n_samples),
+        'income': np.random.lognormal(10, 0.7, n_samples),
+        'credit_score': np.random.normal(650, 150, n_samples),
+        'payment_history': np.random.choice(['excellent', 'good', 'fair', 'poor'], n_samples),
+        'loan_amount': np.random.gamma(2.5, 70000, n_samples),
+        'employment_length': np.random.randint(0, 30, n_samples),
+        'debt_to_income': np.random.uniform(0.05, 0.9, n_samples),
+        'education_level': np.random.choice(['high_school', 'bachelor', 'master', 'phd'], n_samples),
+        'home_ownership': np.random.choice(['own', 'rent', 'mortgage'], n_samples),
+        'loan_purpose': np.random.choice(['home', 'car', 'education', 'business', 'personal'], n_samples),
+        'default_risk': np.random.choice([0, 1], n_samples, p=[0.7, 0.3])
+    })
+    
+    # Create comprehensive model
+    print("Creating comprehensive prediction model...")
+    prediction_model = (
+        RFPipe.from_dataframe(prediction_data)
+        
+        # Generate comprehensive features
+        | generate_numerical_features(
+            columns=['age', 'income', 'credit_score', 'loan_amount', 'employment_length', 'debt_to_income'],
+            operations=['log', 'sqrt', 'square']
+        )
+        
+        | generate_categorical_features(
+            columns=['payment_history', 'education_level', 'home_ownership', 'loan_purpose'],
+            encoding_type='onehot'
+        )
+        
+        | generate_interaction_features(
+            column_pairs=[
+                ('income', 'loan_amount'),
+                ('credit_score', 'debt_to_income'),
+                ('age', 'employment_length'),
+                ('income', 'credit_score')
+            ],
+            operations=['multiply', 'divide']
+        )
+        
+        # Set target
+        | create_binary_labels(
+            column='default_risk',
+            condition='==1',
+            label_column='default'
+        )
+        
+        # Feature selection
+        | select_features(method='mutual_info', k=25)
+        
+        # Train model
+        | train_random_forest(
+            test_size=0.2,
+            n_estimators=300,
+            max_depth=15,
+            min_samples_split=5,
+            model_name='prediction_model'
+        )
+        
+        # Evaluate on test set
+        | predict(model_name='prediction_model', data_split='test')
+        | calculate_metrics(model_name='prediction_model')
+    )
+    
+    # Scenario 1: Basic prediction on new data
+    print("\nScenario 1: Basic prediction on new data...")
+    new_data_1 = prediction_data.sample(n=200, random_state=100)
+    
+    prediction_model = (
+        prediction_model
+        
+        | predict_on_new_data(
+            model_name='prediction_model',
+            new_data=new_data_1,
+            prediction_name='basic_new_predictions'
+        )
+    )
+    
+    # Scenario 2: Prediction with feature subset
+    print("\nScenario 2: Prediction with feature subset...")
+    new_data_2 = prediction_data.sample(n=150, random_state=200)
+    feature_subset = ['age', 'income', 'credit_score', 'loan_amount', 'debt_to_income']
+    
+    prediction_model = (
+        prediction_model
+        
+        | predict_on_new_data(
+            model_name='prediction_model',
+            new_data=new_data_2,
+            feature_subset=feature_subset,
+            prediction_name='subset_predictions'
+        )
+    )
+    
+    # Scenario 3: Prediction on high-risk customers
+    print("\nScenario 3: Prediction on high-risk customers...")
+    high_risk_data = prediction_data[
+        (prediction_data['credit_score'] < 600) | 
+        (prediction_data['debt_to_income'] > 0.7) |
+        (prediction_data['payment_history'] == 'poor')
+    ].sample(n=100, random_state=300)
+    
+    prediction_model = (
+        prediction_model
+        
+        | predict_on_new_data(
+            model_name='prediction_model',
+            new_data=high_risk_data,
+            prediction_name='high_risk_predictions'
+        )
+    )
+    
+    # Print comprehensive summary
+    prediction_model = prediction_model | print_rf_summary('prediction_model')
+    
+    # Get and analyze prediction results separately (since get_new_prediction_results returns a dict)
+    print("\nAnalyzing prediction results...")
+    basic_results = get_new_prediction_results('basic_new_predictions')(prediction_model)
+    subset_results = get_new_prediction_results('subset_predictions')(prediction_model)
+    high_risk_results = get_new_prediction_results('high_risk_predictions')(prediction_model)
+    
+    # Analyze prediction distributions
+    print("\nPrediction Analysis:")
+    for pred_name in ['basic_new_predictions', 'subset_predictions', 'high_risk_predictions']:
+        if pred_name in prediction_model.new_predictions:
+            pred_data = prediction_model.new_predictions[pred_name]
+            predictions = pred_data['predictions']
+            # Convert predictions to integers for proper counting
+            predictions_int = [int(p) for p in predictions]
+            print(f"\n{pred_name}:")
+            print(f"  Total predictions: {len(predictions)}")
+            print(f"  Default predictions: {sum(predictions_int)}")
+            print(f"  Default rate: {sum(predictions_int)/len(predictions):.3f}")
+            print(f"  Average confidence: {np.mean(pred_data['probabilities'].max(axis=1)):.3f}")
+    
+    return prediction_model
+
+
+# Example 10: Complete Model Lifecycle
+def example_complete_lifecycle():
+    """
+    Demonstrate complete model lifecycle from creation to deployment
+    """
+    # Generate comprehensive dataset
+    np.random.seed(999)
+    n_samples = 3000
+    
+    lifecycle_data = pd.DataFrame({
+        'customer_id': range(n_samples),
+        'age': np.random.randint(18, 85, n_samples),
+        'income': np.random.lognormal(10, 0.8, n_samples),
+        'credit_score': np.random.normal(650, 160, n_samples),
+        'payment_history': np.random.choice(['excellent', 'good', 'fair', 'poor'], n_samples),
+        'loan_amount': np.random.gamma(3, 80000, n_samples),
+        'employment_length': np.random.randint(0, 35, n_samples),
+        'debt_to_income': np.random.uniform(0.05, 0.95, n_samples),
+        'education_level': np.random.choice(['high_school', 'bachelor', 'master', 'phd'], n_samples),
+        'home_ownership': np.random.choice(['own', 'rent', 'mortgage'], n_samples),
+        'loan_purpose': np.random.choice(['home', 'car', 'education', 'business', 'personal'], n_samples),
+        'default_risk': np.random.choice([0, 1], n_samples, p=[0.65, 0.35])
+    })
+    
+    print("=== Complete Random Forest Model Lifecycle Demo ===")
+    
+    # Step 1: Initial Model Development
+    print("\nStep 1: Initial Model Development")
+    lifecycle_model = (
+        RFPipe.from_dataframe(lifecycle_data)
+        
+        # Basic feature engineering
+        | generate_numerical_features(
+            columns=['age', 'income', 'credit_score', 'loan_amount', 'employment_length', 'debt_to_income'],
+            operations=['log', 'sqrt']
+        )
+        
+        | generate_categorical_features(
+            columns=['payment_history', 'education_level'],
+            encoding_type='onehot'
+        )
+        
+        # Set target
+        | create_binary_labels(
+            column='default_risk',
+            condition='==1',
+            label_column='default'
+        )
+        
+        # Feature selection
+        | select_features(method='kbest', k=15)
+        
+        # Train initial model
+        | train_random_forest(
+            test_size=0.2,
+            n_estimators=200,
+            max_depth=10,
+            model_name='lifecycle_model'
+        )
+        
+        # Initial evaluation
+        | predict(model_name='lifecycle_model', data_split='test')
+        | calculate_metrics(model_name='lifecycle_model')
+    )
+    
+    # Step 2: Model Enhancement
+    print("\nStep 2: Model Enhancement")
+    lifecycle_model = (
+        lifecycle_model
+        
+        # Add more features
+        | add_features(
+            feature_columns=['home_ownership', 'loan_purpose'],
+            feature_type='classification',
+            feature_name='additional_features'
+        )
+        
+        # Generate features for new columns
+        | generate_categorical_features(
+            columns=['home_ownership', 'loan_purpose'],
+            encoding_type='onehot'
+        )
+        
+        | generate_interaction_features(
+            column_pairs=[
+                ('income', 'loan_amount'),
+                ('credit_score', 'debt_to_income'),
+                ('age', 'employment_length')
+            ],
+            operations=['multiply', 'divide']
+        )
+        
+        # Retrain with enhanced features
+        | retrain_rf_model(
+            model_name='lifecycle_model',
+            update_config={
+                'n_estimators': 300,
+                'max_depth': 15,
+                'min_samples_split': 5
+            },
+            retrain_name='enhanced_lifecycle_model'
+        )
+        
+        # Enhanced evaluation
+        | predict(model_name='enhanced_lifecycle_model', data_split='all')
+        | calculate_metrics(prediction_name='enhanced_lifecycle_model_all_predictions')
+    )
+    
+    # Step 3: Model Optimization
+    print("\nStep 3: Model Optimization")
+    
+    # Test different configurations
+    configs = [
+        {'n_estimators': 200, 'max_depth': 12, 'min_samples_split': 3},
+        {'n_estimators': 400, 'max_depth': 18, 'min_samples_split': 7},
+        {'n_estimators': 300, 'max_depth': 15, 'min_samples_split': 5}
+    ]
+    
+    best_accuracy = 0
+    best_config = None
+    best_model_name = None
+    
+    for i, config in enumerate(configs):
+        model_name = f'optimized_model_{i}'
+        
+        lifecycle_model = (
+            lifecycle_model
+            
+            | retrain_rf_model(
+                model_name='enhanced_lifecycle_model',
+                update_config=config,
+                retrain_name=model_name
+            )
+            
+            | predict(model_name=model_name, data_split='all')
+            | calculate_metrics(prediction_name=f'{model_name}_all_predictions')
+        )
+        
+        # Check if this is the best model
+        metrics = lifecycle_model.metrics.get(f'{model_name}_all_predictions', {})
+        accuracy = metrics.get('accuracy', 0)
+        
+        if accuracy > best_accuracy:
+            best_accuracy = accuracy
+            best_config = config
+            best_model_name = model_name
+    
+    print(f"Best model: {best_model_name} with accuracy: {best_accuracy:.4f}")
+    
+    # Step 4: Model Deployment
+    print("\nStep 4: Model Deployment")
+    lifecycle_model = (
+        lifecycle_model
+        
+        # Save optimized model
+        | save_rf_model(
+            model_name=best_model_name,
+            filepath='deployed_lifecycle_rf_model.joblib',
+            include_preprocessing=True
+        )
+    )
+    
+    # Step 5: Model Monitoring and Updates
+    print("\nStep 5: Model Monitoring and Updates")
+    
+    # Simulate new data arrival
+    new_samples = 500
+    new_data = pd.DataFrame({
+        'customer_id': range(n_samples, n_samples + new_samples),
+        'age': np.random.randint(20, 80, new_samples),
+        'income': np.random.lognormal(10.3, 0.8, new_samples),  # Slightly higher income
+        'credit_score': np.random.normal(670, 150, new_samples),  # Higher credit scores
+        'payment_history': np.random.choice(['excellent', 'good', 'fair', 'poor'], new_samples, p=[0.35, 0.35, 0.2, 0.1]),
+        'loan_amount': np.random.gamma(3.2, 85000, new_samples),  # Higher loan amounts
+        'employment_length': np.random.randint(0, 30, new_samples),
+        'debt_to_income': np.random.uniform(0.1, 0.9, new_samples),
+        'education_level': np.random.choice(['high_school', 'bachelor', 'master', 'phd'], new_samples),
+        'home_ownership': np.random.choice(['own', 'rent', 'mortgage'], new_samples),
+        'loan_purpose': np.random.choice(['home', 'car', 'education', 'business', 'personal'], new_samples),
+        'default_risk': np.random.choice([0, 1], new_samples, p=[0.6, 0.4])  # Higher default rate
+    })
+    
+    # Create the target column for new data (same as in training)
+    new_data['default'] = (new_data['default_risk'] == 1).astype(int)
+    
+    # Update model with new data
+    lifecycle_model = (
+        lifecycle_model
+        
+        # Retrain with new data
+        | retrain_rf_model(
+            model_name=best_model_name,
+            new_data=new_data,
+            retrain_name='updated_lifecycle_model'
+        )
+        
+        # Make predictions on new data
+        | predict_on_new_data(
+            model_name='updated_lifecycle_model',
+            new_data=new_data.sample(n=100, random_state=400),
+            prediction_name='monitoring_predictions'
+        )
+        
+        # Final evaluation
+        | calculate_metrics('updated_lifecycle_model_predictions')
+        | print_metrics('updated_lifecycle_model_predictions')
+        
+        # Comprehensive summary
+        | print_rf_summary()
+    )
+    
+    print("\n=== Model Lifecycle Completed Successfully ===")
+    
+    return lifecycle_model
+
 if __name__ == "__main__":
     print("Running Random Forest Pipeline Examples...")
     
@@ -473,5 +1232,30 @@ if __name__ == "__main__":
     print("Example 5: Production Pipeline")
     print("="*50)
     production_model = example_production_pipeline()
+    
+    print("\n" + "="*50)
+    print("Example 6: Model Management - Save and Load")
+    print("="*50)
+    model_management_example = example_model_management()
+    
+    print("\n" + "="*50)
+    print("Example 7: Feature Management and Addition")
+    print("="*50)
+    feature_management_example = example_feature_management()
+    
+    print("\n" + "="*50)
+    print("Example 8: Model Retraining and Updates")
+    print("="*50)
+    retraining_example = example_model_retraining()
+    
+    print("\n" + "="*50)
+    print("Example 9: Advanced Prediction on New Data")
+    print("="*50)
+    prediction_example = example_advanced_prediction()
+    
+    print("\n" + "="*50)
+    print("Example 10: Complete Model Lifecycle")
+    print("="*50)
+    lifecycle_example = example_complete_lifecycle()
     
     print("\nAll examples completed successfully!")

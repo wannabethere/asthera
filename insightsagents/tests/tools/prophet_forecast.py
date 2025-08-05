@@ -16,7 +16,14 @@ from app.tools.mltools.models.prophet_forecast import (
     plot_forecast,
     plot_cross_validation,
     save_prophet_model,
-    hyperparameter_tuning
+    hyperparameter_tuning,
+    load_prophet_model,
+    add_features,
+    retrain_prophet_model,
+    predict_forecast,
+    get_prediction_results,
+    update_forecast_with_new_data,
+    print_prophet_summary
 )
 import pandas as pd
 import numpy as np
@@ -614,6 +621,700 @@ def example_multi_step_forecasting():
     
     return multi_step_forecast
 
+# Example 7: Model Management - Save and Load
+def example_model_management():
+    """
+    Demonstrate model saving and loading functionality
+    """
+    # Generate sample data
+    np.random.seed(42)
+    dates = pd.date_range(start='2022-01-01', end='2023-12-31', freq='D')
+    
+    # Create time series with trend and seasonality
+    trend = np.linspace(100, 200, len(dates))
+    yearly_season = 20 * np.sin(2 * np.pi * np.arange(len(dates)) / 365.25)
+    weekly_season = 10 * np.sin(2 * np.pi * np.arange(len(dates)) / 7)
+    noise = np.random.normal(0, 5, len(dates))
+    
+    value = trend + yearly_season + weekly_season + noise
+    
+    management_data = pd.DataFrame({
+        'date': dates,
+        'metric': value,
+        'external_factor': np.random.normal(0, 10, len(dates))
+    })
+    
+    # Create and save model
+    print("Creating and saving model...")
+    saved_model = (
+        ProphetPipe.from_dataframe(management_data)
+        
+        # Prepare data
+        | prepare_prophet_data(
+            date_column='date',
+            value_column='metric'
+        )
+        
+        # Add external regressor
+        | add_regressors(
+            regressor_columns=['external_factor'],
+            prior_scale=0.1
+        )
+        
+        # Configure model
+        | configure_prophet(
+            growth='linear',
+            seasonality_mode='additive',
+            yearly_seasonality=True,
+            weekly_seasonality=True,
+            model_name='management_model'
+        )
+        
+        # Fit model
+        | fit_prophet(model_name='management_model')
+        
+        # Make forecast
+        | make_forecast(
+            periods=30,
+            model_name='management_model'
+        )
+        
+        # Save model with preprocessing
+        | save_prophet_model(
+            model_name='management_model',
+            filepath='test_management_model.joblib',
+            include_preprocessing=True
+        )
+    )
+    
+    # Load model in new pipeline
+    print("\nLoading model in new pipeline...")
+    loaded_model = (
+        ProphetPipe.from_dataframe(management_data)
+        
+        # Load saved model
+        | load_prophet_model(
+            filepath='test_management_model.joblib',
+            model_name='loaded_management_model'
+        )
+        
+        # Make new forecast with loaded model
+        | predict_forecast(
+            model_name='loaded_management_model',
+            periods=60,
+            prediction_name='loaded_model_forecast'
+        )
+        
+        # Get prediction results
+        | get_prediction_results('loaded_model_forecast')
+        
+        # Print summary
+        | print_prophet_summary('loaded_management_model')
+    )
+    
+    # Compare original and loaded models
+    print("\nComparing original and loaded models...")
+    original_forecast = saved_model.forecasts.get('management_model_forecast', {})
+    loaded_forecast = loaded_model.predictions.get('loaded_model_forecast', {})
+    
+    if original_forecast and loaded_forecast:
+        print(f"Original forecast periods: {len(original_forecast.get('forecast', pd.DataFrame()))}")
+        print(f"Loaded forecast periods: {len(loaded_forecast.get('forecast', pd.DataFrame()))}")
+    
+    return loaded_model
+
+
+# Example 8: Feature Management and Addition
+def example_feature_management():
+    """
+    Demonstrate adding new features to Prophet models
+    """
+    # Generate sample data with multiple features
+    np.random.seed(123)
+    dates = pd.date_range(start='2022-01-01', end='2023-12-31', freq='D')
+    
+    # Base metric
+    base_metric = 100 + 0.5 * np.arange(len(dates))
+    
+    # Create various features
+    feature1 = np.random.normal(0, 10, len(dates))  # Random feature
+    feature2 = 20 * np.sin(2 * np.pi * np.arange(len(dates)) / 30)  # Monthly pattern
+    feature3 = np.random.choice([0, 1], len(dates), p=[0.8, 0.2])  # Binary feature
+    feature4 = np.cumsum(np.random.normal(0, 1, len(dates)))  # Cumulative feature
+    
+    # Combine into target
+    target = base_metric + 0.3 * feature1 + 0.5 * feature2 + 10 * feature3 + 0.1 * feature4 + np.random.normal(0, 5, len(dates))
+    
+    feature_data = pd.DataFrame({
+        'date': dates,
+        'target': target,
+        'feature1': feature1,
+        'feature2': feature2,
+        'feature3': feature3,
+        'feature4': feature4,
+        'derived_feature': feature1 * feature2,  # Interaction
+        'external_metric': np.random.normal(50, 15, len(dates))
+    })
+    
+    # Feature management pipeline
+    print("Creating model with initial features...")
+    feature_model = (
+        ProphetPipe.from_dataframe(feature_data)
+        
+        # Prepare data
+        | prepare_prophet_data(
+            date_column='date',
+            value_column='target'
+        )
+        
+        # Add initial regressors
+        | add_regressors(
+            regressor_columns=['feature1', 'feature2'],
+            prior_scale=0.1
+        )
+        
+        # Configure and fit initial model
+        | configure_prophet(
+            growth='linear',
+            seasonality_mode='additive',
+            model_name='feature_model'
+        )
+        | fit_prophet(model_name='feature_model')
+        | make_forecast(
+            periods=30,
+            model_name='feature_model'
+        )
+    )
+    
+    print("\nAdding new features...")
+    # Add new features
+    feature_model = (
+        feature_model
+        
+        # Add new regressor features
+        | add_features(
+            feature_columns=['feature3', 'feature4'],
+            feature_type='regressor',
+            feature_name='additional_regressors'
+        )
+        
+        # Add external features
+        | add_features(
+            feature_columns=['external_metric'],
+            feature_type='external',
+            feature_name='external_data'
+        )
+        
+        # Add derived features
+        | add_features(
+            feature_columns=['derived_feature'],
+            feature_type='derived',
+            feature_name='interaction_features'
+        )
+    )
+    
+    print("\nRetraining model with new features...")
+    # Retrain with new features
+    feature_model = (
+        feature_model
+        
+        # Configure new model with all features
+        | configure_prophet(
+            growth='linear',
+            seasonality_mode='additive',
+            model_name='enhanced_feature_model'
+        )
+        
+        # Add all regressors
+        | add_regressors(
+            regressor_columns=['feature1', 'feature2', 'feature3', 'feature4'],
+            prior_scale=0.1
+        )
+        
+        # Fit enhanced model
+        | fit_prophet(model_name='enhanced_feature_model')
+        
+        # Make forecast with future regressor values
+        | predict_forecast(
+            model_name='enhanced_feature_model',
+            periods=30,
+            regressor_future_values={
+                'feature1': np.random.normal(0, 10, 30),
+                'feature2': 20 * np.sin(2 * np.pi * np.arange(30) / 30),
+                'feature3': np.random.choice([0, 1], 30, p=[0.8, 0.2]),
+                'feature4': np.cumsum(np.random.normal(0, 1, 30))
+            },
+            prediction_name='enhanced_forecast'
+        )
+        
+        # Print summary
+        | print_prophet_summary()
+    )
+    
+    return feature_model
+
+
+# Example 9: Model Retraining and Updates
+def example_model_retraining():
+    """
+    Demonstrate model retraining with new data and updated configurations
+    """
+    # Generate initial training data
+    np.random.seed(456)
+    initial_dates = pd.date_range(start='2022-01-01', end='2023-06-30', freq='D')
+    
+    # Initial pattern
+    initial_trend = np.linspace(100, 150, len(initial_dates))
+    initial_season = 20 * np.sin(2 * np.pi * np.arange(len(initial_dates)) / 365.25)
+    initial_noise = np.random.normal(0, 5, len(initial_dates))
+    
+    initial_value = initial_trend + initial_season + initial_noise
+    
+    initial_data = pd.DataFrame({
+        'date': initial_dates,
+        'metric': initial_value,
+        'regressor': np.random.normal(0, 10, len(initial_dates))
+    })
+    
+    # Create initial model
+    print("Creating initial model...")
+    retrain_model = (
+        ProphetPipe.from_dataframe(initial_data)
+        
+        # Prepare data
+        | prepare_prophet_data(
+            date_column='date',
+            value_column='metric'
+        )
+        
+        # Add regressor
+        | add_regressors(
+            regressor_columns=['regressor'],
+            prior_scale=0.1
+        )
+        
+        # Configure initial model
+        | configure_prophet(
+            growth='linear',
+            seasonality_mode='additive',
+            changepoint_prior_scale=0.05,
+            model_name='initial_model'
+        )
+        
+        # Fit initial model
+        | fit_prophet(model_name='initial_model')
+        
+        # Make initial forecast
+        | make_forecast(
+            periods=30,
+            model_name='initial_model'
+        )
+    )
+    
+    # Generate new data with different pattern
+    print("\nGenerating new data with updated pattern...")
+    new_dates = pd.date_range(start='2023-07-01', end='2023-12-31', freq='D')
+    
+    # New pattern with higher trend and different seasonality
+    new_trend = np.linspace(150, 250, len(new_dates))  # Higher trend
+    new_season = 30 * np.sin(2 * np.pi * np.arange(len(new_dates)) / 365.25 + np.pi/4)  # Phase shift
+    new_noise = np.random.normal(0, 8, len(new_dates))  # Higher noise
+    
+    new_value = new_trend + new_season + new_noise
+    
+    new_data = pd.DataFrame({
+        'date': new_dates,
+        'metric': new_value,
+        'regressor': np.random.normal(5, 15, len(new_dates))  # Different regressor pattern
+    })
+    
+    # Retrain with new data
+    print("\nRetraining model with new data...")
+    retrain_model = (
+        retrain_model
+        
+        # Retrain with new data
+        | retrain_prophet_model(
+            model_name='initial_model',
+            new_data=new_data,
+            retrain_name='retrained_model'
+        )
+        
+        # Make forecast with retrained model
+        | predict_forecast(
+            model_name='retrained_model',
+            periods=60,
+            prediction_name='retrained_forecast'
+        )
+    )
+    
+    # Retrain with updated configuration
+    print("\nRetraining with updated configuration...")
+    retrain_model = (
+        retrain_model
+        
+        # Retrain with updated parameters
+        | retrain_prophet_model(
+            model_name='retrained_model',
+            update_config={
+                'changepoint_prior_scale': 0.1,  # More flexible changepoints
+                'seasonality_prior_scale': 20.0,  # Stronger seasonality
+                'n_changepoints': 35  # More changepoints
+            },
+            retrain_name='optimized_model'
+        )
+        
+        # Make forecast with optimized model
+        | predict_forecast(
+            model_name='optimized_model',
+            periods=90,
+            prediction_name='optimized_forecast'
+        )
+        
+        # Compare models
+        | print_prophet_summary()
+    )
+    
+    return retrain_model
+
+
+# Example 10: Advanced Prediction and Inference
+def example_advanced_prediction():
+    """
+    Demonstrate advanced prediction capabilities with different scenarios
+    """
+    # Generate comprehensive dataset
+    np.random.seed(789)
+    dates = pd.date_range(start='2021-01-01', end='2023-12-31', freq='D')
+    
+    # Complex pattern with multiple components
+    trend = np.linspace(100, 300, len(dates))
+    yearly_season = 50 * np.sin(2 * np.pi * np.arange(len(dates)) / 365.25)
+    weekly_season = 20 * np.sin(2 * np.pi * np.arange(len(dates)) / 7)
+    monthly_season = 15 * np.sin(2 * np.pi * np.arange(len(dates)) / 30)
+    
+    # External factors
+    marketing_spend = 1000 + 200 * np.sin(2 * np.pi * np.arange(len(dates)) / 30) + np.random.normal(0, 50, len(dates))
+    weather_effect = 10 * np.sin(2 * np.pi * np.arange(len(dates)) / 365.25 + np.pi) + np.random.normal(0, 3, len(dates))
+    promotion_days = np.random.choice([0, 1], len(dates), p=[0.9, 0.1])
+    
+    # Combine all effects
+    target = trend + yearly_season + weekly_season + monthly_season + 0.1 * marketing_spend + weather_effect + 50 * promotion_days + np.random.normal(0, 10, len(dates))
+    
+    prediction_data = pd.DataFrame({
+        'date': dates,
+        'target': target,
+        'marketing_spend': marketing_spend,
+        'weather': weather_effect,
+        'promotion': promotion_days,
+        'day_of_week': pd.to_datetime(dates).dayofweek,
+        'month': pd.to_datetime(dates).month
+    })
+    
+    # Create comprehensive model
+    print("Creating comprehensive prediction model...")
+    prediction_model = (
+        ProphetPipe.from_dataframe(prediction_data)
+        
+        # Prepare data
+        | prepare_prophet_data(
+            date_column='date',
+            value_column='target'
+        )
+        
+        # Add multiple regressors
+        | add_regressors(
+            regressor_columns=['marketing_spend', 'weather', 'promotion'],
+            prior_scale=0.1
+        )
+        
+        # Configure model
+        | configure_prophet(
+            growth='linear',
+            seasonality_mode='additive',
+            yearly_seasonality=True,
+            weekly_seasonality=True,
+            daily_seasonality=False,
+            model_name='prediction_model'
+        )
+        
+        # Add custom seasonality
+        | add_custom_seasonality(
+            name='monthly',
+            period=30.5,
+            fourier_order=5,
+            model_name='prediction_model'
+        )
+        
+        # Fit model
+        | fit_prophet(model_name='prediction_model')
+    )
+    
+    # Scenario 1: Basic prediction
+    print("\nScenario 1: Basic prediction...")
+    prediction_model = (
+        prediction_model
+        
+        | predict_forecast(
+            model_name='prediction_model',
+            periods=30,
+            prediction_name='basic_prediction'
+        )
+    )
+    
+    # Scenario 2: Prediction with future regressor values
+    print("\nScenario 2: Prediction with future regressor values...")
+    prediction_model = (
+        prediction_model
+        
+        | predict_forecast(
+            model_name='prediction_model',
+            periods=60,
+            regressor_future_values={
+                'marketing_spend': np.random.normal(1200, 100, 60),  # Increased marketing
+                'weather': np.random.normal(0, 5, 60),  # Weather forecast
+                'promotion': np.random.choice([0, 1], 60, p=[0.85, 0.15])  # Planned promotions
+            },
+            prediction_name='regressor_prediction'
+        )
+    )
+    
+    # Scenario 3: Prediction without history
+    print("\nScenario 3: Prediction without historical data...")
+    prediction_model = (
+        prediction_model
+        
+        | predict_forecast(
+            model_name='prediction_model',
+            periods=90,
+            include_history=False,
+            regressor_future_values={
+                'marketing_spend': np.random.normal(1500, 150, 90),  # Aggressive marketing
+                'weather': np.random.normal(5, 8, 90),  # Seasonal weather
+                'promotion': np.random.choice([0, 1], 90, p=[0.8, 0.2])  # More promotions
+            },
+            prediction_name='future_only_prediction'
+        )
+    )
+    
+    # Get and analyze prediction results
+    print("\nAnalyzing prediction results...")
+    basic_results = prediction_model | get_prediction_results('basic_prediction')
+    regressor_results = prediction_model | get_prediction_results('regressor_prediction')
+    future_results = prediction_model | get_prediction_results('future_only_prediction')
+    
+    # Print comprehensive summary
+    prediction_model = prediction_model | print_prophet_summary()
+    
+    return prediction_model
+
+
+# Example 11: Complete Model Lifecycle
+def example_complete_lifecycle():
+    """
+    Demonstrate complete model lifecycle from creation to deployment
+    """
+    # Generate comprehensive dataset
+    np.random.seed(999)
+    dates = pd.date_range(start='2020-01-01', end='2023-12-31', freq='D')
+    
+    # Business metric with complex patterns
+    base_trend = np.linspace(1000, 2000, len(dates))
+    yearly_pattern = 200 * np.sin(2 * np.pi * np.arange(len(dates)) / 365.25)
+    weekly_pattern = 100 * np.sin(2 * np.pi * np.arange(len(dates)) / 7)
+    
+    # Business factors
+    advertising_budget = 500 + 100 * np.sin(2 * np.pi * np.arange(len(dates)) / 30) + np.random.normal(0, 20, len(dates))
+    competitor_activity = np.random.choice([0, 1], len(dates), p=[0.7, 0.3])
+    seasonal_events = np.where((pd.to_datetime(dates).month == 12) | (pd.to_datetime(dates).month == 1), 1, 0)
+    
+    # Combine effects
+    business_metric = base_trend + yearly_pattern + weekly_pattern + 0.5 * advertising_budget - 100 * competitor_activity + 300 * seasonal_events + np.random.normal(0, 50, len(dates))
+    
+    lifecycle_data = pd.DataFrame({
+        'date': dates,
+        'business_metric': business_metric,
+        'advertising_budget': advertising_budget,
+        'competitor_activity': competitor_activity,
+        'seasonal_events': seasonal_events,
+        'day_of_week': pd.to_datetime(dates).dayofweek
+    })
+    
+    print("=== Complete Model Lifecycle Demo ===")
+    
+    # Step 1: Initial Model Development
+    print("\nStep 1: Initial Model Development")
+    lifecycle_model = (
+        ProphetPipe.from_dataframe(lifecycle_data)
+        
+        # Prepare data
+        | prepare_prophet_data(
+            date_column='date',
+            value_column='business_metric'
+        )
+        
+        # Add initial regressors
+        | add_regressors(
+            regressor_columns=['advertising_budget'],
+            prior_scale=0.1
+        )
+        
+        # Configure initial model
+        | configure_prophet(
+            growth='linear',
+            seasonality_mode='additive',
+            yearly_seasonality=True,
+            weekly_seasonality=True,
+            model_name='lifecycle_model'
+        )
+        
+        # Fit model
+        | fit_prophet(model_name='lifecycle_model')
+        
+        # Initial forecast
+        | make_forecast(
+            periods=30,
+            model_name='lifecycle_model'
+        )
+        
+        # Evaluate initial model
+        | cross_validate_model(
+            initial='730 days',
+            period='180 days',
+            horizon='30 days',
+            model_name='lifecycle_model'
+        )
+    )
+    
+    # Step 2: Model Enhancement
+    print("\nStep 2: Model Enhancement")
+    lifecycle_model = (
+        lifecycle_model
+        
+        # Add more features
+        | add_features(
+            feature_columns=['competitor_activity', 'seasonal_events'],
+            feature_type='regressor',
+            feature_name='business_factors'
+        )
+        
+        # Retrain with enhanced features
+        | retrain_prophet_model(
+            model_name='lifecycle_model',
+            update_config={
+                'changepoint_prior_scale': 0.1,
+                'seasonality_prior_scale': 15.0
+            },
+            retrain_name='enhanced_lifecycle_model'
+        )
+        
+        # Enhanced forecast
+        | predict_forecast(
+            model_name='enhanced_lifecycle_model',
+            periods=60,
+            regressor_future_values={
+                'advertising_budget': np.random.normal(600, 50, 60),
+                'competitor_activity': np.random.choice([0, 1], 60, p=[0.6, 0.4]),
+                'seasonal_events': [1 if i < 30 else 0 for i in range(60)]  # Holiday season
+            },
+            prediction_name='enhanced_forecast'
+        )
+    )
+    
+    # Step 3: Model Optimization
+    print("\nStep 3: Model Optimization")
+    param_grid = {
+        'changepoint_prior_scale': [0.05, 0.1, 0.2],
+        'seasonality_prior_scale': [10.0, 15.0, 20.0],
+        'n_changepoints': [20, 25, 30]
+    }
+    
+    lifecycle_model = (
+        lifecycle_model
+        
+        # Hyperparameter tuning
+        | hyperparameter_tuning(
+            param_grid=param_grid,
+            cv_initial='365 days',
+            cv_period='90 days',
+            cv_horizon='30 days',
+            metric='mape',
+            model_name='optimized_lifecycle_model'
+        )
+        
+        # Forecast with optimized model
+        | predict_forecast(
+            model_name='optimized_lifecycle_model_best',
+            periods=90,
+            regressor_future_values={
+                'advertising_budget': np.random.normal(700, 60, 90),
+                'competitor_activity': np.random.choice([0, 1], 90, p=[0.5, 0.5]),
+                'seasonal_events': [1 if i < 45 else 0 for i in range(90)]
+            },
+            prediction_name='optimized_forecast'
+        )
+    )
+    
+    # Step 4: Model Deployment
+    print("\nStep 4: Model Deployment")
+    lifecycle_model = (
+        lifecycle_model
+        
+        # Save optimized model
+        | save_prophet_model(
+            model_name='optimized_lifecycle_model_best',
+            filepath='deployed_lifecycle_model.joblib'
+        )
+    )
+    
+    # Step 5: Model Monitoring and Updates
+    print("\nStep 5: Model Monitoring and Updates")
+    
+    # Simulate new data arrival
+    new_dates = pd.date_range(start='2024-01-01', end='2024-03-31', freq='D')
+    new_advertising = np.random.normal(800, 80, len(new_dates))  # Increased budget
+    new_competitor = np.random.choice([0, 1], len(new_dates), p=[0.4, 0.6])  # More competition
+    new_seasonal = np.zeros(len(new_dates))
+    
+    new_business_metric = (
+        2000 + 0.8 * np.arange(len(new_dates)) +  # Higher trend
+        200 * np.sin(2 * np.pi * np.arange(len(new_dates)) / 365.25) +  # Seasonality
+        0.5 * new_advertising - 150 * new_competitor +  # Business factors
+        np.random.normal(0, 60, len(new_dates))  # Noise
+    )
+    
+    new_data = pd.DataFrame({
+        'date': new_dates,
+        'business_metric': new_business_metric,
+        'advertising_budget': new_advertising,
+        'competitor_activity': new_competitor,
+        'seasonal_events': new_seasonal,
+        'day_of_week': pd.to_datetime(new_dates).dayofweek
+    })
+    
+    # Update model with new data
+    lifecycle_model = (
+        lifecycle_model
+        
+        # Update forecast with new data
+        | update_forecast_with_new_data(
+            model_name='optimized_lifecycle_model_best',
+            new_data=new_data,
+            periods=120,
+            update_name='updated_forecast'
+        )
+        
+        # Final evaluation
+        | calculate_forecast_metrics('updated_forecast')
+        | print_forecast_metrics('updated_forecast')
+        
+        # Comprehensive summary
+        | print_prophet_summary()
+    )
+    
+    print("\n=== Model Lifecycle Completed Successfully ===")
+    
+    return lifecycle_model
 
 if __name__ == "__main__":
     print("Running Prophet Pipeline Examples...")
@@ -648,4 +1349,31 @@ if __name__ == "__main__":
     print("="*50)
     multi_step_model = example_multi_step_forecasting()
     
+    print("\n" + "="*50)
+    print("Example 7: Model Management - Save and Load")
+    print("="*50)
+    model_management_example = example_model_management()
+    
+    print("\n" + "="*50)
+    print("Example 8: Feature Management and Addition")
+    print("="*50)
+    feature_management_example = example_feature_management()
+    
+    print("\n" + "="*50)
+    print("Example 9: Model Retraining and Updates")
+    print("="*50)
+    retraining_example = example_model_retraining()
+    
+    print("\n" + "="*50)
+    print("Example 10: Advanced Prediction and Inference")
+    print("="*50)
+    prediction_example = example_advanced_prediction()
+    
+    print("\n" + "="*50)
+    print("Example 11: Complete Model Lifecycle")
+    print("="*50)
+    lifecycle_example = example_complete_lifecycle()
+    
     print("\nAll Prophet examples completed successfully!")
+
+

@@ -1,0 +1,89 @@
+{
+    "$schema": "https://repo-srv01.corp.balbix.com/de_f1/delta-raw2store/-/blob/main/delta_raw2store/model/schema.py#L151-L186",
+    "type": "object",
+    "properties": {
+        "swkey_partition_id": {
+            "type": "str"
+        },
+        "nuid": {
+            "type": "int"
+        },
+        "dev_id": {
+            "type": "int"
+        },
+        "key": {
+            "type": "str"
+        },
+        "cpe": {
+            "type": "str"
+        },
+        "source": {
+            "type": "str"
+        },
+        "category": {
+            "type": "str"
+        },
+        "product": {
+            "type": "str"
+        },
+        "vendor": {
+            "type": "str"
+        },
+        "version": {
+            "type": "str"
+        },
+        "install_path": {
+            "type": "str"
+        },
+        "latest_remediation_id": {
+            "type": "str"
+        },
+        "latest_available_patch": {
+            "type": "str"
+        },
+        "latest_installed_patch": {
+            "type": "str"
+        },
+        "patch_class": {
+            "type": "str"
+        },
+        "product_state": {
+            "type": "str"
+        },
+        "install_time": {
+            "type": "str"
+        },
+        "latest_remediation_release_time": {
+            "type": "str"
+        },
+        "latest_installed_patch_release_time": {
+            "type": "str"
+        },
+        "latest_patch_release_time": {
+            "type": "str"
+        },
+        "latest_patch_install_time": {
+            "type": "str"
+        },
+        "is_stale": {
+            "type": "bool"
+        },
+        "raw_created_at": {
+            "type": "time"
+        },
+        "store_created_at": {
+            "type": "time"
+        },
+        "store_updated_at": {
+            "type": "time"
+        },
+        "process_id": {
+            "type": "str"
+        }
+    },
+    "required": [
+        "swkey_partition_id",
+        "nuid",
+        "dev_id"
+    ]
+}

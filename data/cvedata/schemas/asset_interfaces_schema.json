@@ -1,0 +1,52 @@
+{
+    "$schema": "https://repo-srv01.corp.balbix.com/de_f1/delta-raw2store/-/blob/main/delta_raw2store/asset_interfaces/model.py",
+    "type": "object",
+    "properties": {
+        "nuid": {
+            "type": "int"
+        },
+        "dev_id": {
+            "type": "int"
+        },
+        "id": {
+            "type": "str"
+        },
+        "ip": {
+            "type": "str"
+        },
+        "subnet": {
+            "type": "str"
+        },
+        "site": {
+            "type": "str"
+        },
+        "mac": {
+            "type": "str"
+        },
+        "manufacturer": {
+            "type": "str"
+        },
+        "updated_at": {
+            "type": "str"
+        },
+        "is_stale": {
+            "type": "bool"
+        },
+        "raw_created_at": {
+            "type": "time"
+        },
+        "store_created_at": {
+            "type": "time"
+        },
+        "store_updated_at": {
+            "type": "time"
+        },
+        "process_id": {
+            "type": "str"
+        }
+    },
+    "required": [
+        "nuid",
+        "dev_id"
+    ]
+}

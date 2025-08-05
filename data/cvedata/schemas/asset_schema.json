@@ -1,0 +1,295 @@
+{
+    "$schema": "https://repo-srv01.corp.balbix.com/de_f1/delta-raw2store/-/blob/main/delta_raw2store/model/schema.py#L4-L113",
+    "type": "object",
+    "properties": {
+        "nuid": {
+            "type": "int"
+        },
+        "dev_id": {
+            "type": "int"
+        },
+        "ip": {
+            "type": "str"
+        },
+        "mac": {
+            "type": "str"
+        },
+        "host_name": {
+            "type": "str"
+        },
+        "os_arch": {
+            "type": "str"
+        },
+        "os_name": {
+            "type": "str"
+        },
+        "os_version": {
+            "type": "str"
+        },
+        "cpu_model_name": {
+            "type": "str"
+        },
+        "count_cpu_cores": {
+            "type": "int"
+        },
+        "total_physical_mem_mb": {
+            "type": "int"
+        },
+        "uptime_mins": {
+            "type": "int"
+        },
+        "secure_boot_status": {
+            "type": "str"
+        },
+        "system_model": {
+            "type": "str"
+        },
+        "power_shell_exec_policy": {
+            "type": "str"
+        },
+        "smb1": {
+            "type": "str"
+        },
+        "smb2": {
+            "type": "str"
+        },
+        "smb3": {
+            "type": "str"
+        },
+        "domain_joined": {
+            "type": "str"
+        },
+        "smbios_version": {
+            "type": "str"
+        },
+        "bios_version": {
+            "type": "str"
+        },
+        "bios_vendor": {
+            "type": "str"
+        },
+        "bios_release_date": {
+            "type": "str"
+        },
+        "serial_number": {
+            "type": "str"
+        },
+        "manufacturer": {
+            "type": "str"
+        },
+        "board_manufacturer": {
+            "type": "str"
+        },
+        "system_manufacturer": {
+            "type": "str"
+        },
+        "is_reboot_pending": {
+            "type": "str"
+        },
+        "is_cloud_asset": {
+            "type": "str"
+        },
+        "raw_impact": {
+            "type": "float"
+        },
+        "raw_likelihood": {
+            "type": "float"
+        },
+        "raw_risk": {
+            "type": "float"
+        },
+        "bastion_impact": {
+            "type": "float"
+        },
+        "propagation_impact": {
+            "type": "float"
+        },
+        "category_impact": {
+            "type": "float"
+        },
+        "unpatched_vulnerability_likelihood": {
+            "type": "float"
+        },
+        "weak_credentials_likelihood": {
+            "type": "float"
+        },
+        "zero_day_likelihood": {
+            "type": "float"
+        },
+        "weak_encryption_likelihood": {
+            "type": "float"
+        },
+        "trust_relationship_likelihood": {
+            "type": "float"
+        },
+        "misconfiguration_likelihood": {
+            "type": "float"
+        },
+        "compromised_credentials_likelihood": {
+            "type": "float"
+        },
+        "phishing_likelihood": {
+            "type": "float"
+        },
+        "malicious_insider_likelihood": {
+            "type": "float"
+        },
+        "credential_vulnerability_likelihood": {
+            "type": "float"
+        },
+        "likelihood_active": {
+            "type": "float"
+        },
+        "unpatched_vulnerability_likelihood_active": {
+            "type": "float"
+        },
+        "weak_credentials_likelihood_active": {
+            "type": "float"
+        },
+        "zero_day_likelihood_active": {
+            "type": "float"
+        },
+        "weak_encryption_likelihood_active": {
+            "type": "float"
+        },
+        "trust_relationship_likelihood_active": {
+            "type": "float"
+        },
+        "misconfiguration_likelihood_active": {
+            "type": "float"
+        },
+        "compromised_credentials_likelihood_active": {
+            "type": "float"
+        },
+        "phishing_likelihood_active": {
+            "type": "float"
+        },
+        "malicious_insider_likelihood_active": {
+            "type": "float"
+        },
+        "credential_vulnerability_likelihood_active": {
+            "type": "float"
+        },
+        "likelihood_inherent": {
+            "type": "float"
+        },
+        "unpatched_vulnerability_likelihood_inherent": {
+            "type": "float"
+        },
+        "weak_credentials_likelihood_inherent": {
+            "type": "float"
+        },
+        "zero_day_likelihood_inherent": {
+            "type": "float"
+        },
+        "weak_encryption_likelihood_inherent": {
+            "type": "float"
+        },
+        "trust_relationship_likelihood_inherent": {
+            "type": "float"
+        },
+        "misconfiguration_likelihood_inherent": {
+            "type": "float"
+        },
+        "compromised_credentials_likelihood_inherent": {
+            "type": "float"
+        },
+        "phishing_likelihood_inherent": {
+            "type": "float"
+        },
+        "malicious_insider_likelihood_inherent": {
+            "type": "float"
+        },
+        "credential_vulnerability_likelihood_inherent": {
+            "type": "float"
+        },
+        "effective_impact": {
+            "type": "float"
+        },
+        "effective_likelihood": {
+            "type": "float"
+        },
+        "effective_risk": {
+            "type": "float"
+        },
+        "device_type": {
+            "type": "str"
+        },
+        "device_subtype": {
+            "type": "str"
+        },
+        "platform": {
+            "type": "str"
+        },
+        "is_manual_canonical_label": {
+            "type": "str"
+        },
+        "roles": {
+            "type": "str"
+        },
+        "search_tags": {
+            "type": "str"
+        },
+        "site_name": {
+            "type": "str"
+        },
+        "final_name": {
+            "type": "str"
+        },
+        "device_zone": {
+            "type": "str"
+        },
+        "location_id": {
+            "type": "str"
+        },
+        "location_region": {
+            "type": "str"
+        },
+        "location_country": {
+            "type": "str"
+        },
+        "location_city": {
+            "type": "str"
+        },
+        "location_state": {
+            "type": "str"
+        },
+        "is_bastion_device": {
+            "type": "str"
+        },
+        "asset_tags": {
+            "type": "str"
+        },
+        "discoverable_tags": {
+            "type": "str"
+        },
+        "inserted_at": {
+            "type": "str"
+        },
+        "os_release_install_date": {
+            "type": "str"
+        },
+        "events_timestamp": {
+            "type": "str"
+        },
+        "is_retired": {
+            "type": "bool"
+        },
+        "raw_created_at": {
+            "type": "time"
+        },
+        "store_created_at": {
+            "type": "time"
+        },
+        "store_updated_at": {
+            "type": "time"
+        },
+        "process_id": {
+            "type": "str"
+        }
+    },
+    "required": [
+        "nuid",
+        "dev_id"
+    ]
+}

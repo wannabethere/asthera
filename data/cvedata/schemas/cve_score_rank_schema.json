@@ -1,0 +1,313 @@
+{
+    "$schema": "https://repo-srv01.corp.balbix.com/de_f1/delta-raw2store/-/blob/main/delta_raw2store/cve_score_rank_schema/model.py",
+    "type": "object",
+    "properties": {
+        "nuid": {
+            "type": "int"
+        },
+        "cve_partition_id": {
+            "type": "str"
+        },
+        "cve_id": {
+            "type": "str"
+        },
+        "balbix_score": {
+            "type": "float"
+        },
+        "balbix_mitigated_score": {
+            "type": "float"
+        },
+        "accessibility_influence": {
+            "type": "float"
+        },
+        "complexity_influence": {
+            "type": "float"
+        },
+        "severity_influence": {
+            "type": "float"
+        },
+        "mitigation_influence": {
+            "type": "float"
+        },
+        "exposure_influence": {
+            "type": "float"
+        },
+        "age_influence": {
+            "type": "float"
+        },
+        "intent_influence": {
+            "type": "float"
+        },
+        "exploit_maturity_influence": {
+            "type": "float"
+        },
+        "zero_day_prob_influence": {
+            "type": "float"
+        },
+        "information_impact": {
+            "type": "float"
+        },
+        "bastion_impact": {
+            "type": "float"
+        },
+        "asset_count": {
+            "type": "int"
+        },
+        "computed_at": {
+            "type": "time"
+        },
+        "rank_score": {
+            "type": "float"
+        },
+        "doc_id": {
+            "type": "str"
+        },
+        "rank": {
+            "type": "int"
+        },
+        "assigner": {
+            "type": "str"
+        },
+        "description": {
+            "type": "str"
+        },
+        "references": {
+            "type": "str"
+        },
+        "cvssv2_attack_complexity": {
+            "type": "str"
+        },
+        "cvssv2_attack_vector": {
+            "type": "str"
+        },
+        "cvssv2_availability_impact": {
+            "type": "str"
+        },
+        "cvssv2_base_score": {
+            "type": "float"
+        },
+        "cvssv2_base_severity": {
+            "type": "str"
+        },
+        "cvssv2_confidentiality_impact": {
+            "type": "str"
+        },
+        "cvssv2_integrity_impact": {
+            "type": "str"
+        },
+        "cvssv2_privileges_required": {
+            "type": "str"
+        },
+        "cvssv2_scope": {
+            "type": "str"
+        },
+        "cvssv2_user_interaction": {
+            "type": "str"
+        },
+        "cvssv2_vector_string": {
+            "type": "str"
+        },
+        "cvssv2_version": {
+            "type": "str"
+        },
+        "cvssv3_attack_complexity": {
+            "type": "str"
+        },
+        "cvssv3_attack_vector": {
+            "type": "str"
+        },
+        "cvssv3_availability_impact": {
+            "type": "str"
+        },
+        "cvssv3_base_score": {
+            "type": "float"
+        },
+        "cvssv3_base_severity": {
+            "type": "str"
+        },
+        "cvssv3_confidentiality_impact": {
+            "type": "str"
+        },
+        "cvssv3_integrity_impact": {
+            "type": "str"
+        },
+        "cvssv3_privileges_required": {
+            "type": "str"
+        },
+        "cvssv3_scope": {
+            "type": "str"
+        },
+        "cvssv3_user_interaction": {
+            "type": "str"
+        },
+        "cvssv3_vector_string": {
+            "type": "str"
+        },
+        "cvssv3_version": {
+            "type": "str"
+        },
+        "exploitability_score": {
+            "type": "float"
+        },
+        "impact_score": {
+            "type": "float"
+        },
+        "threat_names": {
+            "type": "str"
+        },
+        "threat_count": {
+            "type": "str"
+        },
+        "published_date": {
+            "type": "time"
+        },
+        "last_modified_date": {
+            "type": "time"
+        },
+        "vuln_tags": {
+            "type": "str"
+        },
+        "bx_zero_day_prob": {
+            "type": "float"
+        },
+        "bx_mitigation_evidences": {
+            "type": "str"
+        },
+        "bx_mitigation_hyperparameters": {
+            "type": "str"
+        },
+        "bx_mitigation_distribution_type": {
+            "type": "str"
+        },
+        "bx_exploit_maturity_evidences": {
+            "type": "str"
+        },
+        "bx_exploit_maturity_hyperparameters": {
+            "type": "str"
+        },
+        "bx_exploit_maturity_distribution_type": {
+            "type": "str"
+        },
+        "bx_complexity_evidences": {
+            "type": "str"
+        },
+        "bx_complexity_hyperparameters": {
+            "type": "str"
+        },
+        "bx_complexity_distribution_type": {
+            "type": "str"
+        },
+        "bx_severity_evidences": {
+            "type": "str"
+        },
+        "bx_severity_hyperparameters": {
+            "type": "str"
+        },
+        "bx_severity_distribution_type": {
+            "type": "str"
+        },
+        "bx_exposure_evidences": {
+            "type": "str"
+        },
+        "bx_exposure_hyperparameters": {
+            "type": "str"
+        },
+        "bx_exposure_distribution_type": {
+            "type": "str"
+        },
+        "bx_accessibility_evidences": {
+            "type": "str"
+        },
+        "bx_accessibility_hyperparameters": {
+            "type": "str"
+        },
+        "bx_accessibility_distribution_type": {
+            "type": "str"
+        },
+        "bx_intent_evidences": {
+            "type": "str"
+        },
+        "bx_intent_hyperparameters": {
+            "type": "str"
+        },
+        "bx_intent_distribution_type": {
+            "type": "str"
+        },
+        "bx_mitigation_efficacy": {
+            "type": "float"
+        },
+        "bx_temporal_factor": {
+            "type": "float"
+        },
+        "bx_temporal_factor_score": {
+            "type": "float"
+        },
+        "threat_level": {
+            "type": "str"
+        },
+        "severity_level": {
+            "type": "str"
+        },
+        "bx_meta_source_name": {
+            "type": "str"
+        },
+        "bx_meta_accuracy_percentage": {
+            "type": "int"
+        },
+        "bx_meta_completeness_percentage": {
+            "type": "int"
+        },
+        "bx_meta_cpe_count": {
+            "type": "int"
+        },
+        "bx_meta_cve_description_exists": {
+            "type": "bool"
+        },
+        "bx_meta_cve_ref_name_exists": {
+            "type": "bool"
+        },
+        "bx_meta_cve_ref_url_exists": {
+            "type": "bool"
+        },
+        "bx_meta_lead_seconds_over_nvd": {
+            "type": "int"
+        },
+        "bx_meta_remediation_count": {
+            "type": "int"
+        },
+        "bx_meta_v2_score_exists": {
+            "type": "bool"
+        },
+        "bx_meta_v2_vector_string_exists": {
+            "type": "bool"
+        },
+        "bx_meta_v3_score_exists": {
+            "type": "bool"
+        },
+        "bx_meta_v3_vector_string_exists": {
+            "type": "bool"
+        },
+        "year": {
+            "type": "int"
+        },
+        "month": {
+            "type": "int"
+        },
+        "day": {
+            "type": "int"
+        },
+        "hour": {
+            "type": "int"
+        },
+        "bx_updated_at": {
+            "type": "time"
+        },
+        "update_type": {
+            "type": "str"
+        },
+        "_change_type": {
+            "type": "str"
+        }
+    },
+    "required": []
+}

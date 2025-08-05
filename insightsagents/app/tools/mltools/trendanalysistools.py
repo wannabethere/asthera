@@ -132,8 +132,12 @@ class TrendPipe(BasePipe):
         else:
             result_df = pd.DataFrame(result)
         
+        # Ensure we always return a DataFrame
+        if result_df is None:
+            result_df = pd.DataFrame()
+        
         # Add metadata if requested
-        if include_metadata:
+        if include_metadata and not result_df.empty:
             result_df['analysis_name'] = analysis_name
             result_df['analysis_type'] = 'time_aggregation'
             
@@ -150,8 +154,12 @@ class TrendPipe(BasePipe):
         else:
             result_df = pd.DataFrame(result)
         
+        # Ensure we always return a DataFrame
+        if result_df is None:
+            result_df = pd.DataFrame()
+        
         # Add metadata if requested
-        if include_metadata:
+        if include_metadata and not result_df.empty:
             result_df['analysis_name'] = analysis_name
             result_df['analysis_type'] = 'trend_result'
             
@@ -205,8 +213,12 @@ class TrendPipe(BasePipe):
         else:
             result_df = pd.DataFrame(result)
         
+        # Ensure we always return a DataFrame
+        if result_df is None:
+            result_df = pd.DataFrame()
+        
         # Add metadata if requested
-        if include_metadata:
+        if include_metadata and not result_df.empty:
             result_df['analysis_name'] = analysis_name
             result_df['analysis_type'] = 'trend_decomposition'
             
@@ -230,8 +242,12 @@ class TrendPipe(BasePipe):
         else:
             result_df = pd.DataFrame(result)
         
+        # Ensure we always return a DataFrame
+        if result_df is None:
+            result_df = pd.DataFrame()
+        
         # Add metadata if requested
-        if include_metadata:
+        if include_metadata and not result_df.empty:
             result_df['analysis_name'] = analysis_name
             result_df['analysis_type'] = 'forecast'
             
@@ -421,11 +437,11 @@ class TrendPipe(BasePipe):
         
         Returns:
         --------
-        Any or None
-            The current trend analysis result, or None if no current analysis
+        Any
+            The current trend analysis result, or empty dict if no current analysis
         """
         if self.current_analysis is None:
-            return None
+            return {}
         
         # Check in all categories
         if self.current_analysis in self.time_aggregations:
@@ -437,7 +453,7 @@ class TrendPipe(BasePipe):
         elif self.current_analysis in self.forecasts:
             return self.forecasts[self.current_analysis]
         else:
-            return None
+            return {}
     
     def get_original_data(self):
         """
@@ -445,10 +461,10 @@ class TrendPipe(BasePipe):
         
         Returns:
         --------
-        pd.DataFrame or None
-            The original data DataFrame, or None if no data was provided
+        pd.DataFrame
+            The original data DataFrame, or empty DataFrame if no data was provided
         """
-        return self.data.copy() if self.data is not None else None
+        return self.data.copy() if self.data is not None else pd.DataFrame()
     
     def get_time_aggregation_data(self, aggregation_name: Optional[str] = None):
         """
@@ -461,8 +477,8 @@ class TrendPipe(BasePipe):
             
         Returns:
         --------
-        pd.DataFrame or None
-            The time aggregation data, or None if not found
+        pd.DataFrame
+            The time aggregation data, or empty DataFrame if not found
         """
         if aggregation_name is None:
             aggregation_name = self.current_analysis
@@ -472,7 +488,7 @@ class TrendPipe(BasePipe):
             if isinstance(agg_data, dict) and 'data' in agg_data:
                 return agg_data['data'].copy()
         
-        return None
+        return pd.DataFrame()
     
     def get_forecast_data(self, forecast_name: Optional[str] = None):
         """
@@ -485,8 +501,8 @@ class TrendPipe(BasePipe):
             
         Returns:
         --------
-        pd.DataFrame or None
-            The forecast data, or None if not found
+        pd.DataFrame
+            The forecast data, or empty DataFrame if not found
         """
         if forecast_name is None:
             forecast_name = self.current_analysis
@@ -496,7 +512,7 @@ class TrendPipe(BasePipe):
             if isinstance(forecast_data, dict) and 'data' in forecast_data:
                 return forecast_data['data'].copy()
         
-        return None
+        return pd.DataFrame()
     
     def get_summary(self, **kwargs) -> Dict[str, Any]:
         """
@@ -593,7 +609,7 @@ def aggregate_by_time(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Ensure date column is datetime
         if not pd.api.types.is_datetime64_any_dtype(df[date_column]):
@@ -685,7 +701,7 @@ def calculate_growth_rates(
         
         new_pipe = pipe.copy()
         agg_data = new_pipe.time_aggregations[new_pipe.current_analysis]
-        df = agg_data['data']
+        df = agg_data['data'].copy()  # Ensure we work with a copy
         time_period = agg_data['time_period']
         
         # Create a new dataframe for growth rates
@@ -787,7 +803,7 @@ def calculate_moving_average(
         
         new_pipe = pipe.copy()
         agg_data = new_pipe.time_aggregations[new_pipe.current_analysis]
-        df = agg_data['data']
+        df = agg_data['data'].copy()  # Ensure we work with a copy
         
         # Create a new dataframe for moving averages
         ma_df = pd.DataFrame(index=df.index)
@@ -855,7 +871,7 @@ def decompose_trend(
         
         new_pipe = pipe.copy()
         agg_data = new_pipe.time_aggregations[new_pipe.current_analysis]
-        df = agg_data['data']
+        df = agg_data['data'].copy()  # Ensure we work with a copy
         time_period = agg_data['time_period']
         
         # Check if the metric column exists
@@ -1113,7 +1129,7 @@ def forecast_metric(
         method = fmethod
         new_pipe = pipe.copy()
         agg_data = new_pipe.time_aggregations[new_pipe.current_analysis]
-        df = agg_data['data']
+        df = agg_data['data'].copy()  # Ensure we work with a copy
         time_period = agg_data['time_period']
         
         # Check if the metric column exists
@@ -1359,7 +1375,7 @@ def calculate_statistical_trend(
         
         new_pipe = pipe.copy()
         agg_data = new_pipe.time_aggregations[new_pipe.current_analysis]
-        df = agg_data['data']
+        df = agg_data['data'].copy()  # Ensure we work with a copy
         
         # Check if the metric column exists
         if metric_column not in df.columns:
@@ -1498,7 +1514,7 @@ def compare_periods(
         
         new_pipe = pipe.copy()
         agg_data = new_pipe.time_aggregations[new_pipe.current_analysis]
-        df = agg_data['data']
+        df = agg_data['data'].copy()  # Ensure we work with a copy
         time_period = agg_data['time_period']
         
         # Check if the metric column exists

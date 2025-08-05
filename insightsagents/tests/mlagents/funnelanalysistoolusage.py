@@ -322,6 +322,20 @@ def main():
         context="Calculate mean daily transactional values",
         dataframe_name="Purchase Orders Data"
     )
+
+    # Example 5: Another question with code generation
+    print("\n5. Another question with code generation:")
+    result5= analyze_question_with_intent_classification(
+        question="What is the distribution of the mean daily transactional values for each type of source by region and project daily?",
+        dataframe=po_df,
+        dataframe_description="Financial flux data with project, cost center, and department information",
+        dataframe_summary="Dataset contains flux values over time with grouping dimensions",
+        columns_description=columns_description,
+        enable_code_generation=True,
+        context="Calculate mean daily transactional values",
+        dataframe_name="Purchase Orders Data"
+    )
+   
    
     import json
     
@@ -366,6 +380,12 @@ def main():
     print("result4",json.dumps(result4_serializable,indent=4))
     print("\n" + "="*80)
     
+    print(f"RESULT for What is the distribution of the transactional values for each type of source by region and project daily?")
+    print("="*80)
+    result5_serializable = convert_analysis_intent_result(result5)
+    print("result5",json.dumps(result5_serializable,indent=4))
+    print("\n" + "="*80)
+
     print("ANALYSIS COMPLETE")
     print("="*80)
 

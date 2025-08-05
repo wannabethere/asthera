@@ -290,6 +290,28 @@ class TableResponse(BaseModel):
     column_count: int = 0
 
 
+class EnhancedTableResponse(BaseModel):
+    """Enhanced response model for table creation with detailed column information"""
+    model_config = ConfigDict(from_attributes=True)
+    
+    table_id: str
+    name: str
+    display_name: Optional[str]
+    description: Optional[str]
+    table_type: str
+    semantic_description: Optional[str] = None
+    column_count: int = 0
+    business_purpose: Optional[str] = None
+    primary_use_cases: Optional[List[str]] = None
+    key_relationships: Optional[List[str]] = None
+    data_lineage: Optional[str] = None
+    update_frequency: Optional[str] = None
+    data_retention: Optional[str] = None
+    access_patterns: Optional[List[str]] = None
+    performance_considerations: Optional[List[str]] = None
+    enhanced_columns: Optional[List[Dict[str, Any]]] = None  # EnhancedColumnDefinition data
+
+
 # ============================================================================
 # EXAMPLE API MODELS
 # ============================================================================

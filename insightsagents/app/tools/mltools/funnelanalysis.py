@@ -39,7 +39,7 @@ def analyze_funnel(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Validate event_column contains all funnel steps
         events_in_data = df[event_column].unique()
@@ -160,7 +160,7 @@ def analyze_funnel_by_time(
             warnings.warn("Length of step_names doesn't match funnel_steps. Using funnel_steps as labels.")
             step_labels = funnel_steps
         
-        df = cohort_pipe.data
+        df = cohort_pipe.data.copy()  # Ensure we work with a copy
         cohort_column = 'time_cohort'
         
         # Get unique cohorts (time periods)
@@ -294,7 +294,7 @@ def analyze_funnel_by_segment(
             warnings.warn("Length of step_names doesn't match funnel_steps. Using funnel_steps as labels.")
             step_labels = funnel_steps
         
-        df = cohort_pipe.data
+        df = cohort_pipe.data.copy()  # Ensure we work with a copy
         cohort_column = 'segment_cohort'
         
         # Get unique segments
@@ -417,7 +417,7 @@ def analyze_user_paths(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Use provided step names or funnel step values
         step_labels = step_names if step_names else funnel_steps

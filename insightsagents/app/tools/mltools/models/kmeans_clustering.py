@@ -69,6 +69,86 @@ class KMeansPipe(BasePipe):
         if hasattr(source_pipe, 'visualization_data'):
             self.visualization_data = source_pipe.visualization_data.copy()
     
+    def to_df(self, **kwargs) -> pd.DataFrame:
+        """
+        Convert the K-means clustering analysis results to a DataFrame.
+        
+        Parameters:
+        -----------
+        **kwargs : dict
+            Additional arguments:
+            - include_clusters: bool, whether to include cluster assignments (default: True)
+            - include_features: bool, whether to include feature columns (default: True)
+            - include_metrics: bool, whether to include evaluation metrics (default: False)
+            - model_name: str, specific model to include results for (default: None, includes all)
+            
+        Returns:
+        --------
+        pd.DataFrame
+            DataFrame representation of the analysis results
+            
+        Raises:
+        -------
+        ValueError
+            If no analysis has been performed
+        """
+        if self.data is None:
+            raise ValueError("No data available. Run analysis first.")
+        
+        # Get parameters
+        include_clusters = kwargs.get('include_clusters', True)
+        include_features = kwargs.get('include_features', True)
+        include_metrics = kwargs.get('include_metrics', False)
+        model_name = kwargs.get('model_name', None)
+        
+        # Start with the original data
+        result_df = self.data.copy()
+        
+        # Add cluster assignments if requested
+        if include_clusters and self.cluster_assignments:
+            if model_name:
+                if model_name in self.cluster_assignments:
+                    cluster_col = self.cluster_assignments[model_name]['cluster_column']
+                    if cluster_col in result_df.columns:
+                        # Already included in data
+                        pass
+                    else:
+                        result_df[cluster_col] = self.cluster_assignments[model_name]['labels']
+            else:
+                # Add all cluster assignments
+                for name, assignment in self.cluster_assignments.items():
+                    cluster_col = assignment['cluster_column']
+                    if cluster_col not in result_df.columns:
+                        result_df[cluster_col] = assignment['labels']
+        
+        # Add evaluation metrics if requested
+        if include_metrics and self.evaluation_metrics:
+            metrics_data = {}
+            if model_name:
+                if model_name in self.evaluation_metrics:
+                    metrics = self.evaluation_metrics[model_name]
+                    for metric_name, value in metrics.items():
+                        if isinstance(value, (int, float)):
+                            metrics_data[f'{model_name}_{metric_name}'] = [value] * len(result_df)
+            else:
+                # Add all metrics
+                for name, metrics in self.evaluation_metrics.items():
+                    for metric_name, value in metrics.items():
+                        if isinstance(value, (int, float)):
+                            metrics_data[f'{name}_{metric_name}'] = [value] * len(result_df)
+            
+            # Add metrics as columns
+            for col_name, values in metrics_data.items():
+                result_df[col_name] = values
+        
+        # Filter feature columns if requested
+        if not include_features and self.feature_columns:
+            # Remove feature columns but keep cluster assignments and metrics
+            feature_cols_to_remove = [col for col in self.feature_columns if col in result_df.columns]
+            result_df = result_df.drop(columns=feature_cols_to_remove)
+        
+        return result_df
+    
     def get_summary(self, **kwargs) -> Dict[str, Any]:
         """
         Get a summary of the K-means clustering analysis results.
@@ -210,19 +290,31 @@ def prepare_clustering_data(
         
         # Remove outliers if requested
         if remove_outliers:
-            if outlier_method == 'iqr':
-                Q1 = feature_data.quantile(0.25)
-                Q3 = feature_data.quantile(0.75)
-                IQR = Q3 - Q1
-                outlier_mask = ~((feature_data < (Q1 - 1.5 * IQR)) | (feature_data > (Q3 + 1.5 * IQR))).any(axis=1)
-            elif outlier_method == 'zscore':
-                z_scores = np.abs((feature_data - feature_data.mean()) / feature_data.std())
-                outlier_mask = (z_scores < outlier_threshold).all(axis=1)
-            else:
-                raise ValueError(f"Unknown outlier method: {outlier_method}")
+            # Filter out boolean columns for outlier detection
+            numeric_columns = feature_data.select_dtypes(include=[np.number]).columns.tolist()
+            boolean_columns = feature_data.select_dtypes(include=[bool]).columns.tolist()
             
-            feature_data = feature_data[outlier_mask]
-            df = df.loc[feature_data.index]
+            if len(numeric_columns) == 0:
+                print("Warning: No numeric columns found for outlier detection. Skipping outlier removal.")
+            else:
+                numeric_data = feature_data[numeric_columns]
+                
+                if outlier_method == 'iqr':
+                    Q1 = numeric_data.quantile(0.25)
+                    Q3 = numeric_data.quantile(0.75)
+                    IQR = Q3 - Q1
+                    outlier_mask = ~((numeric_data < (Q1 - 1.5 * IQR)) | (numeric_data > (Q3 + 1.5 * IQR))).any(axis=1)
+                elif outlier_method == 'zscore':
+                    z_scores = np.abs((numeric_data - numeric_data.mean()) / numeric_data.std())
+                    outlier_mask = (z_scores < outlier_threshold).all(axis=1)
+                else:
+                    raise ValueError(f"Unknown outlier method: {outlier_method}")
+                
+                feature_data = feature_data[outlier_mask]
+                df = df.loc[feature_data.index]
+                
+                if boolean_columns:
+                    print(f"Note: Boolean columns {boolean_columns} were excluded from outlier detection.")
         
         # Scale features
         if scaling_method == 'standard':
@@ -236,10 +328,20 @@ def prepare_clustering_data(
         else:
             raise ValueError(f"Unknown scaling method: {scaling_method}")
         
-        if scaler:
-            scaled_features = scaler.fit_transform(feature_data)
-            scaled_df = pd.DataFrame(scaled_features, columns=feature_columns, index=feature_data.index)
+        # Separate numeric and boolean columns for scaling
+        numeric_columns = feature_data.select_dtypes(include=[np.number]).columns.tolist()
+        boolean_columns = feature_data.select_dtypes(include=[bool]).columns.tolist()
+        
+        if scaler and len(numeric_columns) > 0:
+            # Scale numeric columns
+            numeric_data = feature_data[numeric_columns]
+            scaled_numeric = scaler.fit_transform(numeric_data)
+            scaled_df = pd.DataFrame(scaled_numeric, columns=numeric_columns, index=feature_data.index)
             new_pipe.scalers['features'] = scaler
+            
+            # Add boolean columns back without scaling
+            if boolean_columns:
+                scaled_df[boolean_columns] = feature_data[boolean_columns]
         else:
             scaled_df = feature_data
         
@@ -310,40 +412,51 @@ def engineer_clustering_features(
         
         # Create ratio features
         if ratio_features:
+            ratio_data = {}
             for col1, col2 in ratio_features:
                 if col1 in df.columns and col2 in df.columns:
                     if pd.api.types.is_numeric_dtype(df[col1]) and pd.api.types.is_numeric_dtype(df[col2]):
                         ratio_name = f'{col1}_div_{col2}'
-                        df[ratio_name] = df[col1] / (df[col2] + 1e-8)  # Avoid division by zero
+                        ratio_data[ratio_name] = df[col1] / (df[col2] + 1e-8)  # Avoid division by zero
                         new_features.append(ratio_name)
+            
+            # Add all ratio features at once to avoid fragmentation
+            if ratio_data:
+                ratio_df = pd.DataFrame(ratio_data, index=df.index)
+                df = pd.concat([df, ratio_df], axis=1)
         
         # Create aggregation features
         if aggregation_features:
+            agg_data = {}
             for group_col, agg_cols in aggregation_features.items():
                 if group_col in df.columns:
                     for agg_col in agg_cols:
                         if agg_col in df.columns and pd.api.types.is_numeric_dtype(df[agg_col]):
                             group_stats = df.groupby(group_col)[agg_col].agg(['mean', 'std', 'min', 'max'])
-                            df = df.merge(
-                                group_stats.add_prefix(f'{agg_col}_by_{group_col}_'),
-                                left_on=group_col,
-                                right_index=True,
-                                how='left'
-                            )
-                            new_features.extend([
-                                f'{agg_col}_by_{group_col}_mean',
-                                f'{agg_col}_by_{group_col}_std',
-                                f'{agg_col}_by_{group_col}_min',
-                                f'{agg_col}_by_{group_col}_max'
-                            ])
+                            # Create new columns for each aggregation
+                            for stat in ['mean', 'std', 'min', 'max']:
+                                col_name = f'{agg_col}_by_{group_col}_{stat}'
+                                agg_data[col_name] = df[group_col].map(group_stats[stat])
+                                new_features.append(col_name)
+            
+            # Add all aggregation features at once
+            if agg_data:
+                agg_df = pd.DataFrame(agg_data, index=df.index)
+                df = pd.concat([df, agg_df], axis=1)
         
         # Create binning features
         if binning_features:
+            bin_data = {}
             for col, n_bins in binning_features.items():
                 if col in df.columns and pd.api.types.is_numeric_dtype(df[col]):
                     binned_name = f'{col}_binned'
-                    df[binned_name] = pd.cut(df[col], bins=n_bins, labels=False)
+                    bin_data[binned_name] = pd.cut(df[col], bins=n_bins, labels=False)
                     new_features.append(binned_name)
+            
+            # Add all binning features at once
+            if bin_data:
+                bin_df = pd.DataFrame(bin_data, index=df.index)
+                df = pd.concat([df, bin_df], axis=1)
         
         # Update feature columns and data
         new_pipe.data = df
@@ -397,7 +510,7 @@ def reduce_dimensions(
         reduced_data = reducer.fit_transform(X)
         
         # Create column names for reduced dimensions
-        dim_columns = [f'{method}_dim_{i+1}' for i in range(n_components)]
+        dim_columns = [f'{reducer_name}_dim_{i+1}' for i in range(n_components)]
         
         # Add reduced dimensions to dataframe
         for i, col in enumerate(dim_columns):
@@ -898,6 +1011,17 @@ def plot_clusters_2d(
         cluster_col = pipe.cluster_assignments[model_name]['cluster_column']
         df = pipe.data
         
+        # Check if requested features exist in the data
+        missing_features = []
+        if x_feature not in df.columns:
+            missing_features.append(x_feature)
+        if y_feature not in df.columns:
+            missing_features.append(y_feature)
+        
+        if missing_features:
+            print(f"Warning: Features {missing_features} not found in data. Available columns: {list(df.columns)}")
+            return pipe
+        
         plt.figure(figsize=figsize)
         
         # Create scatter plot
@@ -976,21 +1100,42 @@ def plot_cluster_profiles(
         
         if profile_type == 'numerical' and 'numerical' in profiles:
             # Plot numerical feature means
-            means_data = profiles['numerical']['mean'].T
+            numerical_profiles = profiles['numerical']
             
-            # Select top k features by variance across clusters
-            if len(means_data) > top_k_features:
-                feature_variance = means_data.var(axis=1)
-                top_features = feature_variance.nlargest(top_k_features).index
-                means_data = means_data.loc[top_features]
-            
-            plt.figure(figsize=figsize)
-            sns.heatmap(means_data, annot=True, cmap='RdYlBu_r', center=0, fmt='.2f')
-            plt.title(f'Cluster Profile Heatmap - {model_name}')
-            plt.ylabel('Features')
-            plt.xlabel('Clusters')
-            plt.tight_layout()
-            plt.show()
+            if numerical_profiles is not None and not numerical_profiles.empty:
+                # Handle multi-level columns from agg() operation
+                if isinstance(numerical_profiles.columns, pd.MultiIndex):
+                    # Extract mean values from multi-level columns
+                    # The structure is typically (feature, agg_func) where agg_func is the first level
+                    if 'mean' in numerical_profiles.columns.get_level_values(0):
+                        means_data = numerical_profiles.xs('mean', level=0, axis=1).T
+                    else:
+                        # Fallback: use the first aggregation function available
+                        first_agg = numerical_profiles.columns.get_level_values(0)[0]
+                        means_data = numerical_profiles.xs(first_agg, level=0, axis=1).T
+                else:
+                    # Fallback for single-level columns
+                    means_data = numerical_profiles.T
+                
+                # Check if we have valid data to plot
+                if means_data is not None and not means_data.empty and len(means_data) > 0:
+                    # Select top k features by variance across clusters
+                    if len(means_data) > top_k_features:
+                        feature_variance = means_data.var(axis=1)
+                        top_features = feature_variance.nlargest(top_k_features).index
+                        means_data = means_data.loc[top_features]
+                    
+                    plt.figure(figsize=figsize)
+                    sns.heatmap(means_data, annot=True, cmap='RdYlBu_r', center=0, fmt='.2f')
+                    plt.title(f'Cluster Profile Heatmap - {model_name}')
+                    plt.ylabel('Features')
+                    plt.xlabel('Clusters')
+                    plt.tight_layout()
+                    plt.show()
+                else:
+                    print(f"No valid numerical data to plot for {model_name}")
+            else:
+                print(f"No numerical profiles available for {model_name}")
             
         elif profile_type == 'categorical' and 'categorical' in profiles:
             # Plot categorical feature distributions
@@ -1228,14 +1373,425 @@ def print_cluster_summary(
         # Cluster profiles summary
         if model_name in pipe.cluster_profiles:
             profiles = pipe.cluster_profiles[model_name]
-            if 'numerical' in profiles:
-                print(f"\nTop 5 Discriminating Features (by variance across clusters):")
-                means_data = profiles['numerical']['mean'].T
-                feature_variance = means_data.var(axis=1)
-                top_features = feature_variance.nlargest(5)
-                for feature, variance in top_features.items():
-                    print(f"  {feature}: {variance:.4f}")
+            if 'numerical' in profiles and profiles['numerical'] is not None:
+                numerical_profiles = profiles['numerical']
+                if not numerical_profiles.empty:
+                    print(f"\nTop 5 Discriminating Features (by variance across clusters):")
+                    try:
+                        # Handle multi-level DataFrame structure
+                        if isinstance(numerical_profiles.columns, pd.MultiIndex):
+                            # Multi-level columns (count, mean, std, etc.)
+                            if 'mean' in numerical_profiles.columns.get_level_values(0):
+                                means_data = numerical_profiles['mean'].T
+                                feature_variance = means_data.var(axis=1)
+                                top_features = feature_variance.nlargest(5)
+                                for feature, variance in top_features.items():
+                                    print(f"  {feature}: {variance:.4f}")
+                            else:
+                                print("  No mean values available in numerical profiles")
+                        else:
+                            # Single-level columns, assume it's already the mean
+                            feature_variance = numerical_profiles.var(axis=0)
+                            top_features = feature_variance.nlargest(5)
+                            for feature, variance in top_features.items():
+                                print(f"  {feature}: {variance:.4f}")
+                    except Exception as e:
+                        print(f"  Error calculating feature variance: {e}")
+                else:
+                    print("  No numerical profiles available")
+            else:
+                print("  No numerical profiles found")
         
         return pipe
     
     return _print_cluster_summary
+
+
+def load_kmeans_model(
+    filepath: str,
+    model_name: str = 'loaded_model'
+):
+    """
+    Load a previously saved K-means clustering model
+    
+    Parameters:
+    -----------
+    filepath : str
+        Path to the saved model file
+    model_name : str
+        Name for the loaded model
+        
+    Returns:
+    --------
+    Callable
+        Function that loads K-means models into a KMeansPipe
+    """
+    def _load_kmeans_model(pipe):
+        try:
+            model_package = joblib.load(filepath)
+            
+            new_pipe = pipe.copy()
+            
+            # Restore model
+            new_pipe.models[model_name] = {
+                'model': model_package['model'],
+                'type': model_package['model_type'],
+                'config': model_package['config']
+            }
+            
+            # Restore feature columns
+            if 'feature_columns' in model_package:
+                new_pipe.feature_columns = model_package['feature_columns']
+            
+            # Restore cluster assignments
+            if 'cluster_assignments' in model_package:
+                new_pipe.cluster_assignments[model_name] = model_package['cluster_assignments']
+            
+            # Restore evaluation metrics
+            if 'evaluation_metrics' in model_package:
+                new_pipe.evaluation_metrics[model_name] = model_package['evaluation_metrics']
+            
+            # Restore cluster profiles
+            if 'cluster_profiles' in model_package:
+                new_pipe.cluster_profiles[model_name] = model_package['cluster_profiles']
+            
+            # Restore preprocessing components
+            if 'scalers' in model_package:
+                new_pipe.scalers = model_package['scalers']
+            
+            if 'dimensionality_reducers' in model_package:
+                new_pipe.dimensionality_reducers = model_package['dimensionality_reducers']
+            
+            new_pipe.current_analysis = f'loaded_model_{model_name}'
+            
+            print(f"Successfully loaded K-means model from: {filepath}")
+            print(f"Model type: {model_package['model_type']}")
+            print(f"Number of clusters: {model_package['config']['n_clusters']}")
+            print(f"Number of features: {len(model_package.get('feature_columns', []))}")
+            
+            return new_pipe
+            
+        except Exception as e:
+            raise ValueError(f"Failed to load model from {filepath}: {str(e)}")
+    
+    return _load_kmeans_model
+
+
+def add_features(
+    feature_columns: List[str],
+    feature_type: str = 'clustering',
+    feature_name: str = 'additional_features'
+):
+    """
+    Add new features to the K-means clustering pipeline
+    
+    Parameters:
+    -----------
+    feature_columns : List[str]
+        List of new feature column names to add
+    feature_type : str
+        Type of features ('clustering', 'auxiliary', 'derived')
+    feature_name : str
+        Name for the feature addition operation
+        
+    Returns:
+    --------
+    Callable
+        Function that adds features to a KMeansPipe
+    """
+    def _add_features(pipe):
+        if pipe.data is None:
+            raise ValueError("No data found. Data must be provided before adding features.")
+        
+        new_pipe = pipe.copy()
+        df = new_pipe.data
+        
+        # Validate that new features exist in the data
+        missing_features = [col for col in feature_columns if col not in df.columns]
+        if missing_features:
+            raise ValueError(f"Missing features in data: {missing_features}")
+        
+        # Add features based on type
+        if feature_type == 'clustering':
+            # Add to clustering feature columns
+            new_pipe.feature_columns.extend(feature_columns)
+            print(f"Added {len(feature_columns)} clustering features: {feature_columns}")
+            
+        elif feature_type == 'auxiliary':
+            # Store auxiliary features (not used for clustering but available for analysis)
+            if not hasattr(new_pipe, 'auxiliary_features'):
+                new_pipe.auxiliary_features = {}
+            new_pipe.auxiliary_features[feature_name] = {
+                'columns': feature_columns,
+                'type': 'auxiliary'
+            }
+            print(f"Added {len(feature_columns)} auxiliary features: {feature_columns}")
+            
+        elif feature_type == 'derived':
+            # Store derived features (computed from existing features)
+            if not hasattr(new_pipe, 'derived_features'):
+                new_pipe.derived_features = {}
+            new_pipe.derived_features[feature_name] = {
+                'columns': feature_columns,
+                'type': 'derived'
+            }
+            print(f"Added {len(feature_columns)} derived features: {feature_columns}")
+        
+        else:
+            raise ValueError(f"Unknown feature type: {feature_type}")
+        
+        new_pipe.current_analysis = f'add_features_{feature_name}'
+        
+        return new_pipe
+    
+    return _add_features
+
+
+def retrain_kmeans_model(
+    model_name: str,
+    new_data: Optional[pd.DataFrame] = None,
+    feature_subset: Optional[List[str]] = None,
+    update_config: Optional[Dict] = None,
+    retrain_name: str = 'retrained_model'
+):
+    """
+    Retrain a K-means model with new data or updated configuration
+    
+    Parameters:
+    -----------
+    model_name : str
+        Name of the existing model to retrain
+    new_data : Optional[pd.DataFrame]
+        New data to use for retraining (if None, uses existing data)
+    feature_subset : Optional[List[str]]
+        Subset of features to use for retraining
+    update_config : Optional[Dict]
+        Updated configuration parameters for the model
+    retrain_name : str
+        Name for the retrained model
+        
+    Returns:
+    --------
+    Callable
+        Function that retrains K-means models from a KMeansPipe
+    """
+    def _retrain_kmeans_model(pipe):
+        if model_name not in pipe.models:
+            raise ValueError(f"Model '{model_name}' not found for retraining.")
+        
+        new_pipe = pipe.copy()
+        
+        # Get the original model configuration
+        original_config = new_pipe.models[model_name]['config'].copy()
+        
+        # Update configuration if provided
+        if update_config:
+            original_config.update(update_config)
+        
+        # Determine data to use for retraining
+        if new_data is not None:
+            retrain_data = new_data.copy()
+            # Ensure feature columns exist in new data
+            if not feature_subset:
+                feature_subset = new_pipe.feature_columns
+            
+            missing_features = [col for col in feature_subset if col not in retrain_data.columns]
+            if missing_features:
+                raise ValueError(f"Missing features in new data: {missing_features}")
+        else:
+            retrain_data = new_pipe.data
+            if retrain_data is None:
+                raise ValueError("No data available for retraining.")
+        
+        # Select features for retraining
+        if feature_subset:
+            clustering_features = feature_subset
+        else:
+            clustering_features = new_pipe.feature_columns
+        
+        # Validate features exist in data
+        missing_features = [col for col in clustering_features if col not in retrain_data.columns]
+        if missing_features:
+            raise ValueError(f"Missing features in data: {missing_features}")
+        
+        X = retrain_data[clustering_features]
+        
+        # Create new model with updated configuration
+        if new_pipe.models[model_name]['type'] == 'kmeans':
+            from sklearn.cluster import KMeans
+            retrained_model = KMeans(
+                n_clusters=original_config['n_clusters'],
+                init=original_config.get('init', 'k-means++'),
+                n_init=original_config.get('n_init', 10),
+                max_iter=original_config.get('max_iter', 300),
+                tol=original_config.get('tol', 1e-4),
+                random_state=original_config.get('random_state', 42),
+                algorithm=original_config.get('algorithm', 'lloyd')
+            )
+        elif new_pipe.models[model_name]['type'] == 'minibatch_kmeans':
+            from sklearn.cluster import MiniBatchKMeans
+            retrained_model = MiniBatchKMeans(
+                n_clusters=original_config['n_clusters'],
+                init=original_config.get('init', 'k-means++'),
+                max_iter=original_config.get('max_iter', 100),
+                batch_size=original_config.get('batch_size', 1024),
+                tol=original_config.get('tol', 0.0),
+                max_no_improvement=original_config.get('max_no_improvement', 10),
+                random_state=original_config.get('random_state', 42)
+            )
+        else:
+            raise ValueError(f"Unknown model type: {new_pipe.models[model_name]['type']}")
+        
+        # Fit the retrained model
+        retrained_model.fit(X)
+        
+        # Store the retrained model
+        new_pipe.models[retrain_name] = {
+            'model': retrained_model,
+            'type': new_pipe.models[model_name]['type'],
+            'config': original_config
+        }
+        
+        # Generate cluster assignments for retrained model
+        cluster_labels = retrained_model.predict(X)
+        retrain_data[f'{retrain_name}_cluster'] = cluster_labels
+        
+        new_pipe.cluster_assignments[retrain_name] = {
+            'labels': cluster_labels,
+            'features_used': clustering_features,
+            'cluster_column': f'{retrain_name}_cluster'
+        }
+        
+        # Update data if using new data
+        if new_data is not None:
+            new_pipe.data = retrain_data
+        
+        new_pipe.current_analysis = f'retrain_{retrain_name}'
+        
+        print(f"Successfully retrained model '{model_name}' as '{retrain_name}'")
+        print(f"Model type: {new_pipe.models[model_name]['type']}")
+        print(f"Number of clusters: {original_config['n_clusters']}")
+        print(f"Features used: {len(clustering_features)}")
+        print(f"Data points: {len(X)}")
+        
+        return new_pipe
+    
+    return _retrain_kmeans_model
+
+
+def predict_clusters(
+    model_name: str,
+    new_data: pd.DataFrame,
+    feature_subset: Optional[List[str]] = None,
+    prediction_name: str = 'cluster_predictions'
+):
+    """
+    Predict cluster assignments for new data using a trained K-means model
+    
+    Parameters:
+    -----------
+    model_name : str
+        Name of the trained model to use for prediction
+    new_data : pd.DataFrame
+        New data to predict clusters for
+    feature_subset : Optional[List[str]]
+        Subset of features to use for prediction
+    prediction_name : str
+        Name for the prediction results
+        
+    Returns:
+    --------
+    Callable
+        Function that predicts clusters from a KMeansPipe
+    """
+    def _predict_clusters(pipe):
+        if model_name not in pipe.models:
+            raise ValueError(f"Model '{model_name}' not found for prediction.")
+        
+        new_pipe = pipe.copy()
+        
+        # Select features for prediction
+        if feature_subset:
+            prediction_features = feature_subset
+        else:
+            prediction_features = new_pipe.feature_columns
+        
+        # Validate features exist in new data
+        missing_features = [col for col in prediction_features if col not in new_data.columns]
+        if missing_features:
+            raise ValueError(f"Missing features in new data: {missing_features}")
+        
+        # Get the model
+        model = new_pipe.models[model_name]['model']
+        
+        # Prepare data for prediction
+        X_new = new_data[prediction_features]
+        
+        # Make predictions
+        cluster_predictions = model.predict(X_new)
+        
+        # Calculate distances to cluster centers
+        cluster_distances = model.transform(X_new)
+        
+        # Create results DataFrame
+        results_df = new_data.copy()
+        results_df[f'{prediction_name}_cluster'] = cluster_predictions
+        results_df[f'{prediction_name}_distance_to_center'] = np.min(cluster_distances, axis=1)
+        
+        # Add confidence scores (inverse of distance to center)
+        max_distance = np.max(cluster_distances)
+        results_df[f'{prediction_name}_confidence'] = 1 - (np.min(cluster_distances, axis=1) / max_distance)
+        
+        # Store prediction results
+        if not hasattr(new_pipe, 'predictions'):
+            new_pipe.predictions = {}
+        
+        new_pipe.predictions[prediction_name] = {
+            'data': results_df,
+            'cluster_assignments': cluster_predictions,
+            'distances_to_centers': cluster_distances,
+            'features_used': prediction_features,
+            'model_used': model_name
+        }
+        
+        new_pipe.current_analysis = f'prediction_{prediction_name}'
+        
+        print(f"Successfully predicted clusters for {len(new_data)} data points")
+        print(f"Model used: {model_name}")
+        print(f"Features used: {len(prediction_features)}")
+        print(f"Cluster distribution: {dict(pd.Series(cluster_predictions).value_counts().sort_index())}")
+        
+        return new_pipe
+    
+    return _predict_clusters
+
+
+def get_prediction_results(
+    prediction_name: Optional[str] = None
+):
+    """
+    Get prediction results from the pipeline
+    
+    Parameters:
+    -----------
+    prediction_name : Optional[str]
+        Specific prediction to retrieve (if None, returns all)
+        
+    Returns:
+    --------
+    Callable
+        Function that retrieves prediction results from a KMeansPipe
+    """
+    def _get_prediction_results(pipe):
+        if not hasattr(pipe, 'predictions') or not pipe.predictions:
+            return {"error": "No prediction results found. Run predict_clusters first."}
+        
+        if prediction_name:
+            if prediction_name in pipe.predictions:
+                return pipe.predictions[prediction_name]
+            else:
+                return {"error": f"Prediction '{prediction_name}' not found"}
+        
+        return pipe.predictions
+    
+    return _get_prediction_results

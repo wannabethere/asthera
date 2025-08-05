@@ -149,6 +149,8 @@ class CohortPipe(BasePipe):
         if analysis_name is None:
             if self.current_analysis is None:
                 # Use the last analysis in cohort_results
+                if not self.cohort_results:
+                    raise ValueError("No cohort results available to convert to DataFrame.")
                 analysis_name = list(self.cohort_results.keys())[-1]
             else:
                 # Find the analysis that matches current_analysis
@@ -208,14 +210,24 @@ class CohortPipe(BasePipe):
                 
                 df_list.append(row)
         
-        return pd.DataFrame(df_list)
+        result_df = pd.DataFrame(df_list)
+        
+        # Ensure we always return a DataFrame
+        if result_df is None:
+            result_df = pd.DataFrame()
+        
+        return result_df
     
     def _conversion_to_df(self, result: Dict, include_metadata: bool = False) -> pd.DataFrame:
         """Convert conversion analysis results to DataFrame"""
         # The funnel_data is already a DataFrame, just add metadata if requested
         df = result['funnel_data'].copy()
         
-        if include_metadata:
+        # Ensure we always return a DataFrame
+        if df is None:
+            df = pd.DataFrame()
+        
+        if include_metadata and not df.empty:
             df['analysis_type'] = 'conversion'
             df['event_column'] = result.get('event_column', 'unknown')
             df['funnel_steps'] = str(result.get('funnel_steps', []))
@@ -260,7 +272,13 @@ class CohortPipe(BasePipe):
                 
                 df_list.append(row)
         
-        return pd.DataFrame(df_list)
+        result_df = pd.DataFrame(df_list)
+        
+        # Ensure we always return a DataFrame
+        if result_df is None:
+            result_df = pd.DataFrame()
+        
+        return result_df
     
     def get_summary(self, analysis_name: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -343,7 +361,7 @@ def form_time_cohorts(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert date column to datetime if it's not already
         if not pd.api.types.is_datetime64_any_dtype(df[date_column]):
@@ -387,6 +405,7 @@ def form_time_cohorts(
             'time_period': time_period
         }
         
+        new_pipe.data = df
         new_pipe.current_analysis = 'time_cohorts'
         
         return new_pipe
@@ -424,7 +443,7 @@ def form_behavioral_cohorts(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Create default cohort column with 'Other'
         df[cohort_column] = 'Other'
@@ -478,6 +497,7 @@ def form_behavioral_cohorts(
             'cohort_column': cohort_column
         }
         
+        new_pipe.data = df
         new_pipe.current_analysis = 'behavioral_cohorts'
         
         return new_pipe
@@ -524,7 +544,7 @@ def form_acquisition_cohorts(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert date column to datetime if it's not already
         if not pd.api.types.is_datetime64_any_dtype(df[acquisition_date_column]):
@@ -579,6 +599,7 @@ def form_acquisition_cohorts(
             'time_period': time_period
         }
         
+        new_pipe.data = df
         new_pipe.current_analysis = 'acquisition_cohorts'
         
         return new_pipe
@@ -629,7 +650,7 @@ def calculate_retention(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert date column to datetime if it's not already
         if not pd.api.types.is_datetime64_any_dtype(df[date_column]):
@@ -813,7 +834,7 @@ def calculate_conversion(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Validate event_column contains all funnel steps
         events_in_data = df[event_column].unique()
@@ -954,7 +975,7 @@ def calculate_lifetime_value(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Convert date column to datetime if it's not already
         if not pd.api.types.is_datetime64_any_dtype(df[date_column]):

@@ -8,10 +8,10 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import selectinload
 from sqlalchemy import select, update, func
 
-from app.service.models import MetricCreate, ViewCreate
+from app.service.models import MetricCreate, ViewCreate, SchemaInput
 from app.schemas.dbmodels import Domain, Table, SQLColumn, Metric, View, CalculatedColumn
 from app.agents.schema_manager import LLMSchemaDocumentationGenerator
-from app.service.models import DomainContext,  AddTableRequest
+from app.service.models import DomainContext, AddTableRequest
 import os
 from app.utils.cache import get_cache_provider
 from app.utils.sse import publish_update
@@ -482,6 +482,7 @@ class DomainWorkflowService:
         return summary
 
     async def add_table(self, add_table_request: AddTableRequest, domain_context: DomainContext):
+        """Add table with enhanced column definitions and documentation"""
         state = self.get_workflow_state()
         schema_input = add_table_request.schema
         
@@ -491,36 +492,278 @@ class DomainWorkflowService:
         # Generate relationship recommendations
         relationship_recommendations = await self.get_relationship_recommendation_for_table(add_table_request, domain_context)
         
-        table = Table(
-            name=schema_input.table_name,
-            display_name=schema_input.table_name,
-            description=schema_input.table_description,
-            dataset_id=add_table_request.dataset_id,
-            metadata={
-                "columns": schema_input.columns,
-                "semantic_description": semantic_description.get("description", ""),
-                "semantic_analysis": semantic_description,
-                "relationship_recommendations": relationship_recommendations
-            }
-        )
-        
-        
         # LLM Table Definition (enhanced with semantic description)
-        
         documented_table = await self.definition_manager.document_table_schema(schema_input, domain_context)
-        
-        
-        # Attach LLM output to table (customize as needed)
-        table.description = documented_table.description
         
         # Add semantic description and relationship recommendations to the documented table
         documented_table.semantic_description = semantic_description
         documented_table.relationship_recommendations = relationship_recommendations
         
+        # Create enhanced column definitions for metadata storage
+        enhanced_columns_for_metadata = []
+        for enhanced_col in documented_table.columns:
+            enhanced_columns_for_metadata.append({
+                "column_name": enhanced_col.column_name,
+                "display_name": enhanced_col.display_name,
+                "description": enhanced_col.description,
+                "business_description": enhanced_col.business_description,
+                "usage_type": enhanced_col.usage_type.value,
+                "data_type": enhanced_col.data_type,
+                "example_values": enhanced_col.example_values,
+                "business_rules": enhanced_col.business_rules,
+                "data_quality_checks": enhanced_col.data_quality_checks,
+                "related_concepts": enhanced_col.related_concepts,
+                "privacy_classification": enhanced_col.privacy_classification,
+                "aggregation_suggestions": enhanced_col.aggregation_suggestions,
+                "filtering_suggestions": enhanced_col.filtering_suggestions,
+                "json_metadata": enhanced_col.json_metadata
+            })
+        
+        # Create enhanced table object with all metadata including enhanced columns
+        table = Table(
+            name=schema_input.table_name,
+            display_name=schema_input.table_name,
+            description=documented_table.description,
+            dataset_id=add_table_request.dataset_id,
+            metadata={
+                "columns": schema_input.columns,
+                "enhanced_columns": enhanced_columns_for_metadata,
+                "semantic_description": semantic_description.get("description", ""),
+                "semantic_analysis": semantic_description,
+                "relationship_recommendations": relationship_recommendations,
+                "business_purpose": documented_table.business_purpose,
+                "primary_use_cases": documented_table.primary_use_cases,
+                "key_relationships": documented_table.key_relationships,
+                "data_lineage": documented_table.data_lineage,
+                "update_frequency": documented_table.update_frequency,
+                "data_retention": documented_table.data_retention,
+                "access_patterns": documented_table.access_patterns,
+                "performance_considerations": documented_table.performance_considerations
+            }
+        )
+        
         state["tables"].append(table)
         self.set_workflow_state(state)
         publish_update(self.user_id, self.session_id or "default", state)
         return documented_table
+
+    async def create_enhanced_columns(self, documented_table, schema_input):
+        """Create enhanced column definitions with LLM-generated insights"""
+        enhanced_columns = []
+        
+        for i, col_data in enumerate(schema_input.columns):
+            # Find corresponding enhanced column definition
+            enhanced_col = None
+            for enhanced_col_def in documented_table.columns:
+                if enhanced_col_def.column_name == col_data.get("name"):
+                    enhanced_col = enhanced_col_def
+                    break
+            
+            # Prepare enhanced metadata
+            enhanced_metadata = col_data.get("metadata", {})
+            if enhanced_col:
+                enhanced_metadata.update({
+                    "business_description": enhanced_col.business_description,
+                    "usage_type": enhanced_col.usage_type.value,
+                    "example_values": enhanced_col.example_values,
+                    "business_rules": enhanced_col.business_rules,
+                    "data_quality_checks": enhanced_col.data_quality_checks,
+                    "related_concepts": enhanced_col.related_concepts,
+                    "privacy_classification": enhanced_col.privacy_classification,
+                    "aggregation_suggestions": enhanced_col.aggregation_suggestions,
+                    "filtering_suggestions": enhanced_col.filtering_suggestions,
+                    "enhanced_metadata": enhanced_col.json_metadata
+                })
+            
+            # Create enhanced column definition
+            enhanced_column = {
+                "table_id": None,  # Will be set when table is created
+                "name": col_data.get("name", "unknown"),
+                "display_name": enhanced_col.display_name if enhanced_col else (col_data.get("display_name") or col_data.get("name", "unknown")),
+                "description": enhanced_col.description if enhanced_col else col_data.get("description"),
+                "data_type": col_data.get("data_type"),
+                "is_nullable": col_data.get("is_nullable", True),
+                "is_primary_key": col_data.get("is_primary_key", False),
+                "is_foreign_key": col_data.get("is_foreign_key", False),
+                "usage_type": enhanced_col.usage_type.value if enhanced_col else col_data.get("usage_type"),
+                "ordinal_position": i + 1,
+                "json_metadata": enhanced_metadata,
+                "enhanced_definition": {
+                    "column_name": enhanced_col.column_name if enhanced_col else col_data.get("name"),
+                    "display_name": enhanced_col.display_name if enhanced_col else (col_data.get("display_name") or col_data.get("name")),
+                    "description": enhanced_col.description if enhanced_col else col_data.get("description"),
+                    "business_description": enhanced_col.business_description if enhanced_col else "",
+                    "usage_type": enhanced_col.usage_type.value if enhanced_col else col_data.get("usage_type"),
+                    "data_type": enhanced_col.data_type if enhanced_col else col_data.get("data_type"),
+                    "example_values": enhanced_col.example_values if enhanced_col else [],
+                    "business_rules": enhanced_col.business_rules if enhanced_col else [],
+                    "data_quality_checks": enhanced_col.data_quality_checks if enhanced_col else [],
+                    "related_concepts": enhanced_col.related_concepts if enhanced_col else [],
+                    "privacy_classification": enhanced_col.privacy_classification if enhanced_col else "internal",
+                    "aggregation_suggestions": enhanced_col.aggregation_suggestions if enhanced_col else [],
+                    "filtering_suggestions": enhanced_col.filtering_suggestions if enhanced_col else [],
+                    "json_metadata": enhanced_col.json_metadata if enhanced_col else {}
+                }
+            }
+            
+            enhanced_columns.append(enhanced_column)
+        
+        return enhanced_columns
+
+    async def get_enhanced_table_response(self, table, documented_table, enhanced_columns, column_count):
+        """Create enhanced table response with all column definitions"""
+        # Convert EnhancedColumnDefinition objects to dictionaries for response
+        response_enhanced_columns = []
+        for enhanced_col in documented_table.columns:
+            response_enhanced_columns.append({
+                "column_name": enhanced_col.column_name,
+                "display_name": enhanced_col.display_name,
+                "description": enhanced_col.description,
+                "business_description": enhanced_col.business_description,
+                "usage_type": enhanced_col.usage_type.value,
+                "data_type": enhanced_col.data_type,
+                "example_values": enhanced_col.example_values,
+                "business_rules": enhanced_col.business_rules,
+                "data_quality_checks": enhanced_col.data_quality_checks,
+                "related_concepts": enhanced_col.related_concepts,
+                "privacy_classification": enhanced_col.privacy_classification,
+                "aggregation_suggestions": enhanced_col.aggregation_suggestions,
+                "filtering_suggestions": enhanced_col.filtering_suggestions,
+                "json_metadata": enhanced_col.json_metadata
+            })
+        
+        return {
+            "table_id": table.table_id,
+            "name": table.name,
+            "display_name": table.display_name,
+            "description": table.description,
+            "table_type": table.table_type,
+            "semantic_description": documented_table.description,
+            "column_count": column_count,
+            "business_purpose": documented_table.business_purpose,
+            "primary_use_cases": documented_table.primary_use_cases,
+            "key_relationships": documented_table.key_relationships,
+            "data_lineage": documented_table.data_lineage,
+            "update_frequency": documented_table.update_frequency,
+            "data_retention": documented_table.data_retention,
+            "access_patterns": documented_table.access_patterns,
+            "performance_considerations": documented_table.performance_considerations,
+            "enhanced_columns": response_enhanced_columns
+        }
+
+    async def get_enhanced_columns_for_table(self, table_id: str, db_session: AsyncSession):
+        """Get enhanced column definitions for an existing table"""
+        try:
+            # Get table with columns
+            table = await db_session.execute(
+                select(Table)
+                .options(selectinload(Table.columns))
+                .where(Table.table_id == table_id)
+            )
+            table = table.scalar_one_or_none()
+            
+            if not table:
+                raise ValueError(f"Table {table_id} not found")
+            
+            # Check if enhanced columns are already stored in table metadata
+            table_metadata = table.json_metadata or {}
+            stored_enhanced_columns = table_metadata.get("enhanced_columns", [])
+            
+            if stored_enhanced_columns:
+                # Return stored enhanced columns
+                logger.info(f"Found {len(stored_enhanced_columns)} stored enhanced columns for table {table_id}")
+                return {
+                    "table_id": table.table_id,
+                    "table_name": table.name,
+                    "enhanced_columns": stored_enhanced_columns,
+                    "source": "stored_metadata"
+                }
+            
+            # If no stored enhanced columns, generate them using LLM
+            logger.info(f"No stored enhanced columns found for table {table_id}, generating with LLM")
+            
+            # Get domain context
+            domain = await db_session.execute(
+                select(Domain).where(Domain.domain_id == table.domain_id)
+            )
+            domain = domain.scalar_one_or_none()
+            
+            if not domain:
+                raise ValueError("Domain not found")
+            
+            # Create domain context for LLM processing
+            domain_context = DomainContext(
+                domain_id=domain.domain_id,
+                domain_name=domain.display_name,
+                business_domain="",  # Would need to be stored in domain
+                purpose=domain.description or "",
+                target_users=[],  # Would need to be stored in domain
+                key_business_concepts=[],  # Would need to be stored in domain
+                data_sources=None,
+                compliance_requirements=None
+            )
+            
+            # Convert existing columns to schema input format
+            columns = []
+            for col in table.columns:
+                columns.append({
+                    "name": col.name,
+                    "data_type": col.data_type,
+                    "nullable": col.is_nullable,
+                    "primary_key": col.is_primary_key,
+                    "description": col.description,
+                    "usage_type": col.usage_type,
+                    "metadata": col.json_metadata or {}
+                })
+            
+            schema_input = SchemaInput(
+                table_name=table.name,
+                table_description=table.description,
+                columns=columns,
+                sample_data=None,
+                constraints=None
+            )
+            
+            # Generate enhanced column definitions
+            documented_table = await self.definition_manager.document_table_schema(schema_input, domain_context)
+            
+            # Convert to response format
+            enhanced_columns = []
+            for enhanced_col in documented_table.columns:
+                enhanced_columns.append({
+                    "column_name": enhanced_col.column_name,
+                    "display_name": enhanced_col.display_name,
+                    "description": enhanced_col.description,
+                    "business_description": enhanced_col.business_description,
+                    "usage_type": enhanced_col.usage_type.value,
+                    "data_type": enhanced_col.data_type,
+                    "example_values": enhanced_col.example_values,
+                    "business_rules": enhanced_col.business_rules,
+                    "data_quality_checks": enhanced_col.data_quality_checks,
+                    "related_concepts": enhanced_col.related_concepts,
+                    "privacy_classification": enhanced_col.privacy_classification,
+                    "aggregation_suggestions": enhanced_col.aggregation_suggestions,
+                    "filtering_suggestions": enhanced_col.filtering_suggestions,
+                    "json_metadata": enhanced_col.json_metadata
+                })
+            
+            # Store the generated enhanced columns in table metadata for future use
+            if enhanced_columns:
+                table_metadata["enhanced_columns"] = enhanced_columns
+                table.json_metadata = table_metadata
+                await db_session.commit()
+                logger.info(f"Stored {len(enhanced_columns)} generated enhanced columns in table metadata")
+            
+            return {
+                "table_id": table.table_id,
+                "table_name": table.name,
+                "enhanced_columns": enhanced_columns,
+                "source": "generated_and_stored"
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting enhanced columns: {str(e)}")
+            raise
 
     async def commit_workflow(self, db_session):
         """Commit the workflow state to database and clean up cache"""
@@ -899,3 +1142,427 @@ class MetricsService:
             await self.db.refresh(calc_column)
             
             return column
+
+    async def enhance_metric_definition(self, metric_id: str, user_id: str) -> dict:
+        """Enhance an existing metric definition using LLM without saving to database"""
+        try:
+            # Get the metric
+            from sqlalchemy import select
+            metric = await self.db.execute(
+                select(Metric).where(Metric.metric_id == metric_id)
+            )
+            metric = metric.scalar_one_or_none()
+            
+            if not metric:
+                raise ValueError(f"Metric {metric_id} not found")
+            
+            # Create UserExample from existing metric data
+            from app.service.models import UserExample, DefinitionType
+            user_example = UserExample(
+                definition_type=DefinitionType.METRIC,
+                name=metric.name,
+                description=metric.description or f"Metric for {metric.name}",
+                sql=metric.metric_sql,
+                additional_context={
+                    "metric_type": metric.metric_type,
+                    "aggregation_type": metric.aggregation_type,
+                    "business_purpose": metric.description,
+                    "existing_metadata": metric.json_metadata or {}
+                },
+                user_id=user_id
+            )
+            
+            # Get domain context for enhancement
+            context = await self._get_domain_context(metric.table_id)
+            
+            # Generate enhanced definition using LLM
+            enhanced_definition = await self.llm_generator.generate_metric_definition(user_example, context)
+            
+            # Return the enhanced definition without saving to database
+            return {
+                "metric_id": metric_id,
+                "original_metric": {
+                    "name": metric.name,
+                    "display_name": metric.display_name,
+                    "description": metric.description,
+                    "metric_sql": metric.metric_sql,
+                    "metric_type": metric.metric_type,
+                    "aggregation_type": metric.aggregation_type,
+                    "format_string": metric.format_string
+                },
+                "enhanced_definition": {
+                    "name": enhanced_definition.name,
+                    "display_name": enhanced_definition.display_name,
+                    "description": enhanced_definition.description,
+                    "sql_query": enhanced_definition.sql_query,
+                    "metadata": enhanced_definition.metadata,
+                    "chain_of_thought": enhanced_definition.chain_of_thought,
+                    "confidence_score": enhanced_definition.confidence_score,
+                    "suggestions": enhanced_definition.suggestions,
+                    "related_tables": enhanced_definition.related_tables,
+                    "related_columns": enhanced_definition.related_columns
+                },
+                "enhancement_summary": {
+                    "improvements_made": len(enhanced_definition.suggestions) if enhanced_definition.suggestions else 0,
+                    "confidence_level": enhanced_definition.confidence_score,
+                    "recommended_changes": enhanced_definition.suggestions or []
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error enhancing metric definition: {str(e)}")
+            raise
+
+    async def apply_metric_enhancement(self, metric_id: str, enhancement_data: dict, user_id: str, session_id: str) -> Metric:
+        """Apply LLM enhancement to an existing metric"""
+        try:
+            # Get the metric
+            from sqlalchemy import select, func
+            metric = await self.db.execute(
+                select(Metric).where(Metric.metric_id == metric_id)
+            )
+            metric = metric.scalar_one_or_none()
+            
+            if not metric:
+                raise ValueError(f"Metric {metric_id} not found")
+            
+            # Extract enhancement data
+            enhanced_definition = enhancement_data.get("enhanced_definition", {})
+            
+            # Update metric with enhanced data
+            if enhanced_definition.get("name"):
+                metric.name = enhanced_definition["name"]
+            if enhanced_definition.get("display_name"):
+                metric.display_name = enhanced_definition["display_name"]
+            if enhanced_definition.get("description"):
+                metric.description = enhanced_definition["description"]
+            if enhanced_definition.get("sql_query"):
+                metric.metric_sql = enhanced_definition["sql_query"]
+            if enhanced_definition.get("metadata", {}).get("metric_type"):
+                metric.metric_type = enhanced_definition["metadata"]["metric_type"]
+            if enhanced_definition.get("metadata", {}).get("aggregation_type"):
+                metric.aggregation_type = enhanced_definition["metadata"]["aggregation_type"]
+            if enhanced_definition.get("metadata", {}).get("format_string"):
+                metric.format_string = enhanced_definition["metadata"]["format_string"]
+            
+            # Update metadata with enhancement information
+            current_metadata = metric.json_metadata or {}
+            current_metadata.update({
+                "enhanced_at": func.now(),
+                "enhanced_by": user_id,
+                "enhancement_session": session_id,
+                "chain_of_thought": enhanced_definition.get("chain_of_thought"),
+                "confidence_score": enhanced_definition.get("confidence_score"),
+                "suggestions": enhanced_definition.get("suggestions"),
+                "related_tables": enhanced_definition.get("related_tables"),
+                "related_columns": enhanced_definition.get("related_columns"),
+                "enhancement_metadata": enhanced_definition.get("metadata", {}),
+                "original_metric": {
+                    "name": metric.name,
+                    "description": metric.description,
+                    "metric_sql": metric.metric_sql,
+                    "metric_type": metric.metric_type,
+                    "aggregation_type": metric.aggregation_type
+                }
+            })
+            metric.json_metadata = current_metadata
+            
+            # Update version and modified info
+            metric.modified_by = user_id
+            metric.entity_version += 1
+            
+            await self.db.commit()
+            await self.db.refresh(metric)
+            
+            logger.info(f"Applied enhancement to metric '{metric.name}' with confidence score {enhanced_definition.get('confidence_score', 0)}")
+            return metric
+            
+        except Exception as e:
+            logger.error(f"Error applying metric enhancement: {str(e)}")
+            raise
+
+    async def enhance_view_definition(self, view_id: str, user_id: str) -> dict:
+        """Enhance an existing view definition using LLM without saving to database"""
+        try:
+            # Get the view
+            from sqlalchemy import select
+            view = await self.db.execute(
+                select(View).where(View.view_id == view_id)
+            )
+            view = view.scalar_one_or_none()
+            
+            if not view:
+                raise ValueError(f"View {view_id} not found")
+            
+            # Create UserExample from existing view data
+            from app.service.models import UserExample, DefinitionType
+            user_example = UserExample(
+                definition_type=DefinitionType.VIEW,
+                name=view.name,
+                description=view.description or f"View for {view.name}",
+                sql=view.view_sql,
+                additional_context={
+                    "view_type": view.view_type,
+                    "business_purpose": view.description,
+                    "target_audience": "business_analysts",
+                    "existing_metadata": view.json_metadata or {}
+                },
+                user_id=user_id
+            )
+            
+            # Get domain context for enhancement
+            context = await self._get_domain_context(view.table_id)
+            
+            # Generate enhanced definition using LLM
+            enhanced_definition = await self.llm_generator.generate_view_definition(user_example, context)
+            
+            # Return the enhanced definition without saving to database
+            return {
+                "view_id": view_id,
+                "original_view": {
+                    "name": view.name,
+                    "display_name": view.display_name,
+                    "description": view.description,
+                    "view_sql": view.view_sql,
+                    "view_type": view.view_type
+                },
+                "enhanced_definition": {
+                    "name": enhanced_definition.name,
+                    "display_name": enhanced_definition.display_name,
+                    "description": enhanced_definition.description,
+                    "sql_query": enhanced_definition.sql_query,
+                    "metadata": enhanced_definition.metadata,
+                    "chain_of_thought": enhanced_definition.chain_of_thought,
+                    "confidence_score": enhanced_definition.confidence_score,
+                    "suggestions": enhanced_definition.suggestions,
+                    "related_tables": enhanced_definition.related_tables,
+                    "related_columns": enhanced_definition.related_columns
+                },
+                "enhancement_summary": {
+                    "improvements_made": len(enhanced_definition.suggestions) if enhanced_definition.suggestions else 0,
+                    "confidence_level": enhanced_definition.confidence_score,
+                    "recommended_changes": enhanced_definition.suggestions or []
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error enhancing view definition: {str(e)}")
+            raise
+
+    async def apply_view_enhancement(self, view_id: str, enhancement_data: dict, user_id: str, session_id: str) -> View:
+        """Apply LLM enhancement to an existing view"""
+        try:
+            # Get the view
+            from sqlalchemy import select, func
+            view = await self.db.execute(
+                select(View).where(View.view_id == view_id)
+            )
+            view = view.scalar_one_or_none()
+            
+            if not view:
+                raise ValueError(f"View {view_id} not found")
+            
+            # Extract enhancement data
+            enhanced_definition = enhancement_data.get("enhanced_definition", {})
+            
+            # Update view with enhanced data
+            if enhanced_definition.get("name"):
+                view.name = enhanced_definition["name"]
+            if enhanced_definition.get("display_name"):
+                view.display_name = enhanced_definition["display_name"]
+            if enhanced_definition.get("description"):
+                view.description = enhanced_definition["description"]
+            if enhanced_definition.get("sql_query"):
+                view.view_sql = enhanced_definition["sql_query"]
+            if enhanced_definition.get("metadata", {}).get("view_type"):
+                view.view_type = enhanced_definition["metadata"]["view_type"]
+            
+            # Update metadata with enhancement information
+            current_metadata = view.json_metadata or {}
+            current_metadata.update({
+                "enhanced_at": func.now(),
+                "enhanced_by": user_id,
+                "enhancement_session": session_id,
+                "chain_of_thought": enhanced_definition.get("chain_of_thought"),
+                "confidence_score": enhanced_definition.get("confidence_score"),
+                "suggestions": enhanced_definition.get("suggestions"),
+                "related_tables": enhanced_definition.get("related_tables"),
+                "related_columns": enhanced_definition.get("related_columns"),
+                "enhancement_metadata": enhanced_definition.get("metadata", {}),
+                "original_view": {
+                    "name": view.name,
+                    "description": view.description,
+                    "view_sql": view.view_sql,
+                    "view_type": view.view_type
+                }
+            })
+            view.json_metadata = current_metadata
+            
+            # Update version and modified info
+            view.modified_by = user_id
+            view.entity_version += 1
+            
+            await self.db.commit()
+            await self.db.refresh(view)
+            
+            logger.info(f"Applied enhancement to view '{view.name}' with confidence score {enhanced_definition.get('confidence_score', 0)}")
+            return view
+            
+        except Exception as e:
+            logger.error(f"Error applying view enhancement: {str(e)}")
+            raise
+
+    async def enhance_calculated_column_definition(self, column_id: str, user_id: str) -> dict:
+        """Enhance an existing calculated column definition using LLM without saving to database"""
+        try:
+            # Get the calculated column
+            from sqlalchemy import select
+            column = await self.db.execute(
+                select(SQLColumn)
+                .options(selectinload(SQLColumn.calculated_column))
+                .where(SQLColumn.column_id == column_id)
+            )
+            column = column.scalar_one_or_none()
+            
+            if not column:
+                raise ValueError(f"Column {column_id} not found")
+            
+            if column.column_type != 'calculated_column':
+                raise ValueError(f"Column {column_id} is not a calculated column")
+            
+            # Create UserExample from existing calculated column data
+            from app.service.models import UserExample, DefinitionType
+            user_example = UserExample(
+                definition_type=DefinitionType.CALCULATED_COLUMN,
+                name=column.name,
+                description=column.description or f"Calculated column {column.name}",
+                sql=column.calculated_column.calculation_sql,
+                additional_context={
+                    "data_type": column.data_type,
+                    "usage_type": column.usage_type,
+                    "dependencies": column.calculated_column.dependencies or [],
+                    "business_purpose": column.description,
+                    "existing_metadata": column.json_metadata or {}
+                },
+                user_id=user_id
+            )
+            
+            # Get domain context for enhancement
+            context = await self._get_domain_context(column.table_id)
+            
+            # Generate enhanced definition using LLM
+            enhanced_definition = await self.llm_generator.generate_calculated_column_definition(user_example, context)
+            
+            # Return the enhanced definition without saving to database
+            return {
+                "column_id": column_id,
+                "original_calculated_column": {
+                    "name": column.name,
+                    "display_name": column.display_name,
+                    "description": column.description,
+                    "data_type": column.data_type,
+                    "usage_type": column.usage_type,
+                    "calculation_sql": column.calculated_column.calculation_sql,
+                    "dependencies": column.calculated_column.dependencies,
+                    "function_id": column.calculated_column.function_id
+                },
+                "enhanced_definition": {
+                    "name": enhanced_definition.name,
+                    "display_name": enhanced_definition.display_name,
+                    "description": enhanced_definition.description,
+                    "sql_query": enhanced_definition.sql_query,
+                    "metadata": enhanced_definition.metadata,
+                    "chain_of_thought": enhanced_definition.chain_of_thought,
+                    "confidence_score": enhanced_definition.confidence_score,
+                    "suggestions": enhanced_definition.suggestions,
+                    "related_tables": enhanced_definition.related_tables,
+                    "related_columns": enhanced_definition.related_columns
+                },
+                "enhancement_summary": {
+                    "improvements_made": len(enhanced_definition.suggestions) if enhanced_definition.suggestions else 0,
+                    "confidence_level": enhanced_definition.confidence_score,
+                    "recommended_changes": enhanced_definition.suggestions or []
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error enhancing calculated column definition: {str(e)}")
+            raise
+
+    async def apply_calculated_column_enhancement(self, column_id: str, enhancement_data: dict, user_id: str, session_id: str) -> SQLColumn:
+        """Apply LLM enhancement to an existing calculated column"""
+        try:
+            # Get the calculated column
+            from sqlalchemy import select, func
+            column = await self.db.execute(
+                select(SQLColumn)
+                .options(selectinload(SQLColumn.calculated_column))
+                .where(SQLColumn.column_id == column_id)
+            )
+            column = column.scalar_one_or_none()
+            
+            if not column:
+                raise ValueError(f"Column {column_id} not found")
+            
+            if column.column_type != 'calculated_column':
+                raise ValueError(f"Column {column_id} is not a calculated column")
+            
+            # Extract enhancement data
+            enhanced_definition = enhancement_data.get("enhanced_definition", {})
+            
+            # Update column with enhanced data
+            if enhanced_definition.get("name"):
+                column.name = enhanced_definition["name"]
+            if enhanced_definition.get("display_name"):
+                column.display_name = enhanced_definition["display_name"]
+            if enhanced_definition.get("description"):
+                column.description = enhanced_definition["description"]
+            if enhanced_definition.get("metadata", {}).get("data_type"):
+                column.data_type = enhanced_definition["metadata"]["data_type"]
+            if enhanced_definition.get("metadata", {}).get("usage_type"):
+                column.usage_type = enhanced_definition["metadata"]["usage_type"]
+            
+            # Update calculated column with enhanced data
+            if enhanced_definition.get("sql_query"):
+                column.calculated_column.calculation_sql = enhanced_definition["sql_query"]
+            if enhanced_definition.get("metadata", {}).get("dependencies"):
+                column.calculated_column.dependencies = enhanced_definition["metadata"]["dependencies"]
+            
+            # Update metadata with enhancement information
+            current_metadata = column.json_metadata or {}
+            current_metadata.update({
+                "enhanced_at": func.now(),
+                "enhanced_by": user_id,
+                "enhancement_session": session_id,
+                "chain_of_thought": enhanced_definition.get("chain_of_thought"),
+                "confidence_score": enhanced_definition.get("confidence_score"),
+                "suggestions": enhanced_definition.get("suggestions"),
+                "related_tables": enhanced_definition.get("related_tables"),
+                "related_columns": enhanced_definition.get("related_columns"),
+                "enhancement_metadata": enhanced_definition.get("metadata", {}),
+                "original_calculated_column": {
+                    "name": column.name,
+                    "description": column.description,
+                    "data_type": column.data_type,
+                    "usage_type": column.usage_type,
+                    "calculation_sql": column.calculated_column.calculation_sql,
+                    "dependencies": column.calculated_column.dependencies
+                }
+            })
+            column.json_metadata = current_metadata
+            
+            # Update version and modified info
+            column.modified_by = user_id
+            column.entity_version += 1
+            column.calculated_column.modified_by = user_id
+            column.calculated_column.entity_version += 1
+            
+            await self.db.commit()
+            await self.db.refresh(column)
+            
+            logger.info(f"Applied enhancement to calculated column '{column.name}' with confidence score {enhanced_definition.get('confidence_score', 0)}")
+            return column
+            
+        except Exception as e:
+            logger.error(f"Error applying calculated column enhancement: {str(e)}")
+            raise

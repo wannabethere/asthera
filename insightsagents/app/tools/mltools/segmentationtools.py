@@ -86,6 +86,8 @@ class SegmentationPipe(BasePipe):
         if analysis_name is None:
             if self.current_analysis is None:
                 # Use the last analysis
+                if not self.segmentation_results:
+                    raise ValueError("No segmentation results available to convert to DataFrame.")
                 analysis_name = list(self.segmentation_results.keys())[-1]
                 # Skip summary results
                 while analysis_name.endswith('_summary') and len(self.segmentation_results) > 1:
@@ -101,6 +103,10 @@ class SegmentationPipe(BasePipe):
         
         # Get the result DataFrame (contains original data + segmentation labels)
         result_df = self.data.copy()
+        
+        # Ensure we always return a DataFrame, even if empty
+        if result_df is None:
+            result_df = pd.DataFrame()
         
         # Filter columns based on parameters
         columns_to_include = []
@@ -120,7 +126,7 @@ class SegmentationPipe(BasePipe):
         output_df = result_df[columns_to_include].copy()
         
         # Add metadata if requested
-        if include_metadata:
+        if include_metadata and not output_df.empty:
             # Add analysis name
             output_df['analysis_name'] = analysis_name
             
@@ -253,13 +259,13 @@ class SegmentationPipe(BasePipe):
         
         Returns:
         --------
-        Any or None
-            The current segmentation result, or None if no current analysis
+        Any
+            The current segmentation result, or empty dict if no current analysis
         """
         if self.current_analysis is None:
-            return None
+            return {}
         
-        return self.segmentation_results.get(self.current_analysis, None)
+        return self.segmentation_results.get(self.current_analysis, {})
     
     def get_original_data(self):
         """
@@ -267,10 +273,10 @@ class SegmentationPipe(BasePipe):
         
         Returns:
         --------
-        pd.DataFrame or None
-            The original data DataFrame, or None if no data was provided
+        pd.DataFrame
+            The original data DataFrame, or empty DataFrame if no data was provided
         """
-        return self.data.copy() if self.data is not None else None
+        return self.data.copy() if self.data is not None else pd.DataFrame()
     
     def get_features_data(self):
         """
@@ -284,7 +290,9 @@ class SegmentationPipe(BasePipe):
         if self.features is None:
             return None
         
-        return (self.features, self.feature_columns, self.scaled_features)
+        return (self.features.copy() if self.features is not None else None, 
+                self.feature_columns, 
+                self.scaled_features.copy() if self.scaled_features is not None else None)
     
     def get_segment_profiles(self, analysis_name: Optional[str] = None):
         """
@@ -297,14 +305,14 @@ class SegmentationPipe(BasePipe):
             
         Returns:
         --------
-        Dict or None
-            Dictionary of segment profiles, or None if not available
+        Dict
+            Dictionary of segment profiles, or empty dict if not available
         """
         if analysis_name is None:
             analysis_name = self.current_analysis
         
         if analysis_name is None:
-            return None
+            return {}
         
         # Check if summary exists
         summary_key = f"{analysis_name}_summary"
@@ -312,7 +320,7 @@ class SegmentationPipe(BasePipe):
             summary = self.segmentation_results[summary_key]
             return summary.get('segment_profiles', {})
         
-        return None
+        return {}
     
     def get_segment_statistics(self, analysis_name: Optional[str] = None):
         """
@@ -325,14 +333,14 @@ class SegmentationPipe(BasePipe):
             
         Returns:
         --------
-        Dict or None
-            Dictionary of segment statistics, or None if not available
+        Dict
+            Dictionary of segment statistics, or empty dict if not available
         """
         if analysis_name is None:
             analysis_name = self.current_analysis
         
         if analysis_name is None:
-            return None
+            return {}
         
         # Check if summary exists
         summary_key = f"{analysis_name}_summary"
@@ -345,7 +353,7 @@ class SegmentationPipe(BasePipe):
                 'feature_importance': summary.get('feature_importance')
             }
         
-        return None
+        return {}
     
     def get_summary(self, **kwargs) -> Dict[str, Any]:
         """
@@ -430,7 +438,7 @@ def get_features(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Determine feature columns
         if columns is not None:
@@ -503,6 +511,7 @@ def run_kmeans(
             raise ValueError("No features found. Call get_features() first.")
         
         new_pipe = pipe.copy()
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Use a local variable for n_clusters to avoid modifying the outer variable
         num_clusters = n_clusters
@@ -533,7 +542,7 @@ def run_kmeans(
         labels = kmeans.fit_predict(features)
         
         # Add segment labels to dataframe
-        new_pipe.data[f'segment_{segment_name}'] = labels
+        df[f'segment_{segment_name}'] = labels
         
         # Store results
         silhouette = silhouette_score(features, labels) if len(np.unique(labels)) > 1 else -1
@@ -547,6 +556,7 @@ def run_kmeans(
             'cluster_centers': kmeans.cluster_centers_
         }
         
+        new_pipe.data = df
         new_pipe.segments[segment_name] = labels
         new_pipe.segmentation_results[segment_name] = result
         new_pipe.current_analysis = segment_name
@@ -583,13 +593,14 @@ def run_dbscan(
             raise ValueError("No features found. Call get_features() first.")
         
         new_pipe = pipe.copy()
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Run DBSCAN
         dbscan = DBSCAN(eps=eps, min_samples=min_samples)
         labels = dbscan.fit_predict(features)
         
         # Add segment labels to dataframe
-        new_pipe.data[f'segment_{segment_name}'] = labels
+        df[f'segment_{segment_name}'] = labels
         
         # Store results
         n_clusters = len(np.unique(labels[labels >= 0]))
@@ -606,6 +617,7 @@ def run_dbscan(
             'noise_percentage': sum(labels == -1) / len(labels) * 100
         }
         
+        new_pipe.data = df
         new_pipe.segments[segment_name] = labels
         new_pipe.segmentation_results[segment_name] = result
         new_pipe.current_analysis = segment_name
@@ -643,13 +655,14 @@ def run_hierarchical(
             raise ValueError("No features found. Call get_features() first.")
         
         new_pipe = pipe.copy()
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Run Agglomerative Clustering
         agg = AgglomerativeClustering(n_clusters=n_clusters, linkage=linkage)
         labels = agg.fit_predict(features)
         
         # Add segment labels to dataframe
-        new_pipe.data[f'segment_{segment_name}'] = labels
+        df[f'segment_{segment_name}'] = labels
         
         # Store results
         silhouette = silhouette_score(features, labels) if len(np.unique(labels)) > 1 else -1
@@ -662,6 +675,7 @@ def run_hierarchical(
             'silhouette_score': silhouette
         }
         
+        new_pipe.data = df
         new_pipe.segments[segment_name] = labels
         new_pipe.segmentation_results[segment_name] = result
         new_pipe.current_analysis = segment_name
@@ -699,7 +713,7 @@ def run_rule_based(
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Initialize with default 'Other' segment
         df[f'segment_{segment_name}'] = 'Other'
@@ -754,6 +768,7 @@ def run_rule_based(
             'rules': rules
         }
         
+        new_pipe.data = df
         new_pipe.segments[segment_name] = df[f'segment_{segment_name}']
         new_pipe.segmentation_results[segment_name] = result
         new_pipe.current_analysis = segment_name
@@ -794,7 +809,7 @@ def generate_summary(algorithm: Optional[str] = None):
             raise ValueError(f"Algorithm '{algorithm_name}' not found in segmentation results")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         result = new_pipe.segmentation_results[algorithm_name]
         
         # Get segment column name
@@ -900,7 +915,7 @@ def get_segment_data(segment_id, algorithm=None):
         if algorithm_name not in pipe.segmentation_results:
             raise ValueError(f"Algorithm '{algorithm_name}' not found in segmentation results")
         
-        df = pipe.data
+        df = pipe.data.copy()  # Ensure we work with a copy
         
         # Get segment column name
         segment_col = f'segment_{algorithm_name}'
@@ -976,7 +991,7 @@ def custom_calculation(func: Callable):
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Apply the custom function to the dataframe
         new_pipe.data = func(df)

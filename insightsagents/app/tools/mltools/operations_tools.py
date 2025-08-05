@@ -71,6 +71,8 @@ class OperationsPipe(BasePipe):
         if operation_name is None:
             if self.current_operation is None:
                 # Use the last operation
+                if not self.operations:
+                    raise ValueError("No operations available to convert to DataFrame.")
                 operation_name = list(self.operations.keys())[-1]
             else:
                 operation_name = self.current_operation
@@ -81,6 +83,10 @@ class OperationsPipe(BasePipe):
         # Get the operation result
         result_df = self.operations[operation_name].copy()
         
+        # Ensure we always return a DataFrame, even if empty
+        if result_df is None:
+            result_df = pd.DataFrame()
+        
         # If include_original is True and we have original data, merge it
         if include_original and self.data is not None:
             # This is a bit tricky since operations typically create new DataFrames
@@ -89,7 +95,7 @@ class OperationsPipe(BasePipe):
                 result_df['metadata_note'] = 'Original data available separately via pipe.data'
         
         # Add metadata if requested
-        if include_metadata:
+        if include_metadata and not result_df.empty:
             # Add operation name
             result_df['operation_name'] = operation_name
             
@@ -225,13 +231,14 @@ class OperationsPipe(BasePipe):
         
         Returns:
         --------
-        pd.DataFrame or None
-            The current operation result DataFrame, or None if no current operation
+        pd.DataFrame
+            The current operation result DataFrame, or empty DataFrame if no current operation
         """
         if self.current_operation is None:
-            return None
+            return pd.DataFrame()
         
-        return self.operations.get(self.current_operation, None)
+        result_df = self.operations.get(self.current_operation, None)
+        return result_df.copy() if result_df is not None else pd.DataFrame()
     
     def get_original_data(self):
         """
@@ -239,10 +246,10 @@ class OperationsPipe(BasePipe):
         
         Returns:
         --------
-        pd.DataFrame or None
-            The original data DataFrame, or None if no data was provided
+        pd.DataFrame
+            The original data DataFrame, or empty DataFrame if no data was provided
         """
-        return self.data.copy() if self.data is not None else None
+        return self.data.copy() if self.data is not None else pd.DataFrame()
     
     def get_summary(self, **kwargs) -> Dict[str, Any]:
         """
@@ -328,7 +335,7 @@ def PercentChange(condition_column: str, baseline: str, output_name: Optional[st
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Validate the condition column and baseline
         if condition_column not in df.columns:
@@ -341,35 +348,39 @@ def PercentChange(condition_column: str, baseline: str, output_name: Optional[st
         baseline_rows = df[df[condition_column] == baseline]
         other_rows = df[df[condition_column] != baseline]
         
-        # Group by any columns except the condition column
-        group_cols = [col for col in df.columns if col != condition_column]
-        
-        # Initialize result dataframe
-        result_df = pd.DataFrame()
-        
-        # Process each metric column (assuming numeric columns are metrics)
-        metric_cols = df.select_dtypes(include=['number']).columns
-        
-        for metric in metric_cols:
-            # Calculate baseline values
-            baseline_values = baseline_rows.groupby(group_cols)[metric].mean().reset_index()
-            baseline_values.rename(columns={metric: 'baseline_value'}, inplace=True)
+        if baseline_rows.empty or other_rows.empty:
+            warnings.warn(f"No data found for baseline '{baseline}' or no other conditions found.")
+            result_df = pd.DataFrame()
+        else:
+            # Group by any columns except the condition column
+            group_cols = [col for col in df.columns if col != condition_column]
             
-            # Calculate other values
-            other_values = other_rows.groupby(group_cols + [condition_column])[metric].mean().reset_index()
+            # Initialize result dataframe
+            result_df = pd.DataFrame()
             
-            # Merge baseline and other values
-            merged = pd.merge(other_values, baseline_values, on=group_cols)
+            # Process each metric column (assuming numeric columns are metrics)
+            metric_cols = df.select_dtypes(include=['number']).columns
             
-            # Calculate percent change
-            merged[f'pct_change_{metric}'] = (merged[metric] - merged['baseline_value']) / merged['baseline_value']
-            
-            # Add to result
-            if result_df.empty:
-                result_df = merged[[*group_cols, condition_column, f'pct_change_{metric}']]
-            else:
-                result_df = pd.merge(result_df, merged[[*group_cols, condition_column, f'pct_change_{metric}']], 
-                                   on=group_cols + [condition_column])
+            for metric in metric_cols:
+                # Calculate baseline values
+                baseline_values = baseline_rows.groupby(group_cols)[metric].mean().reset_index()
+                baseline_values.rename(columns={metric: 'baseline_value'}, inplace=True)
+                
+                # Calculate other values
+                other_values = other_rows.groupby(group_cols + [condition_column])[metric].mean().reset_index()
+                
+                # Merge baseline and other values
+                merged = pd.merge(other_values, baseline_values, on=group_cols)
+                
+                # Calculate percent change
+                merged[f'pct_change_{metric}'] = (merged[metric] - merged['baseline_value']) / merged['baseline_value']
+                
+                # Add to result
+                if result_df.empty:
+                    result_df = merged[[*group_cols, condition_column, f'pct_change_{metric}']]
+                else:
+                    result_df = pd.merge(result_df, merged[[*group_cols, condition_column, f'pct_change_{metric}']], 
+                                       on=group_cols + [condition_column])
         
         # Generate output name if not provided
         op_name = output_name if output_name else f"pct_change_{condition_column}_vs_{baseline}"
@@ -406,7 +417,7 @@ def AbsoluteChange(condition_column: str, baseline: str, output_name: Optional[s
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Validate the condition column and baseline
         if condition_column not in df.columns:
@@ -419,35 +430,39 @@ def AbsoluteChange(condition_column: str, baseline: str, output_name: Optional[s
         baseline_rows = df[df[condition_column] == baseline]
         other_rows = df[df[condition_column] != baseline]
         
-        # Group by any columns except the condition column
-        group_cols = [col for col in df.columns if col != condition_column]
-        
-        # Initialize result dataframe
-        result_df = pd.DataFrame()
-        
-        # Process each metric column (assuming numeric columns are metrics)
-        metric_cols = df.select_dtypes(include=['number']).columns
-        
-        for metric in metric_cols:
-            # Calculate baseline values
-            baseline_values = baseline_rows.groupby(group_cols)[metric].mean().reset_index()
-            baseline_values.rename(columns={metric: 'baseline_value'}, inplace=True)
+        if baseline_rows.empty or other_rows.empty:
+            warnings.warn(f"No data found for baseline '{baseline}' or no other conditions found.")
+            result_df = pd.DataFrame()
+        else:
+            # Group by any columns except the condition column
+            group_cols = [col for col in df.columns if col != condition_column]
             
-            # Calculate other values
-            other_values = other_rows.groupby(group_cols + [condition_column])[metric].mean().reset_index()
+            # Initialize result dataframe
+            result_df = pd.DataFrame()
             
-            # Merge baseline and other values
-            merged = pd.merge(other_values, baseline_values, on=group_cols)
+            # Process each metric column (assuming numeric columns are metrics)
+            metric_cols = df.select_dtypes(include=['number']).columns
             
-            # Calculate absolute change
-            merged[f'abs_change_{metric}'] = merged[metric] - merged['baseline_value']
-            
-            # Add to result
-            if result_df.empty:
-                result_df = merged[[*group_cols, condition_column, f'abs_change_{metric}']]
-            else:
-                result_df = pd.merge(result_df, merged[[*group_cols, condition_column, f'abs_change_{metric}']], 
-                                   on=group_cols + [condition_column])
+            for metric in metric_cols:
+                # Calculate baseline values
+                baseline_values = baseline_rows.groupby(group_cols)[metric].mean().reset_index()
+                baseline_values.rename(columns={metric: 'baseline_value'}, inplace=True)
+                
+                # Calculate other values
+                other_values = other_rows.groupby(group_cols + [condition_column])[metric].mean().reset_index()
+                
+                # Merge baseline and other values
+                merged = pd.merge(other_values, baseline_values, on=group_cols)
+                
+                # Calculate absolute change
+                merged[f'abs_change_{metric}'] = merged[metric] - merged['baseline_value']
+                
+                # Add to result
+                if result_df.empty:
+                    result_df = merged[[*group_cols, condition_column, f'abs_change_{metric}']]
+                else:
+                    result_df = pd.merge(result_df, merged[[*group_cols, condition_column, f'abs_change_{metric}']], 
+                                       on=group_cols + [condition_column])
         
         # Generate output name if not provided
         op_name = output_name if output_name else f"abs_change_{condition_column}_vs_{baseline}"
@@ -486,7 +501,7 @@ def MH(condition_column: str, baseline: str, stratified_by: Union[str, List[str]
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Validate the condition column and baseline
         if condition_column not in df.columns:
@@ -554,7 +569,7 @@ def MH(condition_column: str, baseline: str, stratified_by: Union[str, List[str]
             })
             
             # Add to result
-            result_df = pd.concat([result_df, result_row])
+            result_df = pd.concat([result_df, result_row], ignore_index=True)
         
         # Generate output name if not provided
         op_name = output_name if output_name else f"mh_{condition_column}_vs_{baseline}"
@@ -596,7 +611,7 @@ def CUPED(condition_column: str, baseline: str, covariates: Union[str, List[str]
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Validate the condition column and baseline
         if condition_column not in df.columns:
@@ -640,7 +655,7 @@ def CUPED(condition_column: str, baseline: str, covariates: Union[str, List[str]
                     stratum_result[col] = stratum[i] if isinstance(stratum, tuple) else stratum
                 
                 # Add to result
-                result_df = pd.concat([result_df, stratum_result])
+                result_df = pd.concat([result_df, stratum_result], ignore_index=True)
         else:
             # Apply CUPED to the entire dataset
             result_df = _apply_cuped(df, condition_column, baseline, covariate_cols, metric_cols)
@@ -752,7 +767,7 @@ def PrePostChange(condition_column: str, baseline: str, covariates: Union[str, L
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Validate the condition column and baseline
         if condition_column not in df.columns:
@@ -796,7 +811,7 @@ def PrePostChange(condition_column: str, baseline: str, covariates: Union[str, L
                     stratum_result[col] = stratum[i] if isinstance(stratum, tuple) else stratum
                 
                 # Add to result
-                result_df = pd.concat([result_df, stratum_result])
+                result_df = pd.concat([result_df, stratum_result], ignore_index=True)
         else:
             # Apply PrePost to the entire dataset
             result_df = _apply_prepost(df, condition_column, baseline, covariate_cols, metric_cols)
@@ -875,6 +890,50 @@ def PrePostChange(condition_column: str, baseline: str, covariates: Union[str, L
 
 
 # Additional helper functions
+def SelectColumns(columns: List[str], output_name: Optional[str] = None):
+    """
+    Select specific columns from the dataframe
+    
+    Parameters:
+    -----------
+    columns : List[str]
+        List of column names to select
+    output_name : str, optional
+        Name for the output operation, defaults to 'selected_columns'
+        
+    Returns:
+    --------
+    Callable
+        Function that selects columns from an OperationsPipe
+    """
+    def _select_columns(pipe):
+        if pipe.data is None:
+            raise ValueError("No data found. Data must be provided when creating the pipeline.")
+        
+        new_pipe = pipe.copy()
+        df = new_pipe.data.copy()  # Ensure we work with a copy
+        
+        # Validate that all requested columns exist
+        missing_columns = [col for col in columns if col not in df.columns]
+        if missing_columns:
+            raise ValueError(f"Columns not found in dataframe: {missing_columns}")
+        
+        # Select the specified columns
+        selected_df = df[columns].copy()
+        
+        # Generate output name if not provided
+        op_name = output_name if output_name else "selected_columns"
+        
+        # Store the operation and update the data
+        new_pipe.operations[op_name] = selected_df
+        new_pipe.data = selected_df  # Update the data for subsequent operations
+        new_pipe.current_operation = op_name
+        
+        return new_pipe
+    
+    return _select_columns
+
+
 def FilterConditions(conditions: List[str], output_name: Optional[str] = None):
     """
     Filter the data to include only specified conditions
@@ -896,7 +955,7 @@ def FilterConditions(conditions: List[str], output_name: Optional[str] = None):
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Find condition column by examining the data
         # This assumes condition column is the one with categorical/string values that match conditions
@@ -915,7 +974,7 @@ def FilterConditions(conditions: List[str], output_name: Optional[str] = None):
         condition_column = condition_cols[0][0]
         
         # Filter the data
-        filtered_df = df[df[condition_column].isin(conditions)]
+        filtered_df = df[df[condition_column].isin(conditions)].copy()
         
         if filtered_df.empty:
             warnings.warn(f"No data remains after filtering for conditions: {conditions}")
@@ -923,8 +982,9 @@ def FilterConditions(conditions: List[str], output_name: Optional[str] = None):
         # Generate output name if not provided
         op_name = output_name if output_name else "filtered_conditions"
         
-        # Update the data
-        new_pipe.data = filtered_df
+        # Store the operation and update the data
+        new_pipe.operations[op_name] = filtered_df
+        new_pipe.data = filtered_df  # Update the data for subsequent operations
         new_pipe.current_operation = op_name
         
         return new_pipe
@@ -962,7 +1022,7 @@ def PowerAnalysis(condition_column: str, baseline: str, metric_column: str,
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Validate the condition column and baseline
         if condition_column not in df.columns:
@@ -1082,7 +1142,7 @@ def StratifiedSummary(condition_column: str, stratified_by: Union[str, List[str]
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Validate the condition column
         if condition_column not in df.columns:
@@ -1200,7 +1260,7 @@ def BootstrapCI(condition_column: str, baseline: str, metric_column: str,
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Validate the condition column and baseline
         if condition_column not in df.columns:
@@ -1241,7 +1301,7 @@ def BootstrapCI(condition_column: str, baseline: str, metric_column: str,
                     stratum_result[strata_cols[0]] = stratum
                 
                 # Add to result
-                result_df = pd.concat([result_df, stratum_result])
+                result_df = pd.concat([result_df, stratum_result], ignore_index=True)
         else:
             # Apply bootstrap to the entire dataset
             result_df = _apply_bootstrap(
@@ -1260,7 +1320,6 @@ def BootstrapCI(condition_column: str, baseline: str, metric_column: str,
     
     def _apply_bootstrap(df, condition_column, baseline, metric_column, confidence, n_bootstraps):
         """Helper function to apply bootstrap within a dataframe"""
-        
         
         # Get baseline data
         baseline_data = df[df[condition_column] == baseline][metric_column].dropna().values
@@ -1349,7 +1408,7 @@ def MultiComparisonAdjustment(p_value_column: str, method: str = 'bonferroni',
             raise ValueError("No data found. Data must be provided when creating the pipeline.")
         
         new_pipe = pipe.copy()
-        df = new_pipe.data
+        df = new_pipe.data.copy()  # Ensure we work with a copy
         
         # Validate the p-value column
         if p_value_column not in df.columns:
@@ -1414,8 +1473,9 @@ def MultiComparisonAdjustment(p_value_column: str, method: str = 'bonferroni',
         # Generate output name if not provided
         op_name = output_name if output_name else f"adjusted_{method.lower()}"
         
-        # Update the data
-        new_pipe.data = df
+        # Store the operation and update the data
+        new_pipe.operations[op_name] = df
+        new_pipe.data = df  # Update the data for subsequent operations
         new_pipe.current_operation = op_name
         
         return new_pipe
@@ -1465,10 +1525,15 @@ def ShowOperation(operation_name: Optional[str] = None):
         if operation_name:
             if operation_name not in pipe.operations:
                 raise ValueError(f"Operation '{operation_name}' not found.")
-            return pipe.operations[operation_name]
+            result_df = pipe.operations[operation_name]
         else:
             # Show the most recent operation
-            return pipe.operations[pipe.current_operation]
+            if pipe.current_operation is None:
+                raise ValueError("No current operation available.")
+            result_df = pipe.operations[pipe.current_operation]
+        
+        # Ensure we return a copy of the DataFrame
+        return result_df.copy() if result_df is not None else pd.DataFrame()
     
     return _show_operation
 
@@ -1495,10 +1560,15 @@ def ShowComparison(comparison_name: Optional[str] = None):
         if comparison_name:
             if comparison_name not in pipe.comparisons:
                 raise ValueError(f"Comparison '{comparison_name}' not found.")
-            return pipe.comparisons[comparison_name]
+            result_df = pipe.comparisons[comparison_name]
         else:
             # Show the most recent comparison
-            return pipe.comparisons[next(reversed(pipe.comparisons))]
+            if not pipe.comparisons:
+                raise ValueError("No comparisons available.")
+            result_df = pipe.comparisons[next(reversed(pipe.comparisons))]
+        
+        # Ensure we return a copy of the DataFrame
+        return result_df.copy() if result_df is not None else pd.DataFrame()
     
     return _show_comparison
 

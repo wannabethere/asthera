@@ -105,17 +105,31 @@ class MetricsPipe(BasePipe):
         
         # Create the output DataFrame
         if all_data:
+            # Separate metrics (dictionaries) from pivot tables (DataFrames)
+            metrics_data = []
+            pivot_dfs = []
+            
+            for item in all_data:
+                if isinstance(item, dict):
+                    # This is a metric (dictionary)
+                    metrics_data.append(item)
+                elif isinstance(item, pd.DataFrame):
+                    # This is a pivot table (DataFrame)
+                    pivot_dfs.append(item)
+            
             # If we have pivot tables, we need to handle the different structures
-            if include_pivot_tables and self.pivot_tables:
-                # Combine metrics and pivot tables
-                metrics_df = pd.DataFrame([row for row in all_data if row['type'] == 'metric'])
-                
-                # For pivot tables, we already have DataFrames, so we need to combine them differently
-                pivot_dfs = [row for row in all_data if row['type'] == 'pivot_table']
+            if include_pivot_tables and pivot_dfs:
+                # Create metrics DataFrame if we have metrics
+                metrics_df = pd.DataFrame(metrics_data) if metrics_data else pd.DataFrame()
                 
                 if metrics_df.empty and pivot_dfs:
-                    # Only pivot tables
-                    return pd.concat(pivot_dfs, ignore_index=True)
+                    # Only pivot tables - return the actual pivot table data, not the melted version
+                    if len(self.pivot_tables) == 1:
+                        # If there's only one pivot table, return it directly
+                        return list(self.pivot_tables.values())[0]
+                    else:
+                        # If there are multiple pivot tables, return the first one
+                        return list(self.pivot_tables.values())[0]
                 elif not metrics_df.empty and pivot_dfs:
                     # Both metrics and pivot tables
                     # We'll return the metrics DataFrame and store pivot tables separately
@@ -127,7 +141,7 @@ class MetricsPipe(BasePipe):
                     return metrics_df
             else:
                 # Only metrics
-                return pd.DataFrame(all_data)
+                return pd.DataFrame(metrics_data)
         else:
             return pd.DataFrame()
     
@@ -1031,8 +1045,9 @@ def GroupBy(
             by_str = '_'.join(by) if isinstance(by, list) else by
             group_name = f"grouped_by_{by_str}"
         
-        # Store the result as a new dataframe
-        new_pipe.data = grouped
+        # Store the result as a pivot table and update the data
+        new_pipe.pivot_tables[group_name] = grouped
+        new_pipe.data = grouped  # Update the data for subsequent operations
         new_pipe.current_metric = group_name
         
         return new_pipe
@@ -1070,8 +1085,9 @@ def Filter(condition: Callable[[pd.DataFrame], pd.Series], output_name: Optional
         # Generate output name if not provided
         filter_name = output_name if output_name else "filtered_data"
         
-        # Store the result as a new dataframe
-        new_pipe.data = filtered_df
+        # Store the result as a pivot table and update the data
+        new_pipe.pivot_tables[filter_name] = filtered_df
+        new_pipe.data = filtered_df  # Update the data for subsequent operations
         new_pipe.current_metric = filter_name
         
         return new_pipe
@@ -1109,8 +1125,9 @@ def CumulativeSum(variable: str, output_column: Optional[str] = None):
         # Calculate the cumulative sum
         df[col_name] = df[variable].cumsum()
         
-        # Store the result
-        new_pipe.data = df
+        # Store the result as a pivot table and update the data
+        new_pipe.pivot_tables[col_name] = df
+        new_pipe.data = df  # Update the data for subsequent operations
         new_pipe.current_metric = col_name
         
         return new_pipe
@@ -1185,8 +1202,9 @@ def RollingMetric(
         # Add the result to the dataframe
         df[col_name] = result
         
-        # Store the result
-        new_pipe.data = df
+        # Store the result as a pivot table and update the data
+        new_pipe.pivot_tables[col_name] = df
+        new_pipe.data = df  # Update the data for subsequent operations
         new_pipe.current_metric = col_name
         
         return new_pipe
