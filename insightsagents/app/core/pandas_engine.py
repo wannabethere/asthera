@@ -179,26 +179,38 @@ class PandasEngine(Engine):
             limit_value = None
             offset_value = None
             
-            # Parse tokens to extract all components
+            # More robust parsing logic
+            in_select = False
+            in_from = False
+            
             for i, token in enumerate(tokens):
-                if isinstance(token, sqlparse.sql.Identifier):
-                    table_name = token.get_real_name()
-                elif isinstance(token, sqlparse.sql.Where):
+                token_str = str(token).strip().upper()
+                
+                if token_str == 'SELECT':
+                    in_select = True
+                    in_from = False
+                elif token_str == 'FROM':
+                    in_select = False
+                    in_from = True
+                elif token_str == 'WHERE':
+                    in_select = False
+                    in_from = False
                     where_clause = str(token)
-                elif isinstance(token, sqlparse.sql.IdentifierList):
-                    select_columns = [str(col).strip() for col in token.get_identifiers()]
-                elif isinstance(token, sqlparse.sql.Identifier) and token.get_name().upper() != 'FROM':
-                    select_columns = [token.get_name()]
-                elif isinstance(token, sqlparse.sql.Limit):
-                    # Extract LIMIT value
-                    limit_tokens = token.tokens
-                    for limit_token in limit_tokens:
-                        if isinstance(limit_token, sqlparse.sql.Literal):
+                elif token_str == 'LIMIT':
+                    # Extract LIMIT value from next token
+                    if i + 1 < len(tokens):
+                        next_token = tokens[i + 1]
+                        if isinstance(next_token, sqlparse.sql.Literal):
                             try:
-                                limit_value = int(str(limit_token))
+                                limit_value = int(str(next_token))
                             except ValueError:
-                                logger.warning(f"Invalid LIMIT value: {limit_token}")
-                elif str(token).upper() == 'OFFSET':
+                                logger.warning(f"Invalid LIMIT value: {next_token}")
+                        elif hasattr(next_token, 'value'):
+                            try:
+                                limit_value = int(str(next_token.value))
+                            except ValueError:
+                                logger.warning(f"Invalid LIMIT value: {next_token.value}")
+                elif token_str == 'OFFSET':
                     # Extract OFFSET value from next token
                     if i + 1 < len(tokens):
                         next_token = tokens[i + 1]
@@ -207,8 +219,30 @@ class PandasEngine(Engine):
                                 offset_value = int(str(next_token))
                             except ValueError:
                                 logger.warning(f"Invalid OFFSET value: {next_token}")
+                elif in_select and isinstance(token, sqlparse.sql.IdentifierList):
+                    # Handle multiple columns in SELECT
+                    select_columns = [str(col).strip().strip('"') for col in token.get_identifiers()]
+                elif in_select and isinstance(token, sqlparse.sql.Identifier):
+                    # Handle single column in SELECT
+                    col_name = token.get_name().strip('"')
+                    if col_name != '*':
+                        select_columns.append(col_name)
+                elif in_from and isinstance(token, sqlparse.sql.Identifier):
+                    # Extract table name from FROM clause
+                    table_name = token.get_real_name().strip('"')
+            
+            # If no table name found, try to extract from the SQL string directly
+            if not table_name:
+                # Simple regex fallback for table name extraction
+                import re
+                from_match = re.search(r'FROM\s+["\']?(\w+)["\']?', sql, re.IGNORECASE)
+                if from_match:
+                    table_name = from_match.group(1)
             
             if not table_name or table_name not in self.data_sources:
+                logger.warning(f"Table '{table_name}' not found in data sources. Available: {list(self.data_sources.keys())}")
+                logger.warning(f"SQL being parsed: {sql}")
+                logger.warning(f"Parsed tokens: {[str(t) for t in tokens]}")
                 return None
                 
             df = self.data_sources[table_name]
@@ -278,6 +312,8 @@ class PandasEngine(Engine):
             
             # If all methods fail, return error
             if result_df is None:
+                logger.warning(f"All query execution methods failed for SQL: {quoted_sql}")
+                logger.warning(f"Available data sources: {list(self.data_sources.keys())}")
                 return False, {
                     "error": "Failed to execute query on all available data sources",
                     "data": [],
@@ -486,6 +522,50 @@ class PandasEngine(Engine):
                 logger.warning(f"Failed to get PostgreSQL tables: {e}")
         
         return sorted(tables)
+    
+    def get_dataframe(self, table_name: str, columns: list[str] = None) -> pd.DataFrame:
+        """
+        Get DataFrame data directly without SQL parsing.
+        This is useful for testing and when you want to avoid SQL parsing overhead.
+        
+        Args:
+            table_name: Name of the table to get data from
+            columns: Optional list of columns to select. If None, returns all columns.
+            
+        Returns:
+            pd.DataFrame: The requested data
+            
+        Raises:
+            ValueError: If table_name is not found in data sources
+        """
+        if table_name not in self.data_sources:
+            available_tables = list(self.data_sources.keys())
+            raise ValueError(f"Table '{table_name}' not found. Available tables: {available_tables}")
+        
+        df = self.data_sources[table_name]
+        
+        if columns is not None:
+            # Filter to requested columns
+            available_columns = list(df.columns)
+            missing_columns = [col for col in columns if col not in available_columns]
+            if missing_columns:
+                raise ValueError(f"Columns {missing_columns} not found in table '{table_name}'. Available columns: {available_columns}")
+            return df[columns]
+        
+        return df.copy()
+    
+    def get_dataframe_async(self, table_name: str, columns: list[str] = None) -> pd.DataFrame:
+        """
+        Async version of get_dataframe for consistency with other async methods.
+        
+        Args:
+            table_name: Name of the table to get data from
+            columns: Optional list of columns to select. If None, returns all columns.
+            
+        Returns:
+            pd.DataFrame: The requested data
+        """
+        return self.get_dataframe(table_name, columns)
     
     def cleanup(self):
         """Clean up temporary resources"""

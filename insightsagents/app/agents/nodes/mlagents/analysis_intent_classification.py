@@ -2404,6 +2404,10 @@ The following functions are EXACT matches for the user's question and should be 
 **Description:** {dataframe_description}
 **Summary:** {dataframe_summary}
 
+### SELECTION STRATEGY ###
+1. Please always create step 1 of plan as the data selection step so we can get the most relevant columns from the dataframe.
+2. Add as many columns to the plan that will be needed for selection.
+
 ### STEP 3 TASK ###
 Create a detailed pipeline reasoning plan that:
 

@@ -104,6 +104,14 @@ class SelectPipe(BasePipe):
         
         cols_to_select = columns or self.selected_columns
         
+        # Try to use direct DataFrame access first (for PandasEngine)
+        if hasattr(self.engine, 'get_dataframe'):
+            try:
+                return self.engine.get_dataframe(self.table_name, cols_to_select)
+            except Exception as e:
+                logger.warning(f"Direct DataFrame access failed: {e}, falling back to SQL")
+        
+        # Fallback to SQL-based approach
         if not cols_to_select:
             # Select all columns if none specified
             sql = f"SELECT * FROM {self.table_name}"
@@ -195,6 +203,23 @@ class SelectPipe(BasePipe):
             "data_source": "dataframe" if self.data is not None else "engine",
             "table_name": self.table_name
         }
+    
+    def get_summary(self, **kwargs) -> Dict[str, Any]:
+        """
+        Get a summary of the pipe's current state and operations.
+        This method satisfies the abstract method requirement from BasePipe.
+        
+        Parameters:
+        -----------
+        **kwargs : dict
+            Additional arguments (not used in this implementation)
+            
+        Returns:
+        --------
+        Dict[str, Any]
+            Summary of the pipe's current state
+        """
+        return self.get_selection_summary()
 
 
 # Base Selector Classes
