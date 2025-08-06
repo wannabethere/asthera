@@ -1,0 +1,398 @@
+[
+    {
+        "query": "Create log and square root transformations for numerical columns",
+        "function": "generate_numerical_features",
+        "category": "feature_engineering",
+        "inputs": {
+            "columns": ["age", "income", "purchase_amount"],
+            "operations": ["log", "sqrt"],
+            "prefix": "transform_",
+            "handle_zeros": true
+        },
+        "example": "pipeline = RFPipe.from_dataframe(data)\npipeline = pipeline | generate_numerical_features(\n    columns=['age', 'income', 'purchase_amount'],\n    operations=['log', 'sqrt'],\n    prefix='transform_',\n    handle_zeros=True\n)",
+        "instructions": {
+            "business_case": "Feature Engineering & Data Preprocessing - Transform skewed numerical data to improve model performance, handle non-linear relationships, and normalize distributions for better machine learning outcomes.",
+            "natural_language_questions": [
+                "Can you normalize my skewed sales data?",
+                "How do I transform numerical features for better ML performance?",
+                "What transformations should I apply to financial data?",
+                "Can you create better features from my numeric columns?"
+            ],
+            "data_keywords": [
+                "numerical", "numeric", "continuous", "skewed", "transformation", 
+                "log", "sqrt", "square", "financial", "revenue", "income", "age"
+            ],
+            "configuration_hints": {
+                "operations": "log = good for right-skewed data, sqrt = moderate normalization, square = left-skewed data",
+                "handle_zeros": "True when data contains zeros (adds small constant before log transform)",
+                "prefix": "Use descriptive prefix to identify transformed columns"
+            },
+            "typical_parameters": {
+                "operations_options": ["log", "sqrt", "square", "reciprocal"],
+                "best_for_data_types": ["financial", "counts", "continuous_positive"],
+                "when_to_use": "When data is heavily skewed or has wide value ranges"
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(transform|engineer|generate) (features|columns)", "(log|sqrt|square) (transformation)"],
+            "column_patterns": ["(numerical|numeric) (features|columns)"]
+        }
+    },
+    {
+        "query": "One-hot encode categorical variables for machine learning",
+        "function": "generate_categorical_features", 
+        "category": "feature_engineering",
+        "inputs": {
+            "columns": ["category", "region", "customer_type"],
+            "encoding_type": "onehot",
+            "max_categories": 15
+        },
+        "example": "pipeline = RFPipe.from_dataframe(data)\npipeline = pipeline | generate_categorical_features(\n    columns=['category', 'region', 'customer_type'],\n    encoding_type='onehot',\n    max_categories=15\n)",
+        "instructions": {
+            "business_case": "Machine Learning Preprocessing - Convert categorical data into numerical format that ML algorithms can process, enabling analysis of text-based categories like product types, regions, or customer segments.",
+            "natural_language_questions": [
+                "How do I encode categorical data for machine learning?",
+                "Can you convert my text categories to numbers?",
+                "What's the best way to handle product categories in ML?",
+                "How do I prepare categorical features for modeling?"
+            ],
+            "data_keywords": [
+                "categorical", "category", "text", "region", "type", "segment",
+                "encoding", "onehot", "label", "product_type", "customer_type"
+            ],
+            "configuration_hints": {
+                "encoding_type": "onehot = creates binary columns for each category, label = assigns numbers to categories",
+                "max_categories": "Limit to prevent too many features. Use 10-20 for most cases",
+                "columns": "Select categorical columns with reasonable number of unique values"
+            },
+            "typical_parameters": {
+                "max_categories_range": [5, 50],
+                "encoding_types": ["onehot", "label", "target"],
+                "best_for_data_types": ["categorical", "text_labels", "nominal_data"],
+                "memory_consideration": "OneHot encoding increases data size significantly"
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(encode|encoding) (categorical)", "(one.hot|onehot) (encoding)"],
+            "column_patterns": ["(categorical|category) (features|columns|variables)"]
+        }
+    },
+    {
+        "query": "Create interaction features between age and income columns", 
+        "function": "generate_interaction_features",
+        "category": "feature_engineering",
+        "inputs": {
+            "column_pairs": [["age", "income"], ["price", "quantity"]],
+            "operations": ["multiply", "divide"],
+            "prefix": "interaction_"
+        },
+        "example": "pipeline = RFPipe.from_dataframe(data)\npipeline = pipeline | generate_interaction_features(\n    column_pairs=[('age', 'income'), ('price', 'quantity')],\n    operations=['multiply', 'divide'],\n    prefix='interaction_'\n)",
+        "instructions": {
+            "business_case": "Advanced Feature Engineering - Capture complex relationships between variables that individually might not be predictive, such as age-income interactions in customer behavior or price-quantity relationships in sales analysis.",
+            "natural_language_questions": [
+                "Can you find interactions between age and income?",
+                "How do price and quantity work together?",
+                "What happens when I combine these two features?",
+                "Can you create features that capture relationships between variables?"
+            ],
+            "data_keywords": [
+                "interaction", "relationship", "combine", "multiply", "ratio",
+                "age_income", "price_quantity", "cross_feature", "derived"
+            ],
+            "configuration_hints": {
+                "operations": "multiply = captures joint effects, divide = creates ratios, add/subtract = linear combinations",
+                "column_pairs": "Choose pairs that logically interact (age+income, price+quantity)",
+                "prefix": "Use descriptive prefix to identify interaction features"
+            },
+            "typical_parameters": {
+                "operations_options": ["multiply", "divide", "add", "subtract"],
+                "best_combinations": ["demographic_pairs", "financial_ratios", "performance_metrics"],
+                "avoid_interactions": ["highly_correlated_pairs", "categorical_numerical_pairs"]
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(interaction|cross) (features)", "(multiply|combine) (features|columns)"],
+            "column_patterns": ["(between|across) (columns|features)"]
+        }
+    },
+    {
+        "query": "Create binary classification labels for high-value customers",
+        "function": "create_binary_labels",
+        "category": "labeling", 
+        "inputs": {
+            "column": "lifetime_value",
+            "condition": ">1000",
+            "label_column": "high_value",
+            "positive_label": "1",
+            "negative_label": "0"
+        },
+        "example": "pipeline = RFPipe.from_dataframe(data)\npipeline = pipeline | create_binary_labels(\n    column='lifetime_value',\n    condition='>1000',\n    label_column='high_value',\n    positive_label='1',\n    negative_label='0'\n)",
+        "instructions": {
+            "business_case": "Classification Problem Setup - Create target variables for binary classification tasks like customer churn prediction, fraud detection, or high-value customer identification for targeted marketing campaigns.",
+            "natural_language_questions": [
+                "Can you identify high-value customers?",
+                "How do I create labels for churn prediction?",
+                "What customers are likely to buy premium products?",
+                "Can you flag customers above a spending threshold?"
+            ],
+            "data_keywords": [
+                "binary", "classification", "label", "target", "churn", "fraud",
+                "high_value", "threshold", "flag", "identify", "predict"
+            ],
+            "configuration_hints": {
+                "condition": "Use business-relevant thresholds (>1000 for revenue, <30 for churn days)",
+                "labels": "Use 1/0 for most ML algorithms, True/False for interpretability",
+                "label_column": "Choose descriptive name that explains what positive class means"
+            },
+            "typical_parameters": {
+                "condition_operators": [">", "<", ">=", "<=", "==", "!="],
+                "common_thresholds": ["revenue_percentiles", "time_periods", "behavioral_metrics"],
+                "label_formats": ["1/0", "True/False", "Yes/No"],
+                "business_applications": ["churn", "conversion", "fraud", "segmentation"]
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(binary|two.class) (classification|labels)", "(create|generate) (labels|targets)"],
+            "threshold_patterns": ["(above|below|greater|less) (than|threshold)"]
+        }
+    },
+    {
+        "query": "Segment customers into multiple value tiers based on spending",
+        "function": "create_multiclass_labels",
+        "category": "labeling",
+        "inputs": {
+            "column": "annual_spend",
+            "bins": [0, 100, 500, 1000, 5000],
+            "labels": ["Low", "Medium", "High", "Premium"],
+            "label_column": "customer_tier"
+        },
+        "example": "pipeline = RFPipe.from_dataframe(data)\npipeline = pipeline | create_multiclass_labels(\n    column='annual_spend',\n    bins=[0, 100, 500, 1000, 5000],\n    labels=['Low', 'Medium', 'High', 'Premium'],\n    label_column='customer_tier'\n)",
+        "instructions": {
+            "business_case": "Customer Segmentation & Multi-class Classification - Create meaningful business segments for targeted marketing, pricing strategies, and resource allocation based on customer value, behavior, or characteristics.",
+            "natural_language_questions": [
+                "Can you segment customers by spending levels?",
+                "How do I create customer tiers?",
+                "What are different customer value segments?",
+                "Can you classify customers into multiple groups?"
+            ],
+            "data_keywords": [
+                "segment", "tier", "group", "multiclass", "classification",
+                "customer_value", "spending_level", "category", "bracket"
+            ],
+            "configuration_hints": {
+                "bins": "Use business-meaningful breakpoints based on percentiles or business rules",
+                "labels": "Choose clear, actionable segment names (Low/Medium/High/Premium)",
+                "number_of_segments": "3-7 segments typically work best for business applications"
+            },
+            "typical_parameters": {
+                "bin_strategies": ["equal_width", "percentile_based", "business_rules"],
+                "segment_count_range": [3, 7],
+                "common_applications": ["customer_value", "risk_levels", "engagement_tiers"],
+                "labeling_conventions": ["tier_names", "numeric_levels", "descriptive_labels"]
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(multiclass|multi.class) (classification|labels)", "(segment|tier|group) (customers|users)"],
+            "binning_patterns": ["(bins|buckets|tiers|segments)"]
+        }
+    },
+    {
+        "query": "Select the top 15 most important features for modeling",
+        "function": "select_features",
+        "category": "feature_selection", 
+        "inputs": {
+            "method": "kbest",
+            "k": 15,
+            "score_func": "f_classif"
+        },
+        "example": "pipeline = RFPipe.from_dataframe(data)\npipeline = pipeline | select_features(\n    method='kbest',\n    k=15,\n    score_func=f_classif\n)",
+        "instructions": {
+            "business_case": "Model Optimization & Performance - Reduce noise and improve model performance by selecting only the most predictive features, reducing overfitting and training time while maintaining prediction accuracy.",
+            "natural_language_questions": [
+                "What are the most important features for prediction?",
+                "Can you reduce the number of features?",
+                "Which variables are most predictive?",
+                "How do I select the best features for my model?"
+            ],
+            "data_keywords": [
+                "feature_selection", "important", "predictive", "relevant",
+                "top_features", "reduce_dimensions", "select_best"
+            ],
+            "configuration_hints": {
+                "k": "Start with 10-20 features, adjust based on performance and interpretability",
+                "method": "kbest = simple univariate, rfe = wrapper method, lasso = regularization",
+                "score_func": "f_classif for classification, f_regression for regression"
+            },
+            "typical_parameters": {
+                "k_range": [5, 50],
+                "selection_methods": ["kbest", "rfe", "lasso", "mutual_info"],
+                "score_functions": ["f_classif", "f_regression", "chi2", "mutual_info"],
+                "evaluation_criteria": ["cross_validation", "information_criteria", "business_importance"]
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(select|choose|pick) (features)", "(top|best) (features)"],
+            "number_patterns": ["(\\d+) (features|variables)"],
+            "method_patterns": ["(statistical|univariate) (selection)"]
+        }
+    },
+    {
+        "query": "Train a Random Forest with 200 trees and maximum depth of 10",
+        "function": "train_random_forest",
+        "category": "training",
+        "inputs": {
+            "test_size": 0.2,
+            "n_estimators": 200,
+            "max_depth": 10,
+            "min_samples_split": 5,
+            "model_name": "customer_model",
+            "random_state": 42
+        },
+        "example": "pipeline = RFPipe.from_dataframe(data)\npipeline = pipeline | train_random_forest(\n    test_size=0.2,\n    n_estimators=200,\n    max_depth=10,\n    min_samples_split=5,\n    model_name='customer_model',\n    random_state=42\n)",
+        "instructions": {
+            "business_case": "Predictive Modeling & Machine Learning - Build robust classification or regression models for business applications like customer churn prediction, sales forecasting, or risk assessment with good performance and interpretability.",
+            "natural_language_questions": [
+                "Can you train a machine learning model?",
+                "How do I predict customer behavior?",
+                "Can you build a model to forecast sales?",
+                "What model should I use for classification?"
+            ],
+            "data_keywords": [
+                "train", "model", "predict", "machine_learning", "random_forest",
+                "classification", "regression", "forecast", "behavior"
+            ],
+            "configuration_hints": {
+                "n_estimators": "More trees = better performance but slower training. Start with 100-200",
+                "max_depth": "Controls overfitting. Use 10-20 for most datasets",
+                "test_size": "0.2-0.3 typical for validation. Use 0.2 for most cases",
+                "random_state": "Set for reproducible results"
+            },
+            "typical_parameters": {
+                "n_estimators_range": [50, 500],
+                "max_depth_range": [5, 25],
+                "test_size_range": [0.15, 0.3],
+                "performance_vs_speed": "More trees and depth improve accuracy but increase training time",
+                "typical_applications": ["classification", "regression", "feature_importance"]
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(train|fit|build) (model|classifier)", "(random.forest|rf) (model|classifier)"],
+            "parameter_patterns": ["(\\d+) (trees|estimators)", "(depth|split|leaf) (parameters)"]
+        }
+    },
+    {
+        "query": "Make predictions on the test set using trained model",
+        "function": "predict", 
+        "category": "inference",
+        "inputs": {
+            "model_name": "customer_model",
+            "data_split": "test",
+            "prediction_name": "test_predictions"
+        },
+        "example": "pipeline = RFPipe.from_dataframe(data)\npipeline = pipeline | predict(\n    model_name='customer_model',\n    data_split='test',\n    prediction_name='test_predictions'\n)",
+        "instructions": {
+            "business_case": "Model Deployment & Evaluation - Apply trained models to new data for business decision-making, such as identifying high-risk customers, predicting sales, or automating classification tasks.",
+            "natural_language_questions": [
+                "Can you make predictions on new data?",
+                "What does the model predict for test cases?",
+                "How well does the model perform?",
+                "Can you score the test set?"
+            ],
+            "data_keywords": [
+                "predict", "forecast", "score", "test", "inference",
+                "apply_model", "new_data", "classification", "regression"
+            ],
+            "configuration_hints": {
+                "data_split": "test = held-out data, train = training data, new = completely new data",
+                "model_name": "Must match the name used during training",
+                "prediction_name": "Choose descriptive name for storing predictions"
+            },
+            "typical_parameters": {
+                "data_splits": ["test", "train", "validation", "new"],
+                "prediction_formats": ["probabilities", "class_labels", "continuous_values"],
+                "use_cases": ["model_evaluation", "business_scoring", "production_inference"]
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(predict|inference|classify)", "(test|validation) (set|data)"],
+            "data_patterns": ["(test|train|validation) (split|set|data)"]
+        }
+    },
+    {
+        "query": "Calculate accuracy, precision, recall and F1-score for model evaluation",
+        "function": "calculate_metrics",
+        "category": "evaluation",
+        "inputs": {
+            "prediction_name": "test_predictions", 
+            "model_name": "customer_model",
+            "average": "weighted"
+        },
+        "example": "pipeline = RFPipe.from_dataframe(data)\npipeline = pipeline | calculate_metrics(\n    prediction_name='test_predictions',\n    model_name='customer_model',\n    average='weighted'\n)",
+        "instructions": {
+            "business_case": "Model Performance Assessment - Quantify model accuracy and reliability for business decision-making, ensuring the model meets quality standards before deployment in production systems.",
+            "natural_language_questions": [
+                "How accurate is my model?",
+                "What's the model's performance?",
+                "Can you evaluate the predictions?",
+                "How well does the model classify customers?"
+            ],
+            "data_keywords": [
+                "accuracy", "precision", "recall", "f1_score", "performance",
+                "evaluation", "metrics", "quality", "assessment"
+            ],
+            "configuration_hints": {
+                "average": "weighted = accounts for class imbalance, macro = treats all classes equally",
+                "prediction_name": "Must match name used in predict step",
+                "model_name": "Must match name used in training"
+            },
+            "typical_parameters": {
+                "averaging_methods": ["weighted", "macro", "micro", "binary"],
+                "key_metrics": ["accuracy", "precision", "recall", "f1_score", "auc"],
+                "interpretation": "Higher values generally better, but consider business context",
+                "acceptable_ranges": "Accuracy >80% typically good, depends on use case"
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(calculate|compute|evaluate) (metrics|performance)", "(accuracy|precision|recall|f1)"],
+            "metrics_patterns": ["(classification|model) (metrics|evaluation|performance)"]
+        }
+    },
+    {
+        "query": "Save the trained model for production deployment",
+        "function": "save_model",
+        "category": "model_management",
+        "inputs": {
+            "model_name": "customer_model",
+            "filepath": "production_model.joblib"
+        },
+        "example": "pipeline = RFPipe.from_dataframe(data)\npipeline = pipeline | save_model(\n    model_name='customer_model',\n    filepath='production_model.joblib'\n)",
+        "instructions": {
+            "business_case": "Model Deployment & MLOps - Persist trained models for production use, enabling consistent predictions across different systems and maintaining model versioning for business applications.",
+            "natural_language_questions": [
+                "Can you save the model for later use?",
+                "How do I deploy this model to production?",
+                "Can you export the trained model?",
+                "How do I preserve the model for future predictions?"
+            ],
+            "data_keywords": [
+                "save", "export", "persist", "deploy", "production",
+                "model_file", "joblib", "pickle", "deployment"
+            ],
+            "configuration_hints": {
+                "filepath": "Use descriptive names with version info (model_v1.0.joblib)",
+                "format": "joblib recommended for sklearn models (faster than pickle)",
+                "versioning": "Include timestamps or version numbers in filename"
+            },
+            "typical_parameters": {
+                "file_formats": ["joblib", "pickle", "onnx"],
+                "naming_conventions": ["timestamp", "version_number", "model_type"],
+                "storage_locations": ["local", "cloud", "model_registry"],
+                "deployment_considerations": ["file_size", "loading_speed", "compatibility"]
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(save|export|persist) (model)", "(production|deployment) (model)"],
+            "file_patterns": ["(joblib|pickle|model) (file|format)"]
+        }
+    }
+]

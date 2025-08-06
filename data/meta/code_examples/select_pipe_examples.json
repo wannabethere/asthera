@@ -1,0 +1,171 @@
+[
+    {
+      "page_content": "{\"Question\": \"How do I initialize a SelectPipe with a pandas DataFrame?\", \"Context\": \"I have a pandas DataFrame and want to start performing column selection operations on it.\", \"Code_Example\": \"import pandas as pd\\nfrom selectpipe import SelectPipe\\n\\n# Load your data\\ndata = pd.read_csv('customer_data.csv')\\nprint(f\\\"Original data shape: {data.shape}\\\")\\nprint(f\\\"Columns: {list(data.columns)}\\\")\\n\\n# Initialize the selection pipeline with your data\\nselect_pipe = SelectPipe.from_dataframe(data)\\n\\n# Now the pipeline is ready for column selection operations\\nprint(\\\"Pipeline initialized with data shape:\\\", select_pipe.data.shape)\", \"Usage\": \"SelectPipe.from_dataframe(df)\"}",
+      "metadata": {
+        "function_name": "SelectPipe.from_dataframe",
+        "src_type": "class_method",
+        "category": "initialization",
+        "example_id": 1,
+        "description": "Initialize a SelectPipe with a DataFrame"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I initialize a SelectPipe with a database engine?\", \"Context\": \"I have data in a database and want to perform column selection without loading all data into memory.\", \"Code_Example\": \"from selectpipe import SelectPipe\\nfrom app.core.engine import Engine\\n\\n# Initialize with database engine\\nengine = Engine()  # Your database engine instance\\ntable_name = 'customer_transactions'\\n\\n# Create SelectPipe from engine\\nselect_pipe = SelectPipe.from_engine(engine, table_name)\\n\\n# Get available columns without loading data\\navailable_cols = select_pipe._get_available_columns()\\nprint(f\\\"Available columns: {available_cols}\\\")\\n\\n# Now you can perform selections and fetch only selected columns\\nselected_pipe = select_pipe | Select('customer_id', 'amount', 'date')\\nresult_df = selected_pipe.to_df()  # Only fetches selected columns\", \"Usage\": \"SelectPipe.from_engine(engine, table_name)\"}",
+      "metadata": {
+        "function_name": "SelectPipe.from_engine",
+        "src_type": "class_method",
+        "category": "initialization",
+        "description": "Initialize SelectPipe with database engine"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I select specific columns by name?\", \"Context\": \"I want to select only certain columns from my dataset for analysis.\", \"Code_Example\": \"from selectpipe import SelectPipe, Select\\n\\n# Initialize pipeline\\npipeline = SelectPipe.from_dataframe(customer_data)\\n\\n# Select specific columns by name\\nselected = pipeline | Select('customer_id', 'name', 'email', 'total_spent')\\n\\n# Get the selected columns\\nselected_cols = selected.get_selected_columns()\\nprint(f\\\"Selected columns: {selected_cols}\\\")\\n\\n# Convert to DataFrame\\nresult_df = selected.to_df()\\nprint(f\\\"Result shape: {result_df.shape}\\\")\\nprint(f\\\"Result columns: {list(result_df.columns)}\\\")\", \"Usage\": \"Select('customer_id', 'name', 'email', 'total_spent')\"}",
+      "metadata": {
+        "function_name": "Select",
+        "src_type": "function",
+        "category": "basic_selection",
+        "example_id": 2,
+        "description": "Select specific columns by name"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I select columns using pattern matching?\", \"Context\": \"I want to select all columns that match a specific pattern, like all columns starting with 'user_'.\", \"Code_Example\": \"from selectpipe import SelectPipe, Select, startswith, contains, endswith\\n\\n# Initialize pipeline\\npipeline = SelectPipe.from_dataframe(user_data)\\n\\n# Select columns starting with 'user_'\\nuser_cols = pipeline | Select(startswith('user_'))\\nprint(f\\\"User columns: {user_cols.get_selected_columns()}\\\")\\n\\n# Select columns containing 'score'\\nscore_cols = pipeline | Select(contains('score'))\\nprint(f\\\"Score columns: {score_cols.get_selected_columns()}\\\")\\n\\n# Select columns ending with '_date'\\ndate_cols = pipeline | Select(endswith('_date'))\\nprint(f\\\"Date columns: {date_cols.get_selected_columns()}\\\")\\n\\n# Combine multiple patterns\\ncombined = pipeline | Select(startswith('user_'), contains('score'), endswith('_date'))\\nprint(f\\\"Combined selection: {combined.get_selected_columns()}\\\")\", \"Usage\": \"Select(startswith('user_'), contains('score'), endswith('_date'))\"}",
+      "metadata": {
+        "function_name": "Select",
+        "src_type": "function",
+        "category": "pattern_selection",
+        "example_id": 3,
+        "description": "Select columns using pattern matching"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I select columns by data type?\", \"Context\": \"I want to select all numeric columns or all string columns for specific analysis.\", \"Code_Example\": \"from selectpipe import SelectPipe, Select, numeric, string, temporal, integer, floating\\n\\n# Initialize pipeline\\npipeline = SelectPipe.from_dataframe(mixed_data)\\n\\n# Select all numeric columns\\nnumeric_cols = pipeline | Select(numeric())\\nprint(f\\\"Numeric columns: {numeric_cols.get_selected_columns()}\\\")\\n\\n# Select only integer columns\\nint_cols = pipeline | Select(integer())\\nprint(f\\\"Integer columns: {int_cols.get_selected_columns()}\\\")\\n\\n# Select only float columns\\nfloat_cols = pipeline | Select(floating())\\nprint(f\\\"Float columns: {float_cols.get_selected_columns()}\\\")\\n\\n# Select all string columns\\nstring_cols = pipeline | Select(string())\\nprint(f\\\"String columns: {string_cols.get_selected_columns()}\\\")\\n\\n# Select all date/time columns\\ntime_cols = pipeline | Select(temporal())\\nprint(f\\\"Temporal columns: {time_cols.get_selected_columns()}\\\")\", \"Usage\": \"Select(numeric()), Select(string()), Select(temporal())\"}",
+      "metadata": {
+        "function_name": "Select",
+        "src_type": "function",
+        "category": "type_selection",
+        "example_id": 4,
+        "description": "Select columns by data type"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I use convenience functions for common selections?\", \"Context\": \"I want to quickly select common column types without remembering the full selector syntax.\", \"Code_Example\": \"from selectpipe import SelectPipe, select_numeric, select_strings, select_dates, select_by_pattern\\n\\n# Initialize pipeline\\npipeline = SelectPipe.from_dataframe(analysis_data)\\n\\n# Use convenience functions\\nnumeric_data = pipeline | select_numeric()\\nprint(f\\\"Numeric columns: {numeric_data.get_selected_columns()}\\\")\\n\\nstring_data = pipeline | select_strings()\\nprint(f\\\"String columns: {string_data.get_selected_columns()}\\\")\\n\\ndate_data = pipeline | select_dates()\\nprint(f\\\"Date columns: {date_data.get_selected_columns()}\\\")\\n\\n# Select by regex pattern\\npattern_data = pipeline | select_by_pattern('.*_score$')\\nprint(f\\\"Score columns: {pattern_data.get_selected_columns()}\\\")\", \"Usage\": \"select_numeric(), select_strings(), select_dates(), select_by_pattern('.*_score$')\"}",
+      "metadata": {
+        "function_name": "select_numeric",
+        "src_type": "function",
+        "category": "convenience_functions",
+        "example_id": 5,
+        "description": "Use convenience functions for common selections"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I remove columns from my selection?\", \"Context\": \"I want to exclude certain columns from my analysis, like removing sensitive data or irrelevant columns.\", \"Code_Example\": \"from selectpipe import SelectPipe, Select, Deselect, contains, startswith\\n\\n# Initialize pipeline\\npipeline = SelectPipe.from_dataframe(sensitive_data)\\n\\n# First select all columns\\nall_cols = pipeline | Select('*')\\nprint(f\\\"All columns: {all_cols.get_selected_columns()}\\\")\\n\\n# Remove sensitive columns\\nno_sensitive = all_cols | Deselect('password', 'ssn', 'credit_card')\\nprint(f\\\"After removing sensitive: {no_sensitive.get_selected_columns()}\\\")\\n\\n# Remove columns containing 'temp' or 'debug'\\nno_temp_debug = no_sensitive | Deselect(contains('temp'), contains('debug'))\\nprint(f\\\"After removing temp/debug: {no_temp_debug.get_selected_columns()}\\\")\\n\\n# Remove columns starting with 'internal_'\\nfinal_selection = no_temp_debug | Deselect(startswith('internal_'))\\nprint(f\\\"Final selection: {final_selection.get_selected_columns()}\\\")\", \"Usage\": \"Deselect('password', 'ssn'), Deselect(contains('temp'), startswith('internal_'))\"}",
+      "metadata": {
+        "function_name": "Deselect",
+        "src_type": "function",
+        "category": "column_removal",
+        "example_id": 6,
+        "description": "Remove columns from selection"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I rename columns in my selection?\", \"Context\": \"I want to standardize column names or make them more readable for analysis.\", \"Code_Example\": \"from selectpipe import SelectPipe, Select, Rename\\n\\n# Initialize pipeline\\npipeline = SelectPipe.from_dataframe(raw_data)\\n\\n# Select columns and rename them\\nrenamed = (pipeline \\n    | Select('user_id', 'first_name', 'last_name', 'total_purchases', 'avg_order_value')\\n    | Rename({\\n        'user_id': 'customer_id',\\n        'first_name': 'first',\\n        'last_name': 'last',\\n        'total_purchases': 'purchase_count',\\n        'avg_order_value': 'avg_order'\\n    })\\n)\\n\\nprint(f\\\"Original columns: {pipeline.data.columns.tolist()}\\\")\\nprint(f\\\"Renamed columns: {renamed.get_selected_columns()}\\\")\\n\\n# Get the final DataFrame\\nresult_df = renamed.to_df()\\nprint(f\\\"Final columns: {list(result_df.columns)}\\\")\", \"Usage\": \"Rename({'user_id': 'customer_id', 'first_name': 'first', 'last_name': 'last'})\"}",
+      "metadata": {
+        "function_name": "Rename",
+        "src_type": "function",
+        "category": "column_renaming",
+        "example_id": 7,
+        "description": "Rename columns in selection"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I reorder columns in my selection?\", \"Context\": \"I want to arrange columns in a logical order for better readability and analysis.\", \"Code_Example\": \"from selectpipe import SelectPipe, Select, Reorder\\n\\n# Initialize pipeline\\npipeline = SelectPipe.from_dataframe(order_data)\\n\\n# Select columns and reorder them\\nreordered = (pipeline \\n    | Select('order_id', 'customer_id', 'product_id', 'quantity', 'price', 'total', 'order_date')\\n    | Reorder('order_id', 'order_date', 'customer_id', 'product_id', 'quantity', 'price', 'total')\\n)\\n\\nprint(f\\\"Original order: {pipeline.data.columns.tolist()}\\\")\\nprint(f\\\"Reordered columns: {reordered.get_selected_columns()}\\\")\\n\\n# Get the final DataFrame\\nresult_df = reordered.to_df()\\nprint(f\\\"Final column order: {list(result_df.columns)}\\\")\", \"Usage\": \"Reorder('order_id', 'order_date', 'customer_id', 'product_id', 'quantity', 'price', 'total')\"}",
+      "metadata": {
+        "function_name": "Reorder",
+        "src_type": "function",
+        "category": "column_reordering",
+        "example_id": 8,
+        "description": "Reorder columns in selection"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I add new computed columns to my selection?\", \"Context\": \"I want to create new columns based on calculations or transformations of existing data.\", \"Code_Example\": \"from selectpipe import SelectPipe, Select, AddColumns\\nimport numpy as np\\n\\n# Initialize pipeline\\npipeline = SelectPipe.from_dataframe(sales_data)\\n\\n# Add computed columns\\nenhanced = (pipeline \\n    | Select('product_id', 'quantity', 'price', 'cost')\\n    | AddColumns({\\n        'total_revenue': lambda df: df['quantity'] * df['price'],\\n        'total_cost': lambda df: df['quantity'] * df['cost'],\\n        'profit': lambda df: (df['quantity'] * df['price']) - (df['quantity'] * df['cost']),\\n        'profit_margin': lambda df: ((df['quantity'] * df['price']) - (df['quantity'] * df['cost'])) / (df['quantity'] * df['price']),\\n        'is_profitable': lambda df: ((df['quantity'] * df['price']) - (df['quantity'] * df['cost'])) > 0,\\n        'category': 'electronics'  # Constant value\\n    })\\n)\\n\\n# Get the enhanced DataFrame\\nresult_df = enhanced.to_df()\\nprint(f\\\"Enhanced columns: {list(result_df.columns)}\\\")\\nprint(f\\\"Sample calculations:\\\")\\nprint(result_df[['quantity', 'price', 'total_revenue', 'profit', 'profit_margin']].head())\", \"Usage\": \"AddColumns({'total_revenue': lambda df: df['quantity'] * df['price'], 'profit': lambda df: (df['quantity'] * df['price']) - (df['quantity'] * df['cost'])})\"}",
+      "metadata": {
+        "function_name": "AddColumns",
+        "src_type": "function",
+        "category": "column_creation",
+        "example_id": 9,
+        "description": "Add new computed columns to selection"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I combine multiple selection operations in a pipeline?\", \"Context\": \"I want to perform a series of column operations: select, rename, reorder, and add new columns in one pipeline.\", \"Code_Example\": \"from selectpipe import SelectPipe, Select, Rename, Reorder, AddColumns, contains\\n\\n# Initialize pipeline\\npipeline = SelectPipe.from_dataframe(raw_customer_data)\\n\\n# Complex pipeline with multiple operations\\nprocessed = (pipeline \\n    # Step 1: Select relevant columns\\n    | Select('customer_id', 'first_name', 'last_name', 'email', 'total_spent', 'visit_count')\\n    \\n    # Step 2: Remove any columns containing 'temp' or 'test'\\n    | Deselect(contains('temp'), contains('test'))\\n    \\n    # Step 3: Rename columns for consistency\\n    | Rename({\\n        'first_name': 'first',\\n        'last_name': 'last',\\n        'total_spent': 'spending',\\n        'visit_count': 'visits'\\n    })\\n    \\n    # Step 4: Add computed columns\\n    | AddColumns({\\n        'full_name': lambda df: df['first'] + ' ' + df['last'],\\n        'avg_spend_per_visit': lambda df: df['spending'] / df['visits'],\\n        'high_value': lambda df: df['spending'] > 1000,\\n        'frequent_visitor': lambda df: df['visits'] > 10\\n    })\\n    \\n    # Step 5: Reorder columns logically\\n    | Reorder('customer_id', 'full_name', 'first', 'last', 'email', 'spending', 'visits', 'avg_spend_per_visit', 'high_value', 'frequent_visitor')\\n)\\n\\n# Get final result\\nresult_df = processed.to_df()\\nprint(f\\\"Final columns: {list(result_df.columns)}\\\")\\nprint(f\\\"Final shape: {result_df.shape}\\\")\\n\\n# Show sample of processed data\\nprint(result_df.head())\", \"Usage\": \"pipeline | Select(...) | Deselect(...) | Rename(...) | AddColumns(...) | Reorder(...)\"}",
+      "metadata": {
+        "function_name": "multiple",
+        "src_type": "pipeline",
+        "category": "complex_pipeline",
+        "example_id": 10,
+        "description": "Combine multiple selection operations in pipeline"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I preview what columns would be selected without applying the selection?\", \"Context\": \"I want to test my selection logic before actually applying it to see what columns would be included.\", \"Code_Example\": \"from selectpipe import SelectPipe, preview_selection, Select, contains, startswith\\n\\n# Initialize pipeline\\npipeline = SelectPipe.from_dataframe(complex_data)\\n\\n# Preview different selection strategies\\n\\n# Preview selecting all user-related columns\\nuser_preview = preview_selection(\\n    pipeline.data,\\n    startswith('user_'),\\n    contains('customer')\\n)\\nprint(\\\"User-related columns preview:\\\")\\nprint(f\\\"  Total columns: {user_preview['total_columns']}\\\")\\nprint(f\\\"  Selected: {user_preview['selected_columns']}\\\")\\nprint(f\\\"  Unselected: {user_preview['unselected_columns'][:5]}...\\\")\\n\\n# Preview selecting all numeric columns\\nfrom selectpipe import numeric\\nnumeric_preview = preview_selection(pipeline.data, numeric())\\nprint(f\\\"\\nNumeric columns preview:\\\")\\nprint(f\\\"  Selected: {numeric_preview['selected_columns']}\\\")\\n\\n# Preview complex selection\\ncomplex_preview = preview_selection(\\n    pipeline.data,\\n    startswith('user_'),\\n    contains('score'),\\n    endswith('_date')\\n)\\nprint(f\\\"\\nComplex selection preview:\\\")\\nprint(f\\\"  Selected: {complex_preview['selected_columns']}\\\")\\nprint(f\\\"  Selectors applied: {complex_preview['selectors_applied']}\\\")\", \"Usage\": \"preview_selection(df, startswith('user_'), contains('score'), endswith('_date'))\"}",
+      "metadata": {
+        "function_name": "preview_selection",
+        "src_type": "function",
+        "category": "preview_analysis",
+        "example_id": 11,
+        "description": "Preview selection without applying it"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I get information about my current selection state?\", \"Context\": \"I want to understand what columns are currently selected and the history of my selection operations.\", \"Code_Example\": \"from selectpipe import SelectPipe, Select, Rename, AddColumns\\n\\n# Initialize and perform operations\\npipeline = (SelectPipe.from_dataframe(customer_data) \\n    | Select('customer_id', 'name', 'email', 'total_spent')\\n    | Rename({'name': 'customer_name'})\\n    | AddColumns({'high_value': lambda df: df['total_spent'] > 1000})\\n)\\n\\n# Get current selected columns\\nselected_cols = pipeline.get_selected_columns()\\nprint(f\\\"Currently selected columns: {selected_cols}\\\")\\n\\n# Get detailed selection summary\\nsummary = pipeline.get_selection_summary()\\nprint(f\\\"\\nSelection Summary:\\\")\\nprint(f\\\"  Total available columns: {summary['total_available_columns']}\\\")\\nprint(f\\\"  Selected columns: {summary['selected_columns']}\\\")\\nprint(f\\\"  Data source: {summary['data_source']}\\\")\\nprint(f\\\"  Table name: {summary['table_name']}\\\")\\n\\n# Get selection history\\nprint(f\\\"\\nSelection History:\\\")\\nfor i, operation in enumerate(summary['selection_history'], 1):\\n    print(f\\\"  {i}. {operation['operation']}: {operation}\\\")\\n\\n# Get general summary\\ngeneral_summary = pipeline.get_summary()\\nprint(f\\\"\\nGeneral Summary: {general_summary}\\\")\", \"Usage\": \"get_selected_columns(), get_selection_summary(), get_summary()\"}",
+      "metadata": {
+        "function_name": "get_selection_summary",
+        "src_type": "function",
+        "category": "pipeline_inspection",
+        "example_id": 12,
+        "description": "Get information about current selection state"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I use logical operators to combine selectors?\", \"Context\": \"I want to create complex selection logic using AND, OR, and NOT operations between different selectors.\", \"Code_Example\": \"from selectpipe import SelectPipe, Select, contains, startswith, endswith, numeric\\n\\n# Initialize pipeline\\npipeline = SelectPipe.from_dataframe(complex_data)\\n\\n# Use logical operators with selectors\\n\\n# AND operation: columns that start with 'user_' AND contain 'score'\\nuser_scores = pipeline | Select(startswith('user_') & contains('score'))\\nprint(f\\\"User scores: {user_scores.get_selected_columns()}\\\")\\n\\n# OR operation: columns that start with 'user_' OR start with 'customer_'\\nuser_or_customer = pipeline | Select(startswith('user_') | startswith('customer_'))\\nprint(f\\\"User or customer: {user_or_customer.get_selected_columns()}\\\")\\n\\n# NOT operation: numeric columns that don't end with '_id'\\nnumeric_not_id = pipeline | Select(numeric() & ~endswith('_id'))\\nprint(f\\\"Numeric not ID: {numeric_not_id.get_selected_columns()}\\\")\\n\\n# Complex combination: (user_ OR customer_) AND (score OR rating) AND NOT temp\\ncomplex_selection = pipeline | Select(\\n    (startswith('user_') | startswith('customer_')) & \\n    (contains('score') | contains('rating')) & \\n    ~contains('temp')\\n)\\nprint(f\\\"Complex selection: {complex_selection.get_selected_columns()}\\\")\", \"Usage\": \"Select(startswith('user_') & contains('score')), Select(numeric() & ~endswith('_id'))\"}",
+      "metadata": {
+        "function_name": "Select",
+        "src_type": "function",
+        "category": "logical_operations",
+        "example_id": 13,
+        "description": "Use logical operators to combine selectors"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I handle data from different sources (DataFrame vs Database)?\", \"Context\": \"I want to use the same selection logic whether my data comes from a pandas DataFrame or a database table.\", \"Code_Example\": \"from selectpipe import SelectPipe, Select, select_numeric, select_strings\\nfrom app.core.engine import Engine\\n\\n# Function that works with any data source\\ndef analyze_customer_data(data_source, is_dataframe=True):\\n    if is_dataframe:\\n        # Initialize with DataFrame\\n        pipeline = SelectPipe.from_dataframe(data_source)\\n    else:\\n        # Initialize with database engine\\n        engine, table_name = data_source\\n        pipeline = SelectPipe.from_engine(engine, table_name)\\n    \\n    # Apply same selection logic regardless of source\\n    processed = (pipeline \\n        | Select('customer_id', 'name', 'email')\\n        | select_numeric()  # Add all numeric columns\\n        | select_strings()  # Add all string columns\\n    )\\n    \\n    # Get results\\n    if is_dataframe:\\n        return processed.to_df()\\n    else:\\n        return processed.to_df(fetch_data=True)\\n\\n# Use with DataFrame\\ndf_result = analyze_customer_data(customer_df, is_dataframe=True)\\nprint(f\\\"DataFrame result shape: {df_result.shape}\\\")\\n\\n# Use with database\\ndb_result = analyze_customer_data((engine, 'customers'), is_dataframe=False)\\nprint(f\\\"Database result shape: {db_result.shape}\\\")\\n\\n# Both return the same structure\\nprint(f\\\"Same columns: {list(df_result.columns) == list(db_result.columns)}\\\")\", \"Usage\": \"SelectPipe.from_dataframe(df) or SelectPipe.from_engine(engine, table_name)\"}",
+      "metadata": {
+        "function_name": "SelectPipe.from_engine",
+        "src_type": "function",
+        "category": "data_source_handling",
+        "example_id": 14,
+        "description": "Handle data from different sources"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I create reusable selection patterns for common use cases?\", \"Context\": \"I want to create functions that encapsulate common selection patterns that I use frequently.\", \"Code_Example\": \"from selectpipe import SelectPipe, Select, contains, startswith, endswith, numeric, string\\n\\n# Define reusable selection patterns\\ndef select_customer_columns(pipeline):\\n    \\\"\\\"\\\"Select standard customer-related columns\\\"\\\"\\\"\\n    return pipeline | Select(\\n        'customer_id', 'name', 'email', 'phone',\\n        startswith('customer_'),\\n        contains('contact')\\n    )\\n\\ndef select_financial_columns(pipeline):\\n    \\\"\\\"\\\"Select financial and monetary columns\\\"\\\"\\\"\\n    return pipeline | Select(\\n        numeric(),\\n        contains('amount'),\\n        contains('price'),\\n        contains('cost'),\\n        contains('revenue'),\\n        contains('profit')\\n    )\\n\\ndef select_temporal_columns(pipeline):\\n    \\\"\\\"\\\"Select date and time related columns\\\"\\\"\\\"\\n    return pipeline | Select(\\n        endswith('_date'),\\n        endswith('_time'),\\n        endswith('_timestamp'),\\n        contains('created'),\\n        contains('updated')\\n    )\\n\\ndef select_analysis_columns(pipeline):\\n    \\\"\\\"\\\"Select columns commonly used for analysis\\\"\\\"\\\"\\n    return pipeline | Select(\\n        contains('score'),\\n        contains('rating'),\\n        contains('rank'),\\n        contains('index'),\\n        contains('metric')\\n    )\\n\\n# Use the patterns\\npipeline = SelectPipe.from_dataframe(complex_data)\\n\\n# Apply different patterns\\ncustomer_data = select_customer_columns(pipeline)\\nfinancial_data = select_financial_columns(pipeline)\\ntemporal_data = select_temporal_columns(pipeline)\\nanalysis_data = select_analysis_columns(pipeline)\\n\\nprint(f\\\"Customer columns: {customer_data.get_selected_columns()}\\\")\\nprint(f\\\"Financial columns: {financial_data.get_selected_columns()}\\\")\\nprint(f\\\"Temporal columns: {temporal_data.get_selected_columns()}\\\")\\nprint(f\\\"Analysis columns: {analysis_data.get_selected_columns()}\\\")\", \"Usage\": \"def select_customer_columns(pipeline): return pipeline | Select('customer_id', 'name', startswith('customer_'))\"}",
+      "metadata": {
+        "function_name": "Select",
+        "src_type": "function",
+        "category": "reusable_patterns",
+        "example_id": 15,
+        "description": "Create reusable selection patterns"
+      }
+    },
+    {
+      "page_content": "{\"Question\": \"How do I integrate SelectPipe with other analysis pipelines?\", \"Context\": \"I want to use SelectPipe as part of a larger data analysis workflow with other pipeline components.\", \"Code_Example\": \"from selectpipe import SelectPipe, Select, select_numeric\\nfrom metrics import MetricsPipe\\nfrom trend import TrendPipe\\n\\n# Start with data selection\\nraw_data = pd.read_csv('sales_data.csv')\\n\\n# Step 1: Select and prepare columns\\nselected_data = (SelectPipe.from_dataframe(raw_data) \\n    | Select('date', 'product_id', 'quantity', 'price', 'customer_id')\\n    | select_numeric()\\n)\\n\\n# Step 2: Convert to DataFrame for next pipeline\\nprepared_df = selected_data.to_df()\\n\\n# Step 3: Calculate metrics\\nmetrics_pipeline = (MetricsPipe.from_dataframe(prepared_df) \\n    | MetricsPipe.Sum('quantity')\\n    | MetricsPipe.Mean('price')\\n    | MetricsPipe.GroupBy('product_id')\\n)\\n\\n# Step 4: Analyze trends\\ntrend_pipeline = (TrendPipe.from_dataframe(prepared_df) \\n    | TrendPipe.aggregate_by_time('date', 'daily')\\n    | TrendPipe.calculate_growth_rates('quantity')\\n)\\n\\n# Get results from each pipeline\\nmetrics_results = metrics_pipeline.Execute()\\ntrend_results = trend_pipeline.get_summary()\\n\\nprint(\\\"Metrics Results:\\\")\\nprint(metrics_results)\\nprint(f\\\"\\nTrend Results: {trend_results}\\\")\\n\\n# Alternative: Chain pipelines directly\\nfrom selectpipe import AddColumns\\n\\n# Add computed columns and then analyze\\nenhanced_analysis = (SelectPipe.from_dataframe(raw_data) \\n    | Select('date', 'quantity', 'price')\\n    | AddColumns({\\n        'revenue': lambda df: df['quantity'] * df['price'],\\n        'avg_price': lambda df: df['price']\\n    })\\n    | MetricsPipe.Sum('revenue')\\n    | MetricsPipe.GroupBy('date')\\n)\", \"Usage\": \"SelectPipe.from_dataframe(df) | Select(...) | AddColumns(...) | MetricsPipe.Sum(...)\"}",
+      "metadata": {
+        "function_name": "multiple",
+        "src_type": "pipeline_integration",
+        "category": "advanced_usage",
+        "example_id": 16,
+        "description": "Integrate SelectPipe with other analysis pipelines"
+      }
+    }
+] 

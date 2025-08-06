@@ -1,0 +1,216 @@
+{
+    "functions": {
+        "from_engine": {
+            "category": "SelectPipe",
+            "required_params": [
+                {"name": "engine", "type": "Engine", "description": "The engine instance to use for data operations"},
+                {"name": "table_name", "type": "str", "description": "Name of the table to select from"}
+            ],
+            "optional_params": [
+                {"name": "**kwargs", "type": "dict", "description": "Additional arguments passed to the constructor"}
+            ],
+            "outputs": {
+                "type": "SelectPipe",
+                "description": "A new SelectPipe instance configured with the engine"
+            },
+            "description": "Create a SelectPipe from an engine and table name\n\nParameters:\n-----------\nengine : Engine\n    The engine instance to use for data operations\ntable_name : str\n    Name of the table to select from\n**kwargs : dict\n    Additional arguments passed to the constructor\n\nReturns:\n--------\nSelectPipe\n    A new SelectPipe instance configured with the engine"
+        },
+        "to_df": {
+            "category": "SelectPipe",
+            "required_params": [],
+            "optional_params": [
+                {"name": "fetch_data", "type": "bool", "description": "Whether to fetch data if using an engine (default: True)"}
+            ],
+            "outputs": {
+                "type": "pd.DataFrame",
+                "description": "DataFrame with selected columns"
+            },
+            "description": "Convert the selection to a DataFrame\n\nParameters:\n-----------\nfetch_data : bool, default=True\n    Whether to fetch data if using an engine\n\nReturns:\n--------\npd.DataFrame\n    DataFrame with selected columns"
+        },
+        "get_selected_columns": {
+            "category": "SelectPipe",
+            "required_params": [],
+            "optional_params": [],
+            "outputs": {
+                "type": "List[str]",
+                "description": "List of currently selected column names"
+            },
+            "description": "Get the list of currently selected columns\n\nReturns:\n--------\nList[str]\n    List of currently selected column names"
+        },
+        "get_selection_summary": {
+            "category": "SelectPipe",
+            "required_params": [],
+            "optional_params": [],
+            "outputs": {
+                "type": "Dict[str, Any]",
+                "description": "Summary of the current selection state"
+            },
+            "description": "Get a summary of the current selection\n\nReturns:\n--------\nDict[str, Any]\n    Summary containing total available columns, selected columns, selection history, and data source information"
+        },
+        "get_summary": {
+            "category": "SelectPipe",
+            "required_params": [],
+            "optional_params": [
+                {"name": "**kwargs", "type": "dict", "description": "Additional arguments (not used in this implementation)"}
+            ],
+            "outputs": {
+                "type": "Dict[str, Any]",
+                "description": "Summary of the pipe's current state"
+            },
+            "description": "Get a summary of the pipe's current state and operations\n\nParameters:\n-----------\n**kwargs : dict\n    Additional arguments (not used in this implementation)\n\nReturns:\n--------\nDict[str, Any]\n    Summary of the pipe's current state"
+        },
+        "Select": {
+            "category": "SelectPipe",
+            "required_params": [
+                {"name": "*selectors", "type": "SelectionType", "description": "One or more selectors to apply (string, list of strings, callable, or Selector objects)"}
+            ],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that applies selection to a SelectPipe"
+            },
+            "description": "Select columns using one or more selectors\n\nParameters:\n-----------\n*selectors : SelectionType\n    One or more selectors to apply. Can be:\n    - String: column name\n    - List of strings: multiple column names\n    - Callable: function that takes a Series and returns bool\n    - Selector objects: contains, endswith, startswith, matches, has_type, etc.\n\nReturns:\n--------\nCallable\n    Function that applies selection to a SelectPipe"
+        },
+        "Deselect": {
+            "category": "SelectPipe",
+            "required_params": [
+                {"name": "*selectors", "type": "SelectionType", "description": "One or more selectors to apply for removal"}
+            ],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that removes selected columns from a SelectPipe"
+            },
+            "description": "Remove columns using one or more selectors\n\nParameters:\n-----------\n*selectors : SelectionType\n    One or more selectors to apply for removal. Same types as Select()\n\nReturns:\n--------\nCallable\n    Function that removes selected columns from a SelectPipe"
+        },
+        "Rename": {
+            "category": "SelectPipe",
+            "required_params": [
+                {"name": "column_mapping", "type": "Dict[str, str]", "description": "Mapping of old_name -> new_name"}
+            ],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that renames columns in a SelectPipe"
+            },
+            "description": "Rename columns\n\nParameters:\n-----------\ncolumn_mapping : Dict[str, str]\n    Mapping of old column names to new column names\n\nReturns:\n--------\nCallable\n    Function that renames columns in a SelectPipe"
+        },
+        "Reorder": {
+            "category": "SelectPipe",
+            "required_params": [
+                {"name": "*column_order", "type": "str", "description": "Column names in desired order"}
+            ],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that reorders columns in a SelectPipe"
+            },
+            "description": "Reorder columns\n\nParameters:\n-----------\n*column_order : str\n    Column names in the desired order\n\nReturns:\n--------\nCallable\n    Function that reorders columns in a SelectPipe"
+        },
+        "AddColumns": {
+            "category": "SelectPipe",
+            "required_params": [
+                {"name": "**new_columns", "type": "Any", "description": "Column_name=value pairs for new columns"}
+            ],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that adds columns to a SelectPipe"
+            },
+            "description": "Add new computed columns\n\nParameters:\n-----------\n**new_columns : Any\n    Column_name=value pairs for new columns. Values can be:\n    - Constants: will be applied to all rows\n    - Callables: functions that take DataFrame and return Series\n\nReturns:\n--------\nCallable\n    Function that adds columns to a SelectPipe"
+        },
+        "select_numeric": {
+            "category": "SelectPipe",
+            "required_params": [],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that selects all numeric columns"
+            },
+            "description": "Select all numeric columns\n\nReturns:\n--------\nCallable\n    Function that selects all numeric columns (integer, float, complex)"
+        },
+        "select_strings": {
+            "category": "SelectPipe",
+            "required_params": [],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that selects all string columns"
+            },
+            "description": "Select all string columns\n\nReturns:\n--------\nCallable\n    Function that selects all string/text columns"
+        },
+        "select_dates": {
+            "category": "SelectPipe",
+            "required_params": [],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that selects all date/datetime columns"
+            },
+            "description": "Select all date/datetime columns\n\nReturns:\n--------\nCallable\n    Function that selects all temporal columns (datetime, date, time)"
+        },
+        "select_by_pattern": {
+            "category": "SelectPipe",
+            "required_params": [
+                {"name": "pattern", "type": "str", "description": "Regex pattern to match column names"}
+            ],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that selects columns matching the pattern"
+            },
+            "description": "Select columns matching a regex pattern\n\nParameters:\n-----------\npattern : str\n    Regular expression pattern to match column names\n\nReturns:\n--------\nCallable\n    Function that selects columns matching the pattern"
+        },
+        "select_by_prefix": {
+            "category": "SelectPipe",
+            "required_params": [
+                {"name": "prefix", "type": "str", "description": "Prefix to match at the start of column names"}
+            ],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that selects columns starting with the prefix"
+            },
+            "description": "Select columns starting with a prefix\n\nParameters:\n-----------\nprefix : str\n    Prefix to match at the start of column names\n\nReturns:\n--------\nCallable\n    Function that selects columns starting with the prefix"
+        },
+        "select_by_suffix": {
+            "category": "SelectPipe",
+            "required_params": [
+                {"name": "suffix", "type": "str", "description": "Suffix to match at the end of column names"}
+            ],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that selects columns ending with the suffix"
+            },
+            "description": "Select columns ending with a suffix\n\nParameters:\n-----------\nsuffix : str\n    Suffix to match at the end of column names\n\nReturns:\n--------\nCallable\n    Function that selects columns ending with the suffix"
+        },
+        "select_containing": {
+            "category": "SelectPipe",
+            "required_params": [
+                {"name": "substring", "type": "str", "description": "Substring to search for in column names"}
+            ],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that selects columns containing the substring"
+            },
+            "description": "Select columns containing a substring\n\nParameters:\n-----------\nsubstring : str\n    Substring to search for in column names\n\nReturns:\n--------\nCallable\n    Function that selects columns containing the substring"
+        },
+        "preview_selection": {
+            "category": "SelectPipe",
+            "required_params": [
+                {"name": "df", "type": "pd.DataFrame", "description": "DataFrame to preview selection on"},
+                {"name": "*selectors", "type": "SelectionType", "description": "Selectors to apply"}
+            ],
+            "optional_params": [
+                {"name": "metadata", "type": "SelectMetadata", "description": "Metadata for selection (optional)"}
+            ],
+            "outputs": {
+                "type": "Dict[str, Any]",
+                "description": "Preview information about what would be selected"
+            },
+            "description": "Preview what columns would be selected without creating a pipe\n\nParameters:\n-----------\ndf : pd.DataFrame\n    DataFrame to preview selection on\n*selectors : SelectionType\n    Selectors to apply\nmetadata : SelectMetadata, optional\n    Metadata for selection\n\nReturns:\n--------\nDict[str, Any]\n    Preview information including total columns, selected columns, unselected columns, and selectors applied"
+        }
+    }
+} 

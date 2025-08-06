@@ -1,0 +1,582 @@
+[
+    {
+      "query": "Count total number of transactions per store",
+      "function": "Count",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "transaction_id",
+        "output_name": "transaction_count"
+      },
+      "example": "from metrics_tools import MetricsPipe, Count\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Count transactions\nresult = pipeline | Count(variable='transaction_id', output_name='transaction_count')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['transaction_count'])",
+      "instructions": {
+        "business_case": "Retail Operations & Store Performance - Monitor transaction volume across different stores to identify high-performing locations, optimize staffing levels, and track business growth trends.",
+        "natural_language_questions": [
+          "How many transactions happened in each store today?",
+          "What's the total number of orders we processed?",
+          "Can you count the unique purchases by location?",
+          "How many sales transactions do we have in the dataset?"
+        ],
+        "data_keywords": [
+          "transaction", "order", "purchase", "sale", "count", "volume",
+          "store", "location", "branch", "outlet", "retail", "commerce"
+        ],
+        "configuration_hints": {
+          "variable": "Select the column containing unique identifiers (transaction_id, order_id, etc.)",
+          "output_name": "Choose a descriptive name for the calculated metric"
+        },
+        "typical_parameters": {
+          "common_variables": ["transaction_id", "order_id", "sale_id", "purchase_id"],
+          "best_for_data_types": ["retail_transactions", "e-commerce_orders", "point_of_sale"],
+          "aggregation_level": "Usually grouped by store, date, category, or region"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (count|total)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (transactions)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate total revenue by product category",
+      "function": "Sum",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "order_amount",
+        "output_name": "total_revenue"
+      },
+      "example": "from metrics_tools import MetricsPipe, Sum\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate total revenue\nresult = pipeline | Sum(variable='order_amount', output_name='total_revenue')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['total_revenue'])",
+      "instructions": {
+        "business_case": "Financial Performance Analysis - Track total revenue across different product categories to identify best-selling products, optimize inventory, and inform pricing strategies.",
+        "natural_language_questions": [
+          "What's our total revenue for each product category?",
+          "How much money did we make from sales today?",
+          "Can you sum up all the purchase amounts?",
+          "What's the total value of orders in this time period?"
+        ],
+        "data_keywords": [
+          "revenue", "sales", "amount", "value", "price", "total", "sum",
+          "category", "product", "financial", "money", "earnings", "income"
+        ],
+        "configuration_hints": {
+          "variable": "Select monetary columns like revenue, sales_amount, order_value, price",
+          "output_name": "Use descriptive names like 'total_revenue', 'category_sales'"
+        },
+        "typical_parameters": {
+          "common_variables": ["revenue", "sales_amount", "order_value", "price", "cost"],
+          "best_for_data_types": ["financial_data", "sales_records", "transaction_logs"],
+          "currency_handling": "Ensure consistent currency units across data"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (sum|total)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (revenue)"
+        ]
+      }
+    },
+    {
+      "query": "Find the highest transaction value in each region",
+      "function": "Max",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "transaction_value",
+        "output_name": "max_transaction"
+      },
+      "example": "from metrics_tools import MetricsPipe, Max\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Find maximum transaction value\nresult = pipeline | Max(variable='transaction_value', output_name='max_transaction')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['max_transaction'])",
+      "instructions": {
+        "business_case": "Risk Management & Outlier Detection - Identify the largest transactions or highest-value events to detect potential fraud, understand customer behavior patterns, and set appropriate business limits.",
+        "natural_language_questions": [
+          "What's the largest transaction amount we've seen?",
+          "Which region had the highest single sale?",
+          "Can you find the maximum order value?",
+          "What's the peak value in our data?"
+        ],
+        "data_keywords": [
+          "maximum", "highest", "largest", "peak", "top", "extreme",
+          "transaction", "order", "value", "amount", "outlier", "limit"
+        ],
+        "configuration_hints": {
+          "variable": "Choose numerical columns where you want to find the maximum value",
+          "outlier_detection": "Useful for identifying unusual patterns or potential data quality issues"
+        },
+        "typical_parameters": {
+          "common_variables": ["transaction_value", "order_amount", "session_duration", "user_count"],
+          "best_for_data_types": ["numerical_metrics", "performance_data", "financial_records"],
+          "business_applications": "Fraud detection, capacity planning, performance monitoring"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (max|highest)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (transaction value)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate conversion rate as ratio of purchases to website visits",
+      "function": "Ratio",
+      "category": "metricstools",
+      "inputs": {
+        "numerator": "purchases",
+        "denominator": "website_visits",
+        "output_name": "conversion_rate"
+      },
+      "example": "from metrics_tools import MetricsPipe, Ratio\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate conversion rate\nresult = pipeline | Ratio(numerator='purchases', denominator='website_visits', output_name='conversion_rate')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['conversion_rate'])",
+      "instructions": {
+        "business_case": "Digital Marketing Optimization - Calculate key performance ratios like conversion rates, click-through rates, and efficiency metrics to optimize marketing campaigns and website performance.",
+        "natural_language_questions": [
+          "What's our conversion rate from visits to purchases?",
+          "How many visitors actually buy something?",
+          "What percentage of traffic converts to sales?",
+          "Can you calculate the success rate of our funnel?"
+        ],
+        "data_keywords": [
+          "conversion", "rate", "ratio", "percentage", "efficiency", "performance",
+          "purchases", "visits", "clicks", "impressions", "funnel", "marketing"
+        ],
+        "configuration_hints": {
+          "numerator": "The successful outcome or event you're measuring (purchases, conversions)",
+          "denominator": "The total opportunity or baseline (visits, impressions, attempts)",
+          "interpretation": "Result will be a decimal (0.05 = 5% conversion rate)"
+        },
+        "typical_parameters": {
+          "common_ratios": ["conversion_rate", "click_through_rate", "bounce_rate", "retention_rate"],
+          "best_for_data_types": ["web_analytics", "marketing_data", "funnel_analysis"],
+          "business_kpis": "Essential for measuring marketing ROI and website effectiveness"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (ratio|rate)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion rate)"
+        ]
+      }
+    },
+    {
+      "query": "Find the top 5 customers by total spend",
+      "function": "Nth",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "customer_id",
+        "n": 5,
+        "sort_by": "total_spend",
+        "ascending": false,
+        "dropna": true
+      },
+      "example": "from metrics_tools import MetricsPipe, Nth\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Find top 5 customers\nresult = pipeline | Nth(variable='customer_id', n=5, sort_by='total_spend', ascending=False, dropna=True)\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['nth_5_customer_id_by_total_spend'])",
+      "instructions": {
+        "business_case": "Customer Relationship Management - Identify top-performing customers, products, or channels to focus VIP treatment, inventory planning, and strategic business decisions.",
+        "natural_language_questions": [
+          "Who are our top 5 highest-spending customers?",
+          "Which products sell the most?",
+          "Can you show me the best-performing sales reps?",
+          "What are the top revenue-generating categories?"
+        ],
+        "data_keywords": [
+          "top", "best", "highest", "ranking", "leaderboard", "performance",
+          "customers", "products", "sales", "revenue", "vip", "priority"
+        ],
+        "configuration_hints": {
+          "n": "Number of top/bottom items to retrieve (5, 10, 20)",
+          "sort_by": "Metric to rank by (total_spend, revenue, frequency)",
+          "ascending": "false for top performers, true for bottom performers"
+        },
+        "typical_parameters": {
+          "common_n_values": [5, 10, 20, 50],
+          "ranking_metrics": ["total_spend", "revenue", "frequency", "engagement_score"],
+          "best_for_data_types": ["customer_data", "product_performance", "sales_records"],
+          "business_applications": "VIP programs, inventory management, performance reviews"
+        }
+      },
+      "patterns": {
+        "num_patterns": [
+          "top (5)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate average customer rating by product",
+      "function": "Mean",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "rating",
+        "output_name": "avg_rating"
+      },
+      "example": "from metrics_tools import MetricsPipe, Mean\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate average customer rating\nresult = pipeline | Mean(variable='rating', output_name='avg_rating')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['avg_rating'])",
+      "instructions": {
+        "business_case": "Product Quality & Customer Satisfaction - Monitor average ratings, scores, and satisfaction metrics to identify improvement opportunities and track customer sentiment trends.",
+        "natural_language_questions": [
+          "What's the average customer rating for each product?",
+          "How satisfied are customers on average?",
+          "What's the mean score across all reviews?",
+          "Can you calculate the average performance metric?"
+        ],
+        "data_keywords": [
+          "average", "mean", "rating", "score", "satisfaction", "quality",
+          "review", "feedback", "sentiment", "performance", "evaluation"
+        ],
+        "configuration_hints": {
+          "variable": "Select rating, score, or satisfaction columns (1-5 stars, 1-10 scale)",
+          "interpretation": "Results show central tendency, useful for benchmarking"
+        },
+        "typical_parameters": {
+          "common_variables": ["rating", "satisfaction_score", "nps_score", "quality_rating"],
+          "rating_scales": ["1-5 stars", "1-10 scale", "0-100 percentage"],
+          "best_for_data_types": ["review_data", "survey_responses", "quality_metrics"],
+          "benchmarking": "Compare against industry standards or historical performance"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (average|mean)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (average)"
+        ]
+      }
+    },
+    {
+      "query": "Group sales data by month and calculate total and average order value",
+      "function": "GroupBy",
+      "category": "metricstools",
+      "inputs": {
+        "by": "month",
+        "agg_dict": {
+          "order_value": ["sum", "mean"],
+          "orders": "count"
+        },
+        "output_name": "monthly_sales_metrics"
+      },
+      "example": "from metrics_tools import MetricsPipe, GroupBy\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Group sales data by month\nresult = pipeline | GroupBy(by='month', agg_dict={'order_value': ['sum', 'mean'], 'orders': 'count'}, output_name='monthly_sales_metrics')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)",
+      "instructions": {
+        "business_case": "Time Series Analysis & Trend Monitoring - Analyze business metrics over time periods to identify seasonal patterns, growth trends, and performance changes for strategic planning.",
+        "natural_language_questions": [
+          "How do our sales vary by month?",
+          "What are the trends in customer behavior over time?",
+          "Can you break down performance by different time periods?",
+          "How do metrics change across seasons?"
+        ],
+        "data_keywords": [
+          "group", "aggregate", "time", "trends", "seasonal", "monthly",
+          "breakdown", "segment", "analysis", "patterns", "temporal"
+        ],
+        "configuration_hints": {
+          "by": "Choose grouping columns like date, category, region, customer_segment",
+          "agg_dict": "Specify which metrics to calculate for each group (sum, mean, count, max, min)",
+          "time_grouping": "Common groupings: day, week, month, quarter, year"
+        },
+        "typical_parameters": {
+          "grouping_options": ["month", "quarter", "category", "region", "customer_segment"],
+          "aggregation_functions": ["sum", "mean", "count", "max", "min", "std"],
+          "best_for_data_types": ["time_series", "categorical_analysis", "segment_comparison"],
+          "business_insights": "Seasonality, growth trends, segment performance"
+        }
+      },
+      "patterns": {
+        "time_patterns": [
+          "(monthly)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate 7-day rolling average of daily active users",
+      "function": "RollingMetric",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "daily_active_users",
+        "window": 7,
+        "function": "mean",
+        "output_column": "rolling_dau"
+      },
+      "example": "from metrics_tools import MetricsPipe, RollingMetric\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate 7-day rolling average of daily active users\nresult = pipeline | RollingMetric(variable='daily_active_users', window=7, function='mean', output_column='rolling_dau')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)",
+      "instructions": {
+        "business_case": "Smoothed Trend Analysis & Performance Monitoring - Calculate rolling averages to smooth out daily fluctuations and identify underlying trends in key business metrics.",
+        "natural_language_questions": [
+          "What's the 7-day average of our daily active users?",
+          "Can you smooth out the daily fluctuations in our metrics?",
+          "How do our rolling averages compare to recent performance?",
+          "What's the trend when we look at weekly averages?"
+        ],
+        "data_keywords": [
+          "rolling", "moving", "average", "smooth", "trend", "weekly",
+          "daily", "users", "performance", "fluctuation", "noise_reduction"
+        ],
+        "configuration_hints": {
+          "window": "Number of periods to include (7 for weekly, 30 for monthly smoothing)",
+          "function": "Choose aggregation: mean for averages, sum for totals, max/min for extremes",
+          "interpretation": "Helps identify trends by reducing daily noise"
+        },
+        "typical_parameters": {
+          "common_windows": [7, 14, 30, 90],
+          "aggregation_functions": ["mean", "sum", "max", "min", "median"],
+          "best_for_data_types": ["time_series", "daily_metrics", "volatile_data"],
+          "trend_analysis": "Useful for identifying long-term patterns and seasonal effects"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (rolling average)"
+        ],
+        "time_patterns": [
+          "(daily)"
+        ],
+        "num_patterns": [
+          "(7)-day"
+        ]
+      }
+    },
+    {
+      "query": "Find the lowest price point for each product category",
+      "function": "Min",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "price",
+        "output_name": "min_price"
+      },
+      "example": "from metrics_tools import MetricsPipe, Min\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Find minimum price\nresult = pipeline | Min(variable='price', output_name='min_price')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['min_price'])",
+      "instructions": {
+        "business_case": "Competitive Pricing & Market Analysis - Identify lowest price points to understand market positioning, detect pricing errors, and ensure competitive pricing strategies.",
+        "natural_language_questions": [
+          "What's the cheapest product in each category?",
+          "Can you find the minimum price across all products?",
+          "What's the lowest transaction amount?",
+          "Which category has the most affordable options?"
+        ],
+        "data_keywords": [
+          "minimum", "lowest", "cheapest", "bottom", "floor", "price",
+          "affordable", "budget", "entry_level", "competitive", "baseline"
+        ],
+        "configuration_hints": {
+          "variable": "Select price, cost, or value columns to find minimums",
+          "pricing_strategy": "Useful for competitive analysis and pricing floor identification"
+        },
+        "typical_parameters": {
+          "common_variables": ["price", "cost", "discount_price", "bid_amount"],
+          "best_for_data_types": ["pricing_data", "financial_metrics", "competitive_analysis"],
+          "business_applications": "Price floors, competitive intelligence, budget product identification"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (min|lowest)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (price)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate dot product between user engagement score and conversion likelihood",
+      "function": "Dot",
+      "category": "metricstools",
+      "inputs": {
+        "variable1": "engagement_score",
+        "variable2": "conversion_likelihood",
+        "normalize": true,
+        "output_name": "engagement_conversion_score"
+      },
+      "example": "from metrics_tools import MetricsPipe, Dot\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate normalized dot product\nresult = pipeline | Dot(variable1='engagement_score', variable2='conversion_likelihood', normalize=True, output_name='engagement_conversion_score')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['engagement_conversion_score'])",
+      "instructions": {
+        "business_case": "Advanced Analytics & Similarity Scoring - Calculate weighted combinations of metrics to create composite scores for user similarity, recommendation systems, and multi-factor analysis.",
+        "natural_language_questions": [
+          "How can I combine multiple scores into one metric?",
+          "What's the similarity between user profiles?",
+          "Can you create a composite engagement score?",
+          "How do I weight different factors together?"
+        ],
+        "data_keywords": [
+          "similarity", "composite", "weighted", "combination", "dot_product",
+          "correlation", "matching", "scoring", "recommendation", "vectors"
+        ],
+        "configuration_hints": {
+          "normalize": "true for similarity scores (0-1), false for raw dot products",
+          "variable_selection": "Choose related metrics that should be combined",
+          "interpretation": "Higher values indicate stronger combined signal"
+        },
+        "typical_parameters": {
+          "common_combinations": ["engagement×conversion", "feature×preference", "risk×impact"],
+          "best_for_data_types": ["user_profiles", "recommendation_systems", "scoring_models"],
+          "normalization": "Usually normalized for interpretability and comparison"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (dot product)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate median transaction value by customer segment",
+      "function": "Median",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "transaction_value",
+        "output_name": "median_transaction"
+      },
+      "example": "from metrics_tools import MetricsPipe, Median\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate median transaction value\nresult = pipeline | Median(variable='transaction_value', output_name='median_transaction')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['median_transaction'])",
+      "instructions": {
+        "business_case": "Robust Statistical Analysis - Use median for more robust central tendency measurement that's less affected by outliers, especially useful for skewed business metrics like revenue and transaction amounts.",
+        "natural_language_questions": [
+          "What's the typical transaction value (not affected by outliers)?",
+          "Can you find the middle value in our sales data?",
+          "What's the median customer spend?",
+          "How do I get a robust average that ignores extremes?"
+        ],
+        "data_keywords": [
+          "median", "middle", "typical", "robust", "outlier_resistant",
+          "percentile", "central", "representative", "normal", "standard"
+        ],
+        "configuration_hints": {
+          "vs_mean": "Use median when data is skewed or has outliers",
+          "interpretation": "50% of values are above and below the median",
+          "robustness": "Less sensitive to extreme values than arithmetic mean"
+        },
+        "typical_parameters": {
+          "ideal_for": ["skewed_distributions", "revenue_data", "transaction_amounts"],
+          "best_for_data_types": ["financial_metrics", "customer_behavior", "pricing_data"],
+          "when_to_use": "When outliers might distort the mean"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (median)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate the 90th percentile of page load times",
+      "function": "Percentile",
+      "category": "metricstools",
+      "inputs": {
+        "variable": "load_time_ms",
+        "q": 90,
+        "output_name": "p90_load_time"
+      },
+      "example": "from metrics_tools import MetricsPipe, Percentile\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Calculate 90th percentile of load times\nresult = pipeline | Percentile(variable='load_time_ms', q=90, output_name='p90_load_time')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics['p90_load_time'])",
+      "instructions": {
+        "business_case": "Performance Monitoring & SLA Management - Track percentile-based performance metrics to understand user experience quality and maintain service level agreements.",
+        "natural_language_questions": [
+          "What's the 90th percentile of our page load times?",
+          "How fast is our site for 90% of users?",
+          "Can you show me the performance SLA metrics?",
+          "What's the worst-case scenario for most users?"
+        ],
+        "data_keywords": [
+          "percentile", "performance", "sla", "load_time", "latency", "response_time",
+          "user_experience", "monitoring", "service_level", "quality"
+        ],
+        "configuration_hints": {
+          "q": "90 = P90 (common SLA), 95 = P95 (stricter), 99 = P99 (extreme performance)",
+          "performance_monitoring": "P90/P95/P99 are standard web performance metrics",
+          "interpretation": "P90 = 90% of users experience this performance or better"
+        },
+        "typical_parameters": {
+          "common_percentiles": [50, 75, 90, 95, 99],
+          "performance_metrics": ["load_time", "response_time", "processing_time"],
+          "best_for_data_types": ["performance_logs", "latency_data", "user_experience"],
+          "sla_applications": "Service level agreements, performance monitoring"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (percentile|quantile)"
+        ],
+        "num_patterns": [
+          "(90)th"
+        ]
+      }
+    },
+    {
+      "query": "Create pivot table of revenue by product and region",
+      "function": "PivotTable",
+      "category": "metricstools",
+      "inputs": {
+        "index": "product_name",
+        "columns": "region",
+        "values": "revenue",
+        "aggfunc": "sum",
+        "fill_value": 0
+      },
+      "example": "from metrics_tools import MetricsPipe, PivotTable\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Create pivot table of revenue by product and region\nresult = pipeline | PivotTable(index='product_name', columns='region', values='revenue', aggfunc='sum', fill_value=0)\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)",
+      "instructions": {
+        "business_case": "Multi-Dimensional Business Analysis - Create cross-tabulated views of business data to analyze performance across multiple dimensions simultaneously for strategic insights.",
+        "natural_language_questions": [
+          "How does revenue vary by product and region?",
+          "Can you create a cross-tab of sales performance?",
+          "What's the breakdown of metrics across multiple dimensions?",
+          "How do I see the intersection of different business factors?"
+        ],
+        "data_keywords": [
+          "pivot", "cross_tab", "breakdown", "dimensions", "matrix", "analysis",
+          "multi_dimensional", "intersection", "comparison", "grid", "table"
+        ],
+        "configuration_hints": {
+          "index": "Row dimension (products, customers, time periods)",
+          "columns": "Column dimension (regions, categories, channels)",
+          "aggfunc": "How to aggregate (sum for totals, mean for averages, count for frequencies)"
+        },
+        "typical_parameters": {
+          "common_dimensions": ["product×region", "time×category", "customer×channel"],
+          "aggregation_functions": ["sum", "mean", "count", "max", "min"],
+          "best_for_data_types": ["multi_dimensional_data", "business_intelligence", "cross_analysis"],
+          "visualization": "Results perfect for heatmaps and dashboard tables"
+        }
+      },
+      "patterns": {
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (revenue)"
+        ]
+      }
+    },
+    {
+      "query": "Filter transactions to only include those above $100",
+      "function": "Filter",
+      "category": "metricstools",
+      "inputs": {
+        "condition": "transaction_amount > 100",
+        "output_name": "high_value_transactions"
+      },
+      "example": "from metrics_tools import MetricsPipe, Filter\n\n# Create pipeline from dataframe\ndf = your_dataframe  # Replace with your actual dataframe\npipeline = MetricsPipe.from_dataframe(df)\n\n# Filter high value transactions\nresult = pipeline | Filter(condition=lambda df: df['transaction_amount'] > 100, output_name='high_value_transactions')\n\n# Execute to get results\nmetrics = result | Execute()\nprint(metrics)",
+      "instructions": {
+        "business_case": "Focused Analysis & Data Segmentation - Filter data to focus on specific business segments like high-value transactions, premium customers, or specific time periods for targeted analysis.",
+        "natural_language_questions": [
+          "Can you analyze only transactions above $100?",
+          "How do I focus on high-value customers?",
+          "What if I only want to look at specific data segments?",
+          "Can you filter out low-value transactions?"
+        ],
+        "data_keywords": [
+          "filter", "segment", "focus", "subset", "criteria", "conditions",
+          "high_value", "specific", "targeted", "selective", "qualified"
+        ],
+        "configuration_hints": {
+          "condition": "Use comparison operators (>, <, >=, <=, ==, !=)",
+          "business_focus": "Common filters: value thresholds, date ranges, customer types",
+          "downstream_analysis": "Filtered data flows to subsequent analysis steps"
+        },
+        "typical_parameters": {
+          "common_filters": ["value > threshold", "date in range", "category == type"],
+          "business_segments": ["high_value", "recent", "active", "premium"],
+          "best_for_data_types": ["transactional", "customer", "time_series"],
+          "analysis_focus": "Enables targeted insights on specific business segments"
+        }
+      },
+      "patterns": {
+        "filter_patterns": [
+          "(filter|to) (only include) those above $100"
+        ],
+        "num_patterns": [
+          "(100)"
+        ]
+      }
+    }
+]

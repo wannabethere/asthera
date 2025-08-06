@@ -1,0 +1,651 @@
+[
+    {
+      "query": "Select only customer ID, name, and email columns from the dataset",
+      "function": "Select",
+      "category": "column_selection",
+      "inputs": {
+        "columns": ["customer_id", "name", "email"]
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nselected = select_pipe | Select('customer_id', 'name', 'email')\nresult_df = selected.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(customer|user|client)"
+        ],
+        "metrics_patterns": [
+          "(select|get) (column|field)"
+        ],
+        "column_patterns": [
+          "(id|name|email|contact)"
+        ]
+      }
+    },
+    {
+      "query": "Select all columns that start with 'user_' prefix",
+      "function": "Select",
+      "category": "column_selection",
+      "inputs": {
+        "columns": "startswith('user_')"
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nuser_cols = select_pipe | Select(startswith('user_'))\nresult_df = user_cols.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(start|begin|prefix)"
+        ],
+        "metrics_patterns": [
+          "(select|get) (column) (start|begin)"
+        ],
+        "column_patterns": [
+          "(user_|customer_|product_)"
+        ]
+      }
+    },
+    {
+      "query": "Select all numeric columns for statistical analysis",
+      "function": "select_numeric",
+      "category": "column_selection",
+      "inputs": {},
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nnumeric_data = select_pipe | select_numeric()\nresult_df = numeric_data.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(numeric|number|quantitative)"
+        ],
+        "metrics_patterns": [
+          "(select|get) (numeric|number) (column)"
+        ],
+        "analysis_patterns": [
+          "(statistical|analysis|calculation)"
+        ]
+      }
+    },
+    {
+      "query": "Select all string columns for text analysis",
+      "function": "select_strings",
+      "category": "column_selection",
+      "inputs": {},
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\ntext_data = select_pipe | select_strings()\nresult_df = text_data.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(string|text|character)"
+        ],
+        "metrics_patterns": [
+          "(select|get) (string|text) (column)"
+        ],
+        "analysis_patterns": [
+          "(text|nlp|sentiment) (analysis)"
+        ]
+      }
+    },
+    {
+      "query": "Select all date and time columns for temporal analysis",
+      "function": "select_dates",
+      "category": "column_selection",
+      "inputs": {},
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\ntime_data = select_pipe | select_dates()\nresult_df = time_data.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(date|time|temporal)"
+        ],
+        "metrics_patterns": [
+          "(select|get) (date|time) (column)"
+        ],
+        "analysis_patterns": [
+          "(temporal|time series|trend) (analysis)"
+        ]
+      }
+    },
+    {
+      "query": "Select columns containing 'score' in their name",
+      "function": "select_by_pattern",
+      "category": "column_selection",
+      "inputs": {
+        "pattern": ".*score.*"
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nscore_cols = select_pipe | select_by_pattern('.*score.*')\nresult_df = score_cols.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(contain|include|match)"
+        ],
+        "metrics_patterns": [
+          "(select|get) (column) (contain|include)"
+        ],
+        "column_patterns": [
+          "(score|rating|index|metric)"
+        ]
+      }
+    },
+    {
+      "query": "Select columns ending with '_date' suffix",
+      "function": "select_by_suffix",
+      "category": "column_selection",
+      "inputs": {
+        "suffix": "_date"
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\ndate_cols = select_pipe | select_by_suffix('_date')\nresult_df = date_cols.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(end|suffix|terminate)"
+        ],
+        "metrics_patterns": [
+          "(select|get) (column) (end|suffix)"
+        ],
+        "column_patterns": [
+          "(_date|_time|_timestamp)"
+        ]
+      }
+    },
+    {
+      "query": "Select columns starting with 'product_' prefix",
+      "function": "select_by_prefix",
+      "category": "column_selection",
+      "inputs": {
+        "prefix": "product_"
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nproduct_cols = select_pipe | select_by_prefix('product_')\nresult_df = product_cols.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(start|begin|prefix)"
+        ],
+        "metrics_patterns": [
+          "(select|get) (column) (start|begin)"
+        ],
+        "column_patterns": [
+          "(product_|item_|sku_)"
+        ]
+      }
+    },
+    {
+      "query": "Remove sensitive columns like password and SSN from the dataset",
+      "function": "Deselect",
+      "category": "column_removal",
+      "inputs": {
+        "columns": ["password", "ssn", "credit_card"]
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nclean_data = select_pipe | Deselect('password', 'ssn', 'credit_card')\nresult_df = clean_data.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(remove|exclude|drop)",
+          "(sensitive|private|confidential)"
+        ],
+        "metrics_patterns": [
+          "(remove|exclude) (sensitive|private) (column)"
+        ],
+        "column_patterns": [
+          "(password|ssn|credit_card|social_security)"
+        ]
+      }
+    },
+    {
+      "query": "Remove all columns containing 'temp' or 'debug' in their names",
+      "function": "Deselect",
+      "category": "column_removal",
+      "inputs": {
+        "columns": ["contains('temp')", "contains('debug')"]
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nclean_data = select_pipe | Deselect(contains('temp'), contains('debug'))\nresult_df = clean_data.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(remove|exclude|drop)",
+          "(temp|debug|test)"
+        ],
+        "metrics_patterns": [
+          "(remove|exclude) (temp|debug) (column)"
+        ],
+        "column_patterns": [
+          "(temp|debug|test|temporary)"
+        ]
+      }
+    },
+    {
+      "query": "Rename columns to standardize naming conventions",
+      "function": "Rename",
+      "category": "column_renaming",
+      "inputs": {
+        "column_mapping": {
+          "user_id": "customer_id",
+          "first_name": "first",
+          "last_name": "last",
+          "total_spent": "spending"
+        }
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nrenamed = select_pipe | Rename({\n    'user_id': 'customer_id',\n    'first_name': 'first',\n    'last_name': 'last',\n    'total_spent': 'spending'\n})\nresult_df = renamed.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(rename|change|standardize)",
+          "(naming|convention|format)"
+        ],
+        "metrics_patterns": [
+          "(rename|change) (column) (name)"
+        ],
+        "column_patterns": [
+          "(user_id|customer_id|first_name|last_name)"
+        ]
+      }
+    },
+    {
+      "query": "Reorder columns to put ID first, then dates, then other fields",
+      "function": "Reorder",
+      "category": "column_reordering",
+      "inputs": {
+        "column_order": ["customer_id", "created_date", "updated_date", "name", "email"]
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nreordered = select_pipe | Reorder('customer_id', 'created_date', 'updated_date', 'name', 'email')\nresult_df = reordered.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(reorder|arrange|organize)",
+          "(sequence|order|arrangement)"
+        ],
+        "metrics_patterns": [
+          "(reorder|arrange) (column) (order)"
+        ],
+        "column_patterns": [
+          "(id|date|name|email)"
+        ]
+      }
+    },
+    {
+      "query": "Add computed columns for revenue and profit calculations",
+      "function": "AddColumns",
+      "category": "column_creation",
+      "inputs": {
+        "new_columns": {
+          "revenue": "lambda df: df['quantity'] * df['price']",
+          "profit": "lambda df: (df['quantity'] * df['price']) - (df['quantity'] * df['cost'])",
+          "profit_margin": "lambda df: ((df['quantity'] * df['price']) - (df['quantity'] * df['cost'])) / (df['quantity'] * df['price'])"
+        }
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nenhanced = select_pipe | AddColumns({\n    'revenue': lambda df: df['quantity'] * df['price'],\n    'profit': lambda df: (df['quantity'] * df['price']) - (df['quantity'] * df['cost']),\n    'profit_margin': lambda df: ((df['quantity'] * df['price']) - (df['quantity'] * df['cost'])) / (df['quantity'] * df['price'])\n})\nresult_df = enhanced.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(add|create|compute)",
+          "(calculated|derived|computed)"
+        ],
+        "metrics_patterns": [
+          "(add|create) (calculated|computed) (column)"
+        ],
+        "column_patterns": [
+          "(revenue|profit|margin|calculation)"
+        ]
+      }
+    },
+    {
+      "query": "Select all columns except those containing 'internal' or 'test'",
+      "function": "Deselect",
+      "category": "column_removal",
+      "inputs": {
+        "columns": ["contains('internal')", "contains('test')"]
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nclean_data = select_pipe | Deselect(contains('internal'), contains('test'))\nresult_df = clean_data.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(except|exclude|not)"
+        ],
+        "metrics_patterns": [
+          "(select) (all) (except|exclude)"
+        ],
+        "column_patterns": [
+          "(internal|test|debug|temporary)"
+        ]
+      }
+    },
+    {
+      "query": "Select numeric columns that don't end with '_id'",
+      "function": "Select",
+      "category": "column_selection",
+      "inputs": {
+        "columns": "numeric() & ~endswith('_id')"
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nnumeric_not_id = select_pipe | Select(numeric() & ~endswith('_id'))\nresult_df = numeric_not_id.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(numeric|number)",
+          "(not|except|exclude)"
+        ],
+        "metrics_patterns": [
+          "(select) (numeric) (not) (id)"
+        ],
+        "column_patterns": [
+          "(numeric|number|_id)"
+        ]
+      }
+    },
+    {
+      "query": "Select columns that start with 'user_' OR start with 'customer_'",
+      "function": "Select",
+      "category": "column_selection",
+      "inputs": {
+        "columns": "startswith('user_') | startswith('customer_')"
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nuser_or_customer = select_pipe | Select(startswith('user_') | startswith('customer_'))\nresult_df = user_or_customer.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(or|either|both)"
+        ],
+        "metrics_patterns": [
+          "(select) (user) (or) (customer)"
+        ],
+        "column_patterns": [
+          "(user_|customer_)"
+        ]
+      }
+    },
+    {
+      "query": "Select columns that start with 'user_' AND contain 'score'",
+      "function": "Select",
+      "category": "column_selection",
+      "inputs": {
+        "columns": "startswith('user_') & contains('score')"
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nuser_scores = select_pipe | Select(startswith('user_') & contains('score'))\nresult_df = user_scores.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(and|both|together)"
+        ],
+        "metrics_patterns": [
+          "(select) (user) (and) (score)"
+        ],
+        "column_patterns": [
+          "(user_|score)"
+        ]
+      }
+    },
+    {
+      "query": "Preview what columns would be selected without applying the selection",
+      "function": "preview_selection",
+      "category": "preview_analysis",
+      "inputs": {
+        "df": "data",
+        "selectors": ["startswith('user_')", "contains('score')"]
+      },
+      "example": "preview = preview_selection(data, startswith('user_'), contains('score'))\nprint(f\"Selected columns: {preview['selected_columns']}\")\nprint(f\"Total columns: {preview['total_columns']}\")",
+      "patterns": {
+        "function_patterns": [
+          "(preview|test|check)",
+          "(before|without) (applying)"
+        ],
+        "metrics_patterns": [
+          "(preview|test) (selection) (before)"
+        ],
+        "analysis_patterns": [
+          "(what) (would) (be) (selected)"
+        ]
+      }
+    },
+    {
+      "query": "Get a summary of the current selection state and history",
+      "function": "get_selection_summary",
+      "category": "pipeline_inspection",
+      "inputs": {},
+      "example": "summary = select_pipe.get_selection_summary()\nprint(f\"Selected columns: {summary['selected_columns']}\")\nprint(f\"Total available: {summary['total_available_columns']}\")",
+      "patterns": {
+        "function_patterns": [
+          "(get|show|display)",
+          "(summary|overview|status)"
+        ],
+        "metrics_patterns": [
+          "(get|show) (summary|overview)"
+        ],
+        "analysis_patterns": [
+          "(current) (state|status)"
+        ]
+      }
+    },
+    {
+      "query": "Select all columns from a database table without loading all data into memory",
+      "function": "from_engine",
+      "category": "database_operations",
+      "inputs": {
+        "engine": "database_engine",
+        "table_name": "large_table"
+      },
+      "example": "select_pipe = SelectPipe.from_engine(database_engine, 'large_table')\nall_cols = select_pipe | Select('*')\nresult_df = all_cols.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(select|load|fetch)",
+          "(database|table|sql)"
+        ],
+        "metrics_patterns": [
+          "(select) (from) (database|table)"
+        ],
+        "performance_patterns": [
+          "(without) (loading) (all) (data)"
+        ]
+      }
+    },
+    {
+      "query": "Select only specific columns from a large database table",
+      "function": "from_engine",
+      "category": "database_operations",
+      "inputs": {
+        "engine": "database_engine",
+        "table_name": "large_table",
+        "selected_columns": ["customer_id", "name", "email", "total_spent"]
+      },
+      "example": "select_pipe = SelectPipe.from_engine(database_engine, 'large_table')\nselected = select_pipe | Select('customer_id', 'name', 'email', 'total_spent')\nresult_df = selected.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(select|fetch|load)",
+          "(specific|particular|certain)"
+        ],
+        "metrics_patterns": [
+          "(select) (specific) (column)"
+        ],
+        "performance_patterns": [
+          "(large) (table) (efficient)"
+        ]
+      }
+    },
+    {
+      "query": "Create a customer analysis dataset with selected and computed columns",
+      "function": "multiple",
+      "category": "complex_pipeline",
+      "inputs": {
+        "operations": [
+          "Select('customer_id', 'name', 'email', 'total_spent', 'visit_count')",
+          "Rename({'total_spent': 'spending', 'visit_count': 'visits'})",
+          "AddColumns({'avg_spend_per_visit': 'lambda df: df[\"spending\"] / df[\"visits\"]'})",
+          "Reorder('customer_id', 'name', 'email', 'spending', 'visits', 'avg_spend_per_visit')"
+        ]
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\ncustomer_analysis = (select_pipe\n    | Select('customer_id', 'name', 'email', 'total_spent', 'visit_count')\n    | Rename({'total_spent': 'spending', 'visit_count': 'visits'})\n    | AddColumns({'avg_spend_per_visit': lambda df: df['spending'] / df['visits']})\n    | Reorder('customer_id', 'name', 'email', 'spending', 'visits', 'avg_spend_per_visit')\n)\nresult_df = customer_analysis.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(create|build|construct)",
+          "(analysis|dataset|pipeline)"
+        ],
+        "metrics_patterns": [
+          "(create) (analysis) (dataset)"
+        ],
+        "analysis_patterns": [
+          "(customer|user) (analysis)"
+        ]
+      }
+    },
+    {
+      "query": "Select financial columns and add calculated metrics for reporting",
+      "function": "multiple",
+      "category": "complex_pipeline",
+      "inputs": {
+        "operations": [
+          "select_numeric()",
+          "Select(contains('amount'), contains('price'), contains('cost'))",
+          "AddColumns({'profit': 'lambda df: df[\"revenue\"] - df[\"cost\"]'})",
+          "AddColumns({'profit_margin': 'lambda df: (df[\"revenue\"] - df[\"cost\"]) / df[\"revenue\"]'})"
+        ]
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nfinancial_report = (select_pipe\n    | select_numeric()\n    | Select(contains('amount'), contains('price'), contains('cost'))\n    | AddColumns({\n        'profit': lambda df: df['revenue'] - df['cost'],\n        'profit_margin': lambda df: (df['revenue'] - df['cost']) / df['revenue']\n    })\n)\nresult_df = financial_report.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(financial|monetary|economic)"
+        ],
+        "metrics_patterns": [
+          "(select) (financial) (column)"
+        ],
+        "analysis_patterns": [
+          "(reporting|analysis|metrics)"
+        ]
+      }
+    },
+    {
+      "query": "Clean and prepare data by removing unwanted columns and standardizing names",
+      "function": "multiple",
+      "category": "data_cleaning",
+      "inputs": {
+        "operations": [
+          "Deselect(contains('temp'), contains('debug'), contains('internal'))",
+          "Rename({'user_id': 'customer_id', 'first_name': 'first', 'last_name': 'last'})",
+          "Reorder('customer_id', 'first', 'last', 'email')"
+        ]
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nclean_data = (select_pipe\n    | Deselect(contains('temp'), contains('debug'), contains('internal'))\n    | Rename({\n        'user_id': 'customer_id',\n        'first_name': 'first',\n        'last_name': 'last'\n    })\n    | Reorder('customer_id', 'first', 'last', 'email')\n)\nresult_df = clean_data.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(clean|prepare|standardize)",
+          "(remove|exclude|drop)"
+        ],
+        "metrics_patterns": [
+          "(clean) (and) (prepare) (data)"
+        ],
+        "analysis_patterns": [
+          "(data) (cleaning|preparation)"
+        ]
+      }
+    },
+    {
+      "query": "Select time series columns for trend analysis",
+      "function": "multiple",
+      "category": "time_series_analysis",
+      "inputs": {
+        "operations": [
+          "select_dates()",
+          "Select(contains('timestamp'), contains('date'), contains('time'))",
+          "Reorder('timestamp', 'date', 'value')"
+        ]
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\ntime_series = (select_pipe\n    | select_dates()\n    | Select(contains('timestamp'), contains('date'), contains('time'))\n    | Reorder('timestamp', 'date', 'value')\n)\nresult_df = time_series.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(time|temporal|series)"
+        ],
+        "metrics_patterns": [
+          "(select) (time) (series) (column)"
+        ],
+        "analysis_patterns": [
+          "(trend|time series) (analysis)"
+        ]
+      }
+    },
+    {
+      "query": "Select feature columns for machine learning model training",
+      "function": "multiple",
+      "category": "machine_learning",
+      "inputs": {
+        "operations": [
+          "select_numeric()",
+          "Select(contains('feature'), contains('metric'), contains('score'))",
+          "Deselect(contains('target'), contains('label'), contains('id'))"
+        ]
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nfeatures = (select_pipe\n    | select_numeric()\n    | Select(contains('feature'), contains('metric'), contains('score'))\n    | Deselect(contains('target'), contains('label'), contains('id'))\n)\nresult_df = features.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(feature|predictor|variable)"
+        ],
+        "metrics_patterns": [
+          "(select) (feature) (column)"
+        ],
+        "analysis_patterns": [
+          "(machine learning|ml|training)"
+        ]
+      }
+    },
+    {
+      "query": "Select demographic columns for customer segmentation analysis",
+      "function": "multiple",
+      "category": "customer_analysis",
+      "inputs": {
+        "operations": [
+          "Select(contains('age'), contains('gender'), contains('location'), contains('income'))",
+          "select_strings()",
+          "Reorder('customer_id', 'age', 'gender', 'location', 'income')"
+        ]
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\ndemographics = (select_pipe\n    | Select(contains('age'), contains('gender'), contains('location'), contains('income'))\n    | select_strings()\n    | Reorder('customer_id', 'age', 'gender', 'location', 'income')\n)\nresult_df = demographics.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(demographic|segmentation)"
+        ],
+        "metrics_patterns": [
+          "(select) (demographic) (column)"
+        ],
+        "analysis_patterns": [
+          "(customer) (segmentation) (analysis)"
+        ]
+      }
+    },
+    {
+      "query": "Select sensor data columns for IoT device monitoring",
+      "function": "multiple",
+      "category": "iot_monitoring",
+      "inputs": {
+        "operations": [
+          "Select(startswith('sensor_'), contains('reading'), contains('value'))",
+          "select_numeric()",
+          "Reorder('device_id', 'timestamp', 'sensor_reading')"
+        ]
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nsensor_data = (select_pipe\n    | Select(startswith('sensor_'), contains('reading'), contains('value'))\n    | select_numeric()\n    | Reorder('device_id', 'timestamp', 'sensor_reading')\n)\nresult_df = sensor_data.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(sensor|iot|device)"
+        ],
+        "metrics_patterns": [
+          "(select) (sensor) (data)"
+        ],
+        "analysis_patterns": [
+          "(iot|device) (monitoring)"
+        ]
+      }
+    },
+    {
+      "query": "Select transaction columns for fraud detection analysis",
+      "function": "multiple",
+      "category": "fraud_detection",
+      "inputs": {
+        "operations": [
+          "Select(contains('amount'), contains('transaction'), contains('merchant'))",
+          "select_dates()",
+          "AddColumns({'high_value': 'lambda df: df[\"amount\"] > 1000'})"
+        ]
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\ntransaction_data = (select_pipe\n    | Select(contains('amount'), contains('transaction'), contains('merchant'))\n    | select_dates()\n    | AddColumns({'high_value': lambda df: df['amount'] > 1000})\n)\nresult_df = transaction_data.to_df()",
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(transaction|fraud|security)"
+        ],
+        "metrics_patterns": [
+          "(select) (transaction) (column)"
+        ],
+        "analysis_patterns": [
+          "(fraud) (detection) (analysis)"
+        ]
+      }
+    }
+] 

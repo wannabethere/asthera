@@ -1,0 +1,616 @@
+[
+    {
+      "query": "Calculate 20-day simple moving average for stock price data",
+      "function": "moving_average",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "close_price",
+        "window": 20,
+        "method": "simple"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_average(\n    columns='close_price',\n    window=20,\n    method='simple'\n)",
+      "instructions": {
+        "business_case": "Technical Analysis & Trading Strategy - Calculate moving averages to identify price trends, support/resistance levels, and generate buy/sell signals for investment decisions and automated trading systems.",
+        "natural_language_questions": [
+          "What's the 20-day moving average of our stock price?",
+          "Can you smooth out the price fluctuations with a moving average?",
+          "How do current prices compare to the recent average?",
+          "What's the trend when we look at averaged prices?"
+        ],
+        "data_keywords": [
+          "stock", "price", "trading", "moving_average", "sma", "trend",
+          "technical_analysis", "smooth", "signal", "support", "resistance"
+        ],
+        "configuration_hints": {
+          "window": "20 days is common for short-term trends, 50/200 for longer trends",
+          "method": "simple = equal weights, exponential = recent data weighted more",
+          "trading_signals": "Price above MA = uptrend, below = downtrend"
+        },
+        "typical_parameters": {
+          "common_windows": [5, 10, 20, 50, 100, 200],
+          "timeframes": ["daily", "hourly", "weekly", "monthly"],
+          "best_for_data_types": ["stock_prices", "financial_data", "time_series"],
+          "trading_applications": "Trend identification, signal generation, support/resistance"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(moving average|sma|simple)",
+          "(20|twenty) (day|period)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (moving average)"
+        ],
+        "num_patterns": [
+          "(20) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate exponential moving average with 12-period window for trend analysis",
+      "function": "moving_average",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "price",
+        "window": 12,
+        "method": "exponential"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_average(\n    columns='price',\n    window=12,\n    method='exponential'\n)",
+      "instructions": {
+        "business_case": "Advanced Technical Analysis - Use exponential moving averages that give more weight to recent prices for faster trend detection and more responsive trading signals in volatile markets.",
+        "natural_language_questions": [
+          "How can I get a more responsive moving average?",
+          "What's the exponential moving average that reacts faster to price changes?",
+          "Can you calculate an EMA that emphasizes recent data?",
+          "How do recent prices influence the trend more heavily?"
+        ],
+        "data_keywords": [
+          "exponential", "ema", "weighted", "responsive", "recent", "trend",
+          "volatile", "signal", "momentum", "fast", "reactive", "smoothing"
+        ],
+        "configuration_hints": {
+          "window": "12 periods common for short-term EMA, 26 for medium-term",
+          "responsiveness": "EMA reacts faster to price changes than simple MA",
+          "trading_use": "Better for volatile markets and quick signal generation"
+        },
+        "typical_parameters": {
+          "common_windows": [9, 12, 21, 26, 50],
+          "best_for_data_types": ["volatile_prices", "intraday_data", "forex_data"],
+          "signal_generation": "EMA crossovers, price-EMA relationships",
+          "market_applications": "Day trading, momentum strategies, trend following"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(exponential|ema|weighted)",
+          "(trend|smoothing)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (exponential|ema)"
+        ],
+        "num_patterns": [
+          "(12) (period|window)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving variance and standard deviation for volatility analysis",
+      "function": "moving_variance",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "returns",
+        "window": 30,
+        "var_suffix": "_var",
+        "std_suffix": "_std"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_variance(\n    columns='returns',\n    window=30,\n    var_suffix='_var',\n    std_suffix='_std'\n)",
+      "instructions": {
+        "business_case": "Risk Management & Volatility Analysis - Monitor rolling volatility to assess market risk, set position sizes, and implement volatility-based trading strategies for portfolio management.",
+        "natural_language_questions": [
+          "How volatile has our stock been recently?",
+          "What's the rolling standard deviation of returns?",
+          "Can you measure the changing risk levels over time?",
+          "How does current volatility compare to historical levels?"
+        ],
+        "data_keywords": [
+          "volatility", "risk", "variance", "standard_deviation", "returns",
+          "rolling", "moving", "uncertainty", "fluctuation", "stability"
+        ],
+        "configuration_hints": {
+          "window": "30 days common for monthly volatility, 252 for annual",
+          "returns_data": "Use daily/hourly returns rather than raw prices",
+          "risk_assessment": "Higher values indicate more risky/volatile periods"
+        },
+        "typical_parameters": {
+          "common_windows": [20, 30, 60, 252],
+          "data_requirements": "Price returns or percentage changes",
+          "best_for_data_types": ["return_series", "financial_data", "market_data"],
+          "risk_applications": "VaR calculation, position sizing, portfolio optimization"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(variance|volatility|standard deviation)",
+          "(rolling|moving)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (variance|volatility)"
+        ],
+        "num_patterns": [
+          "(30) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving correlation between stock price and volume over 20-day windows",
+      "function": "moving_correlation",
+      "category": "moving_averages",
+      "inputs": {
+        "column_pairs": [["price", "volume"]],
+        "window": 20,
+        "output_suffix": "_corr"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_correlation(\n    column_pairs=[('price', 'volume')],\n    window=20,\n    output_suffix='_corr'\n)",
+      "instructions": {
+        "business_case": "Market Microstructure Analysis - Analyze the changing relationship between price and volume to identify market patterns, confirm price movements, and detect potential trend reversals.",
+        "natural_language_questions": [
+          "How does the relationship between price and volume change over time?",
+          "Are price increases supported by higher trading volume?",
+          "What's the rolling correlation between different market variables?",
+          "How do market relationships shift during different periods?"
+        ],
+        "data_keywords": [
+          "correlation", "relationship", "price", "volume", "microstructure",
+          "confirmation", "divergence", "pattern", "market_dynamics"
+        ],
+        "configuration_hints": {
+          "column_pairs": "Specify pairs to analyze: [('price', 'volume'), ('stock_a', 'stock_b')]",
+          "window": "20 days typical for short-term relationships",
+          "interpretation": "Values near +1/-1 show strong correlation, near 0 shows weak"
+        },
+        "typical_parameters": {
+          "common_pairs": [["price", "volume"], ["stock_a", "stock_b"], ["returns", "volatility"]],
+          "window_range": [10, 60],
+          "best_for_data_types": ["market_data", "multi_asset", "trading_data"],
+          "trading_insights": "Volume confirmation, pairs trading, market regime detection"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(correlation|relationship)",
+          "(price|volume|pair)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (correlation|relationship)"
+        ],
+        "num_patterns": [
+          "(20) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving z-scores for outlier detection with 30-day window",
+      "function": "moving_zscore",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "price",
+        "window": 30,
+        "output_suffix": "_zscore"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_zscore(\n    columns='price',\n    window=30,\n    output_suffix='_zscore'\n)",
+      "instructions": {
+        "business_case": "Anomaly Detection & Mean Reversion Trading - Identify when prices or metrics deviate significantly from their recent average to spot trading opportunities and detect unusual market conditions.",
+        "natural_language_questions": [
+          "When are prices unusually high or low compared to recent history?",
+          "Can you detect outliers in the price movements?",
+          "How many standard deviations is the current price from normal?",
+          "What periods show extreme deviations from the average?"
+        ],
+        "data_keywords": [
+          "zscore", "outlier", "deviation", "anomaly", "extreme", "unusual",
+          "mean_reversion", "normalized", "standard_deviations", "threshold"
+        ],
+        "configuration_hints": {
+          "window": "30 days provides good baseline for detecting anomalies",
+          "interpretation": "Values >2 or <-2 typically indicate significant deviations",
+          "trading_signals": "Extreme z-scores may indicate reversal opportunities"
+        },
+        "typical_parameters": {
+          "common_windows": [20, 30, 60],
+          "threshold_levels": [1.5, 2.0, 2.5],
+          "best_for_data_types": ["price_data", "trading_metrics", "financial_ratios"],
+          "strategy_applications": "Mean reversion, anomaly detection, risk management"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(z-score|zscore|outlier)",
+          "(standard deviation|normalized)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (z-score|outlier)"
+        ],
+        "num_patterns": [
+          "(30) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Detect turning points (peaks and troughs) in price data with 15-day window",
+      "function": "detect_turning_points",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "price",
+        "window": 15,
+        "threshold": 2.0,
+        "peak_suffix": "_peak",
+        "trough_suffix": "_trough"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | detect_turning_points(\n    columns='price',\n    window=15,\n    threshold=2.0,\n    peak_suffix='_peak',\n    trough_suffix='_trough'\n)",
+      "instructions": {
+        "business_case": "Trend Reversal Detection & Swing Trading - Automatically identify local peaks and troughs in price data to spot potential trend changes and generate entry/exit signals for swing trading strategies.",
+        "natural_language_questions": [
+          "Where are the peaks and valleys in our price chart?",
+          "Can you detect when trends might be reversing?",
+          "What are the local maximum and minimum points?",
+          "How can I identify swing highs and lows automatically?"
+        ],
+        "data_keywords": [
+          "turning_points", "peaks", "troughs", "reversal", "swing", "local_max",
+          "local_min", "trend_change", "pivot", "extremes", "inflection"
+        ],
+        "configuration_hints": {
+          "window": "15 days balances sensitivity vs noise reduction",
+          "threshold": "Higher values (3-5) detect major reversals, lower (1-2) for minor swings",
+          "trading_use": "Entry/exit points, support/resistance identification"
+        },
+        "typical_parameters": {
+          "window_range": [10, 30],
+          "threshold_range": [1.0, 5.0],
+          "best_for_data_types": ["price_data", "trend_analysis", "swing_trading"],
+          "signal_applications": "Entry/exit signals, trend confirmation, pattern recognition"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(turning point|peak|trough)",
+          "(local maximum|local minimum)"
+        ],
+        "metrics_patterns": [
+          "(detect|find|identify) (peak|trough|turning point)"
+        ],
+        "num_patterns": [
+          "(15) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate time-weighted average with exponential decay for recent emphasis",
+      "function": "time_weighted_average",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "price",
+        "window": 30,
+        "decay_factor": 0.9,
+        "output_suffix": "_twa"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | time_weighted_average(\n    columns='price',\n    window=30,\n    decay_factor=0.9,\n    output_suffix='_twa'\n)",
+      "instructions": {
+        "business_case": "Advanced Momentum Analysis - Calculate weighted averages that emphasize recent data more heavily to create responsive indicators for momentum trading and real-time decision making.",
+        "natural_language_questions": [
+          "How can I create an average that emphasizes recent prices more?",
+          "What's a weighted average that gives more importance to newer data?",
+          "Can you calculate a momentum-sensitive moving average?",
+          "How do I weight recent observations more heavily?"
+        ],
+        "data_keywords": [
+          "time_weighted", "decay", "momentum", "recent", "emphasis", "weighted",
+          "exponential", "responsive", "adaptive", "current", "latest"
+        ],
+        "configuration_hints": {
+          "decay_factor": "0.9 = moderate decay, 0.95 = slow decay, 0.8 = fast decay",
+          "window": "30 days provides good balance of history vs responsiveness",
+          "momentum_use": "Higher decay factors emphasize recent data more"
+        },
+        "typical_parameters": {
+          "decay_range": [0.8, 0.95],
+          "window_range": [20, 60],
+          "best_for_data_types": ["momentum_data", "real_time_feeds", "adaptive_analysis"],
+          "trading_applications": "Momentum strategies, adaptive indicators, real-time analysis"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(time-weighted|exponential decay)",
+          "(recent|emphasis|weight)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (time-weighted|weighted)"
+        ],
+        "num_patterns": [
+          "(30) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving regression coefficients for trend analysis",
+      "function": "moving_regression",
+      "category": "moving_averages",
+      "inputs": {
+        "dependent_column": "price",
+        "independent_columns": "volume",
+        "window": 50,
+        "output_suffix": "_reg"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_regression(\n    dependent_column='price',\n    independent_columns='volume',\n    window=50,\n    output_suffix='_reg'\n)",
+      "instructions": {
+        "business_case": "Quantitative Analysis & Predictive Modeling - Calculate rolling regression coefficients to understand changing relationships between variables and create dynamic predictive models.",
+        "natural_language_questions": [
+          "How does the relationship between price and volume change over time?",
+          "What's the rolling slope of the price trend?",
+          "Can you calculate changing correlations between variables?",
+          "How do regression coefficients evolve over time?"
+        ],
+        "data_keywords": [
+          "regression", "coefficients", "slope", "relationship", "predictive",
+          "beta", "correlation", "trend", "linear", "dynamic", "rolling"
+        ],
+        "configuration_hints": {
+          "dependent_column": "The variable you want to predict (price, returns)",
+          "independent_columns": "Explanatory variables (volume, market_index)",
+          "window": "50 periods provides stable regression estimates"
+        },
+        "typical_parameters": {
+          "window_range": [30, 100],
+          "common_relationships": ["price~volume", "returns~market", "stock~index"],
+          "best_for_data_types": ["multi_variable", "financial_data", "quantitative_analysis"],
+          "modeling_applications": "Beta calculation, factor analysis, predictive modeling"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(regression|coefficient|slope)",
+          "(trend|relationship)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (regression|coefficient)"
+        ],
+        "num_patterns": [
+          "(50) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving sum of daily trading volume over 5-day windows",
+      "function": "moving_sum",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "volume",
+        "window": 5,
+        "output_suffix": "_sum"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_sum(\n    columns='volume',\n    window=5,\n    output_suffix='_sum'\n)",
+      "instructions": {
+        "business_case": "Trading Volume Analysis & Liquidity Assessment - Calculate rolling volume totals to identify accumulation periods, assess market liquidity, and detect institutional trading patterns.",
+        "natural_language_questions": [
+          "What's the total trading volume over the past 5 days?",
+          "Can you show me rolling volume accumulation?",
+          "How much total activity has there been recently?",
+          "What's the cumulative volume in recent periods?"
+        ],
+        "data_keywords": [
+          "volume", "accumulation", "total", "cumulative", "liquidity", "trading",
+          "activity", "flow", "throughput", "aggregate", "sum"
+        ],
+        "configuration_hints": {
+          "window": "5 days for weekly volume, 20 for monthly volume accumulation",
+          "volume_analysis": "Higher rolling sums indicate increased market activity",
+          "liquidity_assessment": "Consistent volume sums suggest stable liquidity"
+        },
+        "typical_parameters": {
+          "common_windows": [5, 10, 20, 30],
+          "volume_types": ["share_volume", "dollar_volume", "trade_count"],
+          "best_for_data_types": ["trading_data", "market_microstructure", "liquidity_analysis"],
+          "market_applications": "Liquidity assessment, institutional flow detection, market depth analysis"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(sum|total|cumulative)",
+          "(volume|trading volume)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (sum|total)"
+        ],
+        "num_patterns": [
+          "(5) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving quantiles (25th, 50th, 75th percentiles) for price distribution",
+      "function": "moving_quantile",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "price",
+        "quantile": [0.25, 0.5, 0.75],
+        "window": 60
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_quantile(\n    columns='price',\n    quantile=[0.25, 0.5, 0.75],\n    window=60\n)",
+      "instructions": {
+        "business_case": "Risk Management & Distribution Analysis - Track rolling quantiles to understand price distribution changes, assess risk levels, and identify when markets move outside normal ranges.",
+        "natural_language_questions": [
+          "What are the rolling quartiles of price movements?",
+          "How is the price distribution changing over time?",
+          "Can you show me the 25th and 75th percentile bands?",
+          "What's the rolling interquartile range?"
+        ],
+        "data_keywords": [
+          "quantiles", "percentiles", "distribution", "quartiles", "risk", "bands",
+          "range", "spread", "variability", "bounds", "statistical"
+        ],
+        "configuration_hints": {
+          "quantile": "[0.25, 0.5, 0.75] gives quartiles, [0.1, 0.9] for wider bands",
+          "window": "60 periods provides stable distribution estimates",
+          "risk_bands": "25th-75th percentile range shows normal price variation"
+        },
+        "typical_parameters": {
+          "common_quantiles": [[0.25, 0.75], [0.1, 0.9], [0.05, 0.95]],
+          "window_range": [30, 120],
+          "best_for_data_types": ["price_data", "return_distributions", "risk_metrics"],
+          "risk_applications": "Value at Risk, distribution monitoring, outlier detection"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(quantile|percentile|distribution)",
+          "(25th|50th|75th|median)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (quantile|percentile)"
+        ],
+        "num_patterns": [
+          "(60) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate moving minimum and maximum values for range analysis",
+      "function": "moving_min_max",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "price",
+        "window": 20,
+        "min_suffix": "_min",
+        "max_suffix": "_max"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_min_max(\n    columns='price',\n    window=20,\n    min_suffix='_min',\n    max_suffix='_max'\n)",
+      "instructions": {
+        "business_case": "Support & Resistance Identification - Calculate rolling highs and lows to identify dynamic support and resistance levels for technical analysis and breakout detection.",
+        "natural_language_questions": [
+          "What are the rolling highs and lows in our data?",
+          "Can you identify the recent price range?",
+          "What are the support and resistance levels?",
+          "How do I find the trading range over time?"
+        ],
+        "data_keywords": [
+          "minimum", "maximum", "range", "support", "resistance", "highs", "lows",
+          "bounds", "extremes", "breakout", "levels", "technical"
+        ],
+        "configuration_hints": {
+          "window": "20 days for short-term ranges, 50+ for longer-term levels",
+          "trading_use": "Rolling max = resistance, rolling min = support",
+          "breakout_signals": "Price breaking above rolling max or below rolling min"
+        },
+        "typical_parameters": {
+          "common_windows": [10, 20, 50, 100],
+          "technical_applications": ["support/resistance", "breakout_detection", "range_trading"],
+          "best_for_data_types": ["price_data", "technical_analysis", "trading_signals"],
+          "signal_generation": "Breakouts above max or below min indicate trend changes"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(minimum|maximum|range)",
+          "(high|low|extreme)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (minimum|maximum|range)"
+        ],
+        "num_patterns": [
+          "(20) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Count positive returns in moving windows for trend strength analysis",
+      "function": "moving_count",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "returns",
+        "condition": "lambda x: x > 0",
+        "window": 30,
+        "output_suffix": "_positive_count"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | moving_count(\n    columns='returns',\n    condition=lambda x: x > 0,\n    window=30,\n    output_suffix='_positive_count'\n)",
+      "instructions": {
+        "business_case": "Trend Strength & Momentum Analysis - Count favorable outcomes in rolling windows to measure trend consistency, momentum strength, and probability of continued direction.",
+        "natural_language_questions": [
+          "How many positive days were there in the last 30?",
+          "What's the consistency of our upward trend?",
+          "Can you measure trend strength over time?",
+          "How often do we see positive returns recently?"
+        ],
+        "data_keywords": [
+          "count", "frequency", "positive", "trend_strength", "consistency",
+          "momentum", "probability", "occurrence", "success_rate", "winning"
+        ],
+        "configuration_hints": {
+          "condition": "Customize for any condition (positive returns, above threshold, etc.)",
+          "window": "30 days provides good trend strength assessment",
+          "interpretation": "Higher counts indicate stronger, more consistent trends"
+        },
+        "typical_parameters": {
+          "common_conditions": ["> 0", "> threshold", "== target_value"],
+          "window_range": [10, 60],
+          "best_for_data_types": ["return_series", "binary_outcomes", "success_metrics"],
+          "momentum_applications": "Trend strength, consistency measurement, probability estimation"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(count|frequency)",
+          "(positive|negative|condition)"
+        ],
+        "metrics_patterns": [
+          "(count|calculate) (frequency|occurrence)"
+        ],
+        "num_patterns": [
+          "(30) (day|period)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate expanding window mean for long-term trend analysis",
+      "function": "expanding_window",
+      "category": "moving_averages",
+      "inputs": {
+        "columns": "price",
+        "operation": "mean",
+        "output_suffix": "_exp_mean"
+      },
+      "example": "moving_pipe = MovingAggrPipe.from_dataframe(data)\nmoving_pipe = moving_pipe | expanding_window(\n    columns='price',\n    operation='mean',\n    output_suffix='_exp_mean'\n)",
+      "instructions": {
+        "business_case": "Long-term Baseline & Historical Context - Calculate expanding averages that include all historical data to establish long-term baselines and measure current performance against entire history.",
+        "natural_language_questions": [
+          "What's the all-time average up to each point?",
+          "How does current performance compare to historical baseline?",
+          "Can you show the cumulative average over time?",
+          "What's the long-term trend since the beginning?"
+        ],
+        "data_keywords": [
+          "expanding", "cumulative", "all_time", "historical", "baseline", "long_term",
+          "total_history", "inception", "lifetime", "overall", "complete"
+        ],
+        "configuration_hints": {
+          "operation": "mean for averages, std for growing volatility, max for all-time highs",
+          "baseline_analysis": "Shows how metrics evolve relative to entire history",
+          "long_term_trends": "Reveals persistent patterns and structural changes"
+        },
+        "typical_parameters": {
+          "operations": ["mean", "std", "min", "max", "median"],
+          "best_for_data_types": ["performance_tracking", "baseline_analysis", "historical_context"],
+          "applications": "Performance benchmarking, historical context, long-term trend analysis"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(expanding|all prior|long-term)",
+          "(trend|mean|average)"
+        ],
+        "metrics_patterns": [
+          "(calculate|compute) (expanding|long-term)"
+        ]
+      }
+    }
+]

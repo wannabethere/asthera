@@ -12,7 +12,7 @@ from app.utils.insight_utils import  extract_insights_nb
 from langchain_openai import ChatOpenAI
 
 class CodeExampleLoader:
-    def __init__(self, base_path: str = "/unstructured/end-to-end-chatbot/meta/code_examples"):
+    def __init__(self, base_path: str = ""):
         """
         Initialize the code example loader.
         
@@ -99,7 +99,7 @@ class CodeFunctionLoader:
     """
     Loads function definitions from JSON files and creates Document objects.
     """
-    def __init__(self, json_files_path: str = "/unstructured/end-to-end-chatbot/meta/tools"):
+    def __init__(self, json_files_path: str = ""):
         """
         Initialize the loader with path to JSON file.
         
@@ -248,7 +248,7 @@ class UsageExampleLoader:
     """
     Loads usage examples from JSON files and creates Document objects.
     """
-    def __init__(self, base_path: str = "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/meta/usage_examples"):
+    def __init__(self, base_path: str = "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/meta/instructions"):
         """
         Initialize the usage example loader.
         

@@ -1,0 +1,335 @@
+[
+    {
+      "query": "Find temperature readings that are more than 3 standard deviations from the mean",
+      "function": "detect_statistical_outliers",
+      "category": "anomaly_detection",
+      "inputs": {
+        "columns": "temperature",
+        "method": "zscore",
+        "threshold": 3.0
+      },
+      "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_statistical_outliers(\n    columns='temperature',\n    method='zscore',\n    threshold=3.0\n)",
+      "instructions": {
+        "business_case": "Quality Control & Environmental Monitoring - Detect faulty sensors, equipment malfunctions, or extreme environmental conditions that could damage products or compromise safety.",
+        "natural_language_questions": [
+          "Are there any temperature sensors giving unusual readings?",
+          "Which temperature measurements are abnormally high or low?",
+          "Can you find outliers in our sensor data?",
+          "Are there any extreme temperature values that seem wrong?"
+        ],
+        "data_keywords": [
+          "temperature", "sensor", "readings", "measurements", "environmental", 
+          "HVAC", "manufacturing", "weather", "monitoring", "IoT", "equipment"
+        ],
+        "configuration_hints": {
+          "threshold": "Higher values (3.0+) = fewer, more extreme outliers. Lower values (1.5-2.5) = more sensitive detection",
+          "method": "zscore = assumes normal distribution. Use for continuous sensor data",
+          "columns": "Select numerical columns with sensor readings or measurements"
+        },
+        "typical_parameters": {
+          "threshold_range": [1.5, 4.0],
+          "best_for_data_types": ["continuous", "sensor_readings", "measurements"],
+          "sample_size_requirement": "50+ data points for reliable statistics"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(outlier|anomaly|anomalous)",
+          "(statistical|standard deviation)"
+        ],
+        "metrics_patterns": [
+          "(detect|find|identify) (outlier|anomaly)"
+        ],
+        "num_patterns": [
+          "(3) (standard deviation)"
+        ]
+      }
+    },
+    {
+      "query": "Identify outliers in sensor data using the robust IQR method",
+      "function": "detect_statistical_outliers",
+      "category": "anomaly_detection",
+      "inputs": {
+        "columns": ["pressure", "humidity", "temperature"],
+        "method": "iqr",
+        "threshold": 1.5
+      },
+      "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_statistical_outliers(\n    columns=['pressure', 'humidity', 'temperature'],\n    method='iqr',\n    threshold=1.5\n)",
+      "instructions": {
+        "business_case": "Industrial Equipment Monitoring - Monitor multiple sensor types simultaneously to detect equipment failures, maintenance needs, or environmental issues in manufacturing or facility management.",
+        "natural_language_questions": [
+          "Are there any unusual patterns across our sensor readings?",
+          "Which sensors are reporting values outside normal ranges?",
+          "Can you detect outliers that work even with skewed data?",
+          "What sensors need attention based on abnormal readings?"
+        ],
+        "data_keywords": [
+          "pressure", "humidity", "sensors", "industrial", "equipment", 
+          "manufacturing", "facility", "HVAC", "monitoring", "maintenance"
+        ],
+        "configuration_hints": {
+          "threshold": "1.5 = standard IQR outlier detection. 2.0-3.0 = more conservative detection",
+          "method": "iqr = robust to skewed data and outliers. Good for industrial sensor data",
+          "columns": "Select multiple related sensor columns for comprehensive monitoring"
+        },
+        "typical_parameters": {
+          "threshold_range": [1.0, 3.0],
+          "best_for_data_types": ["skewed", "multi_sensor", "industrial_data"],
+          "sample_size_requirement": "25+ data points minimum"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(outlier|anomaly|anomalous)",
+          "(iqr|interquartile|robust)"
+        ],
+        "metrics_patterns": [
+          "(detect|find|identify) (outlier|anomaly)"
+        ]
+      }
+    },
+    {
+      "query": "Detect outliers in rolling windows of 50 data points for streaming data",
+      "function": "detect_statistical_outliers",
+      "category": "anomaly_detection",
+      "inputs": {
+        "columns": "sensor_reading",
+        "method": "modified_zscore",
+        "threshold": 3.5,
+        "window": 50,
+        "time_column": "timestamp"
+      },
+      "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_statistical_outliers(\n    columns='sensor_reading',\n    method='modified_zscore',\n    threshold=3.5,\n    window=50,\n    time_column='timestamp'\n)",
+      "instructions": {
+        "business_case": "Real-time Monitoring & IoT Analytics - Continuously monitor streaming data from IoT devices, sensors, or live systems to detect anomalies as they occur, enabling immediate response to issues.",
+        "natural_language_questions": [
+          "Can you detect anomalies in real-time streaming data?",
+          "Are there outliers in the most recent sensor readings?",
+          "How can I monitor live data for unusual patterns?",
+          "What's abnormal in the latest batch of measurements?"
+        ],
+        "data_keywords": [
+          "streaming", "real-time", "IoT", "live", "continuous", "monitoring",
+          "sensor", "feed", "current", "latest", "ongoing", "timestamp"
+        ],
+        "configuration_hints": {
+          "window": "Larger windows (100+) = more stable. Smaller windows (20-50) = more responsive to changes",
+          "threshold": "Start with 3.5 for streaming data to reduce false alarms",
+          "time_column": "Must have timestamp column for sequential analysis"
+        },
+        "typical_parameters": {
+          "window_range": [20, 200],
+          "threshold_range": [2.5, 4.0],
+          "best_for_data_types": ["time_series", "streaming", "iot_data"],
+          "update_frequency": "Real-time to hourly updates"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(outlier|anomaly|anomalous)",
+          "(rolling|window|streaming)"
+        ],
+        "metrics_patterns": [
+          "(detect|find|identify) (outlier|anomaly)"
+        ],
+        "num_patterns": [
+          "(50) (points|samples)"
+        ]
+      }
+    },
+    {
+      "query": "Find unusual patterns in website traffic compared to expected hourly trends",
+      "function": "detect_contextual_anomalies",
+      "category": "anomaly_detection",
+      "inputs": {
+        "columns": "page_views",
+        "time_column": "hour",
+        "method": "residual",
+        "model_type": "ewm",
+        "threshold": 2.5,
+        "window": 24
+      },
+      "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_contextual_anomalies(\n    columns='page_views',\n    time_column='hour',\n    method='residual',\n    model_type='ewm',\n    threshold=2.5,\n    window=24\n)",
+      "instructions": {
+        "business_case": "Digital Marketing & Web Analytics - Monitor website traffic patterns to detect viral content, system issues, marketing campaign impacts, or security incidents like DDoS attacks.",
+        "natural_language_questions": [
+          "Is our website getting unusual traffic compared to normal patterns?",
+          "Are there unexpected spikes or drops in page views?",
+          "Can you detect if traffic is abnormal for this time of day?",
+          "What hours had unusual visitor activity?"
+        ],
+        "data_keywords": [
+          "website", "traffic", "page_views", "visitors", "sessions", "hourly",
+          "web_analytics", "marketing", "campaign", "digital", "online"
+        ],
+        "configuration_hints": {
+          "window": "24 hours captures daily patterns. 168 for weekly patterns",
+          "model_type": "ewm = good for trend data. sarimax = better for strong seasonality",
+          "threshold": "2.5 = balanced sensitivity. Lower for more alerts"
+        },
+        "typical_parameters": {
+          "window_range": [12, 168],
+          "threshold_range": [1.5, 4.0],
+          "best_for_data_types": ["web_analytics", "traffic_data", "hourly_metrics"],
+          "seasonality": "Daily, weekly patterns common"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(unusual|anomaly|anomalous)",
+          "(contextual|pattern|trend)"
+        ],
+        "metrics_patterns": [
+          "(detect|find|identify) (pattern|anomaly)"
+        ],
+        "time_patterns": [
+          "(hourly)"
+        ]
+      }
+    },
+    {
+      "query": "Detect anomalies in daily sales considering weekly seasonality",
+      "function": "detect_contextual_anomalies",
+      "category": "anomaly_detection",
+      "inputs": {
+        "columns": "daily_revenue",
+        "time_column": "date",
+        "method": "prediction_interval",
+        "model_type": "sarimax",
+        "threshold": 2.0,
+        "window": 60,
+        "seasonal_period": 7
+      },
+      "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_contextual_anomalies(\n    columns='daily_revenue',\n    time_column='date',\n    method='prediction_interval',\n    model_type='sarimax',\n    threshold=2.0,\n    window=60,\n    seasonal_period=7\n)",
+      "instructions": {
+        "business_case": "Retail & Sales Analytics - Monitor daily sales performance to detect successful promotions, market changes, competitive impacts, or operational issues affecting revenue.",
+        "natural_language_questions": [
+          "Are today's sales unusually high or low for this day of the week?",
+          "Can you detect abnormal revenue patterns accounting for weekly cycles?",
+          "Which days had unexpected sales performance?",
+          "Are there revenue anomalies beyond normal weekend/weekday differences?"
+        ],
+        "data_keywords": [
+          "sales", "revenue", "daily", "weekly", "seasonal", "retail",
+          "business", "performance", "financial", "commercial", "earnings"
+        ],
+        "configuration_hints": {
+          "seasonal_period": "7 for weekly patterns, 30 for monthly, 365 for yearly",
+          "window": "60+ days recommended for stable seasonal patterns",
+          "model_type": "sarimax handles seasonality well, ewm for trend-focused"
+        },
+        "typical_parameters": {
+          "seasonal_period_options": [7, 30, 365],
+          "window_range": [30, 180],
+          "threshold_range": [1.5, 3.0],
+          "best_for_data_types": ["sales_data", "revenue_metrics", "business_kpis"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(anomaly|anomalous)",
+          "(seasonal|weekly|cyclical)"
+        ],
+        "metrics_patterns": [
+          "(detect|find|identify) (anomaly)"
+        ],
+        "time_patterns": [
+          "(daily|weekly)"
+        ]
+      }
+    },
+    {
+      "query": "Identify change points in system performance metrics over time",
+      "function": "detect_contextual_anomalies",
+      "category": "anomaly_detection",
+      "inputs": {
+        "columns": "cpu_utilization",
+        "time_column": "timestamp",
+        "method": "changepoint",
+        "model_type": "ewm",
+        "threshold": 3.0,
+        "window": 100
+      },
+      "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_contextual_anomalies(\n    columns='cpu_utilization',\n    time_column='timestamp',\n    method='changepoint',\n    model_type='ewm',\n    threshold=3.0,\n    window=100\n)",
+      "instructions": {
+        "business_case": "IT Operations & DevOps - Monitor system performance to detect deployments, configuration changes, capacity issues, or degradation that requires immediate attention.",
+        "natural_language_questions": [
+          "When did our system performance suddenly change?",
+          "Can you detect when CPU usage shifted to a new level?",
+          "Are there sudden changes in system behavior?",
+          "What time periods show performance regime changes?"
+        ],
+        "data_keywords": [
+          "system", "performance", "CPU", "memory", "utilization", "infrastructure",
+          "server", "monitoring", "devops", "operations", "metrics"
+        ],
+        "configuration_hints": {
+          "method": "changepoint specifically looks for level shifts vs other anomaly types",
+          "window": "Larger windows detect more significant changes, smaller windows more sensitive",
+          "threshold": "Higher values detect only major changes, lower values catch smaller shifts"
+        },
+        "typical_parameters": {
+          "window_range": [50, 500],
+          "threshold_range": [2.0, 4.0],
+          "best_for_data_types": ["system_metrics", "performance_data", "operational_kpis"],
+          "change_types": ["deployment", "configuration", "load_increase"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(change point|changepoint|regime change)",
+          "(system|performance)"
+        ],
+        "metrics_patterns": [
+          "(detect|find|identify) (change|shift)"
+        ]
+      }
+    },
+    {
+      "query": "Find multivariate anomalies in server metrics using machine learning",
+      "function": "detect_collective_anomalies",
+      "category": "anomaly_detection",
+      "inputs": {
+        "columns": ["cpu_usage", "memory_usage", "disk_io", "network_traffic"],
+        "time_column": "timestamp",
+        "method": "isolation_forest",
+        "window": 200,
+        "contamination": 0.05,
+        "n_estimators": 100
+      },
+      "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_collective_anomalies(\n    columns=['cpu_usage', 'memory_usage', 'disk_io', 'network_traffic'],\n    time_column='timestamp',\n    method='isolation_forest',\n    window=200,\n    contamination=0.05,\n    n_estimators=100\n)",
+      "instructions": {
+        "business_case": "Advanced IT Monitoring & Predictive Maintenance - Detect complex system issues by analyzing multiple metrics together, catching problems that wouldn't be visible in individual metrics.",
+        "natural_language_questions": [
+          "Are there unusual combinations of system metrics that indicate problems?",
+          "Can you find complex patterns across multiple server metrics?",
+          "What time periods show abnormal system behavior across all metrics?",
+          "Are there hidden correlations indicating system stress?"
+        ],
+        "data_keywords": [
+          "multivariate", "server", "system", "metrics", "correlation", "complex",
+          "infrastructure", "monitoring", "machine_learning", "advanced"
+        ],
+        "configuration_hints": {
+          "contamination": "Expected % of anomalies. 0.05 = 5% of data expected to be anomalous",
+          "columns": "Include related metrics that together describe system state",
+          "n_estimators": "More trees = better detection but slower processing"
+        },
+        "typical_parameters": {
+          "contamination_range": [0.01, 0.2],
+          "n_estimators_range": [50, 200],
+          "best_for_data_types": ["multivariate", "correlated_metrics", "system_data"],
+          "min_columns": 3
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(multivariate|collective|multiple)",
+          "(machine learning|isolation forest)"
+        ],
+        "metrics_patterns": [
+          "(detect|find|identify) (anomaly)"
+        ]
+      }
+    }
+]

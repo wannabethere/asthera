@@ -1,0 +1,463 @@
+[
+    {
+      "query": "Select only customer ID, name, and email columns from the dataset",
+      "function": "Select",
+      "category": "column_selection",
+      "inputs": {
+        "columns": ["customer_id", "name", "email"]
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nselected = select_pipe | Select('customer_id', 'name', 'email')\nresult_df = selected.to_df()",
+      "instructions": {
+        "business_case": "Data Privacy & Focused Analysis - Extract only essential customer information for specific business purposes while maintaining data privacy compliance and reducing data exposure for targeted communications or analysis.",
+        "natural_language_questions": [
+          "Can you get just the customer contact information?",
+          "I only need names and emails for the campaign",
+          "Can you extract basic customer details?",
+          "What are the essential customer fields?"
+        ],
+        "data_keywords": [
+          "customer", "contact", "essential", "basic", "personal",
+          "id", "name", "email", "identifier", "communication"
+        ],
+        "configuration_hints": {
+          "columns": "List specific column names as strings or use column selectors",
+          "privacy": "Only select columns needed for specific business purpose",
+          "data_minimization": "Follow principle of least privilege for data access"
+        },
+        "typical_parameters": {
+          "common_selections": ["contact_info", "identifiers", "demographics", "key_metrics"],
+          "privacy_considerations": ["pii_protection", "compliance", "data_minimization"],
+          "use_cases": ["marketing_campaigns", "customer_service", "reporting", "analysis"],
+          "performance": "Selecting fewer columns improves memory usage and processing speed"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(customer|user|client)"
+        ],
+        "metrics_patterns": [
+          "(select|get) (column|field)"
+        ],
+        "column_patterns": [
+          "(id|name|email|contact)"
+        ]
+      }
+    },
+    {
+      "query": "Select all numeric columns for statistical analysis",
+      "function": "select_numeric",
+      "category": "column_selection",
+      "inputs": {},
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nnumeric_data = select_pipe | select_numeric()\nresult_df = numeric_data.to_df()",
+      "instructions": {
+        "business_case": "Quantitative Analysis & Machine Learning - Focus analysis on numerical data for statistical modeling, correlation analysis, and machine learning applications where only quantitative features are relevant.",
+        "natural_language_questions": [
+          "Can you get all the numerical data?",
+          "I want to analyze just the numbers",
+          "What are the quantitative columns?",
+          "Can you select numeric fields for analysis?"
+        ],
+        "data_keywords": [
+          "numeric", "numerical", "quantitative", "numbers", "statistics",
+          "analysis", "mathematical", "continuous", "metrics", "measurements"
+        ],
+        "configuration_hints": {
+          "automatic_detection": "Automatically identifies int, float, and numeric data types",
+          "excludes": "Filters out text, categorical, and date columns",
+          "downstream_use": "Perfect for correlation analysis and machine learning"
+        },
+        "typical_parameters": {
+          "data_types_included": ["int", "float", "decimal", "numeric"],
+          "data_types_excluded": ["string", "object", "datetime", "categorical"],
+          "use_cases": ["correlation_analysis", "statistical_modeling", "feature_engineering"],
+          "preprocessing": ["scaling", "normalization", "transformation"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(numeric|number|quantitative)"
+        ],
+        "metrics_patterns": [
+          "(select|get) (numeric|number) (column)"
+        ],
+        "analysis_patterns": [
+          "(statistical|analysis|calculation)"
+        ]
+      }
+    },
+    {
+      "query": "Select all string columns for text analysis",
+      "function": "select_strings",
+      "category": "column_selection",
+      "inputs": {},
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\ntext_data = select_pipe | select_strings()\nresult_df = text_data.to_df()",
+      "instructions": {
+        "business_case": "Text Analytics & Natural Language Processing - Isolate text-based data for sentiment analysis, content categorization, keyword extraction, and other NLP applications in customer feedback or content analysis.",
+        "natural_language_questions": [
+          "Can you get all the text columns?",
+          "I want to analyze customer comments",
+          "What are the text-based fields?",
+          "Can you select string data for NLP?"
+        ],
+        "data_keywords": [
+          "text", "string", "comments", "feedback", "content",
+          "description", "notes", "messages", "reviews", "categorical"
+        ],
+        "configuration_hints": {
+          "automatic_detection": "Identifies string/object columns that contain text",
+          "includes": "Text descriptions, comments, categorical labels",
+          "preprocessing": "May need cleaning before text analysis"
+        },
+        "typical_parameters": {
+          "data_types_included": ["string", "object", "text"],
+          "common_content": ["reviews", "comments", "descriptions", "categories"],
+          "use_cases": ["sentiment_analysis", "text_classification", "content_analysis"],
+          "preprocessing_steps": ["cleaning", "tokenization", "encoding"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(string|text|character)"
+        ],
+        "metrics_patterns": [
+          "(select|get) (string|text) (column)"
+        ],
+        "analysis_patterns": [
+          "(text|nlp|sentiment) (analysis)"
+        ]
+      }
+    },
+    {
+      "query": "Select all date and time columns for temporal analysis",
+      "function": "select_dates",
+      "category": "column_selection",
+      "inputs": {},
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\ntime_data = select_pipe | select_dates()\nresult_df = time_data.to_df()",
+      "instructions": {
+        "business_case": "Time Series Analysis & Temporal Insights - Focus on temporal data for trend analysis, seasonality detection, and time-based business intelligence to understand patterns over time and forecast future trends.",
+        "natural_language_questions": [
+          "Can you get all the date columns?",
+          "I want to analyze trends over time",
+          "What are the temporal fields?",
+          "Can you select time-based data?"
+        ],
+        "data_keywords": [
+          "date", "time", "temporal", "timestamp", "when",
+          "trend", "seasonality", "timeline", "chronological", "period"
+        ],
+        "configuration_hints": {
+          "automatic_detection": "Identifies datetime, date, and time data types",
+          "formats": "Handles various date/time formats automatically",
+          "timezone": "Consider timezone implications for analysis"
+        },
+        "typical_parameters": {
+          "data_types_included": ["datetime", "date", "time", "timestamp"],
+          "common_fields": ["created_date", "modified_date", "transaction_time"],
+          "use_cases": ["trend_analysis", "seasonality", "time_series_forecasting"],
+          "considerations": ["timezone", "granularity", "missing_periods"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(date|time|temporal)"
+        ],
+        "metrics_patterns": [
+          "(select|get) (date|time) (column)"
+        ],
+        "analysis_patterns": [
+          "(temporal|time series|trend) (analysis)"
+        ]
+      }
+    },
+    {
+      "query": "Select columns containing 'score' in their name",
+      "function": "select_by_pattern",
+      "category": "column_selection",
+      "inputs": {
+        "pattern": ".*score.*"
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nscore_cols = select_pipe | select_by_pattern('.*score.*')\nresult_df = score_cols.to_df()",
+      "instructions": {
+        "business_case": "Performance Metrics & KPI Analysis - Extract performance indicators and scoring metrics for business evaluation, customer assessment, and quality measurement across different business dimensions.",
+        "natural_language_questions": [
+          "Can you get all the score columns?",
+          "I want all performance metrics",
+          "What columns measure performance?",
+          "Can you find rating and scoring fields?"
+        ],
+        "data_keywords": [
+          "score", "rating", "metric", "performance", "kpi",
+          "index", "measurement", "evaluation", "assessment", "quality"
+        ],
+        "configuration_hints": {
+          "pattern": "Use regex patterns for flexible matching (.*score.*, rating_*, *_index)",
+          "case_sensitivity": "Patterns are typically case-sensitive",
+          "wildcards": "Use .* for prefix/suffix matching"
+        },
+        "typical_parameters": {
+          "common_patterns": [".*score.*", "rating_*", "*_index", "*_metric"],
+          "regex_operators": [".*", "*", "^", "$", "|"],
+          "use_cases": ["performance_analysis", "quality_metrics", "customer_scoring"],
+          "pattern_examples": ["credit_score", "satisfaction_rating", "performance_index"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(contain|include|match)"
+        ],
+        "metrics_patterns": [
+          "(select|get) (column) (contain|include)"
+        ],
+        "column_patterns": [
+          "(score|rating|index|metric)"
+        ]
+      }
+    },
+    {
+      "query": "Remove sensitive columns like password and SSN from the dataset",
+      "function": "Deselect",
+      "category": "column_removal",
+      "inputs": {
+        "columns": ["password", "ssn", "credit_card"]
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nclean_data = select_pipe | Deselect('password', 'ssn', 'credit_card')\nresult_df = clean_data.to_df()",
+      "instructions": {
+        "business_case": "Data Security & Privacy Compliance - Remove personally identifiable information (PII) and sensitive data to ensure compliance with privacy regulations and reduce security risks in data analysis and sharing.",
+        "natural_language_questions": [
+          "Can you remove sensitive information?",
+          "I need to exclude PII data",
+          "Can you strip out confidential fields?",
+          "How do I make this data safe to share?"
+        ],
+        "data_keywords": [
+          "sensitive", "private", "confidential", "secure", "pii",
+          "password", "ssn", "credit_card", "personal", "protected"
+        ],
+        "configuration_hints": {
+          "security_focus": "Identify and remove all PII and sensitive data",
+          "compliance": "Consider GDPR, CCPA, and other privacy regulations",
+          "documentation": "Document what data was removed for audit purposes"
+        },
+        "typical_parameters": {
+          "sensitive_fields": ["password", "ssn", "credit_card", "phone", "address"],
+          "compliance_standards": ["GDPR", "CCPA", "HIPAA", "PCI_DSS"],
+          "use_cases": ["data_sharing", "analytics_environment", "reporting"],
+          "verification": "Review remaining columns for hidden sensitive data"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(remove|exclude|drop)",
+          "(sensitive|private|confidential)"
+        ],
+        "metrics_patterns": [
+          "(remove|exclude) (sensitive|private) (column)"
+        ],
+        "column_patterns": [
+          "(password|ssn|credit_card|social_security)"
+        ]
+      }
+    },
+    {
+      "query": "Rename columns to standardize naming conventions",
+      "function": "Rename",
+      "category": "column_renaming",
+      "inputs": {
+        "column_mapping": {
+          "user_id": "customer_id",
+          "first_name": "first",
+          "last_name": "last",
+          "total_spent": "spending"
+        }
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nrenamed = select_pipe | Rename({\n    'user_id': 'customer_id',\n    'first_name': 'first',\n    'last_name': 'last',\n    'total_spent': 'spending'\n})\nresult_df = renamed.to_df()",
+      "instructions": {
+        "business_case": "Data Standardization & Integration - Establish consistent naming conventions across datasets to improve data integration, reduce confusion, and enable seamless collaboration across teams and systems.",
+        "natural_language_questions": [
+          "Can you standardize the column names?",
+          "I need consistent naming across datasets",
+          "Can you rename these columns?",
+          "How do I fix inconsistent column names?"
+        ],
+        "data_keywords": [
+          "rename", "standardize", "consistent", "convention", "naming",
+          "integration", "mapping", "transformation", "cleanup", "harmonize"
+        ],
+        "configuration_hints": {
+          "mapping_dict": "Use dictionary with old_name: new_name format",
+          "conventions": "Follow team/organization naming standards",
+          "consistency": "Use snake_case, camelCase, or chosen convention consistently"
+        },
+        "typical_parameters": {
+          "naming_conventions": ["snake_case", "camelCase", "PascalCase"],
+          "mapping_strategies": ["manual_mapping", "pattern_based", "business_glossary"],
+          "use_cases": ["data_integration", "standardization", "system_migration"],
+          "validation": "Verify renamed columns maintain business meaning"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(rename|change|standardize)",
+          "(naming|convention|format)"
+        ],
+        "metrics_patterns": [
+          "(rename|change) (column) (name)"
+        ],
+        "column_patterns": [
+          "(user_id|customer_id|first_name|last_name)"
+        ]
+      }
+    },
+    {
+      "query": "Add computed columns for revenue and profit calculations",
+      "function": "AddColumns",
+      "category": "column_creation",
+      "inputs": {
+        "new_columns": {
+          "revenue": "lambda df: df['quantity'] * df['price']",
+          "profit": "lambda df: (df['quantity'] * df['price']) - (df['quantity'] * df['cost'])",
+          "profit_margin": "lambda df: ((df['quantity'] * df['price']) - (df['quantity'] * df['cost'])) / (df['quantity'] * df['price'])"
+        }
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nenhanced = select_pipe | AddColumns({\n    'revenue': lambda df: df['quantity'] * df['price'],\n    'profit': lambda df: (df['quantity'] * df['price']) - (df['quantity'] * df['cost']),\n    'profit_margin': lambda df: ((df['quantity'] * df['price']) - (df['quantity'] * df['cost'])) / (df['quantity'] * df['price'])\n})\nresult_df = enhanced.to_df()",
+      "instructions": {
+        "business_case": "Business Intelligence & KPI Creation - Generate calculated metrics and key performance indicators from raw data to support business analysis, financial reporting, and strategic decision-making.",
+        "natural_language_questions": [
+          "Can you calculate revenue from price and quantity?",
+          "I need to add profit calculations",
+          "Can you create KPI columns?",
+          "How do I add calculated fields?"
+        ],
+        "data_keywords": [
+          "calculate", "compute", "derive", "kpi", "metric",
+          "revenue", "profit", "margin", "ratio", "formula"
+        ],
+        "configuration_hints": {
+          "lambda_functions": "Use lambda functions for calculations",
+          "error_handling": "Consider division by zero and null value handling",
+          "business_logic": "Ensure formulas match business definitions"
+        },
+        "typical_parameters": {
+          "calculation_types": ["arithmetic", "ratios", "percentages", "aggregations"],
+          "common_kpis": ["revenue", "profit", "margin", "conversion_rate"],
+          "use_cases": ["financial_analysis", "performance_metrics", "derived_features"],
+          "considerations": ["null_handling", "data_types", "precision"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(add|create|compute)",
+          "(calculated|derived|computed)"
+        ],
+        "metrics_patterns": [
+          "(add|create) (calculated|computed) (column)"
+        ],
+        "column_patterns": [
+          "(revenue|profit|margin|calculation)"
+        ]
+      }
+    },
+    {
+      "query": "Select feature columns for machine learning model training",
+      "function": "multiple",
+      "category": "machine_learning",
+      "inputs": {
+        "operations": [
+          "select_numeric()",
+          "Select(contains('feature'), contains('metric'), contains('score'))",
+          "Deselect(contains('target'), contains('label'), contains('id'))"
+        ]
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nfeatures = (select_pipe\n    | select_numeric()\n    | Select(contains('feature'), contains('metric'), contains('score'))\n    | Deselect(contains('target'), contains('label'), contains('id'))\n)\nresult_df = features.to_df()",
+      "instructions": {
+        "business_case": "Machine Learning Feature Preparation - Systematically prepare feature datasets for model training by selecting relevant predictive variables while excluding target variables and identifiers that could cause data leakage.",
+        "natural_language_questions": [
+          "Can you prepare features for machine learning?",
+          "What columns should I use for modeling?",
+          "Can you get predictive variables only?",
+          "How do I select ML features?"
+        ],
+        "data_keywords": [
+          "features", "predictive", "variables", "modeling", "training",
+          "machine_learning", "ml", "predictor", "independent", "input"
+        ],
+        "configuration_hints": {
+          "feature_types": "Focus on numeric features for most ML algorithms",
+          "exclude_targets": "Remove target variables to prevent data leakage",
+          "exclude_ids": "Remove identifiers that don't have predictive value"
+        },
+        "typical_parameters": {
+          "feature_categories": ["numerical", "categorical", "engineered", "derived"],
+          "exclusions": ["target_variables", "identifiers", "leakage_prone"],
+          "use_cases": ["supervised_learning", "unsupervised_learning", "feature_selection"],
+          "preprocessing": ["scaling", "encoding", "imputation"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(select|choose|pick)",
+          "(feature|predictor|variable)"
+        ],
+        "metrics_patterns": [
+          "(select) (feature) (column)"
+        ],
+        "analysis_patterns": [
+          "(machine learning|ml|training)"
+        ]
+      }
+    },
+    {
+      "query": "Clean and prepare data by removing unwanted columns and standardizing names",
+      "function": "multiple",
+      "category": "data_cleaning",
+      "inputs": {
+        "operations": [
+          "Deselect(contains('temp'), contains('debug'), contains('internal'))",
+          "Rename({'user_id': 'customer_id', 'first_name': 'first', 'last_name': 'last'})",
+          "Reorder('customer_id', 'first', 'last', 'email')"
+        ]
+      },
+      "example": "select_pipe = SelectPipe.from_dataframe(data)\nclean_data = (select_pipe\n    | Deselect(contains('temp'), contains('debug'), contains('internal'))\n    | Rename({\n        'user_id': 'customer_id',\n        'first_name': 'first',\n        'last_name': 'last'\n    })\n    | Reorder('customer_id', 'first', 'last', 'email')\n)\nresult_df = clean_data.to_df()",
+      "instructions": {
+        "business_case": "Data Quality & Production Readiness - Clean and standardize datasets for business use by removing temporary fields, standardizing naming conventions, and organizing columns for optimal usability and consistency.",
+        "natural_language_questions": [
+          "Can you clean up this dataset?",
+          "I need to prepare data for production",
+          "Can you standardize and organize columns?",
+          "How do I make this data business-ready?"
+        ],
+        "data_keywords": [
+          "clean", "prepare", "standardize", "organize", "production",
+          "quality", "ready", "professional", "consistent", "tidy"
+        ],
+        "configuration_hints": {
+          "remove_clutter": "Eliminate temporary, debug, and internal columns",
+          "standardize_names": "Apply consistent naming conventions",
+          "logical_order": "Arrange columns in logical business order"
+        },
+        "typical_parameters": {
+          "cleanup_targets": ["temp_columns", "debug_fields", "internal_data"],
+          "standardization": ["naming_conventions", "data_types", "formats"],
+          "use_cases": ["production_deployment", "business_reporting", "data_sharing"],
+          "quality_checks": ["completeness", "consistency", "validity"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(clean|prepare|standardize)",
+          "(remove|exclude|drop)"
+        ],
+        "metrics_patterns": [
+          "(clean) (and) (prepare) (data)"
+        ],
+        "analysis_patterns": [
+          "(data) (cleaning|preparation)"
+        ]
+      }
+    }
+]

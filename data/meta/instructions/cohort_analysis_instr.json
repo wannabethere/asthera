@@ -1,0 +1,326 @@
+[
+    {
+      "query": "Group users by their sign-up month to track retention",
+      "function": "form_time_cohorts",
+      "category": "cohort_analysis",
+      "inputs": {
+        "date_column": "signup_date",
+        "time_period": "month",
+        "format_cohorts": true,
+        "datetime_format": "%Y-%m-%d"
+      },
+      "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_time_cohorts(\n    date_column='signup_date',\n    time_period='month',\n    format_cohorts=True,\n    datetime_format='%Y-%m-%d'\n)",
+      "instructions": {
+        "business_case": "SaaS & Subscription Business - Track how user retention varies by acquisition month to understand seasonal patterns, product changes impact, and long-term engagement trends.",
+        "natural_language_questions": [
+          "How does user retention differ between users who signed up in different months?",
+          "Are users who joined in January more likely to stay than those who joined in July?",
+          "Which signup months have the best long-term retention?",
+          "How has user stickiness changed over time?"
+        ],
+        "data_keywords": [
+          "signup", "registration", "user", "retention", "monthly", "subscription",
+          "SaaS", "membership", "engagement", "churn", "lifetime"
+        ],
+        "configuration_hints": {
+          "time_period": "month = good for seasonal analysis, week = short-term campaigns, quarter = business planning",
+          "format_cohorts": "true = readable labels, false = faster processing for large datasets",
+          "datetime_format": "Must match your date column format exactly"
+        },
+        "typical_parameters": {
+          "time_period_options": ["day", "week", "month", "quarter", "year"],
+          "best_for_data_types": ["user_events", "subscription_data", "app_usage"],
+          "minimum_cohort_size": "100+ users per cohort for reliable insights"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(retention|cohort)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (retention)"
+        ],
+        "time_patterns": [
+          "(monthly)"
+        ]
+      }
+    },
+    {
+      "query": "Segment users based on their registration quarter for annual analysis",
+      "function": "form_time_cohorts",
+      "category": "cohort_analysis",
+      "inputs": {
+        "date_column": "registration_date",
+        "cohort_column": "registration_quarter",
+        "time_period": "quarter",
+        "datetime_format": "%Y-%m-%d %H:%M:%S"
+      },
+      "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_time_cohorts(\n    date_column='registration_date',\n    cohort_column='registration_quarter',\n    time_period='quarter',\n    datetime_format='%Y-%m-%d %H:%M:%S'\n)",
+      "instructions": {
+        "business_case": "Enterprise & B2B Analysis - Analyze customer behavior by business quarters to align with budget cycles, seasonal business patterns, and annual planning processes.",
+        "natural_language_questions": [
+          "How do customers acquired in Q1 perform compared to Q4 acquisitions?",
+          "Which quarters bring in the most valuable long-term customers?",
+          "Are there seasonal differences in customer behavior?",
+          "How does our annual customer acquisition strategy affect retention?"
+        ],
+        "data_keywords": [
+          "quarterly", "business", "annual", "enterprise", "B2B", "customer",
+          "acquisition", "planning", "budget", "seasonal", "corporate"
+        ],
+        "configuration_hints": {
+          "time_period": "quarter aligns with business planning and financial reporting cycles",
+          "cohort_column": "Custom name for the cohort grouping column",
+          "datetime_format": "Include time component if your data has timestamps"
+        },
+        "typical_parameters": {
+          "analysis_horizon": "2-4 years for meaningful quarterly patterns",
+          "best_for_data_types": ["b2b_customers", "enterprise_data", "subscription_business"],
+          "reporting_alignment": "Financial quarters, business planning cycles"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(segment|cluster|group) (users|customers)",
+          "(analyze|analysis|examine)"
+        ],
+        "time_patterns": [
+          "(quarterly)"
+        ]
+      }
+    },
+    {
+      "query": "Create weekly cohorts from user first purchase dates",
+      "function": "form_time_cohorts",
+      "category": "cohort_analysis",
+      "inputs": {
+        "date_column": "first_purchase_date",
+        "time_period": "week",
+        "format_cohorts": true,
+        "cohort_column": "purchase_week_cohort"
+      },
+      "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_time_cohorts(\n    date_column='first_purchase_date',\n    time_period='week',\n    format_cohorts=True,\n    cohort_column='purchase_week_cohort'\n)",
+      "instructions": {
+        "business_case": "E-commerce & Retail - Track purchase behavior and repeat buying patterns for users who made their first purchase in different weeks, useful for measuring campaign effectiveness and conversion optimization.",
+        "natural_language_questions": [
+          "How quickly do first-time buyers make their second purchase?",
+          "Which weeks brought in customers with the best repeat purchase rates?",
+          "How do promotional campaigns affect long-term buying behavior?",
+          "What's the difference in behavior between customers acquired during sales vs regular periods?"
+        ],
+        "data_keywords": [
+          "purchase", "buying", "e-commerce", "retail", "conversion", "repeat",
+          "customer", "transaction", "shopping", "revenue", "campaign"
+        ],
+        "configuration_hints": {
+          "time_period": "week = good for marketing campaign analysis and short-term behavior tracking",
+          "date_column": "Use first purchase date rather than signup date for purchase-focused analysis",
+          "cohort_column": "Descriptive name helps distinguish from other cohort analyses"
+        },
+        "typical_parameters": {
+          "analysis_window": "12-26 weeks for meaningful purchase patterns",
+          "best_for_data_types": ["purchase_data", "transaction_logs", "e-commerce_events"],
+          "key_metrics": "Repeat purchase rate, time to second purchase, customer lifetime value"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(retention|cohort)"
+        ],
+        "time_patterns": [
+          "(weekly)"
+        ]
+      }
+    },
+    {
+      "query": "Create customer segments based on initial subscription plan",
+      "function": "form_behavioral_cohorts",
+      "category": "cohort_analysis",
+      "inputs": {
+        "behavior_column": "subscription_plan",
+        "cohort_column": "plan_cohort",
+        "custom_cohorts": {
+          "Premium": ["premium", "enterprise"],
+          "Basic": ["basic", "starter"],
+          "Free": ["free_trial"]
+        }
+      },
+      "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_behavioral_cohorts(\n    behavior_column='subscription_plan',\n    cohort_column='plan_cohort',\n    custom_cohorts={\n        'Premium': ['premium', 'enterprise'],\n        'Basic': ['basic', 'starter'],\n        'Free': ['free_trial']\n    }\n)",
+      "instructions": {
+        "business_case": "Subscription Business Model Optimization - Compare retention and engagement across different pricing tiers to optimize pricing strategy, feature allocation, and upgrade paths.",
+        "natural_language_questions": [
+          "Do premium subscribers have better retention than basic plan users?",
+          "How do different subscription tiers behave over time?",
+          "Which pricing plan leads to the highest customer lifetime value?",
+          "Are free trial users converting to paid plans at expected rates?"
+        ],
+        "data_keywords": [
+          "subscription", "plan", "tier", "pricing", "premium", "basic", "free",
+          "trial", "upgrade", "revenue", "pricing_strategy", "monetization"
+        ],
+        "configuration_hints": {
+          "custom_cohorts": "Group similar plans together for cleaner analysis (e.g., all premium tiers)",
+          "behavior_column": "The column containing subscription plan names or IDs",
+          "cohort_column": "New column name for the grouped cohorts"
+        },
+        "typical_parameters": {
+          "typical_cohorts": ["Free", "Basic", "Premium", "Enterprise"],
+          "best_for_data_types": ["subscription_data", "pricing_tiers", "saas_metrics"],
+          "analysis_focus": "Retention rates, upgrade patterns, revenue per cohort"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(segment|cluster|group) (users|customers)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate 3-month retention rates for each user acquisition channel",
+      "function": "calculate_retention",
+      "category": "cohort_analysis",
+      "inputs": {
+        "cohort_column": "acquisition_channel",
+        "date_column": "activity_date",
+        "user_id_column": "user_id",
+        "time_period": "month",
+        "max_periods": 3,
+        "retention_type": "rolling"
+      },
+      "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | calculate_retention(\n    cohort_column='acquisition_channel',\n    date_column='activity_date',\n    user_id_column='user_id',\n    time_period='month',\n    max_periods=3,\n    retention_type='rolling'\n)",
+      "instructions": {
+        "business_case": "Marketing Channel Optimization - Compare the quality of users from different acquisition sources (paid ads, organic, referrals) to optimize marketing spend and channel strategy.",
+        "natural_language_questions": [
+          "Which marketing channels bring in users who stick around longest?",
+          "Are paid advertising users as valuable as organic users?",
+          "How do retention rates compare between different acquisition sources?",
+          "Which channels should we invest more in based on user quality?"
+        ],
+        "data_keywords": [
+          "marketing", "acquisition", "channel", "source", "campaign", "advertising",
+          "organic", "paid", "referral", "social", "retention", "quality"
+        ],
+        "configuration_hints": {
+          "retention_type": "rolling = considers any activity, classic = only specific events",
+          "max_periods": "3 months good for initial assessment, 12+ for full lifecycle",
+          "cohort_column": "Must contain acquisition channel/source data"
+        },
+        "typical_parameters": {
+          "max_periods_range": [3, 24],
+          "common_channels": ["Organic", "Paid Search", "Social Media", "Email", "Referral"],
+          "best_for_data_types": ["marketing_data", "user_acquisition", "campaign_tracking"],
+          "key_insights": "Channel ROI, user quality, marketing attribution"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (retention)",
+          "(retention|cohort)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (retention)"
+        ],
+        "time_patterns": [
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(3) (months)"
+        ]
+      }
+    },
+    {
+      "query": "Analyze conversion from trial to paid subscription for each pricing tier",
+      "function": "calculate_conversion",
+      "category": "cohort_analysis",
+      "inputs": {
+        "cohort_column": "pricing_tier",
+        "event_column": "user_action",
+        "user_id_column": "user_id",
+        "funnel_steps": ["trial_started", "feature_used", "paywall_viewed", "subscription_purchased"],
+        "step_names": ["Trial", "Feature Usage", "Paywall", "Purchase"],
+        "include_rates": true
+      },
+      "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | calculate_conversion(\n    cohort_column='pricing_tier',\n    event_column='user_action',\n    user_id_column='user_id',\n    funnel_steps=['trial_started', 'feature_used', 'paywall_viewed', 'subscription_purchased'],\n    step_names=['Trial', 'Feature Usage', 'Paywall', 'Purchase'],\n    include_rates=True\n)",
+      "instructions": {
+        "business_case": "Freemium to Paid Conversion Optimization - Understand how different pricing tiers and user segments convert from free trials to paid subscriptions to optimize conversion funnels.",
+        "natural_language_questions": [
+          "Which pricing tiers have the best trial-to-paid conversion rates?",
+          "Where in the conversion funnel do users drop off most?",
+          "How do different user segments respond to pricing tiers?",
+          "What steps can we take to improve trial conversion?"
+        ],
+        "data_keywords": [
+          "conversion", "trial", "freemium", "subscription", "pricing", "funnel",
+          "paywall", "upgrade", "monetization", "saas", "revenue"
+        ],
+        "configuration_hints": {
+          "funnel_steps": "Order matters - list events in chronological sequence",
+          "step_names": "Human-readable names for reporting and visualization",
+          "include_rates": "true = shows conversion percentages between steps"
+        },
+        "typical_parameters": {
+          "common_funnel_steps": ["trial_start", "feature_use", "limit_hit", "upgrade"],
+          "best_for_data_types": ["user_events", "subscription_funnels", "saas_metrics"],
+          "typical_conversion_rates": "Trial to paid: 15-25% for SaaS products"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(analyze|analysis|examine)",
+          "(funnel|conversion|step)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion)"
+        ]
+      }
+    },
+    {
+      "query": "Track 6-month cumulative revenue for each geographical region",
+      "function": "calculate_lifetime_value",
+      "category": "cohort_analysis",
+      "inputs": {
+        "cohort_column": "region",
+        "date_column": "transaction_date",
+        "user_id_column": "customer_id",
+        "value_column": "revenue",
+        "time_period": "month",
+        "max_periods": 6,
+        "cumulative": true
+      },
+      "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | calculate_lifetime_value(\n    cohort_column='region',\n    date_column='transaction_date',\n    user_id_column='customer_id',\n    value_column='revenue',\n    time_period='month',\n    max_periods=6,\n    cumulative=True\n)",
+      "instructions": {
+        "business_case": "Geographic Revenue Analysis - Compare customer value across different regions to inform market expansion, pricing strategies, and resource allocation decisions.",
+        "natural_language_questions": [
+          "Which geographic regions generate the most revenue per customer?",
+          "How does customer lifetime value vary by location?",
+          "Are customers in certain regions more valuable over time?",
+          "Where should we focus our expansion efforts?"
+        ],
+        "data_keywords": [
+          "geographic", "region", "location", "revenue", "expansion", "market",
+          "customer_value", "international", "territory", "geographic_analysis"
+        ],
+        "configuration_hints": {
+          "cumulative": "true = running total over time, false = period-by-period values",
+          "max_periods": "6 months good for initial assessment, 12+ for full lifecycle",
+          "value_column": "Any monetary value - revenue, profit, purchase amount"
+        },
+        "typical_parameters": {
+          "max_periods_range": [3, 24],
+          "best_for_data_types": ["transaction_data", "customer_revenue", "geographic_data"],
+          "analysis_applications": "Market expansion, pricing strategy, resource allocation"
+        }
+      },
+      "patterns": {
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (revenue)"
+        ],
+        "time_patterns": [
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(6) (months)"
+        ]
+      }
+    }
+]

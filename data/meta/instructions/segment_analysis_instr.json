@@ -1,0 +1,338 @@
+[
+    {
+      "query": "Group customers into 5 segments based on purchase frequency and spending habits",
+      "function": "run_kmeans",
+      "category": "segmentation_analysis",
+      "inputs": {
+        "n_clusters": 5,
+        "algorithm_name": "customer_value_segments",
+        "random_state": 42
+      },
+      "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nseg_pipe = seg_pipe | get_features(columns=['recency', 'frequency', 'monetary'])\nseg_pipe = seg_pipe | run_kmeans(\n    n_clusters=5,\n    algorithm_name='customer_value_segments',\n    random_state=42\n)",
+      "instructions": {
+        "business_case": "Customer Value Segmentation - Identify distinct customer groups for targeted marketing campaigns, personalized pricing strategies, and resource allocation based on purchasing behavior and value to the business.",
+        "natural_language_questions": [
+          "Can you segment our customers by value?",
+          "What are the different types of customers we have?",
+          "How should we group customers for marketing?",
+          "What customer segments should we target?"
+        ],
+        "data_keywords": [
+          "customer", "segment", "group", "cluster", "value", "purchase",
+          "frequency", "spending", "behavior", "rfm", "targeting"
+        ],
+        "configuration_hints": {
+          "n_clusters": "3-7 segments typical for business use. Start with 5 for customer segmentation",
+          "algorithm_name": "Use descriptive names for business context",
+          "random_state": "Set for reproducible results across analyses"
+        },
+        "typical_parameters": {
+          "n_clusters_range": [3, 10],
+          "best_for_data_types": ["behavioral_metrics", "rfm_data", "customer_features"],
+          "business_applications": ["marketing_campaigns", "pricing_strategy", "product_recommendations"],
+          "evaluation_criteria": ["silhouette_score", "business_interpretability", "actionable_insights"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(segment|cluster|group) (users|customers)"
+        ],
+        "num_patterns": [
+          "(5) segments"
+        ]
+      }
+    },
+    {
+      "query": "Identify outlier user behavior patterns in website navigation data",
+      "function": "run_dbscan",
+      "category": "segmentation_analysis",
+      "inputs": {
+        "eps": 0.5,
+        "min_samples": 10,
+        "algorithm_name": "navigation_pattern_clusters"
+      },
+      "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nseg_pipe = seg_pipe | get_features(columns=['navigation_path', 'click_pattern', 'session_duration'])\nseg_pipe = seg_pipe | run_dbscan(\n    eps=0.5,\n    min_samples=10,\n    algorithm_name='navigation_pattern_clusters'\n)",
+      "instructions": {
+        "business_case": "Anomaly Detection & User Behavior Analysis - Identify unusual user behavior patterns that might indicate bot activity, fraud, or unique user segments requiring special attention or different user experience strategies.",
+        "natural_language_questions": [
+          "Are there unusual user behavior patterns?",
+          "Can you find outliers in website navigation?",
+          "What users behave differently from the norm?",
+          "Are there suspicious activity patterns?"
+        ],
+        "data_keywords": [
+          "outlier", "anomaly", "unusual", "behavior", "navigation", "fraud",
+          "bot", "suspicious", "different", "abnormal", "pattern"
+        ],
+        "configuration_hints": {
+          "eps": "Distance threshold - smaller values = tighter clusters. Start with 0.3-0.7",
+          "min_samples": "Minimum points for cluster. Use 5-15 for most applications",
+          "algorithm_name": "Use descriptive name indicating outlier detection purpose"
+        },
+        "typical_parameters": {
+          "eps_range": [0.1, 2.0],
+          "min_samples_range": [3, 50],
+          "best_for_data_types": ["behavioral_sequences", "interaction_patterns", "time_series"],
+          "use_cases": ["fraud_detection", "bot_identification", "unusual_behavior"],
+          "preprocessing": ["feature_scaling", "dimensionality_reduction", "distance_metrics"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(identify) (outlier)"
+        ],
+        "num_patterns": [
+          "(10)"
+        ]
+      }
+    },
+    {
+      "query": "Create hierarchical clusters of products based on co-purchase patterns",
+      "function": "run_hdbscan",
+      "category": "segmentation_analysis",
+      "inputs": {
+        "min_cluster_size": 5,
+        "min_samples": 3,
+        "algorithm_name": "product_affinity_clusters"
+      },
+      "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nseg_pipe = seg_pipe | get_features(columns=['co_purchase_frequency', 'category_similarity', 'price_range'])\nseg_pipe = seg_pipe | run_hdbscan(\n    min_cluster_size=5,\n    min_samples=3,\n    algorithm_name='product_affinity_clusters'\n)",
+      "instructions": {
+        "business_case": "Product Recommendation & Merchandising - Discover natural product groupings for cross-selling opportunities, inventory planning, and recommendation engine optimization based on customer purchase patterns.",
+        "natural_language_questions": [
+          "What products are bought together?",
+          "Can you find product affinity groups?",
+          "How should we organize our product catalog?",
+          "What products complement each other?"
+        ],
+        "data_keywords": [
+          "product", "affinity", "cross_sell", "recommendation", "bundle",
+          "complement", "co_purchase", "together", "merchandising"
+        ],
+        "configuration_hints": {
+          "min_cluster_size": "Minimum viable product group size. Use 3-10 for most catalogs",
+          "min_samples": "Core product requirement. Use 2-5 for product affinity",
+          "algorithm_name": "Use business-relevant name for product insights"
+        },
+        "typical_parameters": {
+          "min_cluster_size_range": [3, 20],
+          "min_samples_range": [2, 10],
+          "best_for_data_types": ["transaction_data", "purchase_history", "product_features"],
+          "business_applications": ["cross_selling", "product_bundling", "catalog_organization"],
+          "output_interpretation": ["core_products", "edge_products", "noise_products"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(segment|cluster|group)"
+        ],
+        "num_patterns": [
+          "(5)",
+          "(3)"
+        ]
+      }
+    },
+    {
+      "query": "Form customer segments using hierarchical clustering with complete linkage",
+      "function": "run_agglomerative",
+      "category": "segmentation_analysis",
+      "inputs": {
+        "n_clusters": 4,
+        "linkage": "complete",
+        "algorithm_name": "customer_hierarchical_segments"
+      },
+      "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nseg_pipe = seg_pipe | get_features(columns=['purchase_history', 'demographics', 'engagement_metrics'])\nseg_pipe = seg_pipe | run_agglomerative(\n    n_clusters=4,\n    linkage='complete',\n    algorithm_name='customer_hierarchical_segments'\n)",
+      "instructions": {
+        "business_case": "Strategic Customer Segmentation - Create hierarchical customer groups that reveal natural business segments and sub-segments, enabling multi-level marketing strategies and organizational structures for customer management.",
+        "natural_language_questions": [
+          "Can you create a hierarchy of customer segments?",
+          "How do customer groups relate to each other?",
+          "What's the natural structure of our customer base?",
+          "Can you show customer segment relationships?"
+        ],
+        "data_keywords": [
+          "hierarchy", "structure", "relationship", "nested", "tree",
+          "dendrogram", "levels", "multi_level", "organizational"
+        ],
+        "configuration_hints": {
+          "linkage": "complete = compact clusters, ward = balanced sizes, average = moderate",
+          "n_clusters": "Choose based on business structure needs (3-8 typical)",
+          "algorithm_name": "Use name reflecting hierarchical business purpose"
+        },
+        "typical_parameters": {
+          "linkage_options": ["ward", "complete", "average", "single"],
+          "n_clusters_range": [2, 15],
+          "best_for_data_types": ["mixed_features", "standardized_data", "customer_profiles"],
+          "business_applications": ["organizational_structure", "tiered_service", "nested_campaigns"],
+          "visualization": ["dendrogram", "cluster_tree", "hierarchical_map"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(segment|cluster|group) (users|customers)"
+        ],
+        "num_patterns": [
+          "(4)"
+        ]
+      }
+    },
+    {
+      "query": "Create user segments based on subscription status and activity level",
+      "function": "run_rule_based",
+      "category": "segmentation_analysis",
+      "inputs": {
+        "rules": {
+          "High Value Active": "subscription_tier == 'premium' and activity_score > 8",
+          "High Value At Risk": "subscription_tier == 'premium' and activity_score < 3",
+          "Growth Potential": "subscription_tier == 'basic' and activity_score > 8",
+          "Dormant": "activity_score < 2"
+        },
+        "default_segment": "Other",
+        "algorithm_name": "engagement_segments"
+      },
+      "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nrules = {\n    'High Value Active': \"subscription_tier == 'premium' and activity_score > 8\",\n    'High Value At Risk': \"subscription_tier == 'premium' and activity_score < 3\",\n    'Growth Potential': \"subscription_tier == 'basic' and activity_score > 8\",\n    'Dormant': \"activity_score < 2\"\n}\nseg_pipe = seg_pipe | run_rule_based(\n    rules=rules,\n    default_segment='Other',\n    algorithm_name='engagement_segments'\n)",
+      "instructions": {
+        "business_case": "Business Rule-Based Segmentation - Create actionable customer segments based on explicit business logic and domain knowledge, enabling immediate strategy implementation and clear segment definitions for operational teams.",
+        "natural_language_questions": [
+          "Can you segment based on our business rules?",
+          "How do we define high-value customers?",
+          "What customers need immediate attention?",
+          "Can you create segments using our criteria?"
+        ],
+        "data_keywords": [
+          "rule_based", "business_logic", "criteria", "threshold", "definition",
+          "policy", "explicit", "actionable", "clear", "operational"
+        ],
+        "configuration_hints": {
+          "rules": "Use clear business logic with logical operators (and, or, >, <, ==)",
+          "default_segment": "Catch-all category for records not matching specific rules",
+          "segment_names": "Use action-oriented names that guide business decisions"
+        },
+        "typical_parameters": {
+          "rule_complexity": ["simple_thresholds", "multiple_conditions", "nested_logic"],
+          "operator_types": ["comparison", "logical", "membership"],
+          "business_applications": ["customer_lifecycle", "risk_management", "engagement_tiers"],
+          "advantages": ["interpretable", "actionable", "transparent", "business_aligned"],
+          "maintenance": ["rule_updates", "threshold_tuning", "performance_monitoring"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(segment|cluster|group) (users|customers)"
+        ]
+      }
+    },
+    {
+      "query": "Generate detailed profile statistics for each customer segment",
+      "function": "generate_summary",
+      "category": "segmentation_analysis",
+      "inputs": {
+        "algorithm": "customer_value_segments"
+      },
+      "example": "summary = generate_summary(algorithm='customer_value_segments')(seg_pipe)\nprint(f\"Segment profiles: {summary['segment_profiles']}\")\nprint(f\"Segment sizes: {summary['segment_sizes']}\")",
+      "instructions": {
+        "business_case": "Segment Profiling & Business Intelligence - Generate comprehensive segment descriptions and statistics to understand segment characteristics, sizes, and key differentiators for strategic decision-making and campaign planning.",
+        "natural_language_questions": [
+          "What characterizes each customer segment?",
+          "Can you describe the segments you found?",
+          "What are the key differences between segments?",
+          "How big is each customer group?"
+        ],
+        "data_keywords": [
+          "profile", "describe", "characterize", "summary", "statistics",
+          "differences", "features", "demographics", "behavior", "insights"
+        ],
+        "configuration_hints": {
+          "algorithm": "Must match algorithm name used in segmentation step",
+          "output_format": "Returns structured profiles with statistics and characteristics",
+          "interpretation": "Focus on actionable differences between segments"
+        },
+        "typical_parameters": {
+          "summary_metrics": ["mean", "median", "mode", "std", "count"],
+          "profile_elements": ["demographics", "behavior", "value", "preferences"],
+          "business_applications": ["persona_development", "targeting_strategy", "resource_allocation"],
+          "visualization": ["segment_profiles", "comparison_charts", "characteristic_plots"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(generate) (profile|statistics|summary)"
+        ]
+      }
+    },
+    {
+      "query": "Retrieve all users in the 'high_value_active' segment for targeted marketing",
+      "function": "get_segment_data",
+      "category": "segmentation_analysis",
+      "inputs": {
+        "segment_id": "high_value_active",
+        "algorithm": "engagement_segments"
+      },
+      "example": "high_value_users = get_segment_data('high_value_active', 'engagement_segments')(seg_pipe)\nprint(f\"Found {len(high_value_users)} high value active users\")\nprint(high_value_users.head())",
+      "instructions": {
+        "business_case": "Campaign Execution & Customer Targeting - Extract specific customer segments for direct marketing campaigns, personalized communications, and targeted business actions, enabling immediate implementation of segmentation insights.",
+        "natural_language_questions": [
+          "Can you get all customers in the high-value segment?",
+          "Who are the customers I should target?",
+          "Can you export a specific customer group?",
+          "What customers match this criteria?"
+        ],
+        "data_keywords": [
+          "extract", "export", "target", "campaign", "list", "specific",
+          "marketing", "action", "implementation", "execution"
+        ],
+        "configuration_hints": {
+          "segment_id": "Must exactly match segment name from segmentation results",
+          "algorithm": "Must match algorithm name used in segmentation",
+          "output_format": "Returns filtered dataframe with segment members"
+        },
+        "typical_parameters": {
+          "use_cases": ["email_campaigns", "direct_mail", "sales_outreach", "product_offers"],
+          "data_exports": ["csv", "database", "crm_integration", "marketing_platform"],
+          "privacy_considerations": ["data_permissions", "opt_in_status", "compliance"],
+          "campaign_tracking": ["segment_performance", "response_rates", "conversion_metrics"]
+        }
+      },
+      "patterns": {
+        "filter_patterns": [
+          "(retrieve|get) all users in the 'high_value_active' segment"
+        ]
+      }
+    },
+    {
+      "query": "Compare effectiveness of KMeans vs rule-based segmentation approaches",
+      "function": "compare_algorithms",
+      "category": "segmentation_analysis",
+      "inputs": {},
+      "example": "comparison = compare_algorithms()(seg_pipe)\nprint(f\"Algorithm comparison: {comparison}\")\nprint(f\"Best algorithm: {comparison['best_algorithm']}\")",
+      "instructions": {
+        "business_case": "Segmentation Strategy Optimization - Evaluate different segmentation approaches to select the most effective method for specific business objectives, balancing statistical quality with business interpretability and actionability.",
+        "natural_language_questions": [
+          "Which segmentation method works best?",
+          "Should I use machine learning or business rules?",
+          "How do different approaches compare?",
+          "What's the most effective segmentation strategy?"
+        ],
+        "data_keywords": [
+          "compare", "evaluate", "effectiveness", "best", "optimal",
+          "strategy", "approach", "method", "performance", "quality"
+        ],
+        "configuration_hints": {
+          "evaluation_criteria": "Considers silhouette score, business interpretability, and actionability",
+          "algorithm_types": "Compares statistical and rule-based approaches",
+          "business_context": "Weighs technical metrics with business applicability"
+        },
+        "typical_parameters": {
+          "comparison_metrics": ["silhouette_score", "calinski_harabasz", "davies_bouldin"],
+          "business_criteria": ["interpretability", "actionability", "stability"],
+          "algorithm_types": ["clustering", "rule_based", "hierarchical", "density_based"],
+          "selection_factors": ["data_type", "business_objective", "resource_constraints"],
+          "output_format": ["performance_scores", "recommendations", "trade_off_analysis"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(compare) (effectiveness)"
+        ]
+      }
+    }
+]

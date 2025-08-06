@@ -4,23 +4,53 @@
     "functions": {
       "form_time_cohorts": {
         "description": "Form cohorts based on time periods",
-        "usage_description": "Groups users/customers by their sign-up, registration, or first activity date. Common use cases: tracking retention by sign-up month, analyzing quarterly cohorts, creating weekly purchase cohorts, and grouping customers by joining year for annual spending analysis. Supports daily, weekly, monthly, quarterly, and yearly periods."
+        "usage_description": "Groups users/customers by their sign-up, registration, or first activity date. Common use cases: tracking retention by sign-up month, analyzing quarterly cohorts, creating weekly purchase cohorts, and grouping customers by joining year for annual spending analysis. Supports daily, weekly, monthly, quarterly, and yearly periods.",
+        "example_questions": [
+          "How do I group customers by their sign-up month?",
+          "I want to create cohorts based on when users first registered",
+          "How can I analyze customer behavior by joining date?",
+          "I need to form time-based cohorts for retention analysis"
+        ]
       },
       "form_behavioral_cohorts": {
         "description": "Form cohorts based on user behavior",
-        "usage_description": "Creates user segments based on behavioral characteristics like spending levels, activity frequency, or feature usage. Useful for analyzing high-value vs low-value customers, power users vs casual users, and creating targeted marketing segments."
+        "usage_description": "Creates user segments based on behavioral characteristics like spending levels, activity frequency, or feature usage. Useful for analyzing high-value vs low-value customers, power users vs casual users, and creating targeted marketing segments.",
+        "example_questions": [
+          "How do I create customer segments based on spending behavior?",
+          "I want to group users by their activity frequency",
+          "How can I segment customers by their usage patterns?",
+          "I need to create behavioral cohorts for targeted marketing"
+        ]
       },
       "calculate_retention": {
         "description": "Calculate retention metrics for cohorts",
-        "usage_description": "Measures how many users from each cohort return over time. Essential for understanding user engagement, product stickiness, and the effectiveness of onboarding processes. Supports classic, rolling, and unbounded retention calculations."
+        "usage_description": "Measures how many users from each cohort return over time. Essential for understanding user engagement, product stickiness, and the effectiveness of onboarding processes. Supports classic, rolling, and unbounded retention calculations.",
+        "example_questions": [
+          "How do I calculate customer retention rates by cohort?",
+          "I want to measure how many users return over time",
+          "How can I analyze user engagement and stickiness?",
+          "I need to calculate retention metrics for different user groups"
+        ]
       },
       "calculate_conversion": {
         "description": "Calculate conversion funnel metrics for cohorts",
-        "usage_description": "Tracks how users from different cohorts progress through conversion funnels (e.g., signup → activation → first purchase). Helps identify which cohorts have better conversion rates and where users drop off in the funnel."
+        "usage_description": "Tracks how users from different cohorts progress through conversion funnels (e.g., signup → activation → first purchase). Helps identify which cohorts have better conversion rates and where users drop off in the funnel.",
+        "example_questions": [
+          "How do I track conversion rates through funnels by cohort?",
+          "I want to analyze where users drop off in conversion funnels",
+          "How can I measure funnel performance across different user groups?",
+          "I need to calculate conversion metrics for signup to purchase flows"
+        ]
       },
       "calculate_lifetime_value": {
         "description": "Calculate lifetime value metrics for cohorts",
-        "usage_description": "Estimates the total value each cohort will generate over time. Critical for customer acquisition cost analysis, marketing ROI calculations, and understanding which user segments are most valuable to the business."
+        "usage_description": "Estimates the total value each cohort will generate over time. Critical for customer acquisition cost analysis, marketing ROI calculations, and understanding which user segments are most valuable to the business.",
+        "example_questions": [
+          "How do I calculate customer lifetime value by cohort?",
+          "I want to estimate the total value each user group will generate",
+          "How can I analyze customer acquisition cost vs lifetime value?",
+          "I need to calculate LTV metrics for marketing ROI analysis"
+        ]
       }
     }
   },
@@ -29,27 +59,63 @@
     "functions": {
       "analyze_funnel": {
         "description": "Analyze a user funnel using the existing CohortPipe framework",
-        "usage_description": "Creates conversion funnels to track user progression through defined steps (e.g., view → add to cart → purchase). Essential for identifying drop-off points, optimizing user flows, and measuring funnel performance across different user segments."
+        "usage_description": "Creates conversion funnels to track user progression through defined steps (e.g., view → add to cart → purchase). Essential for identifying drop-off points, optimizing user flows, and measuring funnel performance across different user segments.",
+        "example_questions": [
+          "How do I analyze user conversion funnels?",
+          "I want to track user progression through defined steps",
+          "How can I identify drop-off points in user flows?",
+          "I need to measure funnel performance across user segments"
+        ]
       },
       "analyze_funnel_by_time": {
         "description": "Analyze funnel performance over time using the existing CohortPipe framework",
-        "usage_description": "Tracks how funnel conversion rates change over time, helping identify seasonal patterns, the impact of product changes, and long-term trends in user behavior. Useful for measuring the success of optimization efforts."
+        "usage_description": "Tracks how funnel conversion rates change over time, helping identify seasonal patterns, the impact of product changes, and long-term trends in user behavior. Useful for measuring the success of optimization efforts.",
+        "example_questions": [
+          "How do I track funnel performance over time?",
+          "I want to see how conversion rates change over time",
+          "How can I identify seasonal patterns in funnel performance?",
+          "I need to measure the impact of product changes on funnels"
+        ]
       },
       "analyze_funnel_by_segment": {
         "description": "Analyze funnel performance across different user segments using the existing CohortPipe framework",
-        "usage_description": "Compares funnel performance across different user segments (e.g., by device, location, acquisition channel). Helps identify which segments have better conversion rates and where to focus optimization efforts."
+        "usage_description": "Compares funnel performance across different user segments (e.g., by device, location, acquisition channel). Helps identify which segments have better conversion rates and where to focus optimization efforts.",
+        "example_questions": [
+          "How do I compare funnel performance across user segments?",
+          "I want to analyze funnels by device, location, or acquisition channel",
+          "How can I identify which segments have better conversion rates?",
+          "I need to compare funnel performance across different user groups"
+        ]
       },
       "analyze_user_paths": {
         "description": "Analyze actual paths users take through the funnel (not just the ideal path)",
-        "usage_description": "Discovers the actual sequences of actions users take, not just the predefined funnel steps. Reveals unexpected user behaviors, alternative conversion paths, and opportunities for funnel optimization."
+        "usage_description": "Discovers the actual sequences of actions users take, not just the predefined funnel steps. Reveals unexpected user behaviors, alternative conversion paths, and opportunities for funnel optimization.",
+        "example_questions": [
+          "How do I analyze the actual paths users take through funnels?",
+          "I want to discover unexpected user behaviors and alternative paths",
+          "How can I find the real user journey sequences?",
+          "I need to analyze actual user paths vs ideal funnel steps"
+        ]
       },
       "get_funnel_summary": {
         "description": "Return a summary of funnel analysis results",
-        "usage_description": "Provides a comprehensive overview of funnel performance including conversion rates, drop-off points, and key metrics. Useful for reporting and identifying the most critical areas for improvement."
+        "usage_description": "Provides a comprehensive overview of funnel performance including conversion rates, drop-off points, and key metrics. Useful for reporting and identifying the most critical areas for improvement.",
+        "example_questions": [
+          "How do I get a summary of funnel analysis results?",
+          "I want to see conversion rates and drop-off points",
+          "How can I get a comprehensive overview of funnel performance?",
+          "I need a summary report of funnel analysis for reporting"
+        ]
       },
       "compare_segments": {
         "description": "Compare funnel metrics across segments",
-        "usage_description": "Statistical comparison of funnel performance between different user segments. Helps identify significant differences in conversion rates and prioritize optimization efforts based on segment performance."
+        "usage_description": "Statistical comparison of funnel performance between different user segments. Helps identify significant differences in conversion rates and prioritize optimization efforts based on segment performance.",
+        "example_questions": [
+          "How do I statistically compare funnel metrics across segments?",
+          "I want to identify significant differences in conversion rates",
+          "How can I prioritize optimization efforts based on segment performance?",
+          "I need to compare funnel performance between different user groups"
+        ]
       }
     }
   },
@@ -58,63 +124,153 @@
     "functions": {
       "prepare_clustering_data": {
         "description": "Prepare and preprocess data for K-means clustering with scaling and outlier handling",
-        "usage_description": "Essential preprocessing step that scales features to similar ranges, handles outliers, and prepares data for clustering. Critical for ensuring clustering quality and preventing features with larger scales from dominating the analysis."
+        "usage_description": "Essential preprocessing step that scales features to similar ranges, handles outliers, and prepares data for clustering. Critical for ensuring clustering quality and preventing features with larger scales from dominating the analysis.",
+        "example_questions": [
+          "How do I prepare data for K-means clustering?",
+          "I want to scale features and handle outliers before clustering",
+          "How can I preprocess data to ensure clustering quality?",
+          "I need to prepare data with scaling and outlier handling for clustering"
+        ]
       },
       "engineer_clustering_features": {
         "description": "Create advanced features optimized for clustering algorithms",
-        "usage_description": "Creates interaction features, polynomial features, ratios, and aggregations that can improve clustering quality. Useful for capturing complex relationships in the data and creating more meaningful customer segments."
+        "usage_description": "Creates interaction features, polynomial features, ratios, and aggregations that can improve clustering quality. Useful for capturing complex relationships in the data and creating more meaningful customer segments.",
+        "example_questions": [
+          "How do I create advanced features for clustering algorithms?",
+          "I want to engineer features that improve clustering quality",
+          "How can I create interaction features and ratios for clustering?",
+          "I need to build features optimized for customer segmentation"
+        ]
       },
       "reduce_dimensions": {
         "description": "Apply dimensionality reduction for visualization and clustering efficiency",
-        "usage_description": "Reduces the number of features using PCA or t-SNE to improve clustering performance and enable 2D/3D visualization. Essential for high-dimensional data and creating interpretable cluster visualizations."
+        "usage_description": "Reduces the number of features using PCA or t-SNE to improve clustering performance and enable 2D/3D visualization. Essential for high-dimensional data and creating interpretable cluster visualizations.",
+        "example_questions": [
+          "How do I reduce dimensions for clustering visualization?",
+          "I want to apply PCA or t-SNE for clustering efficiency",
+          "How can I create 2D/3D visualizations of high-dimensional clusters?",
+          "I need to reduce dimensions to improve clustering performance"
+        ]
       },
       "configure_kmeans": {
         "description": "Configure standard K-means clustering algorithm",
-        "usage_description": "Sets up K-means parameters including number of clusters, initialization method, and convergence criteria. The core configuration step for customer segmentation, market research, and data exploration."
+        "usage_description": "Sets up K-means parameters including number of clusters, initialization method, and convergence criteria. The core configuration step for customer segmentation, market research, and data exploration.",
+        "example_questions": [
+          "How do I configure K-means clustering parameters?",
+          "I want to set up K-means for customer segmentation",
+          "How can I configure the number of clusters and initialization method?",
+          "I need to configure K-means for market research and data exploration"
+        ]
       },
       "configure_minibatch_kmeans": {
         "description": "Configure MiniBatch K-means for large-scale clustering",
-        "usage_description": "Optimized version of K-means for large datasets that processes data in mini-batches. Useful for big data applications where memory efficiency and speed are critical."
+        "usage_description": "Optimized version of K-means for large datasets that processes data in mini-batches. Useful for big data applications where memory efficiency and speed are critical.",
+        "example_questions": [
+          "How do I configure MiniBatch K-means for large datasets?",
+          "I want to use K-means for big data with memory efficiency",
+          "How can I set up MiniBatch K-means for large-scale clustering?",
+          "I need to configure K-means for big data applications with speed optimization"
+        ]
       },
       "fit_kmeans": {
         "description": "Train K-means model and assign cluster labels",
-        "usage_description": "Executes the clustering algorithm and assigns each data point to a cluster. The main training step that creates the customer segments or data groupings."
+        "usage_description": "Executes the clustering algorithm and assigns each data point to a cluster. The main training step that creates the customer segments or data groupings.",
+        "example_questions": [
+          "How do I train a K-means model and assign cluster labels?",
+          "I want to execute the clustering algorithm and create customer segments",
+          "How can I fit K-means and assign data points to clusters?",
+          "I need to train K-means and create data groupings"
+        ]
       },
       "evaluate_clustering": {
         "description": "Calculate clustering evaluation metrics",
-        "usage_description": "Measures clustering quality using metrics like silhouette score, Calinski-Harabasz score, and Davies-Bouldin score. Essential for validating cluster quality and comparing different clustering configurations."
+        "usage_description": "Measures clustering quality using metrics like silhouette score, Calinski-Harabasz score, and Davies-Bouldin score. Essential for validating cluster quality and comparing different clustering configurations.",
+        "example_questions": [
+          "How do I evaluate clustering quality with metrics?",
+          "I want to calculate silhouette score and other clustering metrics",
+          "How can I validate cluster quality and compare configurations?",
+          "I need to measure clustering performance with evaluation metrics"
+        ]
       },
       "profile_clusters": {
         "description": "Create detailed statistical profiles of each cluster",
-        "usage_description": "Analyzes the characteristics of each cluster to understand what makes them distinct. Critical for interpreting clusters and creating actionable business insights from the segmentation."
+        "usage_description": "Analyzes the characteristics of each cluster to understand what makes them distinct. Critical for interpreting clusters and creating actionable business insights from the segmentation.",
+        "example_questions": [
+          "How do I create statistical profiles of each cluster?",
+          "I want to analyze cluster characteristics and understand what makes them distinct",
+          "How can I interpret clusters and create actionable business insights?",
+          "I need to profile clusters for customer segmentation analysis"
+        ]
       },
       "find_optimal_k": {
         "description": "Determine optimal k using elbow method and silhouette analysis",
-        "usage_description": "Automatically determines the best number of clusters using statistical methods. Eliminates guesswork in choosing the number of segments and ensures optimal clustering quality."
+        "usage_description": "Automatically determines the best number of clusters using statistical methods. Eliminates guesswork in choosing the number of segments and ensures optimal clustering quality.",
+        "example_questions": [
+          "How do I find the optimal number of clusters automatically?",
+          "I want to use elbow method and silhouette analysis to determine k",
+          "How can I automatically determine the best number of clusters?",
+          "I need to find optimal k using statistical methods for clustering"
+        ]
       },
       "plot_clusters_2d": {
         "description": "Visualize clusters in 2D feature space with centroids",
-        "usage_description": "Creates scatter plots showing how data points are grouped in 2D space. Essential for understanding cluster boundaries, identifying outliers, and communicating results to stakeholders."
+        "usage_description": "Creates scatter plots showing how data points are grouped in 2D space. Essential for understanding cluster boundaries, identifying outliers, and communicating results to stakeholders.",
+        "example_questions": [
+          "How do I visualize clusters in 2D space with centroids?",
+          "I want to create scatter plots showing cluster groupings",
+          "How can I visualize cluster boundaries and identify outliers?",
+          "I need to plot clusters in 2D for stakeholder communication"
+        ]
       },
       "plot_cluster_profiles": {
         "description": "Visualize cluster characteristics using heatmaps",
-        "usage_description": "Creates heatmaps showing how each cluster differs across features. Useful for understanding cluster characteristics and identifying the most important features for each segment."
+        "usage_description": "Creates heatmaps showing how each cluster differs across features. Useful for understanding cluster characteristics and identifying the most important features for each segment.",
+        "example_questions": [
+          "How do I visualize cluster characteristics using heatmaps?",
+          "I want to create heatmaps showing cluster differences across features",
+          "How can I identify the most important features for each cluster?",
+          "I need to visualize cluster profiles with heatmaps"
+        ]
       },
       "plot_elbow_curve": {
         "description": "Plot elbow curve for optimal k selection using within-cluster sum of squares",
-        "usage_description": "Visualizes the trade-off between number of clusters and clustering quality. Helps in manually selecting the optimal number of clusters when automatic methods are inconclusive."
+        "usage_description": "Visualizes the trade-off between number of clusters and clustering quality. Helps in manually selecting the optimal number of clusters when automatic methods are inconclusive.",
+        "example_questions": [
+          "How do I plot an elbow curve for optimal k selection?",
+          "I want to visualize the trade-off between clusters and quality",
+          "How can I manually select optimal k using elbow curve?",
+          "I need to plot within-cluster sum of squares for k selection"
+        ]
       },
       "plot_silhouette_scores": {
         "description": "Plot silhouette scores across different k values for cluster quality assessment",
-        "usage_description": "Shows how well-separated the clusters are for different values of k. Higher silhouette scores indicate better-defined, more separated clusters."
+        "usage_description": "Shows how well-separated the clusters are for different values of k. Higher silhouette scores indicate better-defined, more separated clusters.",
+        "example_questions": [
+          "How do I plot silhouette scores across different k values?",
+          "I want to assess cluster quality using silhouette scores",
+          "How can I see how well-separated clusters are for different k?",
+          "I need to plot silhouette scores for cluster quality assessment"
+        ]
       },
       "save_kmeans_model": {
         "description": "Save trained clustering model with preprocessing pipeline and cluster profiles",
-        "usage_description": "Persists the trained model for future use, including preprocessing steps and cluster profiles. Essential for production deployment and model versioning."
+        "usage_description": "Persists the trained model for future use, including preprocessing steps and cluster profiles. Essential for production deployment and model versioning.",
+        "example_questions": [
+          "How do I save a trained K-means model for future use?",
+          "I want to persist the clustering model with preprocessing pipeline",
+          "How can I save cluster profiles and preprocessing steps?",
+          "I need to save the model for production deployment and versioning"
+        ]
       },
       "print_cluster_summary": {
         "description": "Print comprehensive clustering analysis summary and insights",
-        "usage_description": "Provides a complete overview of the clustering results including cluster sizes, key characteristics, and business insights. Useful for reporting and stakeholder communication."
+        "usage_description": "Provides a complete overview of the clustering results including cluster sizes, key characteristics, and business insights. Useful for reporting and stakeholder communication.",
+        "example_questions": [
+          "How do I print a comprehensive clustering analysis summary?",
+          "I want to see cluster sizes, characteristics, and business insights",
+          "How can I get a complete overview of clustering results?",
+          "I need to print clustering summary for reporting and stakeholder communication"
+        ]
       }
     }
   },
@@ -123,71 +279,173 @@
     "functions": {
       "moving_average": {
         "description": "Calculate moving averages for specified columns",
-        "usage_description": "Smooths time series data to identify trends and reduce noise. Common applications: smoothing daily sales data, analyzing website traffic trends, and identifying patterns in sensor readings. Supports simple, weighted, and exponential moving averages."
+        "usage_description": "Smooths time series data to identify trends and reduce noise. Common applications: smoothing daily sales data, analyzing website traffic trends, and identifying patterns in sensor readings. Supports simple, weighted, and exponential moving averages.",
+        "example_questions": [
+          "How do I calculate moving averages to smooth time series data?",
+          "I want to identify trends in daily sales data using moving averages",
+          "How can I reduce noise in sensor readings with moving averages?",
+          "I need to smooth website traffic trends using moving averages"
+        ]
       },
       "moving_variance": {
         "description": "Calculate moving variance and standard deviation for specified columns",
-        "usage_description": "Measures volatility and variability over time. Useful for detecting changes in data variability, analyzing risk in financial data, and identifying periods of unusual activity in sensor data."
+        "usage_description": "Measures volatility and variability over time. Useful for detecting changes in data variability, analyzing risk in financial data, and identifying periods of unusual activity in sensor data.",
+        "example_questions": [
+          "How do I calculate moving variance to measure volatility over time?",
+          "I want to detect changes in data variability using moving variance",
+          "How can I analyze risk in financial data with moving variance?",
+          "I need to identify periods of unusual activity in sensor data"
+        ]
       },
       "moving_sum": {
         "description": "Calculate moving sums for specified columns",
-        "usage_description": "Tracks cumulative totals over rolling windows. Common uses: calculating rolling revenue totals, tracking cumulative user activity, and analyzing running totals in time series data."
+        "usage_description": "Tracks cumulative totals over rolling windows. Common uses: calculating rolling revenue totals, tracking cumulative user activity, and analyzing running totals in time series data.",
+        "example_questions": [
+          "How do I calculate moving sums to track cumulative totals?",
+          "I want to calculate rolling revenue totals over time",
+          "How can I track cumulative user activity with moving sums?",
+          "I need to analyze running totals in time series data"
+        ]
       },
       "moving_quantile": {
         "description": "Calculate moving quantiles (percentiles) for specified columns",
-        "usage_description": "Provides robust measures of central tendency and spread that are less sensitive to outliers than means. Useful for analyzing data distributions over time and identifying changes in data characteristics."
+        "usage_description": "Provides robust measures of central tendency and spread that are less sensitive to outliers than means. Useful for analyzing data distributions over time and identifying changes in data characteristics.",
+        "example_questions": [
+          "How do I calculate moving quantiles for robust measures?",
+          "I want to analyze data distributions over time using quantiles",
+          "How can I get measures less sensitive to outliers than means?",
+          "I need to identify changes in data characteristics using moving quantiles"
+        ]
       },
       "moving_correlation": {
         "description": "Calculate moving correlations between pairs of columns",
-        "usage_description": "Tracks how relationships between variables change over time. Essential for understanding dynamic relationships in financial data, sensor networks, and multivariate time series analysis."
+        "usage_description": "Tracks how relationships between variables change over time. Essential for understanding dynamic relationships in financial data, sensor networks, and multivariate time series analysis.",
+        "example_questions": [
+          "How do I calculate moving correlations between variables?",
+          "I want to track how relationships change over time",
+          "How can I understand dynamic relationships in financial data?",
+          "I need to analyze correlations in sensor networks over time"
+        ]
       },
       "moving_zscore": {
         "description": "Calculate moving z-scores for specified columns",
-        "usage_description": "Standardizes data relative to local windows, making it easier to identify unusual values. Useful for anomaly detection, quality control, and identifying outliers in streaming data."
+        "usage_description": "Standardizes data relative to local windows, making it easier to identify unusual values. Useful for anomaly detection, quality control, and identifying outliers in streaming data.",
+        "example_questions": [
+          "How do I calculate moving z-scores for anomaly detection?",
+          "I want to standardize data relative to local windows",
+          "How can I identify unusual values in streaming data?",
+          "I need to perform quality control using moving z-scores"
+        ]
       },
       "moving_apply_by_group": {
         "description": "Apply a function by group within a moving window",
-        "usage_description": "Performs group-specific calculations within moving windows. Useful for analyzing panel data where you need to maintain group structure while applying time-based calculations."
+        "usage_description": "Performs group-specific calculations within moving windows. Useful for analyzing panel data where you need to maintain group structure while applying time-based calculations.",
+        "example_questions": [
+          "How do I apply functions by group within moving windows?",
+          "I want to perform group-specific calculations in moving windows",
+          "How can I maintain group structure in time-based calculations?",
+          "I need to analyze panel data with group-specific moving calculations"
+        ]
       },
       "moving_ratio": {
         "description": "Calculate the ratio of sums of two columns within a moving window",
-        "usage_description": "Tracks ratios over time, such as conversion rates, efficiency metrics, or performance ratios. Useful for analyzing trends in proportional relationships."
+        "usage_description": "Tracks ratios over time, such as conversion rates, efficiency metrics, or performance ratios. Useful for analyzing trends in proportional relationships.",
+        "example_questions": [
+          "How do I calculate moving ratios between two columns?",
+          "I want to track conversion rates over time using moving ratios",
+          "How can I analyze efficiency metrics with moving ratios?",
+          "I need to calculate performance ratios within moving windows"
+        ]
       },
       "detect_turning_points": {
         "description": "Detect peaks and troughs (turning points) in time series data",
-        "usage_description": "Identifies local maxima and minima in time series data. Essential for identifying trend reversals, seasonal peaks, and critical points in business metrics."
+        "usage_description": "Identifies local maxima and minima in time series data. Essential for identifying trend reversals, seasonal peaks, and critical points in business metrics.",
+        "example_questions": [
+          "How do I detect peaks and troughs in time series data?",
+          "I want to identify local maxima and minima in time series",
+          "How can I find trend reversals and seasonal peaks?",
+          "I need to detect critical turning points in business metrics"
+        ]
       },
       "moving_regression": {
         "description": "Calculate rolling regression coefficients and statistics",
-        "usage_description": "Tracks how relationships between variables evolve over time. Useful for analyzing changing market dynamics, evolving customer behavior patterns, and dynamic system modeling."
+        "usage_description": "Tracks how relationships between variables evolve over time. Useful for analyzing changing market dynamics, evolving customer behavior patterns, and dynamic system modeling.",
+        "example_questions": [
+          "How do I calculate rolling regression coefficients over time?",
+          "I want to track how relationships between variables evolve",
+          "How can I analyze changing market dynamics with rolling regression?",
+          "I need to model dynamic systems with rolling regression statistics"
+        ]
       },
       "moving_min_max": {
         "description": "Calculate moving minimum and maximum values for specified columns",
-        "usage_description": "Tracks the range of values over time. Useful for monitoring data quality, identifying extreme values, and analyzing the spread of data distributions."
+        "usage_description": "Tracks the range of values over time. Useful for monitoring data quality, identifying extreme values, and analyzing the spread of data distributions.",
+        "example_questions": [
+          "How do I calculate moving minimum and maximum values?",
+          "I want to track the range of values over time",
+          "How can I monitor data quality with moving min/max?",
+          "I need to identify extreme values and analyze data spread"
+        ]
       },
       "moving_count": {
         "description": "Calculate moving count of observations or observations meeting a condition",
-        "usage_description": "Tracks frequency of events or conditions over time. Useful for analyzing event patterns, counting occurrences within windows, and monitoring activity levels."
+        "usage_description": "Tracks frequency of events or conditions over time. Useful for analyzing event patterns, counting occurrences within windows, and monitoring activity levels.",
+        "example_questions": [
+          "How do I calculate moving count of observations over time?",
+          "I want to track frequency of events within moving windows",
+          "How can I count occurrences meeting specific conditions?",
+          "I need to monitor activity levels with moving counts"
+        ]
       },
       "moving_aggregate": {
         "description": "Apply a custom aggregation function over a moving window",
-        "usage_description": "Allows application of any custom function to moving windows. Provides flexibility for domain-specific calculations and specialized time series analysis."
+        "usage_description": "Allows application of any custom function to moving windows. Provides flexibility for domain-specific calculations and specialized time series analysis.",
+        "example_questions": [
+          "How do I apply custom aggregation functions over moving windows?",
+          "I want to use custom functions for domain-specific calculations",
+          "How can I perform specialized time series analysis with custom aggregations?",
+          "I need to apply flexible aggregation functions to moving windows"
+        ]
       },
       "moving_percentile_rank": {
         "description": "Calculate the percentile rank of each value within a moving window",
-        "usage_description": "Ranks values relative to their local context. Useful for identifying relative performance, ranking within peer groups, and understanding competitive positioning over time."
+        "usage_description": "Ranks values relative to their local context. Useful for identifying relative performance, ranking within peer groups, and understanding competitive positioning over time.",
+        "example_questions": [
+          "How do I calculate percentile rank within moving windows?",
+          "I want to rank values relative to their local context",
+          "How can I identify relative performance over time?",
+          "I need to understand competitive positioning with percentile ranks"
+        ]
       },
       "time_weighted_average": {
         "description": "Calculate time-weighted average with exponential decay for specified columns",
-        "usage_description": "Gives more weight to recent observations. Useful for emphasizing recent trends, creating responsive indicators, and analyzing time-sensitive metrics."
+        "usage_description": "Gives more weight to recent observations. Useful for emphasizing recent trends, creating responsive indicators, and analyzing time-sensitive metrics.",
+        "example_questions": [
+          "How do I calculate time-weighted average with exponential decay?",
+          "I want to give more weight to recent observations",
+          "How can I emphasize recent trends with time-weighted averages?",
+          "I need to create responsive indicators for time-sensitive metrics"
+        ]
       },
       "moving_cumulative": {
         "description": "Calculate moving cumulative metrics for specified columns",
-        "usage_description": "Tracks running totals within moving windows. Useful for analyzing cumulative effects, tracking progress over time, and understanding accumulation patterns."
+        "usage_description": "Tracks running totals within moving windows. Useful for analyzing cumulative effects, tracking progress over time, and understanding accumulation patterns.",
+        "example_questions": [
+          "How do I calculate moving cumulative metrics?",
+          "I want to track running totals within moving windows",
+          "How can I analyze cumulative effects over time?",
+          "I need to understand accumulation patterns with moving cumulative metrics"
+        ]
       },
       "expanding_window": {
         "description": "Calculate metrics using an expanding window (all prior data)",
-        "usage_description": "Uses all available historical data for each calculation. Useful for creating benchmarks, understanding long-term trends, and analyzing cumulative performance."
+        "usage_description": "Uses all available historical data for each calculation. Useful for creating benchmarks, understanding long-term trends, and analyzing cumulative performance.",
+        "example_questions": [
+          "How do I calculate metrics using expanding windows?",
+          "I want to use all available historical data for calculations",
+          "How can I create benchmarks with expanding windows?",
+          "I need to understand long-term trends using all prior data"
+        ]
       }
     }
   },
@@ -196,47 +454,113 @@
     "functions": {
       "PercentChange": {
         "description": "Compute the percent change (other - baseline) / baseline",
-        "usage_description": "Calculates percentage differences between groups or time periods. Essential for A/B testing, measuring lift from experiments, comparing performance across segments, and analyzing growth rates. Common use cases: conversion rate improvements, revenue growth analysis, and performance comparisons."
+        "usage_description": "Calculates percentage differences between groups or time periods. Essential for A/B testing, measuring lift from experiments, comparing performance across segments, and analyzing growth rates. Common use cases: conversion rate improvements, revenue growth analysis, and performance comparisons.",
+        "example_questions": [
+          "How do I compute percent change between groups or time periods?",
+          "I want to calculate percentage differences for A/B testing",
+          "How can I measure lift from experiments using percent change?",
+          "I need to analyze growth rates and performance comparisons"
+        ]
       },
       "AbsoluteChange": {
         "description": "Compute the absolute change (other - baseline)",
-        "usage_description": "Measures absolute differences between groups or time periods. Useful for understanding the magnitude of changes, analyzing absolute improvements, and comparing raw performance differences. Often used alongside percent change for complete analysis."
+        "usage_description": "Measures absolute differences between groups or time periods. Useful for understanding the magnitude of changes, analyzing absolute improvements, and comparing raw performance differences. Often used alongside percent change for complete analysis.",
+        "example_questions": [
+          "How do I compute absolute change between groups or time periods?",
+          "I want to measure the magnitude of changes between groups",
+          "How can I analyze absolute improvements in performance?",
+          "I need to compare raw performance differences between segments"
+        ]
       },
       "MH": {
         "description": "Compute the Mantel-Haenszel estimator",
-        "usage_description": "Advanced statistical method for analyzing stratified data and controlling for confounding variables. Essential for complex experimental designs, epidemiological studies, and situations where you need to account for multiple factors simultaneously."
+        "usage_description": "Advanced statistical method for analyzing stratified data and controlling for confounding variables. Essential for complex experimental designs, epidemiological studies, and situations where you need to account for multiple factors simultaneously.",
+        "example_questions": [
+          "How do I compute the Mantel-Haenszel estimator for stratified data?",
+          "I want to control for confounding variables in complex experiments",
+          "How can I analyze stratified data accounting for multiple factors?",
+          "I need to use advanced statistical methods for epidemiological studies"
+        ]
       },
       "CUPED": {
         "description": "Compute the absolute change adjusted using the CUPED approach",
-        "usage_description": "Reduces variance in experimental analysis by using pre-treatment covariates. Improves statistical power and precision in A/B testing, making it easier to detect true treatment effects and reducing the required sample size."
+        "usage_description": "Reduces variance in experimental analysis by using pre-treatment covariates. Improves statistical power and precision in A/B testing, making it easier to detect true treatment effects and reducing the required sample size.",
+        "example_questions": [
+          "How do I compute CUPED-adjusted absolute change?",
+          "I want to reduce variance in experimental analysis using pre-treatment covariates",
+          "How can I improve statistical power in A/B testing with CUPED?",
+          "I need to detect true treatment effects with reduced sample size requirements"
+        ]
       },
       "PrePostChange": {
         "description": "Compute the percent change adjusted using the PrePost approach",
-        "usage_description": "Analyzes changes using pre-treatment data as covariates. Useful for before-after studies, measuring the impact of interventions, and analyzing changes while controlling for baseline differences."
+        "usage_description": "Analyzes changes using pre-treatment data as covariates. Useful for before-after studies, measuring the impact of interventions, and analyzing changes while controlling for baseline differences.",
+        "example_questions": [
+          "How do I compute PrePost-adjusted percent change?",
+          "I want to analyze changes using pre-treatment data as covariates",
+          "How can I measure the impact of interventions with PrePost analysis?",
+          "I need to analyze before-after studies controlling for baseline differences"
+        ]
       },
       "FilterConditions": {
         "description": "Filter the data to include only specified conditions",
-        "usage_description": "Subsets data to focus on specific groups or conditions. Essential for targeted analysis, comparing specific segments, and ensuring analysis focuses on relevant data subsets."
+        "usage_description": "Subsets data to focus on specific groups or conditions. Essential for targeted analysis, comparing specific segments, and ensuring analysis focuses on relevant data subsets.",
+        "example_questions": [
+          "How do I filter data to include only specified conditions?",
+          "I want to subset data to focus on specific groups",
+          "How can I ensure analysis focuses on relevant data subsets?",
+          "I need to filter data for targeted analysis of specific segments"
+        ]
       },
       "PowerAnalysis": {
         "description": "Perform power analysis to determine sample size requirements",
-        "usage_description": "Calculates required sample sizes for statistical tests. Critical for experimental design, ensuring studies have sufficient power to detect meaningful effects, and optimizing resource allocation in research and testing."
+        "usage_description": "Calculates required sample sizes for statistical tests. Critical for experimental design, ensuring studies have sufficient power to detect meaningful effects, and optimizing resource allocation in research and testing.",
+        "example_questions": [
+          "How do I perform power analysis to determine sample size requirements?",
+          "I want to calculate required sample sizes for statistical tests",
+          "How can I ensure studies have sufficient power to detect effects?",
+          "I need to optimize resource allocation in research and testing"
+        ]
       },
       "StratifiedSummary": {
         "description": "Create a summary of metrics stratified by specified columns",
-        "usage_description": "Provides detailed breakdowns of metrics across different groups or strata. Useful for understanding how performance varies across segments, identifying opportunities, and creating comprehensive reports."
+        "usage_description": "Provides detailed breakdowns of metrics across different groups or strata. Useful for understanding how performance varies across segments, identifying opportunities, and creating comprehensive reports.",
+        "example_questions": [
+          "How do I create a summary of metrics stratified by columns?",
+          "I want to get detailed breakdowns of metrics across different groups",
+          "How can I understand how performance varies across segments?",
+          "I need to create comprehensive reports with stratified summaries"
+        ]
       },
       "BootstrapCI": {
         "description": "Calculate bootstrap confidence intervals for the difference in means",
-        "usage_description": "Provides robust confidence intervals without assuming specific data distributions. Essential for reliable statistical inference, especially with non-normal data or complex sampling designs."
+        "usage_description": "Provides robust confidence intervals without assuming specific data distributions. Essential for reliable statistical inference, especially with non-normal data or complex sampling designs.",
+        "example_questions": [
+          "How do I calculate bootstrap confidence intervals for difference in means?",
+          "I want to get robust confidence intervals without distribution assumptions",
+          "How can I perform reliable statistical inference with non-normal data?",
+          "I need to calculate confidence intervals for complex sampling designs"
+        ]
       },
       "MultiComparisonAdjustment": {
         "description": "Apply multiple comparison adjustment to p-values",
-        "usage_description": "Controls for multiple testing to prevent false positive results. Critical when conducting multiple statistical tests, ensuring valid inference and maintaining appropriate significance levels."
+        "usage_description": "Controls for multiple testing to prevent false positive results. Critical when conducting multiple statistical tests, ensuring valid inference and maintaining appropriate significance levels.",
+        "example_questions": [
+          "How do I apply multiple comparison adjustment to p-values?",
+          "I want to control for multiple testing to prevent false positives",
+          "How can I ensure valid inference when conducting multiple tests?",
+          "I need to maintain appropriate significance levels with multiple comparisons"
+        ]
       },
       "ExecuteOperations": {
         "description": "Execute the operations pipeline and return all calculated operations",
-        "usage_description": "Runs all configured operations and returns comprehensive results. Essential for obtaining final analysis results, creating reports, and accessing all calculated metrics and comparisons."
+        "usage_description": "Runs all configured operations and returns comprehensive results. Essential for obtaining final analysis results, creating reports, and accessing all calculated metrics and comparisons.",
+        "example_questions": [
+          "How do I execute the operations pipeline and get all results?",
+          "I want to run all configured operations and get comprehensive results",
+          "How can I obtain final analysis results from the operations pipeline?",
+          "I need to access all calculated metrics and comparisons from operations"
+        ]
       }
     }
   },
@@ -245,95 +569,233 @@
     "functions": {
       "Count": {
         "description": "Count the number of non-null entries in a column",
-        "usage_description": "Fundamental metric for counting records, users, transactions, or events. Essential for understanding data volume, tracking activity levels, and measuring frequency of occurrences. Common applications: counting daily active users, transaction volumes, and event frequencies."
+        "usage_description": "Fundamental metric for counting records, users, transactions, or events. Essential for understanding data volume, tracking activity levels, and measuring frequency of occurrences. Common applications: counting daily active users, transaction volumes, and event frequencies.",
+        "example_questions": [
+          "How do I count the number of non-null entries in a column?",
+          "I want to count records, users, or transactions in my data",
+          "How can I track activity levels and measure frequency of occurrences?",
+          "I need to count daily active users and transaction volumes"
+        ]
       },
       "Sum": {
         "description": "Calculate the sum of a column",
-        "usage_description": "Aggregates numeric values to understand totals and cumulative amounts. Critical for revenue analysis, cost calculations, and understanding total impact or volume. Used extensively in financial analysis and performance measurement."
+        "usage_description": "Aggregates numeric values to understand totals and cumulative amounts. Critical for revenue analysis, cost calculations, and understanding total impact or volume. Used extensively in financial analysis and performance measurement.",
+        "example_questions": [
+          "How do I calculate the sum of a column?",
+          "I want to aggregate numeric values to understand totals",
+          "How can I perform revenue analysis and cost calculations?",
+          "I need to understand total impact or volume in financial analysis"
+        ]
       },
       "Max": {
         "description": "Calculate the maximum value of a column",
-        "usage_description": "Identifies peak values and upper bounds in data. Useful for understanding performance ceilings, identifying outliers, and analyzing extreme values. Common in performance analysis and outlier detection."
+        "usage_description": "Identifies peak values and upper bounds in data. Useful for understanding performance ceilings, identifying outliers, and analyzing extreme values. Common in performance analysis and outlier detection.",
+        "example_questions": [
+          "How do I calculate the maximum value of a column?",
+          "I want to identify peak values and upper bounds in my data",
+          "How can I understand performance ceilings and identify outliers?",
+          "I need to analyze extreme values in performance analysis"
+        ]
       },
       "Min": {
         "description": "Calculate the minimum value of a column",
-        "usage_description": "Identifies lowest values and lower bounds in data. Useful for understanding performance floors, identifying outliers, and analyzing extreme values. Often used alongside Max for range analysis."
+        "usage_description": "Identifies lowest values and lower bounds in data. Useful for understanding performance floors, identifying outliers, and analyzing extreme values. Often used alongside Max for range analysis.",
+        "example_questions": [
+          "How do I calculate the minimum value of a column?",
+          "I want to identify lowest values and lower bounds in my data",
+          "How can I understand performance floors and identify outliers?",
+          "I need to analyze extreme values and perform range analysis"
+        ]
       },
       "Ratio": {
         "description": "Calculate the ratio of sums of two columns",
-        "usage_description": "Creates proportional relationships between different metrics. Essential for efficiency metrics, conversion rates, and performance ratios. Common applications: conversion rates, efficiency ratios, and performance indicators."
+        "usage_description": "Creates proportional relationships between different metrics. Essential for efficiency metrics, conversion rates, and performance ratios. Common applications: conversion rates, efficiency ratios, and performance indicators.",
+        "example_questions": [
+          "How do I calculate the ratio of sums of two columns?",
+          "I want to create proportional relationships between different metrics",
+          "How can I calculate efficiency metrics and conversion rates?",
+          "I need to create performance ratios and indicators"
+        ]
       },
       "Dot": {
         "description": "Calculate the dot product between two columns",
-        "usage_description": "Measures similarity and correlation between variables. Useful for similarity analysis, feature engineering, and understanding relationships between different metrics or features."
+        "usage_description": "Measures similarity and correlation between variables. Useful for similarity analysis, feature engineering, and understanding relationships between different metrics or features.",
+        "example_questions": [
+          "How do I calculate the dot product between two columns?",
+          "I want to measure similarity and correlation between variables",
+          "How can I perform similarity analysis and feature engineering?",
+          "I need to understand relationships between different metrics or features"
+        ]
       },
       "Nth": {
         "description": "Get the nth value of a column after sorting by another column",
-        "usage_description": "Retrieves specific ranked values from ordered data. Useful for finding top performers, identifying specific percentiles, and analyzing ranked data. Common in competitive analysis and performance ranking."
+        "usage_description": "Retrieves specific ranked values from ordered data. Useful for finding top performers, identifying specific percentiles, and analyzing ranked data. Common in competitive analysis and performance ranking.",
+        "example_questions": [
+          "How do I get the nth value of a column after sorting?",
+          "I want to retrieve specific ranked values from ordered data",
+          "How can I find top performers and identify specific percentiles?",
+          "I need to analyze ranked data for competitive analysis"
+        ]
       },
       "Variance": {
         "description": "Calculate the variance of a column",
-        "usage_description": "Measures data spread and variability. Essential for understanding data consistency, quality control, and risk assessment. Critical for statistical analysis and understanding data distributions."
+        "usage_description": "Measures data spread and variability. Essential for understanding data consistency, quality control, and risk assessment. Critical for statistical analysis and understanding data distributions.",
+        "example_questions": [
+          "How do I calculate the variance of a column?",
+          "I want to measure data spread and variability",
+          "How can I understand data consistency and perform quality control?",
+          "I need to assess risk and understand data distributions"
+        ]
       },
       "StandardDeviation": {
         "description": "Calculate the standard deviation of a column",
-        "usage_description": "Measures data spread in the same units as the original data. More interpretable than variance for understanding variability and consistency. Essential for quality control and statistical analysis."
+        "usage_description": "Measures data spread in the same units as the original data. More interpretable than variance for understanding variability and consistency. Essential for quality control and statistical analysis.",
+        "example_questions": [
+          "How do I calculate the standard deviation of a column?",
+          "I want to measure data spread in the same units as original data",
+          "How can I understand variability and consistency with standard deviation?",
+          "I need to perform quality control and statistical analysis"
+        ]
       },
       "CV": {
         "description": "Calculate the coefficient of variation of a column",
-        "usage_description": "Standardized measure of variability relative to the mean. Useful for comparing variability across different scales and understanding relative consistency. Common in quality control and comparative analysis."
+        "usage_description": "Standardized measure of variability relative to the mean. Useful for comparing variability across different scales and understanding relative consistency. Common in quality control and comparative analysis.",
+        "example_questions": [
+          "How do I calculate the coefficient of variation of a column?",
+          "I want to get a standardized measure of variability relative to the mean",
+          "How can I compare variability across different scales?",
+          "I need to understand relative consistency in quality control"
+        ]
       },
       "Correlation": {
         "description": "Calculate the Pearson correlation between two columns",
-        "usage_description": "Measures linear relationships between variables. Essential for understanding associations, feature relationships, and identifying potential causal connections. Fundamental for exploratory data analysis."
+        "usage_description": "Measures linear relationships between variables. Essential for understanding associations, feature relationships, and identifying potential causal connections. Fundamental for exploratory data analysis.",
+        "example_questions": [
+          "How do I calculate the Pearson correlation between two columns?",
+          "I want to measure linear relationships between variables",
+          "How can I understand associations and feature relationships?",
+          "I need to identify potential causal connections in exploratory data analysis"
+        ]
       },
       "Cov": {
         "description": "Calculate the covariance between two columns",
-        "usage_description": "Measures how variables change together. Useful for understanding joint variability and building covariance matrices for multivariate analysis. Important for portfolio analysis and multivariate statistics."
+        "usage_description": "Measures how variables change together. Useful for understanding joint variability and building covariance matrices for multivariate analysis. Important for portfolio analysis and multivariate statistics.",
+        "example_questions": [
+          "How do I calculate the covariance between two columns?",
+          "I want to measure how variables change together",
+          "How can I understand joint variability and build covariance matrices?",
+          "I need to perform portfolio analysis and multivariate statistics"
+        ]
       },
       "Mean": {
         "description": "Calculate the mean of a column",
-        "usage_description": "Most common measure of central tendency. Essential for understanding typical values, creating benchmarks, and comparing performance across groups. Fundamental metric used in almost all analyses."
+        "usage_description": "Most common measure of central tendency. Essential for understanding typical values, creating benchmarks, and comparing performance across groups. Fundamental metric used in almost all analyses.",
+        "example_questions": [
+          "How do I calculate the mean of a column?",
+          "I want to understand typical values and create benchmarks",
+          "How can I compare performance across groups using means?",
+          "I need to calculate the most common measure of central tendency"
+        ]
       },
       "Median": {
         "description": "Calculate the median of a column",
-        "usage_description": "Robust measure of central tendency that's less sensitive to outliers than the mean. Useful for skewed data, outlier-prone metrics, and understanding typical values in non-normal distributions."
+        "usage_description": "Robust measure of central tendency that's less sensitive to outliers than the mean. Useful for skewed data, outlier-prone metrics, and understanding typical values in non-normal distributions.",
+        "example_questions": [
+          "How do I calculate the median of a column?",
+          "I want to get a robust measure of central tendency less sensitive to outliers",
+          "How can I understand typical values in skewed or non-normal distributions?",
+          "I need to analyze outlier-prone metrics with median"
+        ]
       },
       "Percentile": {
         "description": "Calculate the specified percentile of a column",
-        "usage_description": "Provides flexible measures of data position and distribution. Essential for understanding data distributions, setting thresholds, and analyzing performance at specific points in the distribution."
+        "usage_description": "Provides flexible measures of data position and distribution. Essential for understanding data distributions, setting thresholds, and analyzing performance at specific points in the distribution.",
+        "example_questions": [
+          "How do I calculate the specified percentile of a column?",
+          "I want to get flexible measures of data position and distribution",
+          "How can I set thresholds and analyze performance at specific points?",
+          "I need to understand data distributions using percentiles"
+        ]
       },
       "PivotTable": {
         "description": "Create a pivot table from the data",
-        "usage_description": "Organizes data into cross-tabulated format for easy analysis. Essential for comparing metrics across different dimensions, creating summary reports, and identifying patterns in multi-dimensional data."
+        "usage_description": "Organizes data into cross-tabulated format for easy analysis. Essential for comparing metrics across different dimensions, creating summary reports, and identifying patterns in multi-dimensional data.",
+        "example_questions": [
+          "How do I create a pivot table from the data?",
+          "I want to organize data into cross-tabulated format for analysis",
+          "How can I compare metrics across different dimensions?",
+          "I need to identify patterns in multi-dimensional data with pivot tables"
+        ]
       },
       "GroupBy": {
         "description": "Group the data and apply aggregation functions",
-        "usage_description": "Enables analysis by categories, segments, or dimensions. Critical for segment analysis, comparative studies, and understanding how metrics vary across different groups or conditions."
+        "usage_description": "Enables analysis by categories, segments, or dimensions. Critical for segment analysis, comparative studies, and understanding how metrics vary across different groups or conditions.",
+        "example_questions": [
+          "How do I group the data and apply aggregation functions?",
+          "I want to analyze data by categories, segments, or dimensions",
+          "How can I perform segment analysis and comparative studies?",
+          "I need to understand how metrics vary across different groups"
+        ]
       },
       "Filter": {
         "description": "Filter the dataframe based on a condition",
-        "usage_description": "Subsets data to focus on specific records or conditions. Essential for targeted analysis, removing irrelevant data, and ensuring analysis focuses on the right data subset."
+        "usage_description": "Subsets data to focus on specific records or conditions. Essential for targeted analysis, removing irrelevant data, and ensuring analysis focuses on the right data subset.",
+        "example_questions": [
+          "How do I filter the dataframe based on a condition?",
+          "I want to subset data to focus on specific records or conditions",
+          "How can I remove irrelevant data and focus on the right subset?",
+          "I need to perform targeted analysis by filtering data"
+        ]
       },
       "CumulativeSum": {
         "description": "Calculate the cumulative sum of a column",
-        "usage_description": "Tracks running totals over time or sequence. Useful for understanding cumulative performance, tracking progress, and analyzing accumulation patterns in time series or ordered data."
+        "usage_description": "Tracks running totals over time or sequence. Useful for understanding cumulative performance, tracking progress, and analyzing accumulation patterns in time series or ordered data.",
+        "example_questions": [
+          "How do I calculate the cumulative sum of a column?",
+          "I want to track running totals over time or sequence",
+          "How can I understand cumulative performance and track progress?",
+          "I need to analyze accumulation patterns in time series data"
+        ]
       },
       "RollingMetric": {
         "description": "Calculate a rolling metric on a column",
-        "usage_description": "Applies functions over moving windows to smooth data and identify trends. Essential for time series analysis, trend identification, and reducing noise in sequential data."
+        "usage_description": "Applies functions over moving windows to smooth data and identify trends. Essential for time series analysis, trend identification, and reducing noise in sequential data.",
+        "example_questions": [
+          "How do I calculate a rolling metric on a column?",
+          "I want to apply functions over moving windows to smooth data",
+          "How can I identify trends and reduce noise in sequential data?",
+          "I need to perform time series analysis with rolling metrics"
+        ]
       },
       "Execute": {
         "description": "Execute the pipeline and return all calculated metrics",
-        "usage_description": "Runs all configured metrics and returns comprehensive results. Essential for obtaining final analysis results, creating reports, and accessing all calculated metrics in a structured format."
+        "usage_description": "Runs all configured metrics and returns comprehensive results. Essential for obtaining final analysis results, creating reports, and accessing all calculated metrics in a structured format.",
+        "example_questions": [
+          "How do I execute the pipeline and return all calculated metrics?",
+          "I want to run all configured metrics and get comprehensive results",
+          "How can I obtain final analysis results from the metrics pipeline?",
+          "I need to access all calculated metrics in a structured format"
+        ]
       },
       "ShowPivot": {
         "description": "Show a specific pivot table or the last created one",
-        "usage_description": "Displays pivot table results for analysis and reporting. Useful for reviewing cross-tabulated data, identifying patterns, and creating summary views of complex data relationships."
+        "usage_description": "Displays pivot table results for analysis and reporting. Useful for reviewing cross-tabulated data, identifying patterns, and creating summary views of complex data relationships.",
+        "example_questions": [
+          "How do I show a specific pivot table or the last created one?",
+          "I want to display pivot table results for analysis and reporting",
+          "How can I review cross-tabulated data and identify patterns?",
+          "I need to create summary views of complex data relationships"
+        ]
       },
       "ShowDataFrame": {
         "description": "Show the current dataframe",
-        "usage_description": "Displays the current state of the data for inspection and verification. Essential for data exploration, debugging analysis steps, and understanding how transformations affect the data."
+        "usage_description": "Displays the current state of the data for inspection and verification. Essential for data exploration, debugging analysis steps, and understanding how transformations affect the data.",
+        "example_questions": [
+          "How do I show the current dataframe?",
+          "I want to display the current state of the data for inspection",
+          "How can I debug analysis steps and verify data transformations?",
+          "I need to explore data and understand how transformations affect it"
+        ]
       }
     }
   },
@@ -342,63 +804,153 @@
     "functions": {
       "prepare_prophet_data": {
         "description": "Convert data to Prophet's required ds/y format with date validation",
-        "usage_description": "Essential preprocessing step that converts data to Prophet's required format with 'ds' (date) and 'y' (value) columns. Critical for ensuring Prophet can properly handle the time series data and date formats."
+        "usage_description": "Essential preprocessing step that converts data to Prophet's required format with 'ds' (date) and 'y' (value) columns. Critical for ensuring Prophet can properly handle the time series data and date formats.",
+        "example_questions": [
+          "How do I convert data to Prophet's required ds/y format?",
+          "I want to prepare time series data for Prophet forecasting",
+          "How can I validate date formats for Prophet time series analysis?",
+          "I need to convert data to Prophet's required format with date validation"
+        ]
       },
       "add_regressors": {
         "description": "Add external variables that influence the forecast",
-        "usage_description": "Incorporates additional variables that affect the forecast (e.g., marketing spend, holidays, weather). Essential for improving forecast accuracy by accounting for external factors that influence the target variable."
+        "usage_description": "Incorporates additional variables that affect the forecast (e.g., marketing spend, holidays, weather). Essential for improving forecast accuracy by accounting for external factors that influence the target variable.",
+        "example_questions": [
+          "How do I add external variables that influence the forecast?",
+          "I want to incorporate marketing spend, holidays, or weather into my forecast",
+          "How can I improve forecast accuracy by accounting for external factors?",
+          "I need to add regressors that influence the target variable"
+        ]
       },
       "add_holidays": {
         "description": "Add holiday effects with custom or built-in holiday calendars",
-        "usage_description": "Accounts for holiday effects that can significantly impact time series data. Critical for retail, e-commerce, and any business affected by seasonal events and holidays."
+        "usage_description": "Accounts for holiday effects that can significantly impact time series data. Critical for retail, e-commerce, and any business affected by seasonal events and holidays.",
+        "example_questions": [
+          "How do I add holiday effects with custom or built-in calendars?",
+          "I want to account for holiday effects that impact time series data",
+          "How can I handle seasonal events and holidays in retail forecasting?",
+          "I need to add holiday effects for e-commerce time series analysis"
+        ]
       },
       "configure_prophet": {
         "description": "Configure Prophet model parameters and seasonality settings",
-        "usage_description": "Sets up Prophet's core parameters including growth models, seasonality modes, and changepoint settings. Essential for optimizing forecast performance and capturing the right patterns in the data."
+        "usage_description": "Sets up Prophet's core parameters including growth models, seasonality modes, and changepoint settings. Essential for optimizing forecast performance and capturing the right patterns in the data.",
+        "example_questions": [
+          "How do I configure Prophet model parameters and seasonality settings?",
+          "I want to set up Prophet's core parameters for optimal forecast performance",
+          "How can I configure growth models, seasonality modes, and changepoint settings?",
+          "I need to optimize Prophet parameters to capture the right patterns in data"
+        ]
       },
       "add_custom_seasonality": {
         "description": "Add custom seasonal patterns beyond default yearly/weekly/daily",
-        "usage_description": "Captures business-specific seasonal patterns that don't follow standard calendar cycles. Useful for industries with unique seasonality patterns or business cycles."
+        "usage_description": "Captures business-specific seasonal patterns that don't follow standard calendar cycles. Useful for industries with unique seasonality patterns or business cycles.",
+        "example_questions": [
+          "How do I add custom seasonal patterns beyond default cycles?",
+          "I want to capture business-specific seasonal patterns",
+          "How can I handle unique seasonality patterns or business cycles?",
+          "I need to add custom seasonality for industries with non-standard patterns"
+        ]
       },
       "fit_prophet": {
         "description": "Train the Prophet model on historical data",
-        "usage_description": "Executes the model training process using historical data. The core step that learns patterns, seasonality, and trends from the data to enable forecasting."
+        "usage_description": "Executes the model training process using historical data. The core step that learns patterns, seasonality, and trends from the data to enable forecasting.",
+        "example_questions": [
+          "How do I train the Prophet model on historical data?",
+          "I want to execute the model training process using historical data",
+          "How can I learn patterns, seasonality, and trends from the data?",
+          "I need to train Prophet to enable forecasting from historical patterns"
+        ]
       },
       "make_forecast": {
         "description": "Generate future forecasts for specified periods",
-        "usage_description": "Creates predictions for future time periods. Essential for planning, resource allocation, and understanding expected future performance based on historical patterns."
+        "usage_description": "Creates predictions for future time periods. Essential for planning, resource allocation, and understanding expected future performance based on historical patterns.",
+        "example_questions": [
+          "How do I generate future forecasts for specified periods?",
+          "I want to create predictions for future time periods",
+          "How can I plan and allocate resources based on forecasts?",
+          "I need to understand expected future performance based on historical patterns"
+        ]
       },
       "forecast_with_regressors": {
         "description": "Generate forecasts with future values for external regressors",
-        "usage_description": "Creates forecasts that incorporate future values of external variables. Critical for scenarios where you have planned values for regressors (e.g., planned marketing spend, known future events)."
+        "usage_description": "Creates forecasts that incorporate future values of external variables. Critical for scenarios where you have planned values for regressors (e.g., planned marketing spend, known future events).",
+        "example_questions": [
+          "How do I generate forecasts with future values for external regressors?",
+          "I want to incorporate planned values for regressors in my forecasts",
+          "How can I create forecasts with known future events or marketing spend?",
+          "I need to generate forecasts that include future values of external variables"
+        ]
       },
       "cross_validate_model": {
         "description": "Evaluate model performance using time series cross-validation",
-        "usage_description": "Assesses forecast accuracy using historical data to validate model performance. Essential for understanding forecast reliability and comparing different model configurations."
+        "usage_description": "Assesses forecast accuracy using historical data to validate model performance. Essential for understanding forecast reliability and comparing different model configurations.",
+        "example_questions": [
+          "How do I evaluate model performance using time series cross-validation?",
+          "I want to assess forecast accuracy using historical data",
+          "How can I validate model performance and understand forecast reliability?",
+          "I need to compare different model configurations using cross-validation"
+        ]
       },
       "calculate_forecast_metrics": {
         "description": "Calculate forecast accuracy metrics (MAE, RMSE, MAPE, coverage)",
-        "usage_description": "Provides quantitative measures of forecast accuracy. Critical for model validation, comparing forecasting methods, and understanding the reliability of predictions."
+        "usage_description": "Provides quantitative measures of forecast accuracy. Critical for model validation, comparing forecasting methods, and understanding the reliability of predictions.",
+        "example_questions": [
+          "How do I calculate forecast accuracy metrics (MAE, RMSE, MAPE, coverage)?",
+          "I want to get quantitative measures of forecast accuracy",
+          "How can I validate models and compare forecasting methods?",
+          "I need to understand the reliability of predictions using accuracy metrics"
+        ]
       },
       "print_forecast_metrics": {
         "description": "Print formatted forecast accuracy metrics",
-        "usage_description": "Displays forecast performance metrics in a readable format. Useful for reporting, model comparison, and communicating forecast accuracy to stakeholders."
+        "usage_description": "Displays forecast performance metrics in a readable format. Useful for reporting, model comparison, and communicating forecast accuracy to stakeholders.",
+        "example_questions": [
+          "How do I print formatted forecast accuracy metrics?",
+          "I want to display forecast performance metrics in a readable format",
+          "How can I report and compare models with formatted metrics?",
+          "I need to communicate forecast accuracy to stakeholders"
+        ]
       },
       "plot_forecast": {
         "description": "Visualize forecast results and decomposed components",
-        "usage_description": "Creates visualizations showing forecasts, confidence intervals, and trend/seasonal components. Essential for understanding forecast patterns and communicating results to stakeholders."
+        "usage_description": "Creates visualizations showing forecasts, confidence intervals, and trend/seasonal components. Essential for understanding forecast patterns and communicating results to stakeholders.",
+        "example_questions": [
+          "How do I visualize forecast results and decomposed components?",
+          "I want to create visualizations showing forecasts and confidence intervals",
+          "How can I understand forecast patterns and trend/seasonal components?",
+          "I need to communicate forecast results to stakeholders with visualizations"
+        ]
       },
       "plot_cross_validation": {
         "description": "Visualize cross-validation performance across different horizons",
-        "usage_description": "Shows how forecast accuracy varies across different prediction horizons. Useful for understanding model performance at different time scales and identifying optimal forecast horizons."
+        "usage_description": "Shows how forecast accuracy varies across different prediction horizons. Useful for understanding model performance at different time scales and identifying optimal forecast horizons.",
+        "example_questions": [
+          "How do I visualize cross-validation performance across different horizons?",
+          "I want to see how forecast accuracy varies across prediction horizons",
+          "How can I understand model performance at different time scales?",
+          "I need to identify optimal forecast horizons using cross-validation plots"
+        ]
       },
       "save_prophet_model": {
         "description": "Save trained Prophet model and configuration to disk",
-        "usage_description": "Persists the trained model for future use and deployment. Essential for production systems, model versioning, and avoiding retraining costs."
+        "usage_description": "Persists the trained model for future use and deployment. Essential for production systems, model versioning, and avoiding retraining costs.",
+        "example_questions": [
+          "How do I save trained Prophet model and configuration to disk?",
+          "I want to persist the trained model for future use and deployment",
+          "How can I save models for production systems and model versioning?",
+          "I need to avoid retraining costs by saving Prophet models"
+        ]
       },
       "hyperparameter_tuning": {
         "description": "Optimize Prophet hyperparameters using cross-validation grid search",
-        "usage_description": "Automatically finds optimal model parameters to maximize forecast accuracy. Critical for achieving the best possible forecast performance and reducing manual parameter tuning effort."
+        "usage_description": "Automatically finds optimal model parameters to maximize forecast accuracy. Critical for achieving the best possible forecast performance and reducing manual parameter tuning effort.",
+        "example_questions": [
+          "How do I optimize Prophet hyperparameters using cross-validation grid search?",
+          "I want to automatically find optimal model parameters to maximize accuracy",
+          "How can I achieve the best possible forecast performance with hyperparameter tuning?",
+          "I need to reduce manual parameter tuning effort with automated optimization"
+        ]
       }
     }
   },
@@ -407,47 +959,113 @@
     "functions": {
       "generate_numerical_features": {
         "description": "Generate numerical features using mathematical transformations",
-        "usage_description": "Creates new features through mathematical transformations (log, sqrt, square, reciprocal) to improve model performance. Essential for feature engineering and capturing non-linear relationships in the data."
+        "usage_description": "Creates new features through mathematical transformations (log, sqrt, square, reciprocal) to improve model performance. Essential for feature engineering and capturing non-linear relationships in the data.",
+        "example_questions": [
+          "How do I generate numerical features using mathematical transformations?",
+          "I want to create new features through log, sqrt, square, reciprocal transformations",
+          "How can I improve model performance with feature engineering?",
+          "I need to capture non-linear relationships in the data with mathematical transformations"
+        ]
       },
       "generate_categorical_features": {
         "description": "Encode categorical features using various encoding methods",
-        "usage_description": "Converts categorical variables into numerical format using one-hot, label, or target encoding. Critical for including categorical data in machine learning models and handling high-cardinality categories."
+        "usage_description": "Converts categorical variables into numerical format using one-hot, label, or target encoding. Critical for including categorical data in machine learning models and handling high-cardinality categories.",
+        "example_questions": [
+          "How do I encode categorical features using various encoding methods?",
+          "I want to convert categorical variables into numerical format",
+          "How can I include categorical data in machine learning models?",
+          "I need to handle high-cardinality categories with encoding methods"
+        ]
       },
       "generate_interaction_features": {
         "description": "Create interaction features between column pairs",
-        "usage_description": "Creates new features that capture relationships between variables (multiplication, addition, subtraction, division). Useful for discovering complex patterns and improving model performance."
+        "usage_description": "Creates new features that capture relationships between variables (multiplication, addition, subtraction, division). Useful for discovering complex patterns and improving model performance.",
+        "example_questions": [
+          "How do I create interaction features between column pairs?",
+          "I want to capture relationships between variables with new features",
+          "How can I discover complex patterns with interaction features?",
+          "I need to improve model performance by creating interaction features"
+        ]
       },
       "create_binary_labels": {
         "description": "Create binary classification labels based on conditions",
-        "usage_description": "Converts continuous variables into binary classification targets using threshold conditions. Essential for binary classification problems like churn prediction, fraud detection, and binary outcome modeling."
+        "usage_description": "Converts continuous variables into binary classification targets using threshold conditions. Essential for binary classification problems like churn prediction, fraud detection, and binary outcome modeling.",
+        "example_questions": [
+          "How do I create binary classification labels based on conditions?",
+          "I want to convert continuous variables into binary classification targets",
+          "How can I create labels for churn prediction and fraud detection?",
+          "I need to model binary outcomes using threshold conditions"
+        ]
       },
       "create_multiclass_labels": {
         "description": "Create multiclass labels by binning continuous variables",
-        "usage_description": "Converts continuous variables into multiple categories for multiclass classification. Useful for customer segmentation, risk categorization, and multi-level outcome prediction."
+        "usage_description": "Converts continuous variables into multiple categories for multiclass classification. Useful for customer segmentation, risk categorization, and multi-level outcome prediction.",
+        "example_questions": [
+          "How do I create multiclass labels by binning continuous variables?",
+          "I want to convert continuous variables into multiple categories",
+          "How can I create labels for customer segmentation and risk categorization?",
+          "I need to perform multi-level outcome prediction with multiclass labels"
+        ]
       },
       "select_features": {
         "description": "Select top k features using statistical tests",
-        "usage_description": "Identifies the most important features for the model using statistical methods. Essential for reducing dimensionality, improving model interpretability, and focusing on the most predictive variables."
+        "usage_description": "Identifies the most important features for the model using statistical methods. Essential for reducing dimensionality, improving model interpretability, and focusing on the most predictive variables.",
+        "example_questions": [
+          "How do I select top k features using statistical tests?",
+          "I want to identify the most important features using statistical methods",
+          "How can I reduce dimensionality and improve model interpretability?",
+          "I need to focus on the most predictive variables with feature selection"
+        ]
       },
       "train_random_forest": {
         "description": "Train a Random Forest classifier with specified parameters",
-        "usage_description": "Executes the Random Forest training process with configurable parameters. The core step that builds the ensemble model for classification or regression tasks."
+        "usage_description": "Executes the Random Forest training process with configurable parameters. The core step that builds the ensemble model for classification or regression tasks.",
+        "example_questions": [
+          "How do I train a Random Forest classifier with specified parameters?",
+          "I want to execute the Random Forest training process with configurable parameters",
+          "How can I build an ensemble model for classification or regression tasks?",
+          "I need to train Random Forest with specific parameters for my model"
+        ]
       },
       "save_model": {
         "description": "Save trained model to disk using joblib",
-        "usage_description": "Persists the trained model for future use and deployment. Essential for production systems, model versioning, and avoiding retraining costs."
+        "usage_description": "Persists the trained model for future use and deployment. Essential for production systems, model versioning, and avoiding retraining costs.",
+        "example_questions": [
+          "How do I save trained model to disk using joblib?",
+          "I want to persist the trained model for future use and deployment",
+          "How can I save models for production systems and model versioning?",
+          "I need to avoid retraining costs by saving models to disk"
+        ]
       },
       "predict": {
         "description": "Make predictions using trained model",
-        "usage_description": "Applies the trained model to new data to generate predictions. Essential for model deployment, scoring new records, and using the model for decision-making."
+        "usage_description": "Applies the trained model to new data to generate predictions. Essential for model deployment, scoring new records, and using the model for decision-making.",
+        "example_questions": [
+          "How do I make predictions using the trained model?",
+          "I want to apply the trained model to new data to generate predictions",
+          "How can I deploy models and score new records?",
+          "I need to use the model for decision-making with predictions"
+        ]
       },
       "calculate_metrics": {
         "description": "Calculate classification metrics (accuracy, precision, recall, f1)",
-        "usage_description": "Evaluates model performance using standard classification metrics. Critical for understanding model quality, comparing different models, and ensuring adequate performance for deployment."
+        "usage_description": "Evaluates model performance using standard classification metrics. Critical for understanding model quality, comparing different models, and ensuring adequate performance for deployment.",
+        "example_questions": [
+          "How do I calculate classification metrics (accuracy, precision, recall, f1)?",
+          "I want to evaluate model performance using standard classification metrics",
+          "How can I understand model quality and compare different models?",
+          "I need to ensure adequate performance for deployment with classification metrics"
+        ]
       },
       "print_metrics": {
         "description": "Print formatted classification metrics and feature importance",
-        "usage_description": "Displays model performance and feature importance in a readable format. Useful for reporting, model comparison, and understanding which features drive predictions."
+        "usage_description": "Displays model performance and feature importance in a readable format. Useful for reporting, model comparison, and understanding which features drive predictions.",
+        "example_questions": [
+          "How do I print formatted classification metrics and feature importance?",
+          "I want to display model performance and feature importance in a readable format",
+          "How can I report and compare models with formatted metrics?",
+          "I need to understand which features drive predictions with feature importance"
+        ]
       }
     }
   },
@@ -456,47 +1074,113 @@
     "functions": {
       "fit_distribution": {
         "description": "Fit a probability distribution to data using maximum likelihood estimation",
-        "usage_description": "Identifies the best-fitting probability distribution for risk modeling. Essential for understanding data characteristics, creating risk models, and enabling probabilistic analysis of outcomes."
+        "usage_description": "Identifies the best-fitting probability distribution for risk modeling. Essential for understanding data characteristics, creating risk models, and enabling probabilistic analysis of outcomes.",
+        "example_questions": [
+          "How do I fit a probability distribution to data using maximum likelihood estimation?",
+          "I want to identify the best-fitting probability distribution for risk modeling",
+          "How can I understand data characteristics and create risk models?",
+          "I need to enable probabilistic analysis of outcomes with distribution fitting"
+        ]
       },
       "calculate_var": {
         "description": "Calculate Value at Risk (VaR) for specified columns",
-        "usage_description": "Measures potential losses at a given confidence level. Critical for financial risk management, portfolio analysis, and understanding downside risk in investment or business scenarios."
+        "usage_description": "Measures potential losses at a given confidence level. Critical for financial risk management, portfolio analysis, and understanding downside risk in investment or business scenarios.",
+        "example_questions": [
+          "How do I calculate Value at Risk (VaR) for specified columns?",
+          "I want to measure potential losses at a given confidence level",
+          "How can I perform financial risk management and portfolio analysis?",
+          "I need to understand downside risk in investment or business scenarios"
+        ]
       },
       "calculate_cvar": {
         "description": "Calculate Conditional Value at Risk (CVaR/Expected Shortfall)",
-        "usage_description": "Measures expected losses beyond the VaR threshold. Provides more comprehensive risk assessment than VaR alone, especially for tail risk analysis and extreme loss scenarios."
+        "usage_description": "Measures expected losses beyond the VaR threshold. Provides more comprehensive risk assessment than VaR alone, especially for tail risk analysis and extreme loss scenarios.",
+        "example_questions": [
+          "How do I calculate Conditional Value at Risk (CVaR/Expected Shortfall)?",
+          "I want to measure expected losses beyond the VaR threshold",
+          "How can I get more comprehensive risk assessment than VaR alone?",
+          "I need to perform tail risk analysis and extreme loss scenario assessment"
+        ]
       },
       "calculate_portfolio_risk": {
         "description": "Calculate portfolio-level risk metrics",
-        "usage_description": "Assesses risk at the portfolio level considering correlations and diversification effects. Essential for portfolio management, asset allocation, and understanding overall risk exposure."
+        "usage_description": "Assesses risk at the portfolio level considering correlations and diversification effects. Essential for portfolio management, asset allocation, and understanding overall risk exposure.",
+        "example_questions": [
+          "How do I calculate portfolio-level risk metrics?",
+          "I want to assess risk at the portfolio level considering correlations",
+          "How can I perform portfolio management and asset allocation?",
+          "I need to understand overall risk exposure with portfolio risk metrics"
+        ]
       },
       "monte_carlo_simulation": {
         "description": "Perform Monte Carlo simulation for risk assessment",
-        "usage_description": "Generates multiple scenarios to assess risk under uncertainty. Critical for complex risk modeling, stress testing, and understanding the range of possible outcomes."
+        "usage_description": "Generates multiple scenarios to assess risk under uncertainty. Critical for complex risk modeling, stress testing, and understanding the range of possible outcomes.",
+        "example_questions": [
+          "How do I perform Monte Carlo simulation for risk assessment?",
+          "I want to generate multiple scenarios to assess risk under uncertainty",
+          "How can I perform complex risk modeling and stress testing?",
+          "I need to understand the range of possible outcomes with Monte Carlo simulation"
+        ]
       },
       "stress_test": {
         "description": "Perform stress testing with specified scenarios",
-        "usage_description": "Evaluates performance under extreme or adverse conditions. Essential for risk management, regulatory compliance, and understanding vulnerability to specific risk factors."
+        "usage_description": "Evaluates performance under extreme or adverse conditions. Essential for risk management, regulatory compliance, and understanding vulnerability to specific risk factors.",
+        "example_questions": [
+          "How do I perform stress testing with specified scenarios?",
+          "I want to evaluate performance under extreme or adverse conditions",
+          "How can I perform risk management and regulatory compliance testing?",
+          "I need to understand vulnerability to specific risk factors with stress testing"
+        ]
       },
       "rolling_risk_metrics": {
         "description": "Calculate rolling risk metrics over time",
-        "usage_description": "Tracks how risk measures change over time. Useful for monitoring risk trends, identifying periods of increased risk, and understanding dynamic risk characteristics."
+        "usage_description": "Tracks how risk measures change over time. Useful for monitoring risk trends, identifying periods of increased risk, and understanding dynamic risk characteristics.",
+        "example_questions": [
+          "How do I calculate rolling risk metrics over time?",
+          "I want to track how risk measures change over time",
+          "How can I monitor risk trends and identify periods of increased risk?",
+          "I need to understand dynamic risk characteristics with rolling metrics"
+        ]
       },
       "correlation_analysis": {
         "description": "Perform correlation analysis for risk assessment",
-        "usage_description": "Analyzes relationships between risk factors and variables. Essential for understanding risk drivers, diversification benefits, and identifying correlated risk exposures."
+        "usage_description": "Analyzes relationships between risk factors and variables. Essential for understanding risk drivers, diversification benefits, and identifying correlated risk exposures.",
+        "example_questions": [
+          "How do I perform correlation analysis for risk assessment?",
+          "I want to analyze relationships between risk factors and variables",
+          "How can I understand risk drivers and diversification benefits?",
+          "I need to identify correlated risk exposures with correlation analysis"
+        ]
       },
       "risk_attribution": {
         "description": "Perform risk attribution analysis",
-        "usage_description": "Decomposes total risk into contributions from individual factors. Critical for understanding risk sources, optimizing risk allocation, and identifying key risk drivers."
+        "usage_description": "Decomposes total risk into contributions from individual factors. Critical for understanding risk sources, optimizing risk allocation, and identifying key risk drivers.",
+        "example_questions": [
+          "How do I perform risk attribution analysis?",
+          "I want to decompose total risk into contributions from individual factors",
+          "How can I understand risk sources and optimize risk allocation?",
+          "I need to identify key risk drivers with risk attribution analysis"
+        ]
       },
       "compare_distributions": {
         "description": "Compare multiple distribution fits and select the best one",
-        "usage_description": "Evaluates different probability distributions to find the best fit. Essential for accurate risk modeling and ensuring appropriate distribution assumptions for risk calculations."
+        "usage_description": "Evaluates different probability distributions to find the best fit. Essential for accurate risk modeling and ensuring appropriate distribution assumptions for risk calculations.",
+        "example_questions": [
+          "How do I compare multiple distribution fits and select the best one?",
+          "I want to evaluate different probability distributions to find the best fit",
+          "How can I ensure accurate risk modeling with appropriate distribution assumptions?",
+          "I need to select the best distribution for risk calculations"
+        ]
       },
       "get_risk_summary": {
         "description": "Get a summary of all risk analysis results",
-        "usage_description": "Provides comprehensive overview of risk metrics and analysis results. Essential for reporting, decision-making, and communicating risk assessment to stakeholders."
+        "usage_description": "Provides comprehensive overview of risk metrics and analysis results. Essential for reporting, decision-making, and communicating risk assessment to stakeholders.",
+        "example_questions": [
+          "How do I get a summary of all risk analysis results?",
+          "I want to get a comprehensive overview of risk metrics and analysis results",
+          "How can I report and make decisions based on risk assessment?",
+          "I need to communicate risk assessment to stakeholders with a summary"
+        ]
       }
     }
   },
@@ -505,39 +1189,93 @@
     "functions": {
       "get_features": {
         "description": "Extract features from dataframe for segmentation",
-        "usage_description": "Prepares and selects relevant features for customer or data segmentation. Essential for ensuring segmentation is based on meaningful characteristics and improving clustering quality."
+        "usage_description": "Prepares and selects relevant features for customer or data segmentation. Essential for ensuring segmentation is based on meaningful characteristics and improving clustering quality.",
+        "example_questions": [
+          "How do I extract features from dataframe for segmentation?",
+          "I want to prepare and select relevant features for customer segmentation",
+          "How can I ensure segmentation is based on meaningful characteristics?",
+          "I need to improve clustering quality by extracting relevant features"
+        ]
       },
       "run_kmeans": {
         "description": "Run KMeans clustering for segmentation",
-        "usage_description": "Creates customer segments using K-means clustering algorithm. Most common segmentation method, useful for creating distinct, well-separated customer groups based on behavioral or demographic characteristics."
+        "usage_description": "Creates customer segments using K-means clustering algorithm. Most common segmentation method, useful for creating distinct, well-separated customer groups based on behavioral or demographic characteristics.",
+        "example_questions": [
+          "How do I run KMeans clustering for segmentation?",
+          "I want to create customer segments using K-means clustering algorithm",
+          "How can I create distinct, well-separated customer groups?",
+          "I need to segment customers based on behavioral or demographic characteristics"
+        ]
       },
       "run_dbscan": {
         "description": "Run DBSCAN clustering for segmentation",
-        "usage_description": "Creates segments using density-based clustering that can identify irregularly shaped clusters. Useful for discovering natural groupings in data and handling outliers effectively."
+        "usage_description": "Creates segments using density-based clustering that can identify irregularly shaped clusters. Useful for discovering natural groupings in data and handling outliers effectively.",
+        "example_questions": [
+          "How do I run DBSCAN clustering for segmentation?",
+          "I want to create segments using density-based clustering",
+          "How can I identify irregularly shaped clusters and discover natural groupings?",
+          "I need to handle outliers effectively with DBSCAN clustering"
+        ]
       },
       "run_hierarchical": {
         "description": "Run Hierarchical (Agglomerative) clustering for segmentation",
-        "usage_description": "Creates a hierarchical structure of segments that can be analyzed at different levels of granularity. Useful for understanding segment relationships and creating multi-level segmentation strategies."
+        "usage_description": "Creates a hierarchical structure of segments that can be analyzed at different levels of granularity. Useful for understanding segment relationships and creating multi-level segmentation strategies.",
+        "example_questions": [
+          "How do I run Hierarchical (Agglomerative) clustering for segmentation?",
+          "I want to create a hierarchical structure of segments",
+          "How can I analyze segments at different levels of granularity?",
+          "I need to understand segment relationships and create multi-level strategies"
+        ]
       },
       "run_rule_based": {
         "description": "Run rule-based segmentation",
-        "usage_description": "Creates segments based on predefined business rules and criteria. Useful for implementing business logic, regulatory requirements, or specific segmentation strategies that require explicit rules."
+        "usage_description": "Creates segments based on predefined business rules and criteria. Useful for implementing business logic, regulatory requirements, or specific segmentation strategies that require explicit rules.",
+        "example_questions": [
+          "How do I run rule-based segmentation?",
+          "I want to create segments based on predefined business rules and criteria",
+          "How can I implement business logic and regulatory requirements?",
+          "I need to create segmentation strategies with explicit rules"
+        ]
       },
       "generate_summary": {
         "description": "Generate summary statistics for segments",
-        "usage_description": "Provides comprehensive statistics and characteristics for each segment. Essential for understanding segment profiles, identifying key differences, and creating actionable insights from segmentation."
+        "usage_description": "Provides comprehensive statistics and characteristics for each segment. Essential for understanding segment profiles, identifying key differences, and creating actionable insights from segmentation.",
+        "example_questions": [
+          "How do I generate summary statistics for segments?",
+          "I want to get comprehensive statistics and characteristics for each segment",
+          "How can I understand segment profiles and identify key differences?",
+          "I need to create actionable insights from segmentation with summary statistics"
+        ]
       },
       "get_segment_data": {
         "description": "Get data for a specific segment",
-        "usage_description": "Extracts data for individual segments for detailed analysis. Useful for segment-specific analysis, targeted marketing strategies, and understanding segment-specific behaviors."
+        "usage_description": "Extracts data for individual segments for detailed analysis. Useful for segment-specific analysis, targeted marketing strategies, and understanding segment-specific behaviors.",
+        "example_questions": [
+          "How do I get data for a specific segment?",
+          "I want to extract data for individual segments for detailed analysis",
+          "How can I perform segment-specific analysis and targeted marketing?",
+          "I need to understand segment-specific behaviors with segment data"
+        ]
       },
       "compare_algorithms": {
         "description": "Compare all segmentation algorithms",
-        "usage_description": "Evaluates different clustering methods to find the best approach for the data. Essential for choosing the most appropriate segmentation method and ensuring optimal results."
+        "usage_description": "Evaluates different clustering methods to find the best approach for the data. Essential for choosing the most appropriate segmentation method and ensuring optimal results.",
+        "example_questions": [
+          "How do I compare all segmentation algorithms?",
+          "I want to evaluate different clustering methods to find the best approach",
+          "How can I choose the most appropriate segmentation method?",
+          "I need to ensure optimal results by comparing segmentation algorithms"
+        ]
       },
       "custom_calculation": {
         "description": "Apply a custom calculation or transformation to the dataframe",
-        "usage_description": "Allows application of custom logic or transformations specific to business needs. Provides flexibility for domain-specific calculations and specialized segmentation requirements."
+        "usage_description": "Allows application of custom logic or transformations specific to business needs. Provides flexibility for domain-specific calculations and specialized segmentation requirements.",
+        "example_questions": [
+          "How do I apply a custom calculation or transformation to the dataframe?",
+          "I want to apply custom logic or transformations specific to business needs",
+          "How can I perform domain-specific calculations for segmentation?",
+          "I need to handle specialized segmentation requirements with custom calculations"
+        ]
       }
     }
   },
@@ -546,35 +1284,83 @@
     "functions": {
       "lead": {
         "description": "Create lead (future) values for specified columns.",
-        "usage_description": "Shifts data forward to access future values for analysis. Essential for time series forecasting, analyzing leading indicators, and understanding how current values relate to future outcomes."
+        "usage_description": "Shifts data forward to access future values for analysis. Essential for time series forecasting, analyzing leading indicators, and understanding how current values relate to future outcomes.",
+        "example_questions": [
+          "How do I create lead (future) values for specified columns?",
+          "I want to shift data forward to access future values for analysis",
+          "How can I analyze leading indicators in time series forecasting?",
+          "I need to understand how current values relate to future outcomes"
+        ]
       },
       "lag": {
         "description": "Create lag (past) values for specified columns.",
-        "usage_description": "Shifts data backward to access historical values. Critical for time series analysis, identifying autoregressive patterns, and understanding how past values influence current outcomes."
+        "usage_description": "Shifts data backward to access historical values. Critical for time series analysis, identifying autoregressive patterns, and understanding how past values influence current outcomes.",
+        "example_questions": [
+          "How do I create lag (past) values for specified columns?",
+          "I want to shift data backward to access historical values",
+          "How can I identify autoregressive patterns in time series analysis?",
+          "I need to understand how past values influence current outcomes"
+        ]
       },
       "variance_analysis": {
         "description": "Calculate variance and standard deviation for time series data.",
-        "usage_description": "Measures volatility and variability over time in time series data. Essential for understanding data stability, identifying periods of high volatility, and analyzing risk in time-dependent data."
+        "usage_description": "Measures volatility and variability over time in time series data. Essential for understanding data stability, identifying periods of high volatility, and analyzing risk in time-dependent data.",
+        "example_questions": [
+          "How do I calculate variance and standard deviation for time series data?",
+          "I want to measure volatility and variability over time in time series data",
+          "How can I understand data stability and identify periods of high volatility?",
+          "I need to analyze risk in time-dependent data with variance analysis"
+        ]
       },
       "distribution_analysis": {
         "description": "Calculate distribution statistics and histograms for time series data.",
-        "usage_description": "Analyzes the statistical distribution of time series data. Useful for understanding data characteristics, identifying distribution changes over time, and ensuring appropriate modeling assumptions."
+        "usage_description": "Analyzes the statistical distribution of time series data. Useful for understanding data characteristics, identifying distribution changes over time, and ensuring appropriate modeling assumptions.",
+        "example_questions": [
+          "How do I calculate distribution statistics and histograms for time series data?",
+          "I want to analyze the statistical distribution of time series data",
+          "How can I understand data characteristics and identify distribution changes over time?",
+          "I need to ensure appropriate modeling assumptions with distribution analysis"
+        ]
       },
       "cumulative_distribution": {
         "description": "Calculate cumulative distribution (empirical CDF) for specified columns.",
-        "usage_description": "Creates cumulative distribution functions for time series data. Useful for understanding data percentiles, setting thresholds, and analyzing the full distribution of time series values."
+        "usage_description": "Creates cumulative distribution functions for time series data. Useful for understanding data percentiles, setting thresholds, and analyzing the full distribution of time series values.",
+        "example_questions": [
+          "How do I calculate cumulative distribution (empirical CDF) for specified columns?",
+          "I want to create cumulative distribution functions for time series data",
+          "How can I understand data percentiles and set thresholds?",
+          "I need to analyze the full distribution of time series values"
+        ]
       },
       "rolling_window": {
         "description": "Apply rolling window operations to time series data.",
-        "usage_description": "Applies functions over moving time windows to smooth data and identify trends. Essential for trend analysis, noise reduction, and understanding patterns in time series data."
+        "usage_description": "Applies functions over moving time windows to smooth data and identify trends. Essential for trend analysis, noise reduction, and understanding patterns in time series data.",
+        "example_questions": [
+          "How do I apply rolling window operations to time series data?",
+          "I want to apply functions over moving time windows to smooth data",
+          "How can I identify trends and reduce noise in time series data?",
+          "I need to understand patterns in time series data with rolling windows"
+        ]
       },
       "get_distribution_summary": {
         "description": "Return a formatted summary of distribution analysis results",
-        "usage_description": "Provides comprehensive summary of time series distribution characteristics. Useful for reporting, understanding data properties, and communicating distribution analysis results."
+        "usage_description": "Provides comprehensive summary of time series distribution characteristics. Useful for reporting, understanding data properties, and communicating distribution analysis results.",
+        "example_questions": [
+          "How do I get a formatted summary of distribution analysis results?",
+          "I want to get a comprehensive summary of time series distribution characteristics",
+          "How can I report and understand data properties with distribution analysis?",
+          "I need to communicate distribution analysis results with a summary"
+        ]
       },
       "custom_calculation": {
         "description": "Apply a custom calculation function to the data",
-        "usage_description": "Allows application of custom time series calculations specific to business needs. Provides flexibility for domain-specific analysis and specialized time series transformations."
+        "usage_description": "Allows application of custom time series calculations specific to business needs. Provides flexibility for domain-specific analysis and specialized time series transformations.",
+        "example_questions": [
+          "How do I apply a custom calculation function to the data?",
+          "I want to apply custom time series calculations specific to business needs",
+          "How can I perform domain-specific analysis with custom calculations?",
+          "I need to handle specialized time series transformations with custom functions"
+        ]
       }
     }
   },
@@ -583,35 +1369,111 @@
     "functions": {
       "aggregate_by_time": {
         "description": "Aggregate data by time periods",
-        "usage_description": "Groups and summarizes data by time periods (daily, weekly, monthly, etc.). Essential for trend analysis, reducing noise in time series data, and creating time-based summaries for analysis."
+        "usage_description": "Groups and summarizes data by time periods (daily, weekly, monthly, etc.). Essential for trend analysis, reducing noise in time series data, and creating time-based summaries for analysis.",
+        "example_questions": [
+          "How do I aggregate data by time periods?",
+          "I want to group and summarize data by daily, weekly, monthly periods",
+          "How can I perform trend analysis and reduce noise in time series data?",
+          "I need to create time-based summaries for analysis"
+        ]
       },
       "calculate_growth_rates": {
         "description": "Calculate growth rates for aggregated metrics",
-        "usage_description": "Measures how metrics change over time using percentage, logarithmic, or CAGR methods. Critical for understanding business growth, comparing performance across periods, and identifying growth trends."
+        "usage_description": "Measures how metrics change over time using percentage, logarithmic, or CAGR methods. Critical for understanding business growth, comparing performance across periods, and identifying growth trends.",
+        "example_questions": [
+          "How do I calculate growth rates for aggregated metrics?",
+          "I want to measure how metrics change over time using percentage, logarithmic, or CAGR methods",
+          "How can I understand business growth and compare performance across periods?",
+          "I need to identify growth trends with growth rate calculations"
+        ]
       },
       "calculate_moving_average": {
         "description": "Calculate moving averages for aggregated metrics",
-        "usage_description": "Smooths time series data to identify underlying trends. Essential for trend analysis, reducing seasonal noise, and understanding long-term patterns in business metrics."
+        "usage_description": "Smooths time series data to identify underlying trends. Essential for trend analysis, reducing seasonal noise, and understanding long-term patterns in business metrics.",
+        "example_questions": [
+          "How do I calculate moving averages for aggregated metrics?",
+          "I want to smooth time series data to identify underlying trends",
+          "How can I perform trend analysis and reduce seasonal noise?",
+          "I need to understand long-term patterns in business metrics with moving averages"
+        ]
       },
       "decompose_trend": {
         "description": "Decompose time series into trend, seasonal, and residual components",
-        "usage_description": "Breaks down time series into trend, seasonal, and random components. Critical for understanding the underlying structure of time series data and identifying different types of patterns."
+        "usage_description": "Breaks down time series into trend, seasonal, and random components. Critical for understanding the underlying structure of time series data and identifying different types of patterns.",
+        "example_questions": [
+          "How do I decompose time series into trend, seasonal, and residual components?",
+          "I want to break down time series into trend, seasonal, and random components",
+          "How can I understand the underlying structure of time series data?",
+          "I need to identify different types of patterns with trend decomposition"
+        ]
       },
       "forecast_metric": {
         "description": "Forecast future values of a metric",
-        "usage_description": "Predicts future values using various forecasting methods. Essential for planning, resource allocation, and understanding expected future performance based on historical patterns."
+        "usage_description": "Predicts future values using various forecasting methods. Essential for planning, resource allocation, and understanding expected future performance based on historical patterns.",
+        "example_questions": [
+          "What will our sales revenue be next quarter?",
+          "Can you forecast the customer acquisition rate for the next 6 months?",
+          "Predict the website traffic for the upcoming holiday season",
+          "What are the expected inventory levels for next month?",
+          "Forecast the demand for our products over the next year",
+          "What will be the projected growth in user signups?",
+          "Can you predict the seasonal trends in our business metrics?",
+          "Estimate the future cash flow based on historical patterns",
+          "What are the expected conversion rates for next quarter?",
+          "Forecast the employee headcount needs for next year"
+        ]
       },
       "calculate_statistical_trend": {
         "description": "Calculate statistical significance of trends",
-        "usage_description": "Tests whether observed trends are statistically significant. Critical for validating trend analysis, ensuring trends are not due to random variation, and making data-driven decisions."
+        "usage_description": "Tests whether observed trends are statistically significant. Critical for validating trend analysis, ensuring trends are not due to random variation, and making data-driven decisions.",
+        "example_questions": [
+          "Is the upward trend in sales statistically significant?",
+          "Are we seeing a real improvement in customer satisfaction or is it just random variation?",
+          "Is the decline in website conversion rate statistically meaningful?",
+          "Can we confirm that our marketing campaign had a significant impact?",
+          "Is the increasing trend in customer complaints statistically valid?",
+          "Are the changes in user engagement metrics significant?",
+          "Is the improvement in product quality scores statistically proven?",
+          "Can we validate that the cost reduction trend is real?",
+          "Is the growth in mobile app usage statistically significant?",
+          "Are the seasonal patterns in our data statistically confirmed?"
+        ]
       },
       "compare_periods": {
         "description": "Compare metrics between different time periods (e.g., year-over-year, month-over-month)",
-        "usage_description": "Analyzes performance changes between comparable time periods. Essential for understanding seasonal patterns, measuring improvement over time, and identifying period-to-period changes."
+        "usage_description": "Analyzes performance changes between comparable time periods. Essential for understanding seasonal patterns, measuring improvement over time, and identifying period-to-period changes.",
+        "example_questions": [
+          "How do this year's sales compare to last year?",
+          "What's the month-over-month change in customer acquisition?",
+          "Compare Q4 performance with Q3 results",
+          "How does this month's revenue compare to the same month last year?",
+          "What's the year-over-year growth in website traffic?",
+          "Compare this quarter's profit margins with the previous quarter",
+          "How do weekday sales compare to weekend sales?",
+          "What's the difference between summer and winter performance?",
+          "Compare morning vs evening user activity patterns",
+          "How does current performance compare to our baseline period?",
+          "What's the change in customer retention from last quarter?",
+          "Compare pre-campaign vs post-campaign metrics"
+        ]
       },
       "get_top_metrics": {
         "description": "Get top metrics based on growth, trend, or other criteria",
-        "usage_description": "Identifies the best-performing metrics based on various criteria. Useful for focusing attention on the most important trends, identifying opportunities, and prioritizing analysis efforts."
+        "usage_description": "Identifies the best-performing metrics based on various criteria. Useful for focusing attention on the most important trends, identifying opportunities, and prioritizing analysis efforts.",
+        "example_questions": [
+          "Which products have the highest growth rate?",
+          "What are the top 5 metrics showing the strongest positive trends?",
+          "Which regions are performing best in terms of sales growth?",
+          "What are the fastest-growing customer segments?",
+          "Which marketing channels show the highest ROI improvement?",
+          "What are the top trending keywords in our search data?",
+          "Which product categories have the best month-over-month growth?",
+          "What are the most improved operational metrics?",
+          "Which customer cohorts show the strongest retention trends?",
+          "What are the top-performing features based on user engagement growth?",
+          "Which business units have the best performance trends?",
+          "What are the highest-impact metrics showing positive change?"
+        ]
       }
     }
   },
@@ -620,43 +1482,368 @@
     "functions": {
       "detect_statistical_outliers": {
         "description": "Detect outliers using statistical methods",
-        "usage_description": "Identifies unusual values using statistical methods like z-score, IQR, and modified z-score. Essential for data quality control, fraud detection, and identifying unusual patterns in sensor data, financial transactions, or business metrics."
+        "usage_description": "Identifies unusual values using statistical methods like z-score, IQR, and modified z-score. Essential for data quality control, fraud detection, and identifying unusual patterns in sensor data, financial transactions, or business metrics.",
+        "example_questions": [
+          "Find unusual sales transactions that might indicate fraud",
+          "Identify outliers in customer spending patterns",
+          "Detect abnormal sensor readings in our IoT devices",
+          "Which orders have unusually high or low values?",
+          "Find statistical outliers in website response times",
+          "Identify customers with extreme usage patterns",
+          "Detect unusual patterns in inventory levels",
+          "Find outliers in employee performance metrics",
+          "Identify abnormal network traffic spikes",
+          "Which products have unusual return rates?",
+          "Detect outliers in manufacturing quality metrics",
+          "Find unusual patterns in customer support ticket volumes"
+        ]
       },
       "detect_contextual_anomalies": {
         "description": "Detect contextual anomalies by comparing actual values with expected values",
-        "usage_description": "Finds anomalies by comparing actual values to expected values based on time, seasonality, or other contextual factors. Critical for detecting unusual patterns in time series data, website traffic anomalies, and business performance outliers."
+        "usage_description": "Finds anomalies by comparing actual values to expected values based on time, seasonality, or other contextual factors. Critical for detecting unusual patterns in time series data, website traffic anomalies, and business performance outliers.",
+        "example_questions": [
+          "Are there unusual patterns in website traffic considering the time of day?",
+          "Detect sales anomalies accounting for seasonal trends",
+          "Find unusual customer behavior patterns for different days of the week",
+          "Identify anomalies in server load considering typical usage patterns",
+          "Are there unexpected changes in user engagement for this time of year?",
+          "Detect unusual energy consumption patterns considering weather conditions",
+          "Find anomalies in call center volume accounting for business hours",
+          "Identify unusual inventory movements considering seasonal demands",
+          "Detect abnormal user login patterns for different time periods",
+          "Are there unexpected changes in conversion rates for this campaign period?",
+          "Find unusual price movements considering market conditions",
+          "Detect anomalies in production output accounting for scheduled maintenance"
+        ]
       },
       "detect_collective_anomalies": {
         "description": "Detect collective anomalies using machine learning methods on multiple features",
-        "usage_description": "Identifies unusual patterns across multiple variables using machine learning algorithms. Essential for complex anomaly detection, fraud detection, and identifying unusual behavior patterns that span multiple dimensions."
+        "usage_description": "Identifies unusual patterns across multiple variables using machine learning algorithms. Essential for complex anomaly detection, fraud detection, and identifying unusual behavior patterns that span multiple dimensions.",
+        "example_questions": [
+          "Find unusual patterns across multiple customer behavior metrics",
+          "Detect complex fraud patterns using multiple transaction features",
+          "Identify unusual combinations of website user interactions",
+          "Find anomalies across multiple operational metrics simultaneously",
+          "Detect unusual patterns in multi-dimensional sensor data",
+          "Identify complex anomalies in financial trading patterns",
+          "Find unusual behavior patterns across multiple marketing channels",
+          "Detect anomalies in multi-feature product performance data",
+          "Identify unusual patterns across multiple supply chain metrics",
+          "Find complex anomalies in multi-dimensional user journey data",
+          "Detect unusual patterns across multiple quality control metrics",
+          "Identify anomalies in multi-variable system performance data"
+        ]
       },
       "calculate_seasonal_residuals": {
         "description": "Calculate residuals after removing seasonal patterns",
-        "usage_description": "Removes seasonal effects to focus on unusual patterns in the remaining data. Useful for detecting anomalies in seasonal data, understanding non-seasonal patterns, and improving anomaly detection accuracy."
+        "usage_description": "Removes seasonal effects to focus on unusual patterns in the remaining data. Useful for detecting anomalies in seasonal data, understanding non-seasonal patterns, and improving anomaly detection accuracy.",
+        "example_questions": [
+          "Remove seasonal effects to see underlying anomalies in sales data",
+          "Calculate residuals after removing holiday patterns from website traffic",
+          "Find non-seasonal anomalies in retail sales data",
+          "Remove weather seasonality to detect unusual energy consumption",
+          "Calculate residuals after removing cyclical patterns from stock prices",
+          "Remove seasonal trends to focus on operational anomalies",
+          "Find underlying anomalies after removing seasonal customer behavior",
+          "Calculate residuals removing seasonal employment patterns",
+          "Remove seasonal effects from tourism data to find unusual patterns",
+          "Calculate non-seasonal residuals in agricultural production data",
+          "Remove cyclical patterns to detect manufacturing anomalies",
+          "Find underlying trends after removing seasonal marketing effects"
+        ]
       },
       "detect_anomalies_from_residuals": {
         "description": "Detect anomalies from pre-calculated residuals",
-        "usage_description": "Identifies anomalies in residual data after seasonal or trend components have been removed. Useful for detecting unusual patterns in detrended data and improving anomaly detection precision."
+        "usage_description": "Identifies anomalies in residual data after seasonal or trend components have been removed. Useful for detecting unusual patterns in detrended data and improving anomaly detection precision.",
+        "example_questions": [
+          "Find anomalies in the residuals after removing seasonal trends",
+          "Detect unusual patterns in detrended sales data",
+          "Identify anomalies in residuals after removing cyclical patterns",
+          "Find outliers in the remaining data after trend removal",
+          "Detect anomalies in residuals from seasonal decomposition",
+          "Identify unusual patterns after removing expected seasonal effects",
+          "Find anomalies in the noise component of time series data",
+          "Detect outliers in residuals from forecasting models",
+          "Identify unusual patterns in deseasonalized data",
+          "Find anomalies in residuals after removing growth trends",
+          "Detect unusual patterns in the error terms of our models",
+          "Identify outliers in residuals from baseline projections"
+        ]
       },
       "get_anomaly_summary": {
         "description": "Generate a summary of detected anomalies",
-        "usage_description": "Provides comprehensive overview of detected anomalies including counts, characteristics, and patterns. Essential for understanding anomaly patterns, reporting findings, and prioritizing investigation efforts."
+        "usage_description": "Provides comprehensive overview of detected anomalies including counts, characteristics, and patterns. Essential for understanding anomaly patterns, reporting findings, and prioritizing investigation efforts.",
+        "example_questions": [
+          "Provide a summary of all detected anomalies this month",
+          "What's the overall pattern of anomalies in our system?",
+          "Generate a report of unusual events found in the data",
+          "Summarize the characteristics of detected outliers",
+          "What are the key findings from anomaly detection analysis?",
+          "Provide an overview of all unusual patterns identified",
+          "Generate a summary report of data quality issues found",
+          "What are the main types of anomalies detected?",
+          "Summarize the frequency and severity of detected outliers",
+          "Provide a comprehensive overview of unusual system behavior",
+          "Generate an executive summary of anomaly detection results",
+          "What are the key insights from outlier analysis?"
+        ]
       },
       "get_top_anomalies": {
         "description": "Get the top n anomalies by score",
-        "usage_description": "Identifies the most significant anomalies based on anomaly scores. Useful for prioritizing investigation efforts, focusing on the most important outliers, and managing large numbers of detected anomalies."
+        "usage_description": "Identifies the most significant anomalies based on anomaly scores. Useful for prioritizing investigation efforts, focusing on the most important outliers, and managing large numbers of detected anomalies.",
+        "example_questions": [
+          "What are the top 10 most unusual transactions?",
+          "Show me the most significant anomalies detected",
+          "Which are the highest priority outliers to investigate?",
+          "What are the top 5 most unusual customer behavior patterns?",
+          "Identify the most critical system anomalies",
+          "Which are the most severe data quality issues?",
+          "Show the top anomalies ranked by severity",
+          "What are the most unusual patterns that need immediate attention?",
+          "Rank the detected outliers by importance",
+          "Which anomalies have the highest impact scores?",
+          "Show me the most significant operational anomalies",
+          "What are the top priority unusual events to investigate?"
+        ]
       },
       "detect_change_points": {
         "description": "Detect change points in time series data",
-        "usage_description": "Identifies points where the underlying data generating process changes. Critical for understanding structural breaks, identifying when business conditions change, and detecting regime changes in time series data."
+        "usage_description": "Identifies points where the underlying data generating process changes. Critical for understanding structural breaks, identifying when business conditions change, and detecting regime changes in time series data.",
+        "example_questions": [
+          "When did our sales patterns fundamentally change?",
+          "Identify points where customer behavior shifted significantly",
+          "Find when our website performance characteristics changed",
+          "Detect when market conditions affected our business metrics",
+          "When did our operational efficiency patterns change?",
+          "Identify structural breaks in our time series data",
+          "Find when our customer acquisition patterns shifted",
+          "Detect regime changes in our financial performance",
+          "When did our product usage patterns fundamentally change?",
+          "Identify points where our business model effectiveness changed",
+          "Find when external factors caused shifts in our metrics",
+          "Detect when new business processes changed our performance patterns"
+        ]
       },
       "forecast_and_detect_anomalies": {
         "description": "Forecast time series and detect anomalies based on forecast errors",
-        "usage_description": "Uses forecasting models to predict expected values and identifies anomalies based on forecast errors. Useful for detecting unusual patterns in time series data and identifying deviations from expected trends."
+        "usage_description": "Uses forecasting models to predict expected values and identifies anomalies based on forecast errors. Useful for detecting unusual patterns in time series data and identifying deviations from expected trends.",
+        "example_questions": [
+          "Forecast sales and identify days with unusual deviations",
+          "Predict website traffic and find anomalous patterns",
+          "Forecast customer signups and detect unusual registration spikes",
+          "Predict server load and identify unusual usage patterns",
+          "Forecast inventory levels and detect unusual consumption patterns",
+          "Predict revenue and identify periods with unexpected performance",
+          "Forecast user engagement and detect unusual activity patterns",
+          "Predict system performance and identify unusual degradation",
+          "Forecast demand and detect unusual market behavior",
+          "Predict conversion rates and identify unusual campaign performance",
+          "Forecast operational metrics and detect unusual efficiency changes",
+          "Predict customer behavior and identify unusual pattern shifts"
+        ]
       },
       "batch_detect_anomalies": {
         "description": "Apply multiple anomaly detection methods and combine results",
-        "usage_description": "Runs multiple anomaly detection algorithms and combines their results for more robust detection. Essential for comprehensive anomaly detection, reducing false positives, and improving detection accuracy through ensemble methods."
+        "usage_description": "Runs multiple anomaly detection algorithms and combines their results for more robust detection. Essential for comprehensive anomaly detection, reducing false positives, and improving detection accuracy through ensemble methods.",
+        "example_questions": [
+          "Run comprehensive anomaly detection using multiple methods",
+          "Apply all available anomaly detection techniques to our data",
+          "Use ensemble methods to find the most reliable anomalies",
+          "Combine statistical and machine learning approaches for anomaly detection",
+          "Run multiple anomaly detection algorithms and merge results",
+          "Apply comprehensive outlier detection across all our metrics",
+          "Use multiple detection methods to reduce false positive anomalies",
+          "Run a full battery of anomaly detection tests",
+          "Apply ensemble anomaly detection for maximum accuracy",
+          "Use combined methods to find the most significant outliers",
+          "Run comprehensive anomaly screening across all dimensions",
+          "Apply multiple detection techniques for robust anomaly identification"
+        ]
+      }
+    }
+  },
+  "SelectPipe": {
+    "description": "Pipeline-style column selection tool with functional composition and selector-based interface similar to dplyr's select functionality.",
+    "functions": {
+      "from_engine": {
+        "description": "Create a SelectPipe from an engine and table name",
+        "usage_description": "Initializes a SelectPipe with a database engine and table name for data operations. Essential for working with database tables, enabling column selection operations on large datasets without loading all data into memory. Common use cases: selecting specific columns from database tables, creating data pipelines with database sources, and performing column operations on remote data.",
+        "example_questions": [
+          "How do I connect to a database table for column selection?",
+          "I want to select columns from a large database table without loading everything into memory",
+          "How can I work with database tables in SelectPipe?",
+          "I need to create a SelectPipe from a database engine and table name"
+        ]
+      },
+      "to_df": {
+        "description": "Convert the selection to a DataFrame",
+        "usage_description": "Converts the current column selection into a pandas DataFrame. Critical for materializing the selection results, enabling further data analysis, and providing the final output for downstream processing. Essential for completing data pipelines and obtaining the selected data for analysis or export.",
+        "example_questions": [
+          "How do I get the final DataFrame from my column selection?",
+          "I want to convert my SelectPipe results to a pandas DataFrame",
+          "How can I materialize the selected columns into a DataFrame?",
+          "I need to export my column selection results to a DataFrame"
+        ]
+      },
+      "get_selected_columns": {
+        "description": "Get the list of currently selected columns",
+        "usage_description": "Returns the current list of selected column names. Useful for understanding the current state of the selection, debugging selection operations, and verifying which columns are included in the current selection. Essential for pipeline inspection and validation.",
+        "example_questions": [
+          "What columns are currently selected in my SelectPipe?",
+          "How can I see which columns I have selected?",
+          "I want to check what columns are in my current selection",
+          "How do I get a list of the selected column names?"
+        ]
+      },
+      "get_selection_summary": {
+        "description": "Get a summary of the current selection",
+        "usage_description": "Provides comprehensive information about the current selection state including total available columns, selected columns, selection history, and data source information. Essential for understanding the selection pipeline state, debugging complex selections, and creating selection reports.",
+        "example_questions": [
+          "How can I get a detailed summary of my column selection?",
+          "I want to see the selection history and statistics",
+          "How do I get comprehensive information about my current selection state?",
+          "I need a summary report of my column selection operations"
+        ]
+      },
+      "get_summary": {
+        "description": "Get a summary of the pipe's current state and operations",
+        "usage_description": "Returns a summary of the pipe's current state, satisfying the abstract method requirement from BasePipe. Useful for pipeline introspection, debugging, and understanding the overall state of the selection pipeline.",
+        "example_questions": [
+          "How do I get the overall state summary of my SelectPipe?",
+          "I want to see the current state of my pipeline",
+          "How can I get a general summary of my pipe operations?",
+          "I need to check the overall status of my SelectPipe"
+        ]
+      },
+      "Select": {
+        "description": "Select columns using one or more selectors",
+        "usage_description": "Applies column selection using various selector types (name-based, pattern-based, type-based, etc.). Core function for column selection operations, enabling flexible and powerful column selection strategies. Essential for data preprocessing, feature selection, and creating focused datasets for analysis.",
+        "example_questions": [
+          "How do I select specific columns from my dataset?",
+          "I want to choose certain columns using column names or patterns",
+          "How can I pick columns based on their names or types?",
+          "I need to select columns using various selection criteria"
+        ]
+      },
+      "Deselect": {
+        "description": "Remove columns using one or more selectors",
+        "usage_description": "Removes columns from the current selection using various selector types. Useful for excluding unwanted columns, removing sensitive data, and refining column selections. Essential for data cleaning and creating focused datasets by removing irrelevant columns.",
+        "example_questions": [
+          "How do I remove unwanted columns from my selection?",
+          "I want to exclude certain columns from my dataset",
+          "How can I drop columns that I don't need?",
+          "I need to remove sensitive or irrelevant columns from my selection"
+        ]
+      },
+      "Rename": {
+        "description": "Rename columns in the selection",
+        "usage_description": "Renames columns in the current selection using a mapping of old names to new names. Critical for standardizing column names, improving readability, and preparing data for downstream analysis. Essential for data preparation and ensuring consistent naming conventions.",
+        "example_questions": [
+          "How do I rename columns in my dataset?",
+          "I want to change column names to make them more readable",
+          "How can I standardize column naming conventions?",
+          "I need to rename columns for better data preparation"
+        ]
+      },
+      "Reorder": {
+        "description": "Reorder columns in the selection",
+        "usage_description": "Reorders columns in the current selection according to a specified order. Useful for organizing data presentation, grouping related columns together, and creating logical column arrangements. Essential for data organization and improving data readability.",
+        "example_questions": [
+          "How do I change the order of columns in my dataset?",
+          "I want to arrange columns in a specific sequence",
+          "How can I organize columns in a logical order?",
+          "I need to reorder columns for better data presentation"
+        ]
+      },
+      "AddColumns": {
+        "description": "Add new computed columns to the selection",
+        "usage_description": "Adds new columns to the selection, either with constant values or computed from existing columns using functions. Essential for feature engineering, creating derived metrics, and adding calculated fields to datasets. Critical for data transformation and creating new analytical variables.",
+        "example_questions": [
+          "How do I add new calculated columns to my dataset?",
+          "I want to create new columns based on existing data",
+          "How can I add computed fields or derived metrics?",
+          "I need to perform feature engineering by adding new columns"
+        ]
+      },
+      "select_numeric": {
+        "description": "Select all numeric columns",
+        "usage_description": "Convenience function that selects all numeric columns (integer, float, complex) from the dataset. Useful for focusing analysis on quantitative variables, preparing data for statistical analysis, and selecting features for machine learning models. Essential for data type-based filtering.",
+        "example_questions": [
+          "How do I select only numeric columns from my dataset?",
+          "I want to get all columns with numbers for statistical analysis",
+          "How can I pick only quantitative variables?",
+          "I need to select all integer and float columns"
+        ]
+      },
+      "select_strings": {
+        "description": "Select all string columns",
+        "usage_description": "Convenience function that selects all string/text columns from the dataset. Useful for text analysis, categorical variable selection, and focusing on qualitative data. Essential for text processing pipelines and categorical data analysis.",
+        "example_questions": [
+          "How do I select only text columns from my dataset?",
+          "I want to get all string columns for text analysis",
+          "How can I pick only categorical or text variables?",
+          "I need to select all columns containing text data"
+        ]
+      },
+      "select_dates": {
+        "description": "Select all date/datetime columns",
+        "usage_description": "Convenience function that selects all temporal columns (datetime, date, time) from the dataset. Useful for time series analysis, temporal feature selection, and date-based data processing. Essential for time-based analysis and temporal data preparation.",
+        "example_questions": [
+          "How do I select only date and time columns from my dataset?",
+          "I want to get all datetime columns for time series analysis",
+          "How can I pick only temporal variables?",
+          "I need to select all columns with dates or timestamps"
+        ]
+      },
+      "select_by_pattern": {
+        "description": "Select columns matching a regex pattern",
+        "usage_description": "Selects columns whose names match a specified regular expression pattern. Useful for selecting columns with similar naming patterns, batch column selection, and pattern-based data organization. Essential for systematic column selection and naming convention-based filtering.",
+        "example_questions": [
+          "How do I select columns using a regex pattern?",
+          "I want to find columns that match a specific pattern in their names",
+          "How can I use regular expressions to select columns?",
+          "I need to select columns based on a naming pattern"
+        ]
+      },
+      "select_by_prefix": {
+        "description": "Select columns starting with a prefix",
+        "usage_description": "Selects columns whose names start with a specified prefix. Useful for selecting related columns (e.g., all columns starting with 'user_'), organizing data by categories, and systematic column grouping. Essential for hierarchical data organization.",
+        "example_questions": [
+          "How do I select columns that start with a specific prefix?",
+          "I want to get all columns beginning with 'user_'",
+          "How can I select columns with a common prefix?",
+          "I need to find columns that start with a particular string"
+        ]
+      },
+      "select_by_suffix": {
+        "description": "Select columns ending with a suffix",
+        "usage_description": "Selects columns whose names end with a specified suffix. Useful for selecting columns with similar purposes (e.g., all columns ending with '_count'), organizing data by function, and systematic column filtering. Essential for functional data organization.",
+        "example_questions": [
+          "How do I select columns that end with a specific suffix?",
+          "I want to get all columns ending with '_date'",
+          "How can I select columns with a common suffix?",
+          "I need to find columns that end with a particular string"
+        ]
+      },
+      "select_containing": {
+        "description": "Select columns containing a substring",
+        "usage_description": "Selects columns whose names contain a specified substring. Useful for flexible column selection, finding related columns, and partial name matching. Essential for exploratory column selection and flexible data filtering.",
+        "example_questions": [
+          "How do I select columns that contain a specific substring?",
+          "I want to find columns with 'score' in their names",
+          "How can I select columns containing a particular word?",
+          "I need to find columns that include a specific text"
+        ]
+      },
+      "preview_selection": {
+        "description": "Preview what columns would be selected without creating a pipe",
+        "usage_description": "Shows what columns would be selected by given selectors without actually applying the selection. Useful for testing selection logic, understanding selector behavior, and planning column selection strategies. Essential for selection validation and planning.",
+        "example_questions": [
+          "How do I preview what columns would be selected before applying?",
+          "I want to test my selection logic without actually selecting",
+          "How can I see what would be selected without creating a pipe?",
+          "I need to preview column selection results before committing"
+        ]
       }
     }
   }

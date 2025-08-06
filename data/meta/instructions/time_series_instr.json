@@ -1,0 +1,265 @@
+[
+    {
+      "query": "Project next week's inventory needs based on current stock levels",
+      "function": "lead",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["stock_level", "sales_rate"],
+        "periods": 7,
+        "time_column": "date",
+        "group_columns": ["warehouse_id", "product_id"],
+        "suffix": "_projected"
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | lead(columns=['stock_level', 'sales_rate'], periods=7, time_column='date', group_columns=['warehouse_id', 'product_id'], suffix='_projected')",
+      "instructions": {
+        "business_case": "Inventory Management & Supply Chain Planning - Forecast future inventory requirements to optimize stock levels, prevent stockouts, reduce carrying costs, and ensure product availability for customer demand.",
+        "natural_language_questions": [
+          "What will my inventory look like next week?",
+          "Can you project future stock needs?",
+          "How much inventory should I order?",
+          "What are the expected stock levels?"
+        ],
+        "data_keywords": [
+          "inventory", "stock", "warehouse", "supply", "forecast",
+          "project", "future", "demand", "planning", "optimization"
+        ],
+        "configuration_hints": {
+          "periods": "7 for next week, 30 for next month, adjust based on planning horizon",
+          "group_columns": "Group by warehouse/product for granular forecasting",
+          "suffix": "Use descriptive suffix to identify projected values"
+        },
+        "typical_parameters": {
+          "periods_range": [1, 90],
+          "common_groupings": ["product", "warehouse", "category", "region"],
+          "use_cases": ["reorder_planning", "capacity_management", "demand_forecasting"],
+          "business_applications": ["supply_chain", "procurement", "operations"]
+        }
+      },
+      "patterns": {
+        "time_patterns": [
+          "(weekly)"
+        ],
+        "num_patterns": [
+          "(7)"
+        ]
+      }
+    },
+    {
+      "query": "Compare current sales with previous week's performance by store",
+      "function": "lag",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["daily_sales", "transaction_count", "average_basket"],
+        "periods": 7,
+        "time_column": "date",
+        "group_columns": ["store_id"],
+        "suffix": "_previous_week"
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | lag(columns=['daily_sales', 'transaction_count', 'average_basket'], periods=7, time_column='date', group_columns=['store_id'], suffix='_previous_week')",
+      "instructions": {
+        "business_case": "Performance Monitoring & Trend Analysis - Compare current performance against historical baselines to identify trends, measure improvement, and detect performance anomalies requiring management attention.",
+        "natural_language_questions": [
+          "How does this week compare to last week?",
+          "Are sales improving compared to before?",
+          "What's the week-over-week performance?",
+          "Can you show performance trends?"
+        ],
+        "data_keywords": [
+          "compare", "previous", "baseline", "trend", "performance",
+          "week_over_week", "change", "improvement", "historical"
+        ],
+        "configuration_hints": {
+          "periods": "7 for week-over-week, 30 for month-over-month comparisons",
+          "group_columns": "Group by business unit (store, region, product)",
+          "suffix": "Use descriptive suffix indicating comparison period"
+        },
+        "typical_parameters": {
+          "periods_range": [1, 365],
+          "comparison_types": ["week_over_week", "month_over_month", "year_over_year"],
+          "use_cases": ["performance_tracking", "trend_analysis", "anomaly_detection"],
+          "business_applications": ["retail", "sales_management", "operations"]
+        }
+      },
+      "patterns": {
+        "time_patterns": [
+          "(daily)",
+          "(weekly)"
+        ],
+        "num_patterns": [
+          "(7)"
+        ]
+      }
+    },
+    {
+      "query": "Analyze volatility in daily website traffic over the past month",
+      "function": "variance_analysis",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["visitors", "page_views", "conversion_rate"],
+        "method": "rolling",
+        "window": 7,
+        "time_column": "date",
+        "suffix": "_volatility"
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | variance_analysis(columns=['visitors', 'page_views', 'conversion_rate'], method='rolling', window=7, time_column='date', suffix='_volatility')",
+      "instructions": {
+        "business_case": "Risk Assessment & Stability Monitoring - Measure variability and stability in business metrics to assess risk, identify periods of instability, and understand the predictability of business performance.",
+        "natural_language_questions": [
+          "How volatile is our website traffic?",
+          "Are there fluctuations in performance?",
+          "How stable are our metrics?",
+          "What's the variability in our data?"
+        ],
+        "data_keywords": [
+          "volatility", "variability", "stability", "fluctuation", "risk",
+          "consistency", "variance", "deviation", "uncertainty"
+        ],
+        "configuration_hints": {
+          "method": "rolling = moving window analysis, expanding = cumulative analysis",
+          "window": "7 days for weekly patterns, 30 for monthly stability",
+          "interpretation": "Higher values indicate more volatility/risk"
+        },
+        "typical_parameters": {
+          "window_range": [3, 90],
+          "methods": ["rolling", "expanding"],
+          "use_cases": ["risk_management", "stability_assessment", "quality_control"],
+          "business_applications": ["finance", "operations", "marketing"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(analyze|analysis|examine) (volatility)"
+        ],
+        "time_patterns": [
+          "(daily)",
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(7)"
+        ]
+      }
+    },
+    {
+      "query": "Examine distribution of order values across different sales channels",
+      "function": "distribution_analysis",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["order_value"],
+        "bins": 10,
+        "group_columns": ["sales_channel"],
+        "normalize": true
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | distribution_analysis(columns=['order_value'], bins=10, group_columns=['sales_channel'], normalize=True)",
+      "instructions": {
+        "business_case": "Customer Behavior Analysis & Channel Optimization - Understand value distribution patterns across different sales channels to optimize pricing strategies, channel mix, and customer targeting approaches.",
+        "natural_language_questions": [
+          "How do order values differ by channel?",
+          "What's the distribution of customer spending?",
+          "Which channels have higher value customers?",
+          "Can you analyze spending patterns?"
+        ],
+        "data_keywords": [
+          "distribution", "pattern", "channel", "spending", "value",
+          "behavior", "segment", "histogram", "frequency", "range"
+        ],
+        "configuration_hints": {
+          "bins": "10-20 bins typical for most distributions",
+          "normalize": "True for percentage comparison across groups",
+          "group_columns": "Compare across business dimensions"
+        },
+        "typical_parameters": {
+          "bins_range": [5, 50],
+          "grouping_options": ["channel", "region", "customer_type", "time_period"],
+          "use_cases": ["pricing_strategy", "customer_segmentation", "channel_analysis"],
+          "visualization": ["histograms", "density_plots", "box_plots"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(analyze|analysis|examine) (distribution)"
+        ],
+        "num_patterns": [
+          "(10)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate running total of new customer acquisitions by marketing channel",
+      "function": "cumulative_distribution",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "columns": ["new_customers"],
+        "time_column": "date",
+        "group_columns": ["marketing_channel"],
+        "suffix": "_cumulative"
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | cumulative_distribution(columns=['new_customers'], time_column='date', group_columns=['marketing_channel'], suffix='_cumulative')",
+      "instructions": {
+        "business_case": "Growth Tracking & ROI Measurement - Monitor cumulative progress toward business goals, track total impact of marketing investments, and measure long-term growth patterns across different channels.",
+        "natural_language_questions": [
+          "What's the total customer acquisition so far?",
+          "How many customers have we gained overall?",
+          "Can you show cumulative growth?",
+          "What's the running total by channel?"
+        ],
+        "data_keywords": [
+          "cumulative", "running_total", "total", "growth", "acquisition",
+          "progress", "accumulate", "sum", "overall", "lifetime"
+        ],
+        "configuration_hints": {
+          "time_column": "Must be sorted chronologically for accurate cumulation",
+          "group_columns": "Track cumulative progress by business dimension",
+          "suffix": "Use descriptive suffix to identify cumulative values"
+        },
+        "typical_parameters": {
+          "common_metrics": ["revenue", "customers", "conversions", "usage"],
+          "grouping_options": ["channel", "campaign", "product", "region"],
+          "use_cases": ["goal_tracking", "roi_analysis", "growth_monitoring"],
+          "business_applications": ["marketing", "sales", "finance"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (running total|cumulative)"
+        ]
+      }
+    },
+    {
+      "query": "Apply custom seasonality adjustment to monthly sales data",
+      "function": "custom_calculation",
+      "category": "timeseries_analysis",
+      "inputs": {
+        "func": "lambda df: df.assign(sales_adjusted=df['sales'] / df['seasonal_factor'])"
+      },
+      "example": "TimeSeriesPipe.from_dataframe(df) | custom_calculation(lambda df: df.assign(sales_adjusted=df['sales'] / df['seasonal_factor']))",
+      "instructions": {
+        "business_case": "Advanced Analytics & Custom Business Logic - Apply specialized business calculations, domain-specific transformations, and custom analytical methods that aren't available in standard functions but are critical for specific business contexts.",
+        "natural_language_questions": [
+          "Can you apply custom business calculations?",
+          "I need to adjust for seasonality",
+          "Can you create specialized metrics?",
+          "How do I apply custom formulas?"
+        ],
+        "data_keywords": [
+          "custom", "specialized", "business_logic", "formula", "adjustment",
+          "transformation", "calculation", "domain_specific", "advanced"
+        ],
+        "configuration_hints": {
+          "lambda_functions": "Use lambda functions for custom calculations",
+          "business_logic": "Implement specific business rules and domain knowledge",
+          "error_handling": "Consider edge cases and data quality issues"
+        },
+        "typical_parameters": {
+          "calculation_types": ["adjustments", "transformations", "ratios", "indices"],
+          "common_uses": ["seasonality", "inflation_adjustment", "normalization"],
+          "use_cases": ["financial_analysis", "operations_research", "specialized_metrics"],
+          "complexity": ["simple_arithmetic", "statistical_functions", "business_rules"]
+        }
+      },
+      "patterns": {
+        "time_patterns": [
+          "(monthly)"
+        ]
+      }
+    }
+]

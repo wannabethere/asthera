@@ -1,0 +1,373 @@
+[
+    {
+        "query": "Prepare customer data for clustering with standard scaling and outlier removal",
+        "function": "prepare_clustering_data",
+        "category": "data_preparation",
+        "inputs": {
+            "feature_columns": ["age", "income", "spending", "frequency", "recency"],
+            "scaling_method": "standard",
+            "handle_missing": "mean",
+            "remove_outliers": true,
+            "outlier_method": "iqr"
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(customer_data)\npipeline = pipeline | prepare_clustering_data(\n    feature_columns=['age', 'income', 'spending', 'frequency', 'recency'],\n    scaling_method='standard',\n    handle_missing='mean',\n    remove_outliers=True,\n    outlier_method='iqr'\n)",
+        "instructions": {
+            "business_case": "Data Preprocessing for Customer Analytics - Clean and standardize customer data to ensure reliable clustering results for market segmentation and personalization strategies.",
+            "natural_language_questions": [
+                "How should I prepare my customer data before clustering?",
+                "Can you clean and standardize the data for segmentation analysis?",
+                "What's the best way to handle missing values and outliers?",
+                "How do I make sure all features are on the same scale?"
+            ],
+            "data_keywords": [
+                "customer", "demographics", "behavioral", "transactional", "missing_values",
+                "outliers", "preprocessing", "scaling", "normalization", "cleaning"
+            ],
+            "configuration_hints": {
+                "scaling_method": "standard = zero mean, unit variance. minmax = 0-1 range. robust = handles outliers",
+                "handle_missing": "mean = average imputation, median = less affected by outliers, drop = remove rows",
+                "outlier_method": "iqr = interquartile range, zscore = standard deviations"
+            },
+            "typical_parameters": {
+                "scaling_methods": ["standard", "minmax", "robust"],
+                "missing_strategies": ["mean", "median", "mode", "drop"],
+                "outlier_methods": ["iqr", "zscore", "isolation_forest"],
+                "best_for_data_types": ["customer_data", "behavioral_metrics", "demographic_data"]
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(prepare|preprocess|clean) (data|features)", "(clustering|unsupervised) (data|preparation)"],
+            "scaling_patterns": ["(standard|minmax|robust) (scaling|normalization)", "(scale|normalize) (features|data)"],
+            "outlier_patterns": ["(outlier|anomaly) (removal|detection|handling)"]
+        }
+    },
+    {
+        "query": "Create interaction and ratio features for better cluster separation",
+        "function": "engineer_clustering_features",
+        "category": "feature_engineering",
+        "inputs": {
+            "interaction_features": true,
+            "polynomial_features": ["income", "age"],
+            "ratio_features": [["spending", "income"], ["frequency", "recency"]],
+            "binning_features": {"age": 5, "income": 4}
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(data)\npipeline = pipeline | engineer_clustering_features(\n    interaction_features=True,\n    polynomial_features=['income', 'age'],\n    ratio_features=[('spending', 'income'), ('frequency', 'recency')],\n    binning_features={'age': 5, 'income': 4}\n)",
+        "instructions": {
+            "business_case": "Advanced Feature Engineering for Customer Segmentation - Create meaningful derived features that capture customer behavior patterns and relationships between variables for more insightful clustering.",
+            "natural_language_questions": [
+                "How can I create better features for customer segmentation?",
+                "Can you generate ratio features like spending per income?",
+                "Should I create interaction terms between customer characteristics?",
+                "How do I capture non-linear relationships in the data?"
+            ],
+            "data_keywords": [
+                "feature_engineering", "interactions", "ratios", "derived_features",
+                "polynomial", "binning", "segmentation", "customer_behavior", "relationships"
+            ],
+            "configuration_hints": {
+                "interaction_features": "Creates combinations of features (age × income) for complex patterns",
+                "ratio_features": "Meaningful business ratios like spend/income, frequency/recency",
+                "polynomial_features": "Captures non-linear relationships (age², income²)"
+            },
+            "typical_parameters": {
+                "useful_ratios": ["spending/income", "frequency/recency", "value/visits"],
+                "interaction_examples": ["age×income", "spending×frequency"],
+                "binning_applications": ["age_groups", "income_brackets"],
+                "best_for_data_types": ["customer_analytics", "behavioral_data", "transactional_data"]
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(engineer|create|generate) (features)", "(interaction|polynomial|ratio) (features)"],
+            "feature_patterns": ["(clustering|unsupervised) (features)", "(feature|variable) (engineering|creation)"],
+            "transformation_patterns": ["(binning|discretization) (features)", "(polynomial|interaction) (terms)"]
+        }
+    },
+    {
+        "query": "Configure K-means clustering with 5 clusters and k-means++ initialization",
+        "function": "configure_kmeans",
+        "category": "model_configuration",
+        "inputs": {
+            "n_clusters": 5,
+            "init": "k-means++",
+            "n_init": 20,
+            "max_iter": 300,
+            "random_state": 42,
+            "model_name": "customer_segments"
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(data)\npipeline = pipeline | configure_kmeans(\n    n_clusters=5,\n    init='k-means++',\n    n_init=20,\n    max_iter=300,\n    random_state=42,\n    model_name='customer_segments'\n)",
+        "instructions": {
+            "business_case": "Customer Segmentation Setup - Configure clustering algorithm for optimal customer segmentation results, balancing interpretability with statistical rigor.",
+            "natural_language_questions": [
+                "How many customer segments should I create?",
+                "What's the best way to initialize the clustering algorithm?",
+                "How do I ensure reproducible clustering results?",
+                "What parameters give the most stable customer segments?"
+            ],
+            "data_keywords": [
+                "segments", "clusters", "customer_groups", "initialization", "reproducible",
+                "configuration", "parameters", "optimization", "segmentation_strategy"
+            ],
+            "configuration_hints": {
+                "n_clusters": "Start with 3-7 for interpretability. Use elbow method for optimization",
+                "init": "k-means++ = smart initialization, random = multiple random starts",
+                "n_init": "More runs = better results but slower. 10-20 is usually sufficient"
+            },
+            "typical_parameters": {
+                "n_clusters_range": [3, 10],
+                "init_options": ["k-means++", "random"],
+                "n_init_range": [10, 50],
+                "best_for_data_types": ["customer_data", "behavioral_segments", "market_research"],
+                "business_applications": "Customer segmentation, market research, personalization"
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(configure|setup|initialize) (kmeans|k-means|clustering)", "(clustering|unsupervised) (model|algorithm)"],
+            "parameter_patterns": ["(n_clusters|clusters|k)", "(initialization|init) (method)", "(iterations|convergence)"],
+            "kmeans_patterns": ["(k-means|kmeans) (clustering|algorithm)", "(centroid|cluster) (initialization)"]
+        }
+    },
+    {
+        "query": "Train K-means model and assign cluster labels to data points",
+        "function": "fit_kmeans",
+        "category": "training",
+        "inputs": {
+            "model_name": "customer_segments",
+            "feature_subset": ["age", "income", "spending_ratio", "frequency"]
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(data)\npipeline = pipeline | fit_kmeans(\n    model_name='customer_segments',\n    feature_subset=['age', 'income', 'spending_ratio', 'frequency']\n)",
+        "instructions": {
+            "business_case": "Customer Segmentation Execution - Execute the clustering algorithm to create actual customer segments that can be used for targeted marketing, personalization, and business strategy.",
+            "natural_language_questions": [
+                "Can you create customer segments from this data?",
+                "How do I run the clustering algorithm on my features?",
+                "Which features should I include in the segmentation?",
+                "How do I get cluster assignments for each customer?"
+            ],
+            "data_keywords": [
+                "training", "execution", "cluster_assignment", "segmentation", "customer_groups",
+                "features", "algorithm", "model_fitting", "labels", "groups"
+            ],
+            "configuration_hints": {
+                "feature_subset": "Select most relevant features for business segmentation goals",
+                "model_name": "Descriptive name to identify this specific segmentation",
+                "feature_selection": "Include behavioral, demographic, and value-based features"
+            },
+            "typical_parameters": {
+                "key_features": ["demographic", "behavioral", "transactional", "engagement"],
+                "feature_count": "4-10 features for interpretable segments",
+                "best_for_data_types": ["customer_profiles", "user_behavior", "transaction_data"],
+                "output": "Cluster labels added to dataset for each customer"
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(fit|train|learn) (model|clustering|kmeans)", "(cluster|segment) (assignment|labeling)"],
+            "training_patterns": ["(unsupervised|clustering) (learning|training)", "(centroid|cluster) (computation|fitting)"],
+            "assignment_patterns": ["(cluster|label) (assignment|prediction)", "(data|point) (clustering|grouping)"]
+        }
+    },
+    {
+        "query": "Evaluate clustering quality using silhouette and inertia metrics",
+        "function": "evaluate_clustering",
+        "category": "evaluation",
+        "inputs": {
+            "model_name": "customer_segments",
+            "metrics": ["silhouette", "calinski_harabasz", "davies_bouldin", "inertia"]
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(data)\npipeline = pipeline | evaluate_clustering(\n    model_name='customer_segments',\n    metrics=['silhouette', 'calinski_harabasz', 'davies_bouldin', 'inertia']\n)",
+        "instructions": {
+            "business_case": "Segmentation Quality Assessment - Validate that customer segments are statistically meaningful and well-separated, ensuring segmentation strategy will be effective for business applications.",
+            "natural_language_questions": [
+                "How good are my customer segments?",
+                "Are the clusters well-separated and meaningful?",
+                "What metrics indicate high-quality segmentation?",
+                "Should I adjust the number of segments based on these scores?"
+            ],
+            "data_keywords": [
+                "quality", "evaluation", "metrics", "validation", "assessment", "silhouette",
+                "separation", "cohesion", "clustering_quality", "statistical_significance"
+            ],
+            "configuration_hints": {
+                "silhouette": "Higher = better separated clusters (0.5+ is good)",
+                "calinski_harabasz": "Higher = better defined clusters",
+                "davies_bouldin": "Lower = better separated clusters"
+            },
+            "typical_parameters": {
+                "good_silhouette": "> 0.5",
+                "good_calinski_harabasz": "> 100",
+                "good_davies_bouldin": "< 1.0",
+                "best_for_data_types": ["any_clustering_output"],
+                "decision_criteria": "Use multiple metrics to assess overall quality"
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(evaluate|assess|measure) (clustering|quality|performance)", "(cluster|clustering) (evaluation|metrics)"],
+            "metrics_patterns": ["(silhouette|inertia|calinski|davies) (score|metric)", "(clustering|quality) (metrics|measures)"],
+            "validation_patterns": ["(cluster|clustering) (validation|quality|assessment)"]
+        }
+    },
+    {
+        "query": "Create detailed statistical profiles for each cluster",
+        "function": "profile_clusters",
+        "category": "analysis",
+        "inputs": {
+            "model_name": "customer_segments",
+            "profile_columns": ["age", "income", "spending", "category", "region"],
+            "include_categorical": true
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(data)\npipeline = pipeline | profile_clusters(\n    model_name='customer_segments',\n    profile_columns=['age', 'income', 'spending', 'category', 'region'],\n    include_categorical=True\n)",
+        "instructions": {
+            "business_case": "Customer Segment Characterization - Create detailed profiles of each customer segment to enable targeted marketing strategies, product development, and personalized customer experiences.",
+            "natural_language_questions": [
+                "What are the characteristics of each customer segment?",
+                "How do the segments differ in demographics and behavior?",
+                "Can you describe the typical customer in each group?",
+                "What insights can help with targeted marketing?"
+            ],
+            "data_keywords": [
+                "profiles", "characteristics", "demographics", "behavior", "insights",
+                "segmentation_analysis", "customer_insights", "targeting", "personas"
+            ],
+            "configuration_hints": {
+                "profile_columns": "Include both clustering features and additional descriptive columns",
+                "include_categorical": "Set true to analyze categorical variables like product preferences",
+                "business_relevance": "Focus on actionable characteristics for marketing and strategy"
+            },
+            "typical_parameters": {
+                "profile_types": ["demographic", "behavioral", "transactional", "geographic"],
+                "key_insights": ["average_values", "distributions", "preferences", "patterns"],
+                "best_for_data_types": ["customer_segments", "user_clusters", "market_segments"],
+                "business_applications": "Persona development, targeted campaigns, product strategy"
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(profile|characterize|analyze) (clusters|segments)", "(cluster|segment) (profiling|analysis)"],
+            "analysis_patterns": ["(statistical|demographic) (profiling|analysis)", "(cluster|group) (characteristics|summary)"],
+            "business_patterns": ["(customer|segment) (insights|profiling)", "(business|actionable) (insights)"]
+        }
+    },
+    {
+        "query": "Find optimal number of clusters using elbow method and silhouette analysis",
+        "function": "find_optimal_k",
+        "category": "optimization",
+        "inputs": {
+            "k_range": [2, 12],
+            "method": "both",
+            "n_init": 10,
+            "analysis_name": "optimal_clusters"
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(data)\npipeline = pipeline | find_optimal_k(\n    k_range=(2, 12),\n    method='both',\n    n_init=10,\n    analysis_name='optimal_clusters'\n)",
+        "instructions": {
+            "business_case": "Segmentation Strategy Optimization - Determine the ideal number of customer segments that balances statistical validity with business interpretability and actionability.",
+            "natural_language_questions": [
+                "How many customer segments should I create?",
+                "What's the optimal number of clusters for my data?",
+                "How do I balance statistical quality with business practicality?",
+                "Which number of segments gives the best results?"
+            ],
+            "data_keywords": [
+                "optimal", "elbow", "silhouette", "k_selection", "number_of_clusters",
+                "optimization", "trade-off", "statistical_vs_business", "segmentation_strategy"
+            ],
+            "configuration_hints": {
+                "k_range": "Test 2-12 clusters for most business applications",
+                "method": "both = elbow + silhouette for comprehensive analysis",
+                "business_consideration": "Balance statistical quality with interpretability"
+            },
+            "typical_parameters": {
+                "k_range_business": [3, 8],
+                "k_range_statistical": [2, 15],
+                "method_options": ["elbow", "silhouette", "both"],
+                "best_for_data_types": ["customer_data", "market_research", "behavioral_data"],
+                "decision_factors": "Statistical metrics + business interpretability"
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(find|determine|optimize) (optimal|best) (k|clusters)", "(elbow|silhouette) (method|analysis)"],
+            "optimization_patterns": ["(optimal|best) (number|k) (clusters|segments)", "(cluster|k) (optimization|selection)"],
+            "method_patterns": ["(elbow|knee) (method|curve)", "(silhouette|coefficient) (analysis|score)"]
+        }
+    },
+    {
+        "query": "Visualize clusters in 2D scatter plot with centroids",
+        "function": "plot_clusters_2d",
+        "category": "visualization",
+        "inputs": {
+            "model_name": "customer_segments",
+            "x_feature": "income",
+            "y_feature": "spending",
+            "figsize": [12, 8],
+            "show_centers": true
+        },
+        "example": "pipeline = KMeansPipe.from_dataframe(data)\npipeline = pipeline | plot_clusters_2d(\n    model_name='customer_segments',\n    x_feature='income',\n    y_feature='spending',\n    figsize=(12, 8),\n    show_centers=True\n)",
+        "instructions": {
+            "business_case": "Customer Segment Visualization & Communication - Create clear visual representations of customer segments for stakeholder presentations, strategy discussions, and business decision-making.",
+            "natural_language_questions": [
+                "Can you show me the customer segments visually?",
+                "How are the segments distributed across income and spending?",
+                "What does the segmentation look like in 2D?",
+                "How can I present these segments to stakeholders?"
+            ],
+            "data_keywords": [
+                "visualization", "scatter_plot", "segments", "presentation", "stakeholders",
+                "2d_plot", "distribution", "visual_communication", "business_presentation"
+            ],
+            "configuration_hints": {
+                "x_feature": "Choose most important business dimension (income, age, etc.)",
+                "y_feature": "Choose complementary dimension (spending, frequency, etc.)",
+                "show_centers": "Display cluster centers for better interpretation"
+            },
+            "typical_parameters": {
+                "key_feature_pairs": ["income×spending", "age×frequency", "recency×value"],
+                "figsize_options": [[10, 6], [12, 8], [15, 10]],
+                "best_for_data_types": ["customer_segments", "behavioral_clusters"],
+                "presentation_use": "Executive reports, strategy meetings, stakeholder communication"
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(plot|visualize|chart) (clusters|segments)", "(2d|scatter) (plot|visualization|chart)"],
+            "visualization_patterns": ["(cluster|segment) (visualization|plotting)", "(scatter|point) (plot|chart)"],
+            "feature_patterns": ["(feature|dimension) (space|plot)", "(centroid|center) (visualization)"]
+        }
+    },
+    {
+        "query": "Complete customer segmentation pipeline with optimal k selection",
+        "function": "complete_pipeline",
+        "category": "end_to_end",
+        "inputs": {
+            "data_source": "customer_transactions.csv",
+            "features": ["age", "income", "purchase_frequency", "avg_order_value"],
+            "clustering_approach": "standard_kmeans",
+            "optimization": true
+        },
+        "example": "customer_segmentation = (\n    KMeansPipe.from_dataframe(customer_data)\n    | prepare_clustering_data(['age', 'income', 'purchase_frequency', 'avg_order_value'], scaling_method='standard')\n    | engineer_clustering_features(interaction_features=True, ratio_features=[('purchase_frequency', 'avg_order_value')])\n    | find_optimal_k(k_range=(2, 10), method='both')\n    | configure_kmeans(n_clusters=5, model_name='customer_segments')\n    | fit_kmeans('customer_segments')\n    | evaluate_clustering('customer_segments')\n    | profile_clusters('customer_segments')\n    | plot_clusters_2d('customer_segments', 'income', 'avg_order_value')\n    | plot_cluster_profiles('customer_segments', 'numerical')\n    | save_kmeans_model('customer_segments')\n)",
+        "instructions": {
+            "business_case": "End-to-End Customer Segmentation Solution - Complete customer analytics pipeline for creating actionable customer segments that drive personalization, targeted marketing, and strategic business decisions.",
+            "natural_language_questions": [
+                "Can you create a complete customer segmentation solution?",
+                "How do I segment customers from raw transaction data?",
+                "What's the full process for customer analytics?",
+                "Can you build segments I can use for marketing campaigns?"
+            ],
+            "data_keywords": [
+                "end_to_end", "complete_solution", "customer_analytics", "marketing_segments",
+                "personalization", "targeting", "business_strategy", "actionable_insights"
+            ],
+            "configuration_hints": {
+                "features": "Include demographic, behavioral, and value-based features",
+                "optimization": "Use optimal k selection for best statistical and business results",
+                "complete_workflow": "Data prep → feature engineering → optimization → clustering → analysis"
+            },
+            "typical_parameters": {
+                "essential_features": ["demographics", "behavior", "value", "engagement"],
+                "pipeline_stages": ["prep", "engineer", "optimize", "cluster", "analyze", "visualize"],
+                "best_for_data_types": ["customer_transactions", "user_behavior", "crm_data"],
+                "business_outcomes": "Targeted campaigns, personalization, customer strategy"
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(customer|user) (segmentation|clustering)", "(market|behavioral) (segmentation)"],
+            "business_patterns": ["(customer.analytics|crm) (segmentation)", "(marketing|targeted) (segmentation|campaigns)"],
+            "pipeline_patterns": ["(end.to.end|complete|full) (pipeline|workflow)"]
+        }
+    }
+]

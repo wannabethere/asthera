@@ -1,0 +1,479 @@
+[
+    {
+      "query": "Calculate percent change in conversion rate between test and control groups",
+      "function": "PercentChange",
+      "category": "operations_tools",
+      "inputs": {
+        "condition_column": "experiment_group",
+        "baseline": "control",
+        "output_name": "conversion_lift"
+      },
+      "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | PercentChange(\n    condition_column='experiment_group',\n    baseline='control',\n    output_name='conversion_lift'\n)",
+      "instructions": {
+        "business_case": "A/B Testing & Conversion Optimization - Measure the percentage improvement of test variants compared to control groups to quantify the impact of product changes, marketing campaigns, or UX improvements.",
+        "natural_language_questions": [
+          "How much did the new design improve our conversion rate?",
+          "What's the percentage lift from the test variant?",
+          "By what percent did conversions increase compared to control?",
+          "How much better is the new version performing?"
+        ],
+        "data_keywords": [
+          "ab_test", "experiment", "conversion", "lift", "improvement", "variant",
+          "control", "test", "percentage", "change", "impact", "optimization"
+        ],
+        "configuration_hints": {
+          "condition_column": "Column containing experiment groups (control, variant_a, variant_b)",
+          "baseline": "The control group to compare against (usually 'control')",
+          "interpretation": "Positive values indicate improvement, negative indicate decline"
+        },
+        "typical_parameters": {
+          "common_baselines": ["control", "original", "baseline", "current"],
+          "experiment_types": ["landing_page", "email_campaign", "product_feature", "pricing"],
+          "best_for_data_types": ["experiment_data", "ab_test_results", "campaign_performance"],
+          "statistical_significance": "Combine with confidence intervals for robust analysis"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (percent change)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion rate)"
+        ]
+      }
+    },
+    {
+      "query": "Compare click-through rates between variants stratified by user device type",
+      "function": "MH",
+      "category": "operations_tools",
+      "inputs": {
+        "condition_column": "variant",
+        "baseline": "control",
+        "stratified_by": "device_type",
+        "output_name": "stratified_ctr_comparison"
+      },
+      "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | MH(\n    condition_column='variant',\n    baseline='control',\n    stratified_by='device_type',\n    output_name='stratified_ctr_comparison'\n)",
+      "instructions": {
+        "business_case": "Advanced Experiment Analysis - Use Mantel-Haenszel analysis to compare treatment effects across different user segments, controlling for confounding variables like device type, geography, or user characteristics.",
+        "natural_language_questions": [
+          "Does the treatment effect vary across different device types?",
+          "How do results differ when we control for user segments?",
+          "Is the improvement consistent across all user groups?",
+          "What's the overall effect after accounting for different strata?"
+        ],
+        "data_keywords": [
+          "stratified", "mantel_haenszel", "confounding", "segments", "device",
+          "controlled", "adjusted", "heterogeneous", "subgroup", "bias_control"
+        ],
+        "configuration_hints": {
+          "stratified_by": "Variables that might influence results (device, age_group, region)",
+          "method": "Controls for confounding variables in experiment analysis",
+          "interpretation": "Provides unbiased estimate of treatment effect across strata"
+        },
+        "typical_parameters": {
+          "stratification_variables": ["device_type", "age_group", "region", "user_segment"],
+          "best_for_data_types": ["heterogeneous_experiments", "multi_segment_analysis"],
+          "statistical_applications": "Confounding control, Simpson's paradox detection",
+          "experiment_validity": "Essential for generalizable experiment conclusions"
+        }
+      },
+      "patterns": {
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (click-through rates)"
+        ]
+      }
+    },
+    {
+      "query": "Adjust conversion metrics using pre-experiment user activity as covariate",
+      "function": "CUPED",
+      "category": "operations_tools",
+      "inputs": {
+        "condition_column": "test_group",
+        "baseline": "control",
+        "covariates": ["pre_test_conversion_rate", "user_tenure"],
+        "stratified_by": "country",
+        "output_name": "adjusted_conversion_impact"
+      },
+      "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | CUPED(\n    condition_column='test_group',\n    baseline='control',\n    covariates=['pre_test_conversion_rate', 'user_tenure'],\n    stratified_by='country',\n    output_name='adjusted_conversion_impact'\n)",
+      "instructions": {
+        "business_case": "Precision Experiment Analysis - Use CUPED (Controlled Using Pre-Experiment Data) to reduce variance in experiment metrics by leveraging historical user behavior, enabling detection of smaller effects with higher confidence.",
+        "natural_language_questions": [
+          "How can I reduce noise in my experiment results?",
+          "Can pre-experiment data help improve statistical power?",
+          "How do I control for users' historical behavior?",
+          "What's the treatment effect after adjusting for baseline differences?"
+        ],
+        "data_keywords": [
+          "cuped", "variance_reduction", "precision", "pre_experiment", "covariates",
+          "statistical_power", "noise_reduction", "baseline", "historical"
+        ],
+        "configuration_hints": {
+          "covariates": "Use strongly correlated pre-experiment metrics (same metric, user behavior)",
+          "variance_reduction": "Can reduce variance by 10-50% for correlated covariates",
+          "power_increase": "Enables detection of smaller effects with same sample size"
+        },
+        "typical_parameters": {
+          "common_covariates": ["pre_conversion_rate", "historical_spend", "engagement_score"],
+          "correlation_threshold": "Use covariates with >0.3 correlation to outcome",
+          "best_for_data_types": ["longitudinal_experiments", "user_behavior_data"],
+          "statistical_benefits": "Increased power, reduced false negatives, faster decisions"
+        }
+      },
+      "patterns": {
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion metrics)"
+        ]
+      }
+    },
+    {
+      "query": "Determine required sample size to detect 5% conversion lift with 80% power",
+      "function": "PowerAnalysis",
+      "category": "operations_tools",
+      "inputs": {
+        "condition_column": "experiment_group",
+        "baseline": "control",
+        "metric_column": "conversion_rate",
+        "alpha": 0.05,
+        "power": 0.8,
+        "output_name": "sample_size_requirements"
+      },
+      "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | PowerAnalysis(\n    condition_column='experiment_group',\n    baseline='control',\n    metric_column='conversion_rate',\n    alpha=0.05,\n    power=0.8,\n    output_name='sample_size_requirements'\n)",
+      "instructions": {
+        "business_case": "Experiment Planning & Resource Allocation - Calculate required sample sizes before launching experiments to ensure sufficient statistical power to detect meaningful business impacts and optimize testing timelines.",
+        "natural_language_questions": [
+          "How many users do I need to detect a 5% improvement?",
+          "What sample size gives me 80% power to find significant results?",
+          "How long should I run this experiment?",
+          "Do I have enough traffic to detect this effect size?"
+        ],
+        "data_keywords": [
+          "power_analysis", "sample_size", "statistical_power", "effect_size",
+          "planning", "duration", "traffic", "significance", "detection"
+        ],
+        "configuration_hints": {
+          "alpha": "0.05 = 5% false positive rate (standard), 0.01 for stricter tests",
+          "power": "0.8 = 80% chance to detect true effects (standard), 0.9 for higher sensitivity",
+          "effect_size": "Minimum meaningful business impact you want to detect"
+        },
+        "typical_parameters": {
+          "standard_alpha": [0.01, 0.05, 0.1],
+          "standard_power": [0.8, 0.9, 0.95],
+          "typical_effects": "2-10% for conversion rates, 5-20% for engagement metrics",
+          "planning_horizon": "Factor in seasonality, business cycles, implementation time"
+        }
+      },
+      "patterns": {
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion)"
+        ],
+        "num_patterns": [
+          "(5)%",
+          "(80)%"
+        ]
+      }
+    },
+    {
+      "query": "Calculate 95% confidence intervals for average revenue per user differences",
+      "function": "BootstrapCI",
+      "category": "operations_tools",
+      "inputs": {
+        "condition_column": "variant",
+        "baseline": "control",
+        "metric_column": "revenue_per_user",
+        "confidence": 0.95,
+        "n_bootstraps": 1000,
+        "stratified_by": "user_tier",
+        "output_name": "revenue_impact_confidence"
+      },
+      "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | BootstrapCI(\n    condition_column='variant',\n    baseline='control',\n    metric_column='revenue_per_user',\n    confidence=0.95,\n    n_bootstraps=1000,\n    stratified_by='user_tier',\n    output_name='revenue_impact_confidence'\n)",
+      "instructions": {
+        "business_case": "Statistical Rigor & Decision Making - Calculate confidence intervals using bootstrap methods to quantify uncertainty in experiment results and provide robust estimates for business decision-making.",
+        "natural_language_questions": [
+          "What's the range of likely revenue impact from this test?",
+          "How confident can I be in these experiment results?",
+          "What are the upper and lower bounds of the effect?",
+          "Is the improvement statistically significant?"
+        ],
+        "data_keywords": [
+          "confidence_interval", "bootstrap", "uncertainty", "statistical_significance",
+          "robust", "range", "bounds", "precision", "reliability"
+        ],
+        "configuration_hints": {
+          "confidence": "0.95 = 95% confidence (standard), 0.99 for conservative estimates",
+          "n_bootstraps": "1000+ for stable estimates, 5000+ for publication-quality",
+          "interpretation": "If interval excludes 0, effect is statistically significant"
+        },
+        "typical_parameters": {
+          "confidence_levels": [0.90, 0.95, 0.99],
+          "bootstrap_samples": [1000, 2000, 5000],
+          "best_for_data_types": ["non_normal_distributions", "small_samples", "complex_metrics"],
+          "decision_support": "Risk assessment, investment decisions, launch recommendations"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (confidence intervals)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (revenue per user)"
+        ],
+        "num_patterns": [
+          "(95)%",
+          "(1000)"
+        ]
+      }
+    },
+    {
+      "query": "Create summary of experiment metrics stratified by user segment and device type",
+      "function": "StratifiedSummary",
+      "category": "operations_tools",
+      "inputs": {
+        "condition_column": "test_group",
+        "stratified_by": ["user_segment", "device_type"],
+        "metrics": ["conversion_rate", "average_order_value", "engagement_score"],
+        "output_name": "stratified_experiment_summary"
+      },
+      "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | StratifiedSummary(\n    condition_column='test_group',\n    stratified_by=['user_segment', 'device_type'],\n    metrics=['conversion_rate', 'average_order_value', 'engagement_score'],\n    output_name='stratified_experiment_summary'\n)",
+      "instructions": {
+        "business_case": "Comprehensive Experiment Reporting - Generate detailed breakdowns of experiment performance across different user segments to identify which groups benefit most and inform targeted rollout strategies.",
+        "natural_language_questions": [
+          "How do results vary across different user segments?",
+          "Which device types show the strongest response to the treatment?",
+          "Are there any segments where the treatment doesn't work?",
+          "What's the detailed breakdown of experiment performance?"
+        ],
+        "data_keywords": [
+          "stratified", "breakdown", "segments", "comprehensive", "detailed",
+          "summary", "reporting", "heterogeneous", "subgroup", "performance"
+        ],
+        "configuration_hints": {
+          "stratified_by": "Key business dimensions (segment, device, geography, tenure)",
+          "metrics": "Include primary KPIs and secondary metrics for full picture",
+          "rollout_planning": "Identify which segments to target for gradual rollout"
+        },
+        "typical_parameters": {
+          "stratification_dimensions": ["user_segment", "device_type", "geography", "tenure"],
+          "key_metrics": ["conversion", "revenue", "engagement", "retention"],
+          "best_for_data_types": ["multi_dimensional_experiments", "large_user_bases"],
+          "business_applications": "Rollout planning, targeting strategies, risk assessment"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(create|generate) (summary)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (experiment metrics)"
+        ]
+      }
+    },
+    {
+      "query": "Apply Bonferroni correction to p-values from multiple experiment metrics",
+      "function": "MultiComparisonAdjustment",
+      "category": "operations_tools",
+      "inputs": {
+        "p_value_column": "raw_p_value",
+        "method": "bonferroni",
+        "output_name": "adjusted_p_values"
+      },
+      "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | MultiComparisonAdjustment(\n    p_value_column='raw_p_value',\n    method='bonferroni',\n    output_name='adjusted_p_values'\n)",
+      "instructions": {
+        "business_case": "Multiple Testing Control & False Discovery Management - Adjust p-values when testing multiple metrics simultaneously to control family-wise error rate and avoid false positive conclusions in experiments.",
+        "natural_language_questions": [
+          "How do I account for testing multiple metrics at once?",
+          "Are my significant results still valid after multiple testing correction?",
+          "What's the adjusted significance level for multiple comparisons?",
+          "How do I control false positive rates in multi-metric experiments?"
+        ],
+        "data_keywords": [
+          "multiple_testing", "bonferroni", "false_discovery", "family_wise_error",
+          "correction", "adjustment", "significance", "p_values", "control"
+        ],
+        "configuration_hints": {
+          "method": "bonferroni = conservative but simple, fdr_bh = less conservative",
+          "multiple_metrics": "Essential when testing >3 metrics simultaneously",
+          "interpretation": "Use adjusted p-values for significance decisions"
+        },
+        "typical_parameters": {
+          "correction_methods": ["bonferroni", "holm", "fdr_bh", "fdr_by"],
+          "typical_scenarios": "Multi-metric experiments, A/B/C tests, feature launches",
+          "best_for_data_types": ["multiple_hypothesis_tests", "comprehensive_experiments"],
+          "statistical_rigor": "Prevents inflated Type I error rates in complex experiments"
+        }
+      },
+      "patterns": {
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (p-values)"
+        ]
+      }
+    },
+    {
+      "query": "Focus analysis on high-traffic experiment conditions only",
+      "function": "FilterConditions",
+      "category": "operations_tools",
+      "inputs": {
+        "conditions": ["control", "variant_a", "variant_b"],
+        "output_name": "main_variants_only"
+      },
+      "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | FilterConditions(\n    conditions=['control', 'variant_a', 'variant_b'],\n    output_name='main_variants_only'\n)",
+      "instructions": {
+        "business_case": "Focused Experiment Analysis & Statistical Power - Filter experiment data to focus on well-powered comparisons and exclude low-traffic variants that might not provide reliable results.",
+        "natural_language_questions": [
+          "Which experiment variants have enough traffic for reliable analysis?",
+          "Can I focus on just the main variants with sufficient sample size?",
+          "How do I exclude low-traffic conditions from analysis?",
+          "What are the core variants I should compare?"
+        ],
+        "data_keywords": [
+          "filter", "focus", "high_traffic", "sufficient_sample", "reliable",
+          "core_variants", "statistical_power", "exclude", "main_comparisons"
+        ],
+        "configuration_hints": {
+          "conditions": "List the experiment variants with adequate sample sizes",
+          "traffic_threshold": "Ensure selected variants have sufficient power for detection",
+          "analysis_focus": "Concentrate on comparisons most likely to inform decisions"
+        },
+        "typical_parameters": {
+          "minimum_sample_sizes": "Varies by effect size and baseline metrics",
+          "variant_selection": "Control + top 2-3 performing variants typically",
+          "best_for_data_types": ["multi_variant_experiments", "unbalanced_traffic"],
+          "decision_optimization": "Focus resources on most promising variants"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(analyze|analysis|examine)"
+        ],
+        "filter_patterns": [
+          "(filter|focus) on high-traffic"
+        ]
+      }
+    },
+    {
+      "query": "Measure absolute difference in customer satisfaction scores after product update",
+      "function": "AbsoluteChange",
+      "category": "operations_tools",
+      "inputs": {
+        "condition_column": "version",
+        "baseline": "before_update",
+        "output_name": "satisfaction_change"
+      },
+      "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | AbsoluteChange(\n    condition_column='version',\n    baseline='before_update',\n    output_name='satisfaction_change'\n)",
+      "instructions": {
+        "business_case": "Product Impact Assessment - Measure absolute changes in key metrics to understand the magnitude of impact from product updates, feature launches, or business changes.",
+        "natural_language_questions": [
+          "What's the actual point difference in satisfaction scores?",
+          "How many points did our rating improve by?",
+          "What's the absolute change in our key metrics?",
+          "By how many units did performance increase?"
+        ],
+        "data_keywords": [
+          "absolute", "difference", "magnitude", "points", "units", "change",
+          "improvement", "impact", "delta", "raw_change", "actual"
+        ],
+        "configuration_hints": {
+          "vs_percent_change": "Absolute shows raw units (5 point increase vs 10% increase)",
+          "baseline": "Reference group to compare changes against",
+          "interpretation": "Positive values indicate improvement over baseline"
+        },
+        "typical_parameters": {
+          "common_metrics": ["satisfaction_score", "rating", "response_time", "conversion_rate"],
+          "measurement_units": ["points", "seconds", "percentage_points", "dollars"],
+          "best_for_data_types": ["satisfaction_surveys", "performance_metrics", "rating_systems"],
+          "business_applications": "Product impact assessment, feature launch analysis"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (absolute difference)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (customer satisfaction)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate percent change in purchase rates adjusted by historical purchase behavior",
+      "function": "PrePostChange",
+      "category": "operations_tools",
+      "inputs": {
+        "condition_column": "test_variant",
+        "baseline": "control",
+        "covariates": ["pre_test_purchase_rate", "user_activity_score"],
+        "output_name": "adjusted_purchase_lift"
+      },
+      "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | PrePostChange(\n    condition_column='test_variant',\n    baseline='control',\n    covariates=['pre_test_purchase_rate', 'user_activity_score'],\n    output_name='adjusted_purchase_lift'\n)",
+      "instructions": {
+        "business_case": "Pre/Post Analysis with Covariate Adjustment - Measure treatment effects while controlling for pre-existing differences and confounding variables to get unbiased impact estimates.",
+        "natural_language_questions": [
+          "What's the true impact after accounting for baseline differences?",
+          "How do results change when I control for user history?",
+          "Can you adjust for pre-experiment behavior?",
+          "What's the net effect after removing confounding factors?"
+        ],
+        "data_keywords": [
+          "pre_post", "adjusted", "covariates", "baseline", "confounding", "net_effect",
+          "controlled", "unbiased", "causal", "true_impact", "difference_in_difference"
+        ],
+        "configuration_hints": {
+          "covariates": "Include variables measured before treatment that correlate with outcome",
+          "adjustment": "Reduces bias from pre-existing differences between groups",
+          "causal_inference": "Provides more reliable estimate of true treatment effect"
+        },
+        "typical_parameters": {
+          "pre_experiment_covariates": ["historical_behavior", "baseline_metrics", "user_characteristics"],
+          "adjustment_methods": ["regression_adjustment", "matching", "stratification"],
+          "best_for_data_types": ["longitudinal_experiments", "observational_studies"],
+          "causal_applications": "Policy evaluation, treatment effect estimation, impact assessment"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (percent change)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (purchase rates)"
+        ]
+      }
+    },
+    {
+      "query": "Use Benjamini-Hochberg procedure to control false discovery rate in A/B test results",
+      "function": "MultiComparisonAdjustment",
+      "category": "operations_tools",
+      "inputs": {
+        "p_value_column": "p_value",
+        "method": "fdr_bh",
+        "output_name": "fdr_adjusted_pvalues"
+      },
+      "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | MultiComparisonAdjustment(\n    p_value_column='p_value',\n    method='fdr_bh',\n    output_name='fdr_adjusted_pvalues'\n)",
+      "instructions": {
+        "business_case": "False Discovery Rate Control - Use more powerful multiple testing corrections that control the expected proportion of false discoveries while maintaining higher statistical power than conservative methods.",
+        "natural_language_questions": [
+          "How do I control false discoveries without being too conservative?",
+          "Can you use a less strict multiple testing correction?",
+          "What's the Benjamini-Hochberg adjustment for my results?",
+          "How do I balance power and false discovery control?"
+        ],
+        "data_keywords": [
+          "false_discovery_rate", "benjamini_hochberg", "fdr", "power", "discovery",
+          "less_conservative", "multiple_testing", "statistical_power", "balance"
+        ],
+        "configuration_hints": {
+          "fdr_bh": "Controls expected proportion of false discoveries (more powerful than Bonferroni)",
+          "vs_bonferroni": "Less conservative, maintains higher power for large number of tests",
+          "interpretation": "Controls false discovery rate at specified level (e.g., 5%)"
+        },
+        "typical_parameters": {
+          "fdr_levels": [0.05, 0.1, 0.2],
+          "method_comparison": "FDR-BH less conservative than Bonferroni, more than uncorrected",
+          "best_for_data_types": ["large_scale_testing", "exploratory_analysis", "genomics"],
+          "statistical_tradeoffs": "Higher power but some false discoveries allowed"
+        }
+      },
+      "patterns": {
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (A/B test results)"
+        ]
+      }
+    }
+  ]

@@ -1,0 +1,357 @@
+[
+    {
+      "query": "Track user journey from homepage view through purchase completion",
+      "function": "analyze_funnel",
+      "category": "funnel_analysis",
+      "inputs": {
+        "event_column": "event_name",
+        "user_id_column": "user_id",
+        "funnel_steps": ["home_page_view", "product_view", "add_to_cart", "checkout_started", "purchase_completed"],
+        "step_names": ["Homepage", "Product Page", "Cart", "Checkout", "Purchase"],
+        "max_step_time": 86400
+      },
+      "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel(\n    event_column='event_name',\n    user_id_column='user_id',\n    funnel_steps=['home_page_view', 'product_view', 'add_to_cart', 'checkout_started', 'purchase_completed'],\n    step_names=['Homepage', 'Product Page', 'Cart', 'Checkout', 'Purchase'],\n    max_step_time=86400\n)",
+      "instructions": {
+        "business_case": "E-commerce Conversion Optimization - Analyze the complete customer purchase journey to identify where potential buyers drop off and optimize each step for higher conversion rates.",
+        "natural_language_questions": [
+          "Where do customers drop off in our purchase process?",
+          "What percentage of homepage visitors eventually make a purchase?",
+          "Which step in our sales funnel has the biggest conversion problem?",
+          "How can we improve our overall purchase conversion rate?"
+        ],
+        "data_keywords": [
+          "e-commerce", "purchase", "conversion", "shopping", "cart", "checkout",
+          "buy", "transaction", "sales", "revenue", "customer_journey"
+        ],
+        "configuration_hints": {
+          "funnel_steps": "Must be in chronological order of the customer journey",
+          "max_step_time": "Time limit in seconds - 86400 = 24 hours for purchase consideration",
+          "step_names": "Human-readable names for reporting and visualization"
+        },
+        "typical_parameters": {
+          "max_step_time_options": [3600, 86400, 604800],
+          "common_e-commerce_steps": ["visit", "view_product", "add_cart", "checkout", "purchase"],
+          "best_for_data_types": ["web_analytics", "e-commerce_events", "user_behavior"],
+          "key_metrics": "Conversion rate between steps, overall funnel conversion"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(funnel|conversion|step)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion)"
+        ]
+      }
+    },
+    {
+      "query": "Analyze drop-off rates in the checkout process",
+      "function": "analyze_funnel",
+      "category": "funnel_analysis",
+      "inputs": {
+        "event_column": "page_name",
+        "user_id_column": "session_id",
+        "funnel_steps": ["cart_page", "shipping_details", "payment_info", "review_order", "confirmation"],
+        "step_names": ["Cart", "Shipping", "Payment", "Review", "Confirmation"]
+      },
+      "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel(\n    event_column='page_name',\n    user_id_column='session_id',\n    funnel_steps=['cart_page', 'shipping_details', 'payment_info', 'review_order', 'confirmation'],\n    step_names=['Cart', 'Shipping', 'Payment', 'Review', 'Confirmation']\n)",
+      "instructions": {
+        "business_case": "Checkout Optimization & Cart Abandonment Reduction - Focus specifically on the checkout process to reduce cart abandonment and improve the final conversion steps.",
+        "natural_language_questions": [
+          "Why are customers abandoning their carts during checkout?",
+          "Which checkout step causes the most people to leave?",
+          "How can we reduce friction in our payment process?",
+          "What's our cart abandonment rate at each step?"
+        ],
+        "data_keywords": [
+          "checkout", "cart", "abandonment", "payment", "shipping", "friction",
+          "drop-off", "conversion", "purchase_completion", "transaction"
+        ],
+        "configuration_hints": {
+          "user_id_column": "Can use session_id for anonymous users or user_id for logged-in users",
+          "funnel_steps": "Focus on specific checkout steps rather than full customer journey",
+          "event_column": "Page names or event names that represent checkout steps"
+        },
+        "typical_parameters": {
+          "typical_checkout_steps": ["cart", "shipping", "payment", "review", "complete"],
+          "best_for_data_types": ["checkout_events", "page_views", "session_data"],
+          "optimization_focus": "Form fields, payment options, shipping costs, trust signals"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(analyze|analysis|examine)",
+          "(funnel|conversion|step)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion)"
+        ]
+      }
+    },
+    {
+      "query": "Measure conversion rate through signup funnel for mobile users",
+      "function": "analyze_funnel",
+      "category": "funnel_analysis",
+      "inputs": {
+        "event_column": "event_type",
+        "user_id_column": "device_id",
+        "funnel_steps": ["app_open", "signup_begin", "email_entered", "password_created", "profile_completed"],
+        "max_step_time": 3600
+      },
+      "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel(\n    event_column='event_type',\n    user_id_column='device_id',\n    funnel_steps=['app_open', 'signup_begin', 'email_entered', 'password_created', 'profile_completed'],\n    max_step_time=3600\n)",
+      "instructions": {
+        "business_case": "Mobile App Onboarding Optimization - Analyze mobile-specific signup flow to optimize for smaller screens, touch interactions, and mobile user behavior patterns.",
+        "natural_language_questions": [
+          "How well does our mobile signup process convert users?",
+          "Where do mobile users struggle in the registration flow?",
+          "What's different about mobile vs desktop signup conversion?",
+          "How can we improve mobile user onboarding?"
+        ],
+        "data_keywords": [
+          "mobile", "app", "signup", "registration", "onboarding", "device",
+          "touch", "screen", "mobile_optimization", "user_experience"
+        ],
+        "configuration_hints": {
+          "max_step_time": "3600 = 1 hour, shorter than web due to mobile attention spans",
+          "user_id_column": "device_id for mobile apps, handles anonymous users better",
+          "mobile_considerations": "Account for app backgrounding and interruptions"
+        },
+        "typical_parameters": {
+          "max_step_time_mobile": [1800, 3600, 7200],
+          "mobile_specific_steps": ["app_open", "permission_granted", "form_started"],
+          "best_for_data_types": ["mobile_events", "app_analytics", "device_data"],
+          "mobile_optimization_factors": "Form length, keyboard type, auto-fill, social login"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(funnel|conversion|step)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion)"
+        ],
+        "filter_patterns": [
+          "(filter|for) (mobile) users"
+        ]
+      }
+    },
+    {
+      "query": "Compare checkout funnel performance week-over-week for the past month",
+      "function": "analyze_funnel_by_time",
+      "category": "funnel_analysis",
+      "inputs": {
+        "event_column": "event_name",
+        "user_id_column": "user_id",
+        "date_column": "event_timestamp",
+        "funnel_steps": ["product_view", "add_to_cart", "checkout_started", "purchase_completed"],
+        "step_names": ["View", "Cart", "Checkout", "Purchase"],
+        "time_period": "week",
+        "max_periods": 4
+      },
+      "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel_by_time(\n    event_column='event_name',\n    user_id_column='user_id',\n    date_column='event_timestamp',\n    funnel_steps=['product_view', 'add_to_cart', 'checkout_started', 'purchase_completed'],\n    step_names=['View', 'Cart', 'Checkout', 'Purchase'],\n    time_period='week',\n    max_periods=4\n)",
+      "instructions": {
+        "business_case": "Performance Monitoring & Trend Analysis - Track funnel performance over time to detect the impact of changes, seasonal patterns, or gradual improvements/degradations.",
+        "natural_language_questions": [
+          "Is our conversion rate improving or getting worse over time?",
+          "Did our recent website changes affect the purchase funnel?",
+          "Are there weekly patterns in our conversion performance?",
+          "Which weeks had unusually high or low conversion rates?"
+        ],
+        "data_keywords": [
+          "trends", "time", "performance", "monitoring", "weekly", "temporal",
+          "changes", "improvement", "degradation", "tracking", "comparison"
+        ],
+        "configuration_hints": {
+          "time_period": "week = good for detecting short-term changes, month = seasonal patterns",
+          "max_periods": "4 weeks = 1 month lookback, 12 weeks = quarterly view",
+          "date_column": "Must contain timestamp information for time-based grouping"
+        },
+        "typical_parameters": {
+          "time_period_options": ["day", "week", "month"],
+          "max_periods_range": [4, 52],
+          "best_for_data_types": ["timestamped_events", "performance_tracking", "a_b_test_data"],
+          "analysis_applications": "A/B testing, performance monitoring, seasonal analysis"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(funnel|conversion|step)",
+          "(trend|growth|change) over time"
+        ],
+        "time_patterns": [
+          "(weekly)",
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(4)"
+        ]
+      }
+    },
+    {
+      "query": "Compare onboarding completion rates across different user segments",
+      "function": "analyze_funnel_by_segment",
+      "category": "funnel_analysis",
+      "inputs": {
+        "event_column": "event_name",
+        "user_id_column": "user_id",
+        "segment_column": "user_type",
+        "funnel_steps": ["signup", "profile_completion", "first_connection", "first_message_sent"],
+        "step_names": ["Sign Up", "Profile", "Connection", "Messaging"],
+        "min_users": 100
+      },
+      "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel_by_segment(\n    event_column='event_name',\n    user_id_column='user_id',\n    segment_column='user_type',\n    funnel_steps=['signup', 'profile_completion', 'first_connection', 'first_message_sent'],\n    step_names=['Sign Up', 'Profile', 'Connection', 'Messaging'],\n    min_users=100\n)",
+      "instructions": {
+        "business_case": "Personalization & Segment-Specific Optimization - Compare how different user segments progress through onboarding to create personalized experiences and targeted improvements.",
+        "natural_language_questions": [
+          "Do different types of users complete onboarding at different rates?",
+          "Which user segments struggle most with our onboarding process?",
+          "Should we create different onboarding flows for different user types?",
+          "How do premium vs free users behave during onboarding?"
+        ],
+        "data_keywords": [
+          "segments", "user_types", "personalization", "comparison", "onboarding",
+          "demographics", "behavior", "customization", "targeting", "optimization"
+        ],
+        "configuration_hints": {
+          "segment_column": "Column containing user categories (type, plan, source, etc.)",
+          "min_users": "Minimum users per segment for statistical significance",
+          "funnel_steps": "Use onboarding-specific events rather than purchase events"
+        },
+        "typical_parameters": {
+          "min_users_range": [50, 500],
+          "common_segments": ["user_type", "acquisition_source", "device_type", "plan_type"],
+          "best_for_data_types": ["user_segments", "onboarding_events", "demographic_data"],
+          "optimization_applications": "Personalized flows, targeted messaging, segment-specific features"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(funnel|conversion|step)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (completion rates)"
+        ],
+        "num_patterns": [
+          "(100)"
+        ]
+      }
+    },
+    {
+      "query": "Identify common user navigation paths through the checkout process",
+      "function": "analyze_user_paths",
+      "category": "funnel_analysis",
+      "inputs": {
+        "event_column": "page_name",
+        "user_id_column": "visitor_id",
+        "timestamp_column": "visit_timestamp",
+        "funnel_steps": ["product_page", "cart_page", "shipping_page", "payment_page", "confirmation_page"],
+        "max_path_length": 10,
+        "min_path_frequency": 0.01
+      },
+      "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_user_paths(\n    event_column='page_name',\n    user_id_column='visitor_id',\n    timestamp_column='visit_timestamp',\n    funnel_steps=['product_page', 'cart_page', 'shipping_page', 'payment_page', 'confirmation_page'],\n    max_path_length=10,\n    min_path_frequency=0.01\n)",
+      "instructions": {
+        "business_case": "User Experience Optimization & Navigation Analysis - Discover actual user navigation patterns to identify common paths, unexpected behaviors, and optimization opportunities.",
+        "natural_language_questions": [
+          "What are the most common paths users take through our checkout?",
+          "Do users go back and forth between certain pages?",
+          "Are there unexpected navigation patterns we should address?",
+          "Which user journeys lead to successful purchases?"
+        ],
+        "data_keywords": [
+          "navigation", "paths", "journey", "user_flow", "behavior", "patterns",
+          "ux", "website", "sequence", "clicks", "page_views", "interaction"
+        ],
+        "configuration_hints": {
+          "max_path_length": "Longer paths capture more behavior but may include noise",
+          "min_path_frequency": "0.01 = 1% of users, filters out rare behaviors",
+          "timestamp_column": "Essential for determining correct sequence order"
+        },
+        "typical_parameters": {
+          "max_path_length_range": [5, 20],
+          "min_path_frequency_range": [0.005, 0.05],
+          "best_for_data_types": ["clickstream", "page_views", "user_sessions"],
+          "insights": "Common paths, unusual behaviors, optimization opportunities"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(funnel|conversion|step)"
+        ],
+        "num_patterns": [
+          "(10)"
+        ]
+      }
+    },
+    {
+      "query": "Get overall conversion metrics for the sign-up to premium upgrade funnel",
+      "function": "get_funnel_summary",
+      "category": "funnel_analysis",
+      "inputs": {},
+      "example": "summary = get_funnel_summary()(cohort_pipe)\nprint(f\"Overall conversion rate: {summary['overall_conversion_rate']:.2f}%\")\nprint(f\"Total users analyzed: {summary['total_users']}\")",
+      "instructions": {
+        "business_case": "Executive Reporting & KPI Tracking - Provide high-level funnel performance metrics for dashboards, executive reports, and strategic decision-making.",
+        "natural_language_questions": [
+          "What's our overall conversion rate from signup to premium?",
+          "How many users completed the full funnel?",
+          "What are the key metrics for our upgrade funnel?",
+          "Can you summarize our funnel performance?"
+        ],
+        "data_keywords": [
+          "summary", "overview", "kpi", "metrics", "performance", "dashboard",
+          "executive", "reporting", "conversion_rate", "totals", "statistics"
+        ],
+        "configuration_hints": {
+          "no_parameters": "This function summarizes previously analyzed funnel data",
+          "usage": "Run after analyze_funnel or other funnel analysis functions",
+          "output": "Returns dictionary with key metrics and percentages"
+        },
+        "typical_parameters": {
+          "output_metrics": ["overall_conversion_rate", "total_users", "step_conversion_rates"],
+          "best_for_data_types": ["any_funnel_analysis_output"],
+          "reporting_use": "Dashboards, executive summaries, KPI tracking"
+        }
+      }
+    },
+    {
+      "query": "Compare conversion rates between mobile and desktop users",
+      "function": "compare_segments",
+      "category": "funnel_analysis",
+      "inputs": {
+        "metric_column": "conversion_rate",
+        "baseline_segment": "desktop"
+      },
+      "example": "comparison = compare_segments(\n    metric_column='conversion_rate',\n    baseline_segment='desktop'\n)(cohort_pipe)\nprint(\"Mobile vs Desktop conversion comparison:\")\nprint(comparison)",
+      "instructions": {
+        "business_case": "Platform Optimization & Cross-Device Strategy - Compare funnel performance across different platforms to prioritize optimization efforts and understand device-specific user behavior.",
+        "natural_language_questions": [
+          "Do mobile users convert differently than desktop users?",
+          "Which platform should we focus our optimization efforts on?",
+          "How significant is the difference between device types?",
+          "Are we losing opportunities on mobile vs desktop?"
+        ],
+        "data_keywords": [
+          "comparison", "segments", "mobile", "desktop", "platform", "device",
+          "cross-device", "optimization", "performance", "differences"
+        ],
+        "configuration_hints": {
+          "baseline_segment": "Choose the segment to compare others against (usually largest segment)",
+          "metric_column": "The metric to compare (conversion_rate, completion_time, etc.)",
+          "usage": "Run after segment-based funnel analysis"
+        },
+        "typical_parameters": {
+          "common_baselines": ["desktop", "organic", "control_group"],
+          "comparison_metrics": ["conversion_rate", "completion_time", "drop_off_rate"],
+          "best_for_data_types": ["segment_analysis_output", "a_b_test_results"],
+          "decision_support": "Resource allocation, optimization priorities, platform strategy"
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(funnel|conversion|step)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion)"
+        ]
+      }
+    }
+]

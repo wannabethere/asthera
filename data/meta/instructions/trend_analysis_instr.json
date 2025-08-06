@@ -1,0 +1,748 @@
+[
+    {
+      "query": "Aggregate daily sales data into weekly totals for the past quarter",
+      "function": "aggregate_by_time",
+      "category": "trend_analysis",
+      "inputs": {
+        "date_column": "transaction_date",
+        "metric_columns": ["revenue", "units_sold", "unique_customers"],
+        "time_period": "week",
+        "aggregation": {
+          "revenue": "sum",
+          "units_sold": "sum",
+          "unique_customers": "nunique"
+        },
+        "fill_missing": "zero",
+        "include_current_period": false
+      },
+      "example": "TrendPipe.from_dataframe(df) | aggregate_by_time(date_column='transaction_date', metric_columns=['revenue', 'units_sold', 'unique_customers'], time_period='week', aggregation={'revenue': 'sum', 'units_sold': 'sum', 'unique_customers': 'nunique'}, fill_missing='zero', include_current_period=False)",
+      "instructions": {
+        "business_case": "Business Reporting & Performance Analytics - Transform granular transaction data into meaningful business periods for executive reporting, trend identification, and strategic planning by aggregating daily operations into manageable time windows.",
+        "natural_language_questions": [
+          "Can you summarize daily data into weekly reports?",
+          "What are our weekly sales trends?",
+          "How do I aggregate transaction data?",
+          "Can you create weekly business summaries?"
+        ],
+        "data_keywords": [
+          "aggregate", "summarize", "weekly", "daily", "total", "sum",
+          "reporting", "period", "rollup", "consolidate", "grouping"
+        ],
+        "configuration_hints": {
+          "time_period": "week/month/quarter based on reporting needs",
+          "aggregation": "sum for totals, mean for averages, nunique for counts",
+          "fill_missing": "zero for missing periods, forward-fill for continuity"
+        },
+        "typical_parameters": {
+          "time_periods": ["day", "week", "month", "quarter", "year"],
+          "aggregation_functions": ["sum", "mean", "count", "nunique", "min", "max"],
+          "use_cases": ["executive_reporting", "trend_analysis", "kpi_tracking"],
+          "business_applications": ["sales_reporting", "operations", "finance"]
+        }
+      },
+      "patterns": {
+        "time_patterns": [
+          "(daily)",
+          "(weekly)",
+          "(quarterly)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate quarter-over-quarter growth rates for user acquisition metrics",
+      "function": "calculate_growth_rates",
+      "category": "trend_analysis",
+      "inputs": {
+        "window": 1,
+        "annualize": false,
+        "method": "percentage"
+      },
+      "example": "TrendPipe.from_dataframe(df) | calculate_growth_rates(window=1, annualize=False, method='percentage')",
+      "instructions": {
+        "business_case": "Strategic Performance Measurement - Quantify business growth and decline patterns to assess strategic initiatives, market performance, and competitive position through standardized growth metrics that enable comparison across time periods.",
+        "natural_language_questions": [
+          "What's our growth rate this quarter?",
+          "How fast are we growing compared to last period?",
+          "Can you calculate percentage change?",
+          "What's the trend in our key metrics?"
+        ],
+        "data_keywords": [
+          "growth", "rate", "percentage", "change", "trend", "increase",
+          "decrease", "performance", "quarter_over_quarter", "progress"
+        ],
+        "configuration_hints": {
+          "window": "1 for period-over-period, 4 for year-over-year",
+          "method": "percentage for relative change, absolute for raw difference",
+          "annualize": "true for annual growth rate calculations"
+        },
+        "typical_parameters": {
+          "window_range": [1, 12],
+          "methods": ["percentage", "absolute", "cagr"],
+          "use_cases": ["performance_tracking", "strategic_planning", "investor_reporting"],
+          "business_applications": ["finance", "marketing", "operations"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (growth rates)",
+          "(trend|growth|change) over time"
+        ],
+        "time_patterns": [
+          "(quarterly)"
+        ],
+        "num_patterns": [
+          "(1)"
+        ]
+      }
+    },
+    {
+      "query": "Smooth weekly sales data using a 4-week moving average",
+      "function": "calculate_moving_average",
+      "category": "trend_analysis",
+      "inputs": {
+        "window": 4,
+        "method": "simple",
+        "center": false
+      },
+      "example": "TrendPipe.from_dataframe(df) | calculate_moving_average(window=4, method='simple', center=False)",
+      "instructions": {
+        "business_case": "Noise Reduction & Trend Identification - Reduce short-term fluctuations and random variations in business data to reveal underlying trends and patterns, enabling clearer strategic insights and more accurate forecasting.",
+        "natural_language_questions": [
+          "Can you smooth out the fluctuations in sales?",
+          "What's the underlying trend?",
+          "Can you reduce noise in the data?",
+          "How do I see clearer patterns?"
+        ],
+        "data_keywords": [
+          "smooth", "average", "trend", "pattern", "noise", "fluctuation",
+          "moving", "rolling", "underlying", "signal", "filter"
+        ],
+        "configuration_hints": {
+          "window": "4-12 periods for most business data smoothing",
+          "method": "simple for equal weighting, exponential for recent emphasis",
+          "center": "false for real-time analysis, true for historical analysis"
+        },
+        "typical_parameters": {
+          "window_range": [3, 52],
+          "methods": ["simple", "exponential", "weighted"],
+          "use_cases": ["trend_identification", "forecasting", "signal_processing"],
+          "business_applications": ["sales_analysis", "demand_planning", "quality_control"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (moving average)"
+        ],
+        "time_patterns": [
+          "(weekly)"
+        ],
+        "num_patterns": [
+          "(4)"
+        ]
+      }
+    },
+    {
+      "query": "Separate seasonal patterns from overall trend in monthly active users",
+      "function": "decompose_trend",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "monthly_active_users",
+        "model": "multiplicative",
+        "period": 12,
+        "extrapolate_trend": true
+      },
+      "example": "TrendPipe.from_dataframe(df) | decompose_trend(metric_column='monthly_active_users', model='multiplicative', period=12, extrapolate_trend=True)",
+      "instructions": {
+        "business_case": "Advanced Analytics & Seasonality Analysis - Separate complex time series into distinct components (trend, seasonal, residual) to understand different drivers of business performance and improve forecasting accuracy by isolating cyclical patterns.",
+        "natural_language_questions": [
+          "What's driving the seasonal patterns?",
+          "Can you separate trend from seasonality?",
+          "What's the underlying growth trend?",
+          "How do seasonal effects impact performance?"
+        ],
+        "data_keywords": [
+          "decompose", "seasonal", "trend", "pattern", "cyclical", "component",
+          "separate", "underlying", "residual", "cyclical", "baseline"
+        ],
+        "configuration_hints": {
+          "model": "multiplicative for percentage seasonality, additive for absolute",
+          "period": "12 for monthly data, 7 for daily, 4 for quarterly",
+          "extrapolate_trend": "true for forecasting, false for historical analysis"
+        },
+        "typical_parameters": {
+          "periods": [4, 7, 12, 52],
+          "models": ["additive", "multiplicative"],
+          "use_cases": ["forecasting", "seasonality_analysis", "trend_identification"],
+          "business_applications": ["demand_planning", "capacity_management", "budget_planning"]
+        }
+      },
+      "patterns": {
+        "time_patterns": [
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(12)"
+        ]
+      }
+    },
+    {
+      "query": "Forecast revenue for the next 3 months based on historical data",
+      "function": "forecast_metric",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "monthly_revenue",
+        "fperiods": 3,
+        "fmethod": "auto_arima",
+        "seasonal_periods": 12,
+        "confidence_interval": 0.9
+      },
+      "example": "TrendPipe.from_dataframe(df) | forecast_metric(metric_column='monthly_revenue', fperiods=3, fmethod='auto_arima', seasonal_periods=12, confidence_interval=0.9)",
+      "instructions": {
+        "business_case": "Strategic Planning & Financial Forecasting - Generate data-driven predictions for business planning, budget allocation, and resource management by leveraging historical patterns to anticipate future performance and market conditions.",
+        "natural_language_questions": [
+          "What will revenue look like next quarter?",
+          "Can you predict future performance?",
+          "What should we expect in the coming months?",
+          "How do I forecast business metrics?"
+        ],
+        "data_keywords": [
+          "forecast", "predict", "future", "projection", "prediction", "estimate",
+          "planning", "budget", "expected", "anticipate", "outlook"
+        ],
+        "configuration_hints": {
+          "fperiods": "3-12 periods typical for business forecasting",
+          "fmethod": "auto_arima for automatic model selection, prophet for business data",
+          "confidence_interval": "0.8-0.95 typical for business confidence levels"
+        },
+        "typical_parameters": {
+          "fperiods_range": [1, 24],
+          "methods": ["auto_arima", "ets", "prophet", "linear"],
+          "confidence_levels": [0.8, 0.9, 0.95],
+          "use_cases": ["budget_planning", "capacity_planning", "strategic_planning"],
+          "business_applications": ["finance", "operations", "marketing"]
+        }
+      },
+      "patterns": {
+        "time_patterns": [
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(3)",
+          "(12)",
+          "(0.9)"
+        ]
+      }
+    },
+    {
+      "query": "Test if there's a statistically significant upward trend in daily active users",
+      "function": "calculate_statistical_trend",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "daily_active_users",
+        "test_method": "mann_kendall",
+        "alpha": 0.05,
+        "window": 30
+      },
+      "example": "TrendPipe.from_dataframe(df) | calculate_statistical_trend(metric_column='daily_active_users', test_method='mann_kendall', alpha=0.05, window=30)",
+      "instructions": {
+        "business_case": "Statistical Validation & Evidence-Based Decisions - Provide statistical rigor to trend analysis by testing whether observed patterns are statistically significant rather than random noise, enabling confident strategic decisions based on validated trends.",
+        "natural_language_questions": [
+          "Is this trend statistically significant?",
+          "Can I be confident about this growth pattern?",
+          "Is the improvement real or just random?",
+          "How do I validate trend significance?"
+        ],
+        "data_keywords": [
+          "significant", "statistical", "confidence", "test", "validation",
+          "evidence", "proof", "reliable", "robust", "credible"
+        ],
+        "configuration_hints": {
+          "test_method": "mann_kendall for non-parametric trend testing",
+          "alpha": "0.05 for 95% confidence, 0.01 for 99% confidence",
+          "window": "30+ observations recommended for reliable results"
+        },
+        "typical_parameters": {
+          "alpha_levels": [0.01, 0.05, 0.1],
+          "test_methods": ["mann_kendall", "cox_stuart", "linear_regression"],
+          "window_range": [20, 100],
+          "use_cases": ["hypothesis_testing", "trend_validation", "statistical_analysis"],
+          "interpretation": ["p_values", "confidence_intervals", "effect_size"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(analyze|analysis|examine) (trend)"
+        ],
+        "time_patterns": [
+          "(daily)"
+        ],
+        "num_patterns": [
+          "(0.05)",
+          "(30)"
+        ]
+      }
+    },
+    {
+      "query": "Compare this month's conversion metrics to same month last year",
+      "function": "compare_periods",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "conversion_rate",
+        "comparison_type": "year_over_year",
+        "n_periods": 1,
+        "aggregation": "mean"
+      },
+      "example": "TrendPipe.from_dataframe(df) | compare_periods(metric_column='conversion_rate', comparison_type='year_over_year', n_periods=1, aggregation='mean')",
+      "instructions": {
+        "business_case": "Performance Benchmarking & Historical Analysis - Compare current performance against relevant historical periods to assess progress, identify cyclical patterns, and understand the impact of business changes or market conditions over time.",
+        "natural_language_questions": [
+          "How do we compare to last year?",
+          "Are we performing better than the same time last year?",
+          "What's our year-over-year performance?",
+          "How do current metrics compare to historical baselines?"
+        ],
+        "data_keywords": [
+          "compare", "benchmark", "year_over_year", "historical", "baseline",
+          "performance", "versus", "against", "relative", "improvement"
+        ],
+        "configuration_hints": {
+          "comparison_type": "year_over_year for seasonal comparison, previous_period for sequential",
+          "n_periods": "1 for direct comparison, multiple for rolling averages",
+          "aggregation": "mean for averages, sum for totals"
+        },
+        "typical_parameters": {
+          "comparison_types": ["year_over_year", "previous_period", "rolling_average"],
+          "n_periods_range": [1, 12],
+          "aggregations": ["mean", "sum", "median", "max"],
+          "use_cases": ["performance_review", "seasonal_analysis", "progress_tracking"],
+          "business_applications": ["executive_reporting", "kpi_monitoring", "strategic_review"]
+        }
+      },
+      "patterns": {
+        "time_patterns": [
+          "(monthly)",
+          "(yearly)"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion metrics)"
+        ],
+        "num_patterns": [
+          "(1)"
+        ]
+      }
+    },
+    {
+      "query": "Identify the fastest growing product categories by revenue",
+      "function": "get_top_metrics",
+      "category": "trend_analysis",
+      "inputs": {
+        "n": 5,
+        "metric_type": "growth_rate",
+        "ascending": false
+      },
+      "example": "get_top_metrics(n=5, metric_type='growth_rate', ascending=False)(TrendPipe.from_dataframe(df))",
+      "instructions": {
+        "business_case": "Strategic Focus & Resource Allocation - Identify top-performing segments, products, or regions to guide investment decisions, strategic priorities, and resource allocation by highlighting areas with strongest growth or performance trends.",
+        "natural_language_questions": [
+          "What are our fastest growing products?",
+          "Which categories should we focus on?",
+          "What's performing best in terms of growth?",
+          "Where should we invest resources?"
+        ],
+        "data_keywords": [
+          "top", "fastest", "best", "highest", "growing", "performing",
+          "priority", "focus", "investment", "opportunity", "winners"
+        ],
+        "configuration_hints": {
+          "n": "5-10 for management focus, adjust based on portfolio size",
+          "metric_type": "growth_rate for momentum, absolute for size",
+          "ascending": "false for top performers, true for bottom performers"
+        },
+        "typical_parameters": {
+          "n_range": [3, 20],
+          "metric_types": ["growth_rate", "absolute_value", "percentage_change"],
+          "ranking_criteria": ["revenue", "units", "customers", "profit"],
+          "use_cases": ["strategic_planning", "investment_decisions", "performance_review"],
+          "business_applications": ["product_management", "marketing", "finance"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(trend|growth|change) over time"
+        ],
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (revenue)"
+        ],
+        "num_patterns": [
+          "(5)"
+        ]
+      }
+    },
+    {
+      "query": "Convert hourly website traffic data to daily aggregates for the past month",
+      "function": "aggregate_by_time",
+      "category": "trend_analysis",
+      "inputs": {
+        "date_column": "timestamp",
+        "metric_columns": ["visitors", "page_views", "bounce_rate", "avg_session_duration"],
+        "time_period": "day",
+        "aggregation": {
+          "visitors": "sum",
+          "page_views": "sum",
+          "bounce_rate": "mean",
+          "avg_session_duration": "mean"
+        },
+        "datetime_format": "%Y-%m-%d %H:%M:%S"
+      },
+      "example": "TrendPipe.from_dataframe(df) | aggregate_by_time(date_column='timestamp', metric_columns=['visitors', 'page_views', 'bounce_rate', 'avg_session_duration'], time_period='day', aggregation={'visitors': 'sum', 'page_views': 'sum', 'bounce_rate': 'mean', 'avg_session_duration': 'mean'}, datetime_format='%Y-%m-%d %H:%M:%S')",
+      "instructions": {
+        "business_case": "Digital Analytics & Web Performance - Transform high-frequency web analytics data into daily summaries for executive dashboards, performance monitoring, and trend analysis while maintaining statistical accuracy across different metric types.",
+        "natural_language_questions": [
+          "Can you summarize hourly web data by day?",
+          "What are our daily website trends?",
+          "How do I aggregate web analytics data?",
+          "Can you create daily website reports?"
+        ],
+        "data_keywords": [
+          "website", "traffic", "analytics", "web", "digital", "online",
+          "visitors", "sessions", "bounce", "engagement", "performance"
+        ],
+        "configuration_hints": {
+          "datetime_format": "Specify format for proper parsing of timestamp data",
+          "mixed_aggregations": "Use sum for counts, mean for rates and averages",
+          "time_period": "day for daily reporting, hour for detailed analysis"
+        },
+        "typical_parameters": {
+          "datetime_formats": ["%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "ISO"],
+          "web_metrics": ["visitors", "sessions", "bounce_rate", "conversion_rate"],
+          "use_cases": ["web_analytics", "performance_monitoring", "digital_marketing"],
+          "reporting_periods": ["hour", "day", "week"]
+        }
+      },
+      "patterns": {
+        "time_patterns": [
+          "(hourly)",
+          "(daily)",
+          "(monthly)"
+        ]
+      }
+    },
+    {
+      "query": "Compute month-over-month percentage change in key performance indicators",
+      "function": "calculate_growth_rates",
+      "category": "trend_analysis",
+      "inputs": {
+        "window": 1,
+        "annualize": false,
+        "method": "percentage"
+      },
+      "example": "TrendPipe.from_dataframe(df) | calculate_growth_rates(window=1, annualize=False, method='percentage')",
+      "instructions": {
+        "business_case": "Executive Reporting & KPI Monitoring - Track month-to-month business performance changes to identify acceleration or deceleration in key metrics, enabling rapid response to business trends and operational adjustments.",
+        "natural_language_questions": [
+          "What's the month-over-month change?",
+          "Are our KPIs improving or declining?",
+          "How much did we grow this month?",
+          "What's the monthly performance trend?"
+        ],
+        "data_keywords": [
+          "month_over_month", "kpi", "performance", "change", "monthly",
+          "indicators", "metrics", "progress", "improvement", "tracking"
+        ],
+        "configuration_hints": {
+          "window": "1 for month-over-month, use monthly aggregated data",
+          "method": "percentage for relative comparison across metrics",
+          "interpretation": "Positive values indicate growth, negative indicate decline"
+        },
+        "typical_parameters": {
+          "comparison_periods": ["month", "quarter", "year"],
+          "kpi_types": ["revenue", "customers", "conversion", "engagement"],
+          "use_cases": ["executive_dashboards", "performance_reviews", "board_reporting"],
+          "alert_thresholds": ["significant_changes", "target_deviations"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (percentage change)",
+          "(trend|growth|change) over time"
+        ],
+        "time_patterns": [
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(1)"
+        ]
+      }
+    },
+    {
+      "query": "Calculate 7-day exponential moving average of daily website traffic",
+      "function": "calculate_moving_average",
+      "category": "trend_analysis",
+      "inputs": {
+        "window": 7,
+        "method": "exponential",
+        "center": false
+      },
+      "example": "TrendPipe.from_dataframe(df) | calculate_moving_average(window=7, method='exponential', center=False)",
+      "instructions": {
+        "business_case": "Real-time Trend Analysis & Adaptive Monitoring - Apply exponential smoothing to emphasize recent performance while reducing noise, ideal for responsive monitoring systems that need to quickly detect and react to changing business conditions.",
+        "natural_language_questions": [
+          "Can you smooth traffic data with recent emphasis?",
+          "What's the recent trend in website performance?",
+          "How do I track responsive moving averages?",
+          "Can you show adaptive trend analysis?"
+        ],
+        "data_keywords": [
+          "exponential", "adaptive", "responsive", "recent", "emphasis",
+          "real_time", "current", "weighted", "dynamic", "sensitive"
+        ],
+        "configuration_hints": {
+          "method": "exponential gives more weight to recent observations",
+          "window": "7 days for weekly patterns, adjust for responsiveness",
+          "center": "false for real-time analysis and forecasting"
+        },
+        "typical_parameters": {
+          "window_range": [3, 21],
+          "weighting_schemes": ["exponential", "linear", "custom"],
+          "use_cases": ["real_time_monitoring", "alert_systems", "adaptive_forecasting"],
+          "responsiveness": ["high_sensitivity", "balanced", "stable"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(calculate|compute|find) (moving average)"
+        ],
+        "time_patterns": [
+          "(daily)"
+        ],
+        "num_patterns": [
+          "(7)"
+        ]
+      }
+    },
+    {
+      "query": "Analyze weekly website traffic for trend and seasonality patterns",
+      "function": "decompose_trend",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "weekly_visitors",
+        "model": "additive",
+        "period": 52,
+        "extrapolate_trend": true
+      },
+      "example": "TrendPipe.from_dataframe(df) | decompose_trend(metric_column='weekly_visitors', model='additive', period=52, extrapolate_trend=True)",
+      "instructions": {
+        "business_case": "Advanced Digital Analytics & Capacity Planning - Decompose website traffic into trend and seasonal components to understand long-term growth patterns, annual seasonality, and plan for infrastructure capacity and marketing campaigns.",
+        "natural_language_questions": [
+          "What drives our website traffic patterns?",
+          "How does seasonality affect web traffic?",
+          "What's the underlying growth in visitors?",
+          "Can you separate annual patterns from growth?"
+        ],
+        "data_keywords": [
+          "website", "digital", "traffic", "annual", "seasonal", "patterns",
+          "visitors", "capacity", "infrastructure", "planning", "cyclical"
+        ],
+        "configuration_hints": {
+          "period": "52 for weekly data with annual seasonality",
+          "model": "additive for stable seasonal effects, multiplicative for proportional",
+          "extrapolate_trend": "true for capacity planning and forecasting"
+        },
+        "typical_parameters": {
+          "seasonal_periods": [52, 26, 13],
+          "decomposition_models": ["additive", "multiplicative", "pseudo_additive"],
+          "use_cases": ["capacity_planning", "marketing_calendar", "budget_planning"],
+          "business_applications": ["infrastructure", "content_strategy", "advertising"]
+        }
+      },
+      "patterns": {
+        "function_patterns": [
+          "(analyze|analysis|examine)"
+        ],
+        "time_patterns": [
+          "(weekly)"
+        ],
+        "num_patterns": [
+          "(52)"
+        ]
+      }
+    },
+    {
+      "query": "Generate a 6-month forecast of website traffic with 95% confidence intervals",
+      "function": "forecast_metric",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "monthly_visitors",
+        "fperiods": 6,
+        "fmethod": "prophet",
+        "seasonal_periods": 12,
+        "confidence_interval": 0.95
+      },
+      "example": "TrendPipe.from_dataframe(df) | forecast_metric(metric_column='monthly_visitors', fperiods=6, fmethod='prophet', seasonal_periods=12, confidence_interval=0.95)",
+      "instructions": {
+        "business_case": "Digital Strategy & Infrastructure Planning - Forecast website traffic for capacity planning, infrastructure scaling, content planning, and digital marketing budget allocation with statistical confidence bounds for risk management.",
+        "natural_language_questions": [
+          "What will our website traffic look like in 6 months?",
+          "How should we plan for digital infrastructure?",
+          "Can you predict visitor growth with confidence intervals?",
+          "What's the expected range of future traffic?"
+        ],
+        "data_keywords": [
+          "digital", "infrastructure", "capacity", "scaling", "planning",
+          "confidence", "uncertainty", "range", "bounds", "risk"
+        ],
+        "configuration_hints": {
+          "fmethod": "prophet excellent for business data with seasonality",
+          "confidence_interval": "0.95 provides 95% confidence bounds for planning",
+          "fperiods": "6 months typical for digital strategy planning"
+        },
+        "typical_parameters": {
+          "planning_horizons": [3, 6, 12],
+          "confidence_levels": [0.8, 0.9, 0.95, 0.99],
+          "forecasting_methods": ["prophet", "arima", "ets"],
+          "use_cases": ["infrastructure_planning", "budget_allocation", "capacity_management"],
+          "uncertainty_management": ["scenario_planning", "risk_assessment", "contingency_planning"]
+        }
+      },
+      "patterns": {
+        "time_patterns": [
+          "(monthly)"
+        ],
+        "num_patterns": [
+          "(6)",
+          "(12)",
+          "(95)%"
+        ]
+      }
+    },
+    {
+      "query": "Determine if the decline in conversion rate is statistically significant",
+      "function": "calculate_statistical_trend",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "conversion_rate",
+        "test_method": "cox_stuart",
+        "alpha": 0.01,
+        "window": 14
+      },
+      "example": "TrendPipe.from_dataframe(df) | calculate_statistical_trend(metric_column='conversion_rate', test_method='cox_stuart', alpha=0.01, window=14)",
+      "instructions": {
+        "business_case": "Performance Monitoring & Alert Systems - Statistically validate whether observed declines in critical business metrics represent genuine problems requiring intervention or are within normal variation, preventing false alarms and ensuring appropriate responses.",
+        "natural_language_questions": [
+          "Is this decline in conversion real or random?",
+          "Should I be concerned about this trend?",
+          "Is the performance drop statistically significant?",
+          "Can I confidently say performance is declining?"
+        ],
+        "data_keywords": [
+          "decline", "drop", "deterioration", "concern", "alert", "significant",
+          "confidence", "validation", "intervention", "problem", "issue"
+        ],
+        "configuration_hints": {
+          "test_method": "cox_stuart for trend testing with minimal assumptions",
+          "alpha": "0.01 for high confidence (99%), use for critical metrics",
+          "window": "14+ observations minimum for reliable statistical testing"
+        },
+        "typical_parameters": {
+          "significance_levels": [0.001, 0.01, 0.05],
+          "test_methods": ["cox_stuart", "mann_kendall", "linear_regression"],
+          "critical_metrics": ["conversion_rate", "revenue", "customer_satisfaction"],
+          "use_cases": ["alert_systems", "performance_monitoring", "quality_control"],
+          "response_protocols": ["investigation", "intervention", "escalation"]
+        }
+      },
+      "patterns": {
+        "metrics_patterns": [
+          "(metrics|measure|calculate) (conversion rate)"
+        ],
+        "num_patterns": [
+          "(0.01)",
+          "(14)"
+        ]
+      }
+    },
+    {
+      "query": "Compare current quarter performance with previous quarter",
+      "function": "compare_periods",
+      "category": "trend_analysis",
+      "inputs": {
+        "metric_column": "revenue",
+        "comparison_type": "previous_period",
+        "n_periods": 1,
+        "aggregation": "sum"
+      },
+      "example": "TrendPipe.from_dataframe(df) | compare_periods(metric_column='revenue', comparison_type='previous_period', n_periods=1, aggregation='sum')",
+      "instructions": {
+        "business_case": "Quarterly Business Reviews & Sequential Performance Analysis - Compare current quarter results against the immediately preceding quarter to assess short-term momentum, evaluate recent strategic initiatives, and identify emerging trends requiring management attention.",
+        "natural_language_questions": [
+          "How did this quarter compare to last quarter?",
+          "Are we improving quarter by quarter?",
+          "What's our sequential quarterly performance?",
+          "Did recent changes improve performance?"
+        ],
+        "data_keywords": [
+          "quarterly", "sequential", "momentum", "recent", "immediate",
+          "initiatives", "changes", "improvement", "progression", "current"
+        ],
+        "configuration_hints": {
+          "comparison_type": "previous_period for sequential analysis",
+          "n_periods": "1 for direct quarter-to-quarter comparison",
+          "aggregation": "sum for revenue totals, mean for rates"
+        },
+        "typical_parameters": {
+          "comparison_periods": ["quarter", "month", "year"],
+          "sequential_analysis": ["quarter_to_quarter", "month_to_month"],
+          "use_cases": ["quarterly_reviews", "momentum_analysis", "initiative_assessment"],
+          "business_applications": ["board_reporting", "management_reviews", "strategic_planning"]
+        }
+      },
+      "patterns": {
+        "time_patterns": [
+          "(quarterly)"
+        ],
+        "num_patterns": [
+          "(1)"
+        ]
+      }
+    },
+    {
+      "query": "Find the top 10 fastest growing user segments by engagement",
+      "function": "get_top_metrics",
+      "category": "trend_analysis",
+      "inputs": {
+        "n": 10,
+        "metric_type": "growth_rate",
+        "ascending": false
+      },
+      "example": "get_top_metrics(n=10, metric_type='growth_rate', ascending=False)(TrendPipe.from_dataframe(df))",
+      "instructions": {
+        "business_case": "Customer Success & Engagement Strategy - Identify user segments with highest engagement growth to understand successful engagement patterns, replicate strategies across other segments, and prioritize resources for maximum impact on user retention and satisfaction.",
+        "natural_language_questions": [
+          "Which user segments are most engaged and growing?",
+          "What engagement strategies are working best?",
+          "Which user groups should we focus on?",
+          "Where is engagement momentum strongest?"
+        ],
+        "data_keywords": [
+          "engagement", "user_segments", "customer_success", "retention",
+          "satisfaction", "momentum", "strategies", "patterns", "focus"
+        ],
+        "configuration_hints": {
+          "n": "10 provides good balance of focus and coverage",
+          "metric_type": "growth_rate shows momentum and trajectory",
+          "ascending": "false to get top performers first"
+        },
+        "typical_parameters": {
+          "segment_sizes": [5, 10, 15, 20],
+          "engagement_metrics": ["activity_rate", "session_duration", "feature_usage"],
+          "use_cases": ["customer_success", "product_development", "engagement_strategy"],
+          "strategic_actions": ["replication", "investment", "expansion"]
+        }
+      },
+      "patterns": {
+        "num_patterns": [
+          "top (10)"
+        ]
+      }
+    }
+]

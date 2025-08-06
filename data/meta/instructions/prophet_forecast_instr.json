@@ -1,0 +1,458 @@
+[
+    {
+        "query": "Prepare daily sales data for Prophet time series forecasting",
+        "function": "prepare_prophet_data",
+        "category": "data_preparation",
+        "inputs": {
+            "date_column": "transaction_date",
+            "value_column": "daily_sales",
+            "date_format": "%Y-%m-%d",
+            "freq": "D"
+        },
+        "example": "pipeline = ProphetPipe.from_dataframe(sales_data)\npipeline = pipeline | prepare_prophet_data(\n    date_column='transaction_date',\n    value_column='daily_sales',\n    date_format='%Y-%m-%d',\n    freq='D'\n)",
+        "instructions": {
+            "business_case": "Sales Forecasting & Demand Planning - Prepare historical sales data for time series forecasting to predict future demand, optimize inventory levels, and support strategic business planning.",
+            "natural_language_questions": [
+                "How can I forecast our future sales based on historical data?",
+                "What will our daily revenue look like next quarter?",
+                "Can you predict demand patterns for inventory planning?",
+                "How do I prepare my sales data for forecasting?"
+            ],
+            "data_keywords": [
+                "sales", "revenue", "demand", "daily", "historical", "time_series",
+                "forecasting", "planning", "inventory", "business", "growth"
+            ],
+            "configuration_hints": {
+                "date_column": "Must contain dates in consistent format (YYYY-MM-DD recommended)",
+                "value_column": "Target variable to forecast (sales, revenue, demand)",
+                "freq": "D=daily, W=weekly, M=monthly, H=hourly depending on data granularity"
+            },
+            "typical_parameters": {
+                "frequencies": ["D", "W", "M", "Q", "H"],
+                "date_formats": ["%Y-%m-%d", "%m/%d/%Y", "%Y-%m-%d %H:%M:%S"],
+                "best_for_data_types": ["sales_data", "revenue_records", "demand_history"],
+                "data_requirements": "Minimum 2 years of historical data for reliable forecasts"
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(prepare|format|convert) (data|format)", "(prophet|time.series) (data|format)"],
+            "time_patterns": ["(daily|hourly|weekly|monthly) (sales|revenue|data)"],
+            "column_patterns": ["(date|time|timestamp) (column)"]
+        }
+    },
+    {
+        "query": "Add marketing spend and promotional campaigns as external regressors",
+        "function": "add_regressors",
+        "category": "data_preparation",
+        "inputs": {
+            "regressor_columns": ["marketing_spend", "promotion_active", "competitor_price"],
+            "prior_scale": 0.1,
+            "standardize": "auto"
+        },
+        "example": "pipeline = ProphetPipe.from_dataframe(data)\npipeline = pipeline | add_regressors(\n    regressor_columns=['marketing_spend', 'promotion_active', 'competitor_price'],\n    prior_scale=0.1,\n    standardize='auto'\n)",
+        "instructions": {
+            "business_case": "Enhanced Forecasting with Business Drivers - Include external factors like marketing spend, promotions, and competitive intelligence to create more accurate and actionable forecasts.",
+            "natural_language_questions": [
+                "How does our marketing spend affect sales forecasts?",
+                "Can I include promotional campaigns in the prediction model?",
+                "What if I want to model the impact of external factors?",
+                "How do competitor prices influence our demand forecasts?"
+            ],
+            "data_keywords": [
+                "marketing", "promotions", "campaigns", "external", "factors", "drivers",
+                "competitor", "pricing", "regressors", "variables", "influence"
+            ],
+            "configuration_hints": {
+                "regressor_columns": "Include variables that causally influence your target metric",
+                "prior_scale": "Smaller values (0.1) = less influence, larger (1.0) = more influence",
+                "future_values": "Must provide future values of regressors for forecasting period"
+            },
+            "typical_parameters": {
+                "common_regressors": ["marketing_spend", "promotions", "weather", "holidays", "competitor_data"],
+                "prior_scale_range": [0.01, 1.0],
+                "best_for_data_types": ["marketing_data", "promotional_calendars", "external_factors"],
+                "forecast_accuracy": "Can improve accuracy by 10-30% when regressors are predictive"
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(add|include) (regressors|variables)", "(external|additional) (factors|variables)"],
+            "business_patterns": ["(marketing|advertising|promotional) (spend|budget|campaigns)"],
+            "regressor_patterns": ["(economic|weather|competitive) (indicators|factors)"]
+        }
+    },
+    {
+        "query": "Include US holidays and Black Friday effects in the forecast model",
+        "function": "add_holidays",
+        "category": "data_preparation",
+        "inputs": {
+            "holiday_data": "US",
+            "holiday_name": "us_holidays",
+            "prior_scale": 10.0,
+            "lower_window": -1,
+            "upper_window": 1
+        },
+        "example": "pipeline = ProphetPipe.from_dataframe(data)\npipeline = pipeline | add_holidays(\n    holiday_data='US',\n    holiday_name='us_holidays',\n    prior_scale=10.0,\n    lower_window=-1,\n    upper_window=1\n)",
+        "instructions": {
+            "business_case": "Holiday & Seasonal Event Modeling - Account for major holidays and special events that significantly impact business metrics like Black Friday, Christmas, or industry-specific events.",
+            "natural_language_questions": [
+                "How do holidays affect our sales patterns?",
+                "Can I account for Black Friday and Christmas shopping?",
+                "What about the impact of special events on demand?",
+                "How do I model holiday effects in forecasts?"
+            ],
+            "data_keywords": [
+                "holidays", "christmas", "black_friday", "thanksgiving", "seasonal",
+                "events", "special", "calendar", "shopping", "festivities"
+            ],
+            "configuration_hints": {
+                "holiday_data": "Use country codes (US, UK, CA) or custom holiday dataframes",
+                "prior_scale": "Higher values (10+) for major impact holidays like Black Friday",
+                "windows": "Extend effect before/after holiday (Black Friday sales start early)"
+            },
+            "typical_parameters": {
+                "countries": ["US", "UK", "CA", "DE", "FR", "JP"],
+                "major_holidays": ["Christmas", "Black Friday", "New Year", "Easter"],
+                "prior_scale_range": [1.0, 20.0],
+                "typical_windows": "1-3 days before/after for retail, longer for seasonal businesses"
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(add|include) (holidays|events)", "(holiday|seasonal) (effects|impact)"],
+            "holiday_patterns": ["(christmas|thanksgiving|black.friday|new.year) (effects|impact)"],
+            "country_patterns": ["(US|UK|CA|DE|FR) (holidays)"]
+        }
+    },
+    {
+        "query": "Generate 90-day daily forecast for revenue prediction",
+        "function": "make_forecast",
+        "category": "forecasting",
+        "inputs": {
+            "periods": 90,
+            "freq": "D",
+            "include_history": true,
+            "model_name": "revenue_model",
+            "forecast_name": "q1_revenue_forecast"
+        },
+        "example": "pipeline = ProphetPipe.from_dataframe(data)\npipeline = pipeline | make_forecast(\n    periods=90,\n    freq='D',\n    include_history=True,\n    model_name='revenue_model',\n    forecast_name='q1_revenue_forecast'\n)",
+        "instructions": {
+            "business_case": "Strategic Business Planning - Generate future predictions for revenue, demand, or key metrics to support quarterly planning, budget allocation, and strategic decision-making.",
+            "natural_language_questions": [
+                "What will our revenue look like over the next 90 days?",
+                "Can you predict our quarterly performance?",
+                "How much should we expect to earn next quarter?",
+                "What's the forecast for the next 3 months?"
+            ],
+            "data_keywords": [
+                "forecast", "prediction", "future", "quarterly", "planning", "budget",
+                "revenue", "90_days", "strategic", "projection", "outlook"
+            ],
+            "configuration_hints": {
+                "periods": "90 days = 1 quarter, 365 = 1 year, adjust based on business needs",
+                "freq": "Match your data frequency (D=daily, W=weekly, M=monthly)",
+                "include_history": "true to see historical fit alongside future predictions"
+            },
+            "typical_parameters": {
+                "forecast_horizons": [30, 60, 90, 180, 365],
+                "planning_cycles": "Monthly (30), Quarterly (90), Annual (365)",
+                "best_for_data_types": ["business_metrics", "financial_data", "operational_kpis"],
+                "confidence_intervals": "Automatic uncertainty bands show forecast reliability"
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(generate|create|make) (forecast|prediction)", "(future|forward) (forecast|prediction)"],
+            "time_patterns": ["(30|60|90|365) (days|day) (forecast|ahead)"],
+            "frequency_patterns": ["(daily|weekly|monthly|hourly) (forecast|prediction)"]
+        }
+    },
+    {
+        "query": "Cross-validate model performance with 2-year initial training and monthly evaluation",
+        "function": "cross_validate_model",
+        "category": "evaluation",
+        "inputs": {
+            "initial": "730 days",
+            "period": "30 days", 
+            "horizon": "30 days",
+            "model_name": "forecast_model",
+            "cv_name": "monthly_validation"
+        },
+        "example": "pipeline = ProphetPipe.from_dataframe(data)\npipeline = pipeline | cross_validate_model(\n    initial='730 days',\n    period='30 days',\n    horizon='30 days',\n    model_name='forecast_model',\n    cv_name='monthly_validation'\n)",
+        "instructions": {
+            "business_case": "Model Validation & Reliability Assessment - Evaluate forecast accuracy using historical data to ensure model reliability before making important business decisions based on predictions.",
+            "natural_language_questions": [
+                "How accurate are my forecasts historically?",
+                "Can I trust these predictions for business planning?",
+                "What's the track record of forecast performance?",
+                "How do I validate my forecasting model?"
+            ],
+            "data_keywords": [
+                "validation", "accuracy", "performance", "reliability", "track_record",
+                "historical", "backtest", "evaluation", "trust", "confidence"
+            ],
+            "configuration_hints": {
+                "initial": "Minimum training period (2+ years recommended for seasonal patterns)",
+                "period": "How often to re-evaluate (monthly for business reviews)",
+                "horizon": "Forecast distance to test (match your business planning horizon)"
+            },
+            "typical_parameters": {
+                "initial_periods": ["365 days", "730 days", "1095 days"],
+                "evaluation_frequencies": ["7 days", "30 days", "90 days"],
+                "horizons": ["7 days", "30 days", "90 days"],
+                "accuracy_metrics": "MAPE, MAE, RMSE automatically calculated"
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(cross.validate|validate|evaluate) (model|performance)", "(time.series|temporal) (validation|evaluation)"],
+            "time_patterns": ["(2) (years|year) (initial|training)", "(30|60|90) (days|day) (horizon|forecast)"],
+            "validation_patterns": ["(rolling|time.series|temporal) (validation|cv)"]
+        }
+    },
+    {
+        "query": "Calculate forecast accuracy metrics including MAPE and coverage",
+        "function": "calculate_forecast_metrics",
+        "category": "evaluation",
+        "inputs": {
+            "forecast_name": "q1_sales_forecast",
+            "actual_column": "actual_sales",
+            "cutoff_date": "2024-01-01"
+        },
+        "example": "pipeline = ProphetPipe.from_dataframe(data)\npipeline = pipeline | calculate_forecast_metrics(\n    forecast_name='q1_sales_forecast',\n    actual_column='actual_sales',\n    cutoff_date='2024-01-01'\n)",
+        "instructions": {
+            "business_case": "Forecast Performance Monitoring - Track prediction accuracy against actual results to continuously improve forecasting methods and build confidence in future predictions.",
+            "natural_language_questions": [
+                "How accurate were my forecasts compared to actual results?",
+                "What's the mean absolute percentage error of predictions?",
+                "Are the confidence intervals capturing actual values?",
+                "How can I measure forecasting performance?"
+            ],
+            "data_keywords": [
+                "accuracy", "mape", "mae", "rmse", "coverage", "performance",
+                "actual", "error", "metrics", "evaluation", "comparison"
+            ],
+            "configuration_hints": {
+                "cutoff_date": "Split point between training and evaluation periods",
+                "actual_column": "Real observed values to compare against predictions",
+                "metrics": "MAPE (%), MAE (units), RMSE (units), Coverage (%) automatically calculated"
+            },
+            "typical_parameters": {
+                "accuracy_targets": "MAPE <10% = excellent, <20% = good, <30% = acceptable",
+                "coverage_targets": "95% confidence intervals should capture ~95% of actual values",
+                "best_for_data_types": ["out_of_sample", "holdout_period", "recent_actuals"],
+                "improvement_actions": "Adjust model parameters, add regressors, extend training period"
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(calculate|compute|measure) (metrics|accuracy|performance)", "(forecast|prediction) (accuracy|error|metrics)"],
+            "metrics_patterns": ["(MAPE|MAE|RMSE|coverage) (metrics|accuracy)"],
+            "evaluation_patterns": ["(out.of.sample|holdout) (evaluation|testing)"]
+        }
+    },
+    {
+        "query": "Plot forecast results with trend and seasonal components",
+        "function": "plot_forecast",
+        "category": "visualization",
+        "inputs": {
+            "forecast_name": "sales_forecast",
+            "figsize": [15, 8],
+            "show_components": true
+        },
+        "example": "pipeline = ProphetPipe.from_dataframe(data)\npipeline = pipeline | plot_forecast(\n    forecast_name='sales_forecast',\n    figsize=(15, 8),\n    show_components=True\n)",
+        "instructions": {
+            "business_case": "Executive Reporting & Stakeholder Communication - Create compelling visualizations of forecasts and underlying patterns to communicate insights and build confidence in predictions with stakeholders.",
+            "natural_language_questions": [
+                "Can you show me the forecast visually?",
+                "What are the underlying trends and seasonal patterns?",
+                "How do I present forecasts to executives?",
+                "What drives the predictions in my data?"
+            ],
+            "data_keywords": [
+                "visualization", "chart", "plot", "trend", "seasonal", "components",
+                "presentation", "executive", "stakeholder", "communication"
+            ],
+            "configuration_hints": {
+                "show_components": "true reveals trend, seasonality, holidays separately",
+                "figsize": "Larger plots (15,8) better for presentations",
+                "interpretation": "Trend shows long-term direction, seasonality shows patterns"
+            },
+            "typical_parameters": {
+                "figure_sizes": [[12, 6], [15, 8], [20, 10]],
+                "component_analysis": "Trend, yearly/weekly seasonality, holiday effects",
+                "best_for_data_types": ["presentation_ready", "executive_dashboards"],
+                "business_insights": "Identify growth trends, seasonal patterns, event impacts"
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(plot|visualize|chart) (forecast|prediction)", "(trend|seasonal) (components|decomposition)"],
+            "visualization_patterns": ["(time.series|forecast) (plot|chart|visualization)"],
+            "component_patterns": ["(trend|seasonality|holiday) (effects|components)"]
+        }
+    },
+    {
+        "query": "Complete e-commerce revenue forecasting with holidays and marketing effects",
+        "function": "complete_pipeline",
+        "category": "end_to_end",
+        "inputs": {
+            "data_source": "ecommerce_daily_revenue.csv",
+            "target": "revenue",
+            "regressors": ["marketing_spend", "competitor_price", "weather_index"],
+            "holidays": "US",
+            "forecast_horizon": 60
+        },
+        "example": "ecommerce_forecast = (\n    ProphetPipe.from_dataframe(revenue_data)\n    | prepare_prophet_data('date', 'daily_revenue')\n    | add_regressors(['marketing_spend', 'competitor_price', 'weather_index'])\n    | add_holidays('US', lower_window=-1, upper_window=1)\n    | configure_prophet(growth='linear', seasonality_mode='additive')\n    | add_custom_seasonality('monthly', period=30.5, fourier_order=5)\n    | fit_prophet()\n    | forecast_with_regressors(periods=60, regressor_future_values=future_regressors)\n    | cross_validate_model('730 days', '60 days', '30 days')\n    | calculate_forecast_metrics('prophet_model_forecast_with_regressors')\n    | plot_forecast('prophet_model_forecast_with_regressors', show_components=True)\n    | save_prophet_model(filepath='ecommerce_forecast_model.joblib')\n)",
+        "instructions": {
+            "business_case": "Comprehensive E-commerce Revenue Planning - Build end-to-end forecasting solution that accounts for marketing activities, competitive dynamics, and seasonal events for strategic revenue planning.",
+            "natural_language_questions": [
+                "How can I forecast our e-commerce revenue comprehensively?",
+                "What will revenue look like considering all business factors?",
+                "Can I build a complete forecasting system for our online business?",
+                "How do I account for marketing, competition, and seasonality together?"
+            ],
+            "data_keywords": [
+                "ecommerce", "revenue", "comprehensive", "marketing", "competition",
+                "seasonal", "holidays", "complete", "business", "strategic"
+            ],
+            "configuration_hints": {
+                "regressors": "Include all known drivers: marketing, competition, weather, etc.",
+                "holidays": "Critical for e-commerce due to shopping seasons",
+                "validation": "Use longer periods for e-commerce seasonality patterns"
+            },
+            "typical_parameters": {
+                "forecast_horizons": [30, 60, 90, 180],
+                "key_regressors": ["marketing_spend", "promotions", "competitor_activity"],
+                "seasonal_considerations": "Black Friday, Christmas, back-to-school seasons",
+                "business_impact": "Revenue planning, inventory management, marketing budget allocation"
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(ecommerce|retail|sales) (forecasting|prediction)", "(revenue|sales) (forecast|prediction)"],
+            "business_patterns": ["(marketing|promotional|seasonal) (effects|impact)"],
+            "pipeline_patterns": ["(complete|full|end.to.end) (pipeline|workflow)"]
+        }
+    },
+    {
+        "query": "Save trained Prophet model for production deployment",
+        "function": "save_prophet_model",
+        "category": "model_management",
+        "inputs": {
+            "model_name": "production_forecast_model",
+            "filepath": "models/prophet_sales_forecast_v2.joblib"
+        },
+        "example": "pipeline = ProphetPipe.from_dataframe(data)\npipeline = pipeline | save_prophet_model(\n    model_name='production_forecast_model',\n    filepath='models/prophet_sales_forecast_v2.joblib'\n)",
+        "instructions": {
+            "business_case": "Model Deployment & Operationalization - Save trained forecasting models for production use, enabling automated forecasting systems and consistent predictions across business applications.",
+            "natural_language_questions": [
+                "How do I save my forecasting model for production use?",
+                "Can you export the trained model for deployment?",
+                "How do I preserve my model for future predictions?",
+                "What's the best way to operationalize my forecasting model?"
+            ],
+            "data_keywords": [
+                "save", "export", "production", "deployment", "operationalize", "model",
+                "persist", "reuse", "automated", "systematic", "consistent"
+            ],
+            "configuration_hints": {
+                "filepath": "Use descriptive names with version numbers for model tracking",
+                "production_use": "Saved models can be loaded for batch or real-time forecasting",
+                "model_versioning": "Include version info for model lifecycle management"
+            },
+            "typical_parameters": {
+                "file_formats": [".joblib", ".pkl", ".json"],
+                "naming_conventions": ["model_name_v1.joblib", "forecast_model_YYYYMMDD.pkl"],
+                "best_for_data_types": ["production_ready_models", "validated_forecasts"],
+                "deployment_scenarios": "Batch forecasting, API endpoints, scheduled predictions"
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(save|export|persist) (model|prophet)", "(production|deployment) (model|version)"],
+            "file_patterns": ["(joblib|pickle|model) (file|format)"],
+            "deployment_patterns": ["(production|live|deployment) (model|version)"]
+        }
+    },
+    {
+        "query": "Optimize Prophet hyperparameters using grid search cross-validation",
+        "function": "hyperparameter_tuning",
+        "category": "optimization",
+        "inputs": {
+            "param_grid": {
+                "changepoint_prior_scale": [0.01, 0.05, 0.1],
+                "seasonality_prior_scale": [1.0, 10.0, 20.0],
+                "seasonality_mode": ["additive", "multiplicative"]
+            },
+            "cv_initial": "365 days",
+            "cv_period": "90 days",
+            "cv_horizon": "30 days",
+            "metric": "mape"
+        },
+        "example": "pipeline = ProphetPipe.from_dataframe(data)\npipeline = pipeline | hyperparameter_tuning(\n    param_grid={\n        'changepoint_prior_scale': [0.01, 0.05, 0.1],\n        'seasonality_prior_scale': [1.0, 10.0, 20.0],\n        'seasonality_mode': ['additive', 'multiplicative']\n    },\n    cv_initial='365 days',\n    cv_period='90 days',\n    cv_horizon='30 days',\n    metric='mape'\n)",
+        "instructions": {
+            "business_case": "Model Optimization & Performance Maximization - Systematically optimize forecasting model parameters to achieve the best possible prediction accuracy for your specific business data and requirements.",
+            "natural_language_questions": [
+                "How can I get the best possible forecast accuracy?",
+                "Can you find the optimal parameters for my model?",
+                "What settings give me the most accurate predictions?",
+                "How do I tune my forecasting model automatically?"
+            ],
+            "data_keywords": [
+                "optimization", "hyperparameters", "tuning", "grid_search", "best_parameters",
+                "accuracy", "performance", "optimal", "systematic", "automated"
+            ],
+            "configuration_hints": {
+                "param_grid": "Test key parameters that most affect accuracy for your data type",
+                "cv_setup": "Use realistic validation periods that match business planning cycles",
+                "metric": "Choose metric that aligns with business goals (MAPE for %, MAE for units)"
+            },
+            "typical_parameters": {
+                "key_parameters": ["changepoint_prior_scale", "seasonality_prior_scale", "seasonality_mode"],
+                "optimization_metrics": ["mape", "mae", "rmse", "coverage"],
+                "parameter_ranges": "Start broad, then narrow based on initial results",
+                "computation_time": "Grid search can be time-intensive for large parameter spaces"
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(optimize|tune|search) (hyperparameters|parameters)", "(grid|random) (search|optimization)"],
+            "optimization_patterns": ["(parameter|hyperparameter) (tuning|optimization|search)"],
+            "validation_patterns": ["(cross.validation|cv) (optimization|tuning)"]
+        }
+    },
+    {
+        "query": "Financial forecasting with logistic growth and economic indicators",
+        "function": "complete_pipeline",
+        "category": "end_to_end",
+        "inputs": {
+            "data_source": "monthly_financial_metrics.csv",
+            "target": "subscriber_count",
+            "growth_model": "logistic",
+            "capacity": 1000000,
+            "regressors": ["marketing_spend", "economic_index", "competitor_count"]
+        },
+        "example": "financial_forecast = (\n    ProphetPipe.from_dataframe(financial_data)\n    | prepare_prophet_data('month', 'subscriber_count')\n    | add_regressors(['marketing_spend', 'economic_index', 'competitor_count'])\n    | configure_prophet(growth='logistic', seasonality_mode='multiplicative')\n    | fit_prophet()\n    | forecast_with_regressors(periods=12, regressor_future_values=future_indicators, freq='MS')\n    | cross_validate_model('730 days', '90 days', '60 days')\n    | calculate_forecast_metrics('prophet_model_forecast_with_regressors')\n    | plot_forecast('prophet_model_forecast_with_regressors', show_components=True)\n    | hyperparameter_tuning(param_grid, '365 days', '90 days', '30 days')\n)",
+        "instructions": {
+            "business_case": "Subscription & SaaS Growth Modeling - Model subscriber growth with realistic capacity constraints and external economic factors for strategic planning and investor reporting.",
+            "natural_language_questions": [
+                "How will our subscriber base grow considering market saturation?",
+                "Can you model growth with realistic capacity limits?",
+                "How do economic factors affect our subscription growth?",
+                "What will our subscriber count look like next year?"
+            ],
+            "data_keywords": [
+                "financial", "subscription", "saas", "growth", "capacity", "saturation",
+                "economic", "subscribers", "logistic", "constraints", "strategic"
+            ],
+            "configuration_hints": {
+                "logistic_growth": "Use when growth has natural limits (market size, capacity)",
+                "capacity": "Set based on total addressable market or operational constraints",
+                "economic_indicators": "Include GDP, unemployment, industry indices"
+            },
+            "typical_parameters": {
+                "growth_patterns": ["linear", "logistic", "piecewise"],
+                "capacity_estimation": "Based on market research, competitive analysis",
+                "economic_regressors": ["GDP", "unemployment", "consumer_confidence", "industry_growth"],
+                "financial_applications": "Investor reports, strategic planning, capacity planning"
+            }
+        },
+        "patterns": {
+            "function_patterns": ["(financial|revenue|subscription) (forecasting|modeling)", "(logistic|constrained) (growth|model)"],
+            "financial_patterns": ["(subscribers|revenue|ARR|MRR) (growth|forecast)"],
+            "capacity_patterns": ["(capacity|limit|saturation) (constraints|modeling)"]
+        }
+    }
+]
