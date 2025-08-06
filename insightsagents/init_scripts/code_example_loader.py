@@ -284,24 +284,62 @@ class UsageExampleLoader:
                 # Convert each example to a Document
                 for example in examples:
                     if isinstance(example, dict):
-                        # Create page content from example data
+                        # Extract instructions and patterns for better searchability
+                        instructions = example.get("instructions", {})
+                        patterns = example.get("patterns", {})
+                        
+                        # Create searchable text from instructions
+                        searchable_instructions = ""
+                        if instructions:
+                            business_case = instructions.get("business_case", "")
+                            natural_language_questions = instructions.get("natural_language_questions", [])
+                            data_keywords = instructions.get("data_keywords", [])
+                            configuration_hints = instructions.get("configuration_hints", {})
+                            typical_parameters = instructions.get("typical_parameters", {})
+                            
+                            searchable_instructions = f"{business_case} {' '.join(natural_language_questions)} {' '.join(data_keywords)}"
+                            if configuration_hints:
+                                searchable_instructions += f" {' '.join([f'{k}: {v}' for k, v in configuration_hints.items()])}"
+                            if typical_parameters:
+                                searchable_instructions += f" {' '.join([f'{k}: {v}' for k, v in typical_parameters.items()])}"
+                        
+                        # Create searchable text from patterns
+                        searchable_patterns = ""
+                        if patterns:
+                            function_patterns = patterns.get("function_patterns", [])
+                            metrics_patterns = patterns.get("metrics_patterns", [])
+                            num_patterns = patterns.get("num_patterns", [])
+                            time_patterns = patterns.get("time_patterns", [])
+                            
+                            searchable_patterns = f"{' '.join(function_patterns)} {' '.join(metrics_patterns)} {' '.join(num_patterns)} {' '.join(time_patterns)}"
+                        
+                        # Create page content from example data with new format support
                         page_content = json.dumps({
+                            "query": example.get("query", ""),
                             "example": example.get("example", ""),
                             "description": example.get("description", ""),
                             "function_name": example.get("function", ""),
                             "category": example.get("category", ""),
+                            "inputs": example.get("inputs", {}),
+                            "instructions": example.get("instructions", {}),
+                            "patterns": example.get("patterns", {}),
+                            "searchable_instructions": searchable_instructions,
+                            "searchable_patterns": searchable_patterns,
                             "input_data": example.get("input_data", {}),
                             "output_data": example.get("output_data", {}),
                             "code_snippet": example.get("code_snippet", "")
                         })
                         
-                        # Create metadata
+                        # Create metadata with enhanced information
                         metadata = {
                             "source_file": str(json_file.name),
                             "type": "usage_example",
                             "function_name": example.get("function", ""),
                             "category": example.get("category", ""),
-                            "example_type": example.get("example_type", "")
+                            "example_type": example.get("example_type", ""),
+                            "query": example.get("query", ""),
+                            "has_instructions": bool(example.get("instructions")),
+                            "has_patterns": bool(example.get("patterns"))
                         }
                         
                         # Create LangChain Document
@@ -343,6 +381,152 @@ class UsageExampleLoader:
         """
         all_docs = self.load_examples()
         return [doc for doc in all_docs if doc.metadata.get("category") == category]
+    
+    def get_examples_by_query(self, query: str) -> List[Document]:
+        """
+        Get all usage examples that match a specific query.
+        
+        Args:
+            query (str): Query text to filter by
+            
+        Returns:
+            List[Document]: List of LangChain Documents matching the query
+        """
+        all_docs = self.load_examples()
+        return [doc for doc in all_docs if doc.metadata.get("query") == query]
+    
+    def get_examples_with_instructions(self) -> List[Document]:
+        """
+        Get all usage examples that have instructions.
+        
+        Returns:
+            List[Document]: List of LangChain Documents with instructions
+        """
+        all_docs = self.load_examples()
+        return [doc for doc in all_docs if doc.metadata.get("has_instructions", False)]
+    
+    def get_examples_with_patterns(self) -> List[Document]:
+        """
+        Get all usage examples that have patterns.
+        
+        Returns:
+            List[Document]: List of LangChain Documents with patterns
+        """
+        all_docs = self.load_examples()
+        return [doc for doc in all_docs if doc.metadata.get("has_patterns", False)]
+    
+    def search_examples_by_keyword(self, keyword: str) -> List[Document]:
+        """
+        Search for examples by keyword in query, instructions, or patterns.
+        
+        Args:
+            keyword (str): Keyword to search for
+            
+        Returns:
+            List[Document]: List of LangChain Documents containing the keyword
+        """
+        all_docs = self.load_examples()
+        matching_docs = []
+        
+        for doc in all_docs:
+            try:
+                content = json.loads(doc.page_content)
+                query = content.get("query", "").lower()
+                searchable_instructions = content.get("searchable_instructions", "").lower()
+                searchable_patterns = content.get("searchable_patterns", "").lower()
+                function_name = content.get("function_name", "").lower()
+                category = content.get("category", "").lower()
+                
+                if (keyword.lower() in query or 
+                    keyword.lower() in searchable_instructions or 
+                    keyword.lower() in searchable_patterns or
+                    keyword.lower() in function_name or
+                    keyword.lower() in category):
+                    matching_docs.append(doc)
+            except (json.JSONDecodeError, KeyError):
+                continue
+                
+        return matching_docs
+    
+    def get_examples_by_business_case(self, business_case_keyword: str) -> List[Document]:
+        """
+        Get examples that match a specific business case keyword.
+        
+        Args:
+            business_case_keyword (str): Business case keyword to search for
+            
+        Returns:
+            List[Document]: List of LangChain Documents matching the business case
+        """
+        all_docs = self.load_examples()
+        matching_docs = []
+        
+        for doc in all_docs:
+            try:
+                content = json.loads(doc.page_content)
+                instructions = content.get("instructions", {})
+                business_case = instructions.get("business_case", "").lower()
+                
+                if business_case_keyword.lower() in business_case:
+                    matching_docs.append(doc)
+            except (json.JSONDecodeError, KeyError):
+                continue
+                
+        return matching_docs
+    
+    def get_examples_by_data_keywords(self, keywords: list) -> List[Document]:
+        """
+        Get examples that match specific data keywords from instructions.
+        
+        Args:
+            keywords (list): List of data keywords to search for
+            
+        Returns:
+            List[Document]: List of LangChain Documents matching the data keywords
+        """
+        all_docs = self.load_examples()
+        matching_docs = []
+        
+        for doc in all_docs:
+            try:
+                content = json.loads(doc.page_content)
+                instructions = content.get("instructions", {})
+                data_keywords = instructions.get("data_keywords", [])
+                
+                # Check if any of the provided keywords match the data keywords
+                if any(keyword.lower() in [kw.lower() for kw in data_keywords] for keyword in keywords):
+                    matching_docs.append(doc)
+            except (json.JSONDecodeError, KeyError):
+                continue
+                
+        return matching_docs
+    
+    def get_examples_by_natural_language_question(self, question_keyword: str) -> List[Document]:
+        """
+        Get examples that contain specific natural language questions.
+        
+        Args:
+            question_keyword (str): Keyword to search for in natural language questions
+            
+        Returns:
+            List[Document]: List of LangChain Documents matching the question keyword
+        """
+        all_docs = self.load_examples()
+        matching_docs = []
+        
+        for doc in all_docs:
+            try:
+                content = json.loads(doc.page_content)
+                instructions = content.get("instructions", {})
+                natural_language_questions = instructions.get("natural_language_questions", [])
+                
+                # Check if the keyword appears in any of the natural language questions
+                if any(question_keyword.lower() in question.lower() for question in natural_language_questions):
+                    matching_docs.append(doc)
+            except (json.JSONDecodeError, KeyError):
+                continue
+                
+        return matching_docs
 
 def load_usage_examples(base_path:str):
     usage_example_loader = UsageExampleLoader(base_path=base_path)
@@ -372,7 +556,7 @@ def main():
     
     usage_example_loader = CodeExampleLoader(base_path="/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/meta/code_examples/")
     function_loader = CodeFunctionLoader(json_files_path="/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/meta/toolspecs")
-    usage_example_loader_new = UsageExampleLoader(base_path="/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/meta/usage_examples")
+    usage_example_loader_new = UsageExampleLoader(base_path="/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/meta/instructions")
     
     # Load all examples
     all_functions = function_loader.load_all_functions()
@@ -394,9 +578,9 @@ def main():
     print("Usage examples loaded into ChromaDB")
     
     #print("examples",examples)
-    #usage_examples_vectorstore.add_documents(new_usage_examples)
-    #examples_vectorstore.add_documents(usage_examples)
-    #functions_vectorstore.add_documents(all_functions)
+    usage_examples_vectorstore.add_documents(new_usage_examples)
+    examples_vectorstore.add_documents(usage_examples)
+    functions_vectorstore.add_documents(all_functions)
     initialize_insights_vectorstore(insights_vectorstore)
         
     # Get examples by function
@@ -479,6 +663,50 @@ def main():
     # Example: Search for usage examples by category
     #usage_examples_by_category = usage_example_loader_new.get_examples_by_category("time_series_analysis")
     #print(f"Found {len(usage_examples_by_category)} usage examples for 'time_series_analysis' category")
+    
+    # Test new functionality with the updated format
+    print("\n--- Testing Updated UsageExampleLoader with New Format ---")
+    updated_usage_loader = UsageExampleLoader(base_path="/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/meta/instructions")
+    
+    # Load examples with new format
+    new_format_examples = updated_usage_loader.load_examples()
+    print(f"Loaded {len(new_format_examples)} examples with new format")
+    
+    if new_format_examples:
+        # Test search by function
+        anomaly_examples = updated_usage_loader.get_examples_by_function("detect_statistical_outliers")
+        print(f"Found {len(anomaly_examples)} examples for 'detect_statistical_outliers'")
+        
+        # Test search by category
+        anomaly_category_examples = updated_usage_loader.get_examples_by_category("anomaly_detection")
+        print(f"Found {len(anomaly_category_examples)} examples for 'anomaly_detection' category")
+        
+        # Test search by keyword
+        temperature_examples = updated_usage_loader.search_examples_by_keyword("temperature")
+        print(f"Found {len(temperature_examples)} examples containing 'temperature'")
+        
+        # Test search by business case
+        quality_control_examples = updated_usage_loader.get_examples_by_business_case("Quality Control")
+        print(f"Found {len(quality_control_examples)} examples with 'Quality Control' business case")
+        
+        # Test examples with instructions
+        examples_with_instructions = updated_usage_loader.get_examples_with_instructions()
+        print(f"Found {len(examples_with_instructions)} examples with instructions")
+        
+        # Show first example structure
+        first_example = new_format_examples[0]
+        print(f"\nFirst example metadata keys: {list(first_example.metadata.keys())}")
+        print(f"Has instructions: {first_example.metadata.get('has_instructions')}")
+        print(f"Has patterns: {first_example.metadata.get('has_patterns')}")
+        print(f"Query: {first_example.metadata.get('query')}")
+        
+        # Test search by data keywords
+        sensor_examples = updated_usage_loader.get_examples_by_data_keywords(["sensor", "temperature"])
+        print(f"Found {len(sensor_examples)} examples with sensor/temperature data keywords")
+        
+        # Test search by natural language question
+        unusual_examples = updated_usage_loader.get_examples_by_natural_language_question("unusual")
+        print(f"Found {len(unusual_examples)} examples with 'unusual' in natural language questions")
     
 if __name__ == "__main__":
     #function_spec = json.loads('"{\\"function_name\\": \\"lead\\", \\"description\\": \\"Create lead (future) values for specified columns\\", \\"inputs\\": {}, \\"required_params\\": [\\"columns\\"], \\"optional_params\\": [\\"periods\\", \\"time_column\\", \\"group_columns\\", \\"suffix\\"], \\"outputs\\": {\\"type\\": \\"Callable\\", \\"description\\": \\"Function that creates lead values in a TimeSeriesPipe\\"}}"')

@@ -95,14 +95,39 @@ class SelfCorrectingPipelineCodeGenerator:
             "Percentile": PipelineType.METRICS,
             "Correlation": PipelineType.METRICS,
             "CV": PipelineType.METRICS,
+            "Ratio": PipelineType.METRICS,  # Ratio calculation
+            "Dot": PipelineType.METRICS,  # Dot product
+            "Nth": PipelineType.METRICS,  # Nth value
+            "Cov": PipelineType.METRICS,  # Covariance
+            "PivotTable": PipelineType.METRICS,  # Pivot table creation
+            "Filter": PipelineType.METRICS,  # Data filtering
+            "CumulativeSum": PipelineType.METRICS,  # Cumulative sum
+            "RollingMetric": PipelineType.METRICS,  # Rolling metrics
+            "Execute": PipelineType.METRICS,  # Execute metrics
+            "ShowPivot": PipelineType.METRICS,  # Show pivot table
+            "ShowDataFrame": PipelineType.METRICS,  # Show dataframe
             "calculate_metrics": PipelineType.METRICS,  # High-level function that gets converted to specific metrics
             "aggregate_by_group": PipelineType.METRICS,  # Alias for GroupBy
             "PercentChange": PipelineType.OPERATIONS,
             "AbsoluteChange": PipelineType.OPERATIONS,
             "CUPED": PipelineType.OPERATIONS,
+            "FilterConditions": PipelineType.OPERATIONS,  # Filter function for OperationsPipe
+            "MH": PipelineType.OPERATIONS,  # Mantel-Haenszel estimator
+            "PrePostChange": PipelineType.OPERATIONS,  # Pre-post analysis
+            "PowerAnalysis": PipelineType.OPERATIONS,  # Power analysis
+            "StratifiedSummary": PipelineType.OPERATIONS,  # Stratified summary
+            "BootstrapCI": PipelineType.OPERATIONS,  # Bootstrap confidence intervals
+            "MultiComparisonAdjustment": PipelineType.OPERATIONS,  # Multiple comparison adjustment
+            "SelectColumns": PipelineType.OPERATIONS,  # Column selection
+            "ExecuteOperations": PipelineType.OPERATIONS,  # Execute operations
+            "ShowOperation": PipelineType.OPERATIONS,  # Show operation
+            "ShowComparison": PipelineType.OPERATIONS,  # Show comparison
             "lead": PipelineType.TIMESERIES,
             "lag": PipelineType.TIMESERIES,
             "variance_analysis": PipelineType.TIMESERIES,
+            "distribution_analysis": PipelineType.TIMESERIES,  # Distribution analysis
+            "cumulative_distribution": PipelineType.TIMESERIES,  # Cumulative distribution
+            "get_distribution_summary": PipelineType.TIMESERIES,  # Get distribution summary
             "calculate_growth_rates": PipelineType.TRENDS,
             "forecast_metric": PipelineType.TRENDS,
             "calculate_moving_average": PipelineType.TRENDS,
@@ -110,6 +135,7 @@ class SelfCorrectingPipelineCodeGenerator:
             "calculate_statistical_trend": PipelineType.TRENDS,
             "compare_periods": PipelineType.TRENDS,
             "get_top_metrics": PipelineType.TRENDS,
+            "aggregate_by_time": PipelineType.TRENDS,  # Time aggregation
             "form_time_cohorts": PipelineType.COHORT,
             "form_behavioral_cohorts": PipelineType.COHORT,
             "calculate_retention": PipelineType.COHORT,
