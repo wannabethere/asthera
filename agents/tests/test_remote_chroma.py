@@ -14,7 +14,10 @@ from chromadb import (
     WhereDocument,
 )
 from chromadb.utils import embedding_functions
-os.environ["OPENAI_API_KEY"] = "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"
+from app.settings import get_settings
+
+settings = get_settings()
+os.environ["OPENAI_API_KEY"] = settings.OPENAI_API_KEY
 
 class ChromaDB:
     def __init__(self, connection_params: Dict[str, Any] | None = None):

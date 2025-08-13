@@ -674,17 +674,17 @@ class TableRetrieval:
         results = []  # Initialize results at the start
         
         if not table_names:
+            # Always create a valid where clause for MODEL type
             where = {"type": {"$eq": 'MODEL'}}
             if project_id:
                 where = {"$and": [{"project_id": {"$eq": project_id}}, {"type": {"$eq": 'MODEL'}}]}
-            #where = {"type": {"$eq": 'MODEL'}}
-            # Perform search with empty table names
-            if where:
-                results = self.schema_store.semantic_search(
-                    query="",
-                    k=10,
-                    where=where
-                )
+            
+            # Perform search with empty table names - where is guaranteed to be valid here
+            results = self.schema_store.semantic_search(
+                query="",
+                k=10,
+                where=where
+            )
         else:
             for table_name in table_names:
                 where = {"$and": [{"name": {"$eq": table_name}}, {"type": {"$eq": 'TABLE_SCHEMA'}}]}
@@ -1091,8 +1091,8 @@ if __name__ == "__main__":
     from langchain_openai import OpenAIEmbeddings
     from app.settings import get_settings
     import os
-    os.environ["OPENAI_API_KEY"] = "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"
     settings = get_settings()
+    os.environ["OPENAI_API_KEY"] = settings.OPENAI_API_KEY
     
     # Initialize embeddings
     embeddings = OpenAIEmbeddings(

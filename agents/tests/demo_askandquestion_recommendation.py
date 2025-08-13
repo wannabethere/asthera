@@ -248,6 +248,7 @@ class QuestionRecommendationDemo:
             if use_schema_cache and "schema" in ask_result:
                 self._cache_schema(mdl, ask_result["schema"])
             
+            """
             # Step 2: Generate question recommendations
             recommendation_request = QuestionRecommendation.Request(
                 event_id=f"{event_id}_recommendations",
@@ -262,11 +263,11 @@ class QuestionRecommendationDemo:
             
             # Get recommendations
             recommendations = await self.question_recommendation.recommend(recommendation_request)
-            
+            """
             # Combine results
             return {
                 "answer": ask_result,
-                "recommendations": recommendations,
+                #"recommendations": recommendations,
                 "status": "success"
             }
             
@@ -376,6 +377,18 @@ async def run_demo():
             #"question": "On average, how many days does it take from AssignmentDate to CompletionDate for each employee by division?",
             #"question": "Which job roles take the longest to complete assignments on average?",
             "event_id": "cornerstone_event_2"
+        },
+        {
+            #"question": "Show me the training completion rates by division, including how many assignments were completed on time versus late",
+            #"question": "How many trainings are assigned vs completed across different Divisions (Administration, Acme Products, Private Operations)?",
+            "question": "What is the overall completion rate of the training activities across all employees?",
+            #"question": "What are the relevant columns I should be asking questions about with the training data sets",
+            #"question": "How many employees have completed the training on time or Late per Division?",
+            #"question": "How has the number of completed trainings changed month by month? (using CompletionDate)",
+            #"question": "How many training activities for each employee and give me their Training Statuses by Assigned, Completed, Expired",
+            #"question": "On average, how many days does it take from AssignmentDate to CompletionDate for each employee by division?",
+            #"question": "Which job roles take the longest to complete assignments on average?",
+            "event_id": "cornerstone_event_3"
         }
     ]
     
@@ -423,29 +436,32 @@ async def run_demo():
                 print(result["answer"])
             
             print("\nRecommended Questions:")
-            if isinstance(result["recommendations"], dict):
-                recommendations = result["recommendations"]
-                if "response" in recommendations:
-                    response = recommendations["response"]
-                    if isinstance(response, dict):
-                        questions = response.get("questions", {})
-                        categories = list(questions.keys())
-                        reasoning = response.get("reasoning", "")
+            if "recommendations" in result and result["recommendations"]:
+                if isinstance(result["recommendations"], dict):
+                    recommendations = result["recommendations"]
+                    if "response" in recommendations:
+                        response = recommendations["response"]
+                        if isinstance(response, dict):
+                            questions = response.get("questions", {})
+                            categories = list(questions.keys())
+                            reasoning = response.get("reasoning", "")
 
-                        for category in categories:
-                            print(f"\n{category}:")
-                            if category in questions:
-                                for q in questions[category]:
-                                    print(f"- {q}")
-                        
-                        if reasoning:
-                            print(f"\nReasoning: {reasoning}")
+                            for category in categories:
+                                print(f"\n{category}:")
+                                if category in questions:
+                                    for q in questions[category]:
+                                        print(f"- {q}")
+                            
+                            if reasoning:
+                                print(f"\nReasoning: {reasoning}")
+                        else:
+                            print(response)
                     else:
-                        print(response)
+                        print(result["recommendations"])
                 else:
                     print(result["recommendations"])
             else:
-                print(result["recommendations"])
+                print("No recommendations available (feature is currently disabled)")
         else:
             print(f"\nError: {result['error']}")
         

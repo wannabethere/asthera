@@ -12,6 +12,7 @@ import hashlib
 from .engine import Engine, clean_generation_result, add_quotes
 from app.settings import EngineType
 from app.utils.cache import Cache, InMemoryCache
+from app.settings import get_settings
 # Optional PostgreSQL imports
 try:
     from sqlalchemy import create_engine, text
@@ -21,7 +22,11 @@ try:
 except ImportError:
     POSTGRES_AVAILABLE = False
 
-os.environ["OPENAI_API_KEY"] = "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"
+# Get settings
+settings = get_settings()
+
+# Set OpenAI API key from settings
+os.environ["OPENAI_API_KEY"] = settings.OPENAI_API_KEY
 logger = logging.getLogger("lexy-ai-service")
 
 

@@ -47,9 +47,11 @@ Also you should provide reasoning for the classification clearly and concisely w
     - When to Use:
         - Select this category if the user's question is directly related to the given database schema and can be answered by generating an SQL query using that schema.
         - If the rephrasedd user's question is related to the previous question, and considering them together could be answered by generating an SQL query using that schema.
+        - If the rephrasedd user's question is asking for a specific metric, insight that can be answered by the given database schema and using SQL to answer.
     - Characteristics:
         - The rephrasedd user's question involves specific data retrieval or manipulation that requires SQL.
         - The rephrasedd user's question references tables, columns, or specific data points within the schema.
+        - The rephrased user questions feels like a metric, insight but can be calculated using SQL.
     - Instructions:
         - MUST include table and column names that should be used in the SQL query according to the database schema in the reasoning output.
         - MUST include phrases from the user's question that are explicitly related to the database schema in the reasoning output.
@@ -57,6 +59,7 @@ Also you should provide reasoning for the classification clearly and concisely w
         - "What is the total sales for last quarter?"
         - "Show me all customers who purchased product X."
         - "List the top 10 products by revenue."
+        - "What percentage of customers of total have purchased product X?"
 
 - ANALYSIS_HELPER
     - When to Use:

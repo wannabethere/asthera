@@ -85,6 +85,9 @@ class SQLRAGAgent:
         
         # User queues for streaming
         self._user_queues = {}
+        
+        # Cache layer for metadata retrieval
+        self._metadata_cache = {}
     
    
     
@@ -175,6 +178,7 @@ The final answer must be a valid JSON format as following:
             SQLOperationType.REASONING.value: """
 ### TASK ###
 You are a helpful data analyst who is great at thinking deeply and reasoning about the user's question and the database schema, and you provide a step-by-step reasoning plan in order to answer the user's question.
+You are also given a list of similar questions, instructions and examples to help you answer the user's question. Please use the relevant information to answer the user's question.
 
 ### INSTRUCTIONS ###
 1. Think deeply and reason about the user's question and the database schema.
@@ -301,8 +305,14 @@ Please provide your response in proper Markdown string format.
                 query = input_data.get("query", "")
                 contexts = input_data.get("contexts", [])
                 language = input_data.get("language", "English")
+                project_id = input_data.get("project_id", "default")
                 
-                result = asyncio.run(self._reason_sql_internal(query, contexts, language))
+                # Create kwargs dict for the internal method
+                kwargs = {
+                    "project_id": project_id
+                }
+                
+                result = asyncio.run(self._reason_sql_internal(query, contexts, language, **kwargs))
                 return orjson.dumps(result).decode()
             except Exception as e:
                 logger.error(f"Error in SQL reasoning tool: {e}")
@@ -580,28 +590,22 @@ Please provide your response in proper Markdown string format.
                 project_id=kwargs.get("project_id", "default")
             )
             
-            sql_pairs_result, instructions_result = await asyncio.gather(
-                self.retrieval_helper.get_sql_pairs(
-                    query=query,
-                    project_id=kwargs.get("project_id", "default"),
-                    similarity_threshold=0.3,
-                    max_retrieval_size=3
-                ),
-                self.retrieval_helper.get_instructions(
-                    query=query,
-                    project_id=kwargs.get("project_id", "default"),
-                    similarity_threshold=0.3,
-                    top_k=3
-                )
+            # Use cached metadata instead of making duplicate calls
+            project_id = kwargs.get("project_id", "default")
+            metadata = await self._retrieve_and_cache_metadata(
+                query=query,
+                project_id=project_id
             )
             
-            instructions = instructions_result.get("documents", []) if instructions_result else []
+            # Extract data from cached metadata
+            sql_pairs = metadata.get("sql_pairs", [])
+            instructions = metadata.get("instructions", [])
             
             # Combine all contexts
             all_contexts = json.dumps(contexts) + json.dumps(schema_data["schema_contexts"]) + json.dumps(instructions)
 
-            if sql_pairs_result and "sql_pairs" in sql_pairs_result:
-                for pair in sql_pairs_result["sql_pairs"]:
+            if sql_pairs:
+                for pair in sql_pairs:
                     if isinstance(pair, dict):
                         all_contexts.append(f"Question: {pair.get('question', '')}\nSQL: {pair.get('sql', '')}")
 
@@ -1091,14 +1095,27 @@ Please provide your response in proper Markdown string format.
                 }]
             }
     
-    async def _reason_sql_internal(self, query: str, contexts: List[str], language: str) -> Dict[str, Any]:
-        """Internal SQL reasoning logic"""
+    async def _reason_sql_internal(self, query: str, contexts: List[str], language: str, **kwargs) -> Dict[str, Any]:
+        """Internal SQL reasoning logic with enhanced metadata"""
         try:
+            # Get additional metadata for better reasoning
+            project_id = kwargs.get("project_id", "default")
+            metadata = await self._retrieve_and_cache_metadata(
+                query=query,
+                project_id=project_id
+            )
+            
+            # Format metadata for the prompt
+            metadata_context = self._format_metadata_for_reasoning(metadata)
+            
             prompt_template = PromptTemplate(
-                input_variables=["query", "contexts", "language"],
+                input_variables=["query", "contexts", "language", "metadata_context"],
                 template="""
                 ### DATABASE SCHEMA ###
                 {contexts}
+                
+                ### ADDITIONAL METADATA FOR REASONING ###
+                {metadata_context}
                 
                 ### QUESTION ###
                 User's Question: {query}
@@ -1117,11 +1134,12 @@ Please provide your response in proper Markdown string format.
             user_prompt = prompt_template.format(
                 query=query,
                 contexts="\n".join(contexts),
-                language=language
+                language=language,
+                metadata_context=metadata_context
             )
             prompt = full_prompt.format(system_prompt=system_prompt, user_prompt=user_prompt)
             
-            logger.info("Generating SQL reasoning with prompt:")
+            logger.info("Generating SQL reasoning with enhanced metadata:")
             #logger.info(f"Query: {query}")
             #logger.info(f"Contexts: {contexts}")
             #logger.info(f"Language: {language}")
@@ -1133,6 +1151,59 @@ Please provide your response in proper Markdown string format.
         except Exception as e:
             logger.error(f"Error in internal SQL reasoning: {e}")
             return {"reasoning": "", "success": False, "error": str(e)}
+    
+    def _format_metadata_for_reasoning(self, metadata: Dict[str, Any]) -> str:
+        """Format metadata into a readable string for reasoning prompts"""
+        formatted_parts = []
+        
+        # Format SQL pairs
+        if metadata.get("sql_pairs"):
+            formatted_parts.append("### SIMILAR QUESTIONS AND SQL ###")
+            for i, pair in enumerate(metadata["sql_pairs"][:3], 1):  # Limit to 3 examples
+                if isinstance(pair, dict):
+                    question = pair.get('question', '')
+                    sql = pair.get('sql', '')
+                    formatted_parts.append(f"Example {i}:")
+                    formatted_parts.append(f"Question: {question}")
+                    formatted_parts.append(f"SQL: {sql}\n")
+        
+        # Format instructions
+        if metadata.get("instructions"):
+            formatted_parts.append("### RELEVANT INSTRUCTIONS ###")
+            for instruction in metadata["instructions"][:3]:  # Limit to 3 instructions
+                if hasattr(instruction, 'content'):
+                    formatted_parts.append(f"- {instruction.content}")
+                else:
+                    formatted_parts.append(f"- {instruction}")
+            formatted_parts.append("")
+        
+        # Format metrics
+        if metadata.get("metrics"):
+            formatted_parts.append("### AVAILABLE METRICS ###")
+            for metric in metadata["metrics"][:5]:  # Limit to 5 metrics
+                if isinstance(metric, dict):
+                    metric_name = metric.get('name', '')
+                    metric_description = metric.get('description', '')
+                    if metric_name and metric_description:
+                        formatted_parts.append(f"- {metric_name}: {metric_description}")
+                else:
+                    formatted_parts.append(f"- {metric}")
+            formatted_parts.append("")
+        
+        # Format views
+        if metadata.get("views"):
+            formatted_parts.append("### AVAILABLE VIEWS ###")
+            for view in metadata["views"][:5]:  # Limit to 5 views
+                if isinstance(view, dict):
+                    view_name = view.get('name', '')
+                    view_description = view.get('description', '')
+                    if view_name and view_description:
+                        formatted_parts.append(f"- {view_name}: {view_description}")
+                else:
+                    formatted_parts.append(f"- {view}")
+            formatted_parts.append("")
+        
+        return "\n".join(formatted_parts) if formatted_parts else "No additional metadata available."
     
     async def _answer_sql_internal(self, query: str, sql: str, sql_data: Dict, language: str) -> Dict[str, Any]:
         """Internal SQL answer logic"""
@@ -1353,8 +1424,13 @@ Please provide your response in proper Markdown string format.
         schema_contexts = schema_data.get("schema_contexts", [])
         
         # Generate reasoning first
+        # Remove schema_contexts and contexts from kwargs to avoid duplicate parameter error
+        kwargs_copy = kwargs.copy()
+        kwargs_copy.pop("schema_contexts", None)
+        kwargs_copy.pop("contexts", None)  # Also remove contexts to avoid conflict
+        
         reasoning_result = await self._reason_sql_internal(
-            query, schema_contexts, kwargs.get("language", "English")
+            query, schema_contexts, kwargs.get("language", "English"), **kwargs_copy
         )
         
         reasoning = reasoning_result.get("reasoning", "")
@@ -1433,12 +1509,22 @@ Please provide your response in proper Markdown string format.
         """Handle SQL expansion"""
         original_sql = kwargs.get("original_sql", "")
         contexts = kwargs.get("contexts", [])
-         #contexts = kwargs.get("contexts", [])
         original_query = kwargs.pop('original_query', "")
         project_id = kwargs.pop('project_id', "")
         reasoning = kwargs.pop('reasoning', "")
         
-       
+        # Use cached metadata for both original and new queries
+        original_metadata = await self._retrieve_and_cache_metadata(
+            query=original_query,
+            project_id=project_id
+        )
+        
+        new_metadata = await self._retrieve_and_cache_metadata(
+            query=query,
+            project_id=project_id
+        )
+        
+        # Get schema data for both queries
         schema_data = await self.retrieval_helper.get_table_names_and_schema_contexts(
             query=original_query,
             project_id=project_id,
@@ -1460,9 +1546,16 @@ Please provide your response in proper Markdown string format.
         )
         
         schema_contexts = schema_data.get("schema_contexts", []) + schema_data_new.get("schema_contexts", [])
-       
         
-        expansion_result = await self._expand_sql_internal(query,  original_sql, schema_contexts, reasoning, original_query)
+        # Combine metadata from both queries for better context
+        combined_metadata = {
+            "sql_pairs": original_metadata.get("sql_pairs", []) + new_metadata.get("sql_pairs", []),
+            "instructions": original_metadata.get("instructions", []) + new_metadata.get("instructions", []),
+            "metrics": original_metadata.get("metrics", []) + new_metadata.get("metrics", []),
+            "views": original_metadata.get("views", []) + new_metadata.get("views", [])
+        }
+        
+        expansion_result = await self._expand_sql_internal(query, original_sql, schema_contexts, reasoning, original_query)
         
         if expansion_result.get("success", False):
             expanded_sql = expansion_result.get("sql", "")
@@ -1490,9 +1583,14 @@ Please provide your response in proper Markdown string format.
         """Handle SQL correction"""
         sql = kwargs.get("sql", "")
         error_message = kwargs.get("error_message", "")
-        #contexts = kwargs.get("contexts", [])
         original_query = kwargs.pop('original_query', "")
         project_id = kwargs.pop('project_id', "")
+        
+        # Use cached metadata for better context
+        metadata = await self._retrieve_and_cache_metadata(
+            query=original_query,
+            project_id=project_id
+        )
         
         schema_data = await self.retrieval_helper.get_table_names_and_schema_contexts(
             query=original_query,
@@ -1522,7 +1620,11 @@ Please provide your response in proper Markdown string format.
         contexts = kwargs.get("contexts", [])
         language = kwargs.get("language", "English")
         
-        reasoning_result = await self._reason_sql_internal(query, contexts, language)
+        # Remove contexts from kwargs to avoid duplicate parameter error
+        kwargs_copy = kwargs.copy()
+        kwargs_copy.pop("contexts", None)
+        
+        reasoning_result = await self._reason_sql_internal(query, contexts, language, **kwargs_copy)
         
         if reasoning_result.get("success", False):
             reasoning = reasoning_result.get("reasoning", "")
@@ -1582,6 +1684,136 @@ Please provide your response in proper Markdown string format.
             summary_result["summaries"] = summaries
             
         return summary_result
+
+    async def _retrieve_and_cache_metadata(
+        self,
+        query: str,
+        project_id: str,
+        similarity_threshold: float = 0.3,
+        max_retrieval_size: int = 3,
+        top_k: int = 3
+    ) -> Dict[str, Any]:
+        """Retrieve and cache all metadata for a query to avoid duplicate calls"""
+        # Clean up expired cache entries periodically
+        self._cleanup_expired_cache()
+        
+        # Use improved cache key generation
+        cache_key = self._get_cache_key(query, project_id)
+        
+        if cache_key in self._metadata_cache:
+            logger.info(f"Using cached metadata for query: {query}")
+            return self._metadata_cache[cache_key]
+        
+        logger.info(f"Retrieving metadata for query: {query}")
+        
+        # Retrieve all metadata in parallel
+        sql_pairs_result, instructions_result, metrics_result, views_result = await asyncio.gather(
+            self.retrieval_helper.get_sql_pairs(
+                query=query,
+                project_id=project_id,
+                similarity_threshold=similarity_threshold,
+                max_retrieval_size=max_retrieval_size
+            ),
+            self.retrieval_helper.get_instructions(
+                query=query,
+                project_id=project_id,
+                similarity_threshold=similarity_threshold,
+                top_k=top_k
+            ),
+            self.retrieval_helper.get_metrics(
+                query=query,
+                project_id=project_id
+            ),
+            self.retrieval_helper.get_views(
+                query=query,
+                project_id=project_id
+            )
+        )
+        
+        # Process and structure the metadata
+        metadata = {
+            "sql_pairs": sql_pairs_result.get("sql_pairs", []) if sql_pairs_result else [],
+            "instructions": instructions_result.get("documents", []) if instructions_result else [],
+            "metrics": metrics_result.get("metrics", []) if metrics_result else [],
+            "views": views_result.get("views", []) if views_result else [],
+            "timestamp": datetime.datetime.now().isoformat(),
+            "query": query,
+            "project_id": project_id
+        }
+        
+        # Cache the metadata
+        self._metadata_cache[cache_key] = metadata
+        
+        return metadata
+    
+    def clear_metadata_cache(self):
+        """Clear the metadata cache"""
+        self._metadata_cache.clear()
+        logger.info("Metadata cache cleared")
+    
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """Get cache statistics"""
+        return {
+            "cache_size": len(self._metadata_cache),
+            "cache_keys": list(self._metadata_cache.keys()),
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+    
+    def _cleanup_expired_cache(self, max_age_hours: int = 24):
+        """Clean up expired cache entries (older than max_age_hours)"""
+        current_time = datetime.datetime.now()
+        expired_keys = []
+        
+        for key, metadata in self._metadata_cache.items():
+            if "timestamp" in metadata:
+                try:
+                    cache_time = datetime.datetime.fromisoformat(metadata["timestamp"])
+                    age_hours = (current_time - cache_time).total_seconds() / 3600
+                    if age_hours > max_age_hours:
+                        expired_keys.append(key)
+                except (ValueError, TypeError):
+                    # If timestamp parsing fails, remove the entry
+                    expired_keys.append(key)
+        
+        for key in expired_keys:
+            del self._metadata_cache[key]
+        
+        if expired_keys:
+            logger.info(f"Cleaned up {len(expired_keys)} expired cache entries")
+    
+    def _get_cache_key(self, query: str, project_id: str, **kwargs) -> str:
+        """Generate a cache key for metadata retrieval"""
+        # Create a hash of the query and project_id for consistent caching
+        import hashlib
+        key_string = f"{query}_{project_id}"
+        return hashlib.md5(key_string.encode()).hexdigest()
+    
+    def add_metadata_to_cache(
+        self,
+        query: str,
+        project_id: str,
+        metadata: Dict[str, Any]
+    ) -> None:
+        """Manually add metadata to the cache for testing or external use"""
+        cache_key = self._get_cache_key(query, project_id)
+        
+        # Add timestamp if not present
+        if "timestamp" not in metadata:
+            metadata["timestamp"] = datetime.datetime.now().isoformat()
+        
+        # Add query and project_id if not present
+        if "query" not in metadata:
+            metadata["query"] = query
+        if "project_id" not in metadata:
+            metadata["project_id"] = project_id
+        
+        self._metadata_cache[cache_key] = metadata
+        logger.info(f"Manually added metadata to cache for query: {query}")
+    
+    def get_cached_metadata(self, query: str, project_id: str) -> Optional[Dict[str, Any]]:
+        """Get cached metadata for a specific query and project_id"""
+        cache_key = self._get_cache_key(query, project_id)
+        return self._metadata_cache.get(cache_key)
 
 
 # Factory function and convenience wrappers

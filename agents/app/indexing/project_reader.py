@@ -250,7 +250,7 @@ class ProjectReader:
                     "content": example_data
                 })
         return examples
-
+#/home/ec2-user/sql_meta_new/
     async def _process_sql_pairs_file(self, project_path: Path, file_path: str, project_id: str) -> Optional[Dict]:
         """Process SQL pairs file and extract relevant information."""
         sql_pairs_path = project_path / file_path
@@ -300,7 +300,7 @@ async def main():
     reader = ProjectReader(base_path, persistent_client)
     
     # Test projects
-    test_projects = ["csodworkday"]
+    test_projects = ["cornerstone"]
     
     for project in test_projects:
         try:
@@ -359,6 +359,115 @@ async def main():
                     content = example['content']
                     logger.info(f"  SQL Pairs: {len(content.get('pairs', []))}")
                     logger.info(f"  Metadata Fields: {len(content.get('metadata', {}))}")
+            
+            # Test reading from ChromaDB using DocumentChromaStore
+            logger.info(f"\n{'='*50}")
+            logger.info(f"Testing ChromaDB Reading for project: {project}")
+            logger.info(f"{'='*50}")
+            
+            # Import DocumentChromaStore
+            from app.storage.documents import DocumentChromaStore
+            
+            # Create DocumentChromaStore instance for the project
+            project_collection_name = f"project_{project}"
+            doc_store = DocumentChromaStore(
+                persistent_client=persistent_client,
+                collection_name=project_collection_name,
+                tf_idf=True  # Enable TF-IDF for enhanced search
+            )
+            
+            # Test semantic search
+            logger.info("\nTesting semantic search...")
+            search_queries = [
+                "What are the main tables in this project?",
+                "Show me the data models and schemas",
+                "What are the key metrics and KPIs?",
+                "Explain the business logic and rules"
+            ]
+            
+            for query in search_queries:
+                logger.info(f"\nQuery: {query}")
+                try:
+                    # Basic semantic search
+                    results = doc_store.semantic_search(query, k=3)
+                    logger.info(f"Found {len(results)} results:")
+                    
+                    for i, result in enumerate(results[:2], 1):  # Show top 2 results
+                        logger.info(f"  Result {i}:")
+                        logger.info(f"    Score: {result['score']:.4f}")
+                        logger.info(f"    Content: {result['content'][:100]}...")
+                        logger.info(f"    ID: {result['id']}")
+                        
+                except Exception as e:
+                    logger.error(f"Error in semantic search: {str(e)}")
+            
+            # Test semantic search with BM25 ranking
+            logger.info("\nTesting semantic search with BM25 ranking...")
+            bm25_query = "What are the main tables and their relationships?"
+            try:
+                bm25_results = doc_store.semantic_search_with_bm25(bm25_query, k=3)
+                logger.info(f"Found {len(bm25_results)} BM25 results:")
+                
+                for i, result in enumerate(bm25_results[:2], 1):
+                    logger.info(f"  Result {i}:")
+                    logger.info(f"    Combined Score: {result['combined_score']:.4f}")
+                    logger.info(f"    Vector Score: {result['vector_score']:.4f}")
+                    logger.info(f"    BM25 Score: {result['bm25_score']:.4f}")
+                    logger.info(f"    Content: {result['content'][:100]}...")
+                    
+            except Exception as e:
+                logger.error(f"Error in BM25 search: {str(e)}")
+            
+            # Test semantic search with TF-IDF
+            logger.info("\nTesting semantic search with TF-IDF...")
+            tfidf_query = "What are the data models and business rules?"
+            try:
+                tfidf_results = doc_store.semantic_search_with_tfidf(tfidf_query, k=3)
+                logger.info(f"Found {len(tfidf_results)} TF-IDF results:")
+                
+                for i, result in enumerate(tfidf_results[:2], 1):
+                    logger.info(f"  Result {i}:")
+                    logger.info(f"    Combined Score: {result['combined_score']:.4f}")
+                    logger.info(f"    Semantic Score: {result['semantic_score']:.4f}")
+                    logger.info(f"    TF-IDF Score: {result['tfidf_score']:.4f}")
+                    logger.info(f"    Content: {result['content'][:100]}...")
+                    
+            except Exception as e:
+                logger.error(f"Error in TF-IDF search: {str(e)}")
+            
+            # Test metadata filtering
+            logger.info("\nTesting search with metadata filters...")
+            try:
+                # Search for documents with specific metadata
+                filtered_results = doc_store.semantic_search(
+                    "table structure and schema",
+                    k=3,
+                    where={"type": "table"}  # Adjust based on your actual metadata structure
+                )
+                logger.info(f"Found {len(filtered_results)} filtered results:")
+                
+                for i, result in enumerate(filtered_results[:2], 1):
+                    logger.info(f"  Result {i}:")
+                    logger.info(f"    Score: {result['score']:.4f}")
+                    logger.info(f"    Content: {result['content'][:100]}...")
+                    logger.info(f"    Metadata: {result['metadata']}")
+                    
+            except Exception as e:
+                logger.error(f"Error in filtered search: {str(e)}")
+            
+            # Test TF-IDF only search
+            logger.info("\nTesting TF-IDF only search...")
+            try:
+                tfidf_only_results = doc_store.tfidf_search("data models tables", k=3)
+                logger.info(f"Found {len(tfidf_only_results)} TF-IDF only results:")
+                
+                for i, result in enumerate(tfidf_only_results[:2], 1):
+                    logger.info(f"  Result {i}:")
+                    logger.info(f"    Score: {result['score']:.4f}")
+                    logger.info(f"    Content: {result['content'][:100]}...")
+                    
+            except Exception as e:
+                logger.error(f"Error in TF-IDF only search: {str(e)}")
             
         except Exception as e:
             logger.error(f"Error processing project {project}: {str(e)}")

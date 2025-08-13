@@ -442,12 +442,14 @@ class DocumentChromaStore:
             
         try:
             logger.info(f"query in semantic_search for {self.collection_name}: {query}")
-                # Otherwise perform regular similarity search
-            results = self.vectorstore.similarity_search_with_score(
-                query,
-                k=k,
-                filter=where
-            )
+            
+            # Handle the where parameter safely - only pass filter if where is not None
+            search_kwargs = {"query": query, "k": k}
+            if where is not None:
+                search_kwargs["filter"] = where
+                
+            # Perform similarity search
+            results = self.vectorstore.similarity_search_with_score(**search_kwargs)
             logger.info(f"results in semantic_search for {self.collection_name}: {results}")
             # Format results
             formatted_results = []
@@ -487,11 +489,11 @@ class DocumentChromaStore:
             
         try:
             # Get vector similarity results using query embedding if provided
-            vector_results = self.vectorstore.similarity_search_with_score(
-                    query,
-                    k=k,
-                    filter=where
-                )
+            search_kwargs = {"query": query, "k": k}
+            if where is not None:
+                search_kwargs["filter"] = where
+                
+            vector_results = self.vectorstore.similarity_search_with_score(**search_kwargs)
             
                 
             

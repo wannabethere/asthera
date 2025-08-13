@@ -89,18 +89,21 @@ class DataAssistanceTool:
         self,
         query: str,
         db_schemas: list[str],
-        configuration: Configuration | Dict[str, Any]
+        configuration: Optional[Configuration | Dict[str, Any]] = None
     ) -> str:
         """Create prompt for data assistance"""
         try:
             # Format database schemas as a readable string
             formatted_schemas = "\n".join(db_schemas) if db_schemas else ""
             print(f"formatted_schemas: {formatted_schemas}")
-            # Handle configuration as either dict or Configuration object
-            if isinstance(configuration, dict):
+            
+            # Handle configuration safely - provide default language if configuration is None
+            if configuration is None:
+                language = "English"
+            elif isinstance(configuration, dict):
                 language = configuration.get('language', 'English')
             else:
-                language = configuration.language or "English"
+                language = getattr(configuration, 'language', 'English') or "English"
                 
             user_prompt = data_assistance_user_prompt_template.format(
                 db_schemas=formatted_schemas,
