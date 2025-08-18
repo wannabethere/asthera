@@ -1,0 +1,11 @@
+# Requirements for Sharing Permissions functionality
+
+# Core Python modules (built-in)
+# asyncio - Async support
+# uuid - UUID generation  
+# logging - Logging
+# json - JSON handling
+# datetime - Datetime handling
+
+# No external dependencies required
+# All functionality is self-contained within the dataservices

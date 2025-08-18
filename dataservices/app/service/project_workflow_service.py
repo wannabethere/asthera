@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy import select, update, func
 
 from app.service.models import MetricCreate, ViewCreate, SchemaInput
-from app.schemas.dbmodels import Domain, Table, SQLColumn, Metric, View, CalculatedColumn
+from app.schemas.dbmodels import Domain, Table, SQLColumn, Metric, View, CalculatedColumn, Relationship
 from app.agents.schema_manager import LLMSchemaDocumentationGenerator
 from app.service.models import DomainContext, AddTableRequest
 import os
@@ -30,6 +30,13 @@ class DomainWorkflowService:
         #self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
         self.llm = get_llm()
         self.definition_manager = LLMSchemaDocumentationGenerator(self.llm)
+        # Initialize sharing permissions service
+        try:
+            from app.service.sharing_permissions_service import SharingPermissionsService
+            self.sharing_service = SharingPermissionsService()
+        except ImportError:
+            logger.warning("SharingPermissionsService not available, sharing permissions will be skipped")
+            self.sharing_service = None
 
     def _workflow_cache_key(self) -> str:
         if self.session_id:
@@ -39,7 +46,7 @@ class DomainWorkflowService:
     def get_workflow_state(self) -> dict:
         state = self.cache.get(self._workflow_cache_key())
         if state is None:
-            state = {"domain": None, "context": None, "datasets": [], "tables": []}
+            state = {"domain": None, "context": None, "datasets": [], "tables": [], "relationships": []}
             self.cache.set(self._workflow_cache_key(), state)
         return state
 
@@ -59,6 +66,55 @@ class DomainWorkflowService:
         self.set_workflow_state(state)
         publish_update(self.user_id, self.session_id or "default", state)
         return state["datasets"]
+    
+    async def fetch_and_store_sharing_permissions(self, domain_id: str) -> Dict[str, Any]:
+        """
+        Fetch sharing permissions from team API and store them in the domain metadata
+        
+        This method is called after dataset creation to establish sharing permissions
+        for the domain/project.
+        
+        Args:
+            domain_id: The ID of the domain to store permissions for
+            
+        Returns:
+            Dictionary containing the stored permissions data
+        """
+        try:
+            if not self.sharing_service:
+                logger.warning("Sharing permissions service not available, skipping permissions fetch")
+                return {"status": "skipped", "reason": "Service not available"}
+            
+            logger.info(f"Fetching sharing permissions for domain {domain_id}")
+            
+            # Fetch permissions from team API
+            permissions_data = await self.sharing_service.fetch_sharing_permissions(self.user_id)
+            
+            # Store permissions in domain metadata
+            stored_permissions = await self.sharing_service.store_permissions_in_project(domain_id, permissions_data)
+            
+            # Update workflow state with permissions
+            state = self.get_workflow_state()
+            state["sharing_permissions"] = stored_permissions
+            self.set_workflow_state(state)
+            
+            # Publish update
+            publish_update(self.user_id, self.session_id or "default", {
+                "type": "sharing_permissions_fetched",
+                "data": stored_permissions
+            })
+            
+            logger.info(f"Successfully fetched and stored sharing permissions for domain {domain_id}")
+            return stored_permissions
+            
+        except Exception as e:
+            logger.error(f"Error fetching sharing permissions for domain {domain_id}: {str(e)}")
+            # Return error response but don't fail the workflow
+            return {
+                "status": "error",
+                "error": str(e),
+                "message": "Failed to fetch sharing permissions"
+            }
     
     async def get_semantic_description_for_table(self, add_table_request: AddTableRequest, domain_context: DomainContext) -> Dict[str, Any]:
         """Generate semantic description for a table using the semantics description service"""
@@ -129,7 +185,6 @@ class DomainWorkflowService:
             return {
                 "description": f"Semantic description for {schema_input.table_name}: This table contains {schema_input.table_description or 'data related to the business domain'}. Generated automatically based on table structure and content.",
                 "table_purpose": f"Stores {schema_input.table_description or 'data'} for {schema_input.table_name}",
-                "key_columns": [],
                 "business_context": f"This table supports the {domain_context.business_domain} domain by storing {schema_input.table_description or 'relevant data'}.",
                 "data_patterns": ["Data storage", "Information management"],
                 "suggested_relationships": []
@@ -212,6 +267,413 @@ class DomainWorkflowService:
                         f"Error during analysis: {str(e)}"
                     ]
                 }
+            }
+
+    async def get_comprehensive_relationship_recommendations(self, domain_context: DomainContext) -> Dict[str, Any]:
+        """
+        Generate comprehensive relationship recommendations for all tables in the domain workflow
+        
+        This method uses the existing RelationshipRecommendation service to analyze all tables
+        in the workflow and generate relationship recommendations between them.
+        
+        Args:
+            domain_context: The domain context for business domain understanding
+        
+        Returns:
+            Dictionary containing relationship recommendations for all tables
+        """
+        try:
+            state = self.get_workflow_state()
+            tables = state.get("tables", [])
+            
+            if not tables:
+                return {
+                    "status": "no_tables",
+                    "message": "No tables have been added to the workflow yet. Add tables first to get relationship recommendations.",
+                    "recommendations": [],
+                    "summary": {
+                        "total_tables": 0,
+                        "total_relationships": 0,
+                        "recommendations": ["Add tables to the workflow to begin relationship analysis"]
+                    }
+                }
+            
+            logger.info(f"Generating relationship recommendations for {len(tables)} tables in domain {domain_context.domain_id}")
+            
+            # Import the existing RelationshipRecommendation service
+            try:
+                from app.agents.relationship_recommendation import RelationshipRecommendation
+            except ImportError:
+                logger.error("RelationshipRecommendation service not available")
+                return {
+                    "status": "error",
+                    "error": "RelationshipRecommendation service not available",
+                    "message": "Failed to import relationship recommendation service"
+                }
+            
+            # Build MDL representation from workflow tables
+            mdl_data = self._build_mdl_from_workflow_tables(tables, domain_context)
+            
+            # Create relationship recommendation service instance
+            relationship_service = RelationshipRecommendation()
+            
+            # Generate recommendations using existing service
+            result = await relationship_service.recommend(
+                RelationshipRecommendation.Input(
+                    id=f"workflow_relationships_{domain_context.domain_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                    mdl=mdl_data,
+                    project_id=domain_context.domain_id
+                )
+            )
+            
+            if result.status == "finished" and result.response:
+                # Process the response from the existing service
+                recommendations = self._process_relationship_recommendations(
+                    result.response, tables, domain_context
+                )
+                
+                # Store recommendations in workflow state
+                state["relationship_recommendations"] = recommendations
+                self.set_workflow_state(state)
+                
+                # Publish update
+                publish_update(self.user_id, self.session_id or "default", {
+                    "type": "relationship_recommendations_generated",
+                    "data": recommendations
+                })
+                
+                logger.info(f"Successfully generated relationship recommendations for {len(tables)} tables")
+                return recommendations
+            else:
+                logger.error(f"Failed to generate relationship recommendations: {result.error}")
+                return {
+                    "status": "error",
+                    "error": str(result.error) if result.error else "Unknown error",
+                    "message": "Failed to generate relationship recommendations using existing service"
+                }
+            
+        except Exception as e:
+            logger.error(f"Error generating comprehensive relationship recommendations: {str(e)}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "message": "Failed to generate relationship recommendations",
+                "recommendations": [],
+                "summary": {
+                    "total_relationships": 0,
+                    "recommendations": [f"Error during analysis: {str(e)}"]
+                }
+            }
+
+    def _build_mdl_from_workflow_tables(self, tables: List[Any], domain_context: DomainContext) -> str:
+        """Build MDL representation from workflow tables for the relationship service"""
+        try:
+            mdl_structure = {
+                "tables": [],
+                "domain": {
+                    "id": domain_context.domain_id,
+                    "name": domain_context.domain_name,
+                    "business_domain": domain_context.business_domain,
+                    "purpose": domain_context.purpose
+                }
+            }
+            
+            for table in tables:
+                table_name = table.name if hasattr(table, 'name') else table.get('name', 'unknown')
+                table_description = table.description if hasattr(table, 'description') else f"Table for {table_name}"
+                
+                # Get columns from table metadata
+                columns = table.metadata.get("columns", []) if hasattr(table, 'metadata') else []
+                
+                table_mdl = {
+                    "name": table_name,
+                    "description": table_description,
+                    "columns": []
+                }
+                
+                for col in columns:
+                    column_mdl = {
+                        "name": col.get("name", "unknown"),
+                        "data_type": col.get("data_type", "VARCHAR"),
+                        "description": col.get("description", ""),
+                        "is_primary_key": col.get("is_primary_key", False),
+                        "is_nullable": col.get("is_nullable", True),
+                        "is_foreign_key": col.get("is_foreign_key", False)
+                    }
+                    table_mdl["columns"].append(column_mdl)
+                
+                mdl_structure["tables"].append(table_mdl)
+            
+            # Convert to JSON string for the relationship service
+            import json
+            return json.dumps(mdl_structure, indent=2)
+            
+        except Exception as e:
+            logger.error(f"Error building MDL from workflow tables: {str(e)}")
+            # Return minimal MDL structure
+            return json.dumps({
+                "tables": [{"name": "error", "description": "Error building MDL", "columns": []}],
+                "domain": {"id": "error", "name": "Error", "business_domain": "Error", "purpose": "Error"}
+            })
+
+    def _process_relationship_recommendations(self, response: Dict[str, Any], tables: List[Any], domain_context: DomainContext) -> Dict[str, Any]:
+        """Process the response from the existing relationship service"""
+        try:
+            # Extract relationships from the service response
+            relationships = response.get("content", {}).get("relationships", [])
+            
+            # Convert to our workflow format
+            processed_recommendations = {
+                "domain_id": domain_context.domain_id,
+                "total_tables": len(tables),
+                "generated_at": datetime.now().isoformat(),
+                "relationships": [],
+                "summary": {
+                    "total_relationships": len(relationships),
+                    "high_priority_relationships": [],
+                    "medium_priority_relationships": [],
+                    "low_priority_relationships": [],
+                    "recommendations": []
+                }
+            }
+            
+            # Process each relationship from the service
+            for rel in relationships:
+                processed_rel = {
+                    "from_table": rel.get("source", ""),
+                    "to_table": rel.get("target", ""),
+                    "relationship_type": rel.get("type", "many_to_one").lower().replace(" ", "_"),
+                    "description": rel.get("explanation", ""),
+                    "confidence_score": 0.8,  # Default confidence for LLM-generated relationships
+                    "source": "llm_generated",
+                    "reasoning": rel.get("explanation", ""),
+                    "suggested_action": "Review and validate against business requirements"
+                }
+                
+                processed_recommendations["relationships"].append(processed_rel)
+                
+                # Categorize by confidence
+                if processed_rel["confidence_score"] > 0.8:
+                    processed_recommendations["summary"]["high_priority_relationships"].append(processed_rel)
+                elif processed_rel["confidence_score"] > 0.6:
+                    processed_recommendations["summary"]["medium_priority_relationships"].append(processed_rel)
+                else:
+                    processed_recommendations["summary"]["low_priority_relationships"].append(processed_rel)
+            
+            # Generate recommendations
+            processed_recommendations["summary"]["recommendations"] = [
+                f"Review {len(processed_recommendations['summary']['high_priority_relationships'])} high-confidence relationships",
+                f"Validate {len(processed_recommendations['summary']['medium_priority_relationships'])} medium-confidence relationships",
+                "Consider business context for all relationships",
+                "Implement foreign key constraints for validated relationships"
+            ]
+            
+            return processed_recommendations
+            
+        except Exception as e:
+            logger.error(f"Error processing relationship recommendations: {str(e)}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "message": "Failed to process relationship recommendations",
+                "relationships": [],
+                "summary": {
+                    "total_relationships": 0,
+                    "recommendations": [f"Error during processing: {str(e)}"]
+                }
+            }
+
+
+
+    async def add_custom_relationship(self, relationship_data: Dict[str, Any], domain_context: DomainContext) -> Dict[str, Any]:
+        """
+        Add a custom relationship to the workflow state
+        
+        This allows users to manually define relationships that may not have been
+        automatically detected by the LLM analysis.
+        
+        Args:
+            relationship_data: Dictionary containing relationship information
+            domain_context: The domain context for the relationship
+        
+        Returns:
+            Dictionary containing the created relationship and status
+        """
+        try:
+            state = self.get_workflow_state()
+            
+            # Validate relationship data
+            required_fields = ["from_table", "to_table", "relationship_type"]
+            for field in required_fields:
+                if field not in relationship_data:
+                    raise ValueError(f"Missing required field: {field}")
+            
+            # Create relationship object
+            relationship = {
+                "relationship_id": str(uuid4()),
+                "domain_id": domain_context.domain_id,
+                "name": relationship_data.get("name", f"{relationship_data['from_table']}_to_{relationship_data['to_table']}"),
+                "relationship_type": relationship_data["relationship_type"],
+                "from_table": relationship_data["from_table"],
+                "to_table": relationship_data["to_table"],
+                "from_column": relationship_data.get("from_column"),
+                "to_column": relationship_data.get("to_column"),
+                "description": relationship_data.get("description", f"Custom relationship between {relationship_data['from_table']} and {relationship_data['to_table']}"),
+                "is_active": True,
+                "created_at": datetime.now().isoformat(),
+                "modified_by": self.user_id,
+                "confidence_score": relationship_data.get("confidence_score", 1.0),
+                "reasoning": relationship_data.get("reasoning", "Manually defined by user"),
+                "source": "user_defined",
+                "json_metadata": {
+                    "workflow_session": self.session_id,
+                    "user_notes": relationship_data.get("user_notes", ""),
+                    "business_justification": relationship_data.get("business_justification", ""),
+                    "implementation_notes": relationship_data.get("implementation_notes", "")
+                }
+            }
+            
+            # Add to workflow state
+            state["relationships"].append(relationship)
+            self.set_workflow_state(state)
+            
+            # Publish update
+            publish_update(self.user_id, self.session_id or "default", {
+                "type": "custom_relationship_added",
+                "data": relationship
+            })
+            
+            logger.info(f"Added custom relationship: {relationship['name']} between {relationship['from_table']} and {relationship['to_table']}")
+            
+            return {
+                "status": "success",
+                "relationship": relationship,
+                "message": f"Successfully added relationship between {relationship['from_table']} and {relationship['to_table']}"
+            }
+            
+        except Exception as e:
+            logger.error(f"Error adding custom relationship: {str(e)}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "message": "Failed to add custom relationship"
+            }
+
+    async def get_workflow_relationships(self) -> Dict[str, Any]:
+        """Get all relationships currently defined in the workflow"""
+        try:
+            state = self.get_workflow_state()
+            relationships = state.get("relationships", [])
+            recommendations = state.get("relationship_recommendations", {})
+            
+            return {
+                "status": "success",
+                "relationships": relationships,
+                "recommendations": recommendations,
+                "summary": {
+                    "total_relationships": len(relationships),
+                    "total_recommendations": len(recommendations.get("table_recommendations", {})),
+                    "workflow_progress": {
+                        "tables_added": len(state.get("tables", [])),
+                        "relationships_defined": len(relationships),
+                        "recommendations_generated": bool(recommendations)
+                    }
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting workflow relationships: {str(e)}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "message": "Failed to get workflow relationships"
+            }
+
+    async def remove_relationship(self, relationship_id: str) -> Dict[str, Any]:
+        """Remove a relationship from the workflow state"""
+        try:
+            state = self.get_workflow_state()
+            relationships = state.get("relationships", [])
+            
+            # Find and remove the relationship
+            original_count = len(relationships)
+            state["relationships"] = [r for r in relationships if r.get("relationship_id") != relationship_id]
+            
+            if len(state["relationships"]) == original_count:
+                return {
+                    "status": "not_found",
+                    "message": f"Relationship {relationship_id} not found in workflow"
+                }
+            
+            self.set_workflow_state(state)
+            
+            # Publish update
+            publish_update(self.user_id, self.session_id or "default", {
+                "type": "relationship_removed",
+                "data": {"relationship_id": relationship_id}
+            })
+            
+            logger.info(f"Removed relationship {relationship_id} from workflow")
+            
+            return {
+                "status": "success",
+                "message": f"Successfully removed relationship {relationship_id}"
+            }
+            
+        except Exception as e:
+            logger.error(f"Error removing relationship: {str(e)}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "message": "Failed to remove relationship"
+            }
+
+    async def update_relationship(self, relationship_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+        """Update an existing relationship in the workflow state"""
+        try:
+            state = self.get_workflow_state()
+            relationships = state.get("relationships", [])
+            
+            # Find and update the relationship
+            for i, rel in enumerate(relationships):
+                if rel.get("relationship_id") == relationship_id:
+                    # Update fields
+                    for key, value in updates.items():
+                        if key in rel and key not in ["relationship_id", "created_at"]:
+                            rel[key] = value
+                    
+                    # Update metadata
+                    rel["modified_by"] = self.user_id
+                    rel["updated_at"] = datetime.now().isoformat()
+                    
+                    # Update workflow state
+                    self.set_workflow_state(state)
+                    
+                    # Publish update
+                    publish_update(self.user_id, self.session_id or "default", {
+                        "type": "relationship_updated",
+                        "data": rel
+                    })
+                    
+                    logger.info(f"Updated relationship {relationship_id}")
+                    
+                    return {
+                        "status": "success",
+                        "relationship": rel,
+                        "message": f"Successfully updated relationship {relationship_id}"
+                    }
+            
+            return {
+                "status": "not_found",
+                "message": f"Relationship {relationship_id} not found in workflow"
+            }
+            
+        except Exception as e:
+            logger.error(f"Error updating relationship: {str(e)}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "message": "Failed to update relationship"
             }
 
     async def get_recommendations(self, add_table_request: AddTableRequest, domain_context: DomainContext, recommendation_types: Optional[List[str]] = None) -> Dict[str, Any]:
@@ -772,13 +1234,20 @@ class DomainWorkflowService:
         if not domain_data:
             raise ValueError("No domain defined in workflow state.")
         
+        # Include relationship information in the final commit
+        relationships = state.get("relationships", [])
+        relationship_recommendations = state.get("relationship_recommendations", {})
+        
         # The actual database operations are now handled in the router
         # This method just cleans up the workflow state
         self.cache.delete(self._workflow_cache_key())
         publish_update(self.user_id, self.session_id or "default", {
             "status": "committed", 
             "domain": domain_data.get("domain_id"),
-            "message": "Workflow committed successfully"
+            "tables_count": len(state.get("tables", [])),
+            "relationships_count": len(relationships),
+            "recommendations_generated": bool(relationship_recommendations),
+            "message": "Workflow committed successfully with relationships defined"
         })
         return state
     

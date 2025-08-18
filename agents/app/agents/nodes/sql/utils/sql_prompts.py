@@ -29,6 +29,7 @@ TEXT_TO_SQL_RULES = """
 - DON'T INCLUDE comments in the generated SQL query.
 - YOU MUST USE "JOIN" if you choose columns from multiple tables!
 - ALWAYS QUALIFY column names with their table name or table alias to avoid ambiguity (e.g., orders.OrderId, o.OrderId)
+- **IMPORTANT: Use column names exactly as they appear in the database schema (case-sensitive). If the schema shows 'division' (lowercase), use 'division', not 'Division'.**
 - YOU MUST USE "lower(<table_name>.<column_name>) like lower(<value>)" function or "lower(<table_name>.<column_name>) = lower(<value>)" function for case-insensitive comparison!
     - Use "lower(<table_name>.<column_name>) LIKE lower(<value>)" when:
         - The user requests a pattern or partial match.
@@ -53,7 +54,7 @@ TEXT_TO_SQL_RULES = """
     CREATE TABLE orders (
       -- {"description":"A column that represents the timestamp when the order was approved.","alias":"_timestamp"}
       ApprovedTimestamp TIMESTAMP
-    }
+    )
 
     SQL
     SELECT _orders.ApprovedTimestamp AS _timestamp FROM orders AS _orders;
@@ -101,6 +102,8 @@ You are a helpful assistant that converts natural language queries into ANSI SQL
 
 Given user's question, database schema, etc., you should think deeply and carefully and generate the SQL query based on the given reasoning plan step by step.
 **In addition, you should also provide a column filters chosen,time filters chosen, aggregations applied on columns and group by columns chosen in the SQL query as a JSON object**
+
+**CRITICAL: When generating SQL, use column names exactly as they appear in the database schema. If the schema shows 'division' (lowercase), use 'division', not 'Division'. This prevents SQL execution errors.**
 
 {TEXT_TO_SQL_RULES}
 

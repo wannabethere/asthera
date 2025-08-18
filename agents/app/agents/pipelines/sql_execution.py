@@ -530,8 +530,9 @@ class DataSummarizationPipeline(AgentPipeline):
     def _prepare_data_for_chart(self, df: pd.DataFrame) -> Dict[str, Any]:
         """Convert DataFrame to the format expected by chart generator"""
         try:
-            # Convert DataFrame to list of lists format
-            data = df.values.tolist()
+            # Convert DataFrame to list of dictionaries format (not list of lists)
+            # This is what the chart generation pipeline expects
+            data = df.to_dict(orient='records')
             columns = df.columns.tolist()
             
             return {

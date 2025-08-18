@@ -17,6 +17,7 @@ import json
 from app.utils.sse import add_subscriber, remove_subscriber
 from typing import List, Optional
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -155,6 +156,14 @@ async def api_add_dataset(
             "description": dataset.description,
             "domain_id": domain_id
         })
+        
+        # Fetch and store sharing permissions after dataset creation
+        try:
+            await workflow_service.fetch_and_store_sharing_permissions(domain_id)
+            logger.info(f"Sharing permissions fetched and stored for domain {domain_id}")
+        except Exception as e:
+            logger.warning(f"Failed to fetch sharing permissions: {str(e)}")
+            # Continue with dataset creation even if permissions fail
         
         return {
             "dataset_id": dataset.dataset_id,
@@ -314,6 +323,14 @@ async def api_add_table(
         # Get enhanced table response using service method
         response_data = await workflow_service.get_enhanced_table_response(table, documented_table, enhanced_columns, column_count)
         
+        # Fetch and store sharing permissions after table creation
+        try:
+            await workflow_service.fetch_and_store_sharing_permissions(dataset.domain_id)
+            logger.info(f"Sharing permissions fetched and stored for domain {dataset.domain_id}")
+        except Exception as e:
+            logger.warning(f"Failed to fetch sharing permissions: {str(e)}")
+            # Continue with table creation even if permissions fail
+        
         return EnhancedTableResponse(**response_data)
         
     except Exception as e:
@@ -397,6 +414,14 @@ async def api_commit_workflow(
             )
         )
         
+        # Fetch and store final sharing permissions before committing
+        try:
+            await workflow_service.fetch_and_store_sharing_permissions(domain.domain_id)
+            logger.info(f"Final sharing permissions fetched and stored for domain {domain.domain_id}")
+        except Exception as e:
+            logger.warning(f"Failed to fetch final sharing permissions: {str(e)}")
+            # Continue with commit even if permissions fail
+        
         await db.commit()
         
         # Execute post-commit workflows asynchronously
@@ -430,6 +455,469 @@ async def api_commit_workflow(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to commit workflow: {str(e)}"
+        )
+
+@router.get("/{domain_id}/sharing-permissions")
+async def api_get_sharing_permissions(
+    domain_id: str,
+    session_id: str = Depends(get_session_id),
+    user_id: str = Depends(get_user_id),
+    db: AsyncSession = Depends(get_async_db_session)
+):
+    """Get sharing permissions for a domain"""
+    try:
+        workflow_service = DomainWorkflowService(user_id, session_id)
+        
+        # Check if domain exists
+        domain = await db.execute(
+            select(Domain).where(Domain.domain_id == domain_id)
+        )
+        domain = domain.scalar_one_or_none()
+        
+        if not domain:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Domain {domain_id} not found"
+            )
+        
+        # Fetch fresh sharing permissions
+        permissions = await workflow_service.fetch_and_store_sharing_permissions(domain_id)
+        
+        return {
+            "domain_id": domain_id,
+            "permissions": permissions,
+            "fetched_at": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting sharing permissions: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get sharing permissions: {str(e)}"
+        )
+
+@router.post("/{domain_id}/refresh-permissions")
+async def api_refresh_sharing_permissions(
+    domain_id: str,
+    session_id: str = Depends(get_session_id),
+    user_id: str = Depends(get_user_id),
+    db: AsyncSession = Depends(get_async_db_session)
+):
+    """Refresh sharing permissions for a domain by fetching from team API"""
+    try:
+        workflow_service = DomainWorkflowService(user_id, session_id)
+        
+        # Check if domain exists
+        domain = await db.execute(
+            select(Domain).where(Domain.domain_id == domain_id)
+        )
+        domain = domain.scalar_one_or_none()
+        
+        if not domain:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Domain {domain_id} not found"
+            )
+        
+        # Fetch fresh sharing permissions
+        permissions = await workflow_service.fetch_and_store_sharing_permissions(domain_id)
+        
+        return {
+            "status": "success",
+            "message": "Sharing permissions refreshed successfully",
+            "domain_id": domain_id,
+            "permissions": permissions,
+            "refreshed_at": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error refreshing sharing permissions: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to refresh sharing permissions: {str(e)}"
+        )
+
+@router.post("/{domain_id}/setup-sharing-permissions")
+async def api_setup_sharing_permissions(
+    domain_id: str,
+    session_id: str = Depends(get_session_id),
+    user_id: str = Depends(get_user_id),
+    db: AsyncSession = Depends(get_async_db_session)
+):
+    """
+    Setup sharing permissions for a domain as part of the data setup workflow
+    
+    This endpoint is designed to be called explicitly during the data setup process
+    to establish sharing permissions before proceeding with other workflow steps.
+    """
+    try:
+        workflow_service = DomainWorkflowService(user_id, session_id)
+        
+        # Check if domain exists
+        domain = await db.execute(
+            select(Domain).where(Domain.domain_id == domain_id)
+        )
+        domain = domain.scalar_one_or_none()
+        
+        if not domain:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Domain {domain_id} not found"
+            )
+        
+        # Check if domain is in appropriate status for setup
+        if domain.status not in ['draft', 'draft_ready']:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Sharing permissions can only be set up for domains in draft or draft_ready status"
+            )
+        
+        logger.info(f"Setting up sharing permissions for domain {domain_id} as part of data setup workflow")
+        
+        # Step 1: Generate initial sharing permissions
+        initial_permissions = await workflow_service.fetch_and_store_sharing_permissions(domain_id)
+        
+        # Step 2: Store permissions in domain metadata
+        domain_metadata = domain.json_metadata or {}
+        domain_metadata["sharing_permissions"] = {
+            "setup_completed_at": datetime.now().isoformat(),
+            "setup_by": user_id,
+            "initial_permissions": initial_permissions,
+            "workflow_step": "data_setup"
+        }
+        
+        # Update domain with permissions metadata
+        await db.execute(
+            update(Domain)
+            .where(Domain.domain_id == domain_id)
+            .values(
+                json_metadata=domain_metadata,
+                updated_at=func.now()
+            )
+        )
+        
+        await db.commit()
+        
+        # Step 3: Publish update for real-time workflow tracking
+        publish_update(user_id, session_id, {
+            "type": "sharing_permissions_setup_completed",
+            "domain_id": domain_id,
+            "data": {
+                "setup_completed_at": datetime.now().isoformat(),
+                "permissions_count": {
+                    "users": len(initial_permissions.get("permissions", {}).get("users", [])),
+                    "total_teams": len(initial_permissions.get("permissions", {}).get("teams", [])),
+                    "total_workspaces": len(initial_permissions.get("permissions", {}).get("workspaces", [])),
+                    "total_projects": len(initial_permissions.get("permissions", {}).get("projects", [])),
+                    "total_organizations": len(initial_permissions.get("permissions", {}).get("organizations", []))
+                }
+            }
+        })
+        
+        logger.info(f"Successfully completed sharing permissions setup for domain {domain_id}")
+        
+        return {
+            "status": "success",
+            "message": "Sharing permissions setup completed successfully",
+            "domain_id": domain_id,
+            "setup_completed_at": datetime.now().isoformat(),
+            "setup_by": user_id,
+            "permissions": initial_permissions,
+            "workflow_step": "data_setup",
+            "next_steps": [
+                "Continue with dataset creation",
+                "Add tables to datasets",
+                "Configure relationships between tables",
+                "Commit workflow when ready"
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error setting up sharing permissions for domain {domain_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to setup sharing permissions: {str(e)}"
+        )
+
+@router.get("/{domain_id}/sharing-permissions-status")
+async def api_get_sharing_permissions_status(
+    domain_id: str,
+    session_id: str = Depends(get_session_id),
+    user_id: str = Depends(get_user_id),
+    db: AsyncSession = Depends(get_async_db_session)
+):
+    """Get the current status of sharing permissions setup for a domain"""
+    try:
+        # Check if domain exists
+        domain = await db.execute(
+            select(Domain).where(Domain.domain_id == domain_id)
+        )
+        domain = domain.scalar_one_or_none()
+        
+        if not domain:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Domain {domain_id} not found"
+            )
+        
+        # Check if sharing permissions are already set up
+        domain_metadata = domain.json_metadata or {}
+        sharing_permissions = domain_metadata.get("sharing_permissions", {})
+        
+        if sharing_permissions:
+            # Permissions are already set up
+            return {
+                "domain_id": domain_id,
+                "status": "setup_completed",
+                "setup_completed_at": sharing_permissions.get("setup_completed_at"),
+                "setup_by": sharing_permissions.get("setup_by"),
+                "workflow_step": sharing_permissions.get("workflow_step"),
+                "permissions_summary": {
+                    "total_users": len(sharing_permissions.get("initial_permissions", {}).get("permissions", {}).get("users", [])),
+                    "total_teams": len(sharing_permissions.get("initial_permissions", {}).get("permissions", {}).get("teams", [])),
+                    "total_workspaces": len(sharing_permissions.get("initial_permissions", {}).get("permissions", {}).get("workspaces", [])),
+                    "total_projects": len(sharing_permissions.get("initial_permissions", {}).get("permissions", {}).get("projects", [])),
+                    "total_organizations": len(sharing_permissions.get("initial_permissions", {}).get("permissions", {}).get("organizations", []))
+                },
+                "can_proceed": True,
+                "message": "Sharing permissions are already set up for this domain"
+            }
+        else:
+            # Permissions not set up yet
+            return {
+                "domain_id": domain_id,
+                "status": "not_setup",
+                "setup_completed_at": None,
+                "setup_by": None,
+                "workflow_step": None,
+                "permissions_summary": {
+                    "total_users": 0,
+                    "total_teams": 0,
+                    "total_workspaces": 0,
+                    "total_projects": 0,
+                    "total_organizations": 0
+                },
+                "can_proceed": False,
+                "message": "Sharing permissions need to be set up before proceeding",
+                "next_action": "Call POST /{domain_id}/setup-sharing-permissions to set up permissions"
+            }
+        
+    except Exception as e:
+        logger.error(f"Error getting sharing permissions status for domain {domain_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get sharing permissions status: {str(e)}"
+        )
+
+@router.post("/{domain_id}/data-setup-workflow")
+async def api_execute_data_setup_workflow(
+    domain_id: str,
+    setup_steps: List[str] = None,
+    session_id: str = Depends(get_session_id),
+    user_id: str = Depends(get_user_id),
+    db: AsyncSession = Depends(get_async_db_session)
+):
+    """
+    Execute the complete data setup workflow for a domain
+    
+    This endpoint orchestrates the entire data setup process including:
+    1. Sharing permissions setup
+    2. Domain validation
+    3. Workflow state initialization
+    4. Ready for dataset creation
+    """
+    try:
+        workflow_service = DomainWorkflowService(user_id, session_id)
+        
+        # Check if domain exists
+        domain = await db.execute(
+            select(Domain).where(Domain.domain_id == domain_id)
+        )
+        domain = domain.scalar_one_or_none()
+        
+        if not domain:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Domain {domain_id} not found"
+            )
+        
+        # Check if domain is in appropriate status
+        if domain.status != 'draft':
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Data setup workflow can only be executed for domains in draft status"
+            )
+        
+        # Default setup steps if none provided
+        if setup_steps is None:
+            setup_steps = [
+                "sharing_permissions",
+                "domain_validation", 
+                "workflow_initialization",
+                "ready_for_datasets"
+            ]
+        
+        logger.info(f"Starting data setup workflow for domain {domain_id} with steps: {setup_steps}")
+        
+        workflow_results = {
+            "domain_id": domain_id,
+            "workflow_started_at": datetime.now().isoformat(),
+            "executed_by": user_id,
+            "steps": {},
+            "overall_status": "in_progress"
+        }
+        
+        # Step 1: Sharing Permissions Setup
+        if "sharing_permissions" in setup_steps:
+            try:
+                logger.info(f"Executing sharing permissions setup for domain {domain_id}")
+                permissions_result = await workflow_service.fetch_and_store_sharing_permissions(domain_id)
+                
+                workflow_results["steps"]["sharing_permissions"] = {
+                    "status": "completed",
+                    "result": permissions_result,
+                    "completed_at": datetime.now().isoformat()
+                }
+                
+                logger.info(f"Sharing permissions setup completed for domain {domain_id}")
+                
+            except Exception as e:
+                logger.error(f"Error in sharing permissions setup: {str(e)}")
+                workflow_results["steps"]["sharing_permissions"] = {
+                    "status": "failed",
+                    "error": str(e),
+                    "failed_at": datetime.now().isoformat()
+                }
+        
+        # Step 2: Domain Validation
+        if "domain_validation" in setup_steps:
+            try:
+                logger.info(f"Executing domain validation for domain {domain_id}")
+                
+                # Basic validation checks
+                validation_checks = {
+                    "domain_exists": True,
+                    "status_valid": domain.status == 'draft',
+                    "has_required_fields": bool(domain.domain_id and domain.display_name),
+                    "can_proceed": True
+                }
+                
+                workflow_results["steps"]["domain_validation"] = {
+                    "status": "completed",
+                    "result": validation_checks,
+                    "completed_at": datetime.now().isoformat()
+                }
+                
+                logger.info(f"Domain validation completed for domain {domain_id}")
+                
+            except Exception as e:
+                logger.error(f"Error in domain validation: {str(e)}")
+                workflow_results["steps"]["domain_validation"] = {
+                    "status": "failed",
+                    "error": str(e),
+                    "failed_at": datetime.now().isoformat()
+                }
+        
+        # Step 3: Workflow Initialization
+        if "workflow_initialization" in setup_steps:
+            try:
+                logger.info(f"Executing workflow initialization for domain {domain_id}")
+                
+                # Initialize workflow state
+                workflow_state = workflow_service.get_workflow_state()
+                workflow_state["domain"] = {
+                    "domain_id": domain.domain_id,
+                    "display_name": domain.display_name,
+                    "description": domain.description,
+                    "created_by": domain.created_by,
+                    "setup_completed_at": datetime.now().isoformat()
+                }
+                workflow_service.set_workflow_state(workflow_state)
+                
+                workflow_results["steps"]["workflow_initialization"] = {
+                    "status": "completed",
+                    "result": {"workflow_state_initialized": True},
+                    "completed_at": datetime.now().isoformat()
+                }
+                
+                logger.info(f"Workflow initialization completed for domain {domain_id}")
+                
+            except Exception as e:
+                logger.error(f"Error in workflow initialization: {str(e)}")
+                workflow_results["steps"]["workflow_initialization"] = {
+                    "status": "failed",
+                    "error": str(e),
+                    "failed_at": datetime.now().isoformat()
+                }
+        
+        # Step 4: Ready for Datasets
+        if "ready_for_datasets" in setup_steps:
+            try:
+                logger.info(f"Marking domain {domain_id} as ready for datasets")
+                
+                # Update domain metadata to indicate setup completion
+                domain_metadata = domain.json_metadata or {}
+                domain_metadata["data_setup_workflow"] = {
+                    "completed_at": datetime.now().isoformat(),
+                    "completed_by": user_id,
+                    "workflow_results": workflow_results,
+                    "status": "ready_for_datasets"
+                }
+                
+                await db.execute(
+                    update(Domain)
+                    .where(Domain.domain_id == domain_id)
+                    .values(
+                        json_metadata=domain_metadata,
+                        updated_at=func.now()
+                    )
+                )
+                
+                workflow_results["steps"]["ready_for_datasets"] = {
+                    "status": "completed",
+                    "result": {"ready_for_datasets": True},
+                    "completed_at": datetime.now().isoformat()
+                }
+                
+                logger.info(f"Domain {domain_id} marked as ready for datasets")
+                
+            except Exception as e:
+                logger.error(f"Error marking domain as ready for datasets: {str(e)}")
+                workflow_results["steps"]["ready_for_datasets"] = {
+                    "status": "failed",
+                    "error": str(e),
+                    "failed_at": datetime.now().isoformat()
+                }
+        
+        # Determine overall workflow status
+        failed_steps = [step for step, result in workflow_results["steps"].items() if result["status"] == "failed"]
+        if failed_steps:
+            workflow_results["overall_status"] = "failed"
+            workflow_results["failed_steps"] = failed_steps
+            workflow_results["message"] = f"Data setup workflow failed for steps: {', '.join(failed_steps)}"
+        else:
+            workflow_results["overall_status"] = "completed"
+            workflow_results["message"] = "Data setup workflow completed successfully"
+            workflow_results["completed_at"] = datetime.now().isoformat()
+        
+        await db.commit()
+        
+        # Publish workflow completion update
+        publish_update(user_id, session_id, {
+            "type": "data_setup_workflow_completed",
+            "domain_id": domain_id,
+            "data": workflow_results
+        })
+        
+        logger.info(f"Data setup workflow completed for domain {domain_id} with status: {workflow_results['overall_status']}")
+        
+        return workflow_results
+        
+    except Exception as e:
+        logger.error(f"Error executing data setup workflow for domain {domain_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to execute data setup workflow: {str(e)}"
         )
 
 @router.get("/domain/{domain_id}/status")

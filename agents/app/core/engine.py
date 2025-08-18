@@ -79,8 +79,10 @@ def remove_limit_statement(sql: str) -> str:
 
 def add_quotes(sql: str) -> Tuple[str, str]:
     try:
+        # Disable automatic quoting to prevent issues with PostgreSQL case sensitivity
+        # The original code used identify=True which caused problems with column names
         quoted_sql = sqlglot.transpile(
-            sql, read="trino", identify=True, error_level=sqlglot.ErrorLevel.RAISE
+            sql, read="trino", identify=False, error_level=sqlglot.ErrorLevel.RAISE
         )[0]
     except Exception as e:
         logger.exception(f"Error in sqlglot.transpile to {sql}: {e}")
@@ -88,3 +90,59 @@ def add_quotes(sql: str) -> Tuple[str, str]:
         return "", str(e)
 
     return quoted_sql, ""
+
+
+def validate_and_fix_column_names(sql: str, schema_context: Dict[str, Any] = None) -> Tuple[str, str]:
+    """
+    Validate and fix column names in SQL to match actual database schema case.
+    
+    Args:
+        sql: The SQL query to validate
+        schema_context: Optional schema context containing actual column names
+        
+    Returns:
+        Tuple of (fixed_sql, error_message)
+    """
+    try:
+        if not schema_context:
+            # If no schema context, just return the SQL as-is
+            return sql, ""
+        
+        # Extract actual column names from schema context
+        actual_columns = {}
+        for table_info in schema_context.get("schemas", []):
+            if isinstance(table_info, dict):
+                table_name = table_info.get("table_name", "")
+                table_ddl = table_info.get("table_ddl", "")
+                
+                # Parse DDL to extract column names
+                if table_ddl:
+                    # Simple regex to extract column names from CREATE TABLE
+                    import re
+                    column_matches = re.findall(r'^\s*(\w+)\s+[A-Z]+', table_ddl, re.MULTILINE)
+                    for col in column_matches:
+                        actual_columns[f"{table_name}.{col}"] = col
+                        actual_columns[col] = col  # Also store just column name
+        
+        # If we have actual column information, try to fix case issues
+        if actual_columns:
+            # Simple case correction for common patterns
+            fixed_sql = sql
+            
+            # Replace common case mismatches
+            for actual_col, correct_case in actual_columns.items():
+                # Handle table.column format
+                if "." in actual_col:
+                    table_name, col_name = actual_col.split(".", 1)
+                    # Look for patterns like table.Column and replace with table.column
+                    pattern = rf'\b{re.escape(table_name)}\.{re.escape(col_name)}\b'
+                    replacement = f"{table_name}.{correct_case}"
+                    fixed_sql = re.sub(pattern, replacement, fixed_sql, flags=re.IGNORECASE)
+            
+            return fixed_sql, ""
+        
+        return sql, ""
+        
+    except Exception as e:
+        logger.exception(f"Error validating column names: {e}")
+        return sql, str(e)

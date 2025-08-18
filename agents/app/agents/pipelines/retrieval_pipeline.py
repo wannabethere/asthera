@@ -83,6 +83,13 @@ class RetrievalPipeline(AgentPipeline):
             print("retrieval_type in retrieval pipeline: ", retrieval_type)
             print("query in retrieval pipeline: ", query)
             print("project_id in retrieval pipeline: ", project_id)
+            
+            # Add debug logging
+            logger.info(f"DEBUG: RetrievalPipeline.run() called with project_id: {project_id}")
+            logger.info(f"DEBUG: project_id type: {type(project_id)}")
+            logger.info(f"DEBUG: project_id value: {repr(project_id)}")
+            logger.info(f"DEBUG: kwargs keys: {list(kwargs.keys())}")
+            logger.info(f"DEBUG: kwargs['project_id']: {kwargs.get('project_id')}")
             cache_key = self._generate_cache_key(
                 retrieval_type=retrieval_type,
                 **kwargs

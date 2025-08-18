@@ -19,7 +19,7 @@ from app.agents.retrieval.retrieval_helper import RetrievalHelper
 settings = get_settings()
 CHROMA_STORE_PATH = settings.CHROMA_STORE_PATH
 
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = settings.OPENAI_API_KEY
  # Initialize ChromaDB client and collections
 client = chromadb.PersistentClient(path=CHROMA_STORE_PATH)
 examples_vectorstore = DocumentChromaStore(persistent_client=client, collection_name="tools_examples_collection")

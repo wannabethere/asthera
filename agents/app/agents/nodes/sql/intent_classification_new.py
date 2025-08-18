@@ -42,10 +42,32 @@ Also you should provide reasoning for the classification clearly and concisely w
 - The reasoning of the intent classification MUST use the same language as the Output Language from the user input.
 - The rephrased user's question MUST use the same language as the Output Language from the user input.
 
+### CLASSIFICATION DECISION PROCESS ###
+Before classifying, follow this decision tree:
+
+1. **Can this question be answered with a specific SQL query?**
+   - Does it ask for counts, sums, averages, percentages, or data filtering?
+   - Can the result be computed directly from database tables?
+   - If YES → Likely TEXT_TO_SQL
+
+2. **Is the user asking for interpretation or guidance?**
+   - Do they want to understand what something means?
+   - Are they asking for recommendations on how to analyze?
+   - Do they want suggestions on methodology?
+   - If YES → Likely ANALYSIS_HELPER
+
+3. **For boundary cases with analytical language:**
+   - Default to TEXT_TO_SQL if any specific data can be calculated
+   - Only choose ANALYSIS_HELPER if truly seeking interpretation/guidance
+
+MUST include this decision process in your reasoning output.
+
 ### INTENT DEFINITIONS ###
 - TEXT_TO_SQL
     - When to Use:
         - Select this category if the user's question is directly related to the given database schema and can be answered by generating an SQL query using that schema.
+        - IMPORTANT: Analytical vocabulary does NOT automatically mean ANALYSIS_HELPER. Focus on whether the data can be calculated directly from the database.
+        - IMPORTANT: If the question asks for specific metrics, counts, percentages, averages, or data aggregations that can be computed with SQL (GROUP BY, COUNT, SUM, etc.), classify as TEXT_TO_SQL.
         - If the rephrasedd user's question is related to the previous question, and considering them together could be answered by generating an SQL query using that schema.
         - If the rephrasedd user's question is asking for a specific metric, insight that can be answered by the given database schema and using SQL to answer.
     - Characteristics:
@@ -55,17 +77,30 @@ Also you should provide reasoning for the classification clearly and concisely w
     - Instructions:
         - MUST include table and column names that should be used in the SQL query according to the database schema in the reasoning output.
         - MUST include phrases from the user's question that are explicitly related to the database schema in the reasoning output.
+        - If the question uses analytical language (proportions, percentages, distributions, breakdowns), explicitly state that these can be calculated using SQL operations like GROUP BY, COUNT, SUM, or mathematical expressions.
+        - Do NOT let analytical vocabulary bias toward ANALYSIS_HELPER - focus on whether the underlying data request is computable.
     - Examples:
-        - "What is the total sales for last quarter?"
+       - "What is the total sales for last quarter?"
         - "Show me all customers who purchased product X."
         - "List the top 10 products by revenue."
-        - "What percentage of customers of total have purchased product X?"
+        - "What percentage of customers have purchased product X?"
+        - "What are the proportions of employees by division?"
+        - "Show me the distribution of orders by month"
+        - "What's the breakdown of revenue by product category?"
+        - "Calculate the retention rate for Q3 customers"
+### CRITICAL DISTINCTION: Analytical Language vs Analytical Intent
+- TEXT_TO_SQL: Questions using analytical terms but asking for specific, calculable data
+  - "What are the proportions of X by Y?" → Calculate percentages using SQL
+  - "Show me the distribution of sales by region" → GROUP BY with COUNT/SUM
+  - "What percentage of customers have Z?" → SQL calculation with percent
 
 - ANALYSIS_HELPER
     - When to Use:
-        - Select this category when the user is asking for analytical insights, metrics recommendations, or wants to understand what metrics can be calculated from the data.
-        - If the rephrased user's question is asking for suggestions on how to analyze data or what KPIs/metrics are possible.
-        - When the user wants recommendations for data analysis approaches or metric calculations.
+        - Questions asking for interpretation, insights, or recommendations
+        - Select this category ONLY when the user is asking for interpretation, guidance, or recommendations rather than specific data calculations.
+        - The user wants to understand HOW to analyze data, not GET specific data results.
+        - The question seeks methodology, best practices, or explanatory insights.
+        - IMPORTANT: Questions asking for specific calculations (even with analytical language) should be TEXT_TO_SQL, not ANALYSIS_HELPER.
     - Characteristics:
         - The rephrased user's question seeks analytical guidance or metric recommendations.
         - The question asks about possible analysis methods, KPIs, or data insights.
@@ -74,10 +109,11 @@ Also you should provide reasoning for the classification clearly and concisely w
         - MUST include phrases from the user's question that indicate analytical intent in the reasoning output.
         - MUST mention relevant tables/columns that could be used for metrics calculation.
     - Examples:
-        - "What metrics can I calculate from this sales data?"
-        - "What are the best KPIs for analyzing customer behavior?"
-        - "How can I measure performance with this dataset?"
-        - "What analytical insights are possible from this data?"
+        - "What metrics can I calculate from this sales data?" (asking for options/guidance)
+        - "How should I interpret declining sales trends?" (seeking interpretation)
+        - "What analytical approaches work best for customer segmentation?" (methodology guidance)
+        - "What does a 15% churn rate mean for our business?" (interpretation needed)
+        - "How can I improve my analysis methodology?" (process guidance)
 
 - QUESTION_SUGGESTION
     - When to Use:
@@ -126,6 +162,17 @@ Also you should provide reasoning for the classification clearly and concisely w
         - "How are you?"
         - "What's the weather like today?"
         - "Tell me a joke."
+
+### BOUNDARY CASE EXAMPLES ###
+❌ WRONG: "What are the proportions of employees by division who have not completed training in the last 6 months" → ANALYSIS_HELPER
+
+✅ CORRECT: "What are the proportions of employees by division who have not completed training in the last 6 months" → TEXT_TO_SQL
+Reasoning: Asks for specific calculation (proportions = percentages) that can be computed with SQL: GROUP BY division, WHERE training_date < 6_months_ago, COUNT(*) and calculate percentages.
+
+❌ WRONG: "Show me the revenue distribution by quarter" → ANALYSIS_HELPER
+
+✅ CORRECT: "Show me the revenue distribution by quarter" → TEXT_TO_SQL  
+Reasoning: Asks for specific data aggregation (revenue by quarter) using SQL: GROUP BY quarter, SUM(revenue).
         
 ### OUTPUT FORMAT ###
 Please provide your response as a JSON object, structured as follows:

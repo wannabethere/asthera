@@ -1,0 +1,81 @@
+# FastAPI Project
+
+This is a **FastAPI application** that provides a fully functional API for managing:
+
+- **Projects**
+- **Project Version Histories**
+- **Datasets**
+- **Tables**
+- **Columns**
+- **Instructions**
+- **Examples**
+- **Knowledge Base Entries**
+- **Metrics**
+- **Calculated Columns**
+- **Views**
+- **Relationships**
+
+## 🔹Features:
+
+ **CRUD Operations:**  
+Create, Retrieve, Update, and Delete for all resources.
+
+ **API Schema Validation:**  
+Using Pydantic v2 with `from_attributes` configuration.
+
+ **Database:**  
+Postgres (using `UUID`) with SQLAlchemy ORM.
+
+ **Clean Layers:**  
+- **API:** `FastAPI`
+- **Business:** `Services`
+- **Data:** `Models (dbmodel)`  
+
+ **OpenAPI:**  
+API docs available at:
+- [http://localhost:8000/docs](http://localhost:8000/docs) (Swagger UI)  
+- [http://localhost:8000/redoc](http://localhost:8000/redoc) (Redoc)
+
+## 🔹Installation:
+
+1️⃣ **Clone this repository:**  
+```bash
+git clone <your-repo-url>
+cd your-repo
+2️⃣ Create and activate a virtual environment:
+
+python -m venv venv
+source venv/Scripts/activate  # Windows
+source venv/bin/activate  # Mac or Linux
+
+3️⃣ Install requirements:
+
+pip install -r requirements.txt
+4️⃣ Set up your Postgres database and update DATABASE_URL in your config.
+
+5️⃣ Create tables:
+uvicorn main:app --reload
+The application will automatically create tables on startup if configured in main.py.
+
+🔹Running:
+Start the application:
+uvicorn main:app --reload
+API will be available at http://localhost:8000.
+
+🔹API Docs:
+ http://localhost:8000/docs (Swagger UI)
+ http://localhost:8000/redoc (Redoc)
+
+🔹Project Structure (simplified)
+css
+Copy
+Edit
+.
+├── main.py
+├── app/
+    ├─ service/
+    ├─ routers/
+    ├─ schemas/
+    └─ dbmodel/
+├── requirements.txt
+├── README.md

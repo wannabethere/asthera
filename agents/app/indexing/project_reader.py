@@ -288,11 +288,11 @@ async def main():
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
 
-    #persistent_client = chromadb.PersistentClient(
-    #    path=settings.CHROMA_STORE_PATH
-    #)
+    persistent_client = chromadb.PersistentClient(
+        path=settings.CHROMA_STORE_PATH
+    )
 
-    persistent_client = chromadb.HttpClient(host='ec2-54-161-71-105.compute-1.amazonaws.com', port=8888)
+    #persistent_client = chromadb.HttpClient(host='ec2-54-161-71-105.compute-1.amazonaws.com', port=8888)
     # Set up base path
     base_path = Path("/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/sql_meta")
     

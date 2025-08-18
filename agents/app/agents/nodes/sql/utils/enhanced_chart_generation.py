@@ -382,8 +382,32 @@ class EnhancedChartDataPreprocessor:
             raw_data = data["data"]
             columns = data.get("columns", [])
             
+            # Validate data structure - ensure each row is a dictionary
+            if raw_data and not isinstance(raw_data[0], dict):
+                logger.warning(f"Data rows are not dictionaries. Converting from {type(raw_data[0])} to dict format")
+                # Convert list of lists to list of dicts if needed
+                if isinstance(raw_data[0], list):
+                    raw_data = [dict(zip(columns, row)) for row in raw_data]
+                else:
+                    logger.error(f"Unexpected data format: {type(raw_data[0])}")
+                    return {
+                        "sample_data": [],
+                        "sample_column_values": {},
+                        "data_analysis": {
+                            "column_count": 0,
+                            "row_count": 0,
+                            "data_types": {},
+                            "suggested_charts": []
+                        }
+                    }
+            
             # Create sample data
             sample_data = raw_data[:sample_data_count] if len(raw_data) > sample_data_count else raw_data
+            
+            # Add debugging information
+            logger.info(f"Data preprocessing - Raw data type: {type(raw_data)}, Sample data type: {type(sample_data)}")
+            if sample_data:
+                logger.info(f"First row type: {type(sample_data[0])}, First row: {sample_data[0]}")
             
             # Analyze sample column values
             sample_column_values = {}

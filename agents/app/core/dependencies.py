@@ -85,7 +85,7 @@ def get_dependencies():
         
     # Initialize ChromaDB client
     client = chromadb.PersistentClient(path=CHROMA_STORE_PATH)
-
+    #client = chromadb.HttpClient(host='ec2-54-161-71-105.compute-1.amazonaws.com', port=8888)
     # Initialize vector stores
     vectorstore_examples = DocumentChromaStore(
         persistent_client=client,

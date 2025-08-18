@@ -437,6 +437,10 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             )
         )
 
+        logger.info(f"DEBUG: About to call database_schemas pipeline with project_id: {request.project_id}")
+        logger.info(f"DEBUG: request.project_id type: {type(request.project_id)}")
+        logger.info(f"DEBUG: request.project_id value: {repr(request.project_id)}")
+        
         retrieval_result = await self._pipeline_container.get_pipeline("database_schemas").run(
             retrieval_type="database_schemas",
             query=user_query,
@@ -888,6 +892,7 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             ask_results.append(ask_result)
             
         return {
+            'status': 'finished',  # Add required status field
             'success': sql_result.get('success', False),
             'api_results': ask_results,
             'quality_scoring': quality_scoring,

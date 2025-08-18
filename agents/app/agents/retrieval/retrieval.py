@@ -369,8 +369,14 @@ class TableRetrieval:
             Dictionary containing retrieval results and metadata
         """
         logger.info(f"Table retrieval is running... for {project_id}")
+        logger.info(f"DEBUG: TableRetrieval.run() called with project_id: {project_id}")
+        logger.info(f"DEBUG: project_id type: {type(project_id)}")
+        logger.info(f"DEBUG: project_id value: {repr(project_id)}")
         
         try:
+            # Add debug logging
+            logger.info(f"DEBUG: TableRetrieval.run() - about to call _retrieve_table_descriptions with project_id: {project_id}")
+            
             # Get table descriptions
             table_docs = await self._retrieve_table_descriptions(
                 query, tables, project_id
@@ -613,10 +619,15 @@ class TableRetrieval:
     ) -> List[Any]:
         """Retrieve table descriptions from the document store."""
         try:
-            where = {"type": {"$eq": 'TABLE_DESCRIPTION'}}
+            logger.info(f"DEBUG: _retrieve_table_descriptions called with project_id: {project_id}")
+            logger.info(f"DEBUG: project_id type: {type(project_id)}")
+            logger.info(f"DEBUG: project_id value: {repr(project_id)}")
+            
+            where = {"type": {"$eq": 'TABLE_SCHEMA'}}
             if project_id:
-                where = {"$and": [{"project_id": {"$eq": project_id}},{"type": {"$eq": "TABLE_DESCRIPTION"}}]}
-            where = {"project_id": {"$eq": project_id}}
+                where = {"$and": [{"project_id": {"$eq": project_id}},{"type": {"$eq": "TABLE_SCHEMA"}}]}
+            
+            logger.info(f"DEBUG: _retrieve_table_descriptions - final where clause: {where}")
             #where = None
             if query:
                 # Get query embedding
@@ -654,6 +665,8 @@ class TableRetrieval:
                 )
             ]
             
+            logger.info(f"DEBUG: _retrieve_table_descriptions - filtered {len(results)} results down to {len(filtered_results)} results")
+            
             # Extract table names
             #table_names = self._extract_table_names(results)
             #print("table_names in retrieve_table_descriptions", table_names)
@@ -674,10 +687,15 @@ class TableRetrieval:
         results = []  # Initialize results at the start
         
         if not table_names:
-            # Always create a valid where clause for MODEL type
-            where = {"type": {"$eq": 'MODEL'}}
+            # Always create a valid where clause for TABLE_SCHEMA type
+            where = {"type": {"$eq": 'TABLE_SCHEMA'}}
             if project_id:
-                where = {"$and": [{"project_id": {"$eq": project_id}}, {"type": {"$eq": 'MODEL'}}]}
+                where = {"$and": [{"project_id": {"$eq": project_id}}, {"type": {"$eq": 'TABLE_SCHEMA'}}]}
+            
+            # Add debug logging for where clause
+            logger.info(f"DEBUG: _retrieve_schemas - project_id: {project_id}")
+            logger.info(f"DEBUG: _retrieve_schemas - where clause: {where}")
+            logger.info(f"DEBUG: _retrieve_schemas - where clause type: {type(where)}")
             
             # Perform search with empty table names - where is guaranteed to be valid here
             results = self.schema_store.semantic_search(
@@ -696,6 +714,11 @@ class TableRetrieval:
                             {"type": {"$eq": 'TABLE_SCHEMA'}}
                         ]
                     }    
+                
+                # Add debug logging for where clause
+                logger.info(f"DEBUG: _retrieve_schemas - table_name: {table_name}, project_id: {project_id}")
+                logger.info(f"DEBUG: _retrieve_schemas - where clause: {where}")
+                
                 # Use schema store's semantic search
                 tresults = self.schema_store.semantic_search(
                     query="",  # Empty query since we're filtering by table names
@@ -723,7 +746,7 @@ class TableRetrieval:
             return {}
 
     def _is_table_doc(self, content_dict) -> bool:
-        return content_dict.get('type') in ['TABLE_SCHEMA', 'TABLE_DESCRIPTION', 'MODEL']
+        return content_dict.get('type') in ['TABLE_SCHEMA', 'TABLE_DESCRIPTION', 'MODEL','METRIC','VIEW']
 
     def _is_column_doc(self, content_dict) -> bool:
         return content_dict.get('type') in ['TABLE_COLUMNS', 'COLUMNS']

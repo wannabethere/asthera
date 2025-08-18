@@ -493,7 +493,6 @@ class DocumentChromaStore:
                     filter=where
                 )
             
-                
             
             # Initialize BM25 ranker
             bm25 = BM25Ranker()

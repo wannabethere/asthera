@@ -140,6 +140,12 @@ class RetrievalHelper:
             print("Input get_database_schemas query: ", query)
             print("Input get_database_schemas project_id: ", project_id)
             
+            # Add debug logging
+            logger.info(f"DEBUG: get_database_schemas called with project_id: {project_id}")
+            logger.info(f"DEBUG: project_id type: {type(project_id)}")
+            logger.info(f"DEBUG: project_id value: {repr(project_id)}")
+            logger.info(f"DEBUG: About to call table_retrieval.run() with project_id: {project_id}")
+            
             # Use the table retrieval to get schema information
             schema_result = await self.retrievers["table_retrieval"].run(
                 query=query,

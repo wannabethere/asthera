@@ -19,9 +19,11 @@ from app.core.settings import Settings
 from app.utils import df_utils
 from app.utils.telemetry import traced
 from app.agents.models.models import DocumentGrade
+from app.core.settings import get_settings
 
-os.environ["OPENAI_API_KEY"] = "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"
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
+settings = get_settings()
+os.environ["OPENAI_API_KEY"] = settings.OPENAI_API_KEY
+llm = ChatOpenAI(model=settings.MODEL_NAME, temperature=settings.TEMPERATURE)
 
 class RetrievalInsightsAgent:
     """Agent responsible for document retrieval and initial filtering."""
