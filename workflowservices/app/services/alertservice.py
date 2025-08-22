@@ -2,8 +2,9 @@ from typing import Optional, List, Dict, Any, Union
 from uuid import UUID
 import uuid
 from datetime import datetime, date
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import and_, or_, func, select
+from sqlalchemy.orm import selectinload
 from app.services.baseservice import BaseService, SharingPermission
 from app.models.dbmodels import (
     Task, Dataset, Metric, Condition, Alert, UpdateAction, MetricType
@@ -18,12 +19,12 @@ from app.models.schema import (
 class AlertService(BaseService):
     """Service for managing alerts, tasks, and conditions"""
     
-    def __init__(self, db: Session, chroma_client=None):
+    def __init__(self, db: AsyncSession, chroma_client=None):
         super().__init__(db, chroma_client)
         self.collection_name = "alerts"
         self.task_collection = "tasks"
     
-    def create_task(
+    async def create_task(
         self,
         user_id: UUID,
         task_data: TaskCreate,
@@ -34,24 +35,25 @@ class AlertService(BaseService):
         """Create a new task with datasets, metrics, and conditions"""
         
         # Check permissions
-        if project_id and not self._check_user_permission(
+        if project_id and not await self._check_user_permission(
             user_id, "project", project_id, "create"
         ):
             raise PermissionError("User doesn't have permission to create task in this project")
         
-        if workspace_id and not self._check_user_permission(
+        if workspace_id and not await self._check_user_permission(
             user_id, "workspace", workspace_id, "create"
         ):
             raise PermissionError("User doesn't have permission to create task in this workspace")
         
         # Validate workflow if provided
         if workflow_id:
-            workflow = self.db.query(Workflow).filter(
-                Workflow.id == workflow_id
-            ).first()
+            stmt = select(Workflow).where(Workflow.id == workflow_id)
+            result = await self.db.execute(stmt)
+            workflow = result.scalar_one_or_none()
+            
             if not workflow:
                 raise ValueError(f"Workflow {workflow_id} not found")
-            if workflow.user_id != user_id and not self._check_user_permission(
+            if workflow.user_id != user_id and not await self._check_user_permission(
                 user_id, "thread", workflow.thread_id, "read"
             ):
                 raise PermissionError("User doesn't have access to this workflow")
@@ -64,7 +66,7 @@ class AlertService(BaseService):
         )
         
         self.db.add(task)
-        self.db.flush()
+        await self.db.flush()
         
         # Create datasets
         datasets = task_data.dataset_details
@@ -72,7 +74,7 @@ class AlertService(BaseService):
             datasets = [datasets]
         
         for dataset_data in datasets:
-            dataset = self._create_dataset(task.id, dataset_data)
+            dataset = await self._create_dataset(task.id, dataset_data)
             self.db.add(dataset)
         
         # Create metrics
@@ -81,7 +83,7 @@ class AlertService(BaseService):
             metrics = [metrics]
         
         for metric_data in metrics:
-            metric = self._create_metric(task.id, metric_data)
+            metric = await self._create_metric(task.id, metric_data)
             self.db.add(metric)
         
         # Create conditions and alerts
@@ -90,7 +92,7 @@ class AlertService(BaseService):
             conditions = [conditions]
         
         for condition_data in conditions:
-            condition = self._create_condition(task.id, condition_data, project_id)
+            condition = await self._create_condition(task.id, condition_data, project_id)
             self.db.add(condition)
         
         # Store in ChromaDB for searchability
@@ -102,7 +104,7 @@ class AlertService(BaseService):
             "status": task.status
         }
         
-        self._add_to_chroma(
+        await self._add_to_chroma(
             self.task_collection,
             str(task.id),
             {
@@ -116,26 +118,26 @@ class AlertService(BaseService):
             metadata
         )
         
-        self.db.commit()
+        await self.db.commit()
         return task
     
-    def get_task(
+    async def get_task(
         self,
         user_id: UUID,
         task_id: UUID
     ) -> Optional[Task]:
         """Get task by ID with permission check"""
         
-        task = self.db.query(Task).filter(
-            Task.id == task_id
-        ).first()
+        stmt = select(Task).where(Task.id == task_id)
+        result = await self.db.execute(stmt)
+        task = result.scalar_one_or_none()
         
         if not task:
             return None
         
         # Check permissions via ChromaDB metadata
-        collection = self._create_chroma_collection(self.task_collection)
-        result = collection.get(ids=[str(task_id)])
+        collection = await self._create_chroma_collection(self.task_collection)
+        result = await collection.get(ids=[str(task_id)])
         
         if not result["ids"]:
             return None
@@ -143,12 +145,12 @@ class AlertService(BaseService):
         metadata = result["metadatas"][0]
         
         # Check if user has access
-        if not self._has_task_access(user_id, metadata):
+        if not await self._has_task_access(user_id, metadata):
             raise PermissionError("User doesn't have access to this task")
         
         return task
     
-    def update_task(
+    async def update_task(
         self,
         user_id: UUID,
         task_id: UUID,
@@ -156,16 +158,16 @@ class AlertService(BaseService):
     ) -> Task:
         """Update task and its components"""
         
-        task = self.get_task(user_id, task_id)
+        task = await self.get_task(user_id, task_id)
         if not task:
             raise ValueError(f"Task {task_id} not found")
         
         # Check update permission
-        collection = self._create_chroma_collection(self.task_collection)
-        result = collection.get(ids=[str(task_id)])
+        collection = await self._create_chroma_collection(self.task_collection)
+        result = await collection.get(ids=[str(task_id)])
         metadata = result["metadatas"][0]
         
-        if metadata["created_by"] != str(user_id) and not self._check_user_permission(
+        if metadata["created_by"] != str(user_id) and not await self._check_user_permission(
             user_id, "task", task_id, "update"
         ):
             raise PermissionError("User doesn't have permission to update this task")
@@ -182,24 +184,24 @@ class AlertService(BaseService):
         if update_data.dataset_details:
             # For simplicity, update the first dataset
             if task.datasets:
-                self._update_dataset(task.datasets[0], update_data.dataset_details)
+                await self._update_dataset(task.datasets[0], update_data.dataset_details)
         
         # Update metric if provided
         if update_data.metric_details:
             # For simplicity, update the first metric
             if task.metrics:
-                self._update_metric(task.metrics[0], update_data.metric_details)
+                await self._update_metric(task.metrics[0], update_data.metric_details)
         
         # Update condition if provided
         if update_data.condition_details:
             # For simplicity, update the first condition
             if task.conditions:
-                self._update_condition(task.conditions[0], update_data.condition_details)
+                await self._update_condition(task.conditions[0], update_data.condition_details)
         
         task.updated_at = datetime.utcnow()
         
         # Update ChromaDB
-        self._update_chroma(
+        await self._update_chroma(
             self.task_collection,
             str(task_id),
             {
@@ -213,45 +215,45 @@ class AlertService(BaseService):
             metadata
         )
         
-        self.db.commit()
+        await self.db.commit()
         return task
     
-    def delete_task(
+    async def delete_task(
         self,
         user_id: UUID,
         task_id: UUID
     ) -> bool:
         """Delete task and all its components"""
         
-        task = self.get_task(user_id, task_id)
+        task = await self.get_task(user_id, task_id)
         if not task:
             return False
         
         # Check delete permission
-        collection = self._create_chroma_collection(self.task_collection)
-        result = collection.get(ids=[str(task_id)])
+        collection = await self._create_chroma_collection(self.task_collection)
+        result = await collection.get(ids=[str(task_id)])
         metadata = result["metadatas"][0]
         
-        if metadata["created_by"] != str(user_id) and not self._check_user_permission(
+        if metadata["created_by"] != str(user_id) and not await self._check_user_permission(
             user_id, "task", task_id, "delete"
         ):
             raise PermissionError("User doesn't have permission to delete this task")
         
         # Delete from ChromaDB
-        self._delete_from_chroma(self.task_collection, str(task_id))
+        await self._delete_from_chroma(self.task_collection, str(task_id))
         
         # Delete alerts from ChromaDB
         for condition in task.conditions:
             if condition.alert:
-                self._delete_from_chroma(self.collection_name, str(condition.alert.id))
+                await self._delete_from_chroma(self.collection_name, str(condition.alert.id))
         
         # Delete from PostgreSQL (cascades will handle related entities)
-        self.db.delete(task)
-        self.db.commit()
+        await self.db.delete(task)
+        await self.db.commit()
         
         return True
     
-    def search_tasks(
+    async def search_tasks(
         self,
         user_id: UUID,
         query: str,
@@ -272,7 +274,7 @@ class AlertService(BaseService):
             filters["status"] = status
         
         # Search in ChromaDB
-        results = self._search_chroma(
+        results = await self._search_chroma(
             self.task_collection,
             query,
             filters,
@@ -282,11 +284,12 @@ class AlertService(BaseService):
         # Filter by permissions
         accessible_results = []
         for result in results:
-            if self._has_task_access(user_id, result["metadata"]):
+            if await self._has_task_access(user_id, result["metadata"]):
                 task_id = UUID(result["id"])
-                task = self.db.query(Task).filter(
-                    Task.id == task_id
-                ).first()
+                stmt = select(Task).where(Task.id == task_id)
+                result_obj = await self.db.execute(stmt)
+                task = result_obj.scalar_one_or_none()
+                
                 if task:
                     accessible_results.append({
                         "task": task,
@@ -298,7 +301,7 @@ class AlertService(BaseService):
         
         return accessible_results
     
-    def get_active_alerts(
+    async def get_active_alerts(
         self,
         user_id: UUID,
         project_id: Optional[UUID] = None,
@@ -306,45 +309,46 @@ class AlertService(BaseService):
     ) -> List[Alert]:
         """Get active alerts for user"""
         
-        query = self.db.query(Alert).join(
+        stmt = select(Alert).join(
             Condition, Alert.condition_id == Condition.id
         ).join(
             Task, Condition.task_id == Task.id
-        ).filter(
+        ).where(
             Task.status == "active"
         )
         
         if project_id:
-            query = query.filter(Alert.project_id == str(project_id))
+            stmt = stmt.where(Alert.project_id == str(project_id))
         
         if notification_group:
-            query = query.filter(Alert.notification_group == notification_group)
+            stmt = stmt.where(Alert.notification_group == notification_group)
         
-        alerts = query.all()
+        result = await self.db.execute(stmt)
+        alerts = result.scalars().all()
         
         # Filter by user access
         accessible_alerts = []
         for alert in alerts:
             # Get task metadata from ChromaDB
-            collection = self._create_chroma_collection(self.task_collection)
-            result = collection.get(ids=[str(alert.condition.task_id)])
+            collection = await self._create_chroma_collection(self.task_collection)
+            result = await collection.get(ids=[str(alert.condition.task_id)])
             if result["ids"]:
                 metadata = result["metadatas"][0]
-                if self._has_task_access(user_id, metadata):
+                if await self._has_task_access(user_id, metadata):
                     accessible_alerts.append(alert)
         
         return accessible_alerts
     
-    def trigger_alert(
+    async def trigger_alert(
         self,
         alert_id: UUID,
         triggered_by: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Trigger an alert and return notification details"""
         
-        alert = self.db.query(Alert).filter(
-            Alert.id == alert_id
-        ).first()
+        stmt = select(Alert).where(Alert.id == alert_id)
+        result = await self.db.execute(stmt)
+        alert = result.scalar_one_or_none()
         
         if not alert:
             raise ValueError(f"Alert {alert_id} not found")
@@ -369,7 +373,7 @@ class AlertService(BaseService):
         }
         
         # Store alert trigger in ChromaDB
-        self._add_to_chroma(
+        await self._add_to_chroma(
             self.collection_name,
             str(uuid.uuid4()),  # Generate unique ID for trigger
             notification,
@@ -383,16 +387,16 @@ class AlertService(BaseService):
         
         return notification
     
-    def evaluate_conditions(
+    async def evaluate_conditions(
         self,
         task_id: UUID,
         metric_values: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
         """Evaluate all conditions for a task and trigger alerts if needed"""
         
-        task = self.db.query(Task).filter(
-            Task.id == task_id
-        ).first()
+        stmt = select(Task).where(Task.id == task_id)
+        result = await self.db.execute(stmt)
+        task = result.scalar_one_or_none()
         
         if not task:
             raise ValueError(f"Task {task_id} not found")
@@ -403,10 +407,10 @@ class AlertService(BaseService):
             metric_value = metric_values.get(condition.metric_name)
             
             if metric_value is not None:
-                if self._evaluate_condition(condition, metric_value):
+                if await self._evaluate_condition(condition, metric_value):
                     # Trigger alert
                     if condition.alert:
-                        notification = self.trigger_alert(
+                        notification = await self.trigger_alert(
                             condition.alert.id,
                             {"current_value": metric_value, "metric_values": metric_values}
                         )
@@ -414,11 +418,11 @@ class AlertService(BaseService):
                     
                     # Execute update action if defined
                     if condition.update:
-                        self._execute_update_action(condition.update, metric_value)
+                        await self._execute_update_action(condition.update, metric_value)
         
         return triggered_alerts
     
-    def _create_dataset(self, task_id: UUID, dataset_data: DatasetDetails) -> Dataset:
+    async def _create_dataset(self, task_id: UUID, dataset_data: DatasetDetails) -> Dataset:
         """Create a dataset entity"""
         return Dataset(
             task_id=task_id,
@@ -431,7 +435,7 @@ class AlertService(BaseService):
             columns=dataset_data.columns
         )
     
-    def _create_metric(self, task_id: UUID, metric_data: MetricDetails) -> Metric:
+    async def _create_metric(self, task_id: UUID, metric_data: MetricDetails) -> Metric:
         """Create a metric entity"""
         return Metric(
             task_id=task_id,
@@ -442,7 +446,7 @@ class AlertService(BaseService):
             type_params=metric_data.metric_params
         )
     
-    def _create_condition(
+    async def _create_condition(
         self, 
         task_id: UUID, 
         condition_data: ConditionDetails,
@@ -460,7 +464,7 @@ class AlertService(BaseService):
         )
         
         self.db.add(condition)
-        self.db.flush()
+        await self.db.flush()
         
         # Create alert if specified
         if condition_data.alert_details:
@@ -481,7 +485,7 @@ class AlertService(BaseService):
         
         return condition
     
-    def _update_dataset(self, dataset: Dataset, update_data: DatasetDetails):
+    async def _update_dataset(self, dataset: Dataset, update_data: DatasetDetails):
         """Update dataset entity"""
         if update_data.name:
             dataset.name = update_data.name
@@ -498,7 +502,7 @@ class AlertService(BaseService):
         if update_data.columns:
             dataset.columns = update_data.columns
     
-    def _update_metric(self, metric: Metric, update_data: MetricDetails):
+    async def _update_metric(self, metric: Metric, update_data: MetricDetails):
         """Update metric entity"""
         if update_data.metric_name:
             metric.name = update_data.metric_name
@@ -512,7 +516,7 @@ class AlertService(BaseService):
             metric.type_params = update_data.metric_params
         metric.updated_at = datetime.utcnow()
     
-    def _update_condition(self, condition: Condition, update_data: ConditionDetails):
+    async def _update_condition(self, condition: Condition, update_data: ConditionDetails):
         """Update condition entity"""
         if update_data.condition_name:
             condition.name = update_data.condition_name
@@ -537,7 +541,7 @@ class AlertService(BaseService):
         
         condition.updated_at = datetime.utcnow()
     
-    def _evaluate_condition(self, condition: Condition, value: Any) -> bool:
+    async def _evaluate_condition(self, condition: Condition, value: Any) -> bool:
         """Evaluate if a condition is met"""
         
         threshold = condition.value.get("value")
@@ -561,13 +565,13 @@ class AlertService(BaseService):
         
         return False
     
-    def _execute_update_action(self, update_action: UpdateAction, value: Any):
+    async def _execute_update_action(self, update_action: UpdateAction, value: Any):
         """Execute an update action"""
         # Implement the action execution logic
         # This could update database records, trigger workflows, etc.
         pass
     
-    def _has_task_access(
+    async def _has_task_access(
         self,
         user_id: UUID,
         metadata: Dict[str, Any]
@@ -581,23 +585,27 @@ class AlertService(BaseService):
         # Check workspace/project membership
         if metadata.get("workspace_id"):
             from app.models.workspace import WorkspaceAccess
-            access = self.db.query(WorkspaceAccess).filter(
+            stmt = select(WorkspaceAccess).where(
                 and_(
                     WorkspaceAccess.workspace_id == UUID(metadata["workspace_id"]),
                     WorkspaceAccess.user_id == user_id
                 )
-            ).first()
+            )
+            result = await self.db.execute(stmt)
+            access = result.scalar_one_or_none()
             if access:
                 return True
         
         if metadata.get("project_id"):
             from app.models.workspace import ProjectAccess
-            access = self.db.query(ProjectAccess).filter(
+            stmt = select(ProjectAccess).where(
                 and_(
                     ProjectAccess.project_id == UUID(metadata["project_id"]),
                     ProjectAccess.user_id == user_id
                 )
-            ).first()
+            )
+            result = await self.db.execute(stmt)
+            access = result.scalar_one_or_none()
             if access:
                 return True
         

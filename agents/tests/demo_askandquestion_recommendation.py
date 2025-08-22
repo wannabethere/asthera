@@ -389,6 +389,11 @@ async def run_demo():
             #"question": "On average, how many days does it take from AssignmentDate to CompletionDate for each employee by division?",
             #"question": "Which job roles take the longest to complete assignments on average?",
             "event_id": "cornerstone_event_3"
+        },
+        #Can you show me increasing vs decreasing time spent for each role (`PrimaryJob`) that struggles certification requirements?
+        {
+            "question": "Can you show me increasing vs decreasing time spent for each role (`PrimaryJob`) that struggles certification requirements?",
+            "event_id": "cornerstone_event_4"
         }
     ]
     

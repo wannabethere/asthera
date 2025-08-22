@@ -134,11 +134,11 @@ class Settings(BaseSettings):
     CHROMA_STORE_PATH: str = "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/lexy/data/chroma_db"
     
     # ChromaDB Settings
-    CHROMA_USE_LOCAL: bool = True
-    CHROMA_HOST: str = "localhost"
-    CHROMA_PORT: int = 8000
+    CHROMA_USE_LOCAL: bool = True  # Default to HTTP client
+    CHROMA_HOST: str = "ec2-54-161-71-105.compute-1.amazonaws.com"  # Default EC2 host
+    CHROMA_PORT: int = 8888  # Default EC2 port
     CHROMA_COLLECTION_NAME: str = "default"
-    CHROMA_PERSIST_DIRECTORY: str = "chroma_db"
+    CHROMA_PERSIST_DIRECTORY: str = CHROMA_STORE_PATH
     
     # Embedding Settings
     EMBEDDING_PROVIDER: str = "openai"

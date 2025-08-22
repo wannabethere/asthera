@@ -1,0 +1,10 @@
+# Requirements for N8nChromaDBStore utility
+# Core dependencies
+chromadb>=0.4.0
+
+# Optional dependencies for enhanced functionality
+# These are already included in the main workflowservices requirements
+# but listed here for clarity
+openai>=1.0.0  # For embeddings if using OpenAI
+langchain>=0.1.0  # For LangChain integration if needed
+langchain-community>=0.0.10  # For community integrations

@@ -3,8 +3,8 @@ from uuid import UUID
 import uuid
 from datetime import datetime, timedelta
 import json
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import and_, or_, func, select
 
 from app.services.baseservice import BaseService, SharingPermission
 from app.services.dashboardservice import DashboardService
@@ -24,13 +24,13 @@ from app.models.schema import DashboardCreate, DashboardUpdate
 class DashboardWorkflowService(BaseService):
     """Service for managing dashboard creation workflows"""
     
-    def __init__(self, db: Session, chroma_client=None):
+    def __init__(self, db: AsyncSession, chroma_client=None):
         super().__init__(db, chroma_client)
-        self.collection_name = "dashboard_workflows"
+        self.collection_name = "dashboard_workflow"
         self.dashboard_service = DashboardService(db, chroma_client)
         self.n8n_creator = N8nWorkflowCreator()
     
-    def create_workflow(
+    async def create_workflow(
         self,
         user_id: UUID,
         dashboard_name: str,
@@ -52,7 +52,7 @@ class DashboardWorkflowService(BaseService):
             content={"status": "draft", "components": []}
         )
         
-        dashboard = self.dashboard_service.create_dashboard(
+        dashboard = await self.dashboard_service.create_dashboard(
             user_id=user_id,
             dashboard_data=dashboard_data,
             project_id=project_id,
@@ -76,10 +76,10 @@ class DashboardWorkflowService(BaseService):
         self.db.add(workflow)
         
         # Create initial version
-        self._create_workflow_version(workflow, user_id)
+        await self._create_workflow_version(workflow, user_id)
         
         # Add to ChromaDB for searchability
-        self._add_to_chroma(
+        await self._add_to_chroma(
             self.collection_name,
             str(workflow.id),
             {
@@ -95,10 +95,10 @@ class DashboardWorkflowService(BaseService):
             }
         )
         
-        self.db.commit()
+        await self.db.commit()
         return workflow, dashboard
     
-    def add_thread_component(
+    async def add_thread_component(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -109,16 +109,18 @@ class DashboardWorkflowService(BaseService):
         Step 2: Add thread message components to workflow
         """
         
-        workflow = self._get_workflow(workflow_id, user_id)
+        workflow = await self._get_workflow(workflow_id, user_id)
         
         # Validate state
         if workflow.state not in [WorkflowState.DRAFT, WorkflowState.CONFIGURING]:
             raise ValueError(f"Cannot add components in {workflow.state} state")
         
         # Get next sequence order
-        max_order = self.db.query(func.max(ThreadComponent.sequence_order)).filter(
+        stmt = select(func.max(ThreadComponent.sequence_order)).where(
             ThreadComponent.workflow_id == workflow_id
-        ).scalar() or 0
+        )
+        result = await self.db.execute(stmt)
+        max_order = result.scalar() or 0
         
         # Create thread component
         component = ThreadComponent(
@@ -143,15 +145,15 @@ class DashboardWorkflowService(BaseService):
             workflow.current_step = 2
         
         # Update dashboard content
-        self._update_dashboard_content(workflow, user_id)
+        await self._update_dashboard_content(workflow, user_id)
         
         # Create version
-        self._create_workflow_version(workflow, user_id)
+        await self._create_workflow_version(workflow, user_id)
         
-        self.db.commit()
+        await self.db.commit()
         return component
     
-    def add_alert_thread_component(
+    async def add_alert_thread_component(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -162,16 +164,18 @@ class DashboardWorkflowService(BaseService):
         Add an alert as a thread message component to the dashboard workflow
         """
         
-        workflow = self._get_workflow(workflow_id, user_id)
+        workflow = await self._get_workflow(workflow_id, user_id)
         
         # Validate state
         if workflow.state not in [WorkflowState.DRAFT, WorkflowState.CONFIGURING]:
             raise ValueError(f"Cannot add alert components in {workflow.state} state")
         
         # Get next sequence order
-        max_order = self.db.query(func.max(ThreadComponent.sequence_order)).filter(
+        stmt = select(func.max(ThreadComponent.sequence_order)).where(
             ThreadComponent.workflow_id == workflow_id
-        ).scalar() or 0
+        )
+        result = await self.db.execute(stmt)
+        max_order = result.scalar() or 0
         
         # Create alert configuration
         alert_config = {
@@ -209,15 +213,15 @@ class DashboardWorkflowService(BaseService):
             workflow.current_step = 2
         
         # Update dashboard content
-        self._update_dashboard_content(workflow, user_id)
+        await self._update_dashboard_content(workflow, user_id)
         
         # Create version
-        self._create_workflow_version(workflow, user_id)
+        await self._create_workflow_version(workflow, user_id)
         
-        self.db.commit()
+        await self.db.commit()
         return component
     
-    def configure_thread_component(
+    async def configure_thread_component(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -228,15 +232,17 @@ class DashboardWorkflowService(BaseService):
         Step 3: Configure individual thread message components
         """
         
-        workflow = self._get_workflow(workflow_id, user_id)
+        workflow = await self._get_workflow(workflow_id, user_id)
         
         # Get component
-        component = self.db.query(ThreadComponent).filter(
+        stmt = select(ThreadComponent).where(
             and_(
                 ThreadComponent.id == component_id,
                 ThreadComponent.workflow_id == workflow_id
             )
-        ).first()
+        )
+        result = await self.db.execute(stmt)
+        component = result.scalar_one_or_none()
         
         if not component:
             raise ValueError(f"Component {component_id} not found")
@@ -247,27 +253,29 @@ class DashboardWorkflowService(BaseService):
         component.updated_at = datetime.utcnow()
         
         # Check if all components are configured
-        all_configured = self.db.query(ThreadComponent).filter(
+        stmt = select(ThreadComponent).where(
             and_(
                 ThreadComponent.workflow_id == workflow_id,
                 ThreadComponent.is_configured == False
             )
-        ).count() == 0
+        )
+        result = await self.db.execute(stmt)
+        all_configured = result.scalars().count() == 0
         
         if all_configured and workflow.state == WorkflowState.CONFIGURING:
             workflow.state = WorkflowState.CONFIGURED
             workflow.current_step = 3
         
         # Update dashboard
-        self._update_dashboard_content(workflow, user_id)
+        await self._update_dashboard_content(workflow, user_id)
         
         # Create version
-        self._create_workflow_version(workflow, user_id)
+        await self._create_workflow_version(workflow, user_id)
         
-        self.db.commit()
+        await self.db.commit()
         return component
     
-    def update_alert_thread_component(
+    async def update_alert_thread_component(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -278,16 +286,18 @@ class DashboardWorkflowService(BaseService):
         Update an existing alert thread component
         """
         
-        workflow = self._get_workflow(workflow_id, user_id)
+        workflow = await self._get_workflow(workflow_id, user_id)
         
         # Get component
-        component = self.db.query(ThreadComponent).filter(
+        stmt = select(ThreadComponent).where(
             and_(
                 ThreadComponent.id == component_id,
                 ThreadComponent.workflow_id == workflow_id,
                 ThreadComponent.component_type == ComponentType.ALERT
             )
-        ).first()
+        )
+        result = await self.db.execute(stmt)
+        component = result.scalar_one_or_none()
         
         if not component:
             raise ValueError(f"Alert component {component_id} not found")
@@ -340,15 +350,15 @@ class DashboardWorkflowService(BaseService):
         component.updated_at = datetime.utcnow()
         
         # Update dashboard content
-        self._update_dashboard_content(workflow, user_id)
+        await self._update_dashboard_content(workflow, user_id)
         
         # Create version
-        self._create_workflow_version(workflow, user_id)
+        await self._create_workflow_version(workflow, user_id)
         
-        self.db.commit()
+        await self.db.commit()
         return component
     
-    def test_alert_thread_component(
+    async def test_alert_thread_component(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -359,23 +369,25 @@ class DashboardWorkflowService(BaseService):
         Test an alert thread component with sample data
         """
         
-        workflow = self._get_workflow(workflow_id, user_id)
+        workflow = await self._get_workflow(workflow_id, user_id)
         
         # Get alert component
-        component = self.db.query(ThreadComponent).filter(
+        stmt = select(ThreadComponent).where(
             and_(
                 ThreadComponent.id == component_id,
                 ThreadComponent.workflow_id == workflow_id,
                 ThreadComponent.component_type == ComponentType.ALERT
             )
-        ).first()
+        )
+        result = await self.db.execute(stmt)
+        component = result.scalar_one_or_none()
         
         if not component:
             raise ValueError(f"Alert component {component_id} not found")
         
         # Test the alert condition
         try:
-            test_result = self._evaluate_alert_condition(component, test_data or {})
+            test_result = await self._evaluate_alert_condition(component, test_data or {})
             
             return {
                 "success": True,
@@ -393,7 +405,7 @@ class DashboardWorkflowService(BaseService):
                 "message": "Failed to evaluate alert condition"
             }
     
-    def trigger_alert_thread_component(
+    async def trigger_alert_thread_component(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -404,16 +416,18 @@ class DashboardWorkflowService(BaseService):
         Manually trigger an alert thread component for testing
         """
         
-        workflow = self._get_workflow(workflow_id, user_id)
+        workflow = await self._get_workflow(workflow_id, user_id)
         
         # Get alert component
-        component = self.db.query(ThreadComponent).filter(
+        stmt = select(ThreadComponent).where(
             and_(
                 ThreadComponent.id == component_id,
                 ThreadComponent.workflow_id == workflow_id,
                 ThreadComponent.component_type == ComponentType.ALERT
             )
-        ).first()
+        )
+        result = await self.db.execute(stmt)
+        component = result.scalar_one_or_none()
         
         if not component:
             raise ValueError(f"Alert component {component_id} not found")
@@ -431,14 +445,14 @@ class DashboardWorkflowService(BaseService):
         
         # Trigger the alert
         try:
-            trigger_result = self._execute_alert_notifications(component, trigger_data or {})
+            trigger_result = await self._execute_alert_notifications(component, trigger_data or {})
             
             # Update alert status
             component.last_triggered = datetime.utcnow()
             component.trigger_count += 1
             component.alert_status = AlertStatus.TRIGGERED
             
-            self.db.commit()
+            await self.db.commit()
             
             return {
                 "success": True,
@@ -456,7 +470,7 @@ class DashboardWorkflowService(BaseService):
                 "message": "Failed to trigger alert"
             }
     
-    def update_thread_component(
+    async def update_thread_component(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -467,14 +481,16 @@ class DashboardWorkflowService(BaseService):
         Update existing thread component
         """
         
-        workflow = self._get_workflow(workflow_id, user_id)
+        workflow = await self._get_workflow(workflow_id, user_id)
         
-        component = self.db.query(ThreadComponent).filter(
+        stmt = select(ThreadComponent).where(
             and_(
                 ThreadComponent.id == component_id,
                 ThreadComponent.workflow_id == workflow_id
             )
-        ).first()
+        )
+        result = await self.db.execute(stmt)
+        component = result.scalar_one_or_none()
         
         if not component:
             raise ValueError(f"Component {component_id} not found")
@@ -486,15 +502,15 @@ class DashboardWorkflowService(BaseService):
         component.updated_at = datetime.utcnow()
         
         # Update dashboard
-        self._update_dashboard_content(workflow, user_id)
+        await self._update_dashboard_content(workflow, user_id)
         
         # Create version
-        self._create_workflow_version(workflow, user_id)
+        await self._create_workflow_version(workflow, user_id)
         
-        self.db.commit()
+        await self.db.commit()
         return component
     
-    def configure_sharing(
+    async def configure_sharing(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -504,7 +520,7 @@ class DashboardWorkflowService(BaseService):
         Step 4: Configure sharing settings
         """
         
-        workflow = self._get_workflow(workflow_id, user_id)
+        workflow = await self._get_workflow(workflow_id, user_id)
         
         # Validate state
         if workflow.state not in [WorkflowState.CONFIGURED, WorkflowState.SHARING]:
@@ -529,22 +545,22 @@ class DashboardWorkflowService(BaseService):
             
             # Send notification based on share type
             if share_config.share_type == ShareType.EMAIL:
-                self._send_email_invitation(target_id, workflow, user_id)
+                await self._send_email_invitation(target_id, workflow, user_id)
         
         # Update workflow state
         workflow.state = WorkflowState.SHARED
         workflow.current_step = 5
         
         # Update dashboard sharing
-        self._apply_sharing_to_dashboard(workflow, share_configs, user_id)
+        await self._apply_sharing_to_dashboard(workflow, share_configs, user_id)
         
         # Create version
-        self._create_workflow_version(workflow, user_id)
+        await self._create_workflow_version(workflow, user_id)
         
-        self.db.commit()
+        await self.db.commit()
         return share_configs
     
-    def configure_schedule(
+    async def configure_schedule(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -554,7 +570,7 @@ class DashboardWorkflowService(BaseService):
         Step 5: Configure scheduling
         """
         
-        workflow = self._get_workflow(workflow_id, user_id)
+        workflow = await self._get_workflow(workflow_id, user_id)
         
         # Validate state
         if workflow.state not in [WorkflowState.SHARED, WorkflowState.SCHEDULING]:
@@ -566,9 +582,11 @@ class DashboardWorkflowService(BaseService):
             workflow.current_step = 6
         
         # Create or update schedule configuration
-        schedule = self.db.query(ScheduleConfiguration).filter(
+        stmt = select(ScheduleConfiguration).where(
             ScheduleConfiguration.workflow_id == workflow_id
-        ).first()
+        )
+        result = await self.db.execute(stmt)
+        schedule = result.scalar_one_or_none()
         
         if not schedule:
             schedule = ScheduleConfiguration(
@@ -591,19 +609,19 @@ class DashboardWorkflowService(BaseService):
             schedule.updated_at = datetime.utcnow()
         
         # Calculate next run time
-        schedule.next_run = self._calculate_next_run(schedule)
+        schedule.next_run = await self._calculate_next_run(schedule)
         
         # Update workflow state
         workflow.state = WorkflowState.SCHEDULED
         workflow.current_step = 7
         
         # Create version
-        self._create_workflow_version(workflow, user_id)
+        await self._create_workflow_version(workflow, user_id)
         
-        self.db.commit()
+        await self.db.commit()
         return schedule
     
-    def configure_integrations(
+    async def configure_integrations(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -613,7 +631,7 @@ class DashboardWorkflowService(BaseService):
         Step 6: Configure integrations for publishing
         """
         
-        workflow = self._get_workflow(workflow_id, user_id)
+        workflow = await self._get_workflow(workflow_id, user_id)
         
         # Validate state
         if workflow.state not in [WorkflowState.SCHEDULED, WorkflowState.PUBLISHING]:
@@ -628,7 +646,7 @@ class DashboardWorkflowService(BaseService):
         
         for config_data in integration_configs:
             # Encrypt sensitive connection data
-            encrypted_config = self._encrypt_connection_config(config_data.connection_config)
+            encrypted_config = await self._encrypt_connection_config(config_data.connection_config)
             
             integration = IntegrationConfig(
                 workflow_id=workflow_id,
@@ -642,12 +660,12 @@ class DashboardWorkflowService(BaseService):
             integrations.append(integration)
         
         # Create version
-        self._create_workflow_version(workflow, user_id)
+        await self._create_workflow_version(workflow, user_id)
         
-        self.db.commit()
+        await self.db.commit()
         return integrations
     
-    def publish_dashboard(
+    async def publish_dashboard(
         self,
         user_id: UUID,
         workflow_id: UUID
@@ -656,27 +674,27 @@ class DashboardWorkflowService(BaseService):
         Step 7: Publish dashboard to all configured integrations
         """
         
-        workflow = self._get_workflow(workflow_id, user_id)
+        workflow = await self._get_workflow(workflow_id, user_id)
         
         # Validate state
         if workflow.state != WorkflowState.PUBLISHING:
             raise ValueError(f"Cannot publish in {workflow.state} state")
         
         # Get dashboard
-        dashboard = self.db.query(Dashboard).filter(
-            Dashboard.id == workflow.dashboard_id
-        ).first()
+        stmt = select(Dashboard).where(Dashboard.id == workflow.dashboard_id)
+        result = await self.db.execute(stmt)
+        dashboard = result.scalar_one_or_none()
         
         # Get integrations
-        integrations = self.db.query(IntegrationConfig).filter(
-            IntegrationConfig.workflow_id == workflow_id
-        ).all()
+        stmt = select(IntegrationConfig).where(IntegrationConfig.workflow_id == workflow_id)
+        result = await self.db.execute(stmt)
+        integrations = result.scalars().all()
         
         publish_results = {}
         
         for integration in integrations:
             try:
-                result = self._publish_to_integration(
+                result = await self._publish_to_integration(
                     dashboard,
                     integration,
                     workflow
@@ -705,26 +723,34 @@ class DashboardWorkflowService(BaseService):
         workflow.completed_at = datetime.utcnow()
         
         # Create final version
-        self._create_workflow_version(workflow, user_id)
+        await self._create_workflow_version(workflow, user_id)
         
         # Create n8n workflow automatically when dashboard becomes active
         try:
             # Get all components, share configs, schedule, and integrations
-            components = self.db.query(ThreadComponent).filter(
+            stmt = select(ThreadComponent).where(
                 ThreadComponent.workflow_id == workflow_id
-            ).order_by(ThreadComponent.sequence_order).all()
+            ).order_by(ThreadComponent.sequence_order)
+            result = await self.db.execute(stmt)
+            components = result.scalars().all()
             
-            share_configs = self.db.query(ShareConfiguration).filter(
+            stmt = select(ShareConfiguration).where(
                 ShareConfiguration.workflow_id == workflow_id
-            ).all()
+            )
+            result = await self.db.execute(stmt)
+            share_configs = result.scalars().all()
             
-            schedule_config = self.db.query(ScheduleConfiguration).filter(
+            stmt = select(ScheduleConfiguration).where(
                 ScheduleConfiguration.workflow_id == workflow_id
-            ).first()
+            )
+            result = await self.db.execute(stmt)
+            schedule_config = result.scalar_one_or_none()
             
-            integrations = self.db.query(IntegrationConfig).filter(
+            stmt = select(IntegrationConfig).where(
                 IntegrationConfig.workflow_id == workflow_id
-            ).all()
+            )
+            result = await self.db.execute(stmt)
+            integrations = result.scalars().all()
             
             # Generate n8n workflow
             n8n_result = self.n8n_creator.create_dashboard_workflow(
@@ -751,7 +777,7 @@ class DashboardWorkflowService(BaseService):
             }
         
         # Update ChromaDB
-        self._update_chroma(
+        await self._update_chroma(
             self.collection_name,
             str(workflow.id),
             {
@@ -766,7 +792,7 @@ class DashboardWorkflowService(BaseService):
             }
         )
         
-        self.db.commit()
+        await self.db.commit()
         
         return {
             "workflow_id": str(workflow.id),
@@ -776,34 +802,42 @@ class DashboardWorkflowService(BaseService):
             "completed_at": workflow.completed_at.isoformat()
         }
     
-    def get_workflow_state(
+    async def get_workflow_state(
         self,
         user_id: UUID,
         workflow_id: UUID
     ) -> Dict[str, Any]:
         """Get current workflow state and progress"""
         
-        workflow = self._get_workflow(workflow_id, user_id)
+        workflow = await self._get_workflow(workflow_id, user_id)
         
         # Get all components
-        components = self.db.query(ThreadComponent).filter(
+        stmt = select(ThreadComponent).where(
             ThreadComponent.workflow_id == workflow_id
-        ).order_by(ThreadComponent.sequence_order).all()
+        ).order_by(ThreadComponent.sequence_order)
+        result = await self.db.execute(stmt)
+        components = result.scalars().all()
         
         # Get share configs
-        share_configs = self.db.query(ShareConfiguration).filter(
+        stmt = select(ShareConfiguration).where(
             ShareConfiguration.workflow_id == workflow_id
-        ).all()
+        )
+        result = await self.db.execute(stmt)
+        share_configs = result.scalars().all()
         
         # Get schedule
-        schedule = self.db.query(ScheduleConfiguration).filter(
+        stmt = select(ScheduleConfiguration).where(
             ScheduleConfiguration.workflow_id == workflow_id
-        ).first()
+        )
+        result = await self.db.execute(stmt)
+        schedule = result.scalar_one_or_none()
         
         # Get integrations
-        integrations = self.db.query(IntegrationConfig).filter(
+        stmt = select(IntegrationConfig).where(
             IntegrationConfig.workflow_id == workflow_id
-        ).all()
+        )
+        result = await self.db.execute(stmt)
+        integrations = result.scalars().all()
         
         return {
             "workflow_id": str(workflow.id),
@@ -833,7 +867,7 @@ class DashboardWorkflowService(BaseService):
             "completed_at": workflow.completed_at.isoformat() if workflow.completed_at else None
         }
     
-    def rollback_to_version(
+    async def rollback_to_version(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -841,15 +875,17 @@ class DashboardWorkflowService(BaseService):
     ) -> DashboardWorkflow:
         """Rollback workflow to a specific version"""
         
-        workflow = self._get_workflow(workflow_id, user_id)
+        workflow = await self._get_workflow(workflow_id, user_id)
         
         # Get version
-        version = self.db.query(WorkflowVersion).filter(
+        stmt = select(WorkflowVersion).where(
             and_(
                 WorkflowVersion.id == version_id,
                 WorkflowVersion.workflow_id == workflow_id
             )
-        ).first()
+        )
+        result = await self.db.execute(stmt)
+        version = result.scalar_one_or_none()
         
         if not version:
             raise ValueError(f"Version {version_id} not found")
@@ -861,12 +897,12 @@ class DashboardWorkflowService(BaseService):
         workflow.metadata = snapshot["metadata"]
         
         # Create new version for rollback
-        self._create_workflow_version(workflow, user_id, f"Rollback to version {version.version_number}")
+        await self._create_workflow_version(workflow, user_id, f"Rollback to version {version.version_number}")
         
-        self.db.commit()
+        await self.db.commit()
         return workflow
     
-    def create_n8n_workflow(
+    async def create_n8n_workflow(
         self,
         user_id: UUID,
         workflow_id: UUID
@@ -876,12 +912,12 @@ class DashboardWorkflowService(BaseService):
         Useful for re-generating workflows or creating them for dashboards that were active before this feature
         """
         
-        workflow = self._get_workflow(workflow_id, user_id)
+        workflow = await self._get_workflow(workflow_id, user_id)
         
         # Check if dashboard is active
-        dashboard = self.db.query(Dashboard).filter(
-            Dashboard.id == workflow.dashboard_id
-        ).first()
+        stmt = select(Dashboard).where(Dashboard.id == workflow.dashboard_id)
+        result = await self.db.execute(stmt)
+        dashboard = result.scalar_one_or_none()
         
         if not dashboard:
             raise ValueError(f"Dashboard {workflow.dashboard_id} not found")
@@ -890,21 +926,29 @@ class DashboardWorkflowService(BaseService):
             raise ValueError(f"Dashboard {dashboard.id} is not active. Only active dashboards can have n8n workflows.")
         
         # Get all components, share configs, schedule, and integrations
-        components = self.db.query(ThreadComponent).filter(
+        stmt = select(ThreadComponent).where(
             ThreadComponent.workflow_id == workflow_id
-        ).order_by(ThreadComponent.sequence_order).all()
+        ).order_by(ThreadComponent.sequence_order)
+        result = await self.db.execute(stmt)
+        components = result.scalars().all()
         
-        share_configs = self.db.query(ShareConfiguration).filter(
+        stmt = select(ShareConfiguration).where(
             ShareConfiguration.workflow_id == workflow_id
-        ).all()
+        )
+        result = await self.db.execute(stmt)
+        share_configs = result.scalars().all()
         
-        schedule_config = self.db.query(ScheduleConfiguration).filter(
+        stmt = select(ScheduleConfiguration).where(
             ScheduleConfiguration.workflow_id == workflow_id
-        ).first()
+        )
+        result = await self.db.execute(stmt)
+        schedule_config = result.scalar_one_or_none()
         
-        integrations = self.db.query(IntegrationConfig).filter(
+        stmt = select(IntegrationConfig).where(
             IntegrationConfig.workflow_id == workflow_id
-        ).all()
+        )
+        result = await self.db.execute(stmt)
+        integrations = result.scalars().all()
         
         # Generate n8n workflow
         n8n_result = self.n8n_creator.create_dashboard_workflow(
@@ -923,14 +967,14 @@ class DashboardWorkflowService(BaseService):
             "n8n_workflow": n8n_result
         }
     
-    def get_n8n_workflow_status(
+    async def get_n8n_workflow_status(
         self,
         user_id: UUID,
         workflow_id: UUID
     ) -> Dict[str, Any]:
         """Get the status of n8n workflow for a dashboard"""
         
-        workflow = self._get_workflow(workflow_id, user_id)
+        workflow = await self._get_workflow(workflow_id, user_id)
         
         # Check if n8n workflow file exists
         file_path = self.n8n_creator.get_workflow_file_path(
@@ -959,14 +1003,14 @@ class DashboardWorkflowService(BaseService):
         
         return self.n8n_creator.list_workflow_files()
     
-    def delete_n8n_workflow(
+    async def delete_n8n_workflow(
         self,
         user_id: UUID,
         workflow_id: UUID
     ) -> Dict[str, Any]:
         """Delete n8n workflow file for a dashboard"""
         
-        workflow = self._get_workflow(workflow_id, user_id)
+        workflow = await self._get_workflow(workflow_id, user_id)
         
         # Delete the file
         deleted = self.n8n_creator.delete_workflow_file(
@@ -990,29 +1034,31 @@ class DashboardWorkflowService(BaseService):
     
     # Private helper methods
     
-    def _get_workflow(self, workflow_id: UUID, user_id: UUID) -> DashboardWorkflow:
+    async def _get_workflow(self, workflow_id: UUID, user_id: UUID) -> DashboardWorkflow:
         """Get workflow with permission check"""
         
-        workflow = self.db.query(DashboardWorkflow).filter(
-            DashboardWorkflow.id == workflow_id
-        ).first()
+        stmt = select(DashboardWorkflow).where(DashboardWorkflow.id == workflow_id)
+        result = await self.db.execute(stmt)
+        workflow = result.scalar_one_or_none()
         
         if not workflow:
             raise ValueError(f"Workflow {workflow_id} not found")
         
-        if workflow.user_id != user_id and not self._check_user_permission(
+        if workflow.user_id != user_id and not await self._check_user_permission(
             user_id, "dashboard", workflow.dashboard_id, "update"
         ):
             raise PermissionError("User doesn't have access to this workflow")
         
         return workflow
     
-    def _update_dashboard_content(self, workflow: DashboardWorkflow, user_id: UUID):
+    async def _update_dashboard_content(self, workflow: DashboardWorkflow, user_id: UUID):
         """Update dashboard content with thread components"""
         
-        components = self.db.query(ThreadComponent).filter(
+        stmt = select(ThreadComponent).where(
             ThreadComponent.workflow_id == workflow.id
-        ).order_by(ThreadComponent.sequence_order).all()
+        ).order_by(ThreadComponent.sequence_order)
+        result = await self.db.execute(stmt)
+        components = result.scalars().all()
         
         content = {
             "status": workflow.state.value,
@@ -1035,9 +1081,9 @@ class DashboardWorkflowService(BaseService):
             content["components"].append(comp_data)
         
         # Update dashboard
-        dashboard = self.db.query(Dashboard).filter(
-            Dashboard.id == workflow.dashboard_id
-        ).first()
+        stmt = select(Dashboard).where(Dashboard.id == workflow.dashboard_id)
+        result = await self.db.execute(stmt)
+        dashboard = result.scalar_one_or_none()
         
         dashboard.content = content
         dashboard.updated_at = datetime.utcnow()
@@ -1051,7 +1097,7 @@ class DashboardWorkflowService(BaseService):
         self.db.add(version)
         dashboard.version = version.version
     
-    def _create_workflow_version(
+    async def _create_workflow_version(
         self, 
         workflow: DashboardWorkflow, 
         user_id: UUID,
@@ -1060,9 +1106,11 @@ class DashboardWorkflowService(BaseService):
         """Create a version snapshot of the workflow"""
         
         # Get current version number
-        max_version = self.db.query(func.max(WorkflowVersion.version_number)).filter(
+        stmt = select(func.max(WorkflowVersion.version_number)).where(
             WorkflowVersion.workflow_id == workflow.id
-        ).scalar() or 0
+        )
+        result = await self.db.execute(stmt)
+        max_version = result.scalar() or 0
         
         # Create snapshot
         snapshot = {
@@ -1077,9 +1125,11 @@ class DashboardWorkflowService(BaseService):
         }
         
         # Add components to snapshot
-        components = self.db.query(ThreadComponent).filter(
+        stmt = select(ThreadComponent).where(
             ThreadComponent.workflow_id == workflow.id
-        ).all()
+        )
+        result = await self.db.execute(stmt)
+        components = result.scalars().all()
         
         for comp in components:
             snapshot["components"].append({
@@ -1099,7 +1149,7 @@ class DashboardWorkflowService(BaseService):
         )
         self.db.add(version)
     
-    def _apply_sharing_to_dashboard(
+    async def _apply_sharing_to_dashboard(
         self,
         workflow: DashboardWorkflow,
         share_configs: List[ShareConfiguration],
@@ -1128,14 +1178,14 @@ class DashboardWorkflowService(BaseService):
         
         # Update dashboard sharing
         if target_ids:
-            self.dashboard_service.share_dashboard(
+            await self.dashboard_service.share_dashboard(
                 user_id=user_id,
                 dashboard_id=workflow.dashboard_id,
                 share_with=target_ids,
                 permission_level=permission_level
             )
     
-    def _calculate_next_run(self, schedule: ScheduleConfiguration) -> Optional[datetime]:
+    async def _calculate_next_run(self, schedule: ScheduleConfiguration) -> Optional[datetime]:
         """Calculate next run time based on schedule configuration"""
         
         now = datetime.utcnow()
@@ -1159,7 +1209,7 @@ class DashboardWorkflowService(BaseService):
         
         return None
     
-    def _encrypt_connection_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def _encrypt_connection_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Encrypt sensitive connection configuration"""
         # In production, use proper encryption (e.g., Fernet, KMS)
         # This is a placeholder
@@ -1168,7 +1218,7 @@ class DashboardWorkflowService(BaseService):
             "data": json.dumps(config)  # Would be encrypted in production
         }
     
-    def _publish_to_integration(
+    async def _publish_to_integration(
         self,
         dashboard: Dashboard,
         integration: IntegrationConfig,
@@ -1177,18 +1227,18 @@ class DashboardWorkflowService(BaseService):
         """Publish dashboard to specific integration"""
         
         if integration.integration_type == IntegrationType.TABLEAU:
-            return self._publish_to_tableau(dashboard, integration)
+            return await self._publish_to_tableau(dashboard, integration)
         elif integration.integration_type == IntegrationType.POWERBI:
-            return self._publish_to_powerbi(dashboard, integration)
+            return await self._publish_to_powerbi(dashboard, integration)
         elif integration.integration_type == IntegrationType.SLACK:
-            return self._publish_to_slack(dashboard, integration)
+            return await self._publish_to_slack(dashboard, integration)
         elif integration.integration_type == IntegrationType.EMAIL:
-            return self._publish_to_email(dashboard, integration)
+            return await self._publish_to_email(dashboard, integration)
         # Add more integrations as needed
         
         return {"status": "not_implemented"}
     
-    def _publish_to_tableau(self, dashboard: Dashboard, integration: IntegrationConfig) -> Dict[str, Any]:
+    async def _publish_to_tableau(self, dashboard: Dashboard, integration: IntegrationConfig) -> Dict[str, Any]:
         """Publish to Tableau Server/Online"""
         # Placeholder - would use Tableau REST API
         return {
@@ -1197,7 +1247,7 @@ class DashboardWorkflowService(BaseService):
             "status": "published"
         }
     
-    def _publish_to_powerbi(self, dashboard: Dashboard, integration: IntegrationConfig) -> Dict[str, Any]:
+    async def _publish_to_powerbi(self, dashboard: Dashboard, integration: IntegrationConfig) -> Dict[str, Any]:
         """Publish to Power BI"""
         # Placeholder - would use Power BI REST API
         return {
@@ -1207,7 +1257,7 @@ class DashboardWorkflowService(BaseService):
             "status": "published"
         }
     
-    def _publish_to_slack(self, dashboard: Dashboard, integration: IntegrationConfig) -> Dict[str, Any]:
+    async def _publish_to_slack(self, dashboard: Dashboard, integration: IntegrationConfig) -> Dict[str, Any]:
         """Publish to Slack"""
         # Placeholder - would use Slack API
         return {
@@ -1216,7 +1266,7 @@ class DashboardWorkflowService(BaseService):
             "status": "sent"
         }
     
-    def _publish_to_email(self, dashboard: Dashboard, integration: IntegrationConfig) -> Dict[str, Any]:
+    async def _publish_to_email(self, dashboard: Dashboard, integration: IntegrationConfig) -> Dict[str, Any]:
         """Send dashboard via email"""
         # Placeholder - would use email service
         return {
@@ -1225,12 +1275,12 @@ class DashboardWorkflowService(BaseService):
             "status": "sent"
         }
     
-    def _send_email_invitation(self, email: str, workflow: DashboardWorkflow, user_id: UUID):
+    async def _send_email_invitation(self, email: str, workflow: DashboardWorkflow, user_id: UUID):
         """Send email invitation for dashboard sharing"""
         # Placeholder - would use email service
         pass
     
-    def _evaluate_alert_condition(
+    async def _evaluate_alert_condition(
         self,
         component: ThreadComponent,
         data: Dict[str, Any]
@@ -1244,19 +1294,19 @@ class DashboardWorkflowService(BaseService):
         condition_config = alert_config.get("condition_config", {})
         
         if alert_type == "threshold":
-            return self._evaluate_threshold_condition(component, data)
+            return await self._evaluate_threshold_condition(component, data)
         elif alert_type == "anomaly":
-            return self._evaluate_anomaly_condition(component, data)
+            return await self._evaluate_anomaly_condition(component, data)
         elif alert_type == "trend":
-            return self._evaluate_trend_condition(component, data)
+            return await self._evaluate_trend_condition(component, data)
         elif alert_type == "comparison":
-            return self._evaluate_comparison_condition(component, data)
+            return await self._evaluate_comparison_condition(component, data)
         elif alert_type == "schedule":
-            return self._evaluate_schedule_condition(component, data)
+            return await self._evaluate_schedule_condition(component, data)
         else:
             return {"triggered": False, "reason": f"Unknown alert type: {alert_type}"}
     
-    def _evaluate_threshold_condition(
+    async def _evaluate_threshold_condition(
         self,
         component: ThreadComponent,
         data: Dict[str, Any]
@@ -1303,7 +1353,7 @@ class DashboardWorkflowService(BaseService):
             "condition_met": triggered
         }
     
-    def _evaluate_anomaly_condition(
+    async def _evaluate_anomaly_condition(
         self,
         component: ThreadComponent,
         data: Dict[str, Any]
@@ -1346,7 +1396,7 @@ class DashboardWorkflowService(BaseService):
             "anomaly_detected": triggered
         }
     
-    def _evaluate_trend_condition(
+    async def _evaluate_trend_condition(
         self,
         component: ThreadComponent,
         data: Dict[str, Any]
@@ -1376,7 +1426,7 @@ class DashboardWorkflowService(BaseService):
             "trend_detected": triggered
         }
     
-    def _evaluate_comparison_condition(
+    async def _evaluate_comparison_condition(
         self,
         component: ThreadComponent,
         data: Dict[str, Any]
@@ -1426,7 +1476,7 @@ class DashboardWorkflowService(BaseService):
             "condition_met": triggered
         }
     
-    def _evaluate_schedule_condition(
+    async def _evaluate_schedule_condition(
         self,
         component: ThreadComponent,
         data: Dict[str, Any]
@@ -1452,7 +1502,7 @@ class DashboardWorkflowService(BaseService):
             "schedule_matched": triggered
         }
     
-    def _execute_alert_notifications(
+    async def _execute_alert_notifications(
         self,
         component: ThreadComponent,
         data: Dict[str, Any]
@@ -1468,11 +1518,11 @@ class DashboardWorkflowService(BaseService):
         for channel in notification_channels:
             try:
                 if channel == "email":
-                    result = self._send_alert_email(component, data)
+                    result = await self._send_alert_email(component, data)
                 elif channel == "slack":
-                    result = self._send_alert_slack(component, data)
+                    result = await self._send_alert_slack(component, data)
                 elif channel == "webhook":
-                    result = self._send_alert_webhook(component, data)
+                    result = await self._send_alert_webhook(component, data)
                 else:
                     result = {"success": False, "error": f"Unknown channel: {channel}"}
                 
@@ -1482,7 +1532,7 @@ class DashboardWorkflowService(BaseService):
         
         return results
     
-    def _send_alert_email(self, component: ThreadComponent, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _send_alert_email(self, component: ThreadComponent, data: Dict[str, Any]) -> Dict[str, Any]:
         """Send alert notification via email"""
         # Placeholder - would use email service
         return {
@@ -1491,7 +1541,7 @@ class DashboardWorkflowService(BaseService):
             "message": f"Alert '{component.question}' triggered"
         }
     
-    def _send_alert_slack(self, component: ThreadComponent, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _send_alert_slack(self, component: ThreadComponent, data: Dict[str, Any]) -> Dict[str, Any]:
         """Send alert notification via Slack"""
         # Placeholder - would use Slack API
         return {
@@ -1500,7 +1550,7 @@ class DashboardWorkflowService(BaseService):
             "message": f"Alert '{component.question}' triggered"
         }
     
-    def _send_alert_webhook(self, component: ThreadComponent, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _send_alert_webhook(self, component: ThreadComponent, data: Dict[str, Any]) -> Dict[str, Any]:
         """Send alert notification via webhook"""
         # Placeholder - would use HTTP client
         return {

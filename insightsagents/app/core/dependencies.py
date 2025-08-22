@@ -2,7 +2,6 @@
 Dependency injection for persistence services
 """
 
-from typing import AsyncGenerator
 import os
 import chromadb
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
@@ -31,11 +30,23 @@ def get_llm(temperature: float = 0.0, model: str = "gpt-4o-mini"):
         api_key=api_key
     )
 
+def get_chromadb_client():
+    """Get ChromaDB client based on configuration settings."""
+    if settings.CHROMA_USE_LOCAL:
+        # Use local persistent client
+        return chromadb.PersistentClient(path=settings.CHROMA_PERSIST_DIRECTORY)
+    else:
+        # Use HTTP client (default)
+        return chromadb.HttpClient(
+            host=settings.CHROMA_HOST, 
+            port=settings.CHROMA_PORT
+        )
+
 def get_doc_store_provider():
     """Get the document store provider with all SQL-related stores."""
-    # Initialize ChromaDB client
-    client = chromadb.PersistentClient(path=settings.CHROMA_STORE_PATH)
-    #client = chromadb.HttpClient(host='ec2-54-161-71-105.compute-1.amazonaws.com', port=8888)
+    # Initialize ChromaDB client using configuration
+    client = get_chromadb_client()
+    
     # Create document stores for SQL-related collections
     stores = {
         "usage_examples": DocumentChromaStore(persistent_client=client,collection_name="usage_examples_collection"),
@@ -82,14 +93,6 @@ async def get_async_db_session():
         yield session
 
 
-
-
-def get_chromadb_client():
-    """Get ChromaDB persistent client"""
-    chroma_store_path = os.getenv("CHROMA_STORE_PATH", "./chroma_db")
-    return chromadb.PersistentClient(path=chroma_store_path)
-
-
 def get_embeddings():
     """Get OpenAI embeddings instance"""
     api_key = os.getenv("OPENAI_API_KEY")
@@ -98,7 +101,7 @@ def get_embeddings():
     
     return OpenAIEmbeddings(
         model="text-embedding-3-small",
-        openai_api_key=api_key
+        api_key=api_key
     )
 
 

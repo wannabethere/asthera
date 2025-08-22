@@ -2,8 +2,8 @@ from typing import Optional, List, Dict, Any, Union
 from uuid import UUID
 import uuid
 from datetime import datetime
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import and_, or_, func, select
 from app.services.baseservice import BaseService, SharingPermission
 from app.models.dbmodels import Report, ReportVersion
 from app.models.thread import Thread, Workflow
@@ -13,11 +13,11 @@ from app.models.schema import ReportCreate, ReportUpdate, ReportResponse
 class ReportService(BaseService):
     """Service for managing reports with workflow integration"""
     
-    def __init__(self, db: Session, chroma_client=None):
+    def __init__(self, db: AsyncSession, chroma_client=None):
         super().__init__(db, chroma_client)
         self.collection_name = "reports"
     
-    def create_report(
+    async def create_report(
         self,
         user_id: UUID,
         report_data: ReportCreate,
@@ -30,24 +30,25 @@ class ReportService(BaseService):
         """Create a new report with optional workflow association"""
         
         # Check permissions if project/workspace specified
-        if project_id and not self._check_user_permission(
+        if project_id and not await self._check_user_permission(
             user_id, "project", project_id, "create"
         ):
             raise PermissionError("User doesn't have permission to create report in this project")
         
-        if workspace_id and not self._check_user_permission(
+        if workspace_id and not await self._check_user_permission(
             user_id, "workspace", workspace_id, "create"
         ):
             raise PermissionError("User doesn't have permission to create report in this workspace")
         
         # Validate workflow exists and user has access
         if workflow_id:
-            workflow = self.db.query(Workflow).filter(
-                Workflow.id == workflow_id
-            ).first()
+            stmt = select(Workflow).where(Workflow.id == workflow_id)
+            result = await self.db.execute(stmt)
+            workflow = result.scalar_one_or_none()
+            
             if not workflow:
                 raise ValueError(f"Workflow {workflow_id} not found")
-            if workflow.user_id != user_id and not self._check_user_permission(
+            if workflow.user_id != user_id and not await self._check_user_permission(
                 user_id, "thread", workflow.thread_id, "read"
             ):
                 raise PermissionError("User doesn't have access to this workflow")
@@ -63,7 +64,7 @@ class ReportService(BaseService):
         )
         
         self.db.add(report)
-        self.db.flush()
+        await self.db.flush()
         
         # Create initial version
         version = ReportVersion(
@@ -84,7 +85,7 @@ class ReportService(BaseService):
         }
         
         # Add to ChromaDB for searchability
-        self._add_to_chroma(
+        await self._add_to_chroma(
             self.collection_name,
             str(report.id),
             {
@@ -96,26 +97,26 @@ class ReportService(BaseService):
             metadata
         )
         
-        self.db.commit()
+        await self.db.commit()
         return report
     
-    def get_report(
+    async def get_report(
         self,
         user_id: UUID,
         report_id: UUID
     ) -> Optional[Report]:
         """Get report by ID with permission check"""
         
-        report = self.db.query(Report).filter(
-            Report.id == report_id
-        ).first()
+        stmt = select(Report).where(Report.id == report_id)
+        result = await self.db.execute(stmt)
+        report = result.scalar_one_or_none()
         
         if not report:
             return None
         
         # Check permissions via ChromaDB metadata
-        collection = self._create_chroma_collection(self.collection_name)
-        result = collection.get(ids=[str(report_id)])
+        collection = await self._create_chroma_collection(self.collection_name)
+        result = await collection.get(ids=[str(report_id)])
         
         if not result["ids"]:
             return None
@@ -123,12 +124,12 @@ class ReportService(BaseService):
         metadata = result["metadatas"][0]
         
         # Check access permissions
-        if not self._has_report_access(user_id, metadata):
+        if not await self._has_report_access(user_id, metadata):
             raise PermissionError("User doesn't have access to this report")
         
         return report
     
-    def update_report(
+    async def update_report(
         self,
         user_id: UUID,
         report_id: UUID,
@@ -137,16 +138,16 @@ class ReportService(BaseService):
     ) -> Report:
         """Update report with optional versioning"""
         
-        report = self.get_report(user_id, report_id)
+        report = await self.get_report(user_id, report_id)
         if not report:
             raise ValueError(f"Report {report_id} not found")
         
         # Check update permission
-        collection = self._create_chroma_collection(self.collection_name)
-        result = collection.get(ids=[str(report_id)])
+        collection = await self._create_chroma_collection(self.collection_name)
+        result = await collection.get(ids=[str(report_id)])
         metadata = result["metadatas"][0]
         
-        if metadata["created_by"] != str(user_id) and not self._check_user_permission(
+        if metadata["created_by"] != str(user_id) and not await self._check_user_permission(
             user_id, "report", report_id, "update"
         ):
             raise PermissionError("User doesn't have permission to update this report")
@@ -171,7 +172,7 @@ class ReportService(BaseService):
         report.updated_at = datetime.utcnow()
         
         # Update ChromaDB
-        self._update_chroma(
+        await self._update_chroma(
             self.collection_name,
             str(report_id),
             {
@@ -183,40 +184,40 @@ class ReportService(BaseService):
             metadata
         )
         
-        self.db.commit()
+        await self.db.commit()
         return report
     
-    def delete_report(
+    async def delete_report(
         self,
         user_id: UUID,
         report_id: UUID
     ) -> bool:
         """Delete report with permission check"""
         
-        report = self.get_report(user_id, report_id)
+        report = await self.get_report(user_id, report_id)
         if not report:
             return False
         
         # Check delete permission
-        collection = self._create_chroma_collection(self.collection_name)
-        result = collection.get(ids=[str(report_id)])
+        collection = await self._create_chroma_collection(self.collection_name)
+        result = await collection.get(ids=[str(report_id)])
         metadata = result["metadatas"][0]
         
-        if metadata["created_by"] != str(user_id) and not self._check_user_permission(
+        if metadata["created_by"] != str(user_id) and not await self._check_user_permission(
             user_id, "report", report_id, "delete"
         ):
             raise PermissionError("User doesn't have permission to delete this report")
         
         # Delete from ChromaDB
-        self._delete_from_chroma(self.collection_name, str(report_id))
+        await self._delete_from_chroma(self.collection_name, str(report_id))
         
         # Delete from PostgreSQL (versions will cascade)
         self.db.delete(report)
-        self.db.commit()
+        await self.db.commit()
         
         return True
     
-    def search_reports(
+    async def search_reports(
         self,
         user_id: UUID,
         query: str,
@@ -241,7 +242,7 @@ class ReportService(BaseService):
             filters["type"] = report_type
         
         # Search in ChromaDB
-        results = self._search_chroma(
+        results = await self._search_chroma(
             self.collection_name,
             query,
             filters,
@@ -251,11 +252,11 @@ class ReportService(BaseService):
         # Filter by permissions
         accessible_results = []
         for result in results:
-            if self._has_report_access(user_id, result["metadata"]):
+            if await self._has_report_access(user_id, result["metadata"]):
                 report_id = UUID(result["id"])
-                report = self.db.query(Report).filter(
-                    Report.id == report_id
-                ).first()
+                stmt = select(Report).where(Report.id == report_id)
+                result = await self.db.execute(stmt)
+                report = result.scalar_one_or_none()
                 if report:
                     accessible_results.append({
                         "report": report,
@@ -267,7 +268,7 @@ class ReportService(BaseService):
         
         return accessible_results
     
-    def list_user_reports(
+    async def list_user_reports(
         self,
         user_id: UUID,
         workspace_id: Optional[UUID] = None,
@@ -279,7 +280,7 @@ class ReportService(BaseService):
         """List reports accessible to user with pagination"""
         
         # Get all reports from ChromaDB with metadata
-        collection = self._create_chroma_collection(self.collection_name)
+        collection = await self._create_chroma_collection(self.collection_name)
         
         # Build filter
         where_clause = {}
@@ -289,7 +290,7 @@ class ReportService(BaseService):
             where_clause["project_id"] = str(project_id)
         
         # Get all matching documents
-        all_results = collection.get(where=where_clause) if where_clause else collection.get()
+        all_results = await collection.get(where=where_clause) if where_clause else collection.get()
         
         # Filter by access permissions
         accessible_reports = []
@@ -297,11 +298,11 @@ class ReportService(BaseService):
             metadata = all_results["metadatas"][i]
             
             # Check if user has access
-            if self._has_report_access(user_id, metadata, include_shared):
+            if await self._has_report_access(user_id, metadata, include_shared):
                 report_id = UUID(doc_id)
-                report = self.db.query(Report).filter(
-                    Report.id == report_id
-                ).first()
+                stmt = select(Report).where(Report.id == report_id)
+                result = await self.db.execute(stmt)
+                report = result.scalar_one_or_none()
                 if report:
                     accessible_reports.append({
                         "report": report,
@@ -322,7 +323,7 @@ class ReportService(BaseService):
             "total_pages": (total_count + page_size - 1) // page_size
         }
     
-    def share_report(
+    async def share_report(
         self,
         user_id: UUID,
         report_id: UUID,
@@ -332,8 +333,8 @@ class ReportService(BaseService):
         """Share report with users/teams/workspace"""
         
         # Get report and check ownership
-        collection = self._create_chroma_collection(self.collection_name)
-        result = collection.get(ids=[str(report_id)])
+        collection = await self._create_chroma_collection(self.collection_name)
+        result = await collection.get(ids=[str(report_id)])
         
         if not result["ids"]:
             raise ValueError(f"Report {report_id} not found")
@@ -348,11 +349,13 @@ class ReportService(BaseService):
         metadata["shared_with"] = [str(uid) for uid in share_with]
         
         # Update in ChromaDB
-        report = self.db.query(Report).filter(
-            Report.id == report_id
-        ).first()
+        report = await self.db.execute(select(Report).where(Report.id == report_id))
+        report = report.scalar_one_or_none()
         
-        self._update_chroma(
+        if not report:
+            raise ValueError(f"Report {report_id} not found")
+        
+        await self._update_chroma(
             self.collection_name,
             str(report_id),
             {
@@ -366,7 +369,7 @@ class ReportService(BaseService):
         
         return True
     
-    def generate_report_from_workflow(
+    async def generate_report_from_workflow(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -375,26 +378,26 @@ class ReportService(BaseService):
         """Generate a report from workflow data"""
         
         # Get workflow and thread data
-        workflow = self.db.query(Workflow).filter(
-            Workflow.id == workflow_id
-        ).first()
+        stmt = select(Workflow).where(Workflow.id == workflow_id)
+        result = await self.db.execute(stmt)
+        workflow = result.scalar_one_or_none()
         
         if not workflow:
             raise ValueError(f"Workflow {workflow_id} not found")
         
         # Check access to workflow
-        if workflow.user_id != user_id and not self._check_user_permission(
+        if workflow.user_id != user_id and not await self._check_user_permission(
             user_id, "thread", workflow.thread_id, "read"
         ):
             raise PermissionError("User doesn't have access to this workflow")
         
         # Get thread and messages
-        thread = self.db.query(Thread).filter(
-            Thread.id == workflow.thread_id
-        ).first()
+        stmt = select(Thread).where(Thread.id == workflow.thread_id)
+        result = await self.db.execute(stmt)
+        thread = result.scalar_one_or_none()
         
         # Generate report content from workflow
-        report_content = self._generate_report_content(workflow, thread, report_template)
+        report_content = await self._generate_report_content(workflow, thread, report_template)
         
         # Create report
         report_data = ReportCreate(
@@ -405,14 +408,14 @@ class ReportService(BaseService):
             content=report_content
         )
         
-        return self.create_report(
+        return await self.create_report(
             user_id=user_id,
             report_data=report_data,
             workflow_id=workflow_id,
             project_id=thread.project_id if thread else None
         )
     
-    def _generate_report_content(
+    async def _generate_report_content(
         self,
         workflow: Workflow,
         thread: Thread,
@@ -464,7 +467,7 @@ class ReportService(BaseService):
         
         return report_content
     
-    def _has_report_access(
+    async def _has_report_access(
         self,
         user_id: UUID,
         metadata: Dict[str, Any],
@@ -495,12 +498,14 @@ class ReportService(BaseService):
         # Check workspace/project membership
         if sharing == SharingPermission.WORKSPACE.value and metadata.get("workspace_id"):
             from app.models.workspace import WorkspaceAccess
-            access = self.db.query(WorkspaceAccess).filter(
+            stmt = select(WorkspaceAccess).where(
                 and_(
                     WorkspaceAccess.workspace_id == UUID(metadata["workspace_id"]),
                     WorkspaceAccess.user_id == user_id
                 )
-            ).first()
+            )
+            result = await self.db.execute(stmt)
+            access = result.scalar_one_or_none()
             return access is not None
         
         # Check team membership
@@ -508,12 +513,14 @@ class ReportService(BaseService):
             from app.models.team import team_memberships
             shared_team_ids = metadata.get("shared_with", [])
             if shared_team_ids:
-                membership = self.db.query(team_memberships).filter(
+                stmt = select(team_memberships).where(
                     and_(
                         team_memberships.c.user_id == user_id,
                         team_memberships.c.team_id.in_([UUID(tid) for tid in shared_team_ids])
                     )
-                ).first()
+                )
+                result = await self.db.execute(stmt)
+                membership = result.scalar_one_or_none()
                 return membership is not None
         
         return False

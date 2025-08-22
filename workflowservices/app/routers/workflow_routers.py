@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, List, Dict, Any
 from uuid import UUID
 from datetime import datetime
 
-from app.models.dbmodels import get_db
+from app.core.dependencies import get_async_db_session
 from app.services.workflow_orchestrator import WorkflowOrchestrator, WorkflowType
 from app.models.workflowmodels import (
     WorkflowState, ThreadComponentCreate, ShareConfigCreate,
@@ -27,7 +27,7 @@ async def create_dashboard_workflow(
     project_id: Optional[UUID] = None,
     workspace_id: Optional[UUID] = None,
     metadata: Optional[Dict[str, Any]] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -58,7 +58,7 @@ async def create_report_workflow(
     project_id: Optional[UUID] = None,
     workspace_id: Optional[UUID] = None,
     workflow_id: Optional[UUID] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -89,7 +89,7 @@ async def add_dashboard_component(
     workflow_id: UUID,
     component: ThreadComponentCreate,
     thread_message_id: Optional[UUID] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -118,7 +118,7 @@ async def configure_dashboard_component(
     workflow_id: UUID,
     component_id: UUID,
     configuration: Dict[str, Any],
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -145,7 +145,7 @@ async def configure_dashboard_component(
 async def configure_dashboard_sharing(
     workflow_id: UUID,
     share_config: ShareConfigCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -170,7 +170,7 @@ async def configure_dashboard_sharing(
 async def schedule_dashboard(
     workflow_id: UUID,
     schedule_config: ScheduleConfigCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -195,7 +195,7 @@ async def schedule_dashboard(
 async def configure_dashboard_integrations(
     workflow_id: UUID,
     integrations: List[IntegrationConfigCreate],
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -220,7 +220,7 @@ async def configure_dashboard_integrations(
 async def publish_dashboard(
     workflow_id: UUID,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -252,7 +252,7 @@ async def add_report_section(
     workflow_id: UUID,
     section_type: str,
     section_config: Dict[str, Any],
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """Add a section to the report"""
@@ -276,7 +276,7 @@ async def add_report_section(
 async def configure_report_data_sources(
     workflow_id: UUID,
     data_sources: List[Dict[str, Any]],
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """Configure data sources for the report"""
@@ -297,7 +297,7 @@ async def configure_report_data_sources(
 async def preview_report(
     workflow_id: UUID,
     format_type: str = Query(default="html", regex="^(html|pdf)$"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """Generate a preview of the report"""
@@ -320,7 +320,7 @@ async def preview_report(
 async def execute_batch_steps(
     workflow_id: UUID,
     steps: List[Dict[str, Any]],
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -350,7 +350,7 @@ async def execute_batch_steps(
 @router.get("/{workflow_id}/status")
 async def get_workflow_status(
     workflow_id: UUID,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """Get the current status and progress of a workflow"""
@@ -370,7 +370,7 @@ async def list_workflows(
     workflow_type: Optional[WorkflowType] = None,
     state: Optional[WorkflowState] = None,
     limit: int = Query(default=20, le=100),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """List all workflows for the current user"""
@@ -389,7 +389,7 @@ async def list_workflows(
 async def cancel_workflow(
     workflow_id: UUID,
     reason: Optional[str] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """Cancel an active workflow"""
@@ -411,7 +411,7 @@ async def cancel_workflow(
 @router.post("/{workflow_id}/resume")
 async def resume_workflow(
     workflow_id: UUID,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """Resume a paused or failed workflow"""
@@ -429,7 +429,7 @@ async def resume_workflow(
 
 @router.post("/example/complete-dashboard-workflow")
 async def example_complete_dashboard_workflow(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -560,7 +560,7 @@ async def example_complete_dashboard_workflow(
 @router.post("/scheduled/run")
 async def run_scheduled_workflows(
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_async_db_session)
 ):
     """
     Trigger execution of all due scheduled workflows
@@ -575,7 +575,7 @@ async def run_scheduled_workflows(
 @router.post("/{workflow_id}/n8n/create")
 async def create_n8n_workflow(
     workflow_id: UUID,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -594,7 +594,7 @@ async def create_n8n_workflow(
 @router.get("/{workflow_id}/n8n/status")
 async def get_n8n_workflow_status(
     workflow_id: UUID,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -612,7 +612,7 @@ async def get_n8n_workflow_status(
 
 @router.get("/n8n/workflows")
 async def list_all_n8n_workflows(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -628,7 +628,7 @@ async def list_all_n8n_workflows(
 @router.delete("/{workflow_id}/n8n/delete")
 async def delete_n8n_workflow(
     workflow_id: UUID,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -650,7 +650,7 @@ async def delete_n8n_workflow(
 async def add_alert_thread_component(
     workflow_id: UUID,
     alert_data: AlertThreadComponentCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -672,7 +672,7 @@ async def update_alert_thread_component(
     workflow_id: UUID,
     component_id: UUID,
     update_data: AlertThreadComponentUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -695,7 +695,7 @@ async def test_alert_thread_component(
     workflow_id: UUID,
     component_id: UUID,
     test_data: Dict[str, Any] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -718,7 +718,7 @@ async def trigger_alert_thread_component(
     workflow_id: UUID,
     component_id: UUID,
     trigger_data: Dict[str, Any] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -742,7 +742,7 @@ async def trigger_alert_thread_component(
 async def add_report_alert_thread_component(
     workflow_id: UUID,
     alert_data: AlertThreadComponentCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -764,7 +764,7 @@ async def update_report_alert_thread_component(
     workflow_id: UUID,
     component_id: UUID,
     update_data: AlertThreadComponentUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -785,7 +785,7 @@ async def update_report_alert_thread_component(
 @router.get("/reports/{workflow_id}/alerts")
 async def get_report_alert_thread_components(
     workflow_id: UUID,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -805,7 +805,7 @@ async def get_report_alert_thread_components(
 async def delete_report_alert_thread_component(
     workflow_id: UUID,
     component_id: UUID,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -827,7 +827,7 @@ async def test_report_alert_thread_component(
     workflow_id: UUID,
     component_id: UUID,
     test_data: Dict[str, Any] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """
@@ -850,7 +850,7 @@ async def trigger_report_alert_thread_component(
     workflow_id: UUID,
     component_id: UUID,
     trigger_data: Dict[str, Any] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
     """

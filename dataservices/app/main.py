@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse
 import asyncio
 import json
 
-#from app.routers.instruction_router import router as instruction_router
+from app.routers.instruction_router import router as instruction_router
 from app.routers.example_router import router as example_router
 from app.routers.knowledge_base_router import router as knowledge_base_router
 from app.routers.project_workflow import router as project_workflow_router
@@ -11,6 +11,7 @@ from app.routers.sql_functions_routers import router as sql_functions_router
 from app.routers.semantics import router as semantics_router
 from app.routers.relationships import router as relationships_router
 from app.routers.recommendations import router as recommendations_router
+from app.routers.relationship_workflow import router as relationship_workflow_router
 from app.utils.cache import set_cache_provider, InMemoryCacheProvider
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
@@ -38,7 +39,7 @@ app = FastAPI(title="Data Services API", version="1.0.0",
 
 load_dotenv()
 
-#app.include_router(instruction_router, prefix="/instructions", tags=["Instructions"])
+app.include_router(instruction_router, prefix="/instructions", tags=["Instructions"])
 app.include_router(example_router, prefix="/examples", tags=["Examples"])
 app.include_router(
     knowledge_base_router, prefix="/knowledge-bases", tags=["Knowledge Base"]
@@ -49,6 +50,7 @@ app.include_router(sql_functions_router, prefix="/sql-functions", tags=["SQL Fun
 app.include_router(semantics_router, prefix="/semantics", tags=["Semantics"])
 app.include_router(relationships_router, prefix="/relationships", tags=["Relationships"])
 app.include_router(recommendations_router, prefix="/recommendations", tags=["Recommendations"])
+app.include_router(relationship_workflow_router, prefix="/workflow/relationships", tags=["Relationship Workflow"])
 
 
 @app.get("/")

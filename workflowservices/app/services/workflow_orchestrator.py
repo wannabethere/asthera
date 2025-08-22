@@ -1,10 +1,14 @@
 from typing import Optional, List, Dict, Any, Union
 from uuid import UUID
 import uuid
-from datetime import datetime
-from sqlalchemy.orm import Session
+from datetime import datetime, timezone
+from sqlalchemy.ext.asyncio import AsyncSession
 import asyncio
 from enum import Enum
+
+def utc_now():
+    """Get current UTC datetime for SQLAlchemy defaults"""
+    return datetime.now(timezone.utc)
 
 from app.services.dashboard_workflow import DashboardWorkflowService
 from app.services.report_workflow import ReportWorkflowService
@@ -13,7 +17,7 @@ from app.models.workflowmodels import (
     WorkflowState, ComponentType, ShareType, ScheduleType, IntegrationType,
     ThreadComponentCreate, ShareConfigCreate, ScheduleConfigCreate,
     IntegrationConfigCreate, DashboardWorkflow, ReportWorkflow,
-    AlertThreadComponentCreate, AlertThreadComponentUpdate
+    ThreadComponent, AlertThreadComponentCreate, AlertThreadComponentUpdate
 )
 
 class WorkflowType(str, Enum):
@@ -27,7 +31,7 @@ class WorkflowOrchestrator:
     Provides a unified interface and handles workflow transitions
     """
     
-    def __init__(self, db: Session, chroma_client=None):
+    def __init__(self, db: AsyncSession, chroma_client=None):
         self.db = db
         self.dashboard_workflow_service = DashboardWorkflowService(db, chroma_client)
         self.report_workflow_service = ReportWorkflowService(db, chroma_client)
@@ -119,7 +123,7 @@ class WorkflowOrchestrator:
             "type": workflow_type,
             "user_id": str(user_id),
             "state": result["state"],
-            "created_at": datetime.utcnow()
+            "created_at": utc_now()
         }
         
         return result
@@ -424,7 +428,7 @@ class WorkflowOrchestrator:
         
         # Get report workflows
         if not workflow_type or workflow_type == WorkflowType.REPORT:
-            from app.services.report_workflow import ReportWorkflow
+            from app.models.workflowmodels import ReportWorkflow
             report_workflows = self.db.query(ReportWorkflow).filter(
                 ReportWorkflow.user_id == user_id
             )
@@ -518,7 +522,7 @@ class WorkflowOrchestrator:
             }
         
         # Check report workflows
-        from app.services.report_workflow_service import ReportWorkflow
+        from app.models.workflowmodels import ReportWorkflow
         report_wf = self.db.query(ReportWorkflow).filter(
             ReportWorkflow.id == workflow_id
         ).first()
@@ -551,7 +555,7 @@ class WorkflowOrchestrator:
         
         from app.models.workflowmodels import ScheduleConfiguration
         
-        now = datetime.utcnow()
+        now = utc_now()
         
         # Find workflows that need to run
         due_schedules = self.db.query(ScheduleConfiguration).filter(

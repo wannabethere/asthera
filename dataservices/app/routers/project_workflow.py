@@ -3,10 +3,10 @@
 from fastapi import APIRouter, Depends, Request, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from sqlalchemy import select, update, func
+from sqlalchemy import select, update, func, delete
 from app.core.dependencies import get_async_db_session, get_session_manager
 from app.service.models import (
-    CreateDomainRequest, DomainContext, AddTableRequest, 
+    CreateDomainRequest, DomainContext, AddTableRequest, UpdateTableRequest,
     DomainResponse, TableResponse, EnhancedTableResponse, MetricCreate, ViewCreate, CalculatedColumnCreate
 )
 from app.schemas.dbmodels import Domain, Dataset, Table, SQLColumn, Metric, View, CalculatedColumn
@@ -41,20 +41,39 @@ async def api_create_domain(
 ):
     """Create a new domain in draft status"""
     try:
-        # Check if domain already exists
+        # Initialize workflow service first to generate domain ID if needed
+        workflow_service = DomainWorkflowService(user_id, session_id)
+        
+        # Prepare domain data for workflow service
+        workflow_domain_data = {
+            "display_name": domain_data.display_name,
+            "description": domain_data.description,
+            "created_by": domain_data.created_by,
+            "context": domain_data.context.dict() if domain_data.context else None
+        }
+        
+        # If domain_id is provided, use it; otherwise let workflow service generate one
+        if domain_data.domain_id:
+            workflow_domain_data["domain_id"] = domain_data.domain_id
+        
+        # Create domain in workflow state (this will generate domain_id if not provided)
+        workflow_domain = await workflow_service.create_domain(workflow_domain_data)
+        
+        # Now check if the generated domain_id already exists in database
+        domain_id = workflow_domain["domain_id"]
         result = await db.execute(
-            select(Domain).where(Domain.domain_id == domain_data.domain_id)
+            select(Domain).where(Domain.domain_id == domain_id)
         )
         existing = result.scalars().first()
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Domain with ID {domain_data.domain_id} already exists"
+                detail=f"Domain with ID {domain_id} already exists"
             )
         
-        # Create domain in draft status
+        # Create domain in database
         domain = Domain(
-            domain_id=domain_data.domain_id,
+            domain_id=domain_id,
             display_name=domain_data.display_name,
             description=domain_data.description,
             created_by=domain_data.created_by,
@@ -64,15 +83,8 @@ async def api_create_domain(
         db.add(domain)
         await db.commit()
         await db.refresh(domain)
-        # Initialize workflow service for this domain
-        workflow_service = DomainWorkflowService(user_id, session_id)
-        await workflow_service.create_domain({
-            "domain_id": domain.domain_id,
-            "display_name": domain.display_name,
-            "description": domain.description,
-            "created_by": domain.created_by,
-            "context": domain_data.context.dict() if domain_data.context else None
-        })
+        
+        logger.info(f"Successfully created domain: {domain.domain_id} - {domain.display_name}")
         
         return DomainResponse(
             domain_id=domain.domain_id,
@@ -82,7 +94,6 @@ async def api_create_domain(
             status=domain.status,
             version_string=domain.version_string,
             created_at=domain.created_at,
-            is_draft=True if domain.status =='draft' else False,
             updated_at=domain.updated_at
         )
         
@@ -91,6 +102,43 @@ async def api_create_domain(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create domain: {str(e)}"
+        )
+
+@router.get("/summary")
+async def get_workflow_summary(
+    session_id: str = Depends(get_session_id),
+    user_id: str = Depends(get_user_id)
+):
+    """Get a summary of the current workflow state"""
+    try:
+        workflow_service = DomainWorkflowService(user_id, session_id)
+        summary = workflow_service.get_workflow_summary()
+        return summary
+    except Exception as e:
+        logger.error(f"Error getting workflow summary: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get workflow summary: {str(e)}"
+        )
+
+@router.delete("/clear")
+async def clear_workflow(
+    session_id: str = Depends(get_session_id),
+    user_id: str = Depends(get_user_id)
+):
+    """Clear the current workflow state"""
+    try:
+        workflow_service = DomainWorkflowService(user_id, session_id)
+        cleared_state = workflow_service.clear_workflow()
+        return {
+            "message": "Workflow cleared successfully",
+            "cleared_state": cleared_state
+        }
+    except Exception as e:
+        logger.error(f"Error clearing workflow: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to clear workflow: {str(e)}"
         )
 
 @router.post("/dataset", status_code=status.HTTP_201_CREATED)
@@ -338,6 +386,501 @@ async def api_add_table(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to add table: {str(e)}"
+        )
+
+@router.put("/table/{table_id}", response_model=EnhancedTableResponse)
+async def api_update_table(
+    table_id: str,
+    update_table_request: UpdateTableRequest,
+    domain_context: DomainContext,
+    session_id: str = Depends(get_session_id),
+    user_id: str = Depends(get_user_id),
+    db: AsyncSession = Depends(get_async_db_session)
+):
+    """Update an existing table with enhanced documentation and column definitions, or create if it doesn't exist"""
+    try:
+        # Check if table exists
+        existing_table = await db.execute(
+            select(Table).where(Table.table_id == table_id)
+        )
+        existing_table = existing_table.scalar_one_or_none()
+        
+        # Check if dataset exists
+        dataset = await db.execute(
+            select(Dataset).where(Dataset.dataset_id == update_table_request.dataset_id)
+        )
+        dataset = dataset.scalar_one_or_none()
+        
+        if not dataset:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Dataset {update_table_request.dataset_id} not found"
+            )
+        
+        # Check if domain is in appropriate status for updating
+        domain = await db.execute(
+            select(Domain).where(Domain.domain_id == dataset.domain_id)
+        )
+        domain = domain.scalar_one_or_none()
+        
+        if not domain or domain.status not in ['draft', 'draft_ready']:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Can only update tables in domains with draft or draft_ready status"
+            )
+        
+        # Use workflow service to get enhanced table documentation
+        workflow_service = DomainWorkflowService(user_id, session_id)
+        documented_table = await workflow_service.add_table(update_table_request, domain_context)
+        
+        # Create enhanced column definitions for metadata storage
+        enhanced_columns_for_metadata = []
+        for enhanced_col in documented_table.columns:
+            enhanced_columns_for_metadata.append({
+                "column_name": enhanced_col.column_name,
+                "display_name": enhanced_col.display_name,
+                "description": enhanced_col.description,
+                "business_description": enhanced_col.business_description,
+                "usage_type": enhanced_col.usage_type.value,
+                "data_type": enhanced_col.data_type,
+                "example_values": enhanced_col.example_values,
+                "business_rules": enhanced_col.business_rules,
+                "data_quality_checks": enhanced_col.data_quality_checks,
+                "related_concepts": enhanced_col.related_concepts,
+                "privacy_classification": enhanced_col.privacy_classification,
+                "aggregation_suggestions": enhanced_col.aggregation_suggestions,
+                "filtering_suggestions": enhanced_col.filtering_suggestions,
+                "json_metadata": enhanced_col.json_metadata
+            })
+        
+        if existing_table:
+            # Update existing table
+            logger.info(f"Updating existing table {table_id}")
+            
+            # Check for duplicate table name in the domain (excluding current table)
+            duplicate_table = await db.execute(
+                select(Table).where(
+                    Table.domain_id == dataset.domain_id,
+                    Table.name == update_table_request.schema.table_name,
+                    Table.table_id != table_id
+                )
+            )
+            if duplicate_table.scalar_one_or_none():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Table '{update_table_request.schema.table_name}' already exists in domain"
+                )
+            
+            # Prepare updated metadata with partial update support
+            current_metadata = existing_table.json_metadata or {}
+            updated_metadata = {}
+            
+            if update_table_request.update_columns:
+                updated_metadata["columns"] = update_table_request.schema.columns
+                updated_metadata["enhanced_columns"] = enhanced_columns_for_metadata
+            
+            if update_table_request.update_enhanced_metadata:
+                updated_metadata.update({
+                    "semantic_description": documented_table.semantic_description,
+                    "relationship_recommendations": documented_table.relationship_recommendations,
+                    "business_purpose": documented_table.business_purpose,
+                    "primary_use_cases": documented_table.primary_use_cases,
+                    "key_relationships": documented_table.key_relationships,
+                    "data_lineage": documented_table.data_lineage,
+                    "update_frequency": documented_table.update_frequency,
+                    "data_retention": documented_table.data_retention,
+                    "access_patterns": documented_table.access_patterns,
+                    "performance_considerations": documented_table.performance_considerations
+                })
+            
+            # Preserve existing metadata if requested
+            if update_table_request.preserve_existing_metadata:
+                for key, value in current_metadata.items():
+                    if key not in updated_metadata:
+                        updated_metadata[key] = value
+            
+            # Update table fields
+            existing_table.name = update_table_request.schema.table_name
+            existing_table.display_name = update_table_request.schema.table_name
+            
+            if update_table_request.update_description:
+                existing_table.description = documented_table.description
+            
+            existing_table.json_metadata = updated_metadata
+            existing_table.modified_by = user_id
+            existing_table.entity_version += 1
+            
+            # Update columns only if requested
+            if update_table_request.update_columns:
+                # Delete existing columns to recreate them
+                await db.execute(
+                    delete(SQLColumn).where(SQLColumn.table_id == table_id)
+                )
+                
+                # Create enhanced columns using service method
+                enhanced_columns = await workflow_service.create_enhanced_columns(documented_table, update_table_request.schema)
+                
+                # Add updated columns to the table
+                for enhanced_col_data in enhanced_columns:
+                    enhanced_col_data["table_id"] = table_id
+                    column = SQLColumn(
+                        table_id=enhanced_col_data["table_id"],
+                        name=enhanced_col_data["name"],
+                        display_name=enhanced_col_data["display_name"],
+                        description=enhanced_col_data["description"],
+                        data_type=enhanced_col_data["data_type"],
+                        is_nullable=enhanced_col_data["is_nullable"],
+                        is_primary_key=enhanced_col_data["is_primary_key"],
+                        is_foreign_key=enhanced_col_data["is_foreign_key"],
+                        usage_type=enhanced_col_data["usage_type"],
+                        ordinal_position=enhanced_col_data["ordinal_position"],
+                        json_metadata=enhanced_col_data["json_metadata"]
+                    )
+                    db.add(column)
+            else:
+                # Keep existing columns but update their metadata if enhanced metadata is being updated
+                if update_table_request.update_enhanced_metadata:
+                    existing_columns = await db.execute(
+                        select(SQLColumn).where(SQLColumn.table_id == table_id)
+                    )
+                    existing_columns = existing_columns.scalars().all()
+                    
+                    # Update column metadata with enhanced information
+                    for col in existing_columns:
+                        col.json_metadata = col.json_metadata or {}
+                        if update_table_request.update_enhanced_metadata:
+                            # Find corresponding enhanced column definition
+                            for enhanced_col in documented_table.columns:
+                                if enhanced_col.column_name == col.name:
+                                    col.json_metadata.update({
+                                        "business_description": enhanced_col.business_description,
+                                        "usage_type": enhanced_col.usage_type.value,
+                                        "example_values": enhanced_col.example_values,
+                                        "business_rules": enhanced_col.business_rules,
+                                        "data_quality_checks": enhanced_col.data_quality_checks,
+                                        "related_concepts": enhanced_col.related_concepts,
+                                        "privacy_classification": enhanced_col.privacy_classification,
+                                        "aggregation_suggestions": enhanced_col.aggregation_suggestions,
+                                        "filtering_suggestions": enhanced_col.filtering_suggestions
+                                    })
+                                    break
+                            col.modified_by = user_id
+                            col.entity_version += 1
+                    
+                    enhanced_columns = existing_columns
+                else:
+                    # Get existing columns without modification
+                    existing_columns = await db.execute(
+                        select(SQLColumn).where(SQLColumn.table_id == table_id)
+                    )
+                    enhanced_columns = existing_columns.scalars().all()
+            
+            table = existing_table
+            
+        else:
+            # Create new table if it doesn't exist
+            logger.info(f"Creating new table with ID {table_id}")
+            
+            # Check table limit (3-4 tables max per domain)
+            table_count = await db.execute(
+                select(func.count(Table.table_id)).where(Table.domain_id == dataset.domain_id)
+            )
+            table_count = table_count.scalar()
+            
+            if table_count >= 4:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Domain can have maximum 4 tables"
+                )
+            
+            # Check for duplicate table name in the domain
+            duplicate_table = await db.execute(
+                select(Table).where(
+                    Table.domain_id == dataset.domain_id,
+                    Table.name == update_table_request.schema.table_name
+                )
+            )
+            if duplicate_table.scalar_one_or_none():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Table '{update_table_request.schema.table_name}' already exists in domain"
+                )
+            
+            # Create new table
+            table = Table(
+                table_id=table_id,  # Use the provided table_id
+                domain_id=dataset.domain_id,
+                dataset_id=update_table_request.dataset_id,
+                name=update_table_request.schema.table_name,
+                display_name=update_table_request.schema.table_name,
+                description=documented_table.description,
+                table_type='table',
+                json_metadata={
+                    "columns": update_table_request.schema.columns,
+                    "enhanced_columns": enhanced_columns_for_metadata,
+                    "semantic_description": documented_table.semantic_description,
+                    "relationship_recommendations": documented_table.relationship_recommendations,
+                    "business_purpose": documented_table.business_purpose,
+                    "primary_use_cases": documented_table.primary_use_cases,
+                    "key_relationships": documented_table.key_relationships,
+                    "data_lineage": documented_table.data_lineage,
+                    "update_frequency": documented_table.update_frequency,
+                    "data_retention": documented_table.data_retention,
+                    "access_patterns": documented_table.access_patterns,
+                    "performance_considerations": documented_table.performance_considerations
+                }
+            )
+            
+            db.add(table)
+            await db.commit()
+            await db.refresh(table)
+            
+            # Create enhanced columns using service method
+            enhanced_columns = await workflow_service.create_enhanced_columns(documented_table, update_table_request.schema)
+            
+            # Add columns to the table
+            for enhanced_col_data in enhanced_columns:
+                enhanced_col_data["table_id"] = table.table_id
+                column = SQLColumn(
+                    table_id=enhanced_col_data["table_id"],
+                    name=enhanced_col_data["name"],
+                    display_name=enhanced_col_data["display_name"],
+                    description=enhanced_col_data["description"],
+                    data_type=enhanced_col_data["data_type"],
+                    is_nullable=enhanced_col_data["is_nullable"],
+                    is_primary_key=enhanced_col_data["is_primary_key"],
+                    is_foreign_key=enhanced_col_data["is_foreign_key"],
+                    usage_type=enhanced_col_data["usage_type"],
+                    ordinal_position=enhanced_col_data["ordinal_position"],
+                    json_metadata=enhanced_col_data["json_metadata"]
+                )
+                db.add(column)
+        
+        await db.commit()
+        
+        # Get column count
+        column_count = await db.execute(
+            select(func.count(SQLColumn.column_id)).where(SQLColumn.table_id == table.table_id)
+        )
+        column_count = column_count.scalar()
+        
+        # Get enhanced table response using service method
+        response_data = await workflow_service.get_enhanced_table_response(table, documented_table, enhanced_columns, column_count)
+        
+        # Fetch and store sharing permissions after table update/creation
+        try:
+            await workflow_service.fetch_and_store_sharing_permissions(dataset.domain_id)
+            logger.info(f"Sharing permissions fetched and stored for domain {dataset.domain_id}")
+        except Exception as e:
+            logger.warning(f"Failed to fetch sharing permissions: {str(e)}")
+            # Continue with table update/creation even if permissions fail
+        
+        return EnhancedTableResponse(**response_data)
+        
+    except Exception as e:
+        logger.error(f"Error updating table {table_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update table: {str(e)}"
+        )
+
+
+@router.patch("/table/{table_id}", response_model=EnhancedTableResponse)
+async def api_patch_table(
+    table_id: str,
+    update_table_request: UpdateTableRequest,
+    domain_context: DomainContext,
+    session_id: str = Depends(get_session_id),
+    user_id: str = Depends(get_user_id),
+    db: AsyncSession = Depends(get_async_db_session)
+):
+    """Partially update an existing table with selective field updates"""
+    try:
+        # Check if table exists
+        existing_table = await db.execute(
+            select(Table).where(Table.table_id == table_id)
+        )
+        existing_table = existing_table.scalar_one_or_none()
+        
+        if not existing_table:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Table {table_id} not found"
+            )
+        
+        # Check if dataset exists
+        dataset = await db.execute(
+            select(Dataset).where(Dataset.dataset_id == update_table_request.dataset_id)
+        )
+        dataset = dataset.scalar_one_or_none()
+        
+        if not dataset:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Dataset {update_table_request.dataset_id} not found"
+            )
+        
+        # Check if domain is in appropriate status for updating
+        domain = await db.execute(
+            select(Domain).where(Domain.domain_id == dataset.domain_id)
+        )
+        domain = domain.scalar_one_or_none()
+        
+        if not domain or domain.status not in ['draft', 'draft_ready']:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Can only update tables in domains with draft or draft_ready status"
+            )
+        
+        # Use workflow service to get enhanced table documentation
+        workflow_service = DomainWorkflowService(user_id, session_id)
+        documented_table = await workflow_service.add_table(update_table_request, domain_context)
+        
+        # Create enhanced column definitions for metadata storage
+        enhanced_columns_for_metadata = []
+        for enhanced_col in documented_table.columns:
+            enhanced_columns_for_metadata.append({
+                "column_name": enhanced_col.column_name,
+                "display_name": enhanced_col.display_name,
+                "description": enhanced_col.description,
+                "business_description": enhanced_col.business_description,
+                "usage_type": enhanced_col.usage_type.value,
+                "data_type": enhanced_col.data_type,
+                "example_values": enhanced_col.example_values,
+                "business_rules": enhanced_col.business_rules,
+                "data_quality_checks": enhanced_col.data_quality_checks,
+                "related_concepts": enhanced_col.related_concepts,
+                "privacy_classification": enhanced_col.privacy_classification,
+                "aggregation_suggestions": enhanced_col.aggregation_suggestions,
+                "filtering_suggestions": enhanced_col.filtering_suggestions,
+                "json_metadata": enhanced_col.json_metadata
+            })
+        
+        # Prepare updated metadata with partial update support
+        current_metadata = existing_table.json_metadata or {}
+        updated_metadata = current_metadata.copy()  # Start with existing metadata
+        
+        if update_table_request.update_columns:
+            updated_metadata["columns"] = update_table_request.schema.columns
+            updated_metadata["enhanced_columns"] = enhanced_columns_for_metadata
+        
+        if update_table_request.update_enhanced_metadata:
+            updated_metadata.update({
+                "semantic_description": documented_table.semantic_description,
+                "relationship_recommendations": documented_table.relationship_recommendations,
+                "business_purpose": documented_table.business_purpose,
+                "primary_use_cases": documented_table.primary_use_cases,
+                "key_relationships": documented_table.key_relationships,
+                "data_lineage": documented_table.data_lineage,
+                "update_frequency": documented_table.update_frequency,
+                "data_retention": documented_table.data_retention,
+                "access_patterns": documented_table.access_patterns,
+                "performance_considerations": documented_table.performance_considerations
+            })
+        
+        # Update table fields selectively
+        if update_table_request.update_columns:
+            existing_table.name = update_table_request.schema.table_name
+            existing_table.display_name = update_table_request.schema.table_name
+        
+        if update_table_request.update_description:
+            existing_table.description = documented_table.description
+        
+        existing_table.json_metadata = updated_metadata
+        existing_table.modified_by = user_id
+        existing_table.entity_version += 1
+        
+        # Update columns only if requested
+        if update_table_request.update_columns:
+            # Delete existing columns to recreate them
+            await db.execute(
+                delete(SQLColumn).where(SQLColumn.table_id == table_id)
+            )
+            
+            # Create enhanced columns using service method
+            enhanced_columns = await workflow_service.create_enhanced_columns(documented_table, update_table_request.schema)
+            
+            # Add updated columns to the table
+            for enhanced_col_data in enhanced_columns:
+                enhanced_col_data["table_id"] = table_id
+                column = SQLColumn(
+                    table_id=enhanced_col_data["table_id"],
+                    name=enhanced_col_data["name"],
+                    display_name=enhanced_col_data["display_name"],
+                    description=enhanced_col_data["description"],
+                    data_type=enhanced_col_data["data_type"],
+                    is_nullable=enhanced_col_data["is_nullable"],
+                    is_primary_key=enhanced_col_data["is_primary_key"],
+                    is_foreign_key=enhanced_col_data["is_foreign_key"],
+                    usage_type=enhanced_col_data["usage_type"],
+                    ordinal_position=enhanced_col_data["ordinal_position"],
+                    json_metadata=enhanced_col_data["json_metadata"]
+                )
+                db.add(column)
+        else:
+            # Keep existing columns but update their metadata if enhanced metadata is being updated
+            if update_table_request.update_enhanced_metadata:
+                existing_columns = await db.execute(
+                    select(SQLColumn).where(SQLColumn.table_id == table_id)
+                )
+                existing_columns = existing_columns.scalars().all()
+                
+                # Update column metadata with enhanced information
+                for col in existing_columns:
+                    col.json_metadata = col.json_metadata or {}
+                    if update_table_request.update_enhanced_metadata:
+                        # Find corresponding enhanced column definition
+                        for enhanced_col in documented_table.columns:
+                            if enhanced_col.column_name == col.name:
+                                col.json_metadata.update({
+                                    "business_description": enhanced_col.business_description,
+                                    "usage_type": enhanced_col.usage_type.value,
+                                    "example_values": enhanced_col.example_values,
+                                    "business_rules": enhanced_col.business_rules,
+                                    "data_quality_checks": enhanced_col.data_quality_checks,
+                                    "related_concepts": enhanced_col.related_concepts,
+                                    "privacy_classification": enhanced_col.privacy_classification,
+                                    "aggregation_suggestions": enhanced_col.aggregation_suggestions,
+                                    "filtering_suggestions": enhanced_col.filtering_suggestions
+                                })
+                                break
+                        col.modified_by = user_id
+                        col.entity_version += 1
+                
+                enhanced_columns = existing_columns
+            else:
+                # Get existing columns without modification
+                existing_columns = await db.execute(
+                    select(SQLColumn).where(SQLColumn.table_id == table_id)
+                )
+                enhanced_columns = existing_columns.scalars().all()
+        
+        await db.commit()
+        
+        # Get column count
+        column_count = await db.execute(
+            select(func.count(SQLColumn.column_id)).where(SQLColumn.table_id == table_id)
+        )
+        column_count = column_count.scalar()
+        
+        # Get enhanced table response using service method
+        response_data = await workflow_service.get_enhanced_table_response(existing_table, documented_table, enhanced_columns, column_count)
+        
+        # Fetch and store sharing permissions after table update
+        try:
+            await workflow_service.fetch_and_store_sharing_permissions(dataset.domain_id)
+            logger.info(f"Sharing permissions fetched and stored for domain {dataset.domain_id}")
+        except Exception as e:
+            logger.warning(f"Failed to fetch sharing permissions: {str(e)}")
+            # Continue with table update even if permissions fail
+        
+        return EnhancedTableResponse(**response_data)
+        
+    except Exception as e:
+        logger.error(f"Error patching table {table_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to patch table: {str(e)}"
         )
 
 @router.get("/table/{table_id}/enhanced-columns")

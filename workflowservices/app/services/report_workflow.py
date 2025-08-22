@@ -1,9 +1,14 @@
 from typing import Optional, List, Dict, Any, Tuple
 from uuid import UUID
 import uuid
-from datetime import datetime
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, func
+import json
+from datetime import datetime, timezone
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import and_, func, select
+
+def utc_now():
+    """Get current UTC datetime for SQLAlchemy defaults"""
+    return datetime.now(timezone.utc)
 
 from app.services.baseservice import BaseService, SharingPermission
 from app.services.reportservice import ReportService
@@ -16,40 +21,18 @@ from app.models.workflowmodels import (
 from app.models.dbmodels import Report, ReportVersion
 from app.models.schema import ReportCreate, ReportUpdate
 
-# Report-specific models (extend workflow models)
-from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean, UUID as SQLUUID, JSON, Integer, Enum as SQLEnum
-from app.models.dbmodels import Base
-
-class ReportWorkflow(Base):
-    __tablename__ = "report_workflows"
-    
-    id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    report_id = Column(SQLUUID(as_uuid=True), ForeignKey("reports.id", ondelete="CASCADE"), nullable=False)
-    user_id = Column(SQLUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    state = Column(SQLEnum(WorkflowState), nullable=False, default=WorkflowState.DRAFT)
-    current_step = Column(Integer, default=0)
-    
-    # Report-specific fields
-    report_template = Column(String, nullable=True)  # Template type
-    data_sources = Column(JSON, default=[])  # List of data source configurations
-    sections = Column(JSON, default=[])  # Report sections configuration
-    formatting = Column(JSON, default={})  # Formatting options
-    
-    metadata = Column(JSON, default={})
-    error_message = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    completed_at = Column(DateTime, nullable=True)
+# Import ReportWorkflow from models instead of defining it here
+from app.models.workflowmodels import ReportWorkflow
 
 class ReportWorkflowService(BaseService):
     """Service for managing report creation workflows"""
     
-    def __init__(self, db: Session, chroma_client=None):
+    def __init__(self, db: AsyncSession, chroma_client=None):
         super().__init__(db, chroma_client)
         self.collection_name = "report_workflows"
         self.report_service = ReportService(db, chroma_client)
     
-    def create_report_workflow(
+    async def create_report_workflow(
         self,
         user_id: UUID,
         report_name: str,
@@ -70,7 +53,7 @@ class ReportWorkflowService(BaseService):
             content={"status": "draft", "sections": []}
         )
         
-        report = self.report_service.create_report(
+        report = await self.report_service.create_report(
             user_id=user_id,
             report_data=report_data,
             workflow_id=workflow_id,
@@ -96,11 +79,11 @@ class ReportWorkflowService(BaseService):
         )
         
         self.db.add(workflow)
-        self.db.commit()
+        await self.db.commit()
         
         return workflow, report
     
-    def add_report_section(
+    async def add_report_section(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -109,7 +92,7 @@ class ReportWorkflowService(BaseService):
     ) -> Dict[str, Any]:
         """Add a section to the report"""
         
-        workflow = self._get_report_workflow(workflow_id, user_id)
+        workflow = await self._get_report_workflow(workflow_id, user_id)
         
         if workflow.state not in [WorkflowState.DRAFT, WorkflowState.CONFIGURING]:
             raise ValueError(f"Cannot add sections in {workflow.state} state")
@@ -120,7 +103,7 @@ class ReportWorkflowService(BaseService):
             "type": section_type,
             "config": section_config,
             "order": len(workflow.sections) + 1,
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": utc_now().isoformat()
         }
         
         sections = workflow.sections or []
@@ -133,12 +116,12 @@ class ReportWorkflowService(BaseService):
             workflow.current_step = 2
         
         # Update report content
-        self._update_report_content(workflow)
+        await self._update_report_content(workflow)
         
-        self.db.commit()
+        await self.db.commit()
         return section
     
-    def configure_data_sources(
+    async def configure_data_sources(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -146,7 +129,7 @@ class ReportWorkflowService(BaseService):
     ) -> List[Dict[str, Any]]:
         """Configure data sources for the report"""
         
-        workflow = self._get_report_workflow(workflow_id, user_id)
+        workflow = await self._get_report_workflow(workflow_id, user_id)
         
         if workflow.state not in [WorkflowState.CONFIGURING, WorkflowState.CONFIGURED]:
             raise ValueError(f"Cannot configure data sources in {workflow.state} state")
@@ -171,10 +154,10 @@ class ReportWorkflowService(BaseService):
             workflow.state = WorkflowState.CONFIGURED
             workflow.current_step = 3
         
-        self.db.commit()
+        await self.db.commit()
         return validated_sources
     
-    def configure_report_formatting(
+    async def configure_report_formatting(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -182,7 +165,7 @@ class ReportWorkflowService(BaseService):
     ) -> Dict[str, Any]:
         """Configure report formatting options"""
         
-        workflow = self._get_report_workflow(workflow_id, user_id)
+        workflow = await self._get_report_workflow(workflow_id, user_id)
         
         # Formatting options
         workflow.formatting = {
@@ -199,12 +182,12 @@ class ReportWorkflowService(BaseService):
         }
         
         # Update report
-        self._update_report_content(workflow)
+        await self._update_report_content(workflow)
         
-        self.db.commit()
+        await self.db.commit()
         return workflow.formatting
     
-    def generate_report_preview(
+    async def generate_report_preview(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -212,32 +195,32 @@ class ReportWorkflowService(BaseService):
     ) -> Dict[str, Any]:
         """Generate a preview of the report"""
         
-        workflow = self._get_report_workflow(workflow_id, user_id)
+        workflow = await self._get_report_workflow(workflow_id, user_id)
         
         if workflow.state not in [WorkflowState.CONFIGURED, WorkflowState.SHARED, 
                                   WorkflowState.SCHEDULED, WorkflowState.PUBLISHING]:
             raise ValueError(f"Cannot preview report in {workflow.state} state")
         
         # Get report
-        report = self.db.query(Report).filter(
-            Report.id == workflow.report_id
-        ).first()
+        stmt = select(Report).where(Report.id == workflow.report_id)
+        result = await self.db.execute(stmt)
+        report = result.scalar_one_or_none()
         
         # Generate preview based on format
         if format_type == "html":
-            preview = self._generate_html_preview(report, workflow)
+            preview = await self._generate_html_preview(report, workflow)
         elif format_type == "pdf":
-            preview = self._generate_pdf_preview(report, workflow)
+            preview = await self._generate_pdf_preview(report, workflow)
         else:
             preview = {"error": "Unsupported format"}
         
         return {
             "format": format_type,
             "preview": preview,
-            "generated_at": datetime.utcnow().isoformat()
+            "generated_at": utc_now().isoformat()
         }
     
-    def schedule_report_generation(
+    async def schedule_report_generation(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -246,7 +229,7 @@ class ReportWorkflowService(BaseService):
     ) -> Dict[str, Any]:
         """Schedule automatic report generation and distribution"""
         
-        workflow = self._get_report_workflow(workflow_id, user_id)
+        workflow = await self._get_report_workflow(workflow_id, user_id)
         
         # Similar to dashboard scheduling but with report-specific options
         schedule_data = {
@@ -262,11 +245,11 @@ class ReportWorkflowService(BaseService):
         workflow.state = WorkflowState.SCHEDULED
         workflow.current_step = 6
         
-        self.db.commit()
+        await self.db.commit()
         
         return schedule_data
     
-    def publish_report(
+    async def publish_report(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -274,7 +257,7 @@ class ReportWorkflowService(BaseService):
     ) -> Dict[str, Any]:
         """Publish the report to configured destinations"""
         
-        workflow = self._get_report_workflow(workflow_id, user_id)
+        workflow = await self._get_report_workflow(workflow_id, user_id)
         
         if workflow.state not in [WorkflowState.SCHEDULED, WorkflowState.PUBLISHING]:
             raise ValueError(f"Cannot publish report in {workflow.state} state")
@@ -282,9 +265,9 @@ class ReportWorkflowService(BaseService):
         workflow.state = WorkflowState.PUBLISHING
         
         # Get report
-        report = self.db.query(Report).filter(
-            Report.id == workflow.report_id
-        ).first()
+        stmt = select(Report).where(Report.id == workflow.report_id)
+        result = await self.db.execute(stmt)
+        report = result.scalar_one_or_none()
         
         publish_results = {}
         
@@ -292,11 +275,11 @@ class ReportWorkflowService(BaseService):
         formats = publish_options.get("formats", ["pdf", "html"])
         for format_type in formats:
             if format_type == "pdf":
-                result = self._generate_pdf_report(report, workflow)
+                result = await self._generate_pdf_report(report, workflow)
             elif format_type == "html":
-                result = self._generate_html_report(report, workflow)
+                result = await self._generate_html_report(report, workflow)
             elif format_type == "excel":
-                result = self._generate_excel_report(report, workflow)
+                result = await self._generate_excel_report(report, workflow)
             else:
                 result = {"error": "Unsupported format"}
             
@@ -304,24 +287,24 @@ class ReportWorkflowService(BaseService):
         
         # Distribute to configured channels
         if publish_options.get("send_email"):
-            self._send_report_email(report, workflow, publish_results)
+            await self._send_report_email(report, workflow, publish_results)
         
         if publish_options.get("upload_to_sharepoint"):
-            self._upload_to_sharepoint(report, workflow, publish_results)
+            await self._upload_to_sharepoint(report, workflow, publish_results)
         
         if publish_options.get("save_to_drive"):
-            self._save_to_google_drive(report, workflow, publish_results)
+            await self._save_to_google_drive(report, workflow, publish_results)
         
         # Update report status
         report.is_active = True
-        report.updated_at = datetime.utcnow()
+        report.updated_at = utc_now()
         
         # Update workflow
         workflow.state = WorkflowState.ACTIVE
-        workflow.completed_at = datetime.utcnow()
+        workflow.completed_at = utc_now()
         workflow.current_step = 8
         
-        self.db.commit()
+        await self.db.commit()
         
         return {
             "report_id": str(report.id),
@@ -330,7 +313,7 @@ class ReportWorkflowService(BaseService):
             "completed_at": workflow.completed_at.isoformat()
         }
     
-    def clone_report_workflow(
+    async def clone_report_workflow(
         self,
         user_id: UUID,
         source_workflow_id: UUID,
@@ -338,12 +321,12 @@ class ReportWorkflowService(BaseService):
     ) -> Tuple[ReportWorkflow, Report]:
         """Clone an existing report workflow"""
         
-        source_workflow = self._get_report_workflow(source_workflow_id, user_id)
+        source_workflow = await self._get_report_workflow(source_workflow_id, user_id)
         
         # Clone the report
-        source_report = self.db.query(Report).filter(
-            Report.id == source_workflow.report_id
-        ).first()
+        stmt = select(Report).where(Report.id == source_workflow.report_id)
+        result = await self.db.execute(stmt)
+        source_report = result.scalar_one_or_none()
         
         # Create new report
         report_data = ReportCreate(
@@ -354,7 +337,7 @@ class ReportWorkflowService(BaseService):
             content=source_report.content
         )
         
-        new_report = self.report_service.create_report(
+        new_report = await self.report_service.create_report(
             user_id=user_id,
             report_data=report_data
         )
@@ -373,13 +356,13 @@ class ReportWorkflowService(BaseService):
         new_workflow.metadata["cloned_from"] = str(source_workflow_id)
         
         self.db.add(new_workflow)
-        self.db.commit()
+        await self.db.commit()
         
         return new_workflow, new_report
     
     # ==================== Alert Thread Component Management ====================
     
-    def add_alert_thread_component(
+    async def add_alert_thread_component(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -389,7 +372,7 @@ class ReportWorkflowService(BaseService):
         Add an alert as a thread message component to the report workflow
         """
         
-        workflow = self._get_report_workflow(workflow_id, user_id)
+        workflow = await self._get_report_workflow(workflow_id, user_id)
         
         # Validate state - can add alerts in most states
         if workflow.state in [WorkflowState.ARCHIVED, WorkflowState.ERROR]:
@@ -421,7 +404,7 @@ class ReportWorkflowService(BaseService):
             "trigger_count": 0,
             "last_triggered": None,
             "configuration": alert_data.configuration,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": utc_now().isoformat(),
             "created_by": str(user_id)
         }
         
@@ -433,9 +416,9 @@ class ReportWorkflowService(BaseService):
             workflow.current_step = 2
         
         # Update report content
-        self._update_report_content(workflow)
+        await self._update_report_content(workflow)
         
-        self.db.commit()
+        await self.db.commit()
         
         return {
             "success": True,
@@ -444,7 +427,7 @@ class ReportWorkflowService(BaseService):
             "message": f"Alert '{alert_component['question']}' added successfully"
         }
     
-    def update_alert_thread_component(
+    async def update_alert_thread_component(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -455,7 +438,7 @@ class ReportWorkflowService(BaseService):
         Update an existing alert thread component
         """
         
-        workflow = self._get_report_workflow(workflow_id, user_id)
+        workflow = await self._get_report_workflow(workflow_id, user_id)
         
         # Find the alert component
         alerts = workflow.metadata.get("alerts", [])
@@ -516,16 +499,16 @@ class ReportWorkflowService(BaseService):
         if update_data.configuration:
             alert_component["configuration"] = update_data.configuration
         
-        alert_component["updated_at"] = datetime.utcnow().isoformat()
+        alert_component["updated_at"] = utc_now().isoformat()
         
         # Update the alert in the list
         alerts[alert_index] = alert_component
         workflow.metadata["alerts"] = alerts
         
         # Update report content
-        self._update_report_content(workflow)
+        await self._update_report_content(workflow)
         
-        self.db.commit()
+        await self.db.commit()
         
         return {
             "success": True,
@@ -534,7 +517,7 @@ class ReportWorkflowService(BaseService):
             "message": f"Alert '{alert_component['question']}' updated successfully"
         }
     
-    def get_alert_thread_components(
+    async def get_alert_thread_components(
         self,
         user_id: UUID,
         workflow_id: UUID
@@ -543,11 +526,11 @@ class ReportWorkflowService(BaseService):
         Get all alert thread components for a report workflow
         """
         
-        workflow = self._get_report_workflow(workflow_id, user_id)
+        workflow = await self._get_report_workflow(workflow_id, user_id)
         
         return workflow.metadata.get("alerts", [])
     
-    def delete_alert_thread_component(
+    async def delete_alert_thread_component(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -557,7 +540,7 @@ class ReportWorkflowService(BaseService):
         Delete an alert thread component
         """
         
-        workflow = self._get_report_workflow(workflow_id, user_id)
+        workflow = await self._get_report_workflow(workflow_id, user_id)
         
         # Find and remove the alert component
         alerts = workflow.metadata.get("alerts", [])
@@ -576,9 +559,9 @@ class ReportWorkflowService(BaseService):
         workflow.metadata["alerts"] = alerts
         
         # Update report content
-        self._update_report_content(workflow)
+        await self._update_report_content(workflow)
         
-        self.db.commit()
+        await self.db.commit()
         
         return {
             "success": True,
@@ -587,7 +570,7 @@ class ReportWorkflowService(BaseService):
             "message": f"Alert '{alert_component['question']}' deleted successfully"
         }
     
-    def test_alert_thread_component(
+    async def test_alert_thread_component(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -598,7 +581,7 @@ class ReportWorkflowService(BaseService):
         Test an alert thread component with sample data
         """
         
-        workflow = self._get_report_workflow(workflow_id, user_id)
+        workflow = await self._get_report_workflow(workflow_id, user_id)
         
         # Find the alert component
         alerts = workflow.metadata.get("alerts", [])
@@ -614,7 +597,7 @@ class ReportWorkflowService(BaseService):
         
         # Test the alert condition
         try:
-            test_result = self._evaluate_alert_condition(alert_component, test_data or {})
+            test_result = await self._evaluate_alert_condition(alert_component, test_data or {})
             
             return {
                 "success": True,
@@ -632,7 +615,7 @@ class ReportWorkflowService(BaseService):
                 "message": "Failed to evaluate alert condition"
             }
     
-    def trigger_alert_thread_component(
+    async def trigger_alert_thread_component(
         self,
         user_id: UUID,
         workflow_id: UUID,
@@ -643,7 +626,7 @@ class ReportWorkflowService(BaseService):
         Manually trigger an alert thread component for testing
         """
         
-        workflow = self._get_report_workflow(workflow_id, user_id)
+        workflow = await self._get_report_workflow(workflow_id, user_id)
         
         # Find the alert component
         alerts = workflow.metadata.get("alerts", [])
@@ -666,17 +649,17 @@ class ReportWorkflowService(BaseService):
         if alert_component["last_triggered"] and alert_component["alert_config"]:
             cooldown_period = alert_component["alert_config"].get("cooldown_period", 300)
             last_triggered = datetime.fromisoformat(alert_component["last_triggered"])
-            time_since_last = (datetime.utcnow() - last_triggered).total_seconds()
+            time_since_last = (utc_now() - last_triggered).total_seconds()
             if time_since_last < cooldown_period:
                 remaining = cooldown_period - time_since_last
                 raise ValueError(f"Alert is in cooldown period. Try again in {int(remaining)} seconds")
         
         # Trigger the alert
         try:
-            trigger_result = self._execute_alert_notifications(alert_component, trigger_data or {})
+            trigger_result = await self._execute_alert_notifications(alert_component, trigger_data or {})
             
             # Update alert status
-            alert_component["last_triggered"] = datetime.utcnow().isoformat()
+            alert_component["last_triggered"] = utc_now().isoformat()
             alert_component["trigger_count"] += 1
             alert_component["alert_status"] = AlertStatus.TRIGGERED.value
             
@@ -684,7 +667,7 @@ class ReportWorkflowService(BaseService):
             alerts[alert_index] = alert_component
             workflow.metadata["alerts"] = alerts
             
-            self.db.commit()
+            await self.db.commit()
             
             return {
                 "success": True,
@@ -704,29 +687,29 @@ class ReportWorkflowService(BaseService):
     
     # Private helper methods
     
-    def _get_report_workflow(self, workflow_id: UUID, user_id: UUID) -> ReportWorkflow:
+    async def _get_report_workflow(self, workflow_id: UUID, user_id: UUID) -> ReportWorkflow:
         """Get report workflow with permission check"""
         
-        workflow = self.db.query(ReportWorkflow).filter(
-            ReportWorkflow.id == workflow_id
-        ).first()
+        stmt = select(ReportWorkflow).where(ReportWorkflow.id == workflow_id)
+        result = await self.db.execute(stmt)
+        workflow = result.scalar_one_or_none()
         
         if not workflow:
             raise ValueError(f"Report workflow {workflow_id} not found")
         
-        if workflow.user_id != user_id and not self._check_user_permission(
+        if workflow.user_id != user_id and not await self._check_user_permission(
             user_id, "report", workflow.report_id, "update"
         ):
             raise PermissionError("User doesn't have access to this workflow")
         
         return workflow
     
-    def _update_report_content(self, workflow: ReportWorkflow):
+    async def _update_report_content(self, workflow: ReportWorkflow):
         """Update report content based on workflow configuration"""
         
-        report = self.db.query(Report).filter(
-            Report.id == workflow.report_id
-        ).first()
+        stmt = select(Report).where(Report.id == workflow.report_id)
+        result = await self.db.execute(stmt)
+        report = result.scalar_one_or_none()
         
         content = {
             "status": workflow.state.value,
@@ -735,13 +718,13 @@ class ReportWorkflowService(BaseService):
             "data_sources": workflow.data_sources or [],
             "formatting": workflow.formatting or {},
             "metadata": {
-                "updated_at": datetime.utcnow().isoformat(),
+                "updated_at": utc_now().isoformat(),
                 "version": report.version
             }
         }
         
         report.content = content
-        report.updated_at = datetime.utcnow()
+        report.updated_at = utc_now()
         
         # Create version
         new_version = str(float(report.version) + 0.1)
@@ -753,7 +736,7 @@ class ReportWorkflowService(BaseService):
         self.db.add(version)
         report.version = new_version
     
-    def _generate_html_preview(self, report: Report, workflow: ReportWorkflow) -> str:
+    async def _generate_html_preview(self, report: Report, workflow: ReportWorkflow) -> str:
         """Generate HTML preview of the report"""
         
         html = f"""
@@ -782,7 +765,7 @@ class ReportWorkflowService(BaseService):
         html += "</body></html>"
         return html
     
-    def _generate_pdf_preview(self, report: Report, workflow: ReportWorkflow) -> Dict[str, Any]:
+    async def _generate_pdf_preview(self, report: Report, workflow: ReportWorkflow) -> Dict[str, Any]:
         """Generate PDF preview metadata"""
         # In production, would use libraries like ReportLab or WeasyPrint
         return {
@@ -791,7 +774,7 @@ class ReportWorkflowService(BaseService):
             "orientation": workflow.formatting.get("page_layout", "portrait")
         }
     
-    def _generate_pdf_report(self, report: Report, workflow: ReportWorkflow) -> Dict[str, Any]:
+    async def _generate_pdf_report(self, report: Report, workflow: ReportWorkflow) -> Dict[str, Any]:
         """Generate full PDF report"""
         # Placeholder - would use PDF generation library
         return {
@@ -800,15 +783,15 @@ class ReportWorkflowService(BaseService):
             "pages": len(workflow.sections or []) + 2
         }
     
-    def _generate_html_report(self, report: Report, workflow: ReportWorkflow) -> Dict[str, Any]:
+    async def _generate_html_report(self, report: Report, workflow: ReportWorkflow) -> Dict[str, Any]:
         """Generate full HTML report"""
-        html_content = self._generate_html_preview(report, workflow)
+        html_content = await self._generate_html_preview(report, workflow)
         return {
             "content": html_content,
             "size_bytes": len(html_content)
         }
     
-    def _generate_excel_report(self, report: Report, workflow: ReportWorkflow) -> Dict[str, Any]:
+    async def _generate_excel_report(self, report: Report, workflow: ReportWorkflow) -> Dict[str, Any]:
         """Generate Excel report"""
         # Placeholder - would use openpyxl or xlsxwriter
         return {
@@ -817,24 +800,24 @@ class ReportWorkflowService(BaseService):
             "size_bytes": 512000
         }
     
-    def _send_report_email(self, report: Report, workflow: ReportWorkflow, attachments: Dict[str, Any]):
+    async def _send_report_email(self, report: Report, workflow: ReportWorkflow, attachments: Dict[str, Any]):
         """Send report via email"""
         # Placeholder - would use email service
         pass
     
-    def _upload_to_sharepoint(self, report: Report, workflow: ReportWorkflow, files: Dict[str, Any]):
+    async def _upload_to_sharepoint(self, report: Report, workflow: ReportWorkflow, files: Dict[str, Any]):
         """Upload report to SharePoint"""
         # Placeholder - would use SharePoint API
         pass
     
-    def _save_to_google_drive(self, report: Report, workflow: ReportWorkflow, files: Dict[str, Any]):
+    async def _save_to_google_drive(self, report: Report, workflow: ReportWorkflow, files: Dict[str, Any]):
         """Save report to Google Drive"""
         # Placeholder - would use Google Drive API
         pass
     
     # ==================== Alert Helper Methods ====================
     
-    def _evaluate_alert_condition(
+    async def _evaluate_alert_condition(
         self,
         alert_component: Dict[str, Any],
         data: Dict[str, Any]
@@ -848,19 +831,19 @@ class ReportWorkflowService(BaseService):
         condition_config = alert_config.get("condition_config", {})
         
         if alert_type == "threshold":
-            return self._evaluate_threshold_condition(alert_component, data)
+            return await self._evaluate_threshold_condition(alert_component, data)
         elif alert_type == "anomaly":
-            return self._evaluate_anomaly_condition(alert_component, data)
+            return await self._evaluate_anomaly_condition(alert_component, data)
         elif alert_type == "trend":
-            return self._evaluate_trend_condition(alert_component, data)
+            return await self._evaluate_trend_condition(alert_component, data)
         elif alert_type == "comparison":
-            return self._evaluate_comparison_condition(alert_component, data)
+            return await self._evaluate_comparison_condition(alert_component, data)
         elif alert_type == "schedule":
-            return self._evaluate_schedule_condition(alert_component, data)
+            return await self._evaluate_schedule_condition(alert_component, data)
         else:
             return {"triggered": False, "reason": f"Unknown alert type: {alert_type}"}
     
-    def _evaluate_threshold_condition(
+    async def _evaluate_threshold_condition(
         self,
         alert_component: Dict[str, Any],
         data: Dict[str, Any]
@@ -907,7 +890,7 @@ class ReportWorkflowService(BaseService):
             "condition_met": triggered
         }
     
-    def _evaluate_anomaly_condition(
+    async def _evaluate_anomaly_condition(
         self,
         alert_component: Dict[str, Any],
         data: Dict[str, Any]
@@ -950,7 +933,7 @@ class ReportWorkflowService(BaseService):
             "anomaly_detected": triggered
         }
     
-    def _evaluate_trend_condition(
+    async def _evaluate_trend_condition(
         self,
         alert_component: Dict[str, Any],
         data: Dict[str, Any]
@@ -980,7 +963,7 @@ class ReportWorkflowService(BaseService):
             "trend_detected": triggered
         }
     
-    def _evaluate_comparison_condition(
+    async def _evaluate_comparison_condition(
         self,
         alert_component: Dict[str, Any],
         data: Dict[str, Any]
@@ -1030,7 +1013,7 @@ class ReportWorkflowService(BaseService):
             "condition_met": triggered
         }
     
-    def _evaluate_schedule_condition(
+    async def _evaluate_schedule_condition(
         self,
         alert_component: Dict[str, Any],
         data: Dict[str, Any]
@@ -1056,7 +1039,7 @@ class ReportWorkflowService(BaseService):
             "schedule_matched": triggered
         }
     
-    def _execute_alert_notifications(
+    async def _execute_alert_notifications(
         self,
         alert_component: Dict[str, Any],
         data: Dict[str, Any]
@@ -1072,11 +1055,11 @@ class ReportWorkflowService(BaseService):
         for channel in notification_channels:
             try:
                 if channel == "email":
-                    result = self._send_alert_email(alert_component, data)
+                    result = await self._send_alert_email(alert_component, data)
                 elif channel == "slack":
-                    result = self._send_alert_slack(alert_component, data)
+                    result = await self._send_alert_slack(alert_component, data)
                 elif channel == "webhook":
-                    result = self._send_alert_webhook(alert_component, data)
+                    result = await self._send_alert_webhook(alert_component, data)
                 else:
                     result = {"success": False, "error": f"Unknown channel: {channel}"}
                 
@@ -1086,7 +1069,7 @@ class ReportWorkflowService(BaseService):
         
         return results
     
-    def _send_alert_email(self, alert_component: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _send_alert_email(self, alert_component: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
         """Send alert notification via email"""
         # Placeholder - would use email service
         return {
@@ -1095,7 +1078,7 @@ class ReportWorkflowService(BaseService):
             "message": f"Alert '{alert_component['question']}' triggered"
         }
     
-    def _send_alert_slack(self, alert_component: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _send_alert_slack(self, alert_component: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
         """Send alert notification via Slack"""
         # Placeholder - would use Slack API
         return {
@@ -1104,7 +1087,7 @@ class ReportWorkflowService(BaseService):
             "message": f"Alert '{alert_component['question']}' triggered"
         }
     
-    def _send_alert_webhook(self, alert_component: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _send_alert_webhook(self, alert_component: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
         """Send alert notification via webhook"""
         # Placeholder - would use HTTP client
         return {

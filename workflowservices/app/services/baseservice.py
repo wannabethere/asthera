@@ -2,8 +2,8 @@ from typing import Optional, List, Dict, Any, Union
 from uuid import UUID
 import uuid
 from datetime import datetime
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import and_, or_, select
 import chromadb
 from app.core.settings import get_settings
 import json
@@ -21,14 +21,14 @@ class SharingPermission(Enum):
 class BaseService:
     """Base service class with common functionality for all services"""
     
-    def __init__(self, db: Session, chroma_client: chromadb.Client = None):
+    def __init__(self, db: AsyncSession, chroma_client: chromadb.Client = None):
         self.db = db
         self.chroma_client = chroma_client or chromadb.Client(Settings(
             chroma_db_impl="duckdb+parquet",
             persist_directory="./chroma_db"
         ))
         
-    def _check_user_permission(
+    async def _check_user_permission(
         self, 
         user_id: UUID, 
         resource_type: str, 
@@ -39,24 +39,26 @@ class BaseService:
         from app.models.rbac import Role, Permission, user_roles
         
         # Check system roles first (superuser, system_admin)
-        user_system_roles = self.db.query(Role).join(user_roles).filter(
+        stmt = select(Role).join(user_roles).where(
             and_(
                 user_roles.c.user_id == user_id,
                 Role.role_type == "system",
                 Role.name.in_(["superuser", "system_admin"])
             )
-        ).all()
+        )
+        result = await self.db.execute(stmt)
+        user_system_roles = result.scalars().all()
         
         if user_system_roles:
             return True
             
         # Check resource-specific permissions
-        permission_query = self.db.query(Permission).join(
+        permission_stmt = select(Permission).join(
             Role.permissions
         ).join(
             user_roles,
             Role.id == user_roles.c.role_id
-        ).filter(
+        ).where(
             and_(
                 user_roles.c.user_id == user_id,
                 or_(
@@ -68,9 +70,10 @@ class BaseService:
             )
         )
         
-        return permission_query.first() is not None
+        result = await self.db.execute(permission_stmt)
+        return result.scalar_one_or_none() is not None
     
-    def _get_user_accessible_resources(
+    async def _get_user_accessible_resources(
         self,
         user_id: UUID,
         resource_type: str,
@@ -85,35 +88,41 @@ class BaseService:
         
         # Get workspace access
         if workspace_id:
-            workspace_access = self.db.query(WorkspaceAccess).filter(
+            stmt = select(WorkspaceAccess).where(
                 and_(
                     WorkspaceAccess.workspace_id == workspace_id,
                     WorkspaceAccess.user_id == user_id
                 )
-            ).first()
+            )
+            result = await self.db.execute(stmt)
+            workspace_access = result.scalar_one_or_none()
             if workspace_access:
                 accessible_ids.append(workspace_id)
         
         # Get project access
         if project_id:
-            project_access = self.db.query(ProjectAccess).filter(
+            stmt = select(ProjectAccess).where(
                 and_(
                     ProjectAccess.project_id == project_id,
                     ProjectAccess.user_id == user_id
                 )
-            ).first()
+            )
+            result = await self.db.execute(stmt)
+            project_access = result.scalar_one_or_none()
             if project_access:
                 accessible_ids.append(project_id)
         
         # Get team-based access
-        user_teams = self.db.query(team_memberships.c.team_id).filter(
+        stmt = select(team_memberships.c.team_id).where(
             team_memberships.c.user_id == user_id
-        ).all()
+        )
+        result = await self.db.execute(stmt)
+        user_teams = result.all()
         accessible_ids.extend([team_id for (team_id,) in user_teams])
         
         return accessible_ids
     
-    def _create_chroma_collection(self, collection_name: str):
+    async def _create_chroma_collection(self, collection_name: str):
         """Create or get ChromaDB collection"""
         try:
             collection = self.chroma_client.get_collection(collection_name)
@@ -124,7 +133,7 @@ class BaseService:
             )
         return collection
     
-    def _add_to_chroma(
+    async def _add_to_chroma(
         self,
         collection_name: str,
         document_id: str,
@@ -132,18 +141,18 @@ class BaseService:
         metadata: Dict[str, Any]
     ):
         """Add document to ChromaDB collection"""
-        collection = self._create_chroma_collection(collection_name)
+        collection = await self._create_chroma_collection(collection_name)
         
         # Convert content to searchable text
         text_content = json.dumps(content, default=str)
         
-        collection.add(
+        await collection.add(
             documents=[text_content],
             ids=[document_id],
             metadatas=[metadata]
         )
     
-    def _update_chroma(
+    async def _update_chroma(
         self,
         collection_name: str,
         document_id: str,
@@ -151,23 +160,23 @@ class BaseService:
         metadata: Dict[str, Any]
     ):
         """Update document in ChromaDB collection"""
-        collection = self._create_chroma_collection(collection_name)
+        collection = await self._create_chroma_collection(collection_name)
         
         # Convert content to searchable text
         text_content = json.dumps(content, default=str)
         
-        collection.update(
+        await collection.update(
             documents=[text_content],
             ids=[document_id],
             metadatas=[metadata]
         )
     
-    def _delete_from_chroma(self, collection_name: str, document_id: str):
+    async def _delete_from_chroma(self, collection_name: str, document_id: str):
         """Delete document from ChromaDB collection"""
-        collection = self._create_chroma_collection(collection_name)
-        collection.delete(ids=[document_id])
+        collection = await self._create_chroma_collection(collection_name)
+        await collection.delete(ids=[document_id])
     
-    def _search_chroma(
+    async def _search_chroma(
         self,
         collection_name: str,
         query: str,
@@ -175,11 +184,11 @@ class BaseService:
         limit: int = 10
     ) -> List[Dict[str, Any]]:
         """Search documents in ChromaDB collection"""
-        collection = self._create_chroma_collection(collection_name)
+        collection = await self._create_chroma_collection(collection_name)
         
         where_clause = filters if filters else {}
         
-        results = collection.query(
+        results = await collection.query(
             query_texts=[query],
             n_results=limit,
             where=where_clause

@@ -185,6 +185,18 @@ class Settings(BaseSettings):
     CHROMA_COLLECTION_NAME: str = "default"
     CHROMA_PERSIST_DIRECTORY: str = "chroma_db"
     
+    # N8n Store Specific ChromaDB Settings
+    N8N_STORE_COLLECTION_NAME: str = "n8n_store"
+    N8N_STORE_USE_LOCAL: bool = True
+    N8N_STORE_LOCAL_PATH: str = "n8n_chromadb_store"
+    N8N_STORE_HOST: str = "localhost"
+    N8N_STORE_PORT: int = 8000
+    
+    # ChromaDB Advanced Settings
+    CHROMA_ANONYMIZED_TELEMETRY: bool = False
+    CHROMA_ALLOW_RESET: bool = True
+    CHROMA_ISOLATE_COLLECTIONS: bool = False
+    
     # Embedding Settings
     EMBEDDING_PROVIDER: str = "openai"
     EMBEDDING_MODEL: str = "text-embedding-3-small"
@@ -413,6 +425,16 @@ def set_os_environ(settings: Settings) -> None:
         "CHROMA_PORT": str(settings.CHROMA_PORT),
         "CHROMA_COLLECTION_NAME": settings.CHROMA_COLLECTION_NAME,
         "CHROMA_PERSIST_DIRECTORY": settings.CHROMA_PERSIST_DIRECTORY,
+        "CHROMA_ANONYMIZED_TELEMETRY": str(settings.CHROMA_ANONYMIZED_TELEMETRY).lower(),
+        "CHROMA_ALLOW_RESET": str(settings.CHROMA_ALLOW_RESET).lower(),
+        "CHROMA_ISOLATE_COLLECTIONS": str(settings.CHROMA_ISOLATE_COLLECTIONS).lower(),
+        
+        # N8n Store ChromaDB Settings
+        "N8N_STORE_COLLECTION_NAME": settings.N8N_STORE_COLLECTION_NAME,
+        "N8N_STORE_USE_LOCAL": str(settings.N8N_STORE_USE_LOCAL).lower(),
+        "N8N_STORE_LOCAL_PATH": settings.N8N_STORE_LOCAL_PATH,
+        "N8N_STORE_HOST": settings.N8N_STORE_HOST,
+        "N8N_STORE_PORT": str(settings.N8N_STORE_PORT),
         
         # Python Settings
         "PYTHONPATH": str(settings.BASE_DIR),

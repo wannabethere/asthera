@@ -2,16 +2,19 @@
 Dependency injection for persistence services
 """
 
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Generator
 import os
 import chromadb
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from sqlalchemy.orm import Session
+from fastapi import Depends, HTTPException, status, Header
 from app.core.session_manager import SessionManager
 from app.service.persistence_service import PersistenceServiceFactory
 from app.utils.history import DomainManager
 from app.storage.documents import DocumentChromaStore
 from app.agents.indexing.sql_pairs import SqlPairs
 from app.agents.indexing.instructions import Instructions
+from app.core.settings import get_settings
 
 
 def get_session_manager() -> SessionManager:
@@ -39,6 +42,67 @@ async def get_async_db_session():
         yield session
 
 
+def get_db_session() -> Generator[Session, None, None]:
+    """Get synchronous database session using session manager"""
+    session_manager = get_session_manager()
+    
+    # For now, we'll create a sync session from the async engine
+    # This is a temporary solution - you might want to add a sync engine to SessionManager
+    try:
+        # Create a sync session from the async engine
+        # Note: This is not ideal for production - consider adding a sync engine
+        from sqlalchemy.ext.asyncio import AsyncEngine
+        from sqlalchemy import create_engine
+        
+        # Get the async engine and create a sync engine from it
+        async_engine = session_manager.engine
+        sync_engine = create_engine(
+            str(async_engine.url),
+            echo=async_engine.echo,
+            pool_pre_ping=async_engine.pool._pre_ping,
+            pool_recycle=async_engine.pool._recycle
+        )
+        
+        from sqlalchemy.orm import sessionmaker
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
+        
+        db = SessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database connection error: {str(e)}"
+        )
+
+
+def get_current_user(authorization: str = Header(None)) -> str:
+    """
+    Get current user from authorization header
+    
+    This is a simplified implementation. In production, you should:
+    1. Validate the JWT token
+    2. Extract user information from the token
+    3. Verify user permissions
+    """
+    if not authorization:
+        # For development/testing, return a default user
+        # In production, this should raise an authentication error
+        return "default_user"
+    
+    # Simple token extraction (you should implement proper JWT validation)
+    if authorization.startswith("Bearer "):
+        token = authorization[7:]  # Remove "Bearer " prefix
+        # Here you would validate the JWT token and extract user info
+        # For now, we'll just return a placeholder
+        return "user_from_token"
+    
+    # If no Bearer token, return default user for development
+    return "default_user"
+
+
 async def get_persistence_factory() -> AsyncGenerator[PersistenceServiceFactory, None]:
     """Get persistence service factory with session manager"""
     session_manager = get_session_manager()
@@ -61,9 +125,18 @@ async def get_persistence_factory() -> AsyncGenerator[PersistenceServiceFactory,
 
 
 def get_chromadb_client():
-    """Get ChromaDB persistent client"""
-    chroma_store_path = os.getenv("CHROMA_STORE_PATH", "./chroma_db")
-    return chromadb.PersistentClient(path=chroma_store_path)
+    """Get ChromaDB client based on configuration settings."""
+    settings = get_settings()
+    
+    if settings.CHROMA_USE_LOCAL:
+        # Use local persistent client
+        return chromadb.PersistentClient(path=settings.CHROMA_PERSIST_DIRECTORY)
+    else:
+        # Use HTTP client (default)
+        return chromadb.HttpClient(
+            host=settings.CHROMA_HOST, 
+            port=settings.CHROMA_PORT
+        )
 
 
 def get_embeddings():

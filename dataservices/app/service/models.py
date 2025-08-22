@@ -21,11 +21,11 @@ class DomainContextModel(BaseModel):
 
 class CreateDomainRequest(BaseModel):
     """Request model for creating domains"""
-    domain_id: str = Field(..., description="Domain ID")
+    domain_id: str | None = Field(None, description="Domain ID (optional, will be auto-generated if not provided)")
     display_name: str = Field(..., description="Display name for the domain")
     description: str = Field(..., description="Description of the domain")
     created_by: str = Field(..., description="User creating the domain")
-    context: DomainContextModel | None = Field(..., description="Business context for the domain")
+    context: DomainContextModel | None = Field(None, description="Business context for the domain")
 
 
 
@@ -198,6 +198,17 @@ class GeneratedDefinition:
 class AddTableRequest(BaseModel):
     dataset_id: str
     schema: SchemaInput
+
+
+class UpdateTableRequest(BaseModel):
+    """Request model for updating tables with enhanced column definitions and descriptions"""
+    dataset_id: str
+    schema: SchemaInput
+    # Optional fields for partial updates
+    update_description: Optional[bool] = Field(True, description="Whether to update table description")
+    update_columns: Optional[bool] = Field(True, description="Whether to update column definitions")
+    update_enhanced_metadata: Optional[bool] = Field(True, description="Whether to update enhanced metadata")
+    preserve_existing_metadata: Optional[bool] = Field(False, description="Whether to preserve existing metadata not in the update")
 
 
 

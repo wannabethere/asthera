@@ -24,12 +24,34 @@ router = APIRouter(prefix="/workflow/relationships", tags=["relationship_workflo
 # REQUEST/RESPONSE MODELS
 # ============================================================================
 
+class TableDefinition(BaseModel):
+    """Definition of a table for relationship analysis"""
+    name: str = Field(..., description="Table name")
+    display_name: Optional[str] = Field(None, description="Display name for the table")
+    description: Optional[str] = Field(None, description="Table description")
+    columns: List[Dict[str, Any]] = Field(..., description="List of column definitions")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional table metadata")
+
+class ColumnDefinition(BaseModel):
+    """Definition of a column for relationship analysis"""
+    name: str = Field(..., description="Column name")
+    display_name: Optional[str] = Field(None, description="Display name for the column")
+    data_type: str = Field(..., description="Data type of the column")
+    description: Optional[str] = Field(None, description="Column description")
+    is_primary_key: bool = Field(False, description="Whether this column is a primary key")
+    is_nullable: bool = Field(True, description="Whether this column can be null")
+    is_foreign_key: bool = Field(False, description="Whether this column is a foreign key")
+    usage_type: Optional[str] = Field(None, description="Business usage type of the column")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional column metadata")
+
 class RelationshipWorkflowRequest(BaseModel):
     """Request for relationship workflow operations"""
     session_id: Optional[str] = None
     domain_id: str = Field(..., description="Domain ID for the workflow")
     domain_name: Optional[str] = None
     business_domain: Optional[str] = "General"
+    tables: List[TableDefinition] = Field(..., description="List of table definitions to analyze for relationships")
+    business_context: Optional[Dict[str, Any]] = Field(None, description="Additional business context for relationship analysis")
 
 class CustomRelationshipRequest(BaseModel):
     """Request for adding a custom relationship"""
@@ -68,12 +90,12 @@ async def generate_relationship_recommendations(
     current_user: str = Depends(get_current_user)
 ):
     """
-    Generate comprehensive relationship recommendations for all tables in the workflow
+    Generate comprehensive relationship recommendations for tables provided by the user
     
-    This endpoint uses the existing RelationshipRecommendation service to analyze all tables
-    in the workflow and generate relationship recommendations between them.
+    This endpoint accepts table definitions directly from the user and generates
+    relationship recommendations between them using the LLM service.
     
-    This is the main workflow step that should be called after all tables have been added.
+    This gives users greater control over the semantic definitions and relationships.
     """
     try:
         # Create domain context
@@ -81,10 +103,10 @@ async def generate_relationship_recommendations(
             domain_id=request.domain_id,
             domain_name=request.domain_name or f"Domain {request.domain_id}",
             business_domain=request.business_domain,
-            purpose="Generate relationship recommendations for workflow tables",
+            purpose="Generate relationship recommendations for user-provided tables",
             target_users=["Data Analysts", "Business Users", "Data Engineers"],
             key_business_concepts=["Data Modeling", "Business Intelligence", "Data Relationships"],
-            data_sources=["Workflow Tables"],
+            data_sources=["User-Provided Tables"],
             compliance_requirements=[]
         )
         
@@ -94,8 +116,42 @@ async def generate_relationship_recommendations(
             session_id=request.session_id
         )
         
-        # Generate comprehensive relationship recommendations using existing service
-        recommendations = await workflow_service.get_comprehensive_relationship_recommendations(domain_context)
+        # Convert user-provided tables to the format expected by the service
+        user_tables = []
+        for table_def in request.tables:
+            # Convert columns to the expected format
+            columns = []
+            for col in table_def.columns:
+                column_data = {
+                    "name": col.get("name", "unknown"),
+                    "display_name": col.get("display_name") or col.get("name", "unknown"),
+                    "data_type": col.get("data_type", "VARCHAR"),
+                    "description": col.get("description", ""),
+                    "is_primary_key": col.get("is_primary_key", False),
+                    "is_nullable": col.get("is_nullable", True),
+                    "is_foreign_key": col.get("is_foreign_key", False),
+                    "usage_type": col.get("usage_type"),
+                    "metadata": col.get("metadata", {})
+                }
+                columns.append(column_data)
+            
+            # Create table object with metadata
+            table_obj = {
+                "name": table_def.name,
+                "display_name": table_def.display_name or table_def.name,
+                "description": table_def.description or f"Table for {table_def.name}",
+                "metadata": {
+                    "columns": columns,
+                    "user_provided": True,
+                    "business_context": request.business_context or {}
+                }
+            }
+            user_tables.append(table_obj)
+        
+        # Generate comprehensive relationship recommendations using user-provided tables
+        recommendations = await workflow_service.get_relationship_recommendations_from_tables(
+            user_tables, domain_context, request.business_context
+        )
         
         if recommendations.get("status") == "error":
             raise HTTPException(
@@ -105,7 +161,7 @@ async def generate_relationship_recommendations(
         
         return RelationshipWorkflowResponse(
             status="success",
-            message="Successfully generated relationship recommendations using existing service",
+            message="Successfully generated relationship recommendations from user-provided tables",
             data=recommendations
         )
         
@@ -183,6 +239,95 @@ async def add_custom_relationship(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to add custom relationship: {str(e)}"
+        )
+
+@router.post("/analyze-tables", response_model=RelationshipWorkflowResponse)
+async def analyze_tables_for_relationships(
+    request: RelationshipWorkflowRequest,
+    current_user: str = Depends(get_current_user)
+):
+    """
+    Analyze specific tables for relationships without requiring workflow setup
+    
+    This endpoint allows users to get relationship recommendations for specific tables
+    by providing table definitions directly. It's useful for:
+    - Quick relationship analysis without workflow setup
+    - Testing different table configurations
+    - Getting recommendations for tables from different sources
+    """
+    try:
+        # Create domain context
+        domain_context = DomainContext(
+            domain_id=request.domain_id,
+            domain_name=request.domain_name or f"Domain {request.domain_id}",
+            business_domain=request.business_domain,
+            purpose="Analyze user-provided tables for relationships",
+            target_users=["Data Analysts", "Business Users", "Data Engineers"],
+            key_business_concepts=["Data Modeling", "Business Intelligence", "Data Relationships"],
+            data_sources=["User-Provided Tables"],
+            compliance_requirements=[]
+        )
+        
+        # Create workflow service instance (no session required for this analysis)
+        workflow_service = DomainWorkflowService(
+            user_id=current_user,
+            session_id=None  # No session needed for standalone analysis
+        )
+        
+        # Convert user-provided tables to the format expected by the service
+        user_tables = []
+        for table_def in request.tables:
+            # Convert columns to the expected format
+            columns = []
+            for col in table_def.columns:
+                column_data = {
+                    "name": col.get("name", "unknown"),
+                    "display_name": col.get("display_name") or col.get("name", "unknown"),
+                    "data_type": col.get("data_type", "VARCHAR"),
+                    "description": col.get("description", ""),
+                    "is_primary_key": col.get("is_primary_key", False),
+                    "is_nullable": col.get("is_nullable", True),
+                    "is_foreign_key": col.get("is_foreign_key", False),
+                    "usage_type": col.get("usage_type"),
+                    "metadata": col.get("metadata", {})
+                }
+                columns.append(column_data)
+            
+            # Create table object with metadata
+            table_obj = {
+                "name": table_def.name,
+                "display_name": table_def.display_name or table_def.name,
+                "description": table_def.description or f"Table for {table_def.name}",
+                "metadata": {
+                    "columns": columns,
+                    "user_provided": True,
+                    "business_context": request.business_context or {}
+                }
+            }
+            user_tables.append(table_obj)
+        
+        # Generate relationship recommendations using user-provided tables
+        recommendations = await workflow_service.get_relationship_recommendations_from_tables(
+            user_tables, domain_context, request.business_context
+        )
+        
+        if recommendations.get("status") == "error":
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=recommendations.get("error", "Failed to analyze tables")
+            )
+        
+        return RelationshipWorkflowResponse(
+            status="success",
+            message="Successfully analyzed tables for relationships",
+            data=recommendations
+        )
+        
+    except Exception as e:
+        logger.error(f"Error analyzing tables for relationships: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to analyze tables: {str(e)}"
         )
 
 @router.get("/workflow", response_model=RelationshipWorkflowResponse)

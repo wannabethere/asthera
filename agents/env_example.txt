@@ -1,0 +1,12 @@
+# ChromaDB Configuration
+# Set to true to use local ChromaDB, false to use HTTP client (default)
+CHROMA_USE_LOCAL=false
+
+# HTTP Client Settings (used when CHROMA_USE_LOCAL=false)
+CHROMA_HOST=ec2-54-161-71-105.compute-1.amazonaws.com
+CHROMA_PORT=8888
+
+# Local Settings (used when CHROMA_USE_LOCAL=true)
+CHROMA_PERSIST_DIRECTORY=chroma_db
+
+# Other settings can be added here as needed

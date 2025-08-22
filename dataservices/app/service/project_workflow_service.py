@@ -46,7 +46,15 @@ class DomainWorkflowService:
     def get_workflow_state(self) -> dict:
         state = self.cache.get(self._workflow_cache_key())
         if state is None:
-            state = {"domain": None, "context": None, "datasets": [], "tables": [], "relationships": []}
+            state = {
+                "domain": None, 
+                "context": None, 
+                "datasets": [], 
+                "tables": [], 
+                "relationships": [],
+                "relationship_recommendations": None,
+                "sharing_permissions": None
+            }
             self.cache.set(self._workflow_cache_key(), state)
         return state
 
@@ -54,13 +62,145 @@ class DomainWorkflowService:
         self.cache.set(self._workflow_cache_key(), state)
 
     async def create_domain(self, domain_data: dict):
+        """
+        Create domain in workflow state, generating domain ID if not provided
+        
+        Args:
+            domain_data: Dictionary containing domain information including:
+                - display_name: Required display name for the domain
+                - description: Optional description
+                - created_by: User creating the domain
+                - context: Optional business context
+                - domain_id: Optional, will be generated if not provided
+        """
+        # Generate domain ID if not provided
+        if "domain_id" not in domain_data or not domain_data["domain_id"]:
+            domain_data["domain_id"] = self._generate_domain_id(domain_data.get("display_name", "domain"))
+        
+        # Ensure required fields are present
+        if "display_name" not in domain_data:
+            raise ValueError("display_name is required for domain creation")
+        
+        # Set default values for missing fields
+        domain_data.setdefault("status", "draft")
+        domain_data.setdefault("created_at", datetime.now().isoformat())
+        domain_data.setdefault("modified_at", datetime.now().isoformat())
+        
+        # Store in workflow state
         state = self.get_workflow_state()
-        state["domain"] = domain_data  # or Domain(**domain_data)
+        state["domain"] = domain_data
         self.set_workflow_state(state)
+        
+        # Publish update
         publish_update(self.user_id, self.session_id or "default", state)
+        
+        logger.info(f"Created domain in workflow: {domain_data['domain_id']} - {domain_data['display_name']}")
         return state["domain"]
     
+    def _generate_domain_id(self, display_name: str) -> str:
+        """
+        Generate a unique domain ID based on display name and timestamp
+        
+        Args:
+            display_name: The display name of the domain
+            
+        Returns:
+            A unique domain ID string
+        """
+        import uuid
+        from datetime import datetime
+        
+        # Clean the display name for ID generation
+        clean_name = display_name.lower().replace(' ', '_').replace('-', '_').replace('(', '').replace(')', '')
+        # Remove any non-alphanumeric characters except underscores
+        clean_name = ''.join(c for c in clean_name if c.isalnum() or c == '_')
+        
+        # Truncate if too long
+        if len(clean_name) > 20:
+            clean_name = clean_name[:20]
+        
+        # Generate timestamp and unique suffix
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        unique_suffix = str(uuid.uuid4())[:8]
+        
+        domain_id = f"{clean_name}_{timestamp}_{unique_suffix}"
+        
+        # Ensure it's within the 50 character limit from the database schema
+        if len(domain_id) > 50:
+            domain_id = domain_id[:50]
+        
+        return domain_id
+    
+    def get_current_domain_id(self) -> str | None:
+        """Get the current domain ID from the workflow state"""
+        state = self.get_workflow_state()
+        domain = state.get("domain")
+        return domain.get("domain_id") if domain else None
+    
+    def get_current_domain(self) -> dict | None:
+        """Get the current domain data from the workflow state"""
+        state = self.get_workflow_state()
+        return state.get("domain")
+    
+    def has_domain(self) -> bool:
+        """Check if a domain exists in the current workflow state"""
+        state = self.get_workflow_state()
+        return state.get("domain") is not None
+    
+    def get_workflow_summary(self) -> dict:
+        """Get a summary of the current workflow state"""
+        state = self.get_workflow_state()
+        
+        summary = {
+            "has_domain": bool(state.get("domain")),
+            "domain_info": state.get("domain"),
+            "tables_count": len(state.get("tables", [])),
+            "datasets_count": len(state.get("datasets", [])),
+            "relationships_count": len(state.get("relationships", [])),
+            "has_recommendations": bool(state.get("relationship_recommendations")),
+            "workflow_status": "active" if state.get("domain") else "no_domain",
+            "session_id": self.session_id,
+            "user_id": self.user_id
+        }
+        
+        if state.get("domain"):
+            summary["domain_id"] = state["domain"].get("domain_id")
+            summary["domain_name"] = state["domain"].get("display_name")
+            summary["domain_status"] = state["domain"].get("status", "draft")
+        
+        return summary
+    
+    def clear_workflow(self):
+        """Clear the current workflow state and reset to initial state"""
+        initial_state = {
+            "domain": None, 
+            "context": None, 
+            "datasets": [], 
+            "tables": [], 
+            "relationships": [],
+            "relationship_recommendations": None,
+            "sharing_permissions": None
+        }
+        self.set_workflow_state(initial_state)
+        
+        # Publish update about workflow being cleared
+        publish_update(self.user_id, self.session_id or "default", {
+            "type": "workflow_cleared",
+            "message": "Workflow state has been reset"
+        })
+        
+        logger.info(f"Workflow state cleared for user {self.user_id}, session {self.session_id}")
+        return initial_state
+    
+    def _ensure_domain_exists(self):
+        """Ensure a domain exists in the workflow state before performing operations"""
+        if not self.has_domain():
+            raise ValueError("No domain defined in workflow state. Please create a domain first.")
+    
     async def add_dataset(self, dataset_data: dict):
+        """Add dataset to the current domain workflow"""
+        self._ensure_domain_exists()
+        
         state = self.get_workflow_state()
         state["datasets"].append(dataset_data)
         self.set_workflow_state(state)
@@ -365,6 +505,116 @@ class DomainWorkflowService:
                 }
             }
 
+    async def get_relationship_recommendations_from_tables(self, user_tables: List[Dict[str, Any]], domain_context: DomainContext, business_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Generate comprehensive relationship recommendations for user-provided tables
+        
+        This method gives users greater control over the semantic definitions and relationships
+        by accepting table definitions directly instead of relying on workflow state.
+        
+        Args:
+            user_tables: List of table definitions provided by the user
+            domain_context: The domain context for business domain understanding
+            business_context: Optional additional business context for enhanced analysis
+        
+        Returns:
+            Dictionary containing relationship recommendations for the provided tables
+        """
+        try:
+            if not user_tables:
+                return {
+                    "status": "no_tables",
+                    "message": "No tables provided for relationship analysis",
+                    "recommendations": [],
+                    "summary": {
+                        "total_tables": 0,
+                        "total_relationships": 0,
+                        "recommendations": ["Provide table definitions to begin relationship analysis"]
+                    }
+                }
+            
+            logger.info(f"Generating relationship recommendations for {len(user_tables)} user-provided tables in domain {domain_context.domain_id}")
+            
+            # Import the existing RelationshipRecommendation service
+            try:
+                from app.agents.relationship_recommendation import RelationshipRecommendation
+            except ImportError:
+                logger.error("RelationshipRecommendation service not available")
+                return {
+                    "status": "error",
+                    "error": "RelationshipRecommendation service not available",
+                    "message": "Failed to import relationship recommendation service"
+                }
+            
+            # Build MDL representation from user-provided tables
+            mdl_data = self._build_mdl_from_user_tables(user_tables, domain_context, business_context)
+            
+            # Create relationship recommendation service instance
+            relationship_service = RelationshipRecommendation()
+            
+            # Generate recommendations using existing service
+            result = await relationship_service.recommend(
+                RelationshipRecommendation.Input(
+                    id=f"user_tables_relationships_{domain_context.domain_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                    mdl=mdl_data,
+                    project_id=domain_context.domain_id
+                )
+            )
+            
+            if result.status == "finished" and result.response:
+                # Process the response from the existing service
+                recommendations = self._process_relationship_recommendations(
+                    result.response, user_tables, domain_context
+                )
+                
+                # Add user-provided context information
+                recommendations["user_provided_tables"] = True
+                recommendations["business_context"] = business_context
+                recommendations["table_definitions"] = [
+                    {
+                        "name": table.get("name"),
+                        "display_name": table.get("display_name"),
+                        "description": table.get("description"),
+                        "column_count": len(table.get("metadata", {}).get("columns", []))
+                    }
+                    for table in user_tables
+                ]
+                
+                # Store recommendations in workflow state if we have a session
+                if self.session_id:
+                    state = self.get_workflow_state()
+                    state["relationship_recommendations"] = recommendations
+                    self.set_workflow_state(state)
+                    
+                    # Publish update
+                    publish_update(self.user_id, self.session_id, {
+                        "type": "user_table_relationship_recommendations_generated",
+                        "data": recommendations
+                    })
+                
+                logger.info(f"Successfully generated relationship recommendations for {len(user_tables)} user-provided tables")
+                return recommendations
+            else:
+                logger.error(f"Failed to generate relationship recommendations: {result.error}")
+                return {
+                    "status": "error",
+                    "error": str(result.error) if result.error else "Unknown error",
+                    "message": "Failed to generate relationship recommendations using existing service"
+                }
+            
+        except Exception as e:
+            logger.error(f"Error generating relationship recommendations from user tables: {str(e)}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "message": "Failed to generate relationship recommendations from user tables",
+                "recommendations": [],
+                "summary": {
+                    "total_relationships": 0,
+                    "recommendations": [f"Error during analysis: {str(e)}"]
+                }
+            }
+
     def _build_mdl_from_workflow_tables(self, tables: List[Any], domain_context: DomainContext) -> str:
         """Build MDL representation from workflow tables for the relationship service"""
         try:
@@ -410,6 +660,84 @@ class DomainWorkflowService:
             
         except Exception as e:
             logger.error(f"Error building MDL from workflow tables: {str(e)}")
+            # Return minimal MDL structure
+            return json.dumps({
+                "tables": [{"name": "error", "description": "Error building MDL", "columns": []}],
+                "domain": {"id": "error", "name": "Error", "business_domain": "Error", "purpose": "Error"}
+            })
+
+    def _build_mdl_from_user_tables(self, user_tables: List[Dict[str, Any]], domain_context: DomainContext, business_context: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Build MDL representation from user-provided tables for the relationship service
+        
+        This method provides enhanced MDL building with user-provided business context
+        for better semantic relationship analysis.
+        """
+        try:
+            mdl_structure = {
+                "tables": [],
+                "domain": {
+                    "id": domain_context.domain_id,
+                    "name": domain_context.domain_name,
+                    "business_domain": domain_context.business_domain,
+                    "purpose": domain_context.purpose
+                }
+            }
+            
+            # Add business context if provided
+            if business_context:
+                mdl_structure["business_context"] = business_context
+                mdl_structure["domain"]["enhanced_context"] = True
+            
+            for table in user_tables:
+                table_name = table.get("name", "unknown")
+                table_description = table.get("description") or f"Table for {table_name}"
+                table_display_name = table.get("display_name") or table_name
+                
+                # Get columns from table metadata
+                columns = table.get("metadata", {}).get("columns", [])
+                
+                table_mdl = {
+                    "name": table_name,
+                    "display_name": table_display_name,
+                    "description": table_description,
+                    "columns": [],
+                    "user_provided": True
+                }
+                
+                # Add table-level metadata if available
+                table_metadata = table.get("metadata", {})
+                if table_metadata.get("business_context"):
+                    table_mdl["business_context"] = table_metadata["business_context"]
+                
+                for col in columns:
+                    column_mdl = {
+                        "name": col.get("name", "unknown"),
+                        "display_name": col.get("display_name") or col.get("name", "unknown"),
+                        "data_type": col.get("data_type", "VARCHAR"),
+                        "description": col.get("description", ""),
+                        "is_primary_key": col.get("is_primary_key", False),
+                        "is_nullable": col.get("is_nullable", True),
+                        "is_foreign_key": col.get("is_foreign_key", False),
+                        "usage_type": col.get("usage_type"),
+                        "business_description": col.get("business_description", "")
+                    }
+                    
+                    # Add column-level metadata if available
+                    col_metadata = col.get("metadata", {})
+                    if col_metadata:
+                        column_mdl["enhanced_metadata"] = col_metadata
+                    
+                    table_mdl["columns"].append(column_mdl)
+                
+                mdl_structure["tables"].append(table_mdl)
+            
+            # Convert to JSON string for the relationship service
+            import json
+            return json.dumps(mdl_structure, indent=2)
+            
+        except Exception as e:
+            logger.error(f"Error building MDL from user tables: {str(e)}")
             # Return minimal MDL structure
             return json.dumps({
                 "tables": [{"name": "error", "description": "Error building MDL", "columns": []}],
@@ -945,6 +1273,8 @@ class DomainWorkflowService:
 
     async def add_table(self, add_table_request: AddTableRequest, domain_context: DomainContext):
         """Add table with enhanced column definitions and documentation"""
+        self._ensure_domain_exists()
+        
         state = self.get_workflow_state()
         schema_input = add_table_request.schema
         

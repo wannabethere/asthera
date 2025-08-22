@@ -8,6 +8,7 @@ import chromadb
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from app.core.session_manager import SessionManager
 from app.storage.documents import DocumentChromaStore
+from app.core.settings import get_settings
 
 
 def get_session_manager() -> SessionManager:
@@ -36,9 +37,18 @@ async def get_async_db_session():
 
 
 def get_chromadb_client():
-    """Get ChromaDB persistent client"""
-    chroma_store_path = os.getenv("CHROMA_STORE_PATH", "./chroma_db")
-    return chromadb.PersistentClient(path=chroma_store_path)
+    """Get ChromaDB client based on configuration settings."""
+    settings = get_settings()
+    
+    if settings.CHROMA_USE_LOCAL:
+        # Use local persistent client
+        return chromadb.PersistentClient(path=settings.CHROMA_PERSIST_DIRECTORY)
+    else:
+        # Use HTTP client (default)
+        return chromadb.HttpClient(
+            host=settings.CHROMA_HOST, 
+            port=settings.CHROMA_PORT
+        )
 
 
 def get_embeddings():
@@ -49,7 +59,7 @@ def get_embeddings():
     
     return OpenAIEmbeddings(
         model="text-embedding-3-small",
-        openai_api_key=api_key
+        api_key=api_key
     )
 
 

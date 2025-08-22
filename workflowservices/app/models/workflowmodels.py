@@ -1,12 +1,18 @@
 from enum import Enum
 from typing import Dict, List, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 import uuid
+
+def utc_now():
+    """Get current UTC datetime for SQLAlchemy defaults"""
+    return datetime.now(timezone.utc)
 from pydantic import BaseModel, Field
 from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean, UUID as SQLUUID, JSON, Integer, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from app.models.dbmodels import Base
+from app.models.user import User
+from app.models.thread import ThreadMessage
 
 # Workflow States
 class WorkflowState(str, Enum):
@@ -102,10 +108,10 @@ class DashboardWorkflow(Base):
     user_id = Column(SQLUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     state = Column(SQLEnum(WorkflowState), nullable=False, default=WorkflowState.DRAFT)
     current_step = Column(Integer, default=0)
-    metadata = Column(JSON, default={})
+    workflow_metadata = Column(JSON, default={})
     error_message = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
     completed_at = Column(DateTime, nullable=True)
     
     # Relationships
@@ -119,7 +125,8 @@ class ThreadComponent(Base):
     __tablename__ = "thread_components"
     
     id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("dashboard_workflows.id", ondelete="CASCADE"), nullable=False)
+    workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("dashboard_workflows.id", ondelete="CASCADE"), nullable=True)
+    report_workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("report_workflows.id", ondelete="CASCADE"), nullable=True)
     thread_message_id = Column(SQLUUID(as_uuid=True), ForeignKey("thread_messages.id", ondelete="SET NULL"), nullable=True)
     component_type = Column(SQLEnum(ComponentType), nullable=False)
     sequence_order = Column(Integer, nullable=False)
@@ -141,32 +148,36 @@ class ThreadComponent(Base):
     configuration = Column(JSON, default={})
     is_configured = Column(Boolean, default=False)
     
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
     
     # Relationships
-    workflow = relationship("DashboardWorkflow", back_populates="thread_components")
+    workflow = relationship("DashboardWorkflow", back_populates="thread_components", foreign_keys=[workflow_id])
+    report_workflow = relationship("ReportWorkflow", back_populates="thread_components", foreign_keys=[report_workflow_id])
 
 class ShareConfiguration(Base):
     __tablename__ = "share_configurations"
     
     id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("dashboard_workflows.id", ondelete="CASCADE"), nullable=False)
+    workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("dashboard_workflows.id", ondelete="CASCADE"), nullable=True)
+    report_workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("report_workflows.id", ondelete="CASCADE"), nullable=True)
     share_type = Column(SQLEnum(ShareType), nullable=False)
     target_id = Column(String, nullable=False)  # User ID, Team ID, Email, etc.
     permissions = Column(JSON, default={})
     notification_sent = Column(Boolean, default=False)
     accepted = Column(Boolean, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
     
     # Relationships
-    workflow = relationship("DashboardWorkflow", back_populates="share_configs")
+    workflow = relationship("DashboardWorkflow", back_populates="share_configs", foreign_keys=[workflow_id])
+    report_workflow = relationship("ReportWorkflow", back_populates="share_configs", foreign_keys=[report_workflow_id])
 
 class ScheduleConfiguration(Base):
     __tablename__ = "schedule_configurations"
     
     id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("dashboard_workflows.id", ondelete="CASCADE"), nullable=False)
+    workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("dashboard_workflows.id", ondelete="CASCADE"), nullable=True)
+    report_workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("report_workflows.id", ondelete="CASCADE"), nullable=True)
     schedule_type = Column(SQLEnum(ScheduleType), nullable=False)
     cron_expression = Column(String, nullable=True)
     timezone = Column(String, default="UTC")
@@ -177,17 +188,19 @@ class ScheduleConfiguration(Base):
     next_run = Column(DateTime, nullable=True)
     run_count = Column(Integer, default=0)
     configuration = Column(JSON, default={})
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
     
     # Relationships
-    workflow = relationship("DashboardWorkflow", back_populates="schedule_config")
+    workflow = relationship("DashboardWorkflow", back_populates="schedule_config", foreign_keys=[workflow_id])
+    report_workflow = relationship("ReportWorkflow", back_populates="schedule_config", foreign_keys=[report_workflow_id])
 
 class IntegrationConfig(Base):
     __tablename__ = "integration_configs"
     
     id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("dashboard_workflows.id", ondelete="CASCADE"), nullable=False)
+    workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("dashboard_workflows.id", ondelete="CASCADE"), nullable=True)
+    report_workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("report_workflows.id", ondelete="CASCADE"), nullable=True)
     integration_type = Column(SQLEnum(IntegrationType), nullable=False)
     connection_config = Column(JSON, nullable=False)  # Encrypted credentials
     mapping_config = Column(JSON, default={})  # Field mappings
@@ -197,25 +210,50 @@ class IntegrationConfig(Base):
     last_sync = Column(DateTime, nullable=True)
     sync_status = Column(String, nullable=True)
     error_message = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
     
     # Relationships
-    workflow = relationship("DashboardWorkflow", back_populates="integrations")
+    workflow = relationship("DashboardWorkflow", back_populates="integrations", foreign_keys=[workflow_id])
+    report_workflow = relationship("ReportWorkflow", back_populates="integrations", foreign_keys=[report_workflow_id])
 
 class WorkflowVersion(Base):
     __tablename__ = "workflow_versions"
     
     id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("dashboard_workflows.id", ondelete="CASCADE"), nullable=False)
+    workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("dashboard_workflows.id", ondelete="CASCADE"), nullable=True)
+    report_workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("report_workflows.id", ondelete="CASCADE"), nullable=True)
     version_number = Column(Integer, nullable=False)
     state = Column(SQLEnum(WorkflowState), nullable=False)
     snapshot_data = Column(JSON, nullable=False)  # Complete snapshot of workflow state
     created_by = Column(SQLUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
     
     # Relationships
-    workflow = relationship("DashboardWorkflow", back_populates="workflow_versions")
+    workflow = relationship("DashboardWorkflow", back_populates="workflow_versions", foreign_keys=[workflow_id])
+    report_workflow = relationship("ReportWorkflow", back_populates="workflow_versions", foreign_keys=[report_workflow_id])
+
+# Report Workflow Model
+class ReportWorkflow(Base):
+    __tablename__ = "report_workflows"
+    
+    id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    report_id = Column(SQLUUID(as_uuid=True), ForeignKey("reports.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(SQLUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    state = Column(SQLEnum(WorkflowState), nullable=False, default=WorkflowState.DRAFT)
+    current_step = Column(Integer, default=0)
+    workflow_metadata = Column(JSON, default={})
+    error_message = Column(String, nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+    completed_at = Column(DateTime, nullable=True)
+    
+    # Relationships
+    thread_components = relationship("ThreadComponent", back_populates="report_workflow", cascade="all, delete-orphan")
+    share_configs = relationship("ShareConfiguration", back_populates="report_workflow", cascade="all, delete-orphan")
+    schedule_config = relationship("ScheduleConfiguration", back_populates="report_workflow", uselist=False, cascade="all, delete-orphan")
+    integrations = relationship("IntegrationConfig", back_populates="report_workflow", cascade="all, delete-orphan")
+    workflow_versions = relationship("WorkflowVersion", back_populates="report_workflow", cascade="all, delete-orphan")
 
 # Pydantic Models for API
 class ThreadComponentCreate(BaseModel):

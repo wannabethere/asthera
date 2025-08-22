@@ -4,6 +4,7 @@ import asyncio
 import json
 
 #from app.routers.instruction_router import router as instruction_router
+from app.routers.workflow_routers import router as workflow_router
 
 from app.utils.cache import set_cache_provider, InMemoryCacheProvider
 from contextlib import asynccontextmanager
@@ -31,6 +32,9 @@ app = FastAPI(title="Data Services API", version="1.0.0",
             lifespan=lifespan)
 
 load_dotenv()
+
+# Include routers
+app.include_router(workflow_router)
 
 
 @app.get("/")

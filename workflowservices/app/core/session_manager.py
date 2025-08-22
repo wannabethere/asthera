@@ -3,7 +3,7 @@ import logging
 from datetime import datetime, timedelta
 import uuid
 from app.core.settings import ServiceConfig
-from app.schemas.dbmodels import Base
+from app.models.dbmodels import Base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
