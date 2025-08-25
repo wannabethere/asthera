@@ -12,6 +12,7 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document as LangchainDocument
 import chromadb
 from app.core.settings import get_settings
+from app.storage.chromadb import ChromaDB
 from collections import defaultdict
 from sklearn.feature_extraction.text import TfidfVectorizer
 from enum import Enum, auto
@@ -258,7 +259,7 @@ class DocumentVectorstore:
 class DocumentChromaStore:
     """Handle Chroma vectorstore operations."""
 
-    def __init__(self, persistent_client: chromadb.PersistentClient, collection_name: str, vectorstore_path: str = None, embeddings_model: OpenAIEmbeddings = embeddings_model, tf_idf:bool = False):
+    def __init__(self, collection_name: str, vectorstore_path: str = None, embeddings_model: OpenAIEmbeddings = embeddings_model, tf_idf:bool = False):
         """Initialize the Chroma store.
         
         Args:
@@ -269,13 +270,16 @@ class DocumentChromaStore:
         self.collection_name = collection_name
         self.vectorstore_path = vectorstore_path or CHROMA_STORE_PATH
         self.embeddings_model = embeddings_model or embeddings_model
-        self.persistent_client = persistent_client
         self.tf_idf = tf_idf
         self.vectorizer = TfidfVectorizer()
         self.vectorstore = None
         self.tfidf_vectorstore = None
         self.collection = None
         self.tfidf_collection_name = f"{self.collection_name}_tfidf"
+        
+        # Initialize ChromaDB wrapper (will use appropriate client type based on settings)
+        self.chroma_client = ChromaDB()
+        
         # Ensure the storage directory exists
         self.initialize()
         
@@ -291,25 +295,28 @@ class DocumentChromaStore:
             # Initialize the persistent client with the specified path
             
             
-            # Get or create the collection
-            self.collection = self.persistent_client.get_or_create_collection(
+            # Get or create the collection using ChromaDB wrapper
+            self.collection = self.chroma_client.create_collection(
                 name=self.collection_name,
                 metadata={"description": f"Document collection for {self.collection_name}"}
             )
+            
             if self.tf_idf:
-                self.tfidf_collection = self.persistent_client.get_or_create_collection(
+                self.tfidf_collection = self.chroma_client.create_collection(
                     name=self.tfidf_collection_name,
                     metadata={"hnsw:space": "cosine", "description": f"TF-IDF collection for {self.collection_name}"}
                 )
+            
             # Initialize the Langchain Chroma wrapper
             self.vectorstore = Chroma(
-                client=self.persistent_client,
+                client=self.chroma_client.client,
                 collection_name=self.collection_name,
                 embedding_function=self.embeddings_model,
             )
+            
             if self.tf_idf:
                 self.tfidf_vectorstore = Chroma(
-                    client=self.persistent_client,
+                    client=self.chroma_client.client,
                     collection_name=self.tfidf_collection_name,
                     embedding_function=self.embeddings_model,
                 )
@@ -414,10 +421,13 @@ class DocumentChromaStore:
             tfidf_matrix = self.vectorizer.fit_transform(texts)
             metadata_list = [doc.metadata for doc in documents]
             ids = [str(uuid.uuid4()) for _ in range(len(texts))]
-            self.tfidf_collection.add(
-                embeddings=tfidf_matrix.toarray(),
+            # Use ChromaDB wrapper to add TF-IDF vectors with embeddings
+            self.chroma_client.add_documents_with_embeddings(
+                collection_name=self.tfidf_collection_name,
+                documents=texts,
                 ids=ids,
-                metadatas=metadata_list
+                embeddings=tfidf_matrix.toarray(),
+                metadata=metadata_list
             )
             logger.info(f"Added {len(texts)} TF-IDF vectors to collection {self.tfidf_collection_name}")
         else:
@@ -493,6 +503,7 @@ class DocumentChromaStore:
                     filter=where
                 )
             
+                
             
             # Initialize BM25 ranker
             bm25 = BM25Ranker()
@@ -642,8 +653,9 @@ class DocumentChromaStore:
             # Convert query to TF-IDF vector
             query_vector = self.vectorizer.transform([query]).toarray()[0]
             
-            # Query the TF-IDF collection
-            results = self.tfidf_collection.query(
+            # Query the TF-IDF collection using ChromaDB wrapper
+            results = self.chroma_client.query_collection(
+                collection_name=self.tfidf_collection_name,
                 query_embeddings=query_vector.reshape(1, -1),
                 n_results=k,
                 where=where
@@ -725,11 +737,13 @@ class AsyncDocumentWriter:
             # Handle duplicates based on policy
             if policy == DuplicatePolicy.SKIP:
                 # Filter out documents that already exist
-                existing_ids = set(self.document_store.collection.get()['ids'])
+                existing_records = self.document_store.chroma_client.get_all_records(self.document_store.collection_name)
+                existing_ids = set(existing_records.get('ids', []))
                 documents = [doc for doc in documents if doc.metadata.get('id') not in existing_ids]
             elif policy == DuplicatePolicy.FAIL:
                 # Check if any documents already exist
-                existing_ids = set(self.document_store.collection.get()['ids'])
+                existing_records = self.document_store.chroma_client.get_all_records(self.document_store.collection_name)
+                existing_ids = set(existing_records.get('ids', []))
                 duplicate_ids = [doc.metadata.get('id') for doc in documents if doc.metadata.get('id') in existing_ids]
                 if duplicate_ids:
                     raise ValueError(f"Duplicate documents found with IDs: {duplicate_ids}")
@@ -752,14 +766,9 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     
     try:
-        # Initialize the persistent client
-        logger.info(f"Initializing persistent client at {CHROMA_STORE_PATH}")
-        client = chromadb.PersistentClient(path=CHROMA_STORE_PATH)
-        
-        # Create a test collection
+        # Create a test collection using ChromaDB wrapper
         collection_name = "test_collection"
         doc_store = DocumentChromaStore(
-            persistent_client=client,
             collection_name=collection_name
         )
         

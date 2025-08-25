@@ -2,21 +2,29 @@
 Instruction service using the new persistence services
 """
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional, Dict, Any
 from app.service.persistence_service import PersistenceServiceFactory
 from app.service.models import (
     InstructionCreate, InstructionUpdate, InstructionRead
 )
+from app.core.session_manager import SessionManager
 from app.utils.history import DomainManager
 from app.schemas.dbmodels import Instruction
+import logging
+import traceback
+from tests.share_permissions_test import SharePermissions
+from fastapi import HTTPException, status
+logger = logging.getLogger(__name__)
+def session_managers():
+    return SessionManager()
 
-
-def create_instruction(db: Session, data: InstructionCreate, created_by: str) -> InstructionRead:
+async def create_instruction(db: AsyncSession, data: InstructionCreate, created_by: str,token) -> InstructionRead:
     """Create a new instruction using persistence service."""
     # Initialize services
     domain_manager = DomainManager(db)
-    factory = PersistenceServiceFactory(db, domain_manager)
+    session_manager = session_managers()
+    factory = PersistenceServiceFactory(session_manager, domain_manager)
     instruction_service = factory.get_instruction_service()
     
     # Convert to instruction data format
@@ -25,42 +33,51 @@ def create_instruction(db: Session, data: InstructionCreate, created_by: str) ->
         'instructions': data.instructions,
         'sql_query': data.sql_query,
         'chain_of_thought': data.chain_of_thought,
-        'metadata': data.metadata or {}
+        'metadata': data.json_metadata or {}
     }
     
     # Persist using the service
-    instruction_id = instruction_service.persist_instruction(instruction_data, data.domain_id, created_by)
+    instruction_id = await instruction_service.persist_instruction(instruction_data, data.domain_id, created_by,token)
     
     # Get the created instruction
-    instruction = instruction_service.get_instruction_by_id(instruction_id)
+    instruction = await instruction_service.get_instruction_by_id(instruction_id)
     
     return InstructionRead.model_validate(instruction)
 
 
-def get_instruction(db: Session, instruction_id: str) -> Optional[InstructionRead]:
+async def get_instruction(db: AsyncSession, instruction_id: str,token) -> Optional[InstructionRead]:
     """Retrieve an instruction by its ID using persistence service."""
     # Initialize services
     domain_manager = DomainManager(db)
-    factory = PersistenceServiceFactory(db, domain_manager)
+    session_manager = session_managers()
+    factory = PersistenceServiceFactory(session_manager, domain_manager)
     instruction_service = factory.get_instruction_service()
     
     # Get instruction by ID directly
-    instruction = instruction_service.get_instruction_by_id(instruction_id)
-    
+    instruction = await instruction_service.get_instruction_by_id(instruction_id)
+    domain_id=instruction.domain_id
+    check_permission = await SharePermissions().check_user_permission(token,domain_id)
+    if not check_permission:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User does not have permission to access this instruction")
     if instruction:
         return InstructionRead.model_validate(instruction)
     return None
 
 
-def update_instruction(db: Session, instruction_id: str, data: InstructionUpdate, modified_by: str) -> Optional[InstructionRead]:
+async def update_instruction(db: AsyncSession, instruction_id: str, data: InstructionUpdate, modified_by: str,token) -> Optional[InstructionRead]:
     """Update an instruction using persistence service."""
     # Initialize services
     domain_manager = DomainManager(db)
-    factory = PersistenceServiceFactory(db, domain_manager)
+    session_manager = session_managers()
+    factory = PersistenceServiceFactory(session_manager, domain_manager)
     instruction_service = factory.get_instruction_service()
     
     # Get the instruction by ID
-    instruction = instruction_service.get_instruction_by_id(instruction_id)
+    instruction = await instruction_service.get_instruction_by_id(instruction_id)
+    domain_id=instruction.domain_id
+    check_permission = await SharePermissions().check_user_permission(token,domain_id)
+    if not check_permission:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User does not have permission to access this instruction")
     
     if not instruction:
         return None
@@ -75,49 +92,55 @@ def update_instruction(db: Session, instruction_id: str, data: InstructionUpdate
         updates['sql_query'] = data.sql_query
     if data.chain_of_thought is not None:
         updates['chain_of_thought'] = data.chain_of_thought
-    if data.metadata is not None:
-        updates['metadata'] = data.metadata
+    if data.json_metadata is not None:
+        updates['metadata'] = data.json_metadata
     
     # Update using the service
-    updated_instruction = instruction_service.update_instruction(instruction_id, updates, modified_by)
+    updated_instruction = await instruction_service.update_instruction(instruction_id, updates, modified_by)
     
     return InstructionRead.model_validate(updated_instruction)
 
 
-def delete_instruction(db: Session, instruction_id: str) -> bool:
+async def delete_instruction(db: AsyncSession, instruction_id: str,token) -> bool:
     """Delete an instruction using persistence service."""
     # Initialize services
     domain_manager = DomainManager(db)
-    factory = PersistenceServiceFactory(db, domain_manager)
+    session_manager = session_managers()
+    factory = PersistenceServiceFactory(session_manager, domain_manager)
     instruction_service = factory.get_instruction_service()
     
     # Delete using the service
-    return instruction_service.delete_instruction(instruction_id)
+    return await instruction_service.delete_instruction(instruction_id,token)
 
 
-def list_instructions(db: Session, domain_id: Optional[str] = None) -> List[InstructionRead]:
+async def list_instructions(db: AsyncSession, domain_id: Optional[str] = None,token:str=None) -> List[InstructionRead]:
     """List instructions using persistence service."""
     # Initialize services
     domain_manager = DomainManager(db)
-    factory = PersistenceServiceFactory(db, domain_manager)
+    session_manager = session_managers()
+    factory = PersistenceServiceFactory(session_manager, domain_manager)
     instruction_service = factory.get_instruction_service()
     
     # Get instructions
     if domain_id:
-        instructions = instruction_service.get_instructions(domain_id)
+        check_permission = await SharePermissions().check_user_permission(token,domain_id)
+        if not check_permission:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User does not have permission to access this instruction")
+        instructions = await instruction_service.get_instructions(domain_id,token)
     else:
         # Get all instructions (not recommended for large datasets)
-        instructions = instruction_service.get_instructions("")
+        instructions = await instruction_service.get_instructions(token=token)
     
     return [InstructionRead.model_validate(instruction) for instruction in instructions]
 
 
-def create_instructions_batch(db: Session, instructions_data: List[Dict[str, Any]], 
+async def create_instructions_batch(db: AsyncSession, instructions_data: List[Dict[str, Any]], 
                             domain_id: str, created_by: str) -> List[str]:
     """Create multiple instructions in batch using persistence service."""
     # Initialize services
     domain_manager = DomainManager(db)
-    factory = PersistenceServiceFactory(db, domain_manager)
+    session_manager = session_managers()
+    factory = PersistenceServiceFactory(session_manager, domain_manager)
     instruction_service = factory.get_instruction_service()
     
     # Prepare instruction data
@@ -132,20 +155,21 @@ def create_instructions_batch(db: Session, instructions_data: List[Dict[str, Any
         })
     
     # Persist using the service
-    instruction_ids = instruction_service.persist_instructions_batch(formatted_instructions, domain_id, created_by)
+    instruction_ids = await instruction_service.persist_instructions_batch(formatted_instructions, domain_id, created_by)
     
     return instruction_ids
 
 
-def get_instruction_summary(db: Session, domain_id: str) -> Dict[str, Any]:
+async def get_instruction_summary(db: AsyncSession, domain_id: str) -> Dict[str, Any]:
     """Get summary of instructions for a domain."""
     # Initialize services
     domain_manager = DomainManager(db)
-    factory = PersistenceServiceFactory(db, domain_manager)
+    session_manager = session_managers()
+    factory = PersistenceServiceFactory(session_manager, domain_manager)
     instruction_service = factory.get_instruction_service()
     
     # Get all instructions for the domain
-    instructions = instruction_service.get_instructions(domain_id)
+    instructions = await instruction_service.get_instructions(domain_id)
     
     summary = {
         'total_instructions': len(instructions),
@@ -183,4 +207,4 @@ def get_instruction_summary(db: Session, domain_id: str) -> Dict[str, Any]:
         
         summary['instruction_types'][question_type] = summary['instruction_types'].get(question_type, 0) + 1
     
-    return summary 
+    return summary

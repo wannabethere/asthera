@@ -86,8 +86,8 @@ async def test_relationship_recommendation():
         result = await recommendation_service.recommend(
             RelationshipRecommendation.Input(
                 id="test_orders_table",
-                table_data=table_data,
-                project_id="test_project"
+                tables_data=[table_data],
+                domain_id="test_project"
             )
         )
         

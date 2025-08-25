@@ -15,6 +15,11 @@ find . -type d -name "__MACOSX" -print0 | xargs -0 rm -rf
 
 scp -i ~/Downloads/flowharmonic.pem agents.zip ec2-user@ec2-54-161-71-105.compute-1.amazonaws.com:~/.
 
+
+for dataservices:
+sudo yum install postgresql-devel python3-devel gcc
+nohup uvicorn app.main:app --reload --host 0.0.0.0 --port 8035 --workers 4 > dataservices.log 2>&1 & echo $! > run.pid
+
 https://github.com/llm-d/llm-d
 
  'columns': ['Full_Name', 'User_ID', 'Division', 'Assigned_Date', 'Completed_Date', 'Due_Date', 'is_completed', 'is_satisfied_late']}, 'table_name': 'csod_training_records'}

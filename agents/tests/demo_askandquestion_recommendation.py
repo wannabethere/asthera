@@ -392,7 +392,7 @@ async def run_demo():
         },
         #Can you show me increasing vs decreasing time spent for each role (`PrimaryJob`) that struggles certification requirements?
         {
-            "question": "Can you show me increasing vs decreasing time spent for each role (`PrimaryJob`) that struggles certification requirements?",
+            "question": "How many unique learners completed at least one activity in the current year compared to the last year?",
             "event_id": "cornerstone_event_4"
         }
     ]

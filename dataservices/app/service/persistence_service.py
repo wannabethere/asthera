@@ -4,14 +4,16 @@ from app.schemas.dbmodels import (
     Metric, View, CalculatedColumn, SQLColumn, Table, Domain, 
     SQLFunction, Instruction, KnowledgeBase, Example
 )
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.session_manager import SessionManager
-from sqlalchemy.orm import Session
 from sqlalchemy import select
 import uuid
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 import logging
-
+import traceback
+from tests.share_permissions_test import SharePermissions
+from fastapi import HTTPException
 logger = logging.getLogger(__name__)
 
 
@@ -43,7 +45,7 @@ class DefinitionPersistenceService:
                 await session.rollback()
                 raise Exception(f"Failed to persist definition: {str(e)}")
     
-    async def _create_metric(self, session: Session, definition: GeneratedDefinition, 
+    async def _create_metric(self, session: AsyncSession, definition: GeneratedDefinition, 
                            domain_id: str, created_by: str) -> uuid.UUID:
         """Create metric in database"""
         # Find appropriate table for the metric
@@ -75,7 +77,7 @@ class DefinitionPersistenceService:
         await session.flush()  # Get the ID
         return metric.metric_id
     
-    async def _create_view(self, session: Session, definition: GeneratedDefinition, 
+    async def _create_view(self, session: AsyncSession, definition: GeneratedDefinition, 
                           domain_id: str, created_by: str) -> uuid.UUID:
         """Create view in database"""
         table = await self._find_primary_table(session, definition.related_tables, domain_id)
@@ -86,10 +88,10 @@ class DefinitionPersistenceService:
             display_name=definition.display_name,
             description=definition.description,
             view_sql=definition.sql_query,
-            view_type=definition.metadata.get('view_type', 'custom'),
+            view_type=definition.json_metadata.get('view_type', 'custom'),
             modified_by=created_by,
             json_metadata={
-                **definition.metadata,
+                **definition.json_metadata,
                 'chain_of_thought': definition.chain_of_thought,
                 'confidence_score': definition.confidence_score,
                 'suggestions': definition.suggestions,
@@ -104,7 +106,7 @@ class DefinitionPersistenceService:
         await session.flush()
         return view.view_id
     
-    async def _create_calculated_column(self, session: Session, definition: GeneratedDefinition, 
+    async def _create_calculated_column(self, session: AsyncSession, definition: GeneratedDefinition, 
                                       domain_id: str, created_by: str) -> uuid.UUID:
         """Create calculated column in database"""
         table = await self._find_primary_table(session, definition.related_tables, domain_id)
@@ -116,15 +118,15 @@ class DefinitionPersistenceService:
             display_name=definition.display_name,
             description=definition.description,
             column_type='calculated_column',  # Mark as calculated column
-            data_type=definition.metadata.get('data_type', 'VARCHAR'),
-            usage_type=definition.metadata.get('usage_type', 'calculated'),
-            is_nullable=definition.metadata.get('is_nullable', True),
-            is_primary_key=definition.metadata.get('is_primary_key', False),
-            is_foreign_key=definition.metadata.get('is_foreign_key', False),
-            default_value=definition.metadata.get('default_value'),
-            ordinal_position=definition.metadata.get('ordinal_position'),
+            data_type=definition.json_metadata.get('data_type', 'VARCHAR'),
+            usage_type=definition.json_metadata.get('usage_type', 'calculated'),
+            is_nullable=definition.json_metadata.get('is_nullable', True),
+            is_primary_key=definition.json_metadata.get('is_primary_key', False),
+            is_foreign_key=definition.json_metadata.get('is_foreign_key', False),
+            default_value=definition.json_metadata.get('default_value'),
+            ordinal_position=definition.json_metadata.get('ordinal_position'),
             json_metadata={
-                **definition.metadata,
+                **definition.json_metadata,
                 'chain_of_thought': definition.chain_of_thought,
                 'confidence_score': definition.confidence_score,
                 'suggestions': definition.suggestions,
@@ -143,7 +145,7 @@ class DefinitionPersistenceService:
         calc_column = CalculatedColumn(
             column_id=column.column_id,
             calculation_sql=definition.sql_query,
-            function_id=definition.metadata.get('function_id'),
+            function_id=definition.json_metadata.get('function_id',None),
             dependencies=definition.related_columns,
             modified_by=created_by
         )
@@ -152,7 +154,7 @@ class DefinitionPersistenceService:
         await session.flush()
         return column.column_id
     
-    async def _find_primary_table(self, session: Session, table_names: List[str], domain_id: str) -> Table:
+    async def _find_primary_table(self, session: AsyncSession, table_names: List[str], domain_id: str) -> Table:
         """Find the primary table for the definition"""
         if not table_names:
             # Default to first table if none specified
@@ -257,10 +259,14 @@ class UserExamplePersistenceService:
         self.instructions_processor = instructions_processor
     
     async def persist_user_example(self, user_example: UserExample, 
-                                 domain_id: str) -> str:
+                                 domain_id: str, token: str) -> str:
         """Persist user example to database and optionally index to ChromaDB"""
         async with self.session_manager.get_async_db_session() as session:
             try:
+                check_permissions=SharePermissions().check_user_permission(token, domain_id)
+                if not check_permissions:
+                    raise HTTPException(status_code=403, detail="User does not have permission to access this domain")
+                
                 # Convert UserExample to Example model
                 example = Example(
                     domain_id=domain_id,
@@ -274,8 +280,8 @@ class UserExamplePersistenceService:
                     categories=[user_example.definition_type.value] if user_example.definition_type else [],
                     samples=user_example.additional_context.get('samples') if user_example.additional_context else None,
                     additional_context=user_example.additional_context,
-                    user_id=user_example.user_id,
-                    modified_by=user_example.user_id,
+                    created_by=user_example.created_by,
+                    updated_by=user_example.created_by,
                     json_metadata={
                         'definition_type': user_example.definition_type.value if user_example.definition_type else None,
                         'original_name': user_example.name,
@@ -338,25 +344,82 @@ class UserExamplePersistenceService:
             # Don't raise the exception to avoid failing the database transaction
             # The example is still saved to the database
     
-    async def get_user_examples(self, domain_id: str, 
-                              definition_type: Optional[DefinitionType] = None) -> List[Example]:
-        """Get user examples for a domain"""
+    # async def get_user_examples(self, domain_id: str, 
+    #                           definition_type: Optional[DefinitionType] = None,token: str) -> List[Example]:
+    #     """Get user examples for a domain"""
+    #     async with self.session_manager.get_async_db_session() as session:
+    #         query = select(Example)
+            
+    #         if definition_type:
+    #             query = query.where(Example.categories.contains([definition_type.value]))
+    #         elif domain_id:
+    #             query=query.where(Example.domain_id == domain_id)
+            
+    #         result = await session.execute(query)
+    #         return result.scalars().all()
+    async def get_user_examples(self, domain_id: str = None, 
+                         definition_type: Optional[DefinitionType] = None, token: str = None) -> List[Example]:
+        """Get user examples for a domain or all accessible domains"""
         async with self.session_manager.get_async_db_session() as session:
-            query = select(Example).where(Example.domain_id == domain_id)
             
-            if definition_type:
-                query = query.where(Example.categories.contains([definition_type.value]))
-            
-            result = await session.execute(query)
-            return result.scalars().all()
+            if domain_id:
+                # Check permission for specific domain
+                checkPermission = await self.check_user_permission(token, domain_id)
+                if not checkPermission['has_permission']:
+                    raise HTTPException(
+                        status_code=403, 
+                        detail="User does not have permission to access this domain"
+                    )
+                
+                query = select(Example).where(Example.domain_id == domain_id)
+                
+                if definition_type:
+                    query = query.where(Example.categories.contains([definition_type.value]))
+                
+                result = await session.execute(query)
+                return result.scalars().all()
+            else:
+                # Get all accessible domain_ids for user
+                user_datasets = await SharePermissions().get_user_domains(token)
+                accessible_domain_ids = set()
+                
+                # Collect domain_ids from owned datasets
+                for dataset in user_datasets.get("my_datasets", []):
+                    if "project_info" in dataset and "domain_id" in dataset["project_info"]:
+                        accessible_domain_ids.add(dataset["project_info"]["domain_id"])
+                
+                # Collect domain_ids from shared datasets
+                for dataset in user_datasets.get("shared_datasets", []):
+                    if "project_info" in dataset and "domain_id" in dataset["project_info"]:
+                        accessible_domain_ids.add(dataset["project_info"]["domain_id"])
+                
+                if not accessible_domain_ids:
+                    return []
+                
+                # Get examples for all accessible domains
+                query = select(Example).where(Example.domain_id.in_(accessible_domain_ids))
+                
+                if definition_type:
+                    query = query.where(Example.categories.contains([definition_type.value]))
+                
+                result = await session.execute(query)
+                return result.scalars().all()
     
-    async def get_user_example_by_id(self, example_id: str) -> Optional[Example]:
+    async def get_user_example_by_id(self, example_id: str,token: str) -> Optional[Example]:
         """Get user example by ID"""
+        
         async with self.session_manager.get_async_db_session() as session:
             result = await session.execute(
                 select(Example).where(Example.example_id == example_id)
             )
-            return result.scalar_one_or_none()
+            result = result.scalar_one_or_none()
+            domain_id=result.domain_id
+            check_permissions=SharePermissions().check_user_permission(token, domain_id)
+            if not check_permissions:
+                raise HTTPException(status_code=403, detail="User does not have permission to access this domain")
+            
+            
+            return result
     
     async def update_user_example(self, example_id: str, updates: Dict[str, Any], 
                                 modified_by: str) -> Example:
@@ -419,6 +482,8 @@ class SQLFunctionPersistenceService:
         """Persist SQL function to database with optional domain_id"""
         async with self.session_manager.get_async_db_session() as session:
             try:
+                print(f"Entered Persistent SQL Function with {function_data}")
+
                 sql_function = SQLFunction(
                     domain_id=domain_id,
                     name=function_data['name'],
@@ -428,15 +493,19 @@ class SQLFunctionPersistenceService:
                     return_type=function_data.get('return_type'),
                     parameters=function_data.get('parameters', []),
                     modified_by=created_by,
-                    json_metadata=function_data.get('metadata', {})
+                    json_metadata=function_data.get('json_metadata', {})
                 )
                 
                 session.add(sql_function)
                 await session.commit()
+                print(f"After SQL FUnction commit ")
                 
                 return str(sql_function.function_id)
                 
             except Exception as e:
+                print("======================= Error in Persistent SQL Function started ========================")
+                traceback.print_exc()
+                print("========================== Error ended here ====================")
                 await session.rollback()
                 raise Exception(f"Failed to persist SQL function: {str(e)}")
     
@@ -635,8 +704,16 @@ class InstructionPersistenceService:
         self.domain_manager = domain_manager
     
     async def persist_instruction(self, instruction_data: Dict[str, Any], 
-                                domain_id: str, created_by: str) -> str:
+                                domain_id: str, created_by: str,token:str) -> str:
         """Persist instruction to database"""
+        checkPermission = await SharePermissions().check_user_permission(token, domain_id)
+        
+        if not checkPermission['has_permission']:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User does not have permission to access this domain"
+            )
+        
         async with self.session_manager.get_async_db_session() as session:
             try:
                 instruction = Instruction(
@@ -646,7 +723,10 @@ class InstructionPersistenceService:
                     sql_query=instruction_data['sql_query'],
                     chain_of_thought=instruction_data.get('chain_of_thought'),
                     modified_by=created_by,
-                    json_metadata=instruction_data.get('metadata', {})
+                    json_metadata=instruction_data.get('json_metadata', {}),
+                    created_by=created_by,
+                    updated_by=created_by
+
                 )
                 
                 session.add(instruction)
@@ -673,7 +753,7 @@ class InstructionPersistenceService:
                         sql_query=instruction_data['sql_query'],
                         chain_of_thought=instruction_data.get('chain_of_thought'),
                         modified_by=created_by,
-                        json_metadata=instruction_data.get('metadata', {})
+                        json_metadata=instruction_data.get('json_metadata', {})
                     )
                     
                     session.add(instruction)
@@ -687,13 +767,38 @@ class InstructionPersistenceService:
                 await session.rollback()
                 raise Exception(f"Failed to persist instructions batch: {str(e)}")
     
-    async def get_instructions(self, domain_id: str) -> List[Instruction]:
-        """Get all instructions for a domain"""
+    async def get_instructions(self, domain_id: str=None, token: str=None) -> List[Instruction]:
+        """Get all instructions for a domain or all accessible domains"""
         async with self.session_manager.get_async_db_session() as session:
-            result = await session.execute(
-                select(Instruction).where(Instruction.domain_id == domain_id)
-            )
-            return result.scalars().all()
+            
+            if domain_id:
+                result = await session.execute(
+                    select(Instruction).where(Instruction.domain_id == domain_id)
+                )
+                return result.scalars().all()
+            else:
+                
+                user_datasets = await SharePermissions().get_user_domains(token)
+                accessible_domain_ids = set()
+                
+                # Collect domain_ids from owned datasets
+                for dataset in user_datasets.get("my_datasets", []):
+                    if "project_info" in dataset and "domain_id" in dataset["project_info"]:
+                        accessible_domain_ids.add(dataset["project_info"]["domain_id"])
+                
+                # Collect domain_ids from shared datasets
+                for dataset in user_datasets.get("shared_datasets", []):
+                    if "project_info" in dataset and "domain_id" in dataset["project_info"]:
+                        accessible_domain_ids.add(dataset["project_info"]["domain_id"])
+                
+                if not accessible_domain_ids:
+                    return []
+                
+                # Get instructions for all accessible domains
+                result = await session.execute(
+                    select(Instruction).where(Instruction.domain_id.in_(accessible_domain_ids))
+                )
+                return result.scalars().all()
     
     async def get_instruction_by_id(self, instruction_id: str) -> Optional[Instruction]:
         """Get instruction by ID"""
@@ -739,7 +844,7 @@ class InstructionPersistenceService:
                 await session.rollback()
                 raise Exception(f"Failed to update instruction: {str(e)}")
     
-    async def delete_instruction(self, instruction_id: str) -> bool:
+    async def delete_instruction(self, instruction_id: str,token) -> bool:
         """Delete instruction"""
         async with self.session_manager.get_async_db_session() as session:
             try:
@@ -747,7 +852,13 @@ class InstructionPersistenceService:
                     select(Instruction).where(Instruction.instruction_id == instruction_id)
                 )
                 instruction = result.scalar_one_or_none()
-                
+                domain_id=instruction.domain_id
+                checkPermission = await SharePermissions().check_user_permission(token,domain_id)
+                if not checkPermission['has_permission']:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="User does not have permission to access this domain"
+                    )
                 if not instruction:
                     raise ValueError(f"Instruction {instruction_id} not found")
                 
@@ -781,7 +892,7 @@ class KnowledgeBasePersistenceService:
                     content_type=kb_data.get('content_type', 'text'),
                     content=kb_data.get('content'),
                     modified_by=created_by,
-                    json_metadata=kb_data.get('metadata', {})
+                    json_metadata=kb_data.get('json_metadata', {})
                 )
                 
                 session.add(kb_entry)
@@ -810,7 +921,7 @@ class KnowledgeBasePersistenceService:
                         content_type=kb_data.get('content_type', 'text'),
                         content=kb_data.get('content'),
                         modified_by=created_by,
-                        json_metadata=kb_data.get('metadata', {})
+                        json_metadata=kb_data.get('json_metadata', {})
                     )
                     
                     session.add(kb_entry)

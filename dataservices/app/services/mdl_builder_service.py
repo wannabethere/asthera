@@ -14,6 +14,7 @@ from app.schemas.dbmodels import (
     CalculatedColumn, SQLFunction, Relationship
 )
 from app.service.models import DomainContext
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +109,7 @@ class MDLBuilderService:
             return mdl
             
         except Exception as e:
+            traceback.print_exc()
             self.logger.error(f"Error building MDL for domain {domain_id}: {str(e)}")
             raise
     
@@ -342,7 +344,7 @@ class MDLBuilderService:
                         "created_at": column.calculated_column.created_at.isoformat() if column.calculated_column.created_at else None,
                         "updated_at": column.calculated_column.updated_at.isoformat() if column.calculated_column.updated_at else None,
                         "entity_version": column.calculated_column.entity_version,
-                        "metadata": column.calculated_column.json_metadata or {}
+                        "metadata": column.json_metadata or {}
                     }
                     
                     # Add LLM definitions if available

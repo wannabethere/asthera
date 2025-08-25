@@ -9,10 +9,19 @@ from langchain.embeddings import OpenAIEmbeddings
 from langchain.tools import Tool
 
 from cachetools import TTLCache
-from langchain.prompts import PromptTemplate
-from langfuse.decorators import observe
+from langchain.prompts import PromptTemplate,ChatPromptTemplate
+from langchain_core.runnables import RunnableMap
+import re
+
+# Import langfuse compatibility layer
+from app.utils.langfuse_compat import observe
+
 from pydantic import BaseModel
 from app.core.dependencies import get_llm
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 logger = logging.getLogger("lexy-ai-service")
 
@@ -105,14 +114,14 @@ Provide your analysis in the following JSON format:
 
 semantics_description_template = """
 ### Table Structure
-Table Name: {{table_name}}
-Table Description: {{table_description}}
+Table Name: {table_name}
+Table Description: {table_description}
 
 ### Columns
-{{columns_info}}
+{columns_info}
 
 ### Language
-{{language}}
+{language}
 
 Please analyze the table structure and provide a comprehensive semantic description that explains its purpose, structure, and business context. Focus on making the description clear and accessible while using appropriate domain terminology.
 """
@@ -183,7 +192,6 @@ class SemanticsDescription:
         
         return "\n".join(formatted_columns)
 
-    @observe(name="Generate Semantics Description")
     async def describe(self, request: Input, **kwargs) -> Resource:
         logger.info("Generate Semantics Description pipeline is running...")
         trace_id = kwargs.get("trace_id")
@@ -198,29 +206,45 @@ class SemanticsDescription:
             
             # Format columns information
             columns_info = self._format_columns_info(columns)
+            print(f"tablename,tabledescription,columnsinfo",table_name,table_description,columns_info)
 
             # Create prompt for semantics description
-            prompt = PromptTemplate(
-                input_variables=["table_name", "table_description", "columns_info", "language"],
-                template=semantics_description_template
-            )
-            
-            # Generate semantics description using operator pattern
-            result = await (
-                self.llm
-                | {
-                    "system_prompt": semantics_description_system_prompt,
-                    "user_prompt": prompt.format(
-                        table_name=table_name,
-                        table_description=table_description,
-                        columns_info=columns_info,
-                        language=request.configuration.language or "English"
-                    )
-                }
-            ).invoke()
+            chat_prompt = ChatPromptTemplate.from_messages([
+                ("system", semantics_description_system_prompt),
+                ("human", semantics_description_template)
+            ])
 
-            # Parse the result
-            description = orjson.loads(result)
+            # Runnable chain
+            chain = (
+                RunnableMap({
+                    "table_name": lambda x: table_name,
+                    "table_description": lambda x: table_description,
+                    "columns_info": lambda x: columns_info,
+                    "language": lambda x: request.configuration.language or "English"
+                })
+                | chat_prompt  # Converts into BaseMessages
+                | self.llm      
+            )
+
+            result = await chain.ainvoke({})
+            
+
+            content = result.content.strip()
+
+            # Remove ```json ... ```
+            if content.startswith("```json"):
+                content = re.sub(r"^```json\s*", "", content)
+                content = re.sub(r"\s*```$", "", content)
+
+            try:
+                print("Got content from llm",content)
+                description = orjson.loads(content)
+                print("description from llm",description)
+
+            except orjson.JSONDecodeError as e:
+                logger.error(f"Failed to parse cleaned LLM response: {str(e)}")
+                raise
+
             
             self._cache[request.id] = self.Resource(
                 id=request.id,

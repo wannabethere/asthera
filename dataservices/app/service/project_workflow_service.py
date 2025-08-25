@@ -9,14 +9,17 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy import select, update, func
 
 from app.service.models import MetricCreate, ViewCreate, SchemaInput
-from app.schemas.dbmodels import Domain, Table, SQLColumn, Metric, View, CalculatedColumn, Relationship
+from app.schemas.dbmodels import Domain, Table, SQLColumn, Metric, View, CalculatedColumn, SQLFunction, Relationship
 from app.agents.schema_manager import LLMSchemaDocumentationGenerator
-from app.service.models import DomainContext, AddTableRequest
+from app.service.models import DomainContext, AddTableRequest, ShareInfo
 import os
+from app.routers.sql_functions_routers import get_sql_function_service
 from app.utils.cache import get_cache_provider
 from app.utils.sse import publish_update
 from app.core.dependencies import get_llm
 from dotenv import load_dotenv
+from app.service.share_permissions import SharePermissions
+from app.agents.semantics_description import SemanticsDescription
 
 load_dotenv()
 
@@ -27,7 +30,7 @@ class DomainWorkflowService:
         self.user_id = user_id
         self.session_id = session_id
         self.cache = get_cache_provider()
-        #self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
+        # self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
         self.llm = get_llm()
         self.definition_manager = LLMSchemaDocumentationGenerator(self.llm)
         # Initialize sharing permissions service
@@ -51,7 +54,7 @@ class DomainWorkflowService:
                 "context": None, 
                 "datasets": [], 
                 "tables": [], 
-                "relationships": [],
+                "relationships": [], 
                 "relationship_recommendations": None,
                 "sharing_permissions": None
             }
@@ -64,7 +67,7 @@ class DomainWorkflowService:
     async def create_domain(self, domain_data: dict):
         """
         Create domain in workflow state, generating domain ID if not provided
-        
+
         Args:
             domain_data: Dictionary containing domain information including:
                 - display_name: Required display name for the domain
@@ -76,24 +79,23 @@ class DomainWorkflowService:
         # Generate domain ID if not provided
         if "domain_id" not in domain_data or not domain_data["domain_id"]:
             domain_data["domain_id"] = self._generate_domain_id(domain_data.get("display_name", "domain"))
-        
+
         # Ensure required fields are present
         if "display_name" not in domain_data:
             raise ValueError("display_name is required for domain creation")
-        
+
         # Set default values for missing fields
         domain_data.setdefault("status", "draft")
         domain_data.setdefault("created_at", datetime.now().isoformat())
         domain_data.setdefault("modified_at", datetime.now().isoformat())
+        domain_data.setdefault("created_by", self.user_id)
+        domain_data.setdefault("updated_by", self.user_id)
         
         # Store in workflow state
         state = self.get_workflow_state()
-        state["domain"] = domain_data
+        state["domain"] = domain_data  # or Domain(**domain_data)
         self.set_workflow_state(state)
-        
-        # Publish update
         publish_update(self.user_id, self.session_id or "default", state)
-        
         logger.info(f"Created domain in workflow: {domain_data['domain_id']} - {domain_data['display_name']}")
         return state["domain"]
     
@@ -103,54 +105,64 @@ class DomainWorkflowService:
         
         Args:
             display_name: The display name of the domain
-            
         Returns:
             A unique domain ID string
         """
         import uuid
         from datetime import datetime
-        
+
         # Clean the display name for ID generation
         clean_name = display_name.lower().replace(' ', '_').replace('-', '_').replace('(', '').replace(')', '')
         # Remove any non-alphanumeric characters except underscores
         clean_name = ''.join(c for c in clean_name if c.isalnum() or c == '_')
-        
+
         # Truncate if too long
         if len(clean_name) > 20:
             clean_name = clean_name[:20]
-        
+
         # Generate timestamp and unique suffix
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         unique_suffix = str(uuid.uuid4())[:8]
-        
+
         domain_id = f"{clean_name}_{timestamp}_{unique_suffix}"
-        
+
         # Ensure it's within the 50 character limit from the database schema
         if len(domain_id) > 50:
             domain_id = domain_id[:50]
-        
+
         return domain_id
+
     
+
     def get_current_domain_id(self) -> str | None:
+
         """Get the current domain ID from the workflow state"""
         state = self.get_workflow_state()
         domain = state.get("domain")
         return domain.get("domain_id") if domain else None
+
     
+
     def get_current_domain(self) -> dict | None:
+
         """Get the current domain data from the workflow state"""
         state = self.get_workflow_state()
         return state.get("domain")
+
     
+
     def has_domain(self) -> bool:
+
         """Check if a domain exists in the current workflow state"""
         state = self.get_workflow_state()
         return state.get("domain") is not None
+
     
+
     def get_workflow_summary(self) -> dict:
         """Get a summary of the current workflow state"""
         state = self.get_workflow_state()
-        
+
         summary = {
             "has_domain": bool(state.get("domain")),
             "domain_info": state.get("domain"),
@@ -162,52 +174,60 @@ class DomainWorkflowService:
             "session_id": self.session_id,
             "user_id": self.user_id
         }
-        
+
         if state.get("domain"):
             summary["domain_id"] = state["domain"].get("domain_id")
             summary["domain_name"] = state["domain"].get("display_name")
             summary["domain_status"] = state["domain"].get("status", "draft")
-        
+
         return summary
+
     
+
     def clear_workflow(self):
         """Clear the current workflow state and reset to initial state"""
         initial_state = {
-            "domain": None, 
-            "context": None, 
-            "datasets": [], 
-            "tables": [], 
+            "domain": None,
+            "context": None,
+            "datasets": [],
+            "tables": [],
             "relationships": [],
             "relationship_recommendations": None,
             "sharing_permissions": None
         }
+
         self.set_workflow_state(initial_state)
-        
+
         # Publish update about workflow being cleared
         publish_update(self.user_id, self.session_id or "default", {
             "type": "workflow_cleared",
             "message": "Workflow state has been reset"
         })
-        
+
         logger.info(f"Workflow state cleared for user {self.user_id}, session {self.session_id}")
         return initial_state
+
     
+
     def _ensure_domain_exists(self):
+
         """Ensure a domain exists in the workflow state before performing operations"""
         if not self.has_domain():
             raise ValueError("No domain defined in workflow state. Please create a domain first.")
-    
+
+
+
     async def add_dataset(self, dataset_data: dict):
         """Add dataset to the current domain workflow"""
+
         self._ensure_domain_exists()
-        
         state = self.get_workflow_state()
         state["datasets"].append(dataset_data)
         self.set_workflow_state(state)
         publish_update(self.user_id, self.session_id or "default", state)
         return state["datasets"]
     
-    async def fetch_and_store_sharing_permissions(self, domain_id: str) -> Dict[str, Any]:
+    async def fetch_and_store_sharing_permissions(self, permissions: dict, domain_id, token) -> Dict[str, Any]:
         """
         Fetch sharing permissions from team API and store them in the domain metadata
         
@@ -228,24 +248,26 @@ class DomainWorkflowService:
             logger.info(f"Fetching sharing permissions for domain {domain_id}")
             
             # Fetch permissions from team API
-            permissions_data = await self.sharing_service.fetch_sharing_permissions(self.user_id)
+            # permissions_data = await SharePermissions().get_share_datamodel_info(token)
             
             # Store permissions in domain metadata
-            stored_permissions = await self.sharing_service.store_permissions_in_project(domain_id, permissions_data)
+            # stored_permissions = await self.sharing_service.store_permissions_in_project(domain_id,dataset_id, permissions_data)
+
+            store_permissions_in_db = await SharePermissions().store_info(token, ShareInfo(**permissions), domain_id)
             
             # Update workflow state with permissions
             state = self.get_workflow_state()
-            state["sharing_permissions"] = stored_permissions
+            state["sharing_permissions"] = store_permissions_in_db
             self.set_workflow_state(state)
             
             # Publish update
             publish_update(self.user_id, self.session_id or "default", {
                 "type": "sharing_permissions_fetched",
-                "data": stored_permissions
+                "data": store_permissions_in_db
             })
             
             logger.info(f"Successfully fetched and stored sharing permissions for domain {domain_id}")
-            return stored_permissions
+            return store_permissions_in_db
             
         except Exception as e:
             logger.error(f"Error fetching sharing permissions for domain {domain_id}: {str(e)}")
@@ -259,15 +281,8 @@ class DomainWorkflowService:
     async def get_semantic_description_for_table(self, add_table_request: AddTableRequest, domain_context: DomainContext) -> Dict[str, Any]:
         """Generate semantic description for a table using the semantics description service"""
         try:
-            try:
-                from app.agents.semantics_description import SemanticsDescription
-            except Exception as import_error:
-                import traceback
-                traceback.print_exc()
-                raise import_error
-            
-            
-            
+          
+
             schema_input = add_table_request.schema
             
             # Convert schema input to table data format expected by semantics service
@@ -339,6 +354,7 @@ class DomainWorkflowService:
                 import traceback
                 traceback.print_exc()
                 raise import_error
+            
             schema_input = add_table_request.schema
             
             # Convert schema input to table data format expected by relationship service
@@ -370,7 +386,7 @@ class DomainWorkflowService:
             result = await relationship_service.recommend(
                 RelationshipRecommendation.Input(
                     id=f"workflow_relationships_{schema_input.table_name}_{domain_context.domain_id}",
-                    table_data=table_data,
+                    tables_data=[table_data],
                     domain_id=domain_context.domain_id
                 )
             )
@@ -457,12 +473,40 @@ class DomainWorkflowService:
             # Create relationship recommendation service instance
             relationship_service = RelationshipRecommendation()
             
+            # Convert workflow tables to the format expected by RelationshipRecommendation
+            tables_data = []
+            for table in tables:
+                table_name = table.name if hasattr(table, 'name') else table.get('name', 'unknown')
+                table_description = table.description if hasattr(table, 'description') else f"Table for {table_name}"
+                columns = table.metadata.get("columns", []) if hasattr(table, 'metadata') else []
+                
+                table_dict = {
+                    "name": table_name,
+                    "description": table_description,
+                    "columns": []
+                }
+                
+                for col in columns:
+                    column_dict = {
+                        "name": col.get("name", "unknown"),
+                        "display_name": col.get("display_name") or col.get("name", "unknown"),
+                        "description": col.get("description"),
+                        "data_type": col.get("data_type"),
+                        "is_primary_key": col.get("is_primary_key", False),
+                        "is_nullable": col.get("is_nullable", True),
+                        "is_foreign_key": col.get("is_foreign_key", False),
+                        "usage_type": col.get("usage_type")
+                    }
+                    table_dict["columns"].append(column_dict)
+                
+                tables_data.append(table_dict)
+            
             # Generate recommendations using existing service
             result = await relationship_service.recommend(
                 RelationshipRecommendation.Input(
                     id=f"workflow_relationships_{domain_context.domain_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-                    mdl=mdl_data,
-                    project_id=domain_context.domain_id
+                    tables_data=tables_data,
+                    domain_id=domain_context.domain_id
                 )
             )
             
@@ -508,111 +552,205 @@ class DomainWorkflowService:
     async def get_relationship_recommendations_from_tables(self, user_tables: List[Dict[str, Any]], domain_context: DomainContext, business_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Generate comprehensive relationship recommendations for user-provided tables
-        
+
         This method gives users greater control over the semantic definitions and relationships
         by accepting table definitions directly instead of relying on workflow state.
-        
+
         Args:
             user_tables: List of table definitions provided by the user
             domain_context: The domain context for business domain understanding
             business_context: Optional additional business context for enhanced analysis
-        
+
         Returns:
             Dictionary containing relationship recommendations for the provided tables
         """
+
         try:
+
             if not user_tables:
+
                 return {
+
                     "status": "no_tables",
+
                     "message": "No tables provided for relationship analysis",
+
                     "recommendations": [],
+
                     "summary": {
+
                         "total_tables": 0,
+
                         "total_relationships": 0,
+
                         "recommendations": ["Provide table definitions to begin relationship analysis"]
+
                     }
+
                 }
+
             
+
             logger.info(f"Generating relationship recommendations for {len(user_tables)} user-provided tables in domain {domain_context.domain_id}")
+
             
+
             # Import the existing RelationshipRecommendation service
+
             try:
+
                 from app.agents.relationship_recommendation import RelationshipRecommendation
+
             except ImportError:
+
                 logger.error("RelationshipRecommendation service not available")
+
                 return {
+
                     "status": "error",
+
                     "error": "RelationshipRecommendation service not available",
+
                     "message": "Failed to import relationship recommendation service"
+
                 }
+
             
+
             # Build MDL representation from user-provided tables
+
             mdl_data = self._build_mdl_from_user_tables(user_tables, domain_context, business_context)
+
             
+
             # Create relationship recommendation service instance
+
             relationship_service = RelationshipRecommendation()
+
             
+
             # Generate recommendations using existing service
+
             result = await relationship_service.recommend(
+
                 RelationshipRecommendation.Input(
+
                     id=f"user_tables_relationships_{domain_context.domain_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-                    mdl=mdl_data,
-                    project_id=domain_context.domain_id
+
+                    tables_data=user_tables,
+
+                    domain_id=domain_context.domain_id
+
                 )
+
             )
+
             
+
             if result.status == "finished" and result.response:
+
                 # Process the response from the existing service
+
                 recommendations = self._process_relationship_recommendations(
+
                     result.response, user_tables, domain_context
+
                 )
+
                 
+
                 # Add user-provided context information
+
                 recommendations["user_provided_tables"] = True
+
                 recommendations["business_context"] = business_context
+
                 recommendations["table_definitions"] = [
+
                     {
+
                         "name": table.get("name"),
+
                         "display_name": table.get("display_name"),
+
                         "description": table.get("description"),
+
                         "column_count": len(table.get("metadata", {}).get("columns", []))
+
                     }
+
                     for table in user_tables
+
                 ]
+
                 
+
                 # Store recommendations in workflow state if we have a session
+
                 if self.session_id:
+
                     state = self.get_workflow_state()
+
                     state["relationship_recommendations"] = recommendations
+
                     self.set_workflow_state(state)
+
                     
+
                     # Publish update
+
                     publish_update(self.user_id, self.session_id, {
+
                         "type": "user_table_relationship_recommendations_generated",
+
                         "data": recommendations
+
                     })
+
                 
+
                 logger.info(f"Successfully generated relationship recommendations for {len(user_tables)} user-provided tables")
+
                 return recommendations
+
             else:
+
                 logger.error(f"Failed to generate relationship recommendations: {result.error}")
+
                 return {
+
                     "status": "error",
+
                     "error": str(result.error) if result.error else "Unknown error",
+
                     "message": "Failed to generate relationship recommendations using existing service"
+
                 }
+
             
+
         except Exception as e:
+
             logger.error(f"Error generating relationship recommendations from user tables: {str(e)}")
+
             return {
+
                 "status": "error",
+
                 "error": str(e),
+
                 "message": "Failed to generate relationship recommendations from user tables",
+
                 "recommendations": [],
+
                 "summary": {
+
                     "total_relationships": 0,
+
                     "recommendations": [f"Error during analysis: {str(e)}"]
+
                 }
+
             }
 
     def _build_mdl_from_workflow_tables(self, tables: List[Any], domain_context: DomainContext) -> str:
@@ -669,47 +807,80 @@ class DomainWorkflowService:
     def _build_mdl_from_user_tables(self, user_tables: List[Dict[str, Any]], domain_context: DomainContext, business_context: Optional[Dict[str, Any]] = None) -> str:
         """
         Build MDL representation from user-provided tables for the relationship service
-        
+
         This method provides enhanced MDL building with user-provided business context
         for better semantic relationship analysis.
         """
+
         try:
+
             mdl_structure = {
+
                 "tables": [],
+
                 "domain": {
+
                     "id": domain_context.domain_id,
+
                     "name": domain_context.domain_name,
+
                     "business_domain": domain_context.business_domain,
+
                     "purpose": domain_context.purpose
+
                 }
+
             }
+
             
+
             # Add business context if provided
+
             if business_context:
+
                 mdl_structure["business_context"] = business_context
+
                 mdl_structure["domain"]["enhanced_context"] = True
+
             
+
             for table in user_tables:
+
                 table_name = table.get("name", "unknown")
+
                 table_description = table.get("description") or f"Table for {table_name}"
+
                 table_display_name = table.get("display_name") or table_name
+
                 
+
                 # Get columns from table metadata
+
                 columns = table.get("metadata", {}).get("columns", [])
+
                 
+
                 table_mdl = {
+
                     "name": table_name,
+
                     "display_name": table_display_name,
+
                     "description": table_description,
+
                     "columns": [],
+
                     "user_provided": True
+
                 }
+
                 
+
                 # Add table-level metadata if available
                 table_metadata = table.get("metadata", {})
                 if table_metadata.get("business_context"):
                     table_mdl["business_context"] = table_metadata["business_context"]
-                
+
                 for col in columns:
                     column_mdl = {
                         "name": col.get("name", "unknown"),
@@ -722,29 +893,35 @@ class DomainWorkflowService:
                         "usage_type": col.get("usage_type"),
                         "business_description": col.get("business_description", "")
                     }
-                    
+
                     # Add column-level metadata if available
                     col_metadata = col.get("metadata", {})
                     if col_metadata:
                         column_mdl["enhanced_metadata"] = col_metadata
-                    
+
                     table_mdl["columns"].append(column_mdl)
-                
+
                 mdl_structure["tables"].append(table_mdl)
-            
+
             # Convert to JSON string for the relationship service
             import json
             return json.dumps(mdl_structure, indent=2)
-            
+
         except Exception as e:
+
             logger.error(f"Error building MDL from user tables: {str(e)}")
+
             # Return minimal MDL structure
+
             return json.dumps({
+
                 "tables": [{"name": "error", "description": "Error building MDL", "columns": []}],
+
                 "domain": {"id": "error", "name": "Error", "business_domain": "Error", "purpose": "Error"}
+
             })
 
-    def _process_relationship_recommendations(self, response: Dict[str, Any], tables: List[Any], domain_context: DomainContext) -> Dict[str, Any]:
+    async def _process_relationship_recommendations(self, response: Dict[str, Any], tables: List[Any], domain_context: DomainContext) -> Dict[str, Any]:
         """Process the response from the existing relationship service"""
         try:
             # Extract relationships from the service response
@@ -1274,7 +1451,6 @@ class DomainWorkflowService:
     async def add_table(self, add_table_request: AddTableRequest, domain_context: DomainContext):
         """Add table with enhanced column definitions and documentation"""
         self._ensure_domain_exists()
-        
         state = self.get_workflow_state()
         schema_input = add_table_request.schema
         
@@ -1286,11 +1462,11 @@ class DomainWorkflowService:
         
         # LLM Table Definition (enhanced with semantic description)
         documented_table = await self.definition_manager.document_table_schema(schema_input, domain_context)
-        
+
         # Add semantic description and relationship recommendations to the documented table
         documented_table.semantic_description = semantic_description
         documented_table.relationship_recommendations = relationship_recommendations
-        
+
         # Create enhanced column definitions for metadata storage
         enhanced_columns_for_metadata = []
         for enhanced_col in documented_table.columns:
@@ -1310,7 +1486,6 @@ class DomainWorkflowService:
                 "filtering_suggestions": enhanced_col.filtering_suggestions,
                 "json_metadata": enhanced_col.json_metadata
             })
-        
         # Create enhanced table object with all metadata including enhanced columns
         table = Table(
             name=schema_input.table_name,
@@ -1334,15 +1509,18 @@ class DomainWorkflowService:
             }
         )
         
+        # Remove commented code for cleaner implementation
+        
         state["tables"].append(table)
         self.set_workflow_state(state)
         publish_update(self.user_id, self.session_id or "default", state)
         return documented_table
 
+
     async def create_enhanced_columns(self, documented_table, schema_input):
         """Create enhanced column definitions with LLM-generated insights"""
         enhanced_columns = []
-        
+
         for i, col_data in enumerate(schema_input.columns):
             # Find corresponding enhanced column definition
             enhanced_col = None
@@ -1350,7 +1528,7 @@ class DomainWorkflowService:
                 if enhanced_col_def.column_name == col_data.get("name"):
                     enhanced_col = enhanced_col_def
                     break
-            
+
             # Prepare enhanced metadata
             enhanced_metadata = col_data.get("metadata", {})
             if enhanced_col:
@@ -1366,7 +1544,9 @@ class DomainWorkflowService:
                     "filtering_suggestions": enhanced_col.filtering_suggestions,
                     "enhanced_metadata": enhanced_col.json_metadata
                 })
+
             
+
             # Create enhanced column definition
             enhanced_column = {
                 "table_id": None,  # Will be set when table is created
@@ -1397,10 +1577,11 @@ class DomainWorkflowService:
                     "json_metadata": enhanced_col.json_metadata if enhanced_col else {}
                 }
             }
-            
+
             enhanced_columns.append(enhanced_column)
-        
+
         return enhanced_columns
+
 
     async def get_enhanced_table_response(self, table, documented_table, enhanced_columns, column_count):
         """Create enhanced table response with all column definitions"""
@@ -1423,7 +1604,7 @@ class DomainWorkflowService:
                 "filtering_suggestions": enhanced_col.filtering_suggestions,
                 "json_metadata": enhanced_col.json_metadata
             })
-        
+
         return {
             "table_id": table.table_id,
             "name": table.name,
@@ -1443,6 +1624,7 @@ class DomainWorkflowService:
             "enhanced_columns": response_enhanced_columns
         }
 
+
     async def get_enhanced_columns_for_table(self, table_id: str, db_session: AsyncSession):
         """Get enhanced column definitions for an existing table"""
         try:
@@ -1453,14 +1635,14 @@ class DomainWorkflowService:
                 .where(Table.table_id == table_id)
             )
             table = table.scalar_one_or_none()
-            
+
             if not table:
                 raise ValueError(f"Table {table_id} not found")
-            
+
             # Check if enhanced columns are already stored in table metadata
             table_metadata = table.json_metadata or {}
             stored_enhanced_columns = table_metadata.get("enhanced_columns", [])
-            
+
             if stored_enhanced_columns:
                 # Return stored enhanced columns
                 logger.info(f"Found {len(stored_enhanced_columns)} stored enhanced columns for table {table_id}")
@@ -1470,19 +1652,19 @@ class DomainWorkflowService:
                     "enhanced_columns": stored_enhanced_columns,
                     "source": "stored_metadata"
                 }
-            
+
             # If no stored enhanced columns, generate them using LLM
             logger.info(f"No stored enhanced columns found for table {table_id}, generating with LLM")
-            
+
             # Get domain context
             domain = await db_session.execute(
                 select(Domain).where(Domain.domain_id == table.domain_id)
             )
             domain = domain.scalar_one_or_none()
-            
+
             if not domain:
                 raise ValueError("Domain not found")
-            
+
             # Create domain context for LLM processing
             domain_context = DomainContext(
                 domain_id=domain.domain_id,
@@ -1494,7 +1676,7 @@ class DomainWorkflowService:
                 data_sources=None,
                 compliance_requirements=None
             )
-            
+
             # Convert existing columns to schema input format
             columns = []
             for col in table.columns:
@@ -1507,7 +1689,7 @@ class DomainWorkflowService:
                     "usage_type": col.usage_type,
                     "metadata": col.json_metadata or {}
                 })
-            
+
             schema_input = SchemaInput(
                 table_name=table.name,
                 table_description=table.description,
@@ -1515,10 +1697,10 @@ class DomainWorkflowService:
                 sample_data=None,
                 constraints=None
             )
-            
+
             # Generate enhanced column definitions
             documented_table = await self.definition_manager.document_table_schema(schema_input, domain_context)
-            
+
             # Convert to response format
             enhanced_columns = []
             for enhanced_col in documented_table.columns:
@@ -1538,24 +1720,25 @@ class DomainWorkflowService:
                     "filtering_suggestions": enhanced_col.filtering_suggestions,
                     "json_metadata": enhanced_col.json_metadata
                 })
-            
+
             # Store the generated enhanced columns in table metadata for future use
             if enhanced_columns:
                 table_metadata["enhanced_columns"] = enhanced_columns
                 table.json_metadata = table_metadata
                 await db_session.commit()
                 logger.info(f"Stored {len(enhanced_columns)} generated enhanced columns in table metadata")
-            
+
             return {
                 "table_id": table.table_id,
                 "table_name": table.name,
                 "enhanced_columns": enhanced_columns,
                 "source": "generated_and_stored"
             }
-            
+
         except Exception as e:
             logger.error(f"Error getting enhanced columns: {str(e)}")
             raise
+
 
     async def commit_workflow(self, db_session):
         """Commit the workflow state to database and clean up cache"""
@@ -1564,15 +1747,16 @@ class DomainWorkflowService:
         if not domain_data:
             raise ValueError("No domain defined in workflow state.")
         
+        # The actual database operations are now handled in the router
+        # This method just cleans up the workflow state
         # Include relationship information in the final commit
+
         relationships = state.get("relationships", [])
         relationship_recommendations = state.get("relationship_recommendations", {})
         
-        # The actual database operations are now handled in the router
-        # This method just cleans up the workflow state
         self.cache.delete(self._workflow_cache_key())
         publish_update(self.user_id, self.session_id or "default", {
-            "status": "committed", 
+            "status": "committed",
             "domain": domain_data.get("domain_id"),
             "tables_count": len(state.get("tables", [])),
             "relationships_count": len(relationships),
@@ -1662,6 +1846,7 @@ class MetricsService:
                 business_context = domain.json_metadata.get("business_context", {})
             
             return {
+
                 "tables": table_context,
                 "existing_metrics": existing_metrics,
                 "business_context": business_context,
@@ -1708,12 +1893,12 @@ class MetricsService:
                 display_name=enhanced_definition.display_name,
                 description=enhanced_definition.description,
                 metric_sql=enhanced_definition.sql_query,
-                metric_type=enhanced_definition.metadata.get("metric_type", metric_data.metric_type),
-                aggregation_type=enhanced_definition.metadata.get("aggregation_type", metric_data.aggregation_type),
-                format_string=enhanced_definition.metadata.get("format_string"),
+                metric_type=enhanced_definition.json_metadata.get("metric_type", metric_data.metric_type),
+                aggregation_type=enhanced_definition.json_metadata.get("aggregation_type", metric_data.aggregation_type),
+                format_string=enhanced_definition.json_metadata.get("format_string"),
                 modified_by=created_by,
                 json_metadata={
-                    **enhanced_definition.metadata,
+                    **enhanced_definition.json_metadata,
                     "chain_of_thought": enhanced_definition.chain_of_thought,
                     "confidence_score": enhanced_definition.confidence_score,
                     "suggestions": enhanced_definition.suggestions,
@@ -1787,10 +1972,10 @@ class MetricsService:
                 display_name=enhanced_definition.display_name,
                 description=enhanced_definition.description,
                 view_sql=enhanced_definition.sql_query,
-                view_type=enhanced_definition.metadata.get("view_type", view_data.view_type),
+                view_type=enhanced_definition.json_metadata.get("view_type", view_data.view_type),
                 modified_by=created_by,
                 json_metadata={
-                    **enhanced_definition.metadata,
+                    **enhanced_definition.json_metadata,
                     "chain_of_thought": enhanced_definition.chain_of_thought,
                     "confidence_score": enhanced_definition.confidence_score,
                     "suggestions": enhanced_definition.suggestions,
@@ -1850,7 +2035,8 @@ class MetricsService:
                     "dependencies": column_data.get("dependencies", []),
                     "business_purpose": column_data.get("description")
                 },
-                user_id=created_by
+                created_by=created_by,
+                updated_by=created_by
             )
             
             # Generate enhanced definition using LLM
@@ -1863,15 +2049,15 @@ class MetricsService:
                 display_name=enhanced_definition.display_name,
                 description=enhanced_definition.description,
                 column_type='calculated_column',  # Mark as calculated column
-                data_type=enhanced_definition.metadata.get("data_type", column_data.get("data_type")),
-                usage_type=enhanced_definition.metadata.get("calculation_type", column_data.get("usage_type")),
+                data_type=enhanced_definition.json_metadata.get("data_type", column_data.get("data_type")),
+                usage_type=enhanced_definition.json_metadata.get("calculation_type", column_data.get("usage_type")),
                 is_nullable=column_data.get("is_nullable", True),
                 is_primary_key=column_data.get("is_primary_key", False),
                 is_foreign_key=column_data.get("is_foreign_key", False),
                 default_value=column_data.get("default_value"),
                 ordinal_position=column_data.get("ordinal_position"),
                 json_metadata={
-                    **enhanced_definition.metadata,
+                    **enhanced_definition.json_metadata,
                     "chain_of_thought": enhanced_definition.chain_of_thought,
                     "confidence_score": enhanced_definition.confidence_score,
                     "suggestions": enhanced_definition.suggestions,
@@ -1887,12 +2073,34 @@ class MetricsService:
             await self.db.commit()
             await self.db.refresh(column)
             
+            sqldata = {
+                "name":enhanced_definition.name,
+                "display_name" :enhanced_definition.display_name,
+                "description" :enhanced_definition.description,
+                "function_sql" :enhanced_definition.sql_query,
+                "return_type" :enhanced_definition.json_metadata.get("data_type", column_data.get("data_type"))
+            }
+            table = await self.db.execute(
+                select(Table).where(Table.table_id == table_id)
+            )
+            table = table.scalar_one_or_none()
+            
+            if not table:
+                raise ValueError(f"Table {table_id} not found")
+            sql_function_service =  await get_sql_function_service()
+            sql_function = await  sql_function_service.persist_sql_function(
+            function_data=sqldata,
+            created_by=created_by,  # TODO: Get from auth context
+            domain_id=table.domain_id
+        )
+
+
             # Create the associated CalculatedColumn with enhanced calculation details
             calc_column = CalculatedColumn(
                 column_id=column.column_id,
                 calculation_sql=enhanced_definition.sql_query,
-                function_id=column_data.get("function_id"),
-                dependencies=enhanced_definition.metadata.get("dependencies", column_data.get("dependencies", [])),
+                function_id=sql_function,
+                dependencies=enhanced_definition.json_metadata.get("dependencies", column_data.get("dependencies", [])),
                 modified_by=created_by
             )
             
@@ -1901,9 +2109,19 @@ class MetricsService:
             await self.db.refresh(calc_column)
             
             logger.info(f"Created enhanced calculated column '{column.name}' with LLM-generated improvements")
+
+            stmt = (
+                select(SQLColumn)
+                .options(selectinload(SQLColumn.calculated_column))
+                .where(SQLColumn.column_id == column.column_id)
+            )
+            result = await self.db.execute(stmt)
+            column = result.scalar_one()
             return column
             
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             logger.error(f"Error creating enhanced calculated column: {str(e)}")
             # Fallback to original method if LLM generation fails
             column = SQLColumn(

@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import Dict, Any, List, Optional
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict,field_validator
 from enum import Enum
 from datetime import datetime
-
+from uuid import UUID
 # ============================================================================
 # DATA MODELS
 # ============================================================================
@@ -155,6 +155,12 @@ class ColumnDocumentationSchema(BaseModel):
                 }
             }
         }
+    @field_validator("example_values", mode="before")
+    @classmethod
+    def convert_all_to_str(cls, v: Any) -> List[str]:
+            if not isinstance(v, list):
+                raise TypeError("example_values must be a list")
+            return [str(item) for item in v]
 
 
 
@@ -176,7 +182,8 @@ class UserExample:
     description: str
     sql: Optional[str] = None
     additional_context: Optional[Dict[str, Any]] = None
-    user_id: str = "system"
+    created_by:str = 'system'
+    updated_by:str = 'system'
 
 
 @dataclass
@@ -198,17 +205,6 @@ class GeneratedDefinition:
 class AddTableRequest(BaseModel):
     dataset_id: str
     schema: SchemaInput
-
-
-class UpdateTableRequest(BaseModel):
-    """Request model for updating tables with enhanced column definitions and descriptions"""
-    dataset_id: str
-    schema: SchemaInput
-    # Optional fields for partial updates
-    update_description: Optional[bool] = Field(True, description="Whether to update table description")
-    update_columns: Optional[bool] = Field(True, description="Whether to update column definitions")
-    update_enhanced_metadata: Optional[bool] = Field(True, description="Whether to update enhanced metadata")
-    preserve_existing_metadata: Optional[bool] = Field(False, description="Whether to preserve existing metadata not in the update")
 
 
 
@@ -288,6 +284,9 @@ class DomainResponse(BaseModel):
     version_string: str
     created_at: datetime
     table_count: int = 0
+    context: Optional[Dict[str, Any]]={}
+    created_by: str
+    updated_by: str
 
 class TableResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -300,11 +299,9 @@ class TableResponse(BaseModel):
     semantic_description: Optional[str] = None
     column_count: int = 0
 
-
 class EnhancedTableResponse(BaseModel):
     """Enhanced response model for table creation with detailed column information"""
     model_config = ConfigDict(from_attributes=True)
-    
     table_id: str
     name: str
     display_name: Optional[str]
@@ -323,6 +320,30 @@ class EnhancedTableResponse(BaseModel):
     enhanced_columns: Optional[List[Dict[str, Any]]] = None  # EnhancedColumnDefinition data
 
 
+
+class connection_details(BaseModel):
+    name: str = Field(..., description="Name of the connection")
+    database_type: str = Field(..., description="Type of the database")
+    database_details: dict = Field(..., description="Details of the database")
+    
+
+class datasetRead(BaseModel):
+    dataset_id: str
+    project_id: str
+    name: str
+    display_name: str
+    connection_id: UUID
+    tables: List
+    model_config = ConfigDict(from_attributes=True)
+
+
+class tableRead(BaseModel):
+    table_id: str
+    name: str
+    model_config = ConfigDict(from_attributes=True)
+
+
+    
 # ============================================================================
 # EXAMPLE API MODELS
 # ============================================================================
@@ -516,3 +537,29 @@ class KnowledgeBaseRead(BaseModel):
     updated_at: datetime
     entity_version: int
     modified_by: Optional[str]
+
+
+class SupportedDatabasesResponse(BaseModel):
+    supported_databases: List[str]
+
+
+
+
+class PermissionLevel(str, Enum):
+    read = "read"
+    read_write = "read_write"
+    admin = "admin"
+
+class EntityType(str, Enum):
+    user = "user"
+    team = "team"
+    project = "project"
+    workspace = "workspace"
+
+
+
+class ShareInfo(BaseModel):
+    entity_id: str = Field(..., description="ID of the entity to share with")
+    entity_type: EntityType = Field(..., description="Type of entity (user, team, project, workspace)")
+    permission: PermissionLevel = Field(..., description="Permission level (read, read_write, admin)")
+    # dataset_id: str = Field(..., description="ID of the dataset to share")

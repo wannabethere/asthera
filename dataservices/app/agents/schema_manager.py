@@ -27,10 +27,6 @@ from sqlalchemy import text, inspect
 from pydantic import BaseModel, Field
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import PydanticOutputParser
-
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers.string import StrOutputParser
 from langchain_openai import ChatOpenAI
 
@@ -98,6 +94,9 @@ class LLMSchemaDocumentationGenerator:
         2. Primary use cases and access patterns
         3. Relationships to business processes
         4. Data governance considerations
+        
+        CRITICAL: You must return ONLY valid JSON. Do not include any comments, explanations, or text outside the JSON object.
+        Do not use // or /* */ comments in your response.
         """
         
         user_prompt ="""
@@ -133,7 +132,9 @@ class LLMSchemaDocumentationGenerator:
             "access_patterns": ["pattern1", "pattern2"],
             "performance_considerations": ["consideration1", "consideration2"]
         }}
-        ***Important: Return the response as a JSON object with the keys specified above. and do not include any json tags or other separations. If not the responses will fail***
+        CRITICAL: Generate ONLY valid JSON without any comments, explanations, or additional text. 
+        Do NOT include // comments, /* */ comments, or any text outside the JSON object.
+        Return ONLY the JSON object with the exact structure specified above.
         """
         formattedInputs ={
             "name": schema_input.table_name,
@@ -159,19 +160,29 @@ class LLMSchemaDocumentationGenerator:
             return parsed_response
         except json.JSONDecodeError as e:
             print(f"JSON parsing failed: {e}")
-            print("Attempting to extract JSON from response...")
+            print("Attempting to clean and parse JSON response...")
             
-            # Try to extract JSON from the response if it's wrapped in markdown or other text
-            import re
-            json_match = re.search(r'\{.*\}', response, re.DOTALL)
-            if json_match:
-                try:
-                    extracted_json = json_match.group(0)
-                    parsed_response = json.loads(extracted_json)
-                    print("Successfully extracted and parsed JSON")
-                    return parsed_response
-                except json.JSONDecodeError as e2:
-                    print(f"Extracted JSON parsing also failed: {e2}")
+            # Clean the response to remove comments and invalid characters
+            cleaned_response = self._clean_json_response(response)
+            try:
+                parsed_response = json.loads(cleaned_response)
+                print("Successfully cleaned and parsed JSON")
+                return parsed_response
+            except json.JSONDecodeError as e2:
+                print(f"Cleaned JSON parsing also failed: {e2}")
+                print("Attempting to extract JSON from response...")
+                
+                # Try to extract JSON from the response if it's wrapped in markdown or other text
+                import re
+                json_match = re.search(r'\{.*\}', cleaned_response, re.DOTALL)
+                if json_match:
+                    try:
+                        extracted_json = json_match.group(0)
+                        parsed_response = json.loads(extracted_json)
+                        print("Successfully extracted and parsed JSON")
+                        return parsed_response
+                    except json.JSONDecodeError as e3:
+                        print(f"Extracted JSON parsing also failed: {e3}")
             
             # If all else fails, return a default structure
             
@@ -207,6 +218,9 @@ class LLMSchemaDocumentationGenerator:
             
             Be specific and actionable in your recommendations.
             
+            CRITICAL: You must return ONLY valid JSON. Do not include any comments, explanations, or text outside the JSON object.
+            Do not use // or /* */ comments in your response.
+            
             {format_instructions}"""),
             ("human", """Document this database column for business analysis:
             
@@ -229,7 +243,10 @@ class LLMSchemaDocumentationGenerator:
             
             Sample Values (if available):
             {sample_values}
-            ***Important: Return the response as a JSON object with the keys specified above. and do not include any json tags or other separations. If not the responses will fail***
+            
+            CRITICAL: Generate ONLY valid JSON without any comments, explanations, or additional text. 
+            Do NOT include // comments, /* */ comments, or any text outside the JSON object.
+            Return ONLY the JSON object with the exact structure specified in the format instructions.
             """)
         ])
         
@@ -282,7 +299,42 @@ class LLMSchemaDocumentationGenerator:
                 json_metadata=data.json_metadata
             )
         except Exception as e:
-            raise Exception(f"Failed to generate column documentation: {str(e)}")
+            error_msg = str(e)
+            if "Invalid json output" in error_msg or "OUTPUT_PARSING_FAILURE" in error_msg:
+                print(f"JSON parsing failed for column {column['name']}, attempting to clean response...")
+                # Try to get the raw response and clean it
+                try:
+                    # Get raw response from LLM
+                    raw_response = await self._get_raw_llm_response(column, schema_input, domain_context)
+                    cleaned_response = self._clean_json_response(raw_response)
+                    
+                    # Try to parse the cleaned response
+                    import json
+                    parsed_data = json.loads(cleaned_response)
+                    
+                    # Create EnhancedColumnDefinition from parsed data
+                    return EnhancedColumnDefinition(
+                        column_name=column['name'],
+                        display_name=parsed_data.get('display_name', column['name']),
+                        description=parsed_data.get('description', 'Description not generated'),
+                        business_description=parsed_data.get('business_description', 'Business description not generated'),
+                        usage_type=ColumnUsageType(parsed_data.get('usage_type', 'attribute')),
+                        data_type=data_type,
+                        example_values=parsed_data.get('example_values', []),
+                        business_rules=parsed_data.get('business_rules', []),
+                        data_quality_checks=parsed_data.get('data_quality_checks', []),
+                        related_concepts=parsed_data.get('related_concepts', []),
+                        privacy_classification=parsed_data.get('privacy_classification', 'internal'),
+                        aggregation_suggestions=parsed_data.get('aggregation_suggestions', []),
+                        filtering_suggestions=parsed_data.get('filtering_suggestions', []),
+                        json_metadata=parsed_data.get('json_metadata', {})
+                    )
+                except Exception as cleanup_error:
+                    print(f"Failed to clean and parse response: {cleanup_error}")
+                    # Return a fallback definition
+                    return self._create_fallback_column_definition(column, data_type)
+            
+            raise Exception(f"Failed to generate column documentation: {error_msg}")
     
     def _format_columns_for_prompt(self, columns: List[Dict[str, Any]]) -> str:
         """Format columns for LLM prompt using the existing helper utility"""
@@ -317,6 +369,103 @@ class LLMSchemaDocumentationGenerator:
         if values:
             return f"Sample values: {', '.join(values[:5])}"
         return "No sample values found"
+    
+    def _clean_json_response(self, response: str) -> str:
+        """Clean JSON response by removing comments and invalid characters"""
+        import re
+        
+        # Remove single-line comments (// ...)
+        response = re.sub(r'//.*$', '', response, flags=re.MULTILINE)
+        
+        # Remove multi-line comments (/* ... */)
+        response = re.sub(r'/\*.*?\*/', '', response, flags=re.DOTALL)
+        
+        # Remove any trailing commas before closing braces/brackets
+        response = re.sub(r',(\s*[}\]])', r'\1', response)
+        
+        # Remove any text before the first { or after the last }
+        start = response.find('{')
+        end = response.rfind('}')
+        if start != -1 and end != -1 and end > start:
+            response = response[start:end+1]
+        
+        return response.strip()
+    
+    async def _get_raw_llm_response(self, column: Dict[str, Any], schema_input: SchemaInput, domain_context: DomainContext) -> str:
+        """Get raw LLM response for column documentation without parsing"""
+        system_prompt = """You are an expert data analyst specializing in data dictionary creation.
+        Generate comprehensive column documentation that helps business users understand:
+        1. What the column represents in business terms
+        2. How it should be used in analysis
+        3. Data quality and business rules
+        4. Privacy and compliance considerations
+        
+        Be specific and actionable in your recommendations.
+        
+        CRITICAL: You must return ONLY valid JSON. Do not include any comments, explanations, or text outside the JSON object.
+        Do not use // or /* */ comments in your response.
+        """
+        
+        user_prompt = f"""Document this database column for business analysis:
+        
+        Column Details:
+        - Name: {column['name']}
+        - Data Type: {column.get('data_type') or column.get('type', 'UNKNOWN')}
+        - Nullable: {column.get('nullable', True)}
+        - Primary Key: {column.get('primary_key', False)}
+        - Existing Description: {column.get('description', 'None')}
+        
+        Table Context:
+        - Table: {schema_input.table_name}
+        - Other Columns: {[c['name'] for c in schema_input.columns if c['name'] != column['name']]}
+        
+        Project Context:
+        - Business Domain: {domain_context.business_domain}
+        - Purpose: {domain_context.purpose}
+        - Key Concepts: {', '.join(domain_context.key_business_concepts)}
+        - Compliance: {', '.join(domain_context.compliance_requirements or [])}
+        
+        Sample Values (if available):
+        {self._extract_sample_values_for_column(column['name'], schema_input.sample_data)}
+        
+        CRITICAL: Generate ONLY valid JSON without any comments, explanations, or additional text. 
+        Do NOT include // comments, /* */ comments, or any text outside the JSON object.
+        Return ONLY the JSON object with the exact structure specified in the format instructions.
+        """
+        
+        # Create a simple prompt template for raw response
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", system_prompt),
+            ("human", user_prompt)
+        ])
+        
+        chain = prompt | self.client | StrOutputParser()
+        
+        try:
+            response = await chain.ainvoke({})
+            return response
+        except Exception as e:
+            print(f"Failed to get raw LLM response: {e}")
+            return "{}"
+    
+    def _create_fallback_column_definition(self, column: Dict[str, Any], data_type: str) -> EnhancedColumnDefinition:
+        """Create a fallback column definition when LLM generation fails"""
+        return EnhancedColumnDefinition(
+            column_name=column['name'],
+            display_name=column['name'].replace('_', ' ').title(),
+            description=f"Column {column['name']} of type {data_type}",
+            business_description=f"Business description for {column['name']} not available",
+            usage_type=ColumnUsageType('attribute'),
+            data_type=data_type,
+            example_values=[],
+            business_rules=[],
+            data_quality_checks=[],
+            related_concepts=[],
+            privacy_classification='internal',
+            aggregation_suggestions=[],
+            filtering_suggestions=[],
+            json_metadata={}
+        )
     
     async def _call_llm(self, system_prompt: str, user_prompt: str, formattedInputs: Dict[str, Any]) -> str:
         """Call LLM with prompts and return response using Langchain pipe pattern"""
@@ -642,7 +791,7 @@ class SchemaDocumentationExamples:
     def cornerstone_training_example():
         """Example for Cornerstone training project"""
         
-        project_context = ProjectContext(
+        project_context = DomainContext(
             project_id="cornerstone",
             project_name="Cornerstone Training Analysis",
             business_domain="training_management",

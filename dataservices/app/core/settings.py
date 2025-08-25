@@ -25,7 +25,8 @@ class ServiceConfig:
     """Configuration for the LLM Definition Service"""
     
     # Database configuration
-    database_url: str = "postgresql+asyncpg://pixentia:FLc%26dL%40M9A5Q7wI%3B@unedadevpostgresql.postgres.database.azure.com:5432/phenom_gen_ai"
+    database_url: str = "postgresql+asyncpg://pixentia:FLc%26dL%40M9A5Q7wI%3B@unedadevpostgresql.postgres.database.azure.com:5432/phenom_genai_dataservices"
+    genai_database_url: str = "postgresql+asyncpg://pixentia:FLc%26dL%40M9A5Q7wI%3B@unedadevpostgresql.postgres.database.azure.com:5432/phenom_gen_ai"
     
     # LLM configuration
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
@@ -52,6 +53,7 @@ class ServiceConfig:
         """Create configuration from environment variables"""
         return cls(
             database_url=os.getenv("DATABASE_URL", cls.database_url),
+            genai_database_url=os.getenv("GENAI_DATABASE_URL", cls.genai_database_url),
             openai_api_key=os.getenv("OPENAI_API_KEY", ""),
             openai_model=os.getenv("OPENAI_MODEL", cls.openai_model),
             mcp_server_url=os.getenv("MCP_SERVER_URL", cls.mcp_server_url),
@@ -176,12 +178,12 @@ class Settings(BaseSettings):
     
     # Vector Store Settings
     VECTOR_STORE_PATH: str = "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/lexy/data/vector_store"
-    CHROMA_STORE_PATH: str = "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/lexy/data/chroma_db"
-    
+    CHROMA_STORE_PATH: str = "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/lexy/data/service/chroma_db"
+    #host='ec2-54-161-71-105.compute-1.amazonaws.com', port=8888
     # ChromaDB Settings
     CHROMA_USE_LOCAL: bool = True
-    CHROMA_HOST: str = "localhost"
-    CHROMA_PORT: int = 8000
+    CHROMA_HOST: str = "ec2-54-161-71-105.compute-1.amazonaws.com"
+    CHROMA_PORT: int = 8888
     CHROMA_COLLECTION_NAME: str = "default"
     CHROMA_PERSIST_DIRECTORY: str = "chroma_db"
     

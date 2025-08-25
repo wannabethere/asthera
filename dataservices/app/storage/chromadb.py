@@ -159,6 +159,50 @@ class ChromaDB:
                 f"Failed to add documents to collection {collection_name}: {str(e)}"
             ) from e
 
+    def add_documents_with_embeddings(
+        self,
+        collection_name: str,
+        documents: Documents,
+        ids: IDs,
+        embeddings: Embeddings,
+        metadata: Optional[Metadata] = None,
+    ) -> None:
+        """Add documents with pre-computed embeddings to a collection.
+
+        Args:
+            collection_name: Name of the collection
+            documents: List of documents to add
+            ids: List of IDs for the documents
+            embeddings: Pre-computed embeddings for the documents
+            metadata: Optional metadata for each document
+        """
+        try:
+            self._connect_client()
+            collection: Collection = self.get_collection(collection_name)
+
+            # Convert list metadata values to strings and handle None values
+            if metadata:
+                processed_metadata = []
+                for meta in metadata:
+                    processed_meta = {}
+                    for key, value in meta.items():
+                        if value is None:
+                            processed_meta[key] = ""  # Convert None to empty string
+                        elif isinstance(value, list):
+                            processed_meta[key] = ", ".join(str(v) for v in value)
+                        else:
+                            processed_meta[key] = value
+                    processed_metadata.append(processed_meta)
+                metadata = processed_metadata
+
+            collection.add(
+                documents=documents, ids=ids, embeddings=embeddings, metadatas=metadata
+            )
+        except Exception as e:
+            raise Exception(
+                f"Failed to add documents with embeddings to collection {collection_name}: {str(e)}"
+            ) from e
+
     def query_collection(
         self,
         collection_name: str,

@@ -1,6 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
+
+from yaml.tokens import Token
 from app.core.dependencies import get_async_db_session, get_session_manager
 from app.service.persistence_service import PersistenceServiceFactory
 from app.utils.history import DomainManager
@@ -9,7 +11,9 @@ from app.service.models import (
     UserExampleCreate, UserExampleUpdate, UserExampleRead,
     UserExample, DefinitionType
 )
-
+from app.service.share_permissions import SharePermissions
+from app.routers.project_workflow import get_token
+import traceback
 router = APIRouter()
 
 def get_session_id(request: Request):
@@ -26,13 +30,19 @@ def get_user_id(request: Request):
 async def create(
     data: ExampleCreate, 
     session_id: str = Depends(get_session_id),
-    user_id: str = Depends(get_user_id),
+    token: str = Depends(get_token),
     db: AsyncSession = Depends(get_async_db_session)
 ):
     """Create a new example within a domain."""
     try:
+        user= await SharePermissions()._validate_user(token)
+        if data.definition_type not in DefinitionType:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid definition_type: {data.definition_type}. Must be one of: {[dt.value for dt in DefinitionType]}"
+            )
         # TODO: Get actual user from authentication
-        created_by = user_id  # Use the user_id from dependency
+        created_by = user['id']  # Use the user_id from dependency
         
         # Initialize services
         session_manager = get_session_manager()
@@ -42,7 +52,7 @@ async def create(
         
         # Convert ExampleCreate to UserExample
         user_example = UserExample(
-            definition_type=DefinitionType.SQL_PAIR,  # Default, can be enhanced
+            definition_type=data.definition_type,  # Default, can be enhanced
             name=data.question[:50],  # Use question as name, truncated
             description=data.question,
             sql=data.sql_query,
@@ -53,17 +63,19 @@ async def create(
                 'samples': data.samples,
                 **data.json_metadata
             },
-            user_id=created_by
+            created_by=created_by,
+            updated_by=created_by
         )
         
         # Persist using the service
-        example_id = await user_example_service.persist_user_example(user_example, data.domain_id)
+        example_id = await user_example_service.persist_user_example(user_example, data.domain_id,token)
         
         # Get the created example
-        example = await user_example_service.get_user_example_by_id(example_id)
+        example = await user_example_service.get_user_example_by_id(example_id,token)
         
         return ExampleRead.model_validate(example)
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(status_code=400, detail=f"Failed to create example: {str(e)}")
 
 
@@ -73,17 +85,18 @@ async def create(
 async def read(
     example_id: str, 
     session_id: str = Depends(get_session_id),
-    user_id: str = Depends(get_user_id),
+    token: str = Depends(get_token),
     db: AsyncSession = Depends(get_async_db_session)
 ):
     """Retrieve an example by its unique ID."""
     # Initialize services
+    user = await SharePermissions()._validate_user(token)
     session_manager = get_session_manager()
     domain_manager = DomainManager(None)  # Pass None since we're using async sessions
     factory = PersistenceServiceFactory(session_manager, domain_manager)
     user_example_service = factory.get_user_example_service()
     
-    example = await user_example_service.get_user_example_by_id(example_id)
+    example = await user_example_service.get_user_example_by_id(example_id,token)
     if not example:
         raise HTTPException(status_code=404, detail="Example not found.")
     return ExampleRead.model_validate(example)
@@ -96,13 +109,14 @@ async def update(
     example_id: str, 
     data: ExampleUpdate, 
     session_id: str = Depends(get_session_id),
-    user_id: str = Depends(get_user_id),
+    token: str = Depends(get_token),
     db: AsyncSession = Depends(get_async_db_session)
 ):
     """Partially update an example's details."""
     try:
+        user= await SharePermissions()._validate_user(token)
         # TODO: Get actual user from authentication
-        modified_by = user_id  # Use the user_id from dependency
+        modified_by = user['id']  # Use the user_id from dependency
         
         # Initialize services
         session_manager = get_session_manager()
@@ -111,7 +125,7 @@ async def update(
         user_example_service = factory.get_user_example_service()
         
         # Get the example by ID
-        example = await user_example_service.get_user_example_by_id(example_id)
+        example = await user_example_service.get_user_example_by_id(example_id,token)
         
         if not example:
             raise HTTPException(status_code=404, detail="Example not found.")
@@ -149,7 +163,7 @@ async def update(
 async def delete(
     example_id: str, 
     session_id: str = Depends(get_session_id),
-    user_id: str = Depends(get_user_id),
+    token: str = Depends(get_token),
     db: AsyncSession = Depends(get_async_db_session)
 ):
     """Remove an example from the database."""
@@ -169,7 +183,7 @@ async def list_all(
     domain_id: Optional[str] = Query(None, description="Filter by domain ID"),
     definition_type: Optional[DefinitionType] = Query(None, description="Filter by definition type"),
     session_id: str = Depends(get_session_id),
-    user_id: str = Depends(get_user_id),
+    token: str = Depends(get_token),
     db: AsyncSession = Depends(get_async_db_session)
 ):
     """List examples with optional filtering."""
@@ -181,9 +195,9 @@ async def list_all(
     
     # Get examples
     if domain_id:
-        examples = await user_example_service.get_user_examples(domain_id, definition_type)
+        examples = await user_example_service.get_user_examples(domain_id, definition_type,token)
     else:
-        examples = await user_example_service.get_user_examples("", definition_type)
+        examples = await user_example_service.get_user_examples("", definition_type,token)
     
     return [ExampleRead.model_validate(example) for example in examples]
 
@@ -196,7 +210,7 @@ async def list_all(
 async def create_user(
     data: UserExampleCreate, 
     session_id: str = Depends(get_session_id),
-    user_id: str = Depends(get_user_id),
+    token: str = Depends(get_token),
     db: AsyncSession = Depends(get_async_db_session)
 ):
     """Create a new user example within a domain."""
@@ -221,10 +235,10 @@ async def create_user(
         )
         
         # Persist using the service
-        example_id = await user_example_service.persist_user_example(user_example, data.domain_id)
+        example_id = await user_example_service.persist_user_example(user_example, data.domain_id,token)
         
         # Get the created example
-        example = await user_example_service.get_user_example_by_id(example_id)
+        example = await user_example_service.get_user_example_by_id(example_id,token)
         
         return UserExampleRead.model_validate(example)
     except Exception as e:
@@ -237,7 +251,7 @@ async def create_user(
 async def read_user(
     example_id: str, 
     session_id: str = Depends(get_session_id),
-    user_id: str = Depends(get_user_id),
+    token: str = Depends(get_token),
     db: AsyncSession = Depends(get_async_db_session)
 ):
     """Retrieve a user example by its unique ID."""
@@ -247,7 +261,7 @@ async def read_user(
     factory = PersistenceServiceFactory(session_manager, domain_manager)
     user_example_service = factory.get_user_example_service()
     
-    example = await user_example_service.get_user_example_by_id(example_id)
+    example = await user_example_service.get_user_example_by_id(example_id,token)
     if not example:
         raise HTTPException(status_code=404, detail="User example not found.")
     return UserExampleRead.model_validate(example)
@@ -260,7 +274,7 @@ async def update_user(
     example_id: str, 
     data: UserExampleUpdate, 
     session_id: str = Depends(get_session_id),
-    user_id: str = Depends(get_user_id),
+    token: str = Depends(get_token),
     db: AsyncSession = Depends(get_async_db_session)
 ):
     """Partially update a user example's details."""
@@ -288,7 +302,7 @@ async def update_user(
             updates['json_metadata'] = data.additional_context
         
         # Update using the service
-        updated_example = await user_example_service.update_user_example(example_id, updates, modified_by)
+        updated_example = await user_example_service.update_user_example(example_id, updates, modified_by,token)
         
         return UserExampleRead.model_validate(updated_example)
     except HTTPException:
@@ -301,7 +315,7 @@ async def update_user(
 async def delete_user(
     example_id: str, 
     session_id: str = Depends(get_session_id),
-    user_id: str = Depends(get_user_id),
+    token: str = Depends(get_token),
     db: AsyncSession = Depends(get_async_db_session)
 ):
     """Remove a user example from the database."""
@@ -311,7 +325,7 @@ async def delete_user(
     factory = PersistenceServiceFactory(session_manager, domain_manager)
     user_example_service = factory.get_user_example_service()
     
-    if not await user_example_service.delete_user_example(example_id):
+    if not await user_example_service.delete_user_example(example_id,token):
         raise HTTPException(status_code=404, detail="User example not found.")
     return {"message": "User example deleted successfully"}
 
@@ -321,7 +335,7 @@ async def list_all_users(
     domain_id: Optional[str] = Query(None, description="Filter by domain ID"),
     definition_type: Optional[DefinitionType] = Query(None, description="Filter by definition type"),
     session_id: str = Depends(get_session_id),
-    user_id: str = Depends(get_user_id),
+    token: str = Depends(get_token),
     db: AsyncSession = Depends(get_async_db_session)
 ):
     """List user examples with optional filtering."""
@@ -333,8 +347,8 @@ async def list_all_users(
     
     # Get examples
     if domain_id:
-        examples = await user_example_service.get_user_examples(domain_id, definition_type)
+        examples = await user_example_service.get_user_examples(domain_id, definition_type,token)
     else:
-        examples = await user_example_service.get_user_examples("", definition_type)
+        examples = await user_example_service.get_user_examples("", definition_type,token)
     
     return [UserExampleRead.model_validate(example) for example in examples]

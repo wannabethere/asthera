@@ -498,7 +498,7 @@ class LLMDefinitionGenerator:
             chain_of_thought=data.get("chain_of_thought", ""),
             related_tables=data.get("related_tables", []),
             related_columns=data.get("related_columns", []),
-            metadata=data.get("metadata", {}),
+            json_metadata=data.get("metadata", {}),
             confidence_score=data.get("confidence_score", 0.0),
             suggestions=data.get("suggestions", [])
         )

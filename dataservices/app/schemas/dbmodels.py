@@ -76,12 +76,15 @@ class Domain(Base, TimestampMixin):
     last_modified_entity_id = Column(String(36))
     version_locked = Column(Boolean, default=False, nullable=False)
     json_metadata = Column(JSONB)
+    created_by = Column(String(100), nullable=False)
+    updated_by = Column(String(100), nullable=False)
 
     # Workflow tracking fields
     draft_completed_at = Column(DateTime(timezone=True))
     published_at = Column(DateTime(timezone=True))
 
     # Relationships
+    share_permissions = relationship("SharePermission", back_populates="domains", cascade="all, delete-orphan")
     datasets = relationship(
         "Dataset", back_populates="domain", cascade="all, delete-orphan"
     )
@@ -107,9 +110,9 @@ class Domain(Base, TimestampMixin):
         "DomainVersionHistory", back_populates="domain", cascade="all, delete-orphan"
     )
    
-    #domain_histories = relationship(
-    #    "DomainHistory", back_populates="domain", cascade="all, delete-orphan"
-    #)
+    domain_histories = relationship(
+       "DomainHistory", back_populates="domain", cascade="all, delete-orphan"
+    )
 
     # Enhanced constraints
     __table_args__ = (
@@ -299,12 +302,15 @@ class Dataset(Base, TimestampMixin, EntityVersionMixin):
     description = Column(Text)
     json_metadata = Column(JSONB)
     connection_id = Column(UUID(as_uuid=True), ForeignKey("connection_details.id"))
+    created_by = Column(String(100))
+    modified_by = Column(String(100))
 
     # Relationships
     domain = relationship("Domain", back_populates="datasets")
     tables = relationship(
         "Table", back_populates="dataset", cascade="all, delete-orphan"
     )
+    
     connection = relationship("ConnectionDetails", back_populates="datasets")
     __table_args__ = (
         UniqueConstraint("domain_id", "name", name="uq_datasets_domain_name"),
@@ -497,8 +503,8 @@ class Metric(Base, TimestampMixin, EntityVersionMixin):
 
     __table_args__ = (
         UniqueConstraint("table_id", "name", name="uq_metrics_table_name"),
-    )
-
+    )   
+    
 
 class View(Base, TimestampMixin, EntityVersionMixin):
     """Table views and perspectives"""
@@ -592,6 +598,8 @@ class Instruction(Base, TimestampMixin, EntityVersionMixin):
     sql_query = Column(Text)  # Now nullable
     chain_of_thought = Column(Text)
     json_metadata = Column(JSONB)
+    created_by = Column(String(100), nullable=False)
+    updated_by = Column(String(100), nullable=False)
 
     # Relationships
     domain = relationship("Domain", back_populates="instructions")
@@ -634,6 +642,8 @@ class Example(Base, TimestampMixin, EntityVersionMixin):
         String(100), default="system"
     )  # Add user_id field to match UserExample
     json_metadata = Column(JSONB)
+    created_by = Column(String(100), nullable=False)
+    updated_by = Column(String(100), nullable=False)
 
     # Relationships
     domain = relationship("Domain", back_populates="examples")
@@ -684,8 +694,7 @@ class DomainHistory(Base, TimestampMixin):
     history_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     domain_id = Column(
         String(50),
-        nullable=False
-        #ForeignKey("domains.domain_id", ondelete="CASCADE"),
+        ForeignKey("domains.domain_id", ondelete="CASCADE"),nullable=False
         
     )
     table_id = Column(String(36), ForeignKey("tables.table_id"))
@@ -724,6 +733,8 @@ class DataSources(Base):
     updated_at = Column(
         DateTime(timezone=True), default=func.now(), onupdate=func.now(), nullable=False
     )
+    
+    
 
     # Relationships
     connection_details = relationship(
@@ -750,6 +761,8 @@ class ConnectionDetails(Base):
         DateTime(timezone=True), default=func.now(), onupdate=func.now(), nullable=False
     )
     name = Column(String, nullable=False)
+    created_by = Column(String(100), nullable=False)
+    updated_by = Column(String(100), nullable=False)
 
     # Relationships
     data_source = relationship(
@@ -826,7 +839,7 @@ def update_domain_version(session: Session, entity: Any, action: str):
     elif hasattr(entity, "column_id"):
         # For calculated_columns
         column = (
-            session.query(Column).filter(Column.column_id == entity.column_id).first()
+            session.query(SQLColumn).filter(SQLColumn.column_id == entity.column_id).first()
         )
         if column and column.table:
             domain_id = column.table.domain_id
@@ -919,6 +932,28 @@ class WorkflowLog(Base, TimestampMixin):
         Index("idx_workflow_logs_action", "action"),
         Index("idx_workflow_logs_created_at", "created_at"),
     )
+    
+class SharePermission(Base, TimestampMixin, EntityVersionMixin):
+        """Share permissions for entities"""
+
+        __tablename__ = "share_permissions"
+        share_permission_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+        domain_id = Column(
+        String(50),
+        ForeignKey("domains.domain_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+        entity_id = Column(String(36), nullable=False)
+        shared_with = Column(String(100), nullable=False)
+        permission = Column(String(50), nullable=False)
+        shared_by = Column(String(100), nullable=False)
+        created_by = Column(String(100), nullable=False)
+        modified_by = Column(String(100), nullable=False)
+        
+        #Relationships
+        domains = relationship("Domain", back_populates="share_permissions")
+    
+ 
 
 
 # Event handlers for workflow logging

@@ -43,8 +43,17 @@ class SessionManager:
             config.database_url,  # Must be 'postgresql+asyncpg://...'
             echo=config.log_level == "DEBUG"
             )
+            self.genai_engine = create_async_engine(
+            config.genai_database_url,  # Must be 'postgresql+asyncpg://...'
+            echo=config.log_level == "DEBUG"
+            )
         self.async_session_maker = async_sessionmaker(
             bind=self.engine,
+            expire_on_commit=False,
+            class_=AsyncSession
+        )
+        self.genai_async_session_maker = async_sessionmaker(
+            bind=self.genai_engine,
             expire_on_commit=False,
             class_=AsyncSession
         )
@@ -54,15 +63,16 @@ class SessionManager:
             print("Creating tables...")
             await conn.run_sync(Base.metadata.create_all)
     
-    # def get_db_session(self) -> Session:
-    #     """Get database session"""
-    #     if not hasattr(self, 'SessionLocal'):
-    #         raise RuntimeError("SessionManager not initialized with config")
-    #     return self.SessionLocal()
-    
     @asynccontextmanager
     async def get_async_db_session(self):
         async with self.async_session_maker() as session:
+            try:
+                yield session
+            finally:
+                await session.close()
+    
+    async def get_async_genai_db_session(self):
+        async with self.genai_async_session_maker() as session:
             try:
                 yield session
             finally:
