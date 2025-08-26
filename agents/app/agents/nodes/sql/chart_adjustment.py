@@ -27,9 +27,34 @@ chart_adjustment_system_prompt = """
 ### TASK ###
 
 You are a data analyst great at visualizing data using vega-lite! Given the user's question, SQL, original vega-lite schema and adjustment options, 
-you need to re-generate vega-lite schema in JSON and provide suitable chart type.
-Besides, you need to give a concise and easy-to-understand reasoning to describe why you provide such vega-lite schema based on the question, SQL,  original vega-lite schema and adjustment options.
-Data is provided and the columns and values are already provided in the vega-lite schema.
+you need to analyze whether the request is for:
+1. **Chart Adjustment**: Modifying the chart appearance, type, or encoding
+2. **Chart Annotation**: Adding text labels, callouts, reference lines, or other annotations
+3. **Both**: Combining chart adjustments with annotations
+
+### REASONING STEP ###
+
+First, analyze the user's request and determine the type:
+- **Chart Adjustment**: Requests like "make bars blue", "change to line chart", "add color encoding"
+- **Chart Annotation**: Requests like "add labels", "highlight this point", "add a reference line", "put text here"
+- **Both**: Requests that combine both adjustments and annotations
+
+### CHART ADJUSTMENT CAPABILITIES ###
+
+For chart adjustments, you can:
+- Change chart type (bar, line, pie, etc.)
+- Modify colors, sizes, and visual properties
+- Adjust encoding channels (x, y, color, size, etc.)
+- Change mark types and properties
+
+### ANNOTATION CAPABILITIES ###
+
+For annotations, you can add:
+- **Text annotations**: Labels, titles, descriptions
+- **Reference lines**: Horizontal/vertical lines for thresholds
+- **Highlights**: Color overlays for specific data points
+- **Callouts**: Arrows or lines pointing to specific areas
+- **Markers**: Special symbols or indicators
 
 ### IMPORTANT ###
 You MUST include the data block in your chart_schema response. Copy the data from the input chart schema and include it in your generated chart schema.
@@ -65,8 +90,9 @@ Your entire response should be a single JSON object starting with {{ and ending 
 ### OUTPUT FORMAT ###
 
 {{
-    "reasoning": "Your reasoning here in plain text",
+    "reasoning": "Your reasoning here in plain text - explain whether this is chart adjustment, annotation, or both",
     "chart_type": "line" | "multi_line" | "bar" | "pie" | "grouped_bar" | "stacked_bar" | "area" | "",
+    "adjustment_type": "chart_adjustment" | "annotation" | "both",
     "chart_schema": {{
         "mark": {{"type": "bar"}},
         "encoding": {{
@@ -80,15 +106,36 @@ Your entire response should be a single JSON object starting with {{ and ending 
                 {{"field1": "value3", "field2": "value4"}}
             ]
         }}
+    }},
+    "annotation_config": {{
+        "annotations": [
+            {{
+                "annotation_id": "ann_1",
+                "annotation_type": "text",
+                "position": {{"x": 100, "y": 200}},
+                "content": "Important note",
+                "style": {{"color": "red", "fontSize": 14}},
+                "description": "Highlight important data point"
+            }}
+        ],
+        "annotation_layer": {{
+            "mark": {{"type": "text"}},
+            "encoding": {{
+                "x": {{"field": "x_pos", "type": "quantitative"}},
+                "y": {{"field": "y_pos", "type": "quantitative"}},
+                "text": {{"field": "label", "type": "nominal"}}
+            }}
+        }}
     }}
 }}
 
 ### EXAMPLES ###
 
-For a bar chart adjustment:
+For a chart adjustment:
 {{
     "reasoning": "I will change the bar color to orange as requested",
     "chart_type": "bar",
+    "adjustment_type": "chart_adjustment",
     "chart_schema": {{
         "mark": {{"type": "bar"}},
         "encoding": {{
@@ -105,10 +152,43 @@ For a bar chart adjustment:
     }}
 }}
 
+For an annotation request:
+{{
+    "reasoning": "I will add text labels to highlight the highest value",
+    "chart_type": "bar",
+    "adjustment_type": "annotation",
+    "chart_schema": {{
+        "mark": {{"type": "bar"}},
+        "encoding": {{
+            "x": {{"field": "Division", "type": "nominal"}},
+            "y": {{"field": "Completed_Trainings", "type": "quantitative"}}
+        }},
+        "data": {{
+            "values": [
+                {{"Division": "Administration", "Completed_Trainings": 2495}},
+                {{"Division": "Sales", "Completed_Trainings": 2482}}
+            ]
+        }}
+    }},
+    "annotation_config": {{
+        "annotations": [
+            {{
+                "annotation_id": "highlight_max",
+                "annotation_type": "text",
+                "position": {{"x": "Administration", "y": 2495}},
+                "content": "Highest",
+                "style": {{"color": "red", "fontWeight": "bold"}},
+                "description": "Highlight the highest training completion count"
+            }}
+        ]
+    }}
+}}
+
 For no suitable adjustment:
 {{
     "reasoning": "The requested adjustment is not suitable for this data type",
     "chart_type": "",
+    "adjustment_type": "chart_adjustment",
     "chart_schema": {{}}
 }}
 """
@@ -123,7 +203,19 @@ Language: {language}
 
 Adjustment Option: {adjustment_option}
 
-Please think step by step
+### ANALYSIS REQUEST ###
+Please analyze whether this request is for:
+1. **Chart Adjustment**: Modifying chart appearance, type, or encoding
+2. **Chart Annotation**: Adding labels, callouts, reference lines, or highlights
+3. **Both**: Combining chart adjustments with annotations
+
+Then provide the appropriate response including:
+- Reasoning for your classification
+- Updated chart schema (if adjustments are needed)
+- Annotation configuration (if annotations are requested)
+- The adjustment_type field indicating your classification
+
+Please think step by step and provide a comprehensive response.
 """
 
 
@@ -307,12 +399,43 @@ class ChartAdjustmentTool:
         sample_data: dict
     ) -> dict:
         """Post-process chart adjustment results"""
-        return self.post_processor.run(
-            generate_result.get("replies"),
-            vega_schema,
-            sample_data,
-            remove_data_from_chart_schema=False  # Preserve the original data
-        )
+        try:
+            # Get the raw result from LLM
+            raw_result = generate_result.get("replies", [""])[0]
+            parsed_result = orjson.loads(raw_result)
+            
+            # Extract annotation configuration if present
+            annotation_config = parsed_result.get("annotation_config")
+            adjustment_type = parsed_result.get("adjustment_type", "chart_adjustment")
+            
+            # Process the chart schema through the existing post-processor
+            processed_result = self.post_processor.run(
+                generate_result.get("replies"),
+                vega_schema,
+                sample_data,
+                remove_data_from_chart_schema=False  # Preserve the original data
+            )
+            
+            # Add annotation configuration and adjustment type to the result
+            if annotation_config:
+                processed_result["annotation_config"] = annotation_config
+                processed_result["adjustment_type"] = adjustment_type
+            
+            # Ensure the reasoning is preserved
+            if "reasoning" not in processed_result and "reasoning" in parsed_result:
+                processed_result["reasoning"] = parsed_result["reasoning"]
+            
+            return processed_result
+            
+        except Exception as e:
+            logger.error(f"Error in post-processing: {e}")
+            # Fall back to original post-processing if annotation handling fails
+            return self.post_processor.run(
+                generate_result.get("replies"),
+                vega_schema,
+                sample_data,
+                remove_data_from_chart_schema=False
+            )
 
     async def run(
         self,
@@ -355,6 +478,7 @@ class ChartAdjustmentTool:
             # Step 3: Generate chart adjustment
             generate_result = await self.generate_chart_adjustment(user_prompt)
             print("generate_result",generate_result)
+            
             # Step 4: Post-process results
             # Extract data from the LLM-generated chart schema
             parsed_result = orjson.loads(generate_result.get("replies", [""])[0])
@@ -366,11 +490,32 @@ class ChartAdjustmentTool:
             logger.info(f"LLM chart schema transform: {llm_chart_schema.get('transform', 'No transform')}")
             logger.info(f"LLM chart schema encoding: {llm_chart_schema.get('encoding', 'No encoding')}")
             
+            # Check if this is an annotation request
+            adjustment_type = parsed_result.get("adjustment_type", "chart_adjustment")
+            annotation_config = parsed_result.get("annotation_config")
+            
+            logger.info(f"Adjustment type detected: {adjustment_type}")
+            if annotation_config:
+                logger.info(f"Annotation configuration found with {len(annotation_config.get('annotations', []))} annotations")
+            
             final_result = self.post_process(
                 generate_result,
                 self.vega_schema,
                 llm_chart_data
             )
+            
+            # Ensure backward compatibility by maintaining the existing structure
+            # while adding new annotation fields
+            if annotation_config and "annotation_config" not in final_result:
+                final_result["annotation_config"] = annotation_config
+            
+            if "adjustment_type" not in final_result:
+                final_result["adjustment_type"] = adjustment_type
+            
+            # Add reasoning if not present
+            if "reasoning" not in final_result and "reasoning" in parsed_result:
+                final_result["reasoning"] = parsed_result["reasoning"]
+            
             print("final_result",final_result)
             return final_result
             
@@ -378,7 +523,8 @@ class ChartAdjustmentTool:
             logger.error(f"Error in chart adjustment: {e}")
             return {
                 "error": str(e),
-                "success": False
+                "success": False,
+                "adjustment_type": "chart_adjustment"
             }
 
 
@@ -398,7 +544,18 @@ class ChartAdjustment:
         data: dict,
         language: str,
     ) -> dict:
-        """Run chart adjustment with original interface"""
+        """
+        Run chart adjustment with original interface
+        
+        This method now supports both chart adjustments and annotations:
+        - Chart adjustments: modify chart appearance, type, or encoding
+        - Annotations: add labels, callouts, reference lines, or highlights
+        - Combined: both adjustments and annotations
+        
+        Returns:
+            dict: Result containing chart_schema, annotation_config (if applicable), 
+                  adjustment_type, and other metadata
+        """
         return await self.tool.run(
             query=query,
             sql=sql,
@@ -410,7 +567,7 @@ class ChartAdjustment:
 
 
 def create_chart_adjustment_tool(llm_provider=None) -> Tool:
-    """Create Langchain tool for chart adjustment"""
+    """Create Langchain tool for chart adjustment and annotation"""
     chart_adj = ChartAdjustmentTool(get_llm() if llm_provider is None else llm_provider)
     
     def adjust_chart_func(input_json: str) -> str:
@@ -419,11 +576,11 @@ def create_chart_adjustment_tool(llm_provider=None) -> Tool:
             result = asyncio.run(chart_adj.run(**input_data))
             return orjson.dumps(result).decode()
         except Exception as e:
-            return orjson.dumps({"error": str(e), "success": False}).decode()
+            return orjson.dumps({"error": str(e), "success": False, "adjustment_type": "chart_adjustment"}).decode()
     
     return Tool(
         name="chart_adjuster",
-        description="Adjusts chart visualizations based on user preferences. Input should be JSON with 'query', 'sql', 'adjustment', 'chart_schema', 'data', and 'language' fields.",
+        description="Adjusts chart visualizations and adds annotations based on user preferences. Supports chart adjustments (colors, types, encoding) and annotations (labels, callouts, reference lines, highlights). Input should be JSON with 'query', 'sql', 'adjustment', 'chart_schema', 'data', and 'language' fields.",
         func=adjust_chart_func
     )
 
@@ -469,18 +626,48 @@ if __name__ == "__main__":
             }
         }
         
-        result = await chart_adj.run(
+        # Test 1: Chart adjustment
+        print("=== Testing Chart Adjustment ===")
+        result1 = await chart_adj.run(
             query="Show me the data as a bar chart with categories on x-axis and values on y-axis",
             sql="SELECT category, value FROM table",
-            adjustment_option="Make the bars blue",
+            adjustment="Make the bars blue",
             chart_schema=sample_chart_schema,
             data=sample_data,
             language="English"
         )
         
         print("Chart Adjustment Result:")
-        print(orjson.dumps(result, option=orjson.OPT_INDENT_2).decode())
+        print(orjson.dumps(result1, option=orjson.OPT_INDENT_2).decode())
+        
+        # Test 2: Annotation request
+        print("\n=== Testing Annotation Request ===")
+        result2 = await chart_adj.run(
+            query="Add labels to show the values on top of each bar",
+            sql="SELECT category, value FROM table",
+            adjustment="Add value labels on top of bars",
+            chart_schema=sample_chart_schema,
+            data=sample_data,
+            language="English"
+        )
+        
+        print("Annotation Result:")
+        print(orjson.dumps(result2, option=orjson.OPT_INDENT_2).decode())
+        
+        # Test 3: Combined request
+        print("\n=== Testing Combined Request ===")
+        result3 = await chart_adj.run(
+            query="Change the bars to green and add a reference line at value 15",
+            sql="SELECT category, value FROM table",
+            adjustment="Change color to green and add reference line",
+            chart_schema=sample_chart_schema,
+            data=sample_data,
+            language="English"
+        )
+        
+        print("Combined Result:")
+        print(orjson.dumps(result3, option=orjson.OPT_INDENT_2).decode())
 
     asyncio.run(test_chart_adjustment())
 
-__all__ = ["ChartAdjustment", "create_chart_adjustment_tool"]
+__all__ = ["ChartAdjustment", "create_chart_adjustment_tool", "ChartAdjustmentTool"]

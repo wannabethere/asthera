@@ -7,6 +7,7 @@ from app.services.sql.chart_adjustment import ChartAdjustmentService
 from app.services.sql.instructions import InstructionsService
 from app.services.sql.sql_helper_services import SQLHelperService
 from app.services.writers.dashboard_service import DashboardService
+from app.services.writers.report_service import ReportService
 from app.agents.pipelines.pipeline_container import PipelineContainer
 
 class SQLServiceContainer:
@@ -94,6 +95,14 @@ class SQLServiceContainer:
         if doc_store_provider:
             dashboard_service.doc_store_provider = doc_store_provider
         self.register_service("dashboard_service", dashboard_service)
+        
+        # Initialize report service
+        report_service = ReportService()
+        if session_manager:
+            report_service.session_manager = session_manager
+        if doc_store_provider:
+            report_service.doc_store_provider = doc_store_provider
+        self.register_service("report_service", report_service)
     
     def get_service(self, service_name: str) -> BaseService:
         """Get a service instance by name.

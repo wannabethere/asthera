@@ -262,6 +262,56 @@ class KPIChartSchema(ChartSchema):
     kpi_metadata: KPIMetadata
 
 
+class ChartAnnotation(BaseModel):
+    """Model for chart annotations"""
+    annotation_id: str
+    annotation_type: Literal["text", "line", "arrow", "highlight", "callout", "reference"]
+    position: Dict[str, Any]  # x, y coordinates or other positioning info
+    content: Optional[str] = None  # Text content for text annotations
+    style: Optional[Dict[str, Any]] = None  # Visual styling (color, size, etc.)
+    target: Optional[Dict[str, Any]] = None  # What the annotation points to
+    description: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class AnnotationConfig(BaseModel):
+    """Configuration for chart annotations"""
+    annotations: List[ChartAnnotation] = Field(default_factory=list)
+    annotation_layer: Optional[Dict[str, Any]] = None  # Vega-Lite layer configuration
+    global_annotation_settings: Optional[Dict[str, Any]] = None
+
+
+class ChartAdjustmentResult(BaseModel):
+    """Result of chart adjustment with optional annotations"""
+    reasoning: str
+    chart_type: Literal[
+        "line", "multi_line", "bar", "pie", "grouped_bar", "stacked_bar", "area", 
+        "scatter", "heatmap", "boxplot", "histogram", "bubble", "text", "tick", "rule", "kpi", ""
+    ]
+    chart_schema: Union[
+        LineChartSchema,
+        MultiLineChartSchema,
+        BarChartSchema,
+        PieChartSchema,
+        GroupedBarChartSchema,
+        StackedBarChartSchema,
+        AreaChartSchema,
+        ScatterChartSchema,
+        HeatmapChartSchema,
+        BoxPlotChartSchema,
+        HistogramChartSchema,
+        BubbleChartSchema,
+        TextChartSchema,
+        TickChartSchema,
+        RuleChartSchema,
+        Dict[str, Any]
+    ]
+    annotation_config: Optional[AnnotationConfig] = None
+    adjustment_type: Literal["chart_adjustment", "annotation", "both"] = "chart_adjustment"
+    success: bool = True
+    error: Optional[str] = None
+
+
 class ChartGenerationResults(BaseModel):
     reasoning: str
     chart_type: Literal[
@@ -319,3 +369,31 @@ class EnhancedChartGenerationResults(BaseModel):
     alternative_charts: Optional[List[Dict[str, Any]]] = None
     success: bool = True
     error: Optional[str] = None
+
+
+# Export all models
+__all__ = [
+    "ChartAdjustmentOption",
+    "ChartSchema",
+    "TemporalChartEncoding",
+    "LineChartSchema",
+    "MultiLineChartSchema",
+    "BarChartSchema",
+    "GroupedBarChartSchema",
+    "StackedBarChartSchema",
+    "AreaChartSchema",
+    "ScatterChartSchema",
+    "HeatmapChartSchema",
+    "BoxPlotChartSchema",
+    "HistogramChartSchema",
+    "BubbleChartSchema",
+    "TextChartSchema",
+    "TickChartSchema",
+    "RuleChartSchema",
+    "KPIChartSchema",
+    "ChartGenerationResults",
+    "EnhancedChartGenerationResults",
+    "ChartAnnotation",
+    "AnnotationConfig",
+    "ChartAdjustmentResult"
+]

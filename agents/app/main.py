@@ -13,7 +13,9 @@ from app.routers import (
     chart_router,
     chart_adjustment_router,
     instructions_router,
-    sql_helper_router
+    sql_helper_router,
+    dashboard_router,
+    report_router
 )
 #from app.services.sql.routers import ask, ask_feedback, question_recommendation
 from app.core.middleware import RequestLoggingMiddleware
@@ -102,6 +104,16 @@ app = FastAPI(
         * SQL Expansion
         * Query Requirements Analysis
         * SQL Visualization
+    * **Dashboard Endpoints:**
+        * Dashboard Generation with Conditional Formatting
+        * Workflow-based Dashboard Creation
+        * Dashboard Templates and Validation
+        * Service Status and Execution History
+    * **Report Endpoints:**
+        * Comprehensive Report Generation
+        * Workflow-based Report Creation
+        * Report Templates and Custom Components
+        * Conditional Formatting for Reports
     
     ## Authentication
     Most endpoints require authentication. Use the OAuth endpoints to authenticate.
@@ -156,6 +168,8 @@ app.include_router(chart_adjustment_router)
 app.include_router(instructions_router)
 app.include_router(combined_ask.router)
 app.include_router(sql_helper_router)
+app.include_router(dashboard_router)
+app.include_router(report_router)
 
 @app.get("/api/health")
 async def health_check():

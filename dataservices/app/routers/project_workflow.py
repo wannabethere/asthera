@@ -24,9 +24,7 @@ from datetime import datetime
 from fastapi.security import HTTPBearer,HTTPAuthorizationCredentials
 
 logger = logging.getLogger(__name__)
-
 router = APIRouter(prefix="/workflow", tags=["workflow"])
-
 security = HTTPBearer()
 
 def get_token(credentials: HTTPAuthorizationCredentials = Depends(security)):

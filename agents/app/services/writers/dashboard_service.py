@@ -1,20 +1,35 @@
 import logging
 from datetime import datetime
-from typing import Dict, Any, Optional, List, Callable
+from typing import Dict, Any, Optional, List, Callable, Union
 from dataclasses import asdict
+import json
+from pathlib import Path
 
 from app.agents.pipelines.pipeline_container import PipelineContainer
 from app.agents.nodes.writers.dashboard_models import DashboardConfiguration
 from app.services.servicebase import BaseService
 
+# Import workflow models
+try:
+    from workflowservices.app.models.workflowmodels import (
+        DashboardWorkflow, ThreadComponent, WorkflowState, ComponentType as WorkflowComponentType,
+        AlertType, AlertSeverity, AlertStatus
+    )
+    WORKFLOW_MODELS_AVAILABLE = True
+except ImportError:
+    # Fallback if workflow models are not available
+    WORKFLOW_MODELS_AVAILABLE = False
+    logger = logging.getLogger("lexy-ai-service")
+    logger.warning("Workflow models not available - using fallback models")
+
 logger = logging.getLogger("lexy-ai-service")
 
 
 class DashboardService(BaseService):
-    """Enhanced dashboard service using PipelineContainer for all operations"""
+    """Enhanced dashboard service using PipelineContainer for all operations with workflow integration"""
     
     def __init__(self):
-        """Initialize dashboard service with PipelineContainer"""
+        """Initialize dashboard service with PipelineContainer and workflow support"""
         # Initialize BaseService with empty pipelines dict (we'll use PipelineContainer directly)
         super().__init__(pipelines={})
         
@@ -44,9 +59,369 @@ class DashboardService(BaseService):
                 "enhanced_dashboard": None
             }
         
-        # Configuration cache
+        # Configuration cache and execution history
         self._configuration_cache = {}
         self._execution_history = []
+        self._workflow_cache = {}
+        
+        # Initialize default dashboard templates
+        self._initialize_default_templates()
+    
+    def _initialize_default_templates(self):
+        """Initialize default dashboard templates"""
+        self._dashboard_templates = {
+            "executive_dashboard": {
+                "name": "Executive Dashboard",
+                "description": "High-level dashboard for executives and stakeholders",
+                "components": [
+                    "overview_metrics",
+                    "kpi_summary",
+                    "trend_charts",
+                    "alert_summary"
+                ],
+                "layout": "grid_2x2",
+                "refresh_rate": 300
+            },
+            "operational_dashboard": {
+                "name": "Operational Dashboard",
+                "description": "Detailed operational metrics and real-time data",
+                "components": [
+                    "real_time_metrics",
+                    "performance_charts",
+                    "status_indicators",
+                    "detailed_tables"
+                ],
+                "layout": "grid_3x3",
+                "refresh_rate": 60
+            },
+            "analytical_dashboard": {
+                "name": "Analytical Dashboard",
+                "description": "Deep analytical insights with interactive visualizations",
+                "components": [
+                    "interactive_charts",
+                    "drill_down_tables",
+                    "correlation_analysis",
+                    "forecasting_charts"
+                ],
+                "layout": "flexible",
+                "refresh_rate": 600
+            },
+            "monitoring_dashboard": {
+                "name": "Monitoring Dashboard",
+                "description": "System and performance monitoring with alerts",
+                "components": [
+                    "system_metrics",
+                    "performance_monitors",
+                    "alert_panels",
+                    "log_summaries"
+                ],
+                "layout": "grid_2x3",
+                "refresh_rate": 30
+            }
+        }
+    
+    async def process_dashboard_from_workflow(
+        self,
+        workflow_data: Union[Dict[str, Any], DashboardWorkflow, str],
+        dashboard_queries: List[Dict[str, Any]],
+        project_id: str,
+        natural_language_query: Optional[str] = None,
+        additional_context: Optional[Dict[str, Any]] = None,
+        time_filters: Optional[Dict[str, Any]] = None,
+        status_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None
+    ) -> Dict[str, Any]:
+        """
+        Process dashboard using workflow data from API or JSON file
+        
+        Args:
+            workflow_data: Workflow data as dict, DashboardWorkflow object, or JSON file path
+            dashboard_queries: List of SQL queries for dashboard charts
+            project_id: Project identifier
+            natural_language_query: Natural language query for conditional formatting (optional)
+            additional_context: Additional context for formatting
+            time_filters: Time-based filters
+            status_callback: Callback for status updates
+            
+        Returns:
+            Complete dashboard result with workflow-driven configuration
+        """
+        try:
+            # Parse workflow data
+            workflow_info = self._parse_dashboard_workflow_data(workflow_data)
+            
+            if not workflow_info:
+                raise ValueError("Invalid dashboard workflow data provided")
+            
+            # Extract dashboard configuration from workflow
+            dashboard_config = self._extract_dashboard_config_from_workflow(workflow_info)
+            thread_components = self._extract_thread_components_from_workflow(workflow_info)
+            
+            # Create enhanced dashboard context
+            enhanced_context = self._create_enhanced_dashboard_context(
+                workflow_info, dashboard_config, thread_components
+            )
+            
+            # Send initial status update
+            self._send_status_update(
+                status_callback,
+                "workflow_dashboard_processing_started",
+                {
+                    "project_id": project_id,
+                    "workflow_id": workflow_info.get("id"),
+                    "workflow_state": workflow_info.get("state"),
+                    "total_components": len(thread_components),
+                    "total_queries": len(dashboard_queries),
+                    "dashboard_template": dashboard_config.get("template")
+                }
+            )
+            
+            # Process dashboard with workflow-driven configuration
+            result = await self.process_dashboard_with_conditional_formatting(
+                natural_language_query=natural_language_query,
+                dashboard_queries=dashboard_queries,
+                project_id=project_id,
+                dashboard_context=enhanced_context,
+                additional_context=additional_context,
+                time_filters=time_filters,
+                status_callback=status_callback
+            )
+            
+            # Add workflow metadata to result
+            result["workflow_metadata"] = {
+                "workflow_id": workflow_info.get("id"),
+                "workflow_state": workflow_info.get("state"),
+                "workflow_type": "dashboard_workflow",
+                "components_processed": len(thread_components),
+                "dashboard_template": dashboard_config.get("template"),
+                "workflow_source": workflow_info.get("source", "unknown")
+            }
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error in workflow-based dashboard processing: {e}")
+            self._send_status_update(
+                status_callback,
+                "workflow_dashboard_processing_failed",
+                {
+                    "error": str(e),
+                    "project_id": project_id
+                }
+            )
+            raise
+    
+    def _parse_dashboard_workflow_data(
+        self, 
+        workflow_data: Union[Dict[str, Any], DashboardWorkflow, str]
+    ) -> Optional[Dict[str, Any]]:
+        """Parse dashboard workflow data from various input formats"""
+        
+        try:
+            if isinstance(workflow_data, str):
+                # Assume it's a file path
+                if Path(workflow_data).exists():
+                    return self._load_dashboard_workflow_from_json_file(workflow_data)
+                else:
+                    # Try to parse as JSON string
+                    return json.loads(workflow_data)
+            
+            elif isinstance(workflow_data, dict):
+                # Already a dictionary
+                workflow_data["source"] = "dict_input"
+                return workflow_data
+            
+            elif WORKFLOW_MODELS_AVAILABLE and isinstance(workflow_data, DashboardWorkflow):
+                # SQLAlchemy model object
+                return self._convert_dashboard_workflow_model_to_dict(workflow_data)
+            
+            else:
+                logger.error(f"Unsupported dashboard workflow data type: {type(workflow_data)}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error parsing dashboard workflow data: {e}")
+            return None
+    
+    def _load_dashboard_workflow_from_json_file(self, file_path: str) -> Dict[str, Any]:
+        """Load dashboard workflow data from JSON file"""
+        try:
+            with open(file_path, 'r') as f:
+                workflow_data = json.load(f)
+                workflow_data["source"] = "json_file"
+                return workflow_data
+        except Exception as e:
+            logger.error(f"Error loading dashboard workflow from JSON file {file_path}: {e}")
+            raise
+    
+    def _convert_dashboard_workflow_model_to_dict(self, workflow: DashboardWorkflow) -> Dict[str, Any]:
+        """Convert SQLAlchemy dashboard workflow model to dictionary"""
+        try:
+            workflow_dict = {
+                "id": str(workflow.id),
+                "dashboard_id": str(workflow.dashboard_id),
+                "user_id": str(workflow.user_id),
+                "state": workflow.state.value if hasattr(workflow.state, 'value') else str(workflow.state),
+                "current_step": workflow.current_step,
+                "workflow_metadata": workflow.workflow_metadata or {},
+                "error_message": workflow.error_message,
+                "created_at": workflow.created_at.isoformat() if workflow.created_at else None,
+                "updated_at": workflow.updated_at.isoformat() if workflow.updated_at else None,
+                "completed_at": workflow.completed_at.isoformat() if workflow.completed_at else None,
+                "source": "workflow_model"
+            }
+            
+            # Add thread components if available
+            if hasattr(workflow, 'thread_components') and workflow.thread_components:
+                workflow_dict["thread_components"] = [
+                    self._convert_thread_component_to_dict(comp) 
+                    for comp in workflow.thread_components
+                ]
+            
+            return workflow_dict
+            
+        except Exception as e:
+            logger.error(f"Error converting dashboard workflow model to dict: {e}")
+            raise
+    
+    def _convert_thread_component_to_dict(self, component: ThreadComponent) -> Dict[str, Any]:
+        """Convert SQLAlchemy thread component to dictionary"""
+        try:
+            component_dict = {
+                "id": str(component.id),
+                "workflow_id": str(component.workflow_id) if component.workflow_id else None,
+                "report_workflow_id": str(component.report_workflow_id) if component.report_workflow_id else None,
+                "thread_message_id": str(component.thread_message_id) if component.thread_message_id else None,
+                "component_type": component.component_type.value if hasattr(component.component_type, 'value') else str(component.component_type),
+                "sequence_order": component.sequence_order,
+                "question": component.question,
+                "description": component.description,
+                "overview": component.overview,
+                "chart_config": component.chart_config,
+                "table_config": component.table_config,
+                "alert_config": component.alert_config,
+                "alert_status": component.alert_status.value if component.alert_status and hasattr(component.alert_status, 'value') else str(component.alert_status) if component.alert_status else None,
+                "last_triggered": component.last_triggered.isoformat() if component.last_triggered else None,
+                "trigger_count": component.trigger_count,
+                "configuration": component.configuration or {},
+                "is_configured": component.is_configured,
+                "created_at": component.created_at.isoformat() if component.created_at else None,
+                "updated_at": component.updated_at.isoformat() if component.updated_at else None
+            }
+            
+            return component_dict
+            
+        except Exception as e:
+            logger.error(f"Error converting thread component to dict: {e}")
+            raise
+    
+    def _extract_dashboard_config_from_workflow(self, workflow_info: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract dashboard configuration from workflow data"""
+        try:
+            metadata = workflow_info.get("workflow_metadata", {})
+            
+            # Extract dashboard configuration
+            dashboard_config = {
+                "template": metadata.get("dashboard_template", "operational_dashboard"),
+                "layout": metadata.get("dashboard_layout", "grid_2x2"),
+                "refresh_rate": metadata.get("refresh_rate", 300),
+                "auto_refresh": metadata.get("auto_refresh", True),
+                "responsive": metadata.get("responsive", True),
+                "theme": metadata.get("theme", "default"),
+                "custom_styling": metadata.get("custom_styling", {}),
+                "interactive_features": metadata.get("interactive_features", []),
+                "export_options": metadata.get("export_options", ["pdf", "png", "csv"]),
+                "sharing_config": metadata.get("sharing_config", {}),
+                "alert_config": metadata.get("alert_config", {}),
+                "performance_config": metadata.get("performance_config", {})
+            }
+            
+            # Override with template defaults if template exists
+            template_name = dashboard_config["template"]
+            if template_name in self._dashboard_templates:
+                template = self._dashboard_templates[template_name]
+                for key, value in template.items():
+                    if key not in dashboard_config or dashboard_config[key] is None:
+                        dashboard_config[key] = value
+            
+            return dashboard_config
+            
+        except Exception as e:
+            logger.error(f"Error extracting dashboard config from workflow: {e}")
+            return self._dashboard_templates.get("operational_dashboard", {})
+    
+    def _extract_thread_components_from_workflow(self, workflow_info: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Extract thread components from workflow data"""
+        try:
+            components = workflow_info.get("thread_components", [])
+            
+            # Sort by sequence order
+            components.sort(key=lambda x: x.get("sequence_order", 0))
+            
+            return components
+            
+        except Exception as e:
+            logger.error(f"Error extracting thread components from workflow: {e}")
+            return []
+    
+    def _create_enhanced_dashboard_context(
+        self,
+        workflow_info: Dict[str, Any],
+        dashboard_config: Dict[str, Any],
+        thread_components: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Create enhanced dashboard context from workflow data"""
+        try:
+            metadata = workflow_info.get("workflow_metadata", {})
+            
+            # Create base dashboard context
+            context = {
+                "title": metadata.get("dashboard_title", f"Dashboard from Workflow {workflow_info.get('id', 'Unknown')}"),
+                "description": metadata.get("dashboard_description", "Dashboard generated from workflow configuration"),
+                "template": dashboard_config.get("template"),
+                "layout": dashboard_config.get("layout"),
+                "refresh_rate": dashboard_config.get("refresh_rate"),
+                "auto_refresh": dashboard_config.get("auto_refresh"),
+                "responsive": dashboard_config.get("responsive"),
+                "theme": dashboard_config.get("theme"),
+                "custom_styling": dashboard_config.get("custom_styling"),
+                "interactive_features": dashboard_config.get("interactive_features"),
+                "export_options": dashboard_config.get("export_options"),
+                "sharing_config": dashboard_config.get("sharing_config"),
+                "alert_config": dashboard_config.get("alert_config"),
+                "performance_config": dashboard_config.get("performance_config"),
+                "workflow_id": workflow_info.get("id"),
+                "workflow_state": workflow_info.get("state"),
+                "workflow_metadata": metadata
+            }
+            
+            # Add component-specific configurations
+            context["components"] = []
+            for comp in thread_components:
+                component_config = {
+                    "id": comp.get("id"),
+                    "type": comp.get("component_type"),
+                    "title": comp.get("question"),
+                    "description": comp.get("description"),
+                    "sequence_order": comp.get("sequence_order"),
+                    "configuration": comp.get("configuration", {}),
+                    "chart_config": comp.get("chart_config"),
+                    "table_config": comp.get("table_config"),
+                    "alert_config": comp.get("alert_config")
+                }
+                context["components"].append(component_config)
+            
+            return context
+            
+        except Exception as e:
+            logger.error(f"Error creating enhanced dashboard context: {e}")
+            # Return basic context
+            return {
+                "title": "Dashboard from Workflow",
+                "description": "Dashboard generated from workflow configuration",
+                "template": "operational_dashboard",
+                "layout": "grid_2x2",
+                "workflow_id": workflow_info.get("id", "unknown")
+            }
     
     async def process_dashboard_with_conditional_formatting(
         self,
@@ -85,7 +460,9 @@ class DashboardService(BaseService):
             send_status_update("processing_started", {
                 "project_id": project_id,
                 "total_queries": len(dashboard_queries),
-                "has_conditional_formatting": bool(natural_language_query)
+                "has_conditional_formatting": bool(natural_language_query),
+                "dashboard_template": dashboard_context.get("template"),
+                "workflow_id": dashboard_context.get("workflow_id")
             })
             
             # Step 1: Process conditional formatting if provided
@@ -190,12 +567,15 @@ class DashboardService(BaseService):
                 "dashboard_data": dashboard_result.get("post_process", {}),
                 "conditional_formatting": conditional_formatting_result.get("post_process", {}) if conditional_formatting_result else None,
                 "chart_configurations": chart_configurations,
+                "dashboard_config": dashboard_context,
                 "metadata": {
                     "project_id": project_id,
                     "natural_language_query": natural_language_query,
                     "total_queries": len(dashboard_queries),
                     "total_enhanced_queries": len(enhanced_queries),
                     "conditional_formatting_applied": bool(chart_configurations),
+                    "dashboard_template": dashboard_context.get("template"),
+                    "workflow_id": dashboard_context.get("workflow_id"),
                     "timestamp": datetime.now().isoformat()
                 }
             }
@@ -211,7 +591,9 @@ class DashboardService(BaseService):
                 project_id=project_id,
                 natural_language_query=natural_language_query,
                 total_queries=len(dashboard_queries),
-                result=final_result
+                result=final_result,
+                workflow_id=dashboard_context.get("workflow_id"),
+                dashboard_template=dashboard_context.get("template")
             )
             
             return final_result
@@ -675,7 +1057,9 @@ class DashboardService(BaseService):
         project_id: str,
         natural_language_query: Optional[str],
         total_queries: int,
-        result: Dict[str, Any]
+        result: Dict[str, Any],
+        workflow_id: Optional[str] = None,
+        dashboard_template: Optional[str] = None
     ):
         """Store execution history for analytics"""
         history_entry = {
@@ -688,6 +1072,11 @@ class DashboardService(BaseService):
             "total_charts": len(result.get("dashboard_data", {}).get("results", {}))
         }
         
+        if workflow_id:
+            history_entry["workflow_id"] = workflow_id
+        if dashboard_template:
+            history_entry["dashboard_template"] = dashboard_template
+            
         self._execution_history.append(history_entry)
         
         # Keep only last 100 entries
