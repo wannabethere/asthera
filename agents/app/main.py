@@ -15,7 +15,8 @@ from app.routers import (
     instructions_router,
     sql_helper_router,
     dashboard_router,
-    report_router
+    report_router,
+    alert_router
 )
 #from app.services.sql.routers import ask, ask_feedback, question_recommendation
 from app.core.middleware import RequestLoggingMiddleware
@@ -114,6 +115,11 @@ app = FastAPI(
         * Workflow-based Report Creation
         * Report Templates and Custom Components
         * Conditional Formatting for Reports
+    * **Alert Endpoints:**
+        * Native Alert Service (create-single, create-feed, process-request)
+        * Alert Compatibility Service (main.py integration)
+        * Batch Alert Operations
+        * Health Check and Service Information
     
     ## Authentication
     Most endpoints require authentication. Use the OAuth endpoints to authenticate.
@@ -170,6 +176,7 @@ app.include_router(combined_ask.router)
 app.include_router(sql_helper_router)
 app.include_router(dashboard_router)
 app.include_router(report_router)
+app.include_router(alert_router)
 
 @app.get("/api/health")
 async def health_check():

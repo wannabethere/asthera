@@ -5,6 +5,7 @@ from app.service.models import connection_details
 from datetime import datetime
 from app.service.ERDextraction_service import ERDExtractor
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 import traceback
 from typing import Dict,List
 from sqlalchemy import select, func,delete
@@ -12,6 +13,7 @@ import asyncio
 from typing import List, Dict, Any
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import quote_plus
+import oracledb
 import json
 
 
@@ -376,9 +378,428 @@ class ConnectionService:
 
 
 
-
-
 class DataRetriever:
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def get_data_from_connection(self, connection_id: str, tables: List[str]) -> Dict[str, Any]:
+        """
+        Retrieve data from specified tables across different database types
+
+        Args:
+            connection_id: Database connection identifier
+            tables: List of table names to retrieve data from
+
+        Returns:
+            Dictionary with table names as keys and data as values
+        """
+        # Get connection details from database
+        result = await self.db.execute(
+            select(ConnectionDetails)
+            .options(selectinload(ConnectionDetails.data_source))
+            .filter(ConnectionDetails.id == connection_id)
+        )
+        connection = result.scalar_one_or_none()
+
+        if not connection:
+            raise ValueError("Connection is not found")
+        
+        print("Connectionnn", connection)
+        database_type = connection.data_source.database_type.lower()
+
+        # Route to appropriate database handler
+        if database_type == "postgresql":
+            return await self._get_postgresql_data(connection, tables)
+        elif database_type == "mysql":
+            return await self._get_mysql_data(connection, tables)
+        elif database_type == "mongodb":
+            return await self._get_mongodb_data(connection, tables)
+        elif database_type == "oracle":
+            return await self._get_oracle_data(connection, tables)
+        elif database_type == "bigquery":
+            return await self._get_bigquery_data(connection, tables)
+        elif database_type == "snowflake":
+            return await self._get_snowflake_data(connection, tables)
+        else:
+            raise ValueError(f"Unsupported database type: {database_type}")
+
+    async def _get_postgresql_data(self, connection, tables: List[str]) -> Dict[str, Any]:
+        """Retrieve data from PostgreSQL using asyncpg"""
+        conn_details = connection.connection_details
+        print('conn_details', conn_details)
+        
+        db_connection = await asyncpg.connect(
+            host=conn_details['host'],
+            port=conn_details['port'],
+            user=conn_details['username'],
+            password=conn_details['password'],
+            database=conn_details['database']
+        )
+
+        result = {}
+
+        try:
+            for table in tables:
+                try:
+                    # Get table data with limit to avoid memory issues
+                    query = f"SELECT * FROM {table} LIMIT 150"
+                    rows = await db_connection.fetch(query)
+
+                    # Convert to list of dictionaries
+                    table_data = [dict(row) for row in rows]
+                    result[table] = {
+                        'data': table_data,
+                        'row_count': len(table_data),
+                        'columns': list(rows[0].keys()) if rows else []
+                    }
+
+                except Exception as e:
+                    result[table] = {
+                        'error': str(e),
+                        'data': [],
+                        'row_count': 0,
+                        'columns': []
+                    }
+
+        finally:
+            await db_connection.close()
+
+        return result
+
+    async def _get_mysql_data(self, connection, tables: List[str]) -> Dict[str, Any]:
+        """Retrieve data from MySQL using aiomysql"""
+        conn_details = connection.connection_details
+
+        db_connection = await aiomysql.connect(
+            host=conn_details['host'],
+            port=conn_details['port'],
+            user=conn_details['username'],
+            password=conn_details['password'],
+            db=conn_details['database']
+        )
+
+        result = {}
+
+        try:
+            async with db_connection.cursor(aiomysql.DictCursor) as cursor:
+                for table in tables:
+                    try:
+                        # Get table data with limit
+                        query = f"SELECT * FROM {table} LIMIT 150"
+                        await cursor.execute(query)
+                        rows = await cursor.fetchall()
+
+                        result[table] = {
+                            'data': rows,
+                            'row_count': len(rows),
+                            'columns': list(rows[0].keys()) if rows else []
+                        }
+
+                    except Exception as e:
+                        result[table] = {
+                            'error': str(e),
+                            'data': [],
+                            'row_count': 0,
+                            'columns': []
+                        }
+
+        finally:
+            await db_connection.ensure_closed()
+
+        return result
+
+    async def _get_mongodb_data(self, connection, tables: List[str]) -> Dict[str, Any]:
+        """Retrieve data from MongoDB using motor (async pymongo)"""
+        conn_details = connection.connection_details
+
+        # Build MongoDB connection string
+        if "username" in conn_details and "password" in conn_details:
+            connection_string = (
+                f"mongodb://{conn_details['username']}:"
+                f"{quote_plus(conn_details['password'])}@"
+                f"{conn_details['host']}:"
+                f"{conn_details['port']}/"
+                f"{conn_details['database']}"
+            )
+        else:
+            connection_string = (
+                f"mongodb://{conn_details['host']}:{conn_details['port']}"
+            )
+
+        client = motor.motor_asyncio.AsyncIOMotorClient(connection_string)
+        db = client[conn_details["database"]]
+        result = {}
+
+        try:
+            for collection_name in tables:
+                try:
+                    collection = db[collection_name]
+
+                    # Get documents with limit
+                    documents = []
+                    async for doc in collection.find().limit(150):
+                        # Convert ObjectId to string for JSON serialization
+                        if '_id' in doc:
+                            doc['_id'] = str(doc['_id'])
+                        documents.append(doc)
+
+                    # Get unique field names
+                    columns = set()
+                    for doc in documents:
+                        columns.update(doc.keys())
+
+                    result[collection_name] = {
+                        'data': documents,
+                        'row_count': len(documents),
+                        'columns': list(columns)
+                    }
+
+                except Exception as e:
+                    result[collection_name] = {
+                        'error': str(e),
+                        'data': [],
+                        'row_count': 0,
+                        'columns': []
+                    }
+
+        finally:
+            client.close()
+
+        return result
+
+    async def _get_oracle_data(self, connection, tables: List[str]) -> Dict[str, Any]:
+        """Retrieve data from Oracle using async oracledb, fallback to cx_Oracle in thread pool"""
+        conn_details = connection.connection_details
+        
+        # Try async oracledb first
+        try:
+            import oracledb
+            
+            # Try async connection
+            db_connection = await oracledb.connect_async(
+                user=conn_details['username'],
+                password=conn_details['password'],
+                host=conn_details['host'],
+                port=conn_details['port'],
+                service_name=conn_details.get('service_name', conn_details['database'])
+            )
+            
+            result = {}
+            
+            try:
+                for table in tables:
+                    try:
+                        # Get table data with limit
+                        query = f"SELECT * FROM {table} WHERE ROWNUM <= 150"
+                        async with db_connection.cursor() as cursor:
+                            await cursor.execute(query)
+                            rows = await cursor.fetchall()
+                            columns = [desc[0] for desc in cursor.description] if cursor.description else []
+                            
+                            # Convert to dictionaries
+                            table_data = []
+                            for row in rows:
+                                row_dict = {}
+                                for i, value in enumerate(row):
+                                    row_dict[columns[i]] = value
+                                table_data.append(row_dict)
+
+                            result[table] = {
+                                'data': table_data,
+                                'row_count': len(table_data),
+                                'columns': columns
+                            }
+
+                    except Exception as e:
+                        result[table] = {
+                            'error': str(e),
+                            'data': [],
+                            'row_count': 0,
+                            'columns': []
+                        }
+
+            finally:
+                await db_connection.close()
+
+            return result
+            
+        except (ImportError, AttributeError, Exception):
+            # Fallback to cx_Oracle in thread pool
+            def _sync_oracle_query():
+                # Oracle connection string
+                dsn = cx_Oracle.makedsn(
+                    conn_details['host'],
+                    conn_details['port'],
+                    service_name=conn_details.get('service_name', conn_details['database'])
+                )
+
+                db_connection = cx_Oracle.connect(
+                    user=conn_details['username'],
+                    password=conn_details['password'],
+                    dsn=dsn
+                )
+
+                result = {}
+
+                try:
+                    cursor = db_connection.cursor()
+
+                    for table in tables:
+                        try:
+                            # Get table data with limit
+                            query = f"SELECT * FROM {table} WHERE ROWNUM <= 150"
+                            cursor.execute(query)
+                            rows = cursor.fetchall()
+
+                            # Get column names
+                            columns = [desc[0] for desc in cursor.description] if cursor.description else []
+
+                            # Convert to dictionaries
+                            table_data = []
+                            for row in rows:
+                                row_dict = {}
+                                for i, value in enumerate(row):
+                                    row_dict[columns[i]] = value
+                                table_data.append(row_dict)
+
+                            result[table] = {
+                                'data': table_data,
+                                'row_count': len(table_data),
+                                'columns': columns
+                            }
+
+                        except Exception as e:
+                            result[table] = {
+                                'error': str(e),
+                                'data': [],
+                                'row_count': 0,
+                                'columns': []
+                            }
+
+                finally:
+                    db_connection.close()
+
+                return result
+
+            # Run in thread pool as fallback
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, _sync_oracle_query)
+
+    async def _get_bigquery_data(self, connection, tables: List[str]) -> Dict[str, Any]:
+        """Retrieve data from BigQuery using google-cloud-bigquery in thread pool"""
+        conn_details = connection.connection_details
+
+        def _sync_bigquery_query():
+            project_id = conn_details.get("project_id")
+            dataset_id = conn_details.get("dataset_id")
+
+            client = bigquery.Client(project=project_id)
+            result = {}
+
+            for table in tables:
+                try:
+                    # Query with limit
+                    query = f"""
+                        SELECT * 
+                        FROM `{project_id}.{dataset_id}.{table}` 
+                        LIMIT 150
+                    """
+
+                    query_job = client.query(query)
+                    rows = query_job.result()
+
+                    # Convert to list of dictionaries
+                    table_data = []
+                    columns = []
+
+                    for row in rows:
+                        if not columns:
+                            columns = list(row.keys())
+                        table_data.append(dict(row))
+
+                    result[table] = {
+                        'data': table_data,
+                        'row_count': len(table_data),
+                        'columns': columns
+                    }
+
+                except Exception as e:
+                    result[table] = {
+                        'error': str(e),
+                        'data': [],
+                        'row_count': 0,
+                        'columns': []
+                    }
+
+            return result
+
+        # Run in thread pool since BigQuery client doesn't have native async support
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, _sync_bigquery_query)
+
+    async def _get_snowflake_data(self, connection, tables: List[str]) -> Dict[str, Any]:
+        """Retrieve data from Snowflake using snowflake-connector-python in thread pool"""
+        conn_details = connection.connection_details
+
+        def _sync_snowflake_query():
+            import snowflake.connector
+
+            db_connection = snowflake.connector.connect(
+                user=conn_details['username'],
+                password=conn_details['password'],
+                account=conn_details['account'],
+                warehouse=conn_details.get('warehouse'),
+                database=conn_details['database'],
+                schema=conn_details.get('schema', 'PUBLIC')
+            )
+
+            result = {}
+
+            try:
+                cursor = db_connection.cursor()
+
+                for table in tables:
+                    try:
+                        # Get table data with limit
+                        query = f"SELECT * FROM {table} LIMIT 150"
+                        cursor.execute(query)
+                        rows = cursor.fetchall()
+
+                        # Get column names
+                        columns = [desc[0] for desc in cursor.description] if cursor.description else []
+
+                        # Convert to dictionaries
+                        table_data = []
+                        for row in rows:
+                            row_dict = {}
+                            for i, value in enumerate(row):
+                                row_dict[columns[i]] = value
+                            table_data.append(row_dict)
+
+                        result[table] = {
+                            'data': table_data,
+                            'row_count': len(table_data),
+                            'columns': columns
+                        }
+
+                    except Exception as e:
+                        result[table] = {
+                            'error': str(e),
+                            'data': [],
+                            'row_count': 0,
+                            'columns': []
+                        }
+
+            finally:
+                db_connection.close()
+
+            return result
+
+        # Run in thread pool since Snowflake connector doesn't have async support
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, _sync_snowflake_query)
+
+class DatasetSampleRetriever:
     def __init__(self,db:AsyncSession):
         self.executor = ThreadPoolExecutor(max_workers=4)
         self.db=db

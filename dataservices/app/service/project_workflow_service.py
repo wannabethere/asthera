@@ -648,13 +648,9 @@ class DomainWorkflowService:
             
 
             if result.status == "finished" and result.response:
-
                 # Process the response from the existing service
-
                 recommendations = self._process_relationship_recommendations(
-
                     result.response, user_tables, domain_context
-
                 )
 
                 
@@ -1582,13 +1578,29 @@ class DomainWorkflowService:
 
         return enhanced_columns
 
+## Replace this method with the below method.
 
-    async def get_enhanced_table_response(self, table, documented_table, enhanced_columns, column_count):
+    async def get_enhanced_table_response(self, table, documented_table, enhanced_columns, column_count, db_session):
         """Create enhanced table response with all column definitions"""
         # Convert EnhancedColumnDefinition objects to dictionaries for response
         response_enhanced_columns = []
+        
+        # Fetch column IDs from database
+        from sqlalchemy import select
+        from app.schemas.dbmodels import SQLColumn  # Replace with your actual import
+        
+        columns_result = await db_session.execute(
+            select(SQLColumn.column_id, SQLColumn.name).where(SQLColumn.table_id == table.table_id)
+        )
+        
+        # Create a mapping of column names to their database IDs
+        column_id_map = {}
+        for column_id, column_name in columns_result:
+            column_id_map[column_name] = column_id
+        
         for enhanced_col in documented_table.columns:
-            response_enhanced_columns.append({
+            column_dict = {
+                "column_id": column_id_map.get(enhanced_col.column_name),
                 "column_name": enhanced_col.column_name,
                 "display_name": enhanced_col.display_name,
                 "description": enhanced_col.description,
@@ -1603,7 +1615,8 @@ class DomainWorkflowService:
                 "aggregation_suggestions": enhanced_col.aggregation_suggestions,
                 "filtering_suggestions": enhanced_col.filtering_suggestions,
                 "json_metadata": enhanced_col.json_metadata
-            })
+            }
+            response_enhanced_columns.append(column_dict)
 
         return {
             "table_id": table.table_id,

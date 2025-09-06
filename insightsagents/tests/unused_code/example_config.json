@@ -1,0 +1,16 @@
+{
+  "postgres_example": {
+    "host": "prod-db.company.com",
+    "port": 5432,
+    "database": "analytics",
+    "user": "analytics_user",
+    "password": "secure_password_123"
+  },
+  "trino_example": {
+    "host": "trino-cluster.company.com",
+    "port": 8080,
+    "catalog": "hive",
+    "schema": "default",
+    "user": "data_engineer"
+  }
+}

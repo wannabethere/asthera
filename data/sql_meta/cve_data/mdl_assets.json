@@ -1,0 +1,775 @@
+{
+    "catalog": "security_monitoring",
+    "schema": "public",
+    "models": [
+      {
+        "name": "dev_assets",
+        "description": "Comprehensive IT asset inventory with security risk assessments, hardware specifications, and location data",
+        "tableReference": {
+          "table": "dev_assets"
+        },
+        "columns": [
+          {
+            "name": "nuid",
+            "type": "INTEGER",
+            "properties": {
+              "displayName": "Network UID",
+              "description": "Network unique identifier for the asset"
+            }
+          },
+          {
+            "name": "dev_id",
+            "type": "INTEGER",
+            "properties": {
+              "displayName": "Device ID",
+              "description": "Device identifier"
+            }
+          },
+          {
+            "name": "ip",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "IP Address",
+              "description": "Network IP address of the asset"
+            }
+          },
+          {
+            "name": "mac",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "MAC Address",
+              "description": "Media Access Control address"
+            }
+          },
+          {
+            "name": "host_name",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Host Name",
+              "description": "Network hostname of the asset"
+            }
+          },
+          {
+            "name": "os_arch",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "OS Architecture",
+              "description": "Operating system architecture (x64, x86, etc.)"
+            }
+          },
+          {
+            "name": "os_name",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "OS Name",
+              "description": "Operating system name"
+            }
+          },
+          {
+            "name": "os_version",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "OS Version",
+              "description": "Operating system version is the version of the operating system installed on the asset"
+            }
+          },
+          {
+            "name": "cpu_model_name",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "CPU Model",
+              "description": "Processor model name"
+            }
+          },
+          {
+            "name": "count_cpu_cores",
+            "type": "FLOAT",
+            "properties": {
+              "displayName": "CPU Cores",
+              "description": "Number of CPU cores"
+            }
+          },
+          {
+            "name": "total_physical_mem_mb",
+            "type": "FLOAT",
+            "properties": {
+              "displayName": "Physical Memory (MB)",
+              "description": "Total physical memory in megabytes"
+            }
+          },
+          {
+            "name": "uptime_mins",
+            "type": "FLOAT",
+            "properties": {
+              "displayName": "Uptime (Minutes)",
+              "description": "System uptime in minutes"
+            }
+          },
+          {
+            "name": "device_type",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Device Type",
+              "description": "Primary device type classification"
+            }
+          },
+          {
+            "name": "device_subtype",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Device Subtype",
+              "description": "Device subtype classification"
+            }
+          },
+          {
+            "name": "platform",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Platform",
+              "description": "Device platform"
+            }
+          },
+          {
+            "name": "manufacturer",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Manufacturer",
+              "description": "Device manufacturer"
+            }
+          },
+          {
+            "name": "system_manufacturer",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "System Manufacturer",
+              "description": "System manufacturer"
+            }
+          },
+          {
+            "name": "system_model",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "System Model",
+              "description": "System model identifier"
+            }
+          },
+          {
+            "name": "serial_number",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Serial Number",
+              "description": "Device serial number"
+            }
+          },
+          {
+            "name": "is_cloud_asset",
+            "type": "BOOLEAN",
+            "properties": {
+              "displayName": "Is Cloud Asset",
+              "description": "Indicates if asset is cloud-based"
+            }
+          },
+          {
+            "name": "is_bastion_device",
+            "type": "BOOLEAN",
+            "properties": {
+              "displayName": "Is Bastion Device",
+              "description": "Indicates if asset serves as a bastion host"
+            }
+          },
+          {
+            "name": "domain_joined",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Domain Joined",
+              "description": "Domain membership status"
+            }
+          },
+          {
+            "name": "raw_risk",
+            "type": "FLOAT",
+            "properties": {
+              "displayName": "Raw Risk Score",
+              "description": "Raw calculated risk score"
+            }
+          },
+          {
+            "name": "effective_risk",
+            "type": "FLOAT",
+            "properties": {
+              "displayName": "Effective Risk Score",
+              "description": "Effective risk score after mitigations"
+            }
+          },
+          {
+            "name": "raw_impact",
+            "type": "FLOAT",
+            "properties": {
+              "displayName": "Raw Impact Score",
+              "description": "Raw impact assessment score"
+            }
+          },
+          {
+            "name": "effective_impact",
+            "type": "FLOAT",
+            "properties": {
+              "displayName": "Effective Impact Score",
+              "description": "Effective impact score"
+            }
+          },
+          {
+            "name": "raw_likelihood",
+            "type": "FLOAT",
+            "properties": {
+              "displayName": "Raw Likelihood Score",
+              "description": "Raw likelihood of compromise score"
+            }
+          },
+          {
+            "name": "effective_likelihood",
+            "type": "FLOAT",
+            "properties": {
+              "displayName": "Effective Likelihood Score",
+              "description": "Effective likelihood score"
+            }
+          },
+          {
+            "name": "unpatched_vulnerability_likelihood",
+            "type": "FLOAT",
+            "properties": {
+              "displayName": "Unpatched Vulnerability Likelihood",
+              "description": "Likelihood score for unpatched vulnerabilities"
+            }
+          },
+          {
+            "name": "weak_credentials_likelihood",
+            "type": "FLOAT",
+            "properties": {
+              "displayName": "Weak Credentials Likelihood",
+              "description": "Likelihood score for weak credentials risk"
+            }
+          },
+          {
+            "name": "misconfiguration_likelihood",
+            "type": "FLOAT",
+            "properties": {
+              "displayName": "Misconfiguration Likelihood",
+              "description": "Likelihood score for misconfiguration risks"
+            }
+          },
+          {
+            "name": "site_name",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Site Name",
+              "description": "Physical site location name"
+            }
+          },
+          {
+            "name": "location_country",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Location Country",
+              "description": "Country where asset is located"
+            }
+          },
+          {
+            "name": "location_region",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Location Region",
+              "description": "Region where asset is located"
+            }
+          },
+          {
+            "name": "location_city",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Location City",
+              "description": "City where asset is located"
+            }
+          },
+          {
+            "name": "location_state",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Location State",
+              "description": "State where asset is located"
+            }
+          },
+          {
+            "name": "device_zone",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Device Zone",
+              "description": "Security zone classification"
+            }
+          },
+          {
+            "name": "is_retired",
+            "type": "BOOLEAN",
+            "properties": {
+              "displayName": "Is Retired",
+              "description": "Indicates if asset has been retired"
+            }
+          },
+          {
+            "name": "is_stale",
+            "type": "BOOLEAN",
+            "properties": {
+              "displayName": "Is Stale",
+              "description": "Indicates if asset data is stale"
+            }
+          },
+          {
+            "name": "inserted_at",
+            "type": "DATE",
+            "properties": {
+              "displayName": "Inserted At",
+              "description": "Date when asset was first inserted"
+            }
+          },
+          {
+            "name": "store_created_at",
+            "type": "DATE",
+            "properties": {
+              "displayName": "Store Created At",
+              "description": "Timestamp when record was created in store"
+            }
+          },
+          {
+            "name": "store_updated_at",
+            "type": "DATE",
+            "properties": {
+              "displayName": "Store Updated At",
+              "description": "Timestamp when record was last updated"
+            }
+          },
+          {
+            "name": "last_processed",
+            "type": "DATE",
+            "properties": {
+              "displayName": "Last Processed",
+              "description": "Date when asset was last processed"
+            }
+          },
+          {
+            "name": "risk_category",
+            "type": "VARCHAR",
+            "isCalculated": true,
+            "expression": "CASE WHEN effective_risk >= 80 THEN 'Critical' WHEN effective_risk >= 60 THEN 'High' WHEN effective_risk >= 40 THEN 'Medium' WHEN effective_risk >= 20 THEN 'Low' ELSE 'Minimal' END",
+            "properties": {
+              "displayName": "Risk Category",
+              "description": "Calculated categorical risk classification based on effective risk score thresholds, providing simplified risk communication for executive reporting and operational prioritization. Critical (80+) assets require immediate attention and enhanced monitoring, High (60-79) assets need priority remediation, Medium (40-59) assets require scheduled attention, while Low (20-39) and Minimal (<20) assets follow standard maintenance procedures. This classification drives SLA requirements and resource allocation decisions."
+            }
+          },
+          {
+            "name": "is_high_risk",
+            "type": "BOOLEAN",
+            "isCalculated": true,
+            "expression": "CASE WHEN effective_risk >= 60 THEN true ELSE false END",
+            "properties": {
+              "displayName": "Is High Risk",
+              "description": "Calculated boolean flag identifying assets with effective risk scores of 60 or above (High and Critical categories) that require priority security attention, enhanced monitoring, and accelerated incident response procedures. This binary classification simplifies automated alerting, workflow routing, and enables quick filtering for security operations teams focusing on the most critical assets requiring immediate attention and specialized handling procedures."
+            }
+          },
+          {
+            "name": "memory_gb",
+            "type": "FLOAT",
+            "isCalculated": true,
+            "expression": "total_physical_mem_mb / 1024.0",
+            "properties": {
+              "displayName": "Memory (GB)",
+              "description": "Calculated field converting physical memory from megabytes to gigabytes for improved readability and standardized reporting. This metric is essential for capacity planning, performance analysis, and determining appropriate security tool deployment considering memory requirements. Systems with insufficient memory may experience performance degradation when running multiple security agents, while high-memory systems can support more comprehensive monitoring and analysis capabilities."
+            }
+          },
+          {
+            "name": "uptime_days",
+            "type": "FLOAT",
+            "isCalculated": true,
+            "expression": "uptime_mins / 1440.0",
+            "properties": {
+              "displayName": "Uptime (Days)",
+              "description": "Calculated field converting system uptime from minutes to days for better interpretability and trend analysis. Extended uptime periods may indicate systems that haven't received critical security patches requiring reboots, while frequent restarts might suggest hardware instability or aggressive maintenance schedules. This metric helps identify systems needing maintenance windows for security updates and assess overall infrastructure stability patterns."
+            }
+          },
+          {
+            "name": "days_since_last_update",
+            "type": "INTEGER",
+            "isCalculated": true,
+            "expression": "DATEDIFF(day, store_updated_at, CURRENT_DATE)",
+            "properties": {
+              "displayName": "Days Since Last Update",
+              "description": "Calculated field showing the number of days elapsed since the asset's data was last refreshed in the inventory system, indicating data currency and potential staleness issues. Assets with high values may have outdated risk assessments, configuration information, or security posture data that could lead to incorrect security decisions. This metric triggers data refresh processes and helps prioritize assets requiring updated security analysis and risk evaluation."
+            }
+          }
+        ],
+        "primaryKey": "nuid",
+        "properties": {
+          "displayName": "Security Assets",
+          "description": "Comprehensive IT asset inventory with security assessments"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "name": "asset_agent_relationship",
+        "models": ["security_assets", "security_agents"],
+        "joinType": "ONE_TO_MANY",
+        "condition": "security_assets.dev_id = security_agents.dev_id",
+        "properties": {
+          "displayName": "Asset to Agent Relationship",
+          "description": "Relationship between assets and their monitoring agents"
+        }
+      },
+      {
+        "name": "asset_to_software_relationship",
+        "models": ["dev_vulnerability_instances", "dev_software_instances"],
+        "joinType": "MANY_TO_ONE",
+        "condition": "dev_assets.dev_id = dev_software_instances.dev_id AND dev_assets.nuid = dev_software_instances.nuid",
+        "properties": {
+          "displayName": "Asset to Software Relationship",
+          "description": "Relationship between vulnerability instances and their associated software installations"
+        }
+      },
+      {
+        "name": "asset_to_vulnerability_relationship",
+        "models": ["dev_assets", "dev_vulnerability_instances"],
+        "joinType": "MANY_TO_ONE",
+        "condition": "dev_assets.dev_id = dev_vulnerability_instances.dev_id AND dev_assets.nuid = dev_vulnerability_instances.nuid",
+        "properties": {
+          "displayName": "Asset to Vulnerability Relationship",
+          "description": "Relationship between vulnerability instances and their affected assets"
+        }
+      }
+
+    ],
+    "metrics": [
+      {
+        "name": "asset_risk_metrics",
+        "baseObject": "security_assets",
+        "dimension": [
+          {
+            "name": "risk_category",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "device_type",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "location_country",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "device_zone",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "total_assets",
+            "type": "INTEGER",
+            "expression": "COUNT(*)"
+          },
+          {
+            "name": "high_risk_assets",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_high_risk = true THEN 1 END)"
+          },
+          {
+            "name": "avg_risk_score",
+            "type": "DECIMAL",
+            "expression": "AVG(effective_risk)"
+          },
+          {
+            "name": "max_risk_score",
+            "type": "DECIMAL",
+            "expression": "MAX(effective_risk)"
+          },
+          {
+            "name": "critical_risk_assets",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN risk_category = 'Critical' THEN 1 END)"
+          },
+          {
+            "name": "cloud_assets",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_cloud_asset = true THEN 1 END)"
+          },
+          {
+            "name": "bastion_hosts",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_bastion_device = true THEN 1 END)"
+          },
+          {
+            "name": "retired_assets",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_retired = true THEN 1 END)"
+          }
+        ],
+        "properties": {
+          "displayName": "Asset Risk Metrics",
+          "description": "Core security risk assessment metrics for IT assets"
+        }
+      },
+      {
+        "name": "vulnerability_likelihood_metrics",
+        "baseObject": "security_assets",
+        "dimension": [
+          {
+            "name": "device_type",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "os_name",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "location_region",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "avg_unpatched_vulnerability_score",
+            "type": "DECIMAL",
+            "expression": "AVG(unpatched_vulnerability_likelihood)"
+          },
+          {
+            "name": "avg_weak_credentials_score",
+            "type": "DECIMAL",
+            "expression": "AVG(weak_credentials_likelihood)"
+          },
+          {
+            "name": "avg_misconfiguration_score",
+            "type": "DECIMAL",
+            "expression": "AVG(misconfiguration_likelihood)"
+          },
+          {
+            "name": "high_vulnerability_assets",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN unpatched_vulnerability_likelihood > 70 THEN 1 END)"
+          },
+          {
+            "name": "weak_credential_assets",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN weak_credentials_likelihood > 70 THEN 1 END)"
+          },
+          {
+            "name": "misconfigured_assets",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN misconfiguration_likelihood > 70 THEN 1 END)"
+          }
+        ],
+        "properties": {
+          "displayName": "Vulnerability Likelihood Metrics",
+          "description": "Detailed vulnerability and security weakness metrics"
+        }
+      },
+      {
+        "name": "asset_inventory_metrics",
+        "baseObject": "security_assets",
+        "dimension": [
+          {
+            "name": "manufacturer",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "os_name",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "device_type",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "location_country",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "asset_count",
+            "type": "INTEGER",
+            "expression": "COUNT(*)"
+          },
+          {
+            "name": "unique_models",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT system_model)"
+          },
+          {
+            "name": "avg_cpu_cores",
+            "type": "DECIMAL",
+            "expression": "AVG(count_cpu_cores)"
+          },
+          {
+            "name": "avg_memory_gb",
+            "type": "DECIMAL",
+            "expression": "AVG(memory_gb)"
+          },
+          {
+            "name": "avg_uptime_days",
+            "type": "DECIMAL",
+            "expression": "AVG(uptime_days)"
+          },
+          {
+            "name": "domain_joined_assets",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN domain_joined IS NOT NULL AND domain_joined != '' THEN 1 END)"
+          }
+        ],
+        "properties": {
+          "displayName": "Asset Inventory Metrics",
+          "description": "Hardware inventory and configuration metrics"
+        }
+      },
+      {
+        "name": "geographic_distribution_metrics",
+        "baseObject": "security_assets",
+        "dimension": [
+          {
+            "name": "location_country",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "location_region",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "location_city",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "site_name",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "assets_by_location",
+            "type": "INTEGER",
+            "expression": "COUNT(*)"
+          },
+          {
+            "name": "high_risk_by_location",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_high_risk = true THEN 1 END)"
+          },
+          {
+            "name": "location_risk_percentage",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN is_high_risk = true THEN 1 END) * 100.0 / COUNT(*)"
+          },
+          {
+            "name": "unique_device_types",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT device_type)"
+          }
+        ],
+        "properties": {
+          "displayName": "Geographic Distribution Metrics",
+          "description": "Asset distribution and risk metrics by geographic location"
+        }
+      }
+    ],
+    "views": [
+      {
+        "name": "high_risk_assets_summary",
+        "statement": "SELECT host_name, device_type, effective_risk, risk_category, location_country, location_city FROM security_assets WHERE is_high_risk = true ORDER BY effective_risk DESC",
+        "properties": {
+          "displayName": "High Risk Assets Summary",
+          "description": "Summary of assets with high or critical risk scores"
+        }
+      },
+      {
+        "name": "asset_risk_by_location",
+        "statement": "SELECT location_country, location_city, COUNT(*) as total_assets, COUNT(CASE WHEN is_high_risk = true THEN 1 END) as high_risk_assets, AVG(effective_risk) as avg_risk_score FROM security_assets GROUP BY location_country, location_city ORDER BY avg_risk_score DESC",
+        "properties": {
+          "displayName": "Asset Risk by Location",
+          "description": "Risk analysis grouped by geographic location"
+        }
+      },
+      {
+        "name": "vulnerability_hotspots",
+        "statement": "SELECT device_type, os_name, AVG(unpatched_vulnerability_likelihood) as avg_vuln_score, AVG(misconfiguration_likelihood) as avg_misconfig_score, COUNT(*) as asset_count FROM security_assets GROUP BY device_type, os_name HAVING AVG(unpatched_vulnerability_likelihood) > 60 ORDER BY avg_vuln_score DESC",
+        "properties": {
+          "displayName": "Vulnerability Hotspots",
+          "description": "Asset types and OS combinations with high vulnerability scores"
+        }
+      },
+      {
+        "name": "stale_asset_inventory",
+        "statement": "SELECT host_name, device_type, location_city, days_since_last_update, last_processed FROM security_assets WHERE is_stale = true OR days_since_last_update > 30 ORDER BY days_since_last_update DESC",
+        "properties": {
+          "displayName": "Stale Asset Inventory",
+          "description": "Assets with outdated or stale data requiring refresh"
+        }
+      },
+      {
+        "name": "bastion_host_security_status",
+        "statement": "SELECT host_name, location_country, effective_risk, risk_category, unpatched_vulnerability_likelihood, weak_credentials_likelihood FROM security_assets WHERE is_bastion_device = true ORDER BY effective_risk DESC",
+        "properties": {
+          "displayName": "Bastion Host Security Status",
+          "description": "Security assessment of critical bastion hosts"
+        }
+      }
+    ],
+    "enumDefinitions": [
+      {
+        "name": "RiskCategoryEnum",
+        "values": [
+          {
+            "name": "Critical",
+            "value": "Critical"
+          },
+          {
+            "name": "High", 
+            "value": "High"
+          },
+          {
+            "name": "Medium",
+            "value": "Medium"
+          },
+          {
+            "name": "Low",
+            "value": "Low"
+          },
+          {
+            "name": "Minimal",
+            "value": "Minimal"
+          }
+        ],
+        "properties": {
+          "displayName": "Risk Category",
+          "description": "Asset risk categorization levels"
+        }
+      },
+      {
+        "name": "DeviceTypeEnum",
+        "values": [
+          {
+            "name": "Server",
+            "value": "Server"
+          },
+          {
+            "name": "Workstation",
+            "value": "Workstation"
+          },
+          {
+            "name": "Network",
+            "value": "Network"
+          },
+          {
+            "name": "Mobile",
+            "value": "Mobile"
+          }
+        ],
+        "properties": {
+          "displayName": "Device Type",
+          "description": "Primary device type classifications"
+        }
+      }
+    ]
+  }

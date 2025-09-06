@@ -15,6 +15,7 @@ from app.agents.nodes.sql.chart_generation import create_chart_generation_pipeli
 from app.agents.nodes.sql.enhanced_chart_generation import create_enhanced_vega_lite_chart_generation_pipeline
 from app.agents.nodes.sql.plotly_chart_generation import create_plotly_chart_generation_pipeline
 from app.agents.nodes.sql.powerbi_chart_generation import create_powerbi_chart_generation_pipeline
+from app.agents.nodes.sql.tableau_chart_generation import create_tableau_chart_generation_pipeline
 from app.agents.nodes.sql.utils.chart import ChartExecutor, ChartExecutionConfig, execute_chart_with_sql
 from datetime import datetime
 
@@ -408,7 +409,8 @@ class DataSummarizationPipeline(AgentPipeline):
         retrieval_helper: RetrievalHelper,
         chart_generation_pipeline: Optional[Any] = None,
         plotly_chart_generation_pipeline: Optional[Any] = None,
-        powerbi_chart_generation_pipeline: Optional[Any] = None
+        powerbi_chart_generation_pipeline: Optional[Any] = None,
+        tableau_chart_generation_pipeline: Optional[Any] = None
     ):
         super().__init__(
             name=name,
@@ -455,6 +457,7 @@ class DataSummarizationPipeline(AgentPipeline):
         self._chart_generator = chart_generation_pipeline or create_enhanced_vega_lite_chart_generation_pipeline()
         self._plotly_chart_generator = plotly_chart_generation_pipeline or create_plotly_chart_generation_pipeline(self._llm)
         self._powerbi_chart_generator = powerbi_chart_generation_pipeline or create_powerbi_chart_generation_pipeline(self._llm)
+        self._tableau_chart_generator = tableau_chart_generation_pipeline or create_tableau_chart_generation_pipeline(self._llm)
         
         self._batch_summaries = {}  # In-memory cache for batch summaries
         self._batch_data = {}  # In-memory cache for batch data for chart generation
@@ -741,6 +744,33 @@ class DataSummarizationPipeline(AgentPipeline):
                             "error": pipeline_result.get("error", "Unknown chart generation error")
                         }
                 
+                elif chart_format == "tableau":
+                    # Use Tableau chart generation pipeline
+                    pipeline_result = await self._tableau_chart_generator.run(
+                        query=query,
+                        sql=sql,
+                        data=chart_data,
+                        language=language,
+                        remove_data_from_chart_config=True
+                    )
+                    
+                    if pipeline_result.get("success", False):
+                        chart_result = {
+                            "success": True,
+                            "chart_data": {
+                                "chart_schema": pipeline_result.get("chart_config", {}),
+                                "chart_type": pipeline_result.get("chart_type", ""),
+                                "reasoning": pipeline_result.get("reasoning", ""),
+                                "format": "tableau"
+                            },
+                            "data_sample": chart_data
+                        }
+                    else:
+                        chart_result = {
+                            "success": False,
+                            "error": pipeline_result.get("error", "Unknown chart generation error")
+                        }
+                
                 # Add other format conversions if requested
                 if include_other_formats and chart_result.get("success", False):
                     # Add query and SQL info to chart_result for format conversion
@@ -811,6 +841,21 @@ class DataSummarizationPipeline(AgentPipeline):
                         chart_data_obj["powerbi_schema"] = powerbi_result.get("chart_config", {})
                 except Exception as e:
                     logger.warning(f"Failed to generate PowerBI conversion: {e}")
+                
+                # Generate Tableau version
+                try:
+                    tableau_result = await self._tableau_chart_generator.run(
+                        query=chart_result.get("query", ""),
+                        sql=chart_result.get("sql", ""),
+                        data=chart_data,
+                        language=chart_result.get("language", "English"),
+                        remove_data_from_chart_config=True
+                    )
+                    
+                    if tableau_result.get("success", False):
+                        chart_data_obj["tableau_schema"] = tableau_result.get("chart_config", {})
+                except Exception as e:
+                    logger.warning(f"Failed to generate Tableau conversion: {e}")
             
             elif current_format == "plotly":
                 # Generate Vega-Lite version
@@ -842,6 +887,21 @@ class DataSummarizationPipeline(AgentPipeline):
                         chart_data_obj["powerbi_schema"] = powerbi_result.get("chart_config", {})
                 except Exception as e:
                     logger.warning(f"Failed to generate PowerBI conversion: {e}")
+                
+                # Generate Tableau version
+                try:
+                    tableau_result = await self._tableau_chart_generator.run(
+                        query=chart_result.get("query", ""),
+                        sql=chart_result.get("sql", ""),
+                        data=chart_data,
+                        language=chart_result.get("language", "English"),
+                        remove_data_from_chart_config=True
+                    )
+                    
+                    if tableau_result.get("success", False):
+                        chart_data_obj["tableau_schema"] = tableau_result.get("chart_config", {})
+                except Exception as e:
+                    logger.warning(f"Failed to generate Tableau conversion: {e}")
             
             elif current_format == "powerbi":
                 # Generate Vega-Lite version
@@ -873,6 +933,21 @@ class DataSummarizationPipeline(AgentPipeline):
                         chart_data_obj["plotly_schema"] = plotly_result.get("chart_config", {})
                 except Exception as e:
                     logger.warning(f"Failed to generate Plotly conversion: {e}")
+                
+                # Generate Tableau version
+                try:
+                    tableau_result = await self._tableau_chart_generator.run(
+                        query=chart_result.get("query", ""),
+                        sql=chart_result.get("sql", ""),
+                        data=chart_data,
+                        language=chart_result.get("language", "English"),
+                        remove_data_from_chart_config=True
+                    )
+                    
+                    if tableau_result.get("success", False):
+                        chart_data_obj["tableau_schema"] = tableau_result.get("chart_config", {})
+                except Exception as e:
+                    logger.warning(f"Failed to generate Tableau conversion: {e}")
             
         except Exception as e:
             logger.error(f"Error adding format conversions: {e}")
@@ -1334,6 +1409,26 @@ class ChartExecutionPipeline(AgentPipeline):
                 else:
                     return {"success": False, "error": result.get("error", "Failed to generate PowerBI chart schema")}
             
+            elif chart_format == "tableau":
+                result = await self._tableau_chart_generator.run(
+                    query=query,
+                    sql=sql,
+                    data=sample_data,
+                    language=language,
+                    remove_data_from_chart_config=self._configuration.get("remove_data_from_chart_schema", True)
+                )
+                
+                if result.get("success", False):
+                    return {
+                        "success": True,
+                        "chart_schema": result.get("chart_config", {}),
+                        "chart_type": result.get("chart_type", ""),
+                        "reasoning": result.get("reasoning", ""),
+                        "format": "tableau"
+                    }
+                else:
+                    return {"success": False, "error": result.get("error", "Failed to generate Tableau chart schema")}
+            
             else:
                 return {"success": False, "error": f"Unsupported chart format: {chart_format}"}
                 
@@ -1602,6 +1697,21 @@ class ChartExecutionPipeline(AgentPipeline):
                         result["post_process"]["powerbi_schema"] = powerbi_result.get("chart_config", {})
                 except Exception as e:
                     logger.warning(f"Failed to generate PowerBI conversion: {e}")
+                
+                # Generate Tableau version
+                try:
+                    tableau_result = await self._tableau_chart_generator.run(
+                        query=query,
+                        sql=sql,
+                        data=sample_data,
+                        language=language,
+                        remove_data_from_chart_config=True
+                    )
+                    
+                    if tableau_result.get("success", False):
+                        result["post_process"]["tableau_schema"] = tableau_result.get("chart_config", {})
+                except Exception as e:
+                    logger.warning(f"Failed to generate Tableau conversion: {e}")
             
             elif current_format == "plotly":
                 # Generate Vega-Lite version
@@ -1633,6 +1743,21 @@ class ChartExecutionPipeline(AgentPipeline):
                         result["post_process"]["powerbi_schema"] = powerbi_result.get("chart_config", {})
                 except Exception as e:
                     logger.warning(f"Failed to generate PowerBI conversion: {e}")
+                
+                # Generate Tableau version
+                try:
+                    tableau_result = await self._tableau_chart_generator.run(
+                        query=query,
+                        sql=sql,
+                        data=sample_data,
+                        language=language,
+                        remove_data_from_chart_config=True
+                    )
+                    
+                    if tableau_result.get("success", False):
+                        result["post_process"]["tableau_schema"] = tableau_result.get("chart_config", {})
+                except Exception as e:
+                    logger.warning(f"Failed to generate Tableau conversion: {e}")
             
             elif current_format == "powerbi":
                 # Generate Vega-Lite version
@@ -1664,6 +1789,21 @@ class ChartExecutionPipeline(AgentPipeline):
                         result["post_process"]["plotly_schema"] = plotly_result.get("chart_config", {})
                 except Exception as e:
                     logger.warning(f"Failed to generate Plotly conversion: {e}")
+                
+                # Generate Tableau version
+                try:
+                    tableau_result = await self._tableau_chart_generator.run(
+                        query=query,
+                        sql=sql,
+                        data=sample_data,
+                        language=language,
+                        remove_data_from_chart_config=True
+                    )
+                    
+                    if tableau_result.get("success", False):
+                        result["post_process"]["tableau_schema"] = tableau_result.get("chart_config", {})
+                except Exception as e:
+                    logger.warning(f"Failed to generate Tableau conversion: {e}")
                     
         except Exception as e:
             logger.error(f"Error adding format conversions: {e}")

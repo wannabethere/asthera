@@ -200,22 +200,38 @@ class IndexingOrchestrator:
             logger.error(error_msg)
             raise
 
-    """
-    # Clean all indexes for a project.
-    async def clean_project(self, project_key: str) -> None:
+    async def clean_project(self, project_key: str) -> Dict[str, Any]:
+        """Clean all indexes for a project.
         
+        Args:
+            project_key: The project key/ID to clean
+            
+        Returns:
+            Dictionary containing cleanup results for each component
+        """
         logger.info(f"Starting cleanup for project: {project_key}")
+        
+        cleanup_results = {
+            "project_id": project_key,
+            "components_cleaned": {},
+            "total_documents_deleted": 0,
+            "errors": []
+        }
         
         for component_name, component in self.components.items():
             try:
                 logger.info(f"Cleaning {component_name} for project: {project_key}")
                 await component.clean(project_id=project_key)
+                cleanup_results["components_cleaned"][component_name] = "success"
                 logger.info(f"Successfully cleaned {component_name}")
             except Exception as e:
-                logger.error(f"Error cleaning {component_name}: {str(e)}")
-                raise
-        logger.info(f"Successfully completed cleanup for project: {project_key}")
-    """
+                error_msg = f"Error cleaning {component_name}: {str(e)}"
+                logger.error(error_msg)
+                cleanup_results["errors"].append(error_msg)
+                cleanup_results["components_cleaned"][component_name] = f"error: {str(e)}"
+        
+        logger.info(f"Cleanup completed for project: {project_key}")
+        return cleanup_results
 
 if __name__ == "__main__":
     import asyncio

@@ -1072,8 +1072,13 @@ def create_feature_recommendation_tool():
 
 if __name__ == "__main__":
     # Run the demo
-    import os
-    os.environ["OPENAI_API_KEY"] = "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"
+    #import os
+    from app.core.settings import get_settings
+    settings = get_settings()
+    print(f"Settings object type: {type(settings)}")
+    print(f"Settings attributes: {dir(settings)}")
+    print(f"OPENAI_API_KEY from settings: {settings.OPENAI_API_KEY}")
+    #os.environ["OPENAI_API_KEY"] = "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"
     demo_results = demo_feature_recommendation_agent()
     
     # Example of using as a tool

@@ -256,7 +256,7 @@ plot_results()
 # Example of combining with other analysis tools
 # For instance, with the AnomalyPipe for anomaly detection
 try:
-    from chatbot.tools.mltools.anomalydetection import (
+    from app.tools.mltools.anomalydetection import (
         AnomalyPipe, 
         detect_statistical_outliers
     )

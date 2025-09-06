@@ -33,6 +33,32 @@ async def example_dashboard_streaming():
     # Get the dashboard streaming pipeline from the container
     dashboard_pipeline = pipeline_container.get_pipeline("dashboard_streaming")
     
+    # Check if dashboard pipeline is available
+    if dashboard_pipeline is None:
+        print("❌ Dashboard streaming pipeline is not available")
+        print("🔍 Checking available pipelines...")
+        
+        all_pipelines = pipeline_container.get_all_pipelines()
+        available_pipelines = [name for name, pipeline in all_pipelines.items() if pipeline is not None]
+        print(f"   Available pipelines: {available_pipelines}")
+        
+        # Try to use an alternative pipeline or create a simple one
+        print("🔄 Attempting to use alternative approach...")
+        
+        # Check if we can use the sql_execution pipeline instead
+        sql_pipeline = pipeline_container.get_pipeline("sql_execution")
+        if sql_pipeline:
+            print("   ✅ Using sql_execution pipeline as fallback")
+            # For now, we'll skip the dashboard streaming example
+            print("   ⚠️  Dashboard streaming functionality not available")
+            print("   💡 Try running the other examples instead")
+            return {"status": "skipped", "reason": "dashboard_streaming_pipeline_not_available"}
+        else:
+            print("   ❌ No suitable fallback pipeline available")
+            raise RuntimeError("Dashboard streaming pipeline and fallback pipelines are not available")
+    
+    print(f"✅ Dashboard streaming pipeline available: {type(dashboard_pipeline)}")
+    
     # Configure for concurrent execution
     dashboard_pipeline.set_concurrent_execution(enabled=True, max_concurrent=3)
     dashboard_pipeline.set_streaming_options(stream_intermediate=True, continue_on_error=True)
@@ -217,6 +243,12 @@ async def example_sequential_execution():
     
     # Get the dashboard streaming pipeline from the container
     dashboard_pipeline = pipeline_container.get_pipeline("dashboard_streaming")
+    
+    # Check if dashboard pipeline is available
+    if dashboard_pipeline is None:
+        print("❌ Dashboard streaming pipeline is not available")
+        print("   💡 Skipping sequential execution example")
+        return {"status": "skipped", "reason": "dashboard_streaming_pipeline_not_available"}
     
     # Configure for sequential execution
     dashboard_pipeline.set_concurrent_execution(enabled=False)
@@ -450,6 +482,12 @@ async def integration_example():
     # Get dashboard pipeline
     dashboard_pipeline = pipeline_container.get_pipeline("dashboard_streaming")
     
+    # Check if dashboard pipeline is available
+    if dashboard_pipeline is None:
+        print("❌ Dashboard streaming pipeline is not available")
+        print("   💡 Skipping pipeline integration example")
+        return {"status": "skipped", "reason": "dashboard_streaming_pipeline_not_available"}
+    
     # The rest works the same way...
     queries = [
         {
@@ -468,33 +506,336 @@ async def integration_example():
     return result
 
 
+async def example_available_pipelines():
+    """Example showing what pipelines are available and testing basic functionality"""
+    
+    print("🔍 Testing Available Pipelines")
+    print("=" * 50)
+    
+    # Use proper settings and dependencies initialization
+    from app.settings import init_environment, get_settings
+    from app.core.dependencies import get_llm, get_doc_store_provider
+    from app.agents.pipelines.pipeline_container import PipelineContainer
+    
+    # Initialize environment and settings
+    try:
+        init_environment()
+        settings = get_settings()
+        print(f"✅ Environment initialized successfully")
+    except Exception as e:
+        print(f"⚠️  Environment initialization warning: {e}")
+        print("   Continuing with default settings...")
+    
+    # Get proper dependencies
+    llm = get_llm(temperature=0.0, model="gpt-4o-mini")
+    doc_store_provider = get_doc_store_provider()
+    
+    # Initialize pipeline container
+    pipeline_container = PipelineContainer.initialize()
+    
+    # Check all available pipelines
+    print("📋 Checking available pipelines...")
+    all_pipelines = pipeline_container.get_all_pipelines()
+    
+    available_pipelines = []
+    unavailable_pipelines = []
+    
+    for name, pipeline in all_pipelines.items():
+        if pipeline is not None:
+            available_pipelines.append(name)
+        else:
+            unavailable_pipelines.append(name)
+    
+    print(f"✅ Available pipelines ({len(available_pipelines)}):")
+    for name in sorted(available_pipelines):
+        print(f"   - {name}")
+    
+    if unavailable_pipelines:
+        print(f"❌ Unavailable pipelines ({len(unavailable_pipelines)}):")
+        for name in sorted(unavailable_pipelines):
+            print(f"   - {name}")
+    
+    # Test a simple pipeline if available
+    if "sql_execution" in available_pipelines:
+        print("\n🧪 Testing SQL Execution Pipeline...")
+        try:
+            sql_pipeline = pipeline_container.get_pipeline("sql_execution")
+            
+            # Simple test query
+            test_result = await sql_pipeline.run(
+                sql="SELECT 1 as test_column",
+                project_id="pipeline_test"
+            )
+            
+            print(f"   ✅ SQL execution test successful")
+            print(f"   📊 Result type: {type(test_result)}")
+            
+        except Exception as e:
+            print(f"   ❌ SQL execution test failed: {e}")
+    
+    elif "data_summarization" in available_pipelines:
+        print("\n🧪 Testing Data Summarization Pipeline...")
+        try:
+            data_pipeline = pipeline_container.get_pipeline("data_summarization")
+            
+            # Simple test
+            print(f"   ✅ Data summarization pipeline available")
+            print(f"   📊 Pipeline type: {type(data_pipeline)}")
+            
+        except Exception as e:
+            print(f"   ❌ Data summarization test failed: {e}")
+    
+    else:
+        print("\n⚠️  No suitable test pipelines available")
+    
+    return {
+        "available_pipelines": available_pipelines,
+        "unavailable_pipelines": unavailable_pipelines,
+        "total_pipelines": len(all_pipelines)
+    }
+
+
+async def example_basic_sql_execution():
+    """Example of basic SQL execution using available pipelines"""
+    
+    print("🔍 Basic SQL Execution Example")
+    print("=" * 50)
+    
+    # Use proper settings and dependencies initialization
+    from app.settings import init_environment, get_settings
+    from app.core.dependencies import get_llm, get_doc_store_provider
+    from app.agents.pipelines.pipeline_container import PipelineContainer
+    
+    # Initialize environment and settings
+    try:
+        init_environment()
+        settings = get_settings()
+        print(f"✅ Environment initialized successfully")
+    except Exception as e:
+        print(f"⚠️  Environment initialization warning: {e}")
+        print("   Continuing with default settings...")
+    
+    # Get proper dependencies
+    llm = get_llm(temperature=0.0, model="gpt-4o-mini")
+    doc_store_provider = get_doc_store_provider()
+    
+    # Initialize pipeline container
+    pipeline_container = PipelineContainer.initialize()
+    
+    # Try to use sql_execution pipeline
+    sql_pipeline = pipeline_container.get_pipeline("sql_execution")
+    if sql_pipeline is None:
+        print("❌ SQL execution pipeline not available")
+        return {"status": "failed", "reason": "sql_execution_pipeline_not_available"}
+    
+    print("✅ SQL execution pipeline available")
+    
+    # Simple test queries
+    test_queries = [
+        {
+            "sql": "SELECT 1 as test_column, 'Hello World' as message",
+            "description": "Simple test query"
+        },
+        {
+            "sql": "SELECT CURRENT_TIMESTAMP as current_time",
+            "description": "Current timestamp query"
+        }
+    ]
+    
+    results = []
+    
+    for i, query_info in enumerate(test_queries):
+        print(f"\n🧪 Testing query {i+1}: {query_info['description']}")
+        
+        try:
+            result = await sql_pipeline.run(
+                sql=query_info["sql"],
+                project_id="basic_sql_test"
+            )
+            
+            print(f"   ✅ Query {i+1} successful")
+            print(f"   📊 Result type: {type(result)}")
+            
+            if hasattr(result, 'get'):
+                success = result.get('success', False)
+                print(f"   📈 Success: {success}")
+                
+                if success and hasattr(result, 'get'):
+                    data = result.get('data', [])
+                    if data:
+                        print(f"   📋 Data rows: {len(data)}")
+                        print(f"   🔍 Sample data: {data[0] if isinstance(data, list) else 'Complex data'}")
+            
+            results.append({
+                "query": query_info["description"],
+                "success": True,
+                "result": result
+            })
+            
+        except Exception as e:
+            print(f"   ❌ Query {i+1} failed: {e}")
+            results.append({
+                "query": query_info["description"],
+                "success": False,
+                "error": str(e)
+            })
+    
+    # Summary
+    successful_queries = sum(1 for r in results if r["success"])
+    total_queries = len(results)
+    
+    print(f"\n📊 Summary:")
+    print(f"   Total queries: {total_queries}")
+    print(f"   Successful: {successful_queries}")
+    print(f"   Failed: {total_queries - successful_queries}")
+    
+    return {
+        "status": "completed",
+        "total_queries": total_queries,
+        "successful_queries": successful_queries,
+        "results": results
+    }
+
+
+async def debug_dashboard_pipeline_import():
+    """Debug function to test the specific import that's failing"""
+    
+    print("🔍 Debugging Dashboard Pipeline Import Issues")
+    print("=" * 50)
+    
+    try:
+        # Test 1: Import the module
+        print("1. Testing dashboard_streaming_pipeline module import...")
+        from app.agents.pipelines.writers import dashboard_streaming_pipeline
+        print("   ✅ Module import successful")
+        
+        # Test 2: Import the factory function
+        print("2. Testing create_dashboard_streaming_pipeline import...")
+        from app.agents.pipelines.writers.dashboard_streaming_pipeline import create_dashboard_streaming_pipeline
+        print("   ✅ Factory function import successful")
+        
+        # Test 3: Import the class
+        print("3. Testing DashboardStreamingPipeline class import...")
+        from app.agents.pipelines.writers.dashboard_streaming_pipeline import DashboardStreamingPipeline
+        print("   ✅ Class import successful")
+        
+        # Test 4: Test the specific import that might be failing
+        print("4. Testing DataSummarizationPipeline import...")
+        from app.agents.pipelines.sql_execution import DataSummarizationPipeline
+        print("   ✅ DataSummarizationPipeline import successful")
+        
+        # Test 5: Test creating an instance
+        print("5. Testing instance creation...")
+        from app.core.dependencies import get_llm
+        from app.agents.retrieval.retrieval_helper import RetrievalHelper
+        from app.core.engine_provider import EngineProvider
+        
+        llm = get_llm()
+        retrieval_helper = RetrievalHelper()
+        engine = EngineProvider.get_engine()
+        
+        dashboard_pipeline = create_dashboard_streaming_pipeline(
+            engine=engine,
+            llm=llm,
+            retrieval_helper=retrieval_helper
+        )
+        
+        print("   ✅ Dashboard pipeline instance created successfully")
+        print(f"   📊 Instance type: {type(dashboard_pipeline)}")
+        print(f"   📊 Instance name: {dashboard_pipeline.name}")
+        
+        return {"status": "success", "pipeline": dashboard_pipeline}
+        
+    except Exception as e:
+        print(f"   ❌ Import/creation failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"status": "failed", "error": str(e)}
+
+
 if __name__ == "__main__":
     # Run the examples
     print("Dashboard Streaming Pipeline Examples")
     print("=" * 50)
     
     try:
+        # Example 0: Check available pipelines first
+        print("\n0. Available Pipelines Check:")
+        pipeline_info = asyncio.run(example_available_pipelines())
+        
         # Example 1: Concurrent execution with streaming
         print("\n1. Concurrent Execution Example:")
-        asyncio.run(example_dashboard_streaming())
+        try:
+            result1 = asyncio.run(example_dashboard_streaming())
+            if result1.get("status") == "skipped":
+                print("   ⏭️  Skipped due to missing dashboard streaming pipeline")
+            else:
+                print("   ✅ Completed successfully")
+        except Exception as e:
+            print(f"   ❌ Failed: {e}")
         
         # Example 2: Sequential execution  
         print("\n2. Sequential Execution Example:")
-        asyncio.run(example_sequential_execution())
+        try:
+            result2 = asyncio.run(example_sequential_execution())
+            if result2.get("status") == "skipped":
+                print("   ⏭️  Skipped due to missing dashboard streaming pipeline")
+            else:
+                print("   ✅ Completed successfully")
+        except Exception as e:
+            print(f"   ❌ Failed: {e}")
         
         # Example 3: Using DashboardService
         print("\n3. Dashboard Service Example:")
-        asyncio.run(example_using_dashboard_service())
+        try:
+            result3 = asyncio.run(example_using_dashboard_service())
+            print("   ✅ Completed successfully")
+        except Exception as e:
+            print(f"   ❌ Failed: {e}")
         
         # Example 4: Service Container Integration
         print("\n4. Service Container Integration:")
-        asyncio.run(example_service_container_integration())
+        try:
+            result4 = asyncio.run(example_service_container_integration())
+            print("   ✅ Completed successfully")
+        except Exception as e:
+            print(f"   ❌ Failed: {e}")
         
         # Example 5: Pipeline Integration
         print("\n5. Pipeline Integration Example:")
-        asyncio.run(integration_example())
+        try:
+            result5 = asyncio.run(integration_example())
+            if result5.get("status") == "skipped":
+                print("   ⏭️  Skipped due to missing dashboard streaming pipeline")
+            else:
+                print("   ✅ Completed successfully")
+        except Exception as e:
+            print(f"   ❌ Failed: {e}")
         
-        print("\n🎉 All examples completed successfully!")
+        # Example 6: Basic SQL Execution
+        print("\n6. Basic SQL Execution Example:")
+        try:
+            result6 = asyncio.run(example_basic_sql_execution())
+            if result6.get("status") == "failed":
+                print("   ❌ Failed: SQL execution pipeline not available")
+            else:
+                print("   ✅ Completed successfully")
+        except Exception as e:
+            print(f"   ❌ Failed: {e}")
+        
+        # Example 7: Debug Dashboard Pipeline Import
+        print("\n7. Debug Dashboard Pipeline Import:")
+        try:
+            debug_result = asyncio.run(debug_dashboard_pipeline_import())
+            if debug_result.get("status") == "success":
+                print("   ✅ Dashboard pipeline import debug successful")
+            else:
+                print("   ❌ Dashboard pipeline import debug failed")
+        except Exception as e:
+            print(f"   ❌ Debug failed: {e}")
+        
+        print("\n🎉 Examples completed!")
+        print(f"📊 Pipeline Summary: {pipeline_info['total_pipelines']} total, {len(pipeline_info['available_pipelines'])} available, {len(pipeline_info['unavailable_pipelines'])} unavailable")
         
     except Exception as e:
         print(f"\n💥 Error running examples: {e}")

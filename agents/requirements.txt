@@ -16,19 +16,20 @@ alembic==1.15.2
 pytest==8.0.2
 pytest-cov==4.1.0
 
-# AI/ML dependencies
+# AI/ML dependencies chromadb-1.0.20 langchain-chroma-0.2.5 langchain-core-0.3.75 langsmith-0.4.18
 langchain==0.3.25
 langchain-anthropic==0.3.13
 langchain-ollama==0.3.2
 langchain-openai==0.3.16
 langchain-community==0.3.23
-langchain-core==0.3.59
-langchain-chroma==0.2.3
+langchain-core==0.3.75
+langchain-chroma==0.2.5
 langchain-text-splitters==0.3.8
 langgraph==0.4.3
+langsmith==0.4.18
 haystack-ai==2.0.0
 orjson==3.10.18
-chromadb==0.6.3
+chromadb==1.0.20
 faiss-cpu==1.11.0
 tiktoken==0.9.0
 openai==1.78.0

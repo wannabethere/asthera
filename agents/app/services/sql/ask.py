@@ -1172,7 +1172,7 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             return AskResultResponse(
                 status="failed",
                 error=AskError(
-                    code="CACHE_MISS",
+                    code="OTHERS",
                     message="Result not found in cache"
                 )
             )

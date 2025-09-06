@@ -1090,9 +1090,11 @@ if __name__ == "__main__":
     import chromadb
     from langchain_openai import OpenAIEmbeddings
     from app.settings import get_settings
-    import os
-    os.environ["OPENAI_API_KEY"] = "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"
+    from app.core.settings import get_settings
     settings = get_settings()
+    print(f"Settings object type: {type(settings)}")
+    print(f"Settings attributes: {dir(settings)}")
+    print(f"OPENAI_API_KEY from settings: {settings.OPENAI_API_KEY}")
     
     # Initialize embeddings
     embeddings = OpenAIEmbeddings(

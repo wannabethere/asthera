@@ -24,6 +24,7 @@ from app.agents.nodes.sql.chart_adjustment import ChartAdjustment
 from app.agents.nodes.sql.utils.chart_models import ChartAdjustmentOption
 from app.agents.nodes.sql.powerbi_chart_generation import PowerBIChartGenerationPipeline
 from app.agents.nodes.sql.plotly_chart_generation import PlotlyChartGenerationPipeline
+from app.agents.nodes.sql.tableau_chart_generation import TableauChartGenerationPipeline
 from app.agents.nodes.sql.plotly_chart_adjustment import PlotlyChartAdjustment, PlotlyChartAdjustmentOption
 from app.agents.nodes.sql.data_assistance import DataAssistanceRequest, DataAssistanceResult
 from app.agents.nodes.sql.data_assistance import DataAssistanceTool
@@ -81,17 +82,24 @@ class SQLGenerationPipeline(AgentPipeline):
         project_id = kwargs.get("project_id")
         schema_context = kwargs.pop("schema_context", None)  # Remove schema_context from kwargs
         
+        # Append project-specific instructions to the query
+        from app.utils.project_instructions import project_instructions_manager
+        enhanced_query = project_instructions_manager.append_instructions_to_query(
+            query, project_id
+        )
+        
         logger.info(f"Starting SQL generation for query: {query}")
+        logger.info(f"Enhanced query: {enhanced_query}")
         logger.info(f"Project ID: {project_id}")
         logger.info(f"Language: {language}")
         logger.info(f"Number of contexts: {len(contexts)}")
         
-        # Generate SQL using the appropriate agent
+        # Generate SQL using the appropriate agent with enhanced query
         if self.use_enhanced_agent:
             logger.info("Using enhanced SQL generation agent")
             result = await self.agent.process_sql_request_enhanced(
                 operation="GENERATION",
-                query=query,
+                query=enhanced_query,
                 schema_context=schema_context,
                 **kwargs
             )
@@ -99,7 +107,7 @@ class SQLGenerationPipeline(AgentPipeline):
             logger.info("Using standard SQL generation agent")
             result = await self.agent.process_sql_request(
                 operation="GENERATION",
-                query=query,
+                query=enhanced_query,
                 **kwargs
             )
         
@@ -214,19 +222,25 @@ class SQLReasoningPipeline(AgentPipeline):
         query = kwargs.pop("query", "")  # Remove query from kwargs
         language = kwargs.get("language", "English")
         contexts = kwargs.get("contexts", [])
+        project_id = kwargs.get("project_id")
         schema_context = kwargs.pop("schema_context", None)  # Remove schema_context from kwargs
-        
+        # Append project-specific instructions to the query
+        from app.utils.project_instructions import project_instructions_manager
+        enhanced_query = project_instructions_manager.append_instructions_to_query(
+            query, project_id
+        )
+
         if self.use_enhanced_agent:
             result = await self.agent.process_sql_request_enhanced(
                 operation="REASONING",
-                query=query,
+                query=enhanced_query,
                 schema_context=schema_context,
                 **kwargs
             )
         else:
             result = await self.agent.process_sql_request(
                 operation="REASONING",
-                query=query,
+                query=enhanced_query,
                 **kwargs
             )
         
@@ -423,6 +437,8 @@ class ChartGenerationPipeline(AgentPipeline):
             self.chart_generator = PowerBIChartGenerationPipeline(llm=llm)
         elif self.chart_config.get("type") == "plotly":
             self.chart_generator = PlotlyChartGenerationPipeline(llm=llm)
+        elif self.chart_config.get("type") == "tableau":
+            self.chart_generator = TableauChartGenerationPipeline(llm=llm)
         elif self.chart_config.get("type") in ["vega_lite", "enhanced_vega_lite"]:
             # Use enhanced Vega-Lite pipeline with KPI support
             self.chart_generator = EnhancedVegaLiteChartGenerationPipeline()
@@ -699,6 +715,12 @@ class FollowUpSQLGenerationPipeline(AgentPipeline):
         project_id = kwargs.get("project_id")
         sql_generation_reasoning = kwargs.pop("sql_generation_reasoning", "")  # Remove sql_generation_reasoning from kwargs
         
+        # Append project-specific instructions to the query
+        from app.utils.project_instructions import project_instructions_manager
+        enhanced_query = project_instructions_manager.append_instructions_to_query(
+            query, project_id
+        )
+        
         # Create history from previous SQL
         histories = []
         if previous_sql:
@@ -707,9 +729,9 @@ class FollowUpSQLGenerationPipeline(AgentPipeline):
                 sql=previous_sql
             ))
         
-        # Run follow-up SQL generation
+        # Run follow-up SQL generation with enhanced query
         result = await self.followup_generator.run(
-            query=query,
+            query=enhanced_query,
             contexts=contexts,
             sql_generation_reasoning=sql_generation_reasoning,
             histories=histories,

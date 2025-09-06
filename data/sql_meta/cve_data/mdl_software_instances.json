@@ -1,0 +1,920 @@
+{
+    "catalog": "software_asset_management",
+    "schema": "public",
+    "models": [
+      {
+        "name": "dev_software_instances",
+        "description": "Comprehensive software asset inventory containing product names, vendor information, and software versions installed across all assets. This table tracks installed applications, software versions, patch status, and remediation activities across the enterprise infrastructure. Use this table for queries about software products, versions, and vendor information.",
+        "tableReference": {
+          "table": "dev_software_instances"
+        },
+        "columns": [
+          {
+            "name": "swkey_partition_id",
+            "type": "VARCHAR",
+            "notNull": true,
+            "properties": {
+              "displayName": "Software Key Partition ID",
+              "description": "Partition identifier for software key organization and data distribution strategy. This field enables horizontal partitioning of software inventory data across multiple storage nodes or database shards. Common values include 'APPLICATION' for user-installed applications, 'SYSTEM' for operating system components, 'DRIVER' for hardware drivers, and 'PACKAGE' for package manager installations. This partitioning improves query performance for large-scale software inventories and enables parallel processing of software asset management operations."
+            }
+          },
+          {
+            "name": "nuid",
+            "type": "INTEGER",
+            "notNull": true,
+            "properties": {
+              "displayName": "Network Unit ID",
+              "description": "Network unit identifier that establishes the organizational hierarchy and network topology context for software installations. This field links software inventory records to specific business units, departments, geographic locations, or network segments within the enterprise. It enables security teams to perform risk assessments at the organizational level, track software compliance across different business units, and implement targeted patch management strategies. The NUID typically corresponds to Active Directory organizational units, network VLANs, or custom organizational hierarchies defined by the enterprise."
+            }
+          },
+          {
+            "name": "dev_id",
+            "type": "INTEGER",
+            "notNull": true,
+            "properties": {
+              "displayName": "Device ID",
+              "description": "Unique device identifier that represents the specific endpoint, server, workstation, or virtual machine where the software is installed. This field serves as the primary key for device-level software inventory tracking and enables correlation with device management systems, asset databases, and security monitoring tools. The device ID typically corresponds to hardware serial numbers, MAC addresses, or custom device identifiers from enterprise asset management systems. It supports device-centric security analysis, patch deployment tracking, and compliance reporting at the individual device level."
+            }
+          },
+          {
+            "name": "key",
+            "type": "VARCHAR",
+            "notNull": true,
+            "properties": {
+              "displayName": "Software Key Hash",
+              "description": "Unique cryptographic hash identifier that serves as the primary key for each specific software installation instance. This field is typically generated using a combination of software attributes such as vendor, product name, version, installation path, and device identifier to create a deterministic, collision-resistant hash. The key enables deduplication of software installations, supports change detection for software updates, and provides a stable reference for tracking software lifecycle events. It's essential for maintaining data integrity across software inventory updates and supports efficient querying and indexing of software installations."
+            }
+          },
+          {
+            "name": "cpe",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Common Platform Enumeration",
+              "description": "Common Platform Enumeration (CPE) identifier following the CPE 2.3 specification for standardized software identification and vulnerability correlation. CPE provides a structured naming scheme for information technology systems, software, and packages, enabling automated vulnerability scanning and security assessment tools to identify and correlate software installations with known security vulnerabilities. The format follows the pattern 'cpe:2.3:a:vendor:product:version:update:edition:language:sw_edition:target_sw:target_hw:other'. This field may be empty for custom software, legacy applications, or when CPE mapping is not available, but when present, it enables integration with vulnerability databases like NVD (National Vulnerability Database) and automated security scanning tools."
+            }
+          },
+          {
+            "name": "source",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Data Source",
+              "description": "Source system, scanning method, or data collection mechanism used to discover and catalog this software installation. Common values include 'HA' for High Availability scanning systems, 'SCCM' for Microsoft System Center Configuration Manager, 'WSUS' for Windows Server Update Services, 'PACKAGE_MANAGER' for package manager queries (apt, yum, etc.), 'REGISTRY' for Windows registry scanning, 'FILE_SYSTEM' for file system analysis, 'AGENT' for endpoint agent-based discovery, and 'MANUAL' for manually entered inventory data. This field is crucial for data lineage tracking, quality assessment, and determining the reliability and freshness of software inventory information."
+            }
+          },
+          {
+            "name": "category",
+            "type": "VARCHAR",
+            "notNull": true,
+            "properties": {
+              "displayName": "Software Category",
+              "description": "High-level functional categorization of the software type that classifies software based on its primary purpose and usage within the enterprise environment. Common categories include 'APPLICATION' for end-user applications and productivity software, 'SYSTEM' for operating system components and core system software, 'DRIVER' for hardware drivers and device-specific software, 'PACKAGE' for package manager installations and dependencies, 'SERVICE' for background services and daemons, 'LIBRARY' for shared libraries and runtime components, 'TOOL' for administrative and development tools, and 'SECURITY' for security-related software and utilities. This categorization enables software asset management teams to apply different policies, compliance requirements, and risk assessments based on software function."
+            }
+          },
+          {
+            "name": "product",
+            "type": "VARCHAR",
+            "notNull": true,
+            "properties": {
+              "displayName": "Product Name",
+              "description": "Official name of the software product, application, or package as recognized by the vendor or package maintainer. This field contains the standardized product name used for software identification, licensing, and vulnerability correlation. Examples include 'Microsoft Office', 'Adobe Acrobat Reader', 'Google Chrome', 'Apache HTTP Server', 'MySQL Server', and 'Python'. The product name is typically extracted from software metadata, registry entries, package manifests, or installation databases. It serves as the primary identifier for software asset tracking, license management, and security vulnerability assessment, enabling correlation with vendor security advisories and patch management systems."
+            }
+          },
+          {
+            "name": "vendor",
+            "type": "VARCHAR",
+            "notNull": true,
+            "properties": {
+              "displayName": "Vendor/Publisher",
+              "description": "Software vendor, publisher, or maintainer organization responsible for developing, distributing, and supporting the software product. This field identifies the legal entity that owns the software intellectual property and provides security updates, patches, and support. Common vendors include 'Microsoft Corporation', 'Adobe Systems Incorporated', 'Google LLC', 'Oracle Corporation', 'Apache Software Foundation', 'Mozilla Foundation', and 'Red Hat Inc.'. The vendor information is essential for software license compliance tracking, security vulnerability correlation with vendor advisories, patch management coordination, and establishing support relationships. It also enables vendor risk assessment and concentration analysis for enterprise software portfolios."
+            }
+          },
+          {
+            "name": "version",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Software Version",
+              "description": "Installed version number, version identifier, or build number of the software as reported by the software itself or the installation system. This field contains the specific version information that is critical for security vulnerability assessment, patch management, and software lifecycle tracking. Version formats vary by vendor and may include semantic versioning (e.g., '1.2.3'), date-based versions (e.g., '2023.1'), build numbers (e.g., 'Build 19045'), or custom versioning schemes. The version information enables correlation with security advisories, determines patch applicability, tracks software updates over time, and supports compliance reporting for software that must be maintained at specific version levels. This field may be empty for software that doesn't report version information or when version detection fails."
+            }
+          },
+          {
+            "name": "install_path",
+            "type": "TEXT",
+            "properties": {
+              "displayName": "Installation Path",
+              "description": "Complete file system path where the software is installed, including the root directory and all subdirectories. This field provides the absolute path to the software installation location, which is essential for file-based security scanning, patch deployment, and software removal operations. Common installation paths include 'C:\\Program Files\\Microsoft Office\\' for Windows applications, '/usr/bin/' for Linux system binaries, '/Applications/' for macOS applications, and '/opt/' for optional software packages. The installation path enables security teams to perform targeted file system scans, verify patch installations, and implement file-based access controls. This field may be empty for software installed via package managers, containerized applications, or when path detection is not available."
+            }
+          },
+          {
+            "name": "latest_remediation_id",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Latest Remediation ID",
+              "description": "Unique identifier for the most recent remediation action, patch recommendation, or security advisory that applies to this software installation. This field links the software inventory record to specific remediation tickets, patch management workflows, or security incident tracking systems. The remediation ID typically corresponds to internal ticket numbers, vendor security advisory IDs, patch bulletin references, or vulnerability database entries (such as CVE identifiers). It enables tracking of remediation progress, correlation with change management systems, and provides audit trails for security compliance. This field may be empty when no active remediation is required or when the software is fully patched and up-to-date."
+            }
+          },
+          {
+            "name": "latest_available_patch",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Latest Available Patch",
+              "description": "Identifier, version number, or reference for the most recent patch, update, or security fix that is available from the vendor for this specific software installation. This field represents the latest version that the software could be updated to, regardless of whether it has been installed. The patch identifier may include version numbers (e.g., '1.2.4'), patch names (e.g., 'Security Update KB123456'), or vendor-specific patch references. This information is crucial for patch management planning, vulnerability remediation prioritization, and compliance reporting. It enables security teams to identify software that is behind on updates and requires patching. This field may be empty when no patches are available, when patch information is not accessible, or when the software is already at the latest version."
+            }
+          },
+          {
+            "name": "latest_installed_patch",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Latest Installed Patch",
+              "description": "Identifier, version number, or reference for the most recent patch, update, or security fix that has been successfully installed on this software installation. This field tracks the actual patch deployment status and represents the current patch level of the software. The patch identifier may include version numbers (e.g., '1.2.3'), patch names (e.g., 'Security Update KB123456'), or vendor-specific patch references. This information is essential for verifying patch deployment success, tracking software update history, and ensuring compliance with security policies. It enables security teams to confirm that patches have been applied and to identify any gaps between available and installed patches. This field may be empty when no patches have been installed or when patch installation tracking is not available."
+            }
+          },
+          {
+            "name": "patch_class",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Patch Classification",
+              "description": "Classification or categorization of the patch type based on its primary purpose and impact. Common patch classifications include 'SECURITY' for security fixes and vulnerability patches, 'FEATURE' for new functionality and enhancements, 'BUG_FIX' for defect corrections and stability improvements, 'CRITICAL' for critical security or stability fixes requiring immediate deployment, 'OPTIONAL' for non-critical updates and optional features, 'DRIVER' for hardware driver updates, 'SERVICE_PACK' for major update bundles, and 'HOTFIX' for urgent fixes deployed outside normal release cycles. This classification enables patch prioritization, risk assessment, and deployment planning by helping security teams understand the nature and urgency of each patch. It supports compliance reporting and audit requirements for different types of software updates."
+            }
+          },
+          {
+            "name": "product_state",
+            "type": "VARCHAR",
+            "notNull": true,
+            "properties": {
+              "displayName": "Product Security State",
+              "description": "Current security and patch status of the software installation, indicating its compliance with security requirements and patch management policies. The three primary states are: 'PATCHED' indicating the software is up-to-date with all available security patches and updates, 'VULNERABLE' indicating the software has known security vulnerabilities that require patching or remediation, and 'UNKNOWN' indicating the security state cannot be determined due to lack of patch information, scanning failures, or other technical issues. This field is critical for security risk assessment, patch management prioritization, and compliance reporting. It enables security teams to quickly identify software that requires immediate attention and to track overall security posture across the enterprise software inventory."
+            }
+          },
+          {
+            "name": "install_time",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Installation Time",
+              "description": "Timestamp indicating when the software was originally installed on the system, as recorded by the operating system, package manager, or installation tracking system. This field provides the installation date and time, which is essential for software lifecycle management, license compliance tracking, and security risk assessment. The installation time helps determine software age, track deployment patterns, and identify software that may be approaching end-of-life or requiring updates. It supports trend analysis for software adoption, helps with license audit preparation, and enables correlation with security events that may have occurred around the installation time. This field may be empty for software where installation time cannot be determined or for legacy installations without proper tracking."
+            }
+          },
+          {
+            "name": "latest_remediation_release_time",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Latest Remediation Release Time",
+              "description": "Timestamp indicating when the vendor or software maintainer officially released the latest remediation, security update, or patch for this software. This field represents the vendor's release date for the most recent security fix or update, which is crucial for measuring patch deployment timeliness and vendor response to security vulnerabilities. The release time enables calculation of exposure windows (time between vulnerability disclosure and patch availability), helps prioritize patch deployment based on release recency, and supports vendor performance analysis for security response times. This information is essential for security risk assessment, compliance reporting, and patch management optimization. This field may be empty when patch release information is not available or when the software has no known vulnerabilities requiring remediation."
+            }
+          },
+          {
+            "name": "latest_installed_patch_release_time",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Latest Installed Patch Release Time",
+              "description": "Timestamp indicating when the vendor officially released the most recent patch that has been successfully installed on this software installation. This field represents the vendor's release date for the patch that is currently deployed, which is essential for tracking patch deployment lag and measuring the time between vendor patch release and enterprise deployment. The release time enables calculation of deployment delays, helps assess patch management effectiveness, and supports compliance reporting for patch deployment timeliness. This information is crucial for identifying software with outdated patches and for optimizing patch deployment processes. This field may be empty when no patches have been installed or when patch release information is not available."
+            }
+          },
+          {
+            "name": "latest_patch_release_time",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Latest Patch Release Time",
+              "description": "Timestamp indicating when the vendor officially released the most recent patch or update that is available for this software, regardless of whether it has been installed. This field represents the vendor's release date for the latest available patch, which is essential for measuring patch deployment gaps and identifying software that is behind on updates. The release time enables calculation of exposure windows (time since latest patch became available), helps prioritize patch deployment based on patch age, and supports assessment of patch management effectiveness. This information is crucial for identifying software requiring immediate patching and for optimizing patch deployment schedules. This field may be empty when no patches are available or when patch release information is not accessible."
+            }
+          },
+          {
+            "name": "latest_patch_install_time",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Latest Patch Install Time",
+              "description": "Timestamp indicating when the most recent patch or update was actually installed and deployed on the system. This field represents the actual deployment time of the latest patch, which is essential for tracking patch deployment success, measuring deployment timeliness, and maintaining audit trails for compliance reporting. The installation time enables calculation of patch deployment delays (time between vendor release and enterprise deployment), helps assess patch management process effectiveness, and supports correlation with system events that may have occurred during patch deployment. This information is crucial for identifying deployment bottlenecks, optimizing patch deployment processes, and ensuring timely security updates. This field may be empty when no patches have been installed or when patch installation tracking is not available."
+            }
+          },
+          {
+            "name": "is_stale",
+            "type": "BOOLEAN",
+            "notNull": true,
+            "properties": {
+              "displayName": "Is Stale Record",
+              "description": "Boolean flag indicating whether this software inventory record is considered stale, outdated, or no longer current. A record is marked as stale when it hasn't been updated within a defined time period, when the software is no longer detected on the system, or when the inventory data is considered unreliable. This flag helps identify records that may need to be refreshed, removed, or investigated further. Stale records can indicate software that has been uninstalled, systems that are no longer active, or inventory collection issues. This field is essential for maintaining data quality, identifying gaps in inventory collection, and ensuring that security assessments are based on current and accurate software inventory data."
+            }
+          },
+          {
+            "name": "raw_created_at",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Raw Data Creation Time",
+              "description": "Original timestamp indicating when this software installation was first discovered and recorded during the initial raw data collection process. This field preserves the original detection time from the source system, scanning tool, or inventory collection method, providing a historical record of when the software was first identified in the enterprise environment. The raw creation time is essential for data lineage tracking, change detection, and understanding the evolution of the software inventory over time. It helps distinguish between newly discovered software and existing installations, supports trend analysis for software adoption patterns, and enables correlation with other system events that may have occurred around the discovery time. This field is particularly valuable for audit trails and compliance reporting."
+            }
+          },
+          {
+            "name": "store_created_at",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Data Store Creation Time",
+              "description": "Timestamp indicating when this software inventory record was first created and stored in the data warehouse or centralized inventory database. This field represents the system-generated timestamp for when the record was initially inserted into the database, providing a reliable reference point for data management and audit purposes. The store creation time is essential for data lifecycle management, backup and recovery operations, and maintaining data integrity across the software inventory system. It helps track when records were added to the system, supports data retention policies, and enables correlation with system maintenance activities. This field is particularly important for troubleshooting data issues and ensuring proper data governance practices."
+            }
+          },
+          {
+            "name": "store_updated_at",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Data Store Update Time",
+              "description": "Timestamp indicating when this software inventory record was last modified or updated in the data warehouse or centralized inventory database. This field represents the most recent system-generated timestamp for when any field in the record was changed, providing a reliable reference point for tracking data freshness and change history. The store update time is essential for data quality monitoring, identifying stale records, and ensuring that software inventory information remains current and accurate. It helps track when records were last refreshed with new information, supports data retention and cleanup policies, and enables correlation with inventory collection cycles. This field is particularly important for maintaining data integrity and ensuring that security assessments are based on the most recent available information."
+            }
+          },
+          {
+            "name": "process_id",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Processing Job ID",
+              "description": "Unique identifier (typically a UUID) of the data processing job, ETL pipeline, or batch process that created or last updated this software inventory record. This field provides traceability back to the specific data processing workflow that handled this record, enabling debugging of data quality issues, tracking of processing performance, and correlation with system logs and monitoring data. The process ID is essential for data lineage tracking, troubleshooting data inconsistencies, and ensuring that data processing workflows are functioning correctly. It helps identify which processing job introduced specific data, supports rollback operations in case of processing errors, and enables correlation with processing metrics and performance monitoring. This field is particularly valuable for maintaining data quality and ensuring reliable data processing operations."
+            }
+          },
+          {
+            "name": "is_vulnerable",
+            "type": "BOOLEAN",
+            "isCalculated": true,
+            "expression": "CASE WHEN product_state = 'VULNERABLE' THEN true ELSE false END",
+            "properties": {
+              "displayName": "Is Vulnerable",
+              "description": "Boolean flag indicating if the software is in a vulnerable state requiring patching"
+            }
+          },
+          {
+            "name": "is_patched",
+            "type": "BOOLEAN",
+            "isCalculated": true,
+            "expression": "CASE WHEN product_state = 'PATCHED' THEN true ELSE false END",
+            "properties": {
+              "displayName": "Is Patched",
+              "description": "Boolean flag indicating if the software is fully patched and up-to-date"
+            }
+          },
+          {
+            "name": "is_unknown_state",
+            "type": "BOOLEAN",
+            "isCalculated": true,
+            "expression": "CASE WHEN product_state = 'UNKNOWN' THEN true ELSE false END",
+            "properties": {
+              "displayName": "Is Unknown State",
+              "description": "Boolean flag indicating if the software security state is unknown or unclear"
+            }
+          },
+          {
+            "name": "days_since_install",
+            "type": "INTEGER",
+            "isCalculated": true,
+            "expression": "DATEDIFF(day, install_time, CURRENT_TIMESTAMP)",
+            "properties": {
+              "displayName": "Days Since Installation",
+              "description": "Number of days since the software was installed"
+            }
+          },
+          {
+            "name": "days_since_last_patch",
+            "type": "INTEGER",
+            "isCalculated": true,
+            "expression": "CASE WHEN latest_patch_install_time IS NOT NULL THEN DATEDIFF(day, latest_patch_install_time, CURRENT_TIMESTAMP) END",
+            "properties": {
+              "displayName": "Days Since Last Patch",
+              "description": "Number of days since the last patch was installed"
+            }
+          },
+          {
+            "name": "patch_gap_days",
+            "type": "INTEGER",
+            "isCalculated": true,
+            "expression": "CASE WHEN latest_patch_release_time IS NOT NULL AND latest_patch_install_time IS NOT NULL THEN DATEDIFF(day, latest_patch_release_time, latest_patch_install_time) END",
+            "properties": {
+              "displayName": "Patch Gap Days",
+              "description": "Number of days between patch release and installation (negative = installed before official release)"
+            }
+          },
+          {
+            "name": "software_age_category",
+            "type": "VARCHAR",
+            "isCalculated": true,
+            "expression": "CASE WHEN DATEDIFF(day, install_time, CURRENT_TIMESTAMP) <= 30 THEN 'New (30 days)' WHEN DATEDIFF(day, install_time, CURRENT_TIMESTAMP) <= 90 THEN 'Recent (90 days)' WHEN DATEDIFF(day, install_time, CURRENT_TIMESTAMP) <= 365 THEN 'Mature (1 year)' ELSE 'Legacy (>1 year)' END",
+            "properties": {
+              "displayName": "Software Age Category",
+              "description": "Categorical age of the software installation based on install date"
+            }
+          },
+          {
+            "name": "vendor_category",
+            "type": "VARCHAR",
+            "isCalculated": true,
+            "expression": "CASE WHEN vendor IN ('Microsoft Corporation', 'Microsoft') THEN 'Microsoft' WHEN vendor LIKE '%VMware%' THEN 'VMware' WHEN vendor IN ('Fedora Project', 'CentOS', 'Red Hat') THEN 'Red Hat Ecosystem' WHEN vendor = 'Unknown' THEN 'Unknown/Other' ELSE 'Third Party' END",
+            "properties": {
+              "displayName": "Vendor Category",
+              "description": "Categorized grouping of software vendors for analysis"
+            }
+          },
+          {
+            "name": "has_install_path",
+            "type": "BOOLEAN",
+            "isCalculated": true,
+            "expression": "CASE WHEN install_path IS NOT NULL AND LENGTH(install_path) > 0 THEN true ELSE false END",
+            "properties": {
+              "displayName": "Has Installation Path",
+              "description": "Boolean indicating if installation path information is available"
+            }
+          },
+          {
+            "name": "is_system_software",
+            "type": "BOOLEAN",
+            "isCalculated": true,
+            "expression": "CASE WHEN product LIKE '%lib%' OR product LIKE '%system%' OR install_path LIKE '/usr/%' OR install_path LIKE 'C:\\Windows%' THEN true ELSE false END",
+            "properties": {
+              "displayName": "Is System Software",
+              "description": "Boolean indicating if this appears to be system-level software vs application software"
+            }
+          },
+          {
+            "name": "patch_management_score",
+            "type": "DECIMAL",
+            "isCalculated": true,
+            "expression": "CASE WHEN product_state = 'PATCHED' THEN 100.0 WHEN product_state = 'VULNERABLE' THEN 0.0 ELSE 50.0 END",
+            "properties": {
+              "displayName": "Patch Management Score",
+              "description": "Score indicating patch management effectiveness (0-100, higher = better)"
+            }
+          },
+          {
+            "name": "install_year",
+            "type": "INTEGER",
+            "isCalculated": true,
+            "expression": "EXTRACT(YEAR FROM install_time)",
+            "properties": {
+              "displayName": "Installation Year",
+              "description": "Year when the software was installed (for trend analysis)"
+            }
+          }
+        ],
+        "primaryKey": "key",
+        "properties": {
+          "displayName": "Software Asset Inventory",
+          "description": "Comprehensive software asset inventory and patch management system",
+          "keywords": ["software", "product", "version", "vendor", "application", "patch", "inventory", "installed software", "software versions", "product versions"],
+          "use_cases": ["software inventory queries", "product version analysis", "vendor analysis", "patch management", "software asset tracking"]
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "name": "software_to_asset_relationship",
+        "models": ["dev_software_instances", "dev_assets"],
+        "joinType": "MANY_TO_ONE",
+        "condition": "dev_software_instances.dev_id = dev_assets.dev_id AND dev_software_instances.nuid = dev_assets.nuid",
+        "properties": {
+          "displayName": "Software to Asset Relationship",
+          "description": "Relationship between software installations and their host assets"
+        }
+      },
+      {
+        "name": "software_to_vulnerability_relationship",
+        "models": ["dev_software_instances", "dev_vulnerability_instances"],
+        "joinType": "MANY_TO_ONE",
+        "condition": "dev_software_instances.dev_id = dev_vulnerability_instances.dev_id AND dev_software_instances.nuid = dev_vulnerability_instances.nuid",
+        "properties": {
+          "displayName": "Software to Vulnerability Relationship",
+          "description": "Relationship between software installations and their vulnerability instances"
+        }
+      }
+    ],
+    "metrics": [
+      {
+        "name": "software_inventory_metrics",
+        "baseObject": "software_inventory",
+        "description": "Core software inventory and asset management metrics",
+        "dimension": [
+          {
+            "name": "vendor_category",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "product_state",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "category",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "software_age_category",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "total_software_installations",
+            "type": "INTEGER",
+            "expression": "COUNT(*)"
+          },
+          {
+            "name": "vulnerable_software_count",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_vulnerable = true THEN 1 END)"
+          },
+          {
+            "name": "patched_software_count",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_patched = true THEN 1 END)"
+          },
+          {
+            "name": "unknown_state_count",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_unknown_state = true THEN 1 END)"
+          },
+          {
+            "name": "unique_products",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT product)"
+          },
+          {
+            "name": "unique_vendors",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT vendor)"
+          },
+          {
+            "name": "unique_devices",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT dev_id)"
+          },
+          {
+            "name": "patch_compliance_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN is_patched = true THEN 1 END) * 100.0 / COUNT(*)"
+          },
+          {
+            "name": "vulnerability_exposure_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN is_vulnerable = true THEN 1 END) * 100.0 / COUNT(*)"
+          },
+          {
+            "name": "avg_patch_management_score",
+            "type": "DECIMAL",
+            "expression": "AVG(patch_management_score)"
+          }
+        ],
+        "timeGrain": [
+          {
+            "name": "install_time_grain",
+            "refColumn": "install_time",
+            "dateParts": ["YEAR", "QUARTER", "MONTH", "WEEK", "DAY"]
+          },
+          {
+            "name": "store_created_grain",
+            "refColumn": "store_created_at",
+            "dateParts": ["YEAR", "QUARTER", "MONTH", "WEEK", "DAY"]
+          }
+        ],
+        "properties": {
+          "displayName": "Software Inventory Metrics",
+          "description": "Key metrics for software asset management and inventory tracking"
+        }
+      },
+      {
+        "name": "patch_management_metrics",
+        "baseObject": "software_inventory",
+        "description": "Patch management effectiveness and timeliness metrics",
+        "dimension": [
+          {
+            "name": "vendor_category",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "product_state",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "software_age_category",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "avg_days_since_last_patch",
+            "type": "DECIMAL",
+            "expression": "AVG(days_since_last_patch)"
+          },
+          {
+            "name": "avg_patch_gap_days",
+            "type": "DECIMAL",
+            "expression": "AVG(ABS(patch_gap_days))"
+          },
+          {
+            "name": "software_with_patches",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN latest_patch_install_time IS NOT NULL THEN 1 END)"
+          },
+          {
+            "name": "software_needing_patches",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN product_state = 'VULNERABLE' THEN 1 END)"
+          },
+          {
+            "name": "fast_patch_adoption",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN patch_gap_days <= 30 AND patch_gap_days >= 0 THEN 1 END)"
+          },
+          {
+            "name": "slow_patch_adoption",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN patch_gap_days > 90 THEN 1 END)"
+          },
+          {
+            "name": "patch_timeliness_score",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN patch_gap_days <= 30 AND patch_gap_days >= 0 THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN patch_gap_days IS NOT NULL THEN 1 END), 0)"
+          }
+        ],
+        "properties": {
+          "displayName": "Patch Management Metrics",
+          "description": "Metrics for evaluating patch management effectiveness and timeliness"
+        }
+      },
+      {
+        "name": "vendor_diversity_metrics",
+        "baseObject": "software_inventory",
+        "description": "Software vendor diversity and risk concentration analysis",
+        "dimension": [
+          {
+            "name": "vendor",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "vendor_category",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "vendor_software_count",
+            "type": "INTEGER",
+            "expression": "COUNT(*)"
+          },
+          {
+            "name": "vendor_product_count",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT product)"
+          },
+          {
+            "name": "vendor_device_coverage",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT dev_id)"
+          },
+          {
+            "name": "vendor_vulnerability_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN is_vulnerable = true THEN 1 END) * 100.0 / COUNT(*)"
+          },
+          {
+            "name": "vendor_patch_compliance_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN is_patched = true THEN 1 END) * 100.0 / COUNT(*)"
+          },
+          {
+            "name": "vendor_market_share",
+            "type": "DECIMAL",
+            "expression": "COUNT(*) * 100.0 / (SELECT COUNT(*) FROM software_inventory)"
+          }
+        ],
+        "properties": {
+          "displayName": "Vendor Diversity Metrics",
+          "description": "Analysis of software vendor distribution and associated risks"
+        }
+      },
+      {
+        "name": "software_lifecycle_metrics",
+        "baseObject": "software_inventory",
+        "description": "Software lifecycle and age distribution analysis",
+        "dimension": [
+          {
+            "name": "software_age_category",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "install_year",
+            "type": "INTEGER"
+          },
+          {
+            "name": "vendor_category",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "avg_software_age_days",
+            "type": "DECIMAL",
+            "expression": "AVG(days_since_install)"
+          },
+          {
+            "name": "new_installations",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN days_since_install <= 30 THEN 1 END)"
+          },
+          {
+            "name": "legacy_software_count",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN days_since_install > 365 THEN 1 END)"
+          },
+          {
+            "name": "software_refresh_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN days_since_install <= 365 THEN 1 END) * 100.0 / COUNT(*)"
+          },
+          {
+            "name": "installation_velocity",
+            "type": "DECIMAL",
+            "expression": "COUNT(*) * 1.0"
+          }
+        ],
+        "properties": {
+          "displayName": "Software Lifecycle Metrics",
+          "description": "Metrics for analyzing software lifecycle and modernization patterns"
+        }
+      },
+      {
+        "name": "security_posture_metrics",
+        "baseObject": "software_inventory",
+        "description": "Software security posture and risk assessment metrics",
+        "dimension": [
+          {
+            "name": "product_state",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "vendor_category",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "is_system_software",
+            "type": "BOOLEAN"
+          }
+        ],
+        "measure": [
+          {
+            "name": "security_score",
+            "type": "DECIMAL",
+            "expression": "AVG(patch_management_score)"
+          },
+          {
+            "name": "critical_system_vulnerabilities",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_system_software = true AND is_vulnerable = true THEN 1 END)"
+          },
+          {
+            "name": "application_vulnerabilities",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_system_software = false AND is_vulnerable = true THEN 1 END)"
+          },
+          {
+            "name": "unmanaged_software_count",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_unknown_state = true THEN 1 END)"
+          },
+          {
+            "name": "security_visibility_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN product_state IN ('PATCHED', 'VULNERABLE') THEN 1 END) * 100.0 / COUNT(*)"
+          }
+        ],
+        "properties": {
+          "displayName": "Security Posture Metrics",
+          "description": "Metrics for assessing overall software security posture and risk"
+        }
+      }
+    ],
+    "views": [
+      {
+        "name": "vulnerable_software_priority",
+        "statement": "SELECT vendor, product, version, COUNT(*) as instance_count, COUNT(DISTINCT dev_id) as affected_devices, AVG(days_since_install) as avg_age_days FROM software_inventory WHERE is_vulnerable = true GROUP BY vendor, product, version ORDER BY affected_devices DESC, instance_count DESC LIMIT 25",
+        "properties": {
+          "displayName": "Vulnerable Software Priority List",
+          "description": "Top 25 vulnerable software packages prioritized by device impact"
+        }
+      },
+      {
+        "name": "patch_compliance_dashboard",
+        "statement": "SELECT vendor_category, product_state, COUNT(*) as software_count, COUNT(*) * 100.0 / SUM(COUNT(*)) OVER () as percentage FROM software_inventory GROUP BY vendor_category, product_state ORDER BY vendor_category, CASE product_state WHEN 'PATCHED' THEN 1 WHEN 'VULNERABLE' THEN 2 ELSE 3 END",
+        "properties": {
+          "displayName": "Patch Compliance Dashboard",
+          "description": "Patch compliance status breakdown by vendor category"
+        }
+      },
+      {
+        "name": "software_age_analysis",
+        "statement": "SELECT software_age_category, COUNT(*) as software_count, COUNT(CASE WHEN is_vulnerable = true THEN 1 END) as vulnerable_count, COUNT(CASE WHEN is_patched = true THEN 1 END) as patched_count, COUNT(CASE WHEN is_vulnerable = true THEN 1 END) * 100.0 / COUNT(*) as vulnerability_rate FROM software_inventory GROUP BY software_age_category ORDER BY CASE software_age_category WHEN 'New (30 days)' THEN 1 WHEN 'Recent (90 days)' THEN 2 WHEN 'Mature (1 year)' THEN 3 ELSE 4 END",
+        "properties": {
+          "displayName": "Software Age vs Security Analysis",
+          "description": "Analysis of vulnerability rates across different software age categories"
+        }
+      },
+      {
+        "name": "vendor_security_scorecard",
+        "statement": "SELECT vendor, COUNT(*) as total_software, COUNT(CASE WHEN is_patched = true THEN 1 END) as patched_count, COUNT(CASE WHEN is_vulnerable = true THEN 1 END) as vulnerable_count, COUNT(CASE WHEN is_patched = true THEN 1 END) * 100.0 / COUNT(*) as patch_compliance_rate FROM software_inventory GROUP BY vendor HAVING COUNT(*) >= 5 ORDER BY patch_compliance_rate DESC, total_software DESC",
+        "properties": {
+          "displayName": "Vendor Security Scorecard",
+          "description": "Security performance scorecard for software vendors with significant presence"
+        }
+      },
+      {
+        "name": "patch_deployment_timeline",
+        "statement": "SELECT DATE_TRUNC('month', latest_patch_install_time) as patch_month, COUNT(*) as patches_installed, AVG(patch_gap_days) as avg_patch_delay_days FROM software_inventory WHERE latest_patch_install_time IS NOT NULL GROUP BY DATE_TRUNC('month', latest_patch_install_time) ORDER BY patch_month DESC LIMIT 12",
+        "properties": {
+          "displayName": "Patch Deployment Timeline",
+          "description": "Monthly patch deployment activity and average deployment delays"
+        }
+      },
+      {
+        "name": "system_vs_application_security",
+        "statement": "SELECT CASE WHEN is_system_software = true THEN 'System Software' ELSE 'Application Software' END as software_type, COUNT(*) as total_count, COUNT(CASE WHEN is_vulnerable = true THEN 1 END) as vulnerable_count, COUNT(CASE WHEN is_patched = true THEN 1 END) as patched_count, COUNT(CASE WHEN is_vulnerable = true THEN 1 END) * 100.0 / COUNT(*) as vulnerability_rate FROM software_inventory GROUP BY is_system_software",
+        "properties": {
+          "displayName": "System vs Application Security Analysis",
+          "description": "Comparative security analysis between system and application software"
+        }
+      },
+      {
+        "name": "unmanaged_software_inventory",
+        "statement": "SELECT vendor, product, version, COUNT(*) as instance_count, COUNT(DISTINCT dev_id) as device_count, MAX(store_updated_at) as last_seen FROM software_inventory WHERE is_unknown_state = true GROUP BY vendor, product, version ORDER BY device_count DESC, instance_count DESC",
+        "properties": {
+          "displayName": "Unmanaged Software Inventory",
+          "description": "Software installations with unknown security state requiring attention"
+        }
+      },
+      {
+        "name": "installation_trend_analysis",
+        "statement": "SELECT install_year, COUNT(*) as installations, COUNT(DISTINCT product) as unique_products, COUNT(DISTINCT vendor) as unique_vendors FROM software_inventory WHERE install_year >= EXTRACT(YEAR FROM CURRENT_DATE) - 5 GROUP BY install_year ORDER BY install_year DESC",
+        "properties": {
+          "displayName": "Software Installation Trends",
+          "description": "Year-over-year software installation trends and diversity"
+        }
+      }
+    ],
+    "enumDefinitions": [
+      {
+        "name": "ProductState",
+        "values": [
+          {
+            "name": "PATCHED",
+            "value": "PATCHED",
+            "properties": {
+              "description": "Software is up-to-date with latest security patches"
+            }
+          },
+          {
+            "name": "VULNERABLE",
+            "value": "VULNERABLE",
+            "properties": {
+              "description": "Software has known vulnerabilities requiring patches"
+            }
+          },
+          {
+            "name": "UNKNOWN",
+            "value": "UNKNOWN",
+            "properties": {
+              "description": "Software security state is unknown or unclear"
+            }
+          }
+        ],
+        "properties": {
+          "displayName": "Product Security States",
+          "description": "Possible security states for installed software"
+        }
+      },
+      {
+        "name": "SoftwareAgeCategory",
+        "values": [
+          {
+            "name": "New",
+            "value": "New (30 days)",
+            "properties": {
+              "description": "Software installed within the last 30 days"
+            }
+          },
+          {
+            "name": "Recent",
+            "value": "Recent (90 days)",
+            "properties": {
+              "description": "Software installed within the last 90 days"
+            }
+          },
+          {
+            "name": "Mature",
+            "value": "Mature (1 year)",
+            "properties": {
+              "description": "Software installed within the last year"
+            }
+          },
+          {
+            "name": "Legacy",
+            "value": "Legacy (>1 year)",
+            "properties": {
+              "description": "Software installed over a year ago"
+            }
+          }
+        ],
+        "properties": {
+          "displayName": "Software Age Categories",
+          "description": "Age-based categorization of software installations"
+        }
+      },
+      {
+        "name": "VendorCategory",
+        "values": [
+          {
+            "name": "Microsoft",
+            "value": "Microsoft",
+            "properties": {
+              "description": "Microsoft Corporation products"
+            }
+          },
+          {
+            "name": "VMware",
+            "value": "VMware",
+            "properties": {
+              "description": "VMware virtualization products"
+            }
+          },
+          {
+            "name": "RedHatEcosystem",
+            "value": "Red Hat Ecosystem",
+            "properties": {
+              "description": "Red Hat, Fedora, and CentOS products"
+            }
+          },
+          {
+            "name": "ThirdParty",
+            "value": "Third Party",
+            "properties": {
+              "description": "Other commercial and open source vendors"
+            }
+          },
+          {
+            "name": "UnknownOther",
+            "value": "Unknown/Other",
+            "properties": {
+              "description": "Unknown or unclassified vendors"
+            }
+          }
+        ],
+        "properties": {
+          "displayName": "Vendor Categories",
+          "description": "Categorized groupings of software vendors"
+        }
+      }
+    ],
+    "cumulativeMetrics": [
+      {
+        "name": "software_installation_trend",
+        "baseObject": "software_inventory",
+        "description": "Track software installation patterns over time",
+        "timeColumn": "install_time",
+        "aggregation": "COUNT",
+        "window": "MONTH",
+        "measure": {
+          "name": "monthly_installations",
+          "type": "INTEGER",
+          "expression": "COUNT(*)"
+        },
+        "dimensions": ["vendor_category", "product_state"],
+        "properties": {
+          "displayName": "Software Installation Trend",
+          "description": "Monthly tracking of software installation activity"
+        }
+      },
+      {
+        "name": "patch_deployment_trend",
+        "baseObject": "software_inventory",
+        "description": "Track patch deployment velocity over time",
+        "timeColumn": "latest_patch_install_time",
+        "aggregation": "COUNT",
+        "window": "WEEK",
+        "measure": {
+          "name": "weekly_patch_deployments",
+          "type": "INTEGER",
+          "expression": "COUNT(CASE WHEN latest_patch_install_time IS NOT NULL THEN 1 END)"
+        },
+        "dimensions": ["vendor_category"],
+        "properties": {
+          "displayName": "Patch Deployment Trend",
+          "description": "Weekly tracking of patch deployment activity"
+        }
+      },
+      {
+        "name": "vulnerability_exposure_trend",
+        "baseObject": "software_inventory",
+        "description": "Track vulnerability exposure trends over time",
+        "timeColumn": "store_updated_at",
+        "aggregation": "RATE",
+        "window": "DAY",
+        "measure": {
+          "name": "daily_vulnerability_rate",
+          "type": "DECIMAL",
+          "expression": "COUNT(CASE WHEN is_vulnerable = true THEN 1 END) * 100.0 / COUNT(*)"
+        },
+        "dimensions": ["vendor_category", "software_age_category"],
+        "properties": {
+          "displayName": "Vulnerability Exposure Trend",
+          "description": "Daily tracking of vulnerability exposure rates across the software inventory"
+        }
+      }
+    ]
+  }

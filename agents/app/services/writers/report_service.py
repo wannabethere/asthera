@@ -19,28 +19,17 @@ from app.services.servicebase import BaseService
 from app.core.engine import Engine
 from app.core.dependencies import get_llm
 
-# Import workflow models
-try:
-    from workflowservices.app.models.workflowmodels import (
-        ReportWorkflow, ThreadComponent, WorkflowState, ComponentType as WorkflowComponentType,
-        AlertType, AlertSeverity, AlertStatus
-    )
-    WORKFLOW_MODELS_AVAILABLE = True
-except ImportError:
-    # Fallback if workflow models are not available
-    WORKFLOW_MODELS_AVAILABLE = False
-    logger = logging.getLogger("lexy-ai-service")
-    logger.warning("Workflow models not available - using fallback models")
+
 
 logger = logging.getLogger("lexy-ai-service")
 
 
 class ReportService(BaseService):
-    """Service for generating comprehensive reports using the ReportOrchestratorPipeline and workflow models"""
+    """Pure API service for report operations that delegates to agent pipelines"""
     
     def __init__(self, engine: Engine = None):
-        """Initialize report service with ReportOrchestratorPipeline"""
-        # Initialize BaseService with empty pipelines dict (we'll use ReportOrchestratorPipeline directly)
+        """Initialize report service as a pure API layer"""
+        # Initialize BaseService with empty pipelines dict (we'll use agent pipelines directly)
         super().__init__(pipelines={})
         
         self._engine = engine
@@ -65,24 +54,24 @@ class ReportService(BaseService):
             logger.error(f"Error initializing Report Writing Agent: {e}")
             self._report_writing_agent = None
         
-        # Service registry for easy access
+        # Agent pipeline registry for report operations
         try:
             self.pipeline_container = PipelineContainer.initialize()
-            self._services = {
+            self._agent_pipelines = {
                 "conditional_formatting": self.pipeline_container.get_pipeline("conditional_formatting_generation"),
                 "simple_report": self.pipeline_container.get_pipeline("simple_report_generation")
             }
             
-            # Validate that required services are available
-            for service_name, service in self._services.items():
-                if service is None:
-                    logger.warning(f"Service '{service_name}' is not available - report functionality may be limited")
+            # Validate that required agent pipelines are available
+            for pipeline_name, pipeline in self._agent_pipelines.items():
+                if pipeline is None:
+                    logger.warning(f"Agent pipeline '{pipeline_name}' is not available - report functionality may be limited")
                 else:
-                    logger.info(f"Service '{service_name}' initialized successfully")
+                    logger.info(f"Agent pipeline '{pipeline_name}' initialized successfully")
                     
         except Exception as e:
-            logger.error(f"Error initializing report services: {e}")
-            self._services = {
+            logger.error(f"Error initializing report agent pipelines: {e}")
+            self._agent_pipelines = {
                 "conditional_formatting": None,
                 "simple_report": None
             }
@@ -91,7 +80,6 @@ class ReportService(BaseService):
         self._configuration_cache = {}
         self._execution_history = []
         self._report_templates = {}
-        self._workflow_cache = {}
         
         # Initialize default report templates
         self._initialize_default_templates()
@@ -108,8 +96,14 @@ class ReportService(BaseService):
                     "trends_analysis",
                     "recommendations"
                 ],
-                "writer_actor": WriterActorType.EXECUTIVE_ANALYST,
-                "business_goal": BusinessGoal.STRATEGIC_DECISION_MAKING
+                "writer_actor": WriterActorType.EXECUTIVE,
+                "business_goal": BusinessGoal(
+                    primary_objective="Strategic decision making",
+                    target_audience=["executives", "stakeholders"],
+                    decision_context="High-level strategic planning",
+                    success_metrics=["strategic alignment", "decision quality"],
+                    timeframe="quarterly"
+                )
             },
             "detailed_analysis": {
                 "name": "Detailed Analysis Report",
@@ -122,8 +116,14 @@ class ReportService(BaseService):
                     "conclusions",
                     "appendix"
                 ],
-                "writer_actor": WriterActorType.DATA_ANALYST,
-                "business_goal": BusinessGoal.OPERATIONAL_INSIGHTS
+                "writer_actor": WriterActorType.ANALYST,
+                "business_goal": BusinessGoal(
+                    primary_objective="Operational insights",
+                    target_audience=["operations team", "managers"],
+                    decision_context="Day-to-day operational decisions",
+                    success_metrics=["efficiency", "productivity"],
+                    timeframe="weekly"
+                )
             },
             "performance_review": {
                 "name": "Performance Review Report",
@@ -135,8 +135,14 @@ class ReportService(BaseService):
                     "benchmarks",
                     "action_items"
                 ],
-                "writer_actor": WriterActorType.PERFORMANCE_ANALYST,
-                "business_goal": BusinessGoal.PERFORMANCE_OPTIMIZATION
+                "writer_actor": WriterActorType.ANALYST,
+                "business_goal": BusinessGoal(
+                    primary_objective="Performance optimization",
+                    target_audience=["performance team", "management"],
+                    decision_context="Performance improvement decisions",
+                    success_metrics=["performance metrics", "optimization results"],
+                    timeframe="monthly"
+                )
             },
             "trend_analysis": {
                 "name": "Trend Analysis Report",
@@ -148,14 +154,20 @@ class ReportService(BaseService):
                     "drivers_analysis",
                     "future_outlook"
                 ],
-                "writer_actor": WriterActorType.TREND_ANALYST,
-                "business_goal": BusinessGoal.TREND_ANALYSIS
+                "writer_actor": WriterActorType.DATA_SCIENTIST,
+                "business_goal": BusinessGoal(
+                    primary_objective="Trend analysis",
+                    target_audience=["data scientists", "analysts"],
+                    decision_context="Trend-based strategic decisions",
+                    success_metrics=["trend accuracy", "prediction quality"],
+                    timeframe="quarterly"
+                )
             }
         }
     
     async def generate_report_from_workflow(
         self,
-        workflow_data: Union[Dict[str, Any], ReportWorkflow, str],
+        workflow_data: Union[Dict[str, Any], str],
         report_queries: List[Dict[str, Any]],
         project_id: str,
         natural_language_query: Optional[str] = None,
@@ -165,10 +177,10 @@ class ReportService(BaseService):
         configuration: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Generate a report using workflow data from API or JSON file
+        Generate a report using workflow data - delegates to agent pipelines
         
         Args:
-            workflow_data: Workflow data as dict, ReportWorkflow object, or JSON file path
+            workflow_data: Workflow data as dict or JSON file path
             report_queries: List of SQL queries for report data
             project_id: Project identifier
             natural_language_query: Natural language query for conditional formatting (optional)
@@ -181,7 +193,7 @@ class ReportService(BaseService):
             Dictionary containing complete report results
         """
         try:
-            # Parse workflow data
+            # Parse workflow data (simplified - no database models)
             workflow_info = self._parse_workflow_data(workflow_data)
             
             if not workflow_info:
@@ -208,7 +220,7 @@ class ReportService(BaseService):
                 }
             )
             
-            # Generate comprehensive report using workflow data
+            # Delegate to agent pipeline for processing
             result = await self.generate_comprehensive_report(
                 report_queries=report_queries,
                 project_id=project_id,
@@ -248,9 +260,9 @@ class ReportService(BaseService):
     
     def _parse_workflow_data(
         self, 
-        workflow_data: Union[Dict[str, Any], ReportWorkflow, str]
+        workflow_data: Union[Dict[str, Any], str]
     ) -> Optional[Dict[str, Any]]:
-        """Parse workflow data from various input formats"""
+        """Parse workflow data from various input formats (no database dependencies)"""
         
         try:
             if isinstance(workflow_data, str):
@@ -265,10 +277,6 @@ class ReportService(BaseService):
                 # Already a dictionary
                 workflow_data["source"] = "dict_input"
                 return workflow_data
-            
-            elif WORKFLOW_MODELS_AVAILABLE and isinstance(workflow_data, ReportWorkflow):
-                # SQLAlchemy model object
-                return self._convert_workflow_model_to_dict(workflow_data)
             
             else:
                 logger.error(f"Unsupported workflow data type: {type(workflow_data)}")
@@ -289,66 +297,7 @@ class ReportService(BaseService):
             logger.error(f"Error loading workflow from JSON file {file_path}: {e}")
             raise
     
-    def _convert_workflow_model_to_dict(self, workflow: ReportWorkflow) -> Dict[str, Any]:
-        """Convert SQLAlchemy workflow model to dictionary"""
-        try:
-            workflow_dict = {
-                "id": str(workflow.id),
-                "report_id": str(workflow.report_id),
-                "user_id": str(workflow.user_id),
-                "state": workflow.state.value if hasattr(workflow.state, 'value') else str(workflow.state),
-                "current_step": workflow.current_step,
-                "workflow_metadata": workflow.workflow_metadata or {},
-                "error_message": workflow.error_message,
-                "created_at": workflow.created_at.isoformat() if workflow.created_at else None,
-                "updated_at": workflow.updated_at.isoformat() if workflow.updated_at else None,
-                "completed_at": workflow.completed_at.isoformat() if workflow.completed_at else None,
-                "source": "workflow_model"
-            }
-            
-            # Add thread components if available
-            if hasattr(workflow, 'thread_components') and workflow.thread_components:
-                workflow_dict["thread_components"] = [
-                    self._convert_thread_component_to_dict(comp) 
-                    for comp in workflow.thread_components
-                ]
-            
-            return workflow_dict
-            
-        except Exception as e:
-            logger.error(f"Error converting workflow model to dict: {e}")
-            raise
-    
-    def _convert_thread_component_to_dict(self, component: ThreadComponent) -> Dict[str, Any]:
-        """Convert SQLAlchemy thread component to dictionary"""
-        try:
-            component_dict = {
-                "id": str(component.id),
-                "workflow_id": str(component.workflow_id) if component.workflow_id else None,
-                "report_workflow_id": str(component.report_workflow_id) if component.report_workflow_id else None,
-                "thread_message_id": str(component.thread_message_id) if component.thread_message_id else None,
-                "component_type": component.component_type.value if hasattr(component.component_type, 'value') else str(component.component_type),
-                "sequence_order": component.sequence_order,
-                "question": component.question,
-                "description": component.description,
-                "overview": component.overview,
-                "chart_config": component.chart_config,
-                "table_config": component.table_config,
-                "alert_config": component.alert_config,
-                "alert_status": component.alert_status.value if component.alert_status and hasattr(component.alert_status, 'value') else str(component.alert_status) if component.alert_status else None,
-                "last_triggered": component.last_triggered.isoformat() if component.last_triggered else None,
-                "trigger_count": component.trigger_count,
-                "configuration": component.configuration or {},
-                "is_configured": component.is_configured,
-                "created_at": component.created_at.isoformat() if component.created_at else None,
-                "updated_at": component.updated_at.isoformat() if component.updated_at else None
-            }
-            
-            return component_dict
-            
-        except Exception as e:
-            logger.error(f"Error converting thread component to dict: {e}")
-            raise
+
     
     def _extract_thread_components_from_workflow(self, workflow_info: Dict[str, Any]) -> List[ThreadComponentData]:
         """Extract thread components from workflow data and convert to ThreadComponentData"""
@@ -421,17 +370,17 @@ class ReportService(BaseService):
             # Determine from workflow state or type
             workflow_state = workflow_info.get("state", "").lower()
             if "executive" in workflow_state or "summary" in workflow_state:
-                return WriterActorType.EXECUTIVE_ANALYST
+                return WriterActorType.EXECUTIVE
             elif "performance" in workflow_state or "kpi" in workflow_state:
-                return WriterActorType.PERFORMANCE_ANALYST
+                return WriterActorType.ANALYST
             elif "trend" in workflow_state or "forecast" in workflow_state:
-                return WriterActorType.TREND_ANALYST
+                return WriterActorType.DATA_SCIENTIST
             else:
-                return WriterActorType.DATA_ANALYST
+                return WriterActorType.ANALYST
                 
         except Exception as e:
             logger.error(f"Error determining writer actor from workflow: {e}")
-            return WriterActorType.DATA_ANALYST
+            return WriterActorType.ANALYST
     
     def _determine_business_goal_from_workflow(self, workflow_info: Dict[str, Any]) -> BusinessGoal:
         """Determine business goal from workflow metadata"""
@@ -440,26 +389,56 @@ class ReportService(BaseService):
             
             # Check for explicit business goal configuration
             if "business_goal" in metadata:
-                goal_name = metadata["business_goal"].upper()
-                try:
-                    return BusinessGoal[goal_name]
-                except KeyError:
-                    logger.warning(f"Unknown business goal: {goal_name}")
+                goal_config = metadata["business_goal"]
+                if isinstance(goal_config, dict):
+                    return BusinessGoal(**goal_config)
+                else:
+                    logger.warning(f"Business goal should be a dict, got: {type(goal_config)}")
             
             # Determine from workflow state or type
             workflow_state = workflow_info.get("state", "").lower()
             if "executive" in workflow_state or "summary" in workflow_state:
-                return BusinessGoal.STRATEGIC_DECISION_MAKING
+                return BusinessGoal(
+                    primary_objective="Strategic decision making",
+                    target_audience=["executives", "stakeholders"],
+                    decision_context="High-level strategic planning",
+                    success_metrics=["strategic alignment", "decision quality"],
+                    timeframe="quarterly"
+                )
             elif "performance" in workflow_state or "kpi" in workflow_state:
-                return BusinessGoal.PERFORMANCE_OPTIMIZATION
+                return BusinessGoal(
+                    primary_objective="Performance optimization",
+                    target_audience=["performance team", "management"],
+                    decision_context="Performance improvement decisions",
+                    success_metrics=["performance metrics", "optimization results"],
+                    timeframe="monthly"
+                )
             elif "trend" in workflow_state or "forecast" in workflow_state:
-                return BusinessGoal.TREND_ANALYSIS
+                return BusinessGoal(
+                    primary_objective="Trend analysis",
+                    target_audience=["data scientists", "analysts"],
+                    decision_context="Trend-based strategic decisions",
+                    success_metrics=["trend accuracy", "prediction quality"],
+                    timeframe="quarterly"
+                )
             else:
-                return BusinessGoal.OPERATIONAL_INSIGHTS
+                return BusinessGoal(
+                    primary_objective="Operational insights",
+                    target_audience=["operations team", "managers"],
+                    decision_context="Day-to-day operational decisions",
+                    success_metrics=["efficiency", "productivity"],
+                    timeframe="weekly"
+                )
                 
         except Exception as e:
             logger.error(f"Error determining business goal from workflow: {e}")
-            return BusinessGoal.OPERATIONAL_INSIGHTS
+            return BusinessGoal(
+                primary_objective="Operational insights",
+                target_audience=["operations team", "managers"],
+                decision_context="Day-to-day operational decisions",
+                success_metrics=["efficiency", "productivity"],
+                timeframe="weekly"
+            )
     
     def _create_report_context_from_workflow(
         self, 
@@ -637,7 +616,7 @@ class ReportService(BaseService):
         status_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None
     ) -> Dict[str, Any]:
         """
-        Generate a simple report without comprehensive components
+        Generate a simple report without comprehensive components using agent pipelines
         
         Args:
             report_queries: List of SQL queries for report data
@@ -652,7 +631,7 @@ class ReportService(BaseService):
             Dictionary containing simple report results
         """
         try:
-            if not self._services["simple_report"]:
+            if not self._agent_pipelines["simple_report"]:
                 raise RuntimeError("Simple Report Generation Pipeline is not available")
             
             # Send initial status update
@@ -665,8 +644,8 @@ class ReportService(BaseService):
                 }
             )
             
-            # Execute simple report generation
-            result = await self._services["simple_report"].run(
+            # Execute simple report generation using agent pipeline
+            result = await self._agent_pipelines["simple_report"].run(
                 report_queries=report_queries,
                 enhanced_context=report_context,
                 project_id=project_id,
@@ -715,7 +694,7 @@ class ReportService(BaseService):
         status_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None
     ) -> Dict[str, Any]:
         """
-        Generate only conditional formatting without executing report queries
+        Generate only conditional formatting without executing report queries using agent pipelines
         
         Args:
             natural_language_query: Natural language query for conditional formatting
@@ -729,7 +708,7 @@ class ReportService(BaseService):
             Dictionary containing conditional formatting configuration
         """
         try:
-            if not self._services["conditional_formatting"]:
+            if not self._agent_pipelines["conditional_formatting"]:
                 raise RuntimeError("Conditional Formatting Generation Pipeline is not available")
             
             # Send initial status update
@@ -742,8 +721,8 @@ class ReportService(BaseService):
                 }
             )
             
-            # Execute conditional formatting generation
-            result = await self._services["conditional_formatting"].run(
+            # Execute conditional formatting generation using agent pipeline
+            result = await self._agent_pipelines["conditional_formatting"].run(
                 natural_language_query=natural_language_query,
                 dashboard_context=report_context,  # Reuse dashboard context structure
                 project_id=project_id,
@@ -797,8 +776,14 @@ class ReportService(BaseService):
         else:
             # Use default configuration
             thread_components = self._create_default_components()
-            writer_actor = writer_actor or WriterActorType.DATA_ANALYST
-            business_goal = business_goal or BusinessGoal.OPERATIONAL_INSIGHTS
+            writer_actor = writer_actor or WriterActorType.ANALYST
+            business_goal = business_goal or BusinessGoal(
+                primary_objective="Operational insights",
+                target_audience=["operations team", "managers"],
+                decision_context="Day-to-day operational decisions",
+                success_metrics=["efficiency", "productivity"],
+                timeframe="weekly"
+            )
         
         return thread_components, writer_actor, business_goal
     
@@ -1053,7 +1038,7 @@ class ReportService(BaseService):
         return self._execution_history[-limit:] if self._execution_history else []
     
     def get_service_status(self) -> Dict[str, Any]:
-        """Get status of all report services"""
+        """Get status of all report agent pipelines"""
         return {
             "report_orchestrator": {
                 "available": self._report_orchestrator is not None,
@@ -1064,11 +1049,11 @@ class ReportService(BaseService):
                 "initialized": True
             },
             "conditional_formatting": {
-                "available": "conditional_formatting" in self._services,
+                "available": self._agent_pipelines.get("conditional_formatting") is not None,
                 "initialized": True
             },
             "simple_report": {
-                "available": "simple_report" in self._services,
+                "available": self._agent_pipelines.get("simple_report") is not None,
                 "initialized": True
             },
             "pipeline_container": {
@@ -1093,26 +1078,17 @@ class ReportService(BaseService):
         super().clear_cache()
 
 
-# Factory function for creating report service
-def create_report_service(engine: Engine = None) -> ReportService:
-    """
-    Factory function to create a report service
-    
-    Args:
-        engine: Database engine instance (optional)
-    
-    Returns:
-        ReportService instance with all pipelines initialized
-    """
-    return ReportService(engine=engine)
+# Note: Factory function moved to SQLServiceContainer.create_report_service()
 
 
 # Example usage
 async def example_report_service_usage():
-    """Example of using the report service"""
+    """Example of using the refactored report service as a pure API layer"""
     
-    # Create report service
-    report_service = create_report_service()
+    # Get report service from service container
+    # Note: In production, this would be injected via dependency injection
+    # For this example, we'll create the service directly
+    report_service = ReportService()
     
     # Sample report queries
     report_queries = [

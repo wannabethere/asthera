@@ -169,6 +169,7 @@ class RetrievalHelper:
                     schema_info = {
                         "table_name": result.get("table_name", ""),
                         "table_ddl": result.get("table_ddl", ""),
+                        "relationships": result.get("relationships", []),
                         "has_calculated_field": schema_result.get("has_calculated_field", False),
                         "has_metric": schema_result.get("has_metric", False)
                     }
@@ -556,6 +557,7 @@ class RetrievalHelper:
             
             table_names = []
             schema_contexts = []
+            all_relationships = []
             
             if schema_result and "schemas" in schema_result:
                 for schema in schema_result["schemas"]:
@@ -569,12 +571,19 @@ class RetrievalHelper:
                         table_ddl = schema.get("table_ddl", "")
                         if table_ddl:
                             schema_contexts.append(table_ddl)
+                        
+                        # Extract relationships from schema
+                        relationships = schema.get("relationships", [])
+                        if relationships:
+                            all_relationships.extend(relationships)
             
             return {
                 "table_names": table_names,
                 "schema_contexts": schema_contexts,
+                "relationships": all_relationships,
                 "total_tables": len(table_names),
                 "total_contexts": len(schema_contexts),
+                "total_relationships": len(all_relationships),
                 "project_id": project_id,
                 "query": query,
                 "has_calculated_field": schema_result.get("has_calculated_field", False),
@@ -587,8 +596,10 @@ class RetrievalHelper:
             return {
                 "table_names": [],
                 "schema_contexts": [],
+                "relationships": [],
                 "total_tables": 0,
                 "total_contexts": 0,
+                "total_relationships": 0,
                 "project_id": project_id,
                 "query": query,
                 "has_calculated_field": False,

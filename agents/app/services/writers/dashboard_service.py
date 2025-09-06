@@ -6,63 +6,68 @@ import json
 from pathlib import Path
 
 from app.agents.pipelines.pipeline_container import PipelineContainer
+from app.agents.pipelines.writers.dashboard_orchestrator_pipeline import DashboardOrchestratorPipeline, create_dashboard_orchestrator_pipeline
 from app.agents.nodes.writers.dashboard_models import DashboardConfiguration
 from app.services.servicebase import BaseService
-
-# Import workflow models
-try:
-    from workflowservices.app.models.workflowmodels import (
-        DashboardWorkflow, ThreadComponent, WorkflowState, ComponentType as WorkflowComponentType,
-        AlertType, AlertSeverity, AlertStatus
-    )
-    WORKFLOW_MODELS_AVAILABLE = True
-except ImportError:
-    # Fallback if workflow models are not available
-    WORKFLOW_MODELS_AVAILABLE = False
-    logger = logging.getLogger("lexy-ai-service")
-    logger.warning("Workflow models not available - using fallback models")
+from app.core.engine_provider import EngineProvider
+from app.core.dependencies import get_llm
 
 logger = logging.getLogger("lexy-ai-service")
 
 
 class DashboardService(BaseService):
-    """Enhanced dashboard service using PipelineContainer for all operations with workflow integration"""
+    """Pure API service for dashboard operations that delegates to agent pipelines"""
     
     def __init__(self):
-        """Initialize dashboard service with PipelineContainer and workflow support"""
+        """Initialize dashboard service as a pure API layer"""
         # Initialize BaseService with empty pipelines dict (we'll use PipelineContainer directly)
         super().__init__(pipelines={})
         
+        self._engine = EngineProvider.get_engine()
+        self._llm = get_llm()
+        
+        # Initialize the dashboard orchestrator pipeline
+        try:
+            self._dashboard_orchestrator = create_dashboard_orchestrator_pipeline(
+                engine=self._engine,
+                llm=self._llm
+            )
+            logger.info("Dashboard Orchestrator Pipeline initialized successfully")
+        except Exception as e:
+            logger.error(f"Error initializing Dashboard Orchestrator Pipeline: {e}")
+            self._dashboard_orchestrator = None
+        
         self.pipeline_container = PipelineContainer.initialize()
         
-        # Service registry for easy access
+        # Agent pipeline registry for dashboard operations
         try:
-            self._services = {
-                "dashboard_streaming": self.pipeline_container.get_pipeline("dashboard_streaming"),
+            self._agent_pipelines = {
+                "dashboard_orchestrator": self.pipeline_container.get_pipeline("dashboard_orchestrator"),
                 "conditional_formatting": self.pipeline_container.get_pipeline("conditional_formatting_generation"),
+                "dashboard_streaming": self.pipeline_container.get_pipeline("dashboard_streaming"),
                 "enhanced_dashboard": self.pipeline_container.get_pipeline("enhanced_dashboard_streaming")
             }
             
-            # Validate that required services are available
-            for service_name, service in self._services.items():
-                if service is None:
-                    logger.warning(f"Service '{service_name}' is not available - dashboard functionality may be limited")
+            # Validate that required agent pipelines are available
+            for pipeline_name, pipeline in self._agent_pipelines.items():
+                if pipeline is None:
+                    logger.warning(f"Agent pipeline '{pipeline_name}' is not available - dashboard functionality may be limited")
                 else:
-                    logger.info(f"Service '{service_name}' initialized successfully")
+                    logger.info(f"Agent pipeline '{pipeline_name}' initialized successfully")
                     
         except Exception as e:
-            logger.error(f"Error initializing dashboard services: {e}")
-            # Set all services to None to prevent crashes
-            self._services = {
-                "dashboard_streaming": None,
+            logger.error(f"Error initializing dashboard agent pipelines: {e}")
+            # Set all pipelines to None to prevent crashes
+            self._agent_pipelines = {
+                "dashboard_orchestrator": None,
                 "conditional_formatting": None,
+                "dashboard_streaming": None,
                 "enhanced_dashboard": None
             }
         
         # Configuration cache and execution history
         self._configuration_cache = {}
         self._execution_history = []
-        self._workflow_cache = {}
         
         # Initialize default dashboard templates
         self._initialize_default_templates()
@@ -122,7 +127,7 @@ class DashboardService(BaseService):
     
     async def process_dashboard_from_workflow(
         self,
-        workflow_data: Union[Dict[str, Any], DashboardWorkflow, str],
+        workflow_data: Union[Dict[str, Any], str],
         dashboard_queries: List[Dict[str, Any]],
         project_id: str,
         natural_language_query: Optional[str] = None,
@@ -131,10 +136,10 @@ class DashboardService(BaseService):
         status_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None
     ) -> Dict[str, Any]:
         """
-        Process dashboard using workflow data from API or JSON file
+        Process dashboard using workflow data - delegates to agent pipelines
         
         Args:
-            workflow_data: Workflow data as dict, DashboardWorkflow object, or JSON file path
+            workflow_data: Workflow data as dict or JSON file path
             dashboard_queries: List of SQL queries for dashboard charts
             project_id: Project identifier
             natural_language_query: Natural language query for conditional formatting (optional)
@@ -146,19 +151,18 @@ class DashboardService(BaseService):
             Complete dashboard result with workflow-driven configuration
         """
         try:
-            # Parse workflow data
-            workflow_info = self._parse_dashboard_workflow_data(workflow_data)
+            # Parse workflow data (simplified - no database models)
+            workflow_info = self._parse_workflow_data(workflow_data)
             
             if not workflow_info:
                 raise ValueError("Invalid dashboard workflow data provided")
             
             # Extract dashboard configuration from workflow
             dashboard_config = self._extract_dashboard_config_from_workflow(workflow_info)
-            thread_components = self._extract_thread_components_from_workflow(workflow_info)
             
             # Create enhanced dashboard context
             enhanced_context = self._create_enhanced_dashboard_context(
-                workflow_info, dashboard_config, thread_components
+                workflow_info, dashboard_config
             )
             
             # Send initial status update
@@ -169,13 +173,12 @@ class DashboardService(BaseService):
                     "project_id": project_id,
                     "workflow_id": workflow_info.get("id"),
                     "workflow_state": workflow_info.get("state"),
-                    "total_components": len(thread_components),
                     "total_queries": len(dashboard_queries),
                     "dashboard_template": dashboard_config.get("template")
                 }
             )
             
-            # Process dashboard with workflow-driven configuration
+            # Delegate to agent pipeline for processing
             result = await self.process_dashboard_with_conditional_formatting(
                 natural_language_query=natural_language_query,
                 dashboard_queries=dashboard_queries,
@@ -191,7 +194,6 @@ class DashboardService(BaseService):
                 "workflow_id": workflow_info.get("id"),
                 "workflow_state": workflow_info.get("state"),
                 "workflow_type": "dashboard_workflow",
-                "components_processed": len(thread_components),
                 "dashboard_template": dashboard_config.get("template"),
                 "workflow_source": workflow_info.get("source", "unknown")
             }
@@ -210,17 +212,17 @@ class DashboardService(BaseService):
             )
             raise
     
-    def _parse_dashboard_workflow_data(
+    def _parse_workflow_data(
         self, 
-        workflow_data: Union[Dict[str, Any], DashboardWorkflow, str]
+        workflow_data: Union[Dict[str, Any], str]
     ) -> Optional[Dict[str, Any]]:
-        """Parse dashboard workflow data from various input formats"""
+        """Parse workflow data from various input formats (no database dependencies)"""
         
         try:
             if isinstance(workflow_data, str):
                 # Assume it's a file path
                 if Path(workflow_data).exists():
-                    return self._load_dashboard_workflow_from_json_file(workflow_data)
+                    return self._load_workflow_from_json_file(workflow_data)
                 else:
                     # Try to parse as JSON string
                     return json.loads(workflow_data)
@@ -230,89 +232,26 @@ class DashboardService(BaseService):
                 workflow_data["source"] = "dict_input"
                 return workflow_data
             
-            elif WORKFLOW_MODELS_AVAILABLE and isinstance(workflow_data, DashboardWorkflow):
-                # SQLAlchemy model object
-                return self._convert_dashboard_workflow_model_to_dict(workflow_data)
-            
             else:
-                logger.error(f"Unsupported dashboard workflow data type: {type(workflow_data)}")
+                logger.error(f"Unsupported workflow data type: {type(workflow_data)}")
                 return None
                 
         except Exception as e:
-            logger.error(f"Error parsing dashboard workflow data: {e}")
+            logger.error(f"Error parsing workflow data: {e}")
             return None
     
-    def _load_dashboard_workflow_from_json_file(self, file_path: str) -> Dict[str, Any]:
-        """Load dashboard workflow data from JSON file"""
+    def _load_workflow_from_json_file(self, file_path: str) -> Dict[str, Any]:
+        """Load workflow data from JSON file"""
         try:
             with open(file_path, 'r') as f:
                 workflow_data = json.load(f)
                 workflow_data["source"] = "json_file"
                 return workflow_data
         except Exception as e:
-            logger.error(f"Error loading dashboard workflow from JSON file {file_path}: {e}")
+            logger.error(f"Error loading workflow from JSON file {file_path}: {e}")
             raise
     
-    def _convert_dashboard_workflow_model_to_dict(self, workflow: DashboardWorkflow) -> Dict[str, Any]:
-        """Convert SQLAlchemy dashboard workflow model to dictionary"""
-        try:
-            workflow_dict = {
-                "id": str(workflow.id),
-                "dashboard_id": str(workflow.dashboard_id),
-                "user_id": str(workflow.user_id),
-                "state": workflow.state.value if hasattr(workflow.state, 'value') else str(workflow.state),
-                "current_step": workflow.current_step,
-                "workflow_metadata": workflow.workflow_metadata or {},
-                "error_message": workflow.error_message,
-                "created_at": workflow.created_at.isoformat() if workflow.created_at else None,
-                "updated_at": workflow.updated_at.isoformat() if workflow.updated_at else None,
-                "completed_at": workflow.completed_at.isoformat() if workflow.completed_at else None,
-                "source": "workflow_model"
-            }
-            
-            # Add thread components if available
-            if hasattr(workflow, 'thread_components') and workflow.thread_components:
-                workflow_dict["thread_components"] = [
-                    self._convert_thread_component_to_dict(comp) 
-                    for comp in workflow.thread_components
-                ]
-            
-            return workflow_dict
-            
-        except Exception as e:
-            logger.error(f"Error converting dashboard workflow model to dict: {e}")
-            raise
-    
-    def _convert_thread_component_to_dict(self, component: ThreadComponent) -> Dict[str, Any]:
-        """Convert SQLAlchemy thread component to dictionary"""
-        try:
-            component_dict = {
-                "id": str(component.id),
-                "workflow_id": str(component.workflow_id) if component.workflow_id else None,
-                "report_workflow_id": str(component.report_workflow_id) if component.report_workflow_id else None,
-                "thread_message_id": str(component.thread_message_id) if component.thread_message_id else None,
-                "component_type": component.component_type.value if hasattr(component.component_type, 'value') else str(component.component_type),
-                "sequence_order": component.sequence_order,
-                "question": component.question,
-                "description": component.description,
-                "overview": component.overview,
-                "chart_config": component.chart_config,
-                "table_config": component.table_config,
-                "alert_config": component.alert_config,
-                "alert_status": component.alert_status.value if component.alert_status and hasattr(component.alert_status, 'value') else str(component.alert_status) if component.alert_status else None,
-                "last_triggered": component.last_triggered.isoformat() if component.last_triggered else None,
-                "trigger_count": component.trigger_count,
-                "configuration": component.configuration or {},
-                "is_configured": component.is_configured,
-                "created_at": component.created_at.isoformat() if component.created_at else None,
-                "updated_at": component.updated_at.isoformat() if component.updated_at else None
-            }
-            
-            return component_dict
-            
-        except Exception as e:
-            logger.error(f"Error converting thread component to dict: {e}")
-            raise
+
     
     def _extract_dashboard_config_from_workflow(self, workflow_info: Dict[str, Any]) -> Dict[str, Any]:
         """Extract dashboard configuration from workflow data"""
@@ -349,25 +288,10 @@ class DashboardService(BaseService):
             logger.error(f"Error extracting dashboard config from workflow: {e}")
             return self._dashboard_templates.get("operational_dashboard", {})
     
-    def _extract_thread_components_from_workflow(self, workflow_info: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Extract thread components from workflow data"""
-        try:
-            components = workflow_info.get("thread_components", [])
-            
-            # Sort by sequence order
-            components.sort(key=lambda x: x.get("sequence_order", 0))
-            
-            return components
-            
-        except Exception as e:
-            logger.error(f"Error extracting thread components from workflow: {e}")
-            return []
-    
     def _create_enhanced_dashboard_context(
         self,
         workflow_info: Dict[str, Any],
-        dashboard_config: Dict[str, Any],
-        thread_components: List[Dict[str, Any]]
+        dashboard_config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Create enhanced dashboard context from workflow data"""
         try:
@@ -394,9 +318,10 @@ class DashboardService(BaseService):
                 "workflow_metadata": metadata
             }
             
-            # Add component-specific configurations
+            # Add component-specific configurations if available
+            components = workflow_info.get("thread_components", [])
             context["components"] = []
-            for comp in thread_components:
+            for comp in components:
                 component_config = {
                     "id": comp.get("id"),
                     "type": comp.get("component_type"),
@@ -434,7 +359,7 @@ class DashboardService(BaseService):
         status_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None
     ) -> Dict[str, Any]:
         """
-        Process dashboard with conditional formatting using PipelineContainer
+        Process dashboard with conditional formatting using agent pipelines
         
         Args:
             natural_language_query: Natural language query for conditional formatting
@@ -465,138 +390,80 @@ class DashboardService(BaseService):
                 "workflow_id": dashboard_context.get("workflow_id")
             })
             
-            # Step 1: Process conditional formatting if provided
-            conditional_formatting_result = None
-            chart_configurations = {}
-            
-            if natural_language_query and natural_language_query.strip():
-                # Check if conditional formatting service is available
-                if not self._services["conditional_formatting"]:
-                    error_msg = "Conditional formatting service is not available"
-                    logger.error(error_msg)
-                    send_status_update("conditional_formatting_failed", {
-                        "error": error_msg,
-                        "project_id": project_id
-                    })
-                    # Continue without conditional formatting
-                    chart_configurations = {}
-                else:
-                    send_status_update("conditional_formatting_started", {
-                        "query": natural_language_query,
-                        "project_id": project_id
-                    })
-                    
-                    # Use the conditional formatting pipeline from PipelineContainer
-                    conditional_formatting_result = await self._services["conditional_formatting"].run(
-                        natural_language_query=natural_language_query,
-                        dashboard_context=dashboard_context,
-                        project_id=project_id,
-                        additional_context=additional_context,
-                        time_filters=time_filters,
-                        status_callback=self._create_nested_status_callback(send_status_update, "conditional_formatting")
-                    )
-                
-                if conditional_formatting_result and conditional_formatting_result.get("post_process", {}).get("success"):
-                    chart_configurations = conditional_formatting_result.get("post_process", {}).get("chart_configurations", {})
-                    send_status_update("conditional_formatting_completed", {
-                        "total_chart_configs": len(chart_configurations),
-                        "project_id": project_id
-                    })
-                else:
-                    error_msg = conditional_formatting_result.get("post_process", {}).get("error") if conditional_formatting_result else "Conditional formatting failed"
-                    send_status_update("conditional_formatting_failed", {
-                        "error": error_msg,
-                        "project_id": project_id
-                    })
-            
-            # Step 2: Apply conditional formatting to dashboard queries
-            enhanced_queries = self._apply_conditional_formatting_to_queries(
-                dashboard_queries, 
-                chart_configurations,
-                send_status_update
-            )
-            
-            # Step 3: Execute dashboard with enhanced queries
-            if not self._services["dashboard_streaming"]:
-                error_msg = "Dashboard streaming service is not available"
+            # Use dashboard orchestrator pipeline for complete processing
+            if not self._agent_pipelines["dashboard_orchestrator"]:
+                error_msg = "Dashboard orchestrator pipeline is not available"
                 logger.error(error_msg)
-                send_status_update("dashboard_execution_failed", {
+                send_status_update("dashboard_processing_failed", {
                     "error": error_msg,
                     "project_id": project_id
                 })
                 raise RuntimeError(error_msg)
             
-            send_status_update("dashboard_execution_started", {
-                "total_enhanced_queries": len(enhanced_queries),
-                "project_id": project_id
+            send_status_update("dashboard_orchestration_started", {
+                "project_id": project_id,
+                "total_queries": len(dashboard_queries)
             })
             
-            dashboard_result = await self._services["dashboard_streaming"].run(
-                queries=enhanced_queries,
-                status_callback=self._create_nested_status_callback(status_callback, "dashboard"),
-                configuration={
-                    "concurrent_execution": True,
-                    "max_concurrent_queries": 5,
-                    "continue_on_error": True,
-                    "stream_intermediate_results": True
-                },
-                project_id=project_id
+            # Delegate to dashboard orchestrator pipeline
+            result = await self._agent_pipelines["dashboard_orchestrator"].run(
+                dashboard_queries=dashboard_queries,
+                        natural_language_query=natural_language_query,
+                        dashboard_context=dashboard_context,
+                        project_id=project_id,
+                        additional_context=additional_context,
+                        time_filters=time_filters,
+                status_callback=self._create_nested_status_callback(send_status_update, "orchestrator")
             )
             
-            # Step 4: Apply chart adjustments to results
-            if chart_configurations and isinstance(chart_configurations, dict):
-                send_status_update("chart_adjustments_started", {
-                    "total_adjustments": len(chart_configurations),
-                    "project_id": project_id
+            # Extract results from pipeline response
+            if result.get("post_process", {}).get("success"):
+                dashboard_results = result.get("post_process", {}).get("dashboard_results", {})
+                enhanced_dashboard = result.get("post_process", {}).get("enhanced_dashboard", {})
+                orchestration_metadata = result.get("post_process", {}).get("orchestration_metadata", {})
+                
+                # Prepare final response
+                final_result = {
+                    "success": True,
+                    "dashboard_data": dashboard_results,
+                    "enhanced_dashboard": enhanced_dashboard,
+                    "dashboard_config": dashboard_context,
+                    "metadata": {
+                        "project_id": project_id,
+                        "natural_language_query": natural_language_query,
+                        "total_queries": len(dashboard_queries),
+                        "conditional_formatting_applied": bool(enhanced_dashboard.get("conditional_formatting_rules")),
+                        "dashboard_template": dashboard_context.get("template"),
+                        "workflow_id": dashboard_context.get("workflow_id"),
+                        "timestamp": datetime.now().isoformat(),
+                        "orchestration_metadata": orchestration_metadata
+                    }
+                }
+                
+                send_status_update("processing_completed", {
+                    "success": final_result["success"],
+                    "project_id": project_id,
+                    "total_charts": len(dashboard_results.get("results", {})) if dashboard_results else 0
                 })
                 
-                dashboard_result = await self._apply_chart_adjustments(
-                    dashboard_result,
-                    chart_configurations,
-                    project_id,
-                    send_status_update
+                # Store execution history
+                self._store_execution_history(
+                    project_id=project_id,
+                    natural_language_query=natural_language_query,
+                    total_queries=len(dashboard_queries),
+                    result=final_result,
+                    workflow_id=dashboard_context.get("workflow_id"),
+                    dashboard_template=dashboard_context.get("template")
                 )
                 
-                send_status_update("chart_adjustments_completed", {
+                return final_result
+            else:
+                error_msg = result.get("post_process", {}).get("error", "Dashboard orchestration failed")
+                send_status_update("dashboard_processing_failed", {
+                    "error": error_msg,
                     "project_id": project_id
                 })
-            
-            # Step 5: Prepare final response
-            final_result = {
-                "success": dashboard_result.get("post_process", {}).get("success", True),
-                "dashboard_data": dashboard_result.get("post_process", {}),
-                "conditional_formatting": conditional_formatting_result.get("post_process", {}) if conditional_formatting_result else None,
-                "chart_configurations": chart_configurations,
-                "dashboard_config": dashboard_context,
-                "metadata": {
-                    "project_id": project_id,
-                    "natural_language_query": natural_language_query,
-                    "total_queries": len(dashboard_queries),
-                    "total_enhanced_queries": len(enhanced_queries),
-                    "conditional_formatting_applied": bool(chart_configurations),
-                    "dashboard_template": dashboard_context.get("template"),
-                    "workflow_id": dashboard_context.get("workflow_id"),
-                    "timestamp": datetime.now().isoformat()
-                }
-            }
-            
-            send_status_update("processing_completed", {
-                "success": final_result["success"],
-                "project_id": project_id,
-                "total_charts": len(dashboard_result.get("post_process", {}).get("results", {})) if dashboard_result and dashboard_result.get("post_process") else 0
-            })
-            
-            # Store execution history
-            self._store_execution_history(
-                project_id=project_id,
-                natural_language_query=natural_language_query,
-                total_queries=len(dashboard_queries),
-                result=final_result,
-                workflow_id=dashboard_context.get("workflow_id"),
-                dashboard_template=dashboard_context.get("template")
-            )
-            
-            return final_result
+                raise RuntimeError(error_msg)
             
         except Exception as e:
             logger.error(f"Error in dashboard processing: {e}")
@@ -613,7 +480,7 @@ class DashboardService(BaseService):
         status_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None
     ) -> Dict[str, Any]:
         """
-        Execute dashboard without conditional formatting
+        Execute dashboard without conditional formatting using agent pipelines
         
         Args:
             dashboard_queries: List of SQL queries for dashboard charts
@@ -624,8 +491,13 @@ class DashboardService(BaseService):
             Dashboard execution result
         """
         try:
-            # Execute using dashboard streaming pipeline directly
-            result = await self._services["dashboard_streaming"].run(
+            # Use dashboard streaming pipeline directly
+            if not self._agent_pipelines["dashboard_streaming"]:
+                error_msg = "Dashboard streaming pipeline is not available"
+                logger.error(error_msg)
+                raise RuntimeError(error_msg)
+            
+            result = await self._agent_pipelines["dashboard_streaming"].run(
                 queries=dashboard_queries,
                 status_callback=status_callback,
                 configuration={
@@ -660,7 +532,7 @@ class DashboardService(BaseService):
         time_filters: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Process only conditional formatting without executing dashboard
+        Process only conditional formatting without executing dashboard using agent pipelines
         
         Args:
             natural_language_query: Natural language query for conditional formatting
@@ -673,7 +545,13 @@ class DashboardService(BaseService):
             Conditional formatting configuration result
         """
         try:
-            result = await self._services["conditional_formatting"].run(
+            # Use conditional formatting pipeline directly
+            if not self._agent_pipelines["conditional_formatting"]:
+                error_msg = "Conditional formatting pipeline is not available"
+                logger.error(error_msg)
+                raise RuntimeError(error_msg)
+            
+            result = await self._agent_pipelines["conditional_formatting"].run(
                 natural_language_query=natural_language_query,
                 dashboard_context=dashboard_context,
                 project_id=project_id,
@@ -814,228 +692,6 @@ class DashboardService(BaseService):
         
         return validation
     
-    def _apply_conditional_formatting_to_queries(
-        self,
-        dashboard_queries: List[Dict[str, Any]],
-        chart_configurations: Dict[str, Dict[str, Any]],
-        status_callback: Callable[[str, Dict[str, Any]], None]
-    ) -> List[Dict[str, Any]]:
-        """Apply conditional formatting configurations to dashboard queries"""
-        enhanced_queries = []
-        
-        for i, query_data in enumerate(dashboard_queries):
-            # Create a copy of the original query
-            enhanced_query = query_data.copy()
-            
-            # Get chart configuration if available
-            chart_id = query_data.get("chart_id", f"chart_{i}")
-            chart_config = chart_configurations.get(chart_id, {})
-            
-            # Apply SQL expansion if configured
-            if chart_config and "sql_expansion" in chart_config.get("actions", []):
-                sql_expansion_config = chart_config.get("sql_expansion", {})
-                enhanced_query = self._apply_sql_expansion(enhanced_query, sql_expansion_config)
-                
-                status_callback("sql_expansion_applied", {
-                    "chart_id": chart_id,
-                    "query_index": i,
-                    "expansions": list(sql_expansion_config.keys())
-                })
-            
-            # Add chart adjustment configuration for later processing
-            if chart_config and "chart_adjustment" in chart_config.get("actions", []):
-                enhanced_query["chart_adjustment_config"] = chart_config.get("chart_adjustment", {})
-            
-            # Add the enhanced query configuration metadata
-            enhanced_query["conditional_formatting_applied"] = bool(chart_config)
-            enhanced_query["chart_id"] = chart_id
-            
-            enhanced_queries.append(enhanced_query)
-        
-        return enhanced_queries
-    
-    def _apply_sql_expansion(
-        self,
-        query_data: Dict[str, Any],
-        sql_expansion_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Apply SQL expansion configuration to a query"""
-        original_sql = query_data.get("sql", "")
-        
-        if not original_sql:
-            return query_data
-        
-        # Apply WHERE conditions
-        where_conditions = sql_expansion_config.get("where_conditions", [])
-        if where_conditions:
-            # Check if SQL already has WHERE clause
-            sql_lower = original_sql.lower()
-            if "where" in sql_lower:
-                # Add conditions with AND
-                additional_conditions = " AND " + " AND ".join(where_conditions)
-                # Find the position to insert (before ORDER BY, GROUP BY, etc.)
-                insert_position = self._find_sql_insert_position(original_sql)
-                modified_sql = original_sql[:insert_position] + additional_conditions + original_sql[insert_position:]
-            else:
-                # Add WHERE clause
-                insert_position = self._find_sql_insert_position(original_sql)
-                where_clause = " WHERE " + " AND ".join(where_conditions)
-                modified_sql = original_sql[:insert_position] + where_clause + original_sql[insert_position:]
-            
-            query_data["sql"] = modified_sql
-        
-        # Apply time filters
-        time_filters = sql_expansion_config.get("time_filters", {})
-        if time_filters:
-            query_data["sql"] = self._apply_time_filters_to_sql(query_data["sql"], time_filters)
-        
-        # Add metadata about applied expansions
-        query_data["sql_expansions_applied"] = {
-            "where_conditions_count": len(where_conditions),
-            "time_filters_applied": bool(time_filters),
-            "original_sql_length": len(original_sql),
-            "modified_sql_length": len(query_data["sql"])
-        }
-        
-        return query_data
-    
-    def _find_sql_insert_position(self, sql: str) -> int:
-        """Find the position to insert WHERE conditions in SQL"""
-        sql_lower = sql.lower()
-        
-        # Look for ORDER BY, GROUP BY, HAVING, LIMIT clauses
-        keywords = ["order by", "group by", "having", "limit"]
-        positions = []
-        
-        for keyword in keywords:
-            pos = sql_lower.find(keyword)
-            if pos != -1:
-                positions.append(pos)
-        
-        if positions:
-            return min(positions)
-        else:
-            return len(sql)
-    
-    def _apply_time_filters_to_sql(self, sql: str, time_filters: Dict[str, Any]) -> str:
-        """Apply time filters to SQL query"""
-        # This is a simplified implementation
-        # In practice, you'd want more sophisticated date column detection and filtering
-        
-        start_date = time_filters.get("start_date")
-        end_date = time_filters.get("end_date")
-        period = time_filters.get("period")
-        
-        time_conditions = []
-        
-        if start_date and end_date:
-            # Assume there's a date column (you'd want to detect this dynamically)
-            date_column = self._detect_date_column(sql) or "date"
-            time_conditions.append(f"{date_column} BETWEEN '{start_date}' AND '{end_date}'")
-        elif period:
-            date_column = self._detect_date_column(sql) or "date"
-            if period == "last_30_days":
-                time_conditions.append(f"{date_column} >= CURRENT_DATE - INTERVAL '30 days'")
-            elif period == "current_year":
-                time_conditions.append(f"EXTRACT(YEAR FROM {date_column}) = EXTRACT(YEAR FROM CURRENT_DATE)")
-            elif period == "last_quarter":
-                time_conditions.append(f"{date_column} >= DATE_TRUNC('quarter', CURRENT_DATE - INTERVAL '3 months')")
-        
-        if time_conditions:
-            sql_lower = sql.lower()
-            if "where" in sql_lower:
-                insert_position = self._find_sql_insert_position(sql)
-                additional_conditions = " AND " + " AND ".join(time_conditions)
-                sql = sql[:insert_position] + additional_conditions + sql[insert_position:]
-            else:
-                insert_position = self._find_sql_insert_position(sql)
-                where_clause = " WHERE " + " AND ".join(time_conditions)
-                sql = sql[:insert_position] + where_clause + sql[insert_position:]
-        
-        return sql
-    
-    def _detect_date_column(self, sql: str) -> Optional[str]:
-        """Detect date column in SQL query (simplified implementation)"""
-        # This is a simplified implementation
-        # In practice, you'd want to analyze the actual schema
-        
-        common_date_columns = ["date", "created_at", "updated_at", "timestamp", "time", "datetime"]
-        sql_lower = sql.lower()
-        
-        for col in common_date_columns:
-            if col in sql_lower:
-                return col
-        
-        return None
-    
-    async def _apply_chart_adjustments(
-        self,
-        dashboard_result: Dict[str, Any],
-        chart_configurations: Dict[str, Dict[str, Any]],
-        project_id: str,
-        status_callback: Callable[[str, Dict[str, Any]], None]
-    ) -> Dict[str, Any]:
-        """Apply chart adjustments to dashboard results"""
-        try:
-            results = dashboard_result.get("post_process", {}).get("results", {})
-            chart_adjustment_pipeline = self.pipeline_container.get_pipeline("chart_adjustment")
-            
-            for chart_id, chart_config in chart_configurations.items():
-                if "chart_adjustment" in chart_config.get("actions", []):
-                    # Find corresponding result
-                    chart_result_key = None
-                    for key in results.keys():
-                        if key.endswith(chart_id) or chart_id in key:
-                            chart_result_key = key
-                            break
-                    
-                    if chart_result_key and chart_result_key in results:
-                        chart_result = results[chart_result_key]
-                        
-                        if chart_result.get("success", False):
-                            # Get the chart data and schema
-                            execution_result = chart_result.get("execution_result", {})
-                            chart_data = execution_result.get("post_process", {})
-                            
-                            # Apply chart adjustment
-                            adjustment_config = chart_config.get("chart_adjustment", {})
-                            
-                            try:
-                                adjusted_result = await chart_adjustment_pipeline.run(
-                                    query=chart_result.get("query_data", {}).get("query", ""),
-                                    sql=chart_result.get("query_data", {}).get("sql", ""),
-                                    adjustment_option=adjustment_config,
-                                    chart_schema=chart_data.get("chart_schema", {}),
-                                    data=chart_data.get("data", {}),
-                                    language="English"
-                                )
-                                
-                                # Update the result with adjusted chart
-                                if adjusted_result.get("success", False):
-                                    chart_data.update(adjusted_result.get("post_process", {}).get("results", {}))
-                                    
-                                    status_callback("chart_adjustment_applied", {
-                                        "chart_id": chart_id,
-                                        "adjustment_success": True
-                                    })
-                                else:
-                                    status_callback("chart_adjustment_failed", {
-                                        "chart_id": chart_id,
-                                        "error": adjusted_result.get("error")
-                                    })
-                                    
-                            except Exception as e:
-                                logger.error(f"Error applying chart adjustment for {chart_id}: {e}")
-                                status_callback("chart_adjustment_error", {
-                                    "chart_id": chart_id,
-                                    "error": str(e)
-                                })
-            
-            return dashboard_result
-            
-        except Exception as e:
-            logger.error(f"Error applying chart adjustments: {e}")
-            return dashboard_result
     
     def _create_nested_status_callback(
         self,
@@ -1087,19 +743,31 @@ class DashboardService(BaseService):
         """Get recent execution history"""
         return self._execution_history[-limit:] if self._execution_history else []
     
+    def get_available_templates(self) -> Dict[str, Dict[str, Any]]:
+        """Get available dashboard templates"""
+        return self._dashboard_templates.copy()
+    
     def get_service_status(self) -> Dict[str, Any]:
-        """Get status of all dashboard services"""
+        """Get status of all dashboard agent pipelines"""
         return {
-            "dashboard_streaming": {
-                "available": "dashboard_streaming" in self._services,
+            "dashboard_orchestrator": {
+                "available": self._dashboard_orchestrator is not None,
+                "initialized": self._dashboard_orchestrator.is_initialized if self._dashboard_orchestrator else False
+            },
+            "pipeline_container_orchestrator": {
+                "available": self._agent_pipelines.get("dashboard_orchestrator") is not None,
                 "initialized": True
             },
             "conditional_formatting": {
-                "available": "conditional_formatting" in self._services,
+                "available": self._agent_pipelines.get("conditional_formatting") is not None,
+                "initialized": True
+            },
+            "dashboard_streaming": {
+                "available": self._agent_pipelines.get("dashboard_streaming") is not None,
                 "initialized": True
             },
             "enhanced_dashboard": {
-                "available": "enhanced_dashboard" in self._services,
+                "available": self._agent_pipelines.get("enhanced_dashboard") is not None,
                 "initialized": True
             },
             "pipeline_container": {
@@ -1120,23 +788,17 @@ class DashboardService(BaseService):
         super().clear_cache()
 
 
-# Factory function for creating dashboard service
-def create_dashboard_service() -> DashboardService:
-    """
-    Factory function to create a dashboard service
-    
-    Returns:
-        DashboardService instance with all pipelines initialized
-    """
-    return DashboardService()
+# Note: Factory function moved to SQLServiceContainer.create_dashboard_service()
 
 
 # Example usage
 async def example_dashboard_service_usage():
-    """Example of using the refactored dashboard service"""
+    """Example of using the refactored dashboard service as a pure API layer"""
     
-    # Create dashboard service (automatically initializes PipelineContainer)
-    dashboard_service = create_dashboard_service()
+    # Get dashboard service from service container
+    # Note: In production, this would be injected via dependency injection
+    # For this example, we'll create the service directly
+    dashboard_service = DashboardService()
     
     # Sample dashboard queries
     dashboard_queries = [
@@ -1193,7 +855,7 @@ async def example_dashboard_service_usage():
     def status_callback(status: str, details: Dict[str, Any]):
         print(f"Status: {status} - {details}")
     
-    # Process dashboard with conditional formatting
+    # Process dashboard with conditional formatting (delegates to agent pipelines)
     result = await dashboard_service.process_dashboard_with_conditional_formatting(
         natural_language_query=natural_language_query,
         dashboard_queries=dashboard_queries,
@@ -1206,8 +868,9 @@ async def example_dashboard_service_usage():
     
     print("Dashboard Service Result:")
     print(f"Success: {result['success']}")
-    print(f"Total charts: {result['metadata']['total_charts']}")
+    print(f"Total charts: {len(result['dashboard_data'].get('results', {}))}")
     print(f"Conditional formatting applied: {result['metadata']['conditional_formatting_applied']}")
+    print(f"Orchestration metadata: {result['metadata'].get('orchestration_metadata', {})}")
     
     return result
 

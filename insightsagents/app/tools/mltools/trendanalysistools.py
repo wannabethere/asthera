@@ -26,17 +26,266 @@ class TrendPipe(BasePipe):
     def _copy_results(self, source_pipe):
         """Copy results from source pipe to this pipe"""
         if hasattr(source_pipe, 'time_aggregations'):
-            self.time_aggregations = source_pipe.time_aggregations.copy()
+            # Deep copy time aggregations
+            self.time_aggregations = {}
+            for key, value in source_pipe.time_aggregations.items():
+                if isinstance(value, dict):
+                    self.time_aggregations[key] = {}
+                    for sub_key, sub_value in value.items():
+                        if sub_key == 'data' and hasattr(sub_value, 'copy'):
+                            # Deep copy pandas DataFrames
+                            self.time_aggregations[key][sub_key] = sub_value.copy()
+                        else:
+                            # Shallow copy other values
+                            self.time_aggregations[key][sub_key] = sub_value
+                else:
+                    self.time_aggregations[key] = value
+        
         if hasattr(source_pipe, 'trend_results'):
-            self.trend_results = source_pipe.trend_results.copy()
+            # Deep copy trend results
+            self.trend_results = {}
+            for key, value in source_pipe.trend_results.items():
+                if isinstance(value, dict):
+                    self.trend_results[key] = {}
+                    for sub_key, sub_value in value.items():
+                        if sub_key == 'data' and hasattr(sub_value, 'copy'):
+                            # Deep copy pandas DataFrames
+                            self.trend_results[key][sub_key] = sub_value.copy()
+                        else:
+                            # Shallow copy other values
+                            self.trend_results[key][sub_key] = sub_value
+                else:
+                    self.trend_results[key] = value
+        
         if hasattr(source_pipe, 'trend_decompositions'):
-            self.trend_decompositions = source_pipe.trend_decompositions.copy()
+            # Deep copy trend decompositions
+            self.trend_decompositions = {}
+            for key, value in source_pipe.trend_decompositions.items():
+                if isinstance(value, dict):
+                    self.trend_decompositions[key] = {}
+                    for sub_key, sub_value in value.items():
+                        if hasattr(sub_value, 'copy'):
+                            # Deep copy pandas Series/DataFrames
+                            self.trend_decompositions[key][sub_key] = sub_value.copy()
+                        else:
+                            # Shallow copy other values
+                            self.trend_decompositions[key][sub_key] = sub_value
+                else:
+                    self.trend_decompositions[key] = value
+        
         if hasattr(source_pipe, 'forecasts'):
-            self.forecasts = source_pipe.forecasts.copy()
+            # Deep copy forecasts
+            self.forecasts = {}
+            for key, value in source_pipe.forecasts.items():
+                if isinstance(value, dict):
+                    self.forecasts[key] = {}
+                    for sub_key, sub_value in value.items():
+                        if sub_key == 'data' and hasattr(sub_value, 'copy'):
+                            # Deep copy pandas DataFrames
+                            self.forecasts[key][sub_key] = sub_value.copy()
+                        else:
+                            # Shallow copy other values
+                            self.forecasts[key][sub_key] = sub_value
+                else:
+                    self.forecasts[key] = value
+        
         if hasattr(source_pipe, 'current_analysis'):
             self.current_analysis = source_pipe.current_analysis
     
-    def to_df(self, analysis_name: Optional[str] = None, include_metadata: bool = False, include_original: bool = False):
+    
+    def to_df(self, analysis_name: Optional[str] = None, include_metadata: bool = False, include_original: bool = True):
+        """
+        Convert the trend analysis results to a DataFrame
+        
+        Parameters:
+        -----------
+        analysis_name : str, optional
+            Name of the specific analysis to convert. If None, returns the current analysis
+        include_metadata : bool, default=False
+            Whether to include metadata columns in the output DataFrame
+        include_original : bool, default=True
+            Whether to include original data columns in the output DataFrame
+            
+        Returns:
+        --------
+        pd.DataFrame
+            DataFrame representation of the trend analysis results
+            
+        Raises:
+        -------
+        ValueError
+            If no trend analysis has been performed or analysis not found
+            
+        Examples:
+        --------
+        >>> # Basic time aggregation
+        >>> pipe = (TrendPipe.from_dataframe(df)
+        ...         | aggregate_by_time('date', ['sales', 'revenue'], 'M'))
+        >>> results_df = pipe.to_df()
+        >>> print(results_df.head())
+        
+        >>> # Specific analysis with metadata
+        >>> results_df = pipe.to_df('time', include_metadata=True)
+        >>> print(results_df.columns)
+        
+        >>> # Current analysis
+        >>> current_df = pipe.to_df()  # Uses current_analysis
+        >>> print(current_df.head())
+        """
+        if not any([self.time_aggregations, self.trend_results, self.trend_decompositions, self.forecasts]):
+            raise ValueError("No trend analysis has been performed. Run some analysis first.")
+        
+        # Determine which analysis to use
+        if analysis_name is None:
+            if self.current_analysis is None:
+                # Use the last analysis from any category
+                all_analyses = {}
+                all_analyses.update(self.time_aggregations)
+                all_analyses.update(self.trend_results)
+                all_analyses.update(self.trend_decompositions)
+                all_analyses.update(self.forecasts)
+                if all_analyses:
+                    analysis_name = list(all_analyses.keys())[-1]
+                else:
+                    raise ValueError("No analyses found")
+            else:
+                analysis_name = self.current_analysis
+        
+        # Get the result DataFrame based on analysis type
+        if analysis_name in self.time_aggregations:
+            # For time aggregations, get the aggregated data
+            agg_data = self.time_aggregations[analysis_name]
+            if isinstance(agg_data, dict) and 'data' in agg_data:
+                result_df = agg_data['data'].copy()
+            else:
+                result_df = pd.DataFrame()
+        elif analysis_name in self.trend_results:
+            # For trend results, get the trend data
+            trend_data = self.trend_results[analysis_name]
+            if isinstance(trend_data, dict) and 'data' in trend_data:
+                result_df = trend_data['data'].copy()
+            else:
+                result_df = pd.DataFrame()
+        elif analysis_name in self.trend_decompositions:
+            # For trend decompositions, get the decomposition data
+            decomp_data = self.trend_decompositions[analysis_name]
+            if isinstance(decomp_data, dict):
+                # Create DataFrame with decomposition components
+                decomp_dict = {}
+                if 'trend' in decomp_data:
+                    decomp_dict['trend'] = decomp_data['trend']
+                if 'seasonal' in decomp_data:
+                    decomp_dict['seasonal'] = decomp_data['seasonal']
+                if 'residual' in decomp_data:
+                    decomp_dict['residual'] = decomp_data['residual']
+                result_df = pd.DataFrame(decomp_dict) if decomp_dict else pd.DataFrame()
+            else:
+                result_df = pd.DataFrame()
+        elif analysis_name in self.forecasts:
+            # For forecasts, get the forecast data
+            forecast_data = self.forecasts[analysis_name]
+            if isinstance(forecast_data, dict) and 'data' in forecast_data:
+                result_df = forecast_data['data'].copy()
+            else:
+                result_df = pd.DataFrame()
+        else:
+            # Fallback to original data
+            result_df = self.data.copy() if self.data is not None else pd.DataFrame()
+        
+        # Ensure we always return a DataFrame, even if empty
+        if result_df is None:
+            result_df = pd.DataFrame()
+        
+        # If include_original is True and we have original data, merge it with the results
+        if include_original and self.data is not None and not self.data.empty:
+            # For time aggregations, we need to merge the aggregated results back with original data
+            if analysis_name in self.time_aggregations:
+                # Get the aggregated data
+                agg_data = self.time_aggregations[analysis_name]
+                if isinstance(agg_data, dict) and 'data' in agg_data:
+                    agg_df = agg_data['data'].copy()
+                    
+                    # Reset index to make time_period a column
+                    agg_df = agg_df.reset_index()
+                    
+                    # Merge with original data based on date column
+                    # Find the date column in original data
+                    date_cols = [col for col in self.data.columns if 'date' in col.lower() or 'time' in col.lower()]
+                    if date_cols:
+                        date_col = date_cols[0]
+                        # Convert date column to datetime if needed
+                        if not pd.api.types.is_datetime64_any_dtype(self.data[date_col]):
+                            self.data[date_col] = pd.to_datetime(self.data[date_col])
+                        
+                        # Convert time_period to datetime for merging
+                        agg_df['time_period'] = pd.to_datetime(agg_df['time_period'])
+                        
+                        # Merge aggregated results with original data
+                        result_df = self.data.merge(agg_df, left_on=date_col, right_on='time_period', how='left')
+                        
+                        # Drop duplicate time_period column if it exists
+                        if 'time_period' in result_df.columns and date_col in result_df.columns:
+                            result_df = result_df.drop('time_period', axis=1)
+                    else:
+                        # No date column found, just concatenate
+                        result_df = pd.concat([self.data, agg_df], axis=1)
+                else:
+                    result_df = self.data.copy()
+            else:
+                # For other analysis types, just use original data
+                result_df = self.data.copy()
+        
+        # Add metadata if requested
+        if include_metadata and not result_df.empty:
+            # Add analysis name
+            result_df['analysis_name'] = analysis_name
+            
+            # Add analysis type based on which category it belongs to
+            if analysis_name in self.time_aggregations:
+                result_df['analysis_type'] = 'time_aggregation'
+                # Add time aggregation specific metadata
+                agg_data = self.time_aggregations[analysis_name]
+                if isinstance(agg_data, dict):
+                    result_df['time_period'] = agg_data.get('time_period', 'unknown')
+                    result_df['aggregation_method'] = str(agg_data.get('aggregation', 'unknown'))
+                    result_df['metric_columns'] = str(agg_data.get('metric_columns', []))
+            elif analysis_name in self.trend_results:
+                result_df['analysis_type'] = 'trend_result'
+                # Add trend result specific metadata
+                trend_data = self.trend_results[analysis_name]
+                if isinstance(trend_data, dict):
+                    result_df['trend_method'] = trend_data.get('method', 'unknown')
+                    result_df['trend_type'] = trend_data.get('type', 'unknown')
+            elif analysis_name in self.trend_decompositions:
+                result_df['analysis_type'] = 'trend_decomposition'
+                # Add decomposition specific metadata
+                decomp_data = self.trend_decompositions[analysis_name]
+                if isinstance(decomp_data, dict):
+                    result_df['decomposition_model'] = decomp_data.get('model', 'unknown')
+                    result_df['seasonal_period'] = decomp_data.get('period', 'unknown')
+            elif analysis_name in self.forecasts:
+                result_df['analysis_type'] = 'forecast'
+                # Add forecast specific metadata
+                forecast_data = self.forecasts[analysis_name]
+                if isinstance(forecast_data, dict):
+                    result_df['forecast_method'] = forecast_data.get('method', 'unknown')
+                    result_df['forecast_periods'] = forecast_data.get('periods', 'unknown')
+                    result_df['confidence_interval'] = forecast_data.get('confidence_interval', 'unknown')
+            
+            # Add general metadata
+            result_df['has_time_aggregations'] = bool(self.time_aggregations)
+            result_df['has_trend_results'] = bool(self.trend_results)
+            result_df['has_trend_decompositions'] = bool(self.trend_decompositions)
+            result_df['has_forecasts'] = bool(self.forecasts)
+            result_df['total_analyses'] = (len(self.time_aggregations) + 
+                                         len(self.trend_results) + 
+                                         len(self.trend_decompositions) + 
+                                         len(self.forecasts))
+        
+        return result_df
+
+
+    def to_df_old(self, analysis_name: Optional[str] = None, include_metadata: bool = False, include_original: bool = True):
         """
         Convert the trend analysis results to a DataFrame
         
@@ -128,9 +377,18 @@ class TrendPipe(BasePipe):
     def _time_aggregation_to_df(self, result, analysis_name, include_metadata, include_original):
         """Convert time aggregation results to DataFrame"""
         if isinstance(result, dict) and 'data' in result:
-            result_df = result['data'].copy()
+            result_data = result['data']
+            # Handle case where data might be a Series
+            if isinstance(result_data, pd.Series):
+                result_df = result_data.to_frame()
+            else:
+                result_df = result_data.copy()
         else:
-            result_df = pd.DataFrame(result)
+            # Handle case where result might be a Series
+            if isinstance(result, pd.Series):
+                result_df = result.to_frame()
+            else:
+                result_df = pd.DataFrame(result)
         
         # Ensure we always return a DataFrame
         if result_df is None:
@@ -150,9 +408,18 @@ class TrendPipe(BasePipe):
     def _trend_result_to_df(self, result, analysis_name, include_metadata, include_original):
         """Convert trend result to DataFrame"""
         if isinstance(result, dict) and 'data' in result:
-            result_df = result['data'].copy()
+            result_data = result['data']
+            # Handle case where data might be a Series
+            if isinstance(result_data, pd.Series):
+                result_df = result_data.to_frame()
+            else:
+                result_df = result_data.copy()
         else:
-            result_df = pd.DataFrame(result)
+            # Handle case where result might be a Series
+            if isinstance(result, pd.Series):
+                result_df = result.to_frame()
+            else:
+                result_df = pd.DataFrame(result)
         
         # Ensure we always return a DataFrame
         if result_df is None:
@@ -200,18 +467,39 @@ class TrendPipe(BasePipe):
             decomposition_data = {}
             
             if 'trend' in result:
-                decomposition_data['trend'] = result['trend']
+                trend_data = result['trend']
+                # Handle case where trend might be a Series
+                if isinstance(trend_data, pd.Series):
+                    decomposition_data['trend'] = trend_data
+                else:
+                    decomposition_data['trend'] = trend_data
+                    
             if 'seasonal' in result:
-                decomposition_data['seasonal'] = result['seasonal']
+                seasonal_data = result['seasonal']
+                # Handle case where seasonal might be a Series
+                if isinstance(seasonal_data, pd.Series):
+                    decomposition_data['seasonal'] = seasonal_data
+                else:
+                    decomposition_data['seasonal'] = seasonal_data
+                    
             if 'residual' in result:
-                decomposition_data['residual'] = result['residual']
+                residual_data = result['residual']
+                # Handle case where residual might be a Series
+                if isinstance(residual_data, pd.Series):
+                    decomposition_data['residual'] = residual_data
+                else:
+                    decomposition_data['residual'] = residual_data
             
             if decomposition_data:
                 result_df = pd.DataFrame(decomposition_data)
             else:
                 result_df = pd.DataFrame()
         else:
-            result_df = pd.DataFrame(result)
+            # Handle case where result might be a Series
+            if isinstance(result, pd.Series):
+                result_df = result.to_frame()
+            else:
+                result_df = pd.DataFrame(result)
         
         # Ensure we always return a DataFrame
         if result_df is None:
@@ -238,9 +526,18 @@ class TrendPipe(BasePipe):
     def _forecast_to_df(self, result, analysis_name, include_metadata, include_original):
         """Convert forecast results to DataFrame"""
         if isinstance(result, dict) and 'data' in result:
-            result_df = result['data'].copy()
+            result_data = result['data']
+            # Handle case where data might be a Series
+            if isinstance(result_data, pd.Series):
+                result_df = result_data.to_frame()
+            else:
+                result_df = result_data.copy()
         else:
-            result_df = pd.DataFrame(result)
+            # Handle case where result might be a Series
+            if isinstance(result, pd.Series):
+                result_df = result.to_frame()
+            else:
+                result_df = pd.DataFrame(result)
         
         # Ensure we always return a DataFrame
         if result_df is None:
@@ -273,12 +570,22 @@ class TrendPipe(BasePipe):
         # Get columns from time aggregations
         for agg_name, agg_data in self.time_aggregations.items():
             if isinstance(agg_data, dict) and 'data' in agg_data:
-                trend_cols.extend(agg_data['data'].columns.tolist())
+                data = agg_data['data']
+                # Handle case where data might be a Series
+                if isinstance(data, pd.Series):
+                    trend_cols.append(data.name if data.name else f"{agg_name}_value")
+                else:
+                    trend_cols.extend(data.columns.tolist())
         
         # Get columns from trend results
         for result_name, result_data in self.trend_results.items():
             if isinstance(result_data, dict) and 'data' in result_data:
-                trend_cols.extend(result_data['data'].columns.tolist())
+                data = result_data['data']
+                # Handle case where data might be a Series
+                if isinstance(data, pd.Series):
+                    trend_cols.append(data.name if data.name else f"{result_name}_value")
+                else:
+                    trend_cols.extend(data.columns.tolist())
         
         # Get columns from trend decompositions
         for decomp_name, decomp_data in self.trend_decompositions.items():
@@ -293,7 +600,12 @@ class TrendPipe(BasePipe):
         # Get columns from forecasts
         for forecast_name, forecast_data in self.forecasts.items():
             if isinstance(forecast_data, dict) and 'data' in forecast_data:
-                trend_cols.extend(forecast_data['data'].columns.tolist())
+                data = forecast_data['data']
+                # Handle case where data might be a Series
+                if isinstance(data, pd.Series):
+                    trend_cols.append(data.name if data.name else f"{forecast_name}_forecast")
+                else:
+                    trend_cols.extend(data.columns.tolist())
         
         return list(set(trend_cols))  # Remove duplicates
     
@@ -323,9 +635,16 @@ class TrendPipe(BasePipe):
                 }
                 
                 if 'data' in agg_data:
-                    summary_row['shape'] = agg_data['data'].shape
-                    summary_row['rows'] = agg_data['data'].shape[0]
-                    summary_row['columns'] = agg_data['data'].shape[1]
+                    data = agg_data['data']
+                    # Handle case where data might be a Series
+                    if isinstance(data, pd.Series):
+                        summary_row['shape'] = (len(data), 1)
+                        summary_row['rows'] = len(data)
+                        summary_row['columns'] = 1
+                    else:
+                        summary_row['shape'] = data.shape
+                        summary_row['rows'] = data.shape[0]
+                        summary_row['columns'] = data.shape[1]
                 
                 if include_metadata:
                     summary_row['time_period'] = agg_data.get('time_period', 'unknown')
@@ -344,9 +663,16 @@ class TrendPipe(BasePipe):
                 }
                 
                 if 'data' in result_data:
-                    summary_row['shape'] = result_data['data'].shape
-                    summary_row['rows'] = result_data['data'].shape[0]
-                    summary_row['columns'] = result_data['data'].shape[1]
+                    data = result_data['data']
+                    # Handle case where data might be a Series
+                    if isinstance(data, pd.Series):
+                        summary_row['shape'] = (len(data), 1)
+                        summary_row['rows'] = len(data)
+                        summary_row['columns'] = 1
+                    else:
+                        summary_row['shape'] = data.shape
+                        summary_row['rows'] = data.shape[0]
+                        summary_row['columns'] = data.shape[1]
                 
                 if include_metadata:
                     summary_row['method'] = result_data.get('method', 'unknown')
@@ -395,9 +721,16 @@ class TrendPipe(BasePipe):
                 }
                 
                 if 'data' in forecast_data:
-                    summary_row['shape'] = forecast_data['data'].shape
-                    summary_row['rows'] = forecast_data['data'].shape[0]
-                    summary_row['columns'] = forecast_data['data'].shape[1]
+                    data = forecast_data['data']
+                    # Handle case where data might be a Series
+                    if isinstance(data, pd.Series):
+                        summary_row['shape'] = (len(data), 1)
+                        summary_row['rows'] = len(data)
+                        summary_row['columns'] = 1
+                    else:
+                        summary_row['shape'] = data.shape
+                        summary_row['rows'] = data.shape[0]
+                        summary_row['columns'] = data.shape[1]
                 
                 if include_metadata:
                     summary_row['forecast_method'] = forecast_data.get('method', 'unknown')
@@ -486,7 +819,12 @@ class TrendPipe(BasePipe):
         if aggregation_name in self.time_aggregations:
             agg_data = self.time_aggregations[aggregation_name]
             if isinstance(agg_data, dict) and 'data' in agg_data:
-                return agg_data['data'].copy()
+                data = agg_data['data']
+                # Handle case where data might be a Series
+                if isinstance(data, pd.Series):
+                    return data.to_frame()
+                else:
+                    return data.copy()
         
         return pd.DataFrame()
     
@@ -510,7 +848,12 @@ class TrendPipe(BasePipe):
         if forecast_name in self.forecasts:
             forecast_data = self.forecasts[forecast_name]
             if isinstance(forecast_data, dict) and 'data' in forecast_data:
-                return forecast_data['data'].copy()
+                data = forecast_data['data']
+                # Handle case where data might be a Series
+                if isinstance(data, pd.Series):
+                    return data.to_frame()
+                else:
+                    return data.copy()
         
         return pd.DataFrame()
     
@@ -574,7 +917,7 @@ def aggregate_by_time(
     aggregation: Union[str, Dict[str, str]] = 'mean',
     fill_missing: bool = True,
     include_current_period: bool = False,
-    time_name: str = 'time',
+    time_name: str = 'time_period',
     datetime_format: Optional[str] = None
 ):
     """
@@ -610,7 +953,7 @@ def aggregate_by_time(
         
         new_pipe = pipe.copy()
         df = new_pipe.data.copy()  # Ensure we work with a copy
-        
+        time_name = 'time_period'
         # Ensure date column is datetime
         if not pd.api.types.is_datetime64_any_dtype(df[date_column]):
             if datetime_format:
@@ -701,7 +1044,9 @@ def calculate_growth_rates(
         
         new_pipe = pipe.copy()
         agg_data = new_pipe.time_aggregations[new_pipe.current_analysis]
+        
         df = agg_data['data'].copy()  # Ensure we work with a copy
+        print(df.head(3).to_string())
         time_period = agg_data['time_period']
         
         # Create a new dataframe for growth rates

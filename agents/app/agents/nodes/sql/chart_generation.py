@@ -421,6 +421,23 @@ class VegaLiteChartGenerationPipeline:
                 "success": False,
                 "error": str(e)
             }
+    
+    async def generate_chart_from_template(
+        self,
+        existing_chart: Dict[str, Any],
+        new_data: Dict[str, Any],
+        field_mapping: Optional[Dict[str, str]] = None,
+        language: str = "English"
+    ) -> Dict[str, Any]:
+        """Generate a new chart using an existing chart as a template with new data
+        
+        This is a convenience method that creates an AdvancedVegaLiteChartGeneration
+        instance and calls its generate_chart_from_template method.
+        """
+        advanced_pipeline = AdvancedVegaLiteChartGeneration(vega_schema=self.vega_schema)
+        return await advanced_pipeline.generate_chart_from_template(
+            existing_chart, new_data, field_mapping, language
+        )
 
 
 # Alternative pipeline class matching original structure
@@ -584,6 +601,325 @@ class AdvancedVegaLiteChartGeneration(VegaLiteChartGenerationPipeline):
         result["available_templates"] = list(self.chart_templates.keys())
         
         return result
+
+    async def generate_chart_from_template(
+        self,
+        existing_chart: Dict[str, Any],
+        new_data: Dict[str, Any],
+        field_mapping: Optional[Dict[str, str]] = None,
+        language: str = "English"
+    ) -> Dict[str, Any]:
+        """Generate a new chart using an existing chart as a template with new data
+        
+        Args:
+            existing_chart: The existing chart configuration to use as template
+            new_data: New data to visualize using the template
+            field_mapping: Optional mapping from old field names to new field names
+            language: Language for the chart titles and labels
+            
+        Returns:
+            Dict containing the new chart configuration
+        """
+        try:
+            logger.info("Generating chart from template...")
+            
+            # Extract chart schema from existing chart
+            if "chart_schema" in existing_chart:
+                template_schema = existing_chart["chart_schema"]
+            elif "results" in existing_chart and "chart_schema" in existing_chart["results"]:
+                template_schema = existing_chart["results"]["chart_schema"]
+            else:
+                template_schema = existing_chart
+            
+            if not template_schema:
+                return {
+                    "success": False,
+                    "error": "No valid chart schema found in existing chart",
+                    "chart_schema": {},
+                    "reasoning": "Template chart is invalid"
+                }
+            
+            # Preprocess new data
+            preprocessed_data = self.data_preprocessor.run(new_data)
+            new_columns = preprocessed_data["sample_data"].get("columns", [])
+            
+            # Create field mapping if not provided
+            if not field_mapping:
+                field_mapping = self._create_automatic_field_mapping(template_schema, new_columns)
+            
+            # Generate new chart schema based on template
+            new_chart_schema = self._adapt_chart_schema(
+                template_schema, 
+                new_columns, 
+                field_mapping, 
+                language
+            )
+            
+            # Validate the new chart schema
+            validation_result = self._validate_chart_schema(new_chart_schema, new_columns)
+            
+            if not validation_result["valid"]:
+                return {
+                    "success": False,
+                    "error": f"Chart validation failed: {validation_result['error']}",
+                    "chart_schema": new_chart_schema,
+                    "reasoning": f"Generated chart from template but validation failed: {validation_result['error']}"
+                }
+            
+            # Determine chart type from schema
+            chart_type = self._extract_chart_type_from_schema(new_chart_schema)
+            
+            return {
+                "success": True,
+                "chart_schema": new_chart_schema,
+                "chart_type": chart_type,
+                "reasoning": f"Successfully generated chart from template using field mapping: {field_mapping}",
+                "field_mapping": field_mapping,
+                "template_info": {
+                    "original_chart_type": existing_chart.get("chart_type", "unknown"),
+                    "fields_mapped": len(field_mapping),
+                    "validation_passed": True
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error generating chart from template: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "chart_schema": {},
+                "reasoning": f"Error generating chart from template: {str(e)}"
+            }
+    
+    def _create_automatic_field_mapping(
+        self, 
+        template_schema: Dict[str, Any], 
+        new_columns: List[str]
+    ) -> Dict[str, str]:
+        """Create automatic field mapping based on column names and schema fields"""
+        field_mapping = {}
+        
+        # Extract fields used in the template schema
+        template_fields = self._extract_fields_from_schema(template_schema)
+        
+        # Create mapping based on name similarity
+        for template_field in template_fields:
+            best_match = self._find_best_column_match(template_field, new_columns)
+            if best_match:
+                field_mapping[template_field] = best_match
+        
+        return field_mapping
+    
+    def _extract_fields_from_schema(self, schema: Dict[str, Any]) -> List[str]:
+        """Extract all field names used in a Vega-Lite schema"""
+        fields = []
+        
+        def extract_from_encoding(encoding):
+            if isinstance(encoding, dict):
+                for key, value in encoding.items():
+                    if isinstance(value, dict) and "field" in value:
+                        fields.append(value["field"])
+                    elif isinstance(value, list):
+                        for item in value:
+                            if isinstance(item, dict) and "field" in item:
+                                fields.append(item["field"])
+        
+        # Extract from main encoding
+        if "encoding" in schema:
+            extract_from_encoding(schema["encoding"])
+        
+        # Extract from transform operations
+        if "transform" in schema:
+            for transform in schema["transform"]:
+                if "fold" in transform:
+                    fields.extend(transform["fold"])
+                elif "as" in transform:
+                    # These are new field names, not original ones
+                    pass
+        
+        return list(set(fields))
+    
+    def _find_best_column_match(self, template_field: str, new_columns: List[str]) -> Optional[str]:
+        """Find the best matching column name for a template field"""
+        template_field_lower = template_field.lower()
+        
+        # Exact match
+        for col in new_columns:
+            if col.lower() == template_field_lower:
+                return col
+        
+        # Partial match (contains)
+        for col in new_columns:
+            if template_field_lower in col.lower() or col.lower() in template_field_lower:
+                return col
+        
+        # Fuzzy match based on common patterns
+        common_patterns = {
+            'date': ['date', 'time', 'timestamp', 'created', 'updated'],
+            'sales': ['sales', 'revenue', 'amount', 'value'],
+            'region': ['region', 'area', 'location', 'country', 'state'],
+            'product': ['product', 'item', 'category', 'type'],
+            'count': ['count', 'number', 'quantity', 'total'],
+            'profit': ['profit', 'margin', 'income', 'earnings']
+        }
+        
+        for pattern, keywords in common_patterns.items():
+            if pattern in template_field_lower:
+                for col in new_columns:
+                    for keyword in keywords:
+                        if keyword in col.lower():
+                            return col
+        
+        return None
+    
+    def _adapt_chart_schema(
+        self, 
+        template_schema: Dict[str, Any], 
+        new_columns: List[str], 
+        field_mapping: Dict[str, str],
+        language: str
+    ) -> Dict[str, Any]:
+        """Adapt a template chart schema to work with new data"""
+        import copy
+        
+        # Deep copy the template schema
+        new_schema = copy.deepcopy(template_schema)
+        
+        # Update field references in encoding
+        if "encoding" in new_schema:
+            self._update_encoding_fields(new_schema["encoding"], field_mapping)
+        
+        # Update field references in transform operations
+        if "transform" in new_schema:
+            self._update_transform_fields(new_schema["transform"], field_mapping, new_columns)
+        
+        # Update titles to be language-appropriate
+        self._update_titles_for_language(new_schema, language)
+        
+        return new_schema
+    
+    def _update_encoding_fields(self, encoding: Dict[str, Any], field_mapping: Dict[str, str]):
+        """Update field references in encoding section"""
+        for key, value in encoding.items():
+            if isinstance(value, dict):
+                if "field" in value and value["field"] in field_mapping:
+                    value["field"] = field_mapping[value["field"]]
+            elif isinstance(value, list):
+                for item in value:
+                    if isinstance(item, dict) and "field" in item and item["field"] in field_mapping:
+                        item["field"] = field_mapping[item["field"]]
+    
+    def _update_transform_fields(
+        self, 
+        transforms: List[Dict[str, Any]], 
+        field_mapping: Dict[str, str], 
+        new_columns: List[str]
+    ):
+        """Update field references in transform operations"""
+        for transform in transforms:
+            if "fold" in transform:
+                # Update fold fields
+                new_fold_fields = []
+                for field in transform["fold"]:
+                    if field in field_mapping:
+                        new_fold_fields.append(field_mapping[field])
+                    elif field in new_columns:
+                        new_fold_fields.append(field)
+                transform["fold"] = new_fold_fields
+    
+    def _update_titles_for_language(self, schema: Dict[str, Any], language: str):
+        """Update chart titles and labels for the specified language"""
+        # This is a simplified version - in practice, you might want to use
+        # translation services or predefined title templates
+        if "title" in schema and isinstance(schema["title"], str):
+            if "<TITLE_IN_LANGUAGE_PROVIDED_BY_USER>" in schema["title"]:
+                schema["title"] = f"Chart ({language})"
+        
+        # Update axis titles
+        if "encoding" in schema:
+            for key, value in schema["encoding"].items():
+                if isinstance(value, dict) and "title" in value:
+                    if "<TITLE_IN_LANGUAGE_PROVIDED_BY_USER>" in str(value["title"]):
+                        value["title"] = f"{key.title()} ({language})"
+    
+    def _validate_chart_schema(self, schema: Dict[str, Any], columns: List[str]) -> Dict[str, Any]:
+        """Validate that a chart schema is compatible with the provided columns"""
+        try:
+            # Extract all field references from the schema
+            schema_fields = self._extract_fields_from_schema(schema)
+            
+            # Check if all referenced fields exist in the data columns
+            missing_fields = []
+            for field in schema_fields:
+                if field not in columns:
+                    missing_fields.append(field)
+            
+            if missing_fields:
+                return {
+                    "valid": False,
+                    "error": f"Schema references fields not present in data: {missing_fields}"
+                }
+            
+            # Basic schema structure validation
+            if "mark" not in schema:
+                return {
+                    "valid": False,
+                    "error": "Schema missing required 'mark' property"
+                }
+            
+            if "encoding" not in schema:
+                return {
+                    "valid": False,
+                    "error": "Schema missing required 'encoding' property"
+                }
+            
+            return {"valid": True, "error": None}
+            
+        except Exception as e:
+            return {
+                "valid": False,
+                "error": f"Schema validation error: {str(e)}"
+            }
+    
+    def _extract_chart_type_from_schema(self, schema: Dict[str, Any]) -> str:
+        """Extract chart type from Vega-Lite schema"""
+        if "mark" not in schema:
+            return ""
+        
+        mark_type = schema["mark"].get("type", "")
+        
+        # Map Vega-Lite mark types to our chart types
+        mark_to_chart_type = {
+            "bar": "bar",
+            "line": "line", 
+            "area": "area",
+            "arc": "pie",
+            "point": "scatter",
+            "circle": "scatter",
+            "rect": "heatmap",
+            "boxplot": "box",
+            "text": "text",
+            "tick": "tick",
+            "rule": "rule"
+        }
+        
+        base_type = mark_to_chart_type.get(mark_type, "")
+        
+        # Check for special cases
+        if base_type == "bar" and "encoding" in schema:
+            encoding = schema["encoding"]
+            if "stack" in encoding.get("y", {}) and encoding["y"]["stack"] == "zero":
+                return "stacked_bar"
+            elif "xOffset" in encoding:
+                return "grouped_bar"
+        
+        if base_type == "line" and "transform" in schema:
+            # Check for multi-line chart
+            for transform in schema["transform"]:
+                if "fold" in transform:
+                    return "multi_line"
+        
+        return base_type
 
 
 # Example usage and testing

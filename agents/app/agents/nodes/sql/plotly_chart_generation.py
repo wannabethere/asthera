@@ -268,6 +268,23 @@ class PlotlyChartGenerationPipeline:
                 "success": False,
                 "error": str(e)
             }
+    
+    async def generate_chart_from_template(
+        self,
+        existing_chart: Dict[str, Any],
+        new_data: Dict[str, Any],
+        field_mapping: Optional[Dict[str, str]] = None,
+        language: str = "English"
+    ) -> Dict[str, Any]:
+        """Generate a new chart using an existing chart as a template with new data
+        
+        This is a convenience method that creates an AdvancedPlotlyChartGeneration
+        instance and calls its generate_chart_from_template method.
+        """
+        advanced_pipeline = AdvancedPlotlyChartGeneration(self.agent.llm)
+        return await advanced_pipeline.generate_chart_from_template(
+            existing_chart, new_data, field_mapping, language
+        )
 
 
 # Alternative pipeline class matching original structure
@@ -546,6 +563,295 @@ class AdvancedPlotlyChartGeneration(PlotlyChartGenerationPipeline):
             "reasoning": f"Applied template '{template_name}' with field mapping",
             "success": True
         }
+    
+    async def generate_chart_from_template(
+        self,
+        existing_chart: Dict[str, Any],
+        new_data: Dict[str, Any],
+        field_mapping: Optional[Dict[str, str]] = None,
+        language: str = "English"
+    ) -> Dict[str, Any]:
+        """Generate a new chart using an existing chart as a template with new data
+        
+        Args:
+            existing_chart: The existing chart configuration to use as template
+            new_data: New data to visualize using the template
+            field_mapping: Optional mapping from old field names to new field names
+            language: Language for the chart titles and labels
+            
+        Returns:
+            Dict containing the new chart configuration
+        """
+        try:
+            logger.info("Generating Plotly chart from template...")
+            
+            # Extract chart config from existing chart
+            if "chart_config" in existing_chart:
+                template_config = existing_chart["chart_config"]
+            elif "results" in existing_chart and "chart_config" in existing_chart["results"]:
+                template_config = existing_chart["results"]["chart_config"]
+            else:
+                template_config = existing_chart
+            
+            if not template_config:
+                return {
+                    "success": False,
+                    "error": "No valid chart config found in existing chart",
+                    "chart_config": {},
+                    "reasoning": "Template chart is invalid"
+                }
+            
+            # Preprocess new data
+            preprocessed_data = self.data_preprocessor.run(new_data)
+            new_columns = preprocessed_data["sample_data"].get("columns", [])
+            
+            # Create field mapping if not provided
+            if not field_mapping:
+                field_mapping = self._create_automatic_field_mapping(template_config, new_columns)
+            
+            # Generate new chart config based on template
+            new_chart_config = self._adapt_chart_config(
+                template_config, 
+                new_columns, 
+                field_mapping, 
+                language
+            )
+            
+            # Validate the new chart config
+            validation_result = self._validate_chart_config(new_chart_config, new_columns)
+            
+            if not validation_result["valid"]:
+                return {
+                    "success": False,
+                    "error": f"Chart validation failed: {validation_result['error']}",
+                    "chart_config": new_chart_config,
+                    "reasoning": f"Generated chart from template but validation failed: {validation_result['error']}"
+                }
+            
+            # Determine chart type from config
+            chart_type = self._extract_chart_type_from_config(new_chart_config)
+            
+            return {
+                "success": True,
+                "chart_config": new_chart_config,
+                "chart_type": chart_type,
+                "reasoning": f"Successfully generated Plotly chart from template using field mapping: {field_mapping}",
+                "field_mapping": field_mapping,
+                "template_info": {
+                    "original_chart_type": existing_chart.get("chart_type", "unknown"),
+                    "fields_mapped": len(field_mapping),
+                    "validation_passed": True
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error generating Plotly chart from template: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "chart_config": {},
+                "reasoning": f"Error generating chart from template: {str(e)}"
+            }
+    
+    def _create_automatic_field_mapping(
+        self, 
+        template_config: Dict[str, Any], 
+        new_columns: List[str]
+    ) -> Dict[str, str]:
+        """Create automatic field mapping based on column names and config fields"""
+        field_mapping = {}
+        
+        # Extract fields used in the template config
+        template_fields = self._extract_fields_from_config(template_config)
+        
+        # Create mapping based on name similarity
+        for template_field in template_fields:
+            best_match = self._find_best_column_match(template_field, new_columns)
+            if best_match:
+                field_mapping[template_field] = best_match
+        
+        return field_mapping
+    
+    def _extract_fields_from_config(self, config: Dict[str, Any]) -> List[str]:
+        """Extract all field names used in a Plotly chart config"""
+        fields = []
+        
+        # Extract from data traces
+        if "data" in config and isinstance(config["data"], list):
+            for trace in config["data"]:
+                if isinstance(trace, dict):
+                    # Common field names in Plotly traces
+                    field_keys = ["x", "y", "z", "labels", "values", "text", "color", "size"]
+                    for key in field_keys:
+                        if key in trace and isinstance(trace[key], str):
+                            fields.append(trace[key])
+        
+        return list(set(fields))
+    
+    def _find_best_column_match(self, template_field: str, new_columns: List[str]) -> Optional[str]:
+        """Find the best matching column name for a template field"""
+        template_field_lower = template_field.lower()
+        
+        # Exact match
+        for col in new_columns:
+            if col.lower() == template_field_lower:
+                return col
+        
+        # Partial match (contains)
+        for col in new_columns:
+            if template_field_lower in col.lower() or col.lower() in template_field_lower:
+                return col
+        
+        # Fuzzy match based on common patterns
+        common_patterns = {
+            'date': ['date', 'time', 'timestamp', 'created', 'updated'],
+            'sales': ['sales', 'revenue', 'amount', 'value'],
+            'region': ['region', 'area', 'location', 'country', 'state'],
+            'product': ['product', 'item', 'category', 'type'],
+            'count': ['count', 'number', 'quantity', 'total'],
+            'profit': ['profit', 'margin', 'income', 'earnings']
+        }
+        
+        for pattern, keywords in common_patterns.items():
+            if pattern in template_field_lower:
+                for col in new_columns:
+                    for keyword in keywords:
+                        if keyword in col.lower():
+                            return col
+        
+        return None
+    
+    def _adapt_chart_config(
+        self, 
+        template_config: Dict[str, Any], 
+        new_columns: List[str], 
+        field_mapping: Dict[str, str],
+        language: str
+    ) -> Dict[str, Any]:
+        """Adapt a template chart config to work with new data"""
+        import copy
+        
+        # Deep copy the template config
+        new_config = copy.deepcopy(template_config)
+        
+        # Update field references in data traces
+        if "data" in new_config and isinstance(new_config["data"], list):
+            for trace in new_config["data"]:
+                if isinstance(trace, dict):
+                    self._update_trace_fields(trace, field_mapping)
+        
+        # Update titles to be language-appropriate
+        self._update_titles_for_language(new_config, language)
+        
+        return new_config
+    
+    def _update_trace_fields(self, trace: Dict[str, Any], field_mapping: Dict[str, str]):
+        """Update field references in a Plotly trace"""
+        field_keys = ["x", "y", "z", "labels", "values", "text", "color", "size"]
+        
+        for key in field_keys:
+            if key in trace and isinstance(trace[key], str) and trace[key] in field_mapping:
+                trace[key] = field_mapping[trace[key]]
+    
+    def _update_titles_for_language(self, config: Dict[str, Any], language: str):
+        """Update chart titles and labels for the specified language"""
+        # Update main title
+        if "layout" in config and "title" in config["layout"]:
+            title = config["layout"]["title"]
+            if isinstance(title, str) and "<TITLE_IN_LANGUAGE_PROVIDED_BY_USER>" in title:
+                config["layout"]["title"] = f"Chart ({language})"
+        
+        # Update axis titles
+        if "layout" in config:
+            for axis_key in ["xaxis", "yaxis", "zaxis"]:
+                if axis_key in config["layout"] and "title" in config[axis_key]:
+                    title = config[axis_key]["title"]
+                    if isinstance(title, str) and "<TITLE_IN_LANGUAGE_PROVIDED_BY_USER>" in title:
+                        config[axis_key]["title"] = f"{axis_key.replace('axis', '').title()} ({language})"
+    
+    def _validate_chart_config(self, config: Dict[str, Any], columns: List[str]) -> Dict[str, Any]:
+        """Validate that a chart config is compatible with the provided columns"""
+        try:
+            # Extract all field references from the config
+            config_fields = self._extract_fields_from_config(config)
+            
+            # Check if all referenced fields exist in the data columns
+            missing_fields = []
+            for field in config_fields:
+                if field not in columns:
+                    missing_fields.append(field)
+            
+            if missing_fields:
+                return {
+                    "valid": False,
+                    "error": f"Config references fields not present in data: {missing_fields}"
+                }
+            
+            # Basic config structure validation
+            if "data" not in config:
+                return {
+                    "valid": False,
+                    "error": "Config missing required 'data' property"
+                }
+            
+            if not isinstance(config["data"], list) or len(config["data"]) == 0:
+                return {
+                    "valid": False,
+                    "error": "Config 'data' must be a non-empty list"
+                }
+            
+            return {"valid": True, "error": None}
+            
+        except Exception as e:
+            return {
+                "valid": False,
+                "error": f"Config validation error: {str(e)}"
+            }
+    
+    def _extract_chart_type_from_config(self, config: Dict[str, Any]) -> str:
+        """Extract chart type from Plotly config"""
+        if "data" not in config or not isinstance(config["data"], list) or len(config["data"]) == 0:
+            return ""
+        
+        # Get the first trace to determine chart type
+        first_trace = config["data"][0]
+        if not isinstance(first_trace, dict) or "type" not in first_trace:
+            return ""
+        
+        trace_type = first_trace["type"]
+        
+        # Map Plotly trace types to our chart types
+        trace_to_chart_type = {
+            "scatter": "scatter",
+            "bar": "bar",
+            "pie": "pie",
+            "histogram": "histogram",
+            "box": "box",
+            "heatmap": "heatmap",
+            "area": "area",
+            "violin": "violin",
+            "sunburst": "sunburst",
+            "treemap": "treemap",
+            "waterfall": "waterfall",
+            "funnel": "funnel"
+        }
+        
+        base_type = trace_to_chart_type.get(trace_type, "")
+        
+        # Check for special cases
+        if trace_type == "scatter":
+            mode = first_trace.get("mode", "")
+            if "lines" in mode:
+                return "line"
+            elif "markers" in mode:
+                return "scatter"
+        
+        if trace_type == "bar":
+            orientation = first_trace.get("orientation", "v")
+            if orientation == "h":
+                return "horizontal_bar"
+        
+        return base_type
 
 
 # Example usage and testing

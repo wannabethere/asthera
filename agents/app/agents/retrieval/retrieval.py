@@ -31,12 +31,14 @@ The database schema includes tables, columns, primary keys, foreign keys, relati
 1. Carefully analyze the schema and identify the essential tables and columns needed to answer the question.
 1.1 ***Please select as many columns as possible even if they might not be fully relevant to the question. There are other downstream agents that will filter out the irrelevant columns.***
 1.2 ***Please select columns that are relevant to the question from the same schema as much as possible. Then if not possible select from the next best schema. This will avoid unnecessary joins.***
+1.3 ***IMPORTANT: Consider relationships between tables when selecting columns. If a table has relationships with other tables, consider including relevant columns from related tables that might be needed for joins or to provide complete context for the query.***
 2. For each table, provide a clear and concise reasoning for why specific columns are selected.
 3. List each reason as part of a step-by-step chain of thought, justifying the inclusion of each column.
 4. If a "." is included in columns, put the name before the first dot into chosen columns.
 5. The number of columns chosen must match the number of reasoning.
 6. Final chosen columns must be only column names, don't prefix it with table names.
 7. If the chosen column is a child column of a STRUCT type column, choose the parent column instead of the child column.
+8. When analyzing relationships, consider the join type (ONE_TO_ONE, ONE_TO_MANY, MANY_TO_ONE) and the join condition to understand which columns are likely to be used in joins.
 
 ### FINAL ANSWER FORMAT ###
 
@@ -89,6 +91,17 @@ table_columns_selection_user_prompt_template = """
 ### Database Schema in chroma stored documents json format  ###
 
 {db_schemas}
+
+### RELATIONSHIP INFORMATION ###
+Each table may include a "relationships" field that contains information about how this table relates to other tables. 
+The relationships include:
+- name: The name of the relationship
+- models: The tables involved in the relationship
+- joinType: The type of relationship (ONE_TO_ONE, ONE_TO_MANY, MANY_TO_ONE)
+- condition: The join condition showing which columns are used to connect the tables
+- properties: Additional metadata about the relationship
+
+When selecting columns, consider these relationships to ensure you include columns that might be needed for joins or to provide complete context.
 
 ### INPUT ###
 {question}
@@ -840,7 +853,8 @@ class TableRetrieval:
                     "name": table_name,
                     "type": content_dict.get('type', 'TABLE'),
                     "description": description,
-                    "columns": []
+                    "columns": [],
+                    "relationships": content_dict.get('relationships', [])
                 }
         # Process column documents
         for doc in column_docs:
@@ -880,23 +894,32 @@ class TableRetrieval:
                     continue
                 if schema_type in ["TABLE", "TABLE_DESCRIPTION", "MODEL"]:
                     ddl = self._build_table_ddl(schema.get("name", ""), schema.get("description", ""), schema.get("columns", []))
+                    # Extract relationships from schema
+                    relationships = schema.get("relationships", [])
                     retrieval_results.append({
                         "table_name": schema.get("name", ""),
-                        "table_ddl": ddl
+                        "table_ddl": ddl,
+                        "relationships": relationships
                     })
             for doc in schema_docs:
                 content_dict = self._parse_doc_content(doc)
                 doc_type = content_dict.get('type')
                 if doc_type == "METRIC":
+                    # Extract relationships for metrics
+                    relationships = content_dict.get('relationships', [])
                     retrieval_results.append({
                         "table_name": content_dict.get("name", ""),
-                        "table_ddl": self._build_metric_ddl(content_dict)
+                        "table_ddl": self._build_metric_ddl(content_dict),
+                        "relationships": relationships
                     })
                     has_metric = True
                 elif doc_type == "VIEW":
+                    # Extract relationships for views
+                    relationships = content_dict.get('relationships', [])
                     retrieval_results.append({
                         "table_name": content_dict.get("name", ""),
-                        "table_ddl": self._build_view_ddl(content_dict)
+                        "table_ddl": self._build_view_ddl(content_dict),
+                        "relationships": relationships
                     })
             table_ddls = [result["table_ddl"] for result in retrieval_results]
             token_count = len(self._encoding.encode(" ".join(table_ddls)))
@@ -939,17 +962,37 @@ class TableRetrieval:
             
             # Format prompt with the schema DDLs
             try:
+                # Enhance schema data with relationship information
+                enhanced_schemas = []
+                for schema_doc in db_schemas:
+                    enhanced_schema = schema_doc.copy()
+                    
+                    # Extract relationships from the document content if available
+                    if 'content' in schema_doc:
+                        try:
+                            import ast
+                            content_dict = ast.literal_eval(schema_doc['content'])
+                            if isinstance(content_dict, dict):
+                                relationships = content_dict.get('relationships', [])
+                                enhanced_schema['relationships'] = relationships
+                        except:
+                            enhanced_schema['relationships'] = []
+                    else:
+                        enhanced_schema['relationships'] = []
+                    
+                    enhanced_schemas.append(enhanced_schema)
+                
                 # Join DDLs with newlines to create a single string
-                #print("db_schemas", db_schemas)
+                #print("enhanced_schemas", enhanced_schemas)
                 import json
-                schemas_str = json.dumps(db_schemas)
+                schemas_str = json.dumps(enhanced_schemas)
                 
                 # Create the prompt using the template
                 prompt = self._prompt.format(
                     question=query,
                     db_schemas=schemas_str
                 )
-                logger.info(f"Built prompt with {len(db_schemas)} schemas")
+                logger.info(f"Built prompt with {len(enhanced_schemas)} schemas including relationships")
                 return prompt
                 
             except Exception as e:
@@ -967,6 +1010,75 @@ class TableRetrieval:
                 question=query,
                 db_schemas="-- Error building prompt"
             )
+
+    def _analyze_relationships_for_column_selection(
+        self,
+        selected_tables: Dict[str, set],
+        db_schemas: List[Dict]
+    ) -> Dict[str, set]:
+        """Analyze relationships to suggest additional columns from related tables."""
+        enhanced_selection = selected_tables.copy()
+        
+        for schema in db_schemas:
+            table_name = schema.get("name")
+            if not table_name or table_name not in selected_tables:
+                continue
+                
+            relationships = schema.get("relationships", [])
+            for relationship in relationships:
+                models = relationship.get("models", [])
+                join_type = relationship.get("joinType", "")
+                condition = relationship.get("condition", "")
+                
+                # Find related tables
+                related_tables = [model for model in models if model != table_name]
+                
+                for related_table in related_tables:
+                    # Find the related table schema
+                    related_schema = None
+                    for s in db_schemas:
+                        if s.get("name") == related_table:
+                            related_schema = s
+                            break
+                    
+                    if not related_schema:
+                        continue
+                    
+                    # Extract join columns from the condition
+                    join_columns = self._extract_join_columns(condition, related_table)
+                    
+                    # Add join columns to the related table selection
+                    if related_table not in enhanced_selection:
+                        enhanced_selection[related_table] = set()
+                    
+                    enhanced_selection[related_table].update(join_columns)
+                    
+                    # Add some key columns from related tables based on join type
+                    if join_type in ["ONE_TO_MANY", "MANY_TO_ONE"]:
+                        # Add primary key and some descriptive columns
+                        for col in related_schema.get("columns", []):
+                            col_name = col.get("name", "") if isinstance(col, dict) else str(col)
+                            if col_name and (col_name.endswith("_id") or col_name.endswith("name") or col_name.endswith("title")):
+                                enhanced_selection[related_table].add(col_name)
+        
+        return enhanced_selection
+    
+    def _extract_join_columns(self, condition: str, table_name: str) -> List[str]:
+        """Extract column names from join condition for a specific table."""
+        columns = []
+        if not condition:
+            return columns
+            
+        # Parse condition like "table1.column1 = table2.column2"
+        parts = condition.split(" = ")
+        for part in parts:
+            if "." in part:
+                table_col = part.strip()
+                if table_col.startswith(f"{table_name}."):
+                    column = table_col.split(".", 1)[1]
+                    columns.append(column)
+        
+        return columns
 
     def _construct_retrieval_results(
         self,
@@ -1007,6 +1119,12 @@ class TableRetrieval:
             if columns:
                 selected_tables[table_name] = set(columns)
         
+        # Enhance selection based on relationships
+        enhanced_selection = self._analyze_relationships_for_column_selection(
+            selected_tables, db_schemas
+        )
+        logger.info(f"Enhanced column selection with relationships: {enhanced_selection}")
+        
         retrieval_results = []
         has_calculated_field = False
         has_metric = False
@@ -1018,12 +1136,12 @@ class TableRetrieval:
                 continue
                 
             table_name = schema.get("name")
-            if not table_name or table_name not in selected_tables:
+            if not table_name or table_name not in enhanced_selection:
                 continue
                 
-            # Get selected columns for this table
+            # Get selected columns for this table (including relationship-enhanced columns)
             
-            selected_column_names = selected_tables[table_name]
+            selected_column_names = enhanced_selection[table_name]
            
             # Filter the schema's columns to only those selected
             all_columns = schema.get("columns", [])
@@ -1049,9 +1167,36 @@ class TableRetrieval:
                 filtered_columns
             )
             #logger.info(f"selected_tables ddl in table retrieval: {ddl}")
+            
+            # Extract relationships from table descriptions
+            relationships = []
+            for doc in schema_docs:
+                try:
+                    content = doc.get('content', '')
+                    if not content:
+                        continue
+                        
+                    try:
+                        content_dict = ast.literal_eval(content)
+                    except:
+                        continue
+                    
+                    if not isinstance(content_dict, dict):
+                        continue
+                        
+                    # Check if this is a table description for the current table
+                    if (content_dict.get('name') == table_name and 
+                        content_dict.get('type') == 'TABLE_DESCRIPTION'):
+                        relationships = content_dict.get('relationships', [])
+                        break
+                except Exception as e:
+                    logger.warning(f"Error extracting relationships: {str(e)}")
+                    continue
+            
             retrieval_results.append({
                 "table_name": table_name,
-                "table_ddl": ddl
+                "table_ddl": ddl,
+                "relationships": relationships
             })
         
         # Process metrics and views
@@ -1079,20 +1224,26 @@ class TableRetrieval:
                 if not doc_type or not table_name:
                     continue
                     
-                # Only process if table is in selected tables
-                if table_name not in selected_tables:
+                # Only process if table is in enhanced selection
+                if table_name not in enhanced_selection:
                     continue
                 
                 if doc_type == "METRIC" or content_dict.get('mdl_type') == "METRIC":
+                    # Extract relationships for metrics
+                    relationships = content_dict.get('relationships', [])
                     retrieval_results.append({
                         "table_name": table_name,
-                        "table_ddl": self._build_metric_ddl(content_dict)
+                        "table_ddl": self._build_metric_ddl(content_dict),
+                        "relationships": relationships
                     })
                     has_metric = True
                 elif doc_type == "VIEW" or content_dict.get('mdl_type') == "VIEW":
+                    # Extract relationships for views
+                    relationships = content_dict.get('relationships', [])
                     retrieval_results.append({
                         "table_name": table_name,
-                        "table_ddl": self._build_view_ddl(content_dict)
+                        "table_ddl": self._build_view_ddl(content_dict),
+                        "relationships": relationships
                     })
             except Exception as e:
                 logger.warning(f"Error processing schema document: {str(e)}")

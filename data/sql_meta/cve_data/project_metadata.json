@@ -1,0 +1,63 @@
+{
+  "project_id": "cve_data",
+  "tables": [
+    {
+      "name": "vulnerability_assessments",
+      "display_name": "Vulnerability Assessments",
+      "description": "Comprehensive vulnerability and CVE assessment data including CVSS scores, threat intelligence, risk scoring, and remediation tracking for cybersecurity risk management",
+      "mdl_file": "mdl_cve.json",
+      "ddl_file": "ddl_cve.json"
+    },
+    {
+      "name": "vulnerability_instances",
+      "display_name": "Vulnerability Instances",
+      "description": "Comprehensive vulnerability instance tracking system for CVE management, risk assessment, and remediation tracking across enterprise infrastructure",
+      "mdl_file": "mdl_vuln_instance.json",
+      "ddl_file": "ddl_vuln_instance.json"
+    },
+    {
+      "name": "security_assets",
+      "display_name": "Security Assets",
+      "description": "Comprehensive IT asset inventory with security risk assessments, hardware specifications, and location data",
+      "mdl_file": "mdl_assets.json",
+      "ddl_file": "ddl_assets.json"
+    },
+    {
+      "name": "software_inventory",
+      "display_name": "Software Inventory",
+      "description": "Comprehensive software asset inventory and patch management system tracking installed applications, versions, patch status, and remediation activities across the enterprise infrastructure",
+      "mdl_file": "mdl_software_instances.json",
+      "ddl_file": "ddl_software_instances.json"
+    },
+    {
+      "name": "security_agents",
+      "display_name": "Security Agents",
+      "description": "Security monitoring agents deployed across the infrastructure for data collection and monitoring",
+      "mdl_file": "mdl_agents.json",
+      "ddl_file": "ddl_agents.json"
+    },
+    {
+      "name": "network_devices",
+      "display_name": "Network Devices",
+      "description": "Network device inventory and management system tracking IP addresses, MAC addresses, manufacturers, and device lifecycle information across different network sites and subnets",
+      "mdl_file": "mdl_interfaces.json",
+      "ddl_file": "ddl_interfaces.json"
+    }
+  ],
+  "knowledge_base": [
+    {
+      "name": "cve_data_knowledge_base",
+      "display_name": "CVE Data Knowledge Base",
+      "description": "Knowledge base for CVE data analysis and vulnerability management",
+      "file_path": "instructions.json"
+    }
+  ],
+  "examples": [
+    {
+      "name": "cve_data_examples",
+      "display_name": "CVE Data Examples",
+      "description": "Example queries and use cases for CVE data analysis",
+      "file_path": "sql_pairs.json"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "cve_data": {
+    "instructions": "0. When asked for product or software related questions, ALWAYS use the dev_software_instances table for product, vendor, and version information. Get OS version from the dev_assets table. For software/product/versions use all product, vendor, version columns from the dev_software_instances table. 1. Use nuid, dev_id as the key for all table joins with both nuid and dev_id present in both tables. 2. If only nuid or dev_id as the key when present, order nuid first and then followed by dev_id. 3. If the CVE lookup is by year for the partition id, add CVE prefix - 2023 becomes CVE-2023. 4. For vulnerability queries involving software, join dev_vulnerability_instances with dev_software_instances using sw_instance_id and dev_id/nuid. 5. Always include dev_software_instances table when querying for software products, versions, or vendor information. 4. Definition of software for an asset means product, vendor, version always since this combination makes it unique. Multiple versions of same software/product/vendor is possible on the same asset but version can be different. -- Please follow these additional rules for generating the sql"
+  },
+  "workday_data": {
+    "instructions": "1. Always use employee_id as the primary key for employee-related queries. 2. For date-based queries, use the standard workday date format (YYYY-MM-DD). -- Please follow these additional rules for generating the sql"
+  },
+  "default": {
+    "instructions": "Please generate accurate SQL queries based on the provided schema and requirements."
+  }
+}

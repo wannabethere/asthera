@@ -64,6 +64,7 @@ class ComponentType(str, Enum):
     INSIGHT = "insight"
     NARRATIVE = "narrative"
     ALERT = "alert"
+    SQL_SUMMARY = "sql_summary"  # SQL query summary and visualization component
 
 # Alert Types
 class AlertType(str, Enum):
@@ -138,6 +139,18 @@ class ThreadComponent(Base):
     chart_config = Column(JSON, nullable=True)
     table_config = Column(JSON, nullable=True)
     
+    # SQL Summary specific fields
+    sql_query = Column(String, nullable=True)  # The SQL query executed
+    executive_summary = Column(String, nullable=True)  # Executive summary text
+    data_overview = Column(JSON, nullable=True)  # Data overview statistics
+    visualization_data = Column(JSON, nullable=True)  # Visualization configuration and data
+    sample_data = Column(JSON, nullable=True)  # Sample data for preview
+    metadata = Column(JSON, nullable=True)  # Query execution metadata
+    chart_schema = Column(JSON, nullable=True)  # Chart schema (vega_lite, plotly, etc.)
+    reasoning = Column(String, nullable=True)  # Reasoning behind the analysis
+    data_count = Column(Integer, nullable=True)  # Number of records processed
+    validation_results = Column(JSON, nullable=True)  # Data validation results
+    
     # Alert-specific configuration (when component_type is ALERT)
     alert_config = Column(JSON, nullable=True)  # Alert type, severity, conditions
     alert_status = Column(SQLEnum(AlertStatus), nullable=True)  # Current alert status
@@ -154,6 +167,71 @@ class ThreadComponent(Base):
     # Relationships
     workflow = relationship("DashboardWorkflow", back_populates="thread_components", foreign_keys=[workflow_id])
     report_workflow = relationship("ReportWorkflow", back_populates="thread_components", foreign_keys=[report_workflow_id])
+    
+    @classmethod
+    def create_sql_summary_component(
+        cls,
+        workflow_id: Optional[str] = None,
+        report_workflow_id: Optional[str] = None,
+        thread_message_id: Optional[str] = None,
+        sequence_order: int = 0,
+        sql_summary_data: Dict[str, Any] = None,
+        question: Optional[str] = None,
+        description: Optional[str] = None
+    ) -> "ThreadComponent":
+        """Create a ThreadComponent for SQL summary data.
+        
+        Args:
+            workflow_id: ID of the dashboard workflow
+            report_workflow_id: ID of the report workflow
+            thread_message_id: ID of the thread message
+            sequence_order: Order of the component in the thread
+            sql_summary_data: Data from SQL summary response
+            question: Optional question text
+            description: Optional description text
+            
+        Returns:
+            ThreadComponent instance configured for SQL summary
+        """
+        component = cls(
+            workflow_id=workflow_id,
+            report_workflow_id=report_workflow_id,
+            thread_message_id=thread_message_id,
+            component_type=ComponentType.SQL_SUMMARY,
+            sequence_order=sequence_order,
+            question=question,
+            description=description,
+            is_configured=True
+        )
+        
+        if sql_summary_data:
+            # Map SQL summary response data to component fields
+            component.sql_query = sql_summary_data.get("sql_query")
+            component.executive_summary = sql_summary_data.get("executive_summary")
+            component.data_overview = sql_summary_data.get("data_overview")
+            component.visualization_data = sql_summary_data.get("visualization")
+            component.sample_data = sql_summary_data.get("sample_data")
+            component.metadata = sql_summary_data.get("metadata")
+            component.chart_schema = sql_summary_data.get("chart_schema")
+            component.reasoning = sql_summary_data.get("reasoning")
+            component.data_count = sql_summary_data.get("data_count")
+            component.validation_results = sql_summary_data.get("validation_results")
+            
+            # Store additional chart schemas in configuration
+            additional_config = {}
+            if "plotly_schema" in sql_summary_data:
+                additional_config["plotly_schema"] = sql_summary_data["plotly_schema"]
+            if "powerbi_schema" in sql_summary_data:
+                additional_config["powerbi_schema"] = sql_summary_data["powerbi_schema"]
+            if "vega_lite_schema" in sql_summary_data:
+                additional_config["vega_lite_schema"] = sql_summary_data["vega_lite_schema"]
+            if "execution_config" in sql_summary_data:
+                additional_config["execution_config"] = sql_summary_data["execution_config"]
+            
+            if additional_config:
+                component.configuration = additional_config
+        
+        return component
 
 class ShareConfiguration(Base):
     __tablename__ = "share_configurations"
@@ -264,6 +342,18 @@ class ThreadComponentCreate(BaseModel):
     chart_config: Optional[Dict[str, Any]] = None
     table_config: Optional[Dict[str, Any]] = None
     configuration: Dict[str, Any] = Field(default_factory=dict)
+    
+    # SQL Summary specific fields
+    sql_query: Optional[str] = None
+    executive_summary: Optional[str] = None
+    data_overview: Optional[Dict[str, Any]] = None
+    visualization_data: Optional[Dict[str, Any]] = None
+    sample_data: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
+    chart_schema: Optional[Dict[str, Any]] = None
+    reasoning: Optional[str] = None
+    data_count: Optional[int] = None
+    validation_results: Optional[Dict[str, Any]] = None
 
 class ThreadComponentUpdate(BaseModel):
     question: Optional[str] = None
@@ -273,6 +363,18 @@ class ThreadComponentUpdate(BaseModel):
     table_config: Optional[Dict[str, Any]] = None
     configuration: Optional[Dict[str, Any]] = None
     is_configured: Optional[bool] = None
+    
+    # SQL Summary specific fields
+    sql_query: Optional[str] = None
+    executive_summary: Optional[str] = None
+    data_overview: Optional[Dict[str, Any]] = None
+    visualization_data: Optional[Dict[str, Any]] = None
+    sample_data: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
+    chart_schema: Optional[Dict[str, Any]] = None
+    reasoning: Optional[str] = None
+    data_count: Optional[int] = None
+    validation_results: Optional[Dict[str, Any]] = None
 
 class ThreadComponentResponse(BaseModel):
     id: UUID
@@ -289,6 +391,18 @@ class ThreadComponentResponse(BaseModel):
     is_configured: bool
     created_at: datetime
     updated_at: datetime
+    
+    # SQL Summary specific fields
+    sql_query: Optional[str] = None
+    executive_summary: Optional[str] = None
+    data_overview: Optional[Dict[str, Any]] = None
+    visualization_data: Optional[Dict[str, Any]] = None
+    sample_data: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
+    chart_schema: Optional[Dict[str, Any]] = None
+    reasoning: Optional[str] = None
+    data_count: Optional[int] = None
+    validation_results: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True
@@ -349,6 +463,18 @@ class AlertThreadComponentCreate(BaseModel):
     escalation_config: Dict[str, Any] = Field(default_factory=dict)  # Escalation rules
     cooldown_period: int = 300  # Cooldown in seconds
     configuration: Dict[str, Any] = Field(default_factory=dict)
+    
+    # SQL Summary specific fields (for SQL-based alerts)
+    sql_query: Optional[str] = None
+    executive_summary: Optional[str] = None
+    data_overview: Optional[Dict[str, Any]] = None
+    visualization_data: Optional[Dict[str, Any]] = None
+    sample_data: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
+    chart_schema: Optional[Dict[str, Any]] = None
+    reasoning: Optional[str] = None
+    data_count: Optional[int] = None
+    validation_results: Optional[Dict[str, Any]] = None
 
 class AlertThreadComponentUpdate(BaseModel):
     question: Optional[str] = None
@@ -363,6 +489,18 @@ class AlertThreadComponentUpdate(BaseModel):
     cooldown_period: Optional[int] = None
     configuration: Optional[Dict[str, Any]] = None
     alert_status: Optional[AlertStatus] = None
+    
+    # SQL Summary specific fields (for SQL-based alerts)
+    sql_query: Optional[str] = None
+    executive_summary: Optional[str] = None
+    data_overview: Optional[Dict[str, Any]] = None
+    visualization_data: Optional[Dict[str, Any]] = None
+    sample_data: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
+    chart_schema: Optional[Dict[str, Any]] = None
+    reasoning: Optional[str] = None
+    data_count: Optional[int] = None
+    validation_results: Optional[Dict[str, Any]] = None
 
 class AlertThreadComponentResponse(BaseModel):
     id: UUID
@@ -380,6 +518,18 @@ class AlertThreadComponentResponse(BaseModel):
     is_configured: bool
     created_at: datetime
     updated_at: datetime
+    
+    # SQL Summary specific fields (for SQL-based alerts)
+    sql_query: Optional[str] = None
+    executive_summary: Optional[str] = None
+    data_overview: Optional[Dict[str, Any]] = None
+    visualization_data: Optional[Dict[str, Any]] = None
+    sample_data: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
+    chart_schema: Optional[Dict[str, Any]] = None
+    reasoning: Optional[str] = None
+    data_count: Optional[int] = None
+    validation_results: Optional[Dict[str, Any]] = None
     
     class Config:
         from_attributes = True

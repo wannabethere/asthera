@@ -157,7 +157,7 @@ def get_sql_pairs_processor() -> SqlPairs:
     embeddings = get_embeddings()
     
     doc_store = DocumentChromaStore(
-        persistent_client=chroma_client,
+        client=chroma_client,
         collection_name="sql_pairs"
     )
     
@@ -173,9 +173,9 @@ def get_instructions_processor() -> Instructions:
     embeddings = get_embeddings()
     
     doc_store = DocumentChromaStore(
-        persistent_client=chroma_client,
+        client=chroma_client,
         collection_name="instructions"
-    )
+        )
     
     return Instructions(
         document_store=doc_store,

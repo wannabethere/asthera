@@ -1,0 +1,68 @@
+[
+    {
+        "question": "Which CVEs have the highest GTM risk score above 80 that are still active?",
+        "instructions": "List high-risk CVEs with GTM scores over 80 that are still in active state to help prioritize remediation.",
+        "sql": "SELECT cve_id, gtm_score, severity, state FROM dev_vulnerability_instances WHERE gtm_score > 80 AND state = 'ACTIVE' ORDER BY gtm_score DESC",
+        "chain_of_thought": "1. Goal: Prioritize vulnerabilities for remediation. 2. Use GTM score to reflect org-specific risk. 3. Filter by GTM > 80 and active state. 4. Return CVE details and sort by highest score."
+    },
+    {
+        "question": "What are the top 5 vulnerabilities by total number of affected devices?",
+        "instructions": "Aggregate vulnerability instances by CVE ID and rank by number of distinct devices affected.",
+        "sql": "SELECT cve_id, COUNT(DISTINCT dev_id) AS affected_devices FROM dev_vulnerability_instances GROUP BY cve_id ORDER BY affected_devices DESC LIMIT 5",
+        "chain_of_thought": "1. Goal: Identify high-spread vulnerabilities. 2. Aggregate by CVE ID and count distinct devices. 3. Sort in descending order. 4. Limit to top 5."
+    },
+    {
+        "question": "Which devices have the highest number of critical vulnerabilities?",
+        "instructions": "Count critical severity vulnerabilities per device to identify most at-risk assets.",
+        "sql": "SELECT dev_id, COUNT(*) as critical_vulns FROM dev_vulnerability_instances WHERE severity = 4 GROUP BY dev_id ORDER BY critical_vulns DESC",
+        "chain_of_thought": "1. Goal: Spot most vulnerable devices. 2. Severity level 4 = Critical. 3. Count vulnerabilities per device. 4. Sort descending."
+    },
+    {
+        "question": "How many vulnerabilities are patched vs unpatched across the environment?",
+        "instructions": "Compare the number of vulnerabilities with available patches to those without for patch readiness status.",
+        "sql": "SELECT COUNT(CASE WHEN patches IS NOT NULL THEN 1 END) AS patched, COUNT(CASE WHEN patches IS NULL THEN 1 END) AS unpatched FROM dev_vulnerability_instances",
+        "chain_of_thought": "1. Goal: Assess patch coverage. 2. Use NULL check on 'patches' field. 3. Conditional count of patched vs unpatched. 4. No GROUP BY needed for global view."
+    },
+    {
+        "question": "Which CVEs have no patch available but affect more than 10 devices?",
+        "instructions": "List unpatchable high-exposure vulnerabilities for alternative mitigation planning.",
+        "sql": "SELECT cve_id, COUNT(*) AS affected_instances FROM dev_vulnerability_instances WHERE patches IS NULL GROUP BY cve_id HAVING COUNT(*) > 10 ORDER BY affected_instances DESC",
+        "chain_of_thought": "1. Goal: Identify widespread unpatchable issues. 2. Filter by NULL patches. 3. Group by CVE ID. 4. Only include those with >10 affected devices."
+    },
+    {
+        "question": "Which assets have the highest effective risk score?",
+        "instructions": "Rank assets by effective risk to support prioritized asset monitoring.",
+        "sql": "SELECT dev_id, host_name, effective_risk FROM dev_assets ORDER BY effective_risk DESC LIMIT 10",
+        "chain_of_thought": "1. Goal: Identify riskiest assets. 2. Use effective_risk column. 3. Include asset name for readability. 4. Limit results to top 10."
+    },
+    {
+        "question": "What is the average effective risk score by device type?",
+        "instructions": "Aggregate and average effective risk scores to analyze device category vulnerabilities.",
+        "sql": "SELECT device_type, AVG(effective_risk) AS avg_risk FROM dev_assets GROUP BY device_type ORDER BY avg_risk DESC",
+        "chain_of_thought": "1. Goal: Compare risk across device types. 2. Group by type. 3. Use AVG on effective_risk. 4. Sort descending to show highest risk types."
+    },
+    {
+        "question": "Which software products are still in vulnerable state and missing latest patches?",
+        "instructions": "Identify unpatched vulnerable software to track lag in patch application.",
+        "sql": "SELECT vendor, product, version, latest_available_patch, product_state FROM dev_software_inventory WHERE product_state = 'VULNERABLE' AND latest_available_patch IS NOT NULL",
+        "chain_of_thought": "1. Goal: Spot vulnerable but patchable software. 2. Filter by VULNERABLE state. 3. Exclude cases where no patch is known. 4. Return software metadata for context."
+    },
+    {
+        "question": "What percentage of software installations are fully patched?",
+        "instructions": "Calculate proportion of software entries marked as PATCHED.",
+        "sql": "SELECT (COUNT(CASE WHEN product_state = 'PATCHED' THEN 1 END) * 100.0 / COUNT(*)) AS patched_percentage FROM dev_software_inventory",
+        "chain_of_thought": "1. Goal: Measure patch coverage. 2. Use conditional count for PATCHED. 3. Divide by total rows. 4. Multiply by 100 for percentage."
+    },
+    {
+        "question": "How many agents are currently active vs stale?",
+        "instructions": "Count and compare active vs stale agents for coverage monitoring.",
+        "sql": "SELECT COUNT(CASE WHEN is_active = true THEN 1 END) AS active_agents, COUNT(CASE WHEN is_stale = true THEN 1 END) AS stale_agents FROM dev_agents",
+        "chain_of_thought": "1. Goal: Agent health overview. 2. Use is_active and is_stale booleans. 3. Count separately via CASE WHEN. 4. Global view, no grouping needed."
+    },
+    {
+        "question": "Which sources have the most inactive agents?",
+        "instructions": "Group agent data by source and rank by number of inactive records.",
+        "sql": "SELECT display_source, COUNT(*) AS inactive_agents FROM dev_agents WHERE is_active = false GROUP BY display_source ORDER BY inactive_agents DESC",
+        "chain_of_thought": "1. Goal: Identify unreliable data sources. 2. Filter inactive agents. 3. Group by source. 4. Rank descending to show worst sources."
+    }
+]

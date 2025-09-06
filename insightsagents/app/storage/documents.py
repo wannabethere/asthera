@@ -127,31 +127,24 @@ class DocumentVectorstore:
         self.vectorstore.save_local(self.vectorstore_path)
         logger.info(f"Added {len(documents)} documents to the vectorstore.")
 
-    
-
-    def semantic_search(self, query: str, k: int = 5, where: Dict = None) -> List[Dict]:
-        """Perform semantic search on the Chroma store.
-
+    def semantic_search(self, query: str, k: int = 5) -> List[Dict]:
+        """Perform semantic search on the vectorstore.
+        
         Args:
             query: The search query string
             k: Number of results to return (default: 5)
-            where: Optional metadata filter dictionary
-
+            
         Returns:
             List of dictionaries containing search results with scores
         """
         if not self.vectorstore:
-            logger.warning("Chroma store not initialized. Please initialize first.")
+            logger.warning("Vectorstore not initialized. Please initialize first.")
             return []
-
+            
         try:
             # Perform similarity search with scores
-            results = self.vectorstore.similarity_search_with_score(
-                query,
-                k=k,
-                filter=where  # Apply metadata filters if provided
-            )
-
+            results = self.vectorstore.similarity_search_with_score(query, k=k)
+            
             # Format results
             formatted_results = []
             for doc, score in results:
@@ -161,17 +154,16 @@ class DocumentVectorstore:
                     "score": float(score),  # Convert numpy float to Python float
                     "id": doc.metadata.get("id", None)
                 })
-
-            # Sort results by score (lower is better for Chroma)
+            
+            # Sort results by score (lower is better for FAISS)
             formatted_results.sort(key=lambda x: x["score"])
-            #logger.info(f"Found {len(formatted_results)} results for query: {query}")
+            
+            logger.info(f"Found {len(formatted_results)} results for query: {query}")
             return formatted_results
-
+            
         except Exception as e:
             logger.error(f"Error during semantic search: {str(e)}")
             return []
-
-    
 
     def bulk_add_data(self, data: List[Dict[str, Any]]):
         """Add multiple insights at once.
@@ -450,13 +442,33 @@ class DocumentChromaStore:
             
         try:
             logger.info(f"query in semantic_search for {self.collection_name}: {query}")
-                # Otherwise perform regular similarity search
-            results = self.vectorstore.similarity_search_with_score(
-                query,
-                k=k
-            )
+            
+            # Handle the where parameter safely - only pass filter if where is not None and contains valid values
+            search_kwargs = {"query": query, "k": k}
+            if where is not None and isinstance(where, dict) and where:
+                # Log the original where parameter for debugging
+                logger.debug(f"Original where parameter: {where}")
+                
+                # Filter out None values from the where clause
+                filtered_where = {}
+                for key, value in where.items():
+                    if value is not None:
+                        filtered_where[key] = value
+                    else:
+                        logger.warning(f"Filtering out None value for key '{key}' in where clause")
+                
+                # Only add filter if we have valid filters
+                if filtered_where:
+                    search_kwargs["filter"] = filtered_where
+                    logger.debug(f"Using filtered where clause: {filtered_where}")
+                else:
+                    logger.info("No valid filters found in where clause, proceeding without filter")
+            else:
+                logger.debug(f"Where parameter is {where}, proceeding without filter")
+                
+            # Perform similarity search
+            results = self.vectorstore.similarity_search_with_score(**search_kwargs)
             logger.info(f"results in semantic_search for {self.collection_name}: {results}")
-           
             # Format results
             formatted_results = []
             for doc, score in results:
@@ -527,7 +539,7 @@ class DocumentChromaStore:
                 "distances": [],
                 "metadatas": []
             }
-        
+
     def semantic_search_with_bm25(self, query: str, k: int = 5, where: Dict = None, query_embedding: List[float] = None) -> List[Dict]:
         """Perform semantic search using both vector similarity and BM25 ranking.
         
@@ -546,11 +558,31 @@ class DocumentChromaStore:
             
         try:
             # Get vector similarity results using query embedding if provided
-            vector_results = self.vectorstore.similarity_search_with_score(
-                    query,
-                    k=k,
-                    filter=where
-                )
+            search_kwargs = {"query": query, "k": k}
+            
+            # Only add filter if where is not None and contains valid values
+            if where is not None and isinstance(where, dict) and where:
+                # Log the original where parameter for debugging
+                logger.debug(f"Original where parameter in BM25 search: {where}")
+                
+                # Filter out None values from the where clause
+                filtered_where = {}
+                for key, value in where.items():
+                    if value is not None:
+                        filtered_where[key] = value
+                    else:
+                        logger.warning(f"Filtering out None value for key '{key}' in BM25 where clause")
+                
+                # Only add filter if we have valid filters
+                if filtered_where:
+                    search_kwargs["filter"] = filtered_where
+                    logger.debug(f"Using filtered where clause in BM25 search: {filtered_where}")
+                else:
+                    logger.info("No valid filters found in BM25 where clause, proceeding without filter")
+            else:
+                logger.debug(f"Where parameter in BM25 search is {where}, proceeding without filter")
+                
+            vector_results = self.vectorstore.similarity_search_with_score(**search_kwargs)
             
                 
             
@@ -607,18 +639,41 @@ class DocumentChromaStore:
             List of dictionaries containing search results with combined scores
         """
         try:
+            # Prepare search parameters
+            search_kwargs = {"k": k}
+            
+            # Only add filter if where is not None and contains valid values
+            if where is not None and isinstance(where, dict) and where:
+                # Log the original where parameter for debugging
+                logger.debug(f"Original where parameter in TF-IDF search: {where}")
+                
+                # Filter out None values from the where clause
+                filtered_where = {}
+                for key, value in where.items():
+                    if value is not None:
+                        filtered_where[key] = value
+                    else:
+                        logger.warning(f"Filtering out None value for key '{key}' in TF-IDF where clause")
+                
+                # Only add filter if we have valid filters
+                if filtered_where:
+                    search_kwargs["filter"] = filtered_where
+                    logger.debug(f"Using filtered where clause in TF-IDF search: {filtered_where}")
+                else:
+                    logger.info("No valid filters found in TF-IDF where clause, proceeding without filter")
+            else:
+                logger.debug(f"Where parameter in TF-IDF search is {where}, proceeding without filter")
+                
             # Semantic search using query embedding if provided
             if query_embedding is not None:
                 sem_results = self.vectorstore.similarity_search_by_vector(
                     query_embedding,
-                    k=k,
-                    filter=where
+                    **search_kwargs
                 )
             else:
                 sem_results = self.vectorstore.similarity_search_with_score(
                     query,
-                    k=k,
-                    filter=where
+                    **search_kwargs
                 )
             
             sem_docs = [doc for doc, _ in sem_results]
@@ -702,12 +757,36 @@ class DocumentChromaStore:
             # Convert query to TF-IDF vector
             query_vector = self.vectorizer.transform([query]).toarray()[0]
             
+            # Prepare query parameters
+            query_kwargs = {
+                "query_embeddings": query_vector.reshape(1, -1),
+                "n_results": k
+            }
+            
+            # Only add where clause if it's not None and contains valid values
+            if where is not None and isinstance(where, dict) and where:
+                # Log the original where parameter for debugging
+                logger.debug(f"Original where parameter in TF-IDF only search: {where}")
+                
+                # Filter out None values from the where clause
+                filtered_where = {}
+                for key, value in where.items():
+                    if value is not None:
+                        filtered_where[key] = value
+                    else:
+                        logger.warning(f"Filtering out None value for key '{key}' in TF-IDF only where clause")
+                
+                # Only add where if we have valid filters
+                if filtered_where:
+                    query_kwargs["where"] = filtered_where
+                    logger.debug(f"Using filtered where clause in TF-IDF only search: {filtered_where}")
+                else:
+                    logger.info("No valid filters found in TF-IDF only where clause, proceeding without filter")
+            else:
+                logger.debug(f"Where parameter in TF-IDF only search is {where}, proceeding without filter")
+                
             # Query the TF-IDF collection
-            results = self.tfidf_collection.query(
-                query_embeddings=query_vector.reshape(1, -1),
-                n_results=k,
-                where=where
-            )
+            results = self.tfidf_collection.query(**query_kwargs)
             
             # Format results
             formatted_results = []

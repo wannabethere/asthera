@@ -5,7 +5,7 @@ from .retrieval import TableRetrieval
 from .sql_executor import SQLExecutor
 from .sql_functions import SqlFunctions
 from .sql_pairs_retrieval import SqlPairsRetrieval
-
+from .retrieval_helper import RetrievalHelper
 __all__ = [
     "HistoricalQuestionRetrieval",
     "PreprocessSqlData",
@@ -14,4 +14,5 @@ __all__ = [
     "SqlPairsRetrieval",
     "Instructions",
     "SqlFunctions",
+    "RetrievalHelper",
 ]

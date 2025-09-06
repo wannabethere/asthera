@@ -15,6 +15,8 @@ find . -type d -name "__MACOSX" -print0 | xargs -0 rm -rf
 
 scp -i ~/Downloads/flowharmonic.pem agents.zip ec2-user@ec2-54-161-71-105.compute-1.amazonaws.com:~/.
 
+https://ec2-54-161-71-105.compute-1.amazonaws.com/dashboards/dashboard-U13E13890/staticdashboards
+
 
 for dataservices:
 sudo yum install postgresql-devel python3-devel gcc
@@ -22,4 +24,4 @@ nohup uvicorn app.main:app --reload --host 0.0.0.0 --port 8035 --workers 4 > dat
 
 https://github.com/llm-d/llm-d
 
- 'columns': ['Full_Name', 'User_ID', 'Division', 'Assigned_Date', 'Completed_Date', 'Due_Date', 'is_completed', 'is_satisfied_late']}, 'table_name': 'csod_training_records'}
+ 'columns': ['Full_Name', 'User_ID', 'Division', 'Assigned_Date', 'Completed_Date', 'Due_Date', 'is_completed', 'is_satisfied_late'], 'table_name': 'csod_training_records'}

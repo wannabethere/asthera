@@ -458,6 +458,33 @@ class PipelineContainer:
         except ImportError as e:
             logger.warning(f"Failed to import report orchestrator pipeline: {e}")
             self._pipelines["report_orchestrator"] = None
+        
+        # Initialize alert orchestrator pipeline
+        try:
+            from app.agents.pipelines.writers.alert_orchestrator_pipeline import create_alert_orchestrator_pipeline
+            self._pipelines["alert_orchestrator"] = create_alert_orchestrator_pipeline(
+                engine=self._engine,
+                llm=self._llm,
+                retrieval_helper=self._retrieval_helper,
+                sql_execution_pipeline=self._pipelines.get("sql_execution")
+            )
+            self._pipelines["alert_orchestrator"]._initialized = True
+        except ImportError as e:
+            logger.warning(f"Failed to import alert orchestrator pipeline: {e}")
+            self._pipelines["alert_orchestrator"] = None
+        
+        # Initialize feed management pipeline
+        try:
+            from app.agents.pipelines.writers.feed_management_pipeline import create_feed_management_pipeline
+            self._pipelines["feed_management"] = create_feed_management_pipeline(
+                engine=self._engine,
+                llm=self._llm,
+                retrieval_helper=self._retrieval_helper
+            )
+            self._pipelines["feed_management"]._initialized = True
+        except ImportError as e:
+            logger.warning(f"Failed to import feed management pipeline: {e}")
+            self._pipelines["feed_management"] = None
     
     @classmethod
     def get_instance(cls) -> 'PipelineContainer':

@@ -12,35 +12,37 @@ from chromadb import (
     WhereDocument,
 )
 
-from app.core.settings import get_settings
-
-env = get_settings()
 class ChromaDB:
-    def __init__(self, connection_params: Dict[str, Any] | None = None):
+    def __init__(self, client=None, connection_params: Dict[str, Any] | None = None):
         """
         Initialize ChromaDB client with connection settings.
 
         Args:
+            client: Optional ChromaDB client instance. If provided, will use this client.
             connection_params: Optional dictionary of connection parameters.
             Optionally accepting these so this class can be used without running the api.
             If not provided, the connection parameters will be taken from the environment variables.
         """
-        self.client = None
-        if connection_params is None:
-            self.connection_params = {
-                "host": env.CHROMA_HOST,
-                "port": env.CHROMA_PORT,
-            }
-        else:
-            self.connection_params = connection_params
+        self.client = client
+        self.connection_params = connection_params
 
     def _connect_client(self) -> None:
         """Connect to the ChromaDB client."""
-        self.client = HttpClient(**self.connection_params)
+        if self.client is None:
+            if self.connection_params is None:
+                # Try to get client from dependencies if available
+                try:
+                    from app.core.dependencies import get_chromadb_client
+                    self.client = get_chromadb_client()
+                    return
+                except ImportError:
+                    raise ValueError("Either client or connection_params must be provided, or app.core.dependencies must be available")
+            self.client = HttpClient(**self.connection_params)
+        # If client is already provided, no need to connect
 
     def _close_client(self) -> None:
         """Close the ChromaDB client connection."""
-        if self.client:
+        if self.client and hasattr(self.client, 'close'):
             self.client.close()
             self.client = None
 
@@ -62,11 +64,19 @@ class ChromaDB:
         """
         try:
             self._connect_client()
+            
+            # First try to get existing collection
+            try:
+                return self.client.get_collection(name)
+            except Exception:
+                # Collection doesn't exist, create it
+                pass
+            
+            # Create new collection
             return self.client.create_collection(
                 name=name,
                 metadata=metadata,
                 embedding_function=embedding_function,
-                get_or_create=True,
             )
         except Exception as e:
             raise Exception(f"Failed to create/get collection {name}: {str(e)}") from e

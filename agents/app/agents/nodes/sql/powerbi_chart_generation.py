@@ -263,6 +263,270 @@ class PowerBIChartGenerationPipeline:
                 "success": False,
                 "error": str(e)
             }
+    
+    async def generate_chart_from_template(
+        self,
+        existing_chart: Dict[str, Any],
+        new_data: Dict[str, Any],
+        field_mapping: Optional[Dict[str, str]] = None,
+        language: str = "English"
+    ) -> Dict[str, Any]:
+        """Generate a new chart using an existing chart as a template with new data
+        
+        Args:
+            existing_chart: The existing chart configuration to use as template
+            new_data: New data to visualize using the template
+            field_mapping: Optional mapping from old field names to new field names
+            language: Language for the chart titles and labels
+            
+        Returns:
+            Dict containing the new chart configuration
+        """
+        try:
+            logger.info("Generating PowerBI chart from template...")
+            
+            # Extract chart config from existing chart
+            if "chart_config" in existing_chart:
+                template_config = existing_chart["chart_config"]
+            elif "results" in existing_chart and "chart_config" in existing_chart["results"]:
+                template_config = existing_chart["results"]["chart_config"]
+            else:
+                template_config = existing_chart
+            
+            if not template_config:
+                return {
+                    "success": False,
+                    "error": "No valid chart config found in existing chart",
+                    "chart_config": {},
+                    "reasoning": "Template chart is invalid"
+                }
+            
+            # Preprocess new data
+            preprocessed_data = self.agent.data_preprocessor.run(new_data)
+            new_columns = preprocessed_data["sample_data"].get("columns", [])
+            
+            # Create field mapping if not provided
+            if not field_mapping:
+                field_mapping = self._create_automatic_field_mapping(template_config, new_columns)
+            
+            # Generate new chart config based on template
+            new_chart_config = self._adapt_chart_config(
+                template_config, 
+                new_columns, 
+                field_mapping, 
+                language
+            )
+            
+            # Validate the new chart config
+            validation_result = self._validate_chart_config(new_chart_config, new_columns)
+            
+            if not validation_result["valid"]:
+                return {
+                    "success": False,
+                    "error": f"Chart validation failed: {validation_result['error']}",
+                    "chart_config": new_chart_config,
+                    "reasoning": f"Generated chart from template but validation failed: {validation_result['error']}"
+                }
+            
+            # Determine chart type from config
+            chart_type = self._extract_chart_type_from_config(new_chart_config)
+            
+            return {
+                "success": True,
+                "chart_config": new_chart_config,
+                "chart_type": chart_type,
+                "reasoning": f"Successfully generated PowerBI chart from template using field mapping: {field_mapping}",
+                "field_mapping": field_mapping,
+                "template_info": {
+                    "original_chart_type": existing_chart.get("chart_type", "unknown"),
+                    "fields_mapped": len(field_mapping),
+                    "validation_passed": True
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error generating PowerBI chart from template: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "chart_config": {},
+                "reasoning": f"Error generating chart from template: {str(e)}"
+            }
+    
+    def _create_automatic_field_mapping(
+        self, 
+        template_config: Dict[str, Any], 
+        new_columns: List[str]
+    ) -> Dict[str, str]:
+        """Create automatic field mapping based on column names and config fields"""
+        field_mapping = {}
+        
+        # Extract fields used in the template config
+        template_fields = self._extract_fields_from_config(template_config)
+        
+        # Create mapping based on name similarity
+        for template_field in template_fields:
+            best_match = self._find_best_column_match(template_field, new_columns)
+            if best_match:
+                field_mapping[template_field] = best_match
+        
+        return field_mapping
+    
+    def _extract_fields_from_config(self, config: Dict[str, Any]) -> List[str]:
+        """Extract all field names used in a PowerBI chart config"""
+        fields = []
+        
+        # Extract from data roles
+        if "dataRoles" in config:
+            for role_name, role_data in config["dataRoles"].items():
+                if isinstance(role_data, list):
+                    for role_item in role_data:
+                        if isinstance(role_item, dict) and "field" in role_item:
+                            fields.append(role_item["field"])
+        
+        return list(set(fields))
+    
+    def _find_best_column_match(self, template_field: str, new_columns: List[str]) -> Optional[str]:
+        """Find the best matching column name for a template field"""
+        template_field_lower = template_field.lower()
+        
+        # Exact match
+        for col in new_columns:
+            if col.lower() == template_field_lower:
+                return col
+        
+        # Partial match (contains)
+        for col in new_columns:
+            if template_field_lower in col.lower() or col.lower() in template_field_lower:
+                return col
+        
+        # Fuzzy match based on common patterns
+        common_patterns = {
+            'date': ['date', 'time', 'timestamp', 'created', 'updated'],
+            'sales': ['sales', 'revenue', 'amount', 'value'],
+            'region': ['region', 'area', 'location', 'country', 'state'],
+            'product': ['product', 'item', 'category', 'type'],
+            'count': ['count', 'number', 'quantity', 'total'],
+            'profit': ['profit', 'margin', 'income', 'earnings']
+        }
+        
+        for pattern, keywords in common_patterns.items():
+            if pattern in template_field_lower:
+                for col in new_columns:
+                    for keyword in keywords:
+                        if keyword in col.lower():
+                            return col
+        
+        return None
+    
+    def _adapt_chart_config(
+        self, 
+        template_config: Dict[str, Any], 
+        new_columns: List[str], 
+        field_mapping: Dict[str, str],
+        language: str
+    ) -> Dict[str, Any]:
+        """Adapt a template chart config to work with new data"""
+        import copy
+        
+        # Deep copy the template config
+        new_config = copy.deepcopy(template_config)
+        
+        # Update field references in data roles
+        if "dataRoles" in new_config:
+            for role_name, role_data in new_config["dataRoles"].items():
+                if isinstance(role_data, list):
+                    for role_item in role_data:
+                        if isinstance(role_item, dict) and "field" in role_item:
+                            if role_item["field"] in field_mapping:
+                                role_item["field"] = field_mapping[role_item["field"]]
+        
+        # Update titles to be language-appropriate
+        self._update_titles_for_language(new_config, language)
+        
+        return new_config
+    
+    def _update_titles_for_language(self, config: Dict[str, Any], language: str):
+        """Update chart titles and labels for the specified language"""
+        # Update main title
+        if "title" in config:
+            title = config["title"]
+            if isinstance(title, str) and "<TITLE_IN_LANGUAGE_PROVIDED_BY_USER>" in title:
+                config["title"] = f"Chart ({language})"
+        
+        # Update data role display names
+        if "dataRoles" in config:
+            for role_name, role_data in config["dataRoles"].items():
+                if isinstance(role_data, list):
+                    for role_item in role_data:
+                        if isinstance(role_item, dict) and "displayName" in role_item:
+                            display_name = role_item["displayName"]
+                            if isinstance(display_name, str) and "<TITLE_IN_LANGUAGE_PROVIDED_BY_USER>" in display_name:
+                                role_item["displayName"] = f"{role_name} ({language})"
+    
+    def _validate_chart_config(self, config: Dict[str, Any], columns: List[str]) -> Dict[str, Any]:
+        """Validate that a chart config is compatible with the provided columns"""
+        try:
+            # Extract all field references from the config
+            config_fields = self._extract_fields_from_config(config)
+            
+            # Check if all referenced fields exist in the data columns
+            missing_fields = []
+            for field in config_fields:
+                if field not in columns:
+                    missing_fields.append(field)
+            
+            if missing_fields:
+                return {
+                    "valid": False,
+                    "error": f"Config references fields not present in data: {missing_fields}"
+                }
+            
+            # Basic config structure validation
+            if "visualType" not in config:
+                return {
+                    "valid": False,
+                    "error": "Config missing required 'visualType' property"
+                }
+            
+            if "dataRoles" not in config:
+                return {
+                    "valid": False,
+                    "error": "Config missing required 'dataRoles' property"
+                }
+            
+            return {"valid": True, "error": None}
+            
+        except Exception as e:
+            return {
+                "valid": False,
+                "error": f"Config validation error: {str(e)}"
+            }
+    
+    def _extract_chart_type_from_config(self, config: Dict[str, Any]) -> str:
+        """Extract chart type from PowerBI config"""
+        if "visualType" not in config:
+            return ""
+        
+        visual_type = config["visualType"]
+        
+        # Map PowerBI visual types to our chart types
+        visual_to_chart_type = {
+            "columnChart": "bar",
+            "clusteredColumnChart": "grouped_bar",
+            "stackedColumnChart": "stacked_bar",
+            "lineChart": "line",
+            "areaChart": "area",
+            "pieChart": "pie",
+            "donutChart": "pie",
+            "scatterChart": "scatter",
+            "barChart": "bar",
+            "clusteredBarChart": "grouped_bar",
+            "stackedBarChart": "stacked_bar",
+            "comboChart": "combo"
+        }
+        
+        return visual_to_chart_type.get(visual_type, "")
 
 
 # Factory function to create the pipeline

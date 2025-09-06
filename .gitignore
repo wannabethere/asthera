@@ -16,3 +16,5 @@ lexy
 *.pywz
 *.pyzw
 sql_helper/
+analysis_results/
+data/cvedata/data/

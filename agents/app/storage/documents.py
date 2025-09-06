@@ -195,6 +195,45 @@ class DocumentVectorstore:
         """
         self.store.delete(ids)
 
+    def delete_by_project_id(self, project_id: str) -> Dict[str, int]:
+        """Delete all documents for a specific project ID.
+        
+        Args:
+            project_id: The project ID to delete documents for
+            
+        Returns:
+            Dictionary containing the number of documents deleted
+        """
+        try:
+            logger.info(f"Deleting documents for project ID: {project_id}")
+            
+            # Get all documents with the specified project_id to count them
+            results = self.collection.get(where={"project_id": project_id})
+            document_count = len(results['ids']) if results['ids'] else 0
+            
+            if document_count == 0:
+                logger.info(f"No documents found for project ID: {project_id}")
+                return {"documents_deleted": 0}
+            
+            # Delete documents with the specified project_id
+            self.collection.delete(where={"project_id": project_id})
+            
+            # Also delete from TF-IDF collection if enabled
+            if self.tf_idf and self.tfidf_collection:
+                try:
+                    self.tfidf_collection.delete(where={"project_id": project_id})
+                    logger.info(f"Deleted {document_count} documents from TF-IDF collection for project ID: {project_id}")
+                except Exception as e:
+                    logger.warning(f"Error deleting from TF-IDF collection: {str(e)}")
+            
+            logger.info(f"Successfully deleted {document_count} documents for project ID: {project_id}")
+            return {"documents_deleted": document_count}
+            
+        except Exception as e:
+            error_msg = f"Error deleting documents for project ID {project_id}: {str(e)}"
+            logger.error(error_msg)
+            return {"documents_deleted": 0, "error": str(e)}
+
         
     def semantic_search_with_bm25(self, query: str, k: int = 5) -> List[Dict]:
         """Perform semantic search using both vector similarity and BM25 ranking.

@@ -1,3 +1,22 @@
+"""
+Enhanced Analysis Intent Classification with Comprehensive Metadata
+
+This module provides enhanced analysis intent classification that generates detailed
+reasoning plans with comprehensive metadata for each step. The enhanced metadata includes:
+
+1. Column Mapping: Maps function parameters to actual available columns
+2. Input/Output Columns: Specifies which columns are needed and created
+3. Step Dependencies: Tracks data flow between steps
+4. Pipeline Types: Identifies the appropriate pipeline for each function
+5. Parameter Constraints: Provides validation rules for parameters
+6. Error Handling: Specifies how to handle potential issues
+7. Embedded Function Details: Handles complex functions with embedded computations
+
+This enhanced metadata significantly improves the accuracy of the self-correcting
+pipeline generator by providing clear, actionable information about data requirements,
+dependencies, and constraints for each analysis step.
+"""
+
 import logging
 from typing import Any, Dict, List, Literal, Optional
 
@@ -7,7 +26,9 @@ from langfuse.decorators import observe
 from pydantic import BaseModel
 from app.storage.documents import DocumentChromaStore
 from app.agents.nodes.mlagents.function_retrieval import FunctionRetrieval
+from app.agents.nodes.mlagents.enhanced_function_retrieval import EnhancedFunctionRetrieval
 from app.agents.retrieval.retrieval_helper import RetrievalHelper
+import json
 
 logger = logging.getLogger("analysis-intent-planner")
 
@@ -54,19 +75,129 @@ class AnalysisIntentResult(BaseModel):
         return super().json(*args, **kwargs)
 
 
-
+# Add specific function requirements based on intent type
+intent_specific_requirements = {
+        "time_series_analysis": """Need functions for comprehensive temporal data processing including:
+            - Date/time parsing, formatting, and timezone handling
+            - Time-based resampling, upsampling, and downsampling operations
+            - Rolling window calculations (mean, median, std, custom functions)
+            - Lag and lead operations for temporal feature engineering
+            - Seasonality detection and decomposition (additive/multiplicative)
+            - Autocorrelation and partial autocorrelation analysis
+            - Time-based interpolation and gap-filling methods
+            - Stationarity testing and differencing operations
+            - Time series smoothing (exponential, moving averages)
+            - Frequency domain analysis and spectral density estimation""",
+        
+        "trend_analysis": """Need functions for comprehensive trend identification and forecasting including:
+            - Linear and polynomial trend fitting with confidence intervals
+            - Non-parametric trend detection (Mann-Kendall, Theil-Sen)
+            - Change point detection and structural break analysis
+            - Growth rate calculations (CAGR, period-over-period, year-over-year)
+            - Trend strength measurement and significance testing
+            - Forecasting methods (ARIMA, exponential smoothing, Prophet)
+            - Seasonal trend decomposition and adjustment
+            - Trend reversal and momentum indicators
+            - Multi-variate trend analysis and correlation
+            - Trend extrapolation with uncertainty quantification""",
+        
+        "segmentation_analysis": """Need functions for comprehensive clustering and grouping including:
+            - Multiple clustering algorithms (K-means, hierarchical, DBSCAN, Gaussian mixture)
+            - Distance metrics and similarity measures (Euclidean, Manhattan, cosine, Jaccard)
+            - Optimal cluster number determination (elbow method, silhouette analysis)
+            - Cluster validation and quality metrics (silhouette score, Davies-Bouldin index)
+            - Dimensionality reduction for analysis (PCA, t-SNE, UMAP)
+            - Feature scaling and normalization for clustering
+            - Segment profiling and characterization analysis
+            - Segment stability and robustness testing
+            - Custom segmentation rule definition and application
+            - Segment size optimization and business constraint handling""",
+        
+        "cohort_analysis": """Need functions for comprehensive cohort tracking and analysis including:
+            - Flexible cohort definition (time-based, behavior-based, attribute-based)
+            - Retention rate calculations across multiple time periods
+            - Customer lifetime value (CLV) estimation and cohort comparison
+            - Churn analysis and survival curve generation
+            - Cohort size normalization and standardization
+            - Period-over-period cohort performance comparison
+            - Revenue cohort analysis and monetization tracking
+            - Cohort maturation curves and predictive modeling
+            - Cross-cohort migration analysis and transition matrices
+            - Cohort-based A/B testing and treatment effect measurement""",
+        
+        "funnel_analysis": """Need functions for comprehensive conversion tracking and optimization including:
+            - Multi-step funnel construction with flexible stage definition
+            - Conversion rate calculations at each funnel stage
+            - Drop-off analysis and bottleneck identification
+            - User path analysis and journey mapping
+            - Time-to-conversion analysis and velocity metrics
+            - Funnel performance segmentation (by demographics, channels, etc.)
+            - Attribution modeling and multi-touch analysis
+            - Funnel A/B testing and treatment effect measurement
+            - Micro-conversion tracking and intermediate goal analysis
+            - Funnel optimization recommendations and what-if scenario modeling""",
+        
+        "risk_analysis": """Need functions for comprehensive risk assessment and management including:
+            - Statistical risk measures (VaR, CVaR, Expected Shortfall)
+            - Volatility modeling (GARCH, realized volatility, implied volatility)
+            - Probability distribution fitting and goodness-of-fit testing
+            - Monte Carlo simulation for risk scenario generation
+            - Stress testing and sensitivity analysis frameworks
+            - Risk factor decomposition and attribution analysis
+            - Portfolio risk aggregation and diversification metrics
+            - Extreme value theory application for tail risk assessment
+            - Risk-adjusted return calculations (Sharpe ratio, Sortino ratio)
+            - Regulatory risk reporting and compliance metrics""",
+        
+        "anomaly_detection": """Need functions for comprehensive outlier and anomaly identification including:
+            - Statistical outlier detection (Z-score, IQR, Grubbs test)
+            - Machine learning-based anomaly detection (Isolation Forest, One-Class SVM)
+            - Time series anomaly detection with seasonality consideration
+            - Multivariate anomaly detection and correlation analysis
+            - Threshold setting and dynamic threshold adjustment
+            - Anomaly scoring and ranking systems
+            - False positive reduction and anomaly validation
+            - Contextual anomaly detection with conditional analysis
+            - Real-time anomaly monitoring and alerting systems
+            - Anomaly explanation and root cause analysis""",
+        
+        "metrics_calculation": """Need functions for comprehensive statistical and business metrics including:
+            - Descriptive statistics (mean, median, mode, percentiles, quartiles)
+            - Business KPI calculations (conversion rates, ARPU, ARPPU, CAC, LTV)
+            - Distribution analysis and moments calculation (skewness, kurtosis)
+            - Correlation analysis (Pearson, Spearman, Kendall tau)
+            - Ratio analysis and index calculation
+            - Comparative metrics (period-over-period, benchmarking)
+            - Aggregation functions with grouping and pivoting
+            - Confidence interval estimation for all metrics
+            - Metric standardization and normalization
+            - Custom metric definition and calculation frameworks""",
+        
+        "operations_analysis": """Need functions for comprehensive experimental design and testing including:
+            - A/B testing framework with power analysis and sample size calculation
+            - Hypothesis testing (t-tests, chi-square, Mann-Whitney U, ANOVA)
+            - Multiple comparison correction (Bonferroni, FDR, Holm-Sidak)
+            - Effect size calculation and practical significance assessment
+            - Experimental design optimization (factorial, randomized block)
+            - Bayesian A/B testing and credible interval estimation
+            - Sequential testing and early stopping criteria
+            - Treatment assignment and randomization algorithms
+            - Post-hoc analysis and subgroup investigation
+            - Statistical power monitoring and experiment duration optimization"""
+    }
 
 # System prompt for intent classification
 ANALYSIS_INTENT_SYSTEM_PROMPT = """
 ### TASK ###
 You are an expert data analyst who specializes in intent classification for data analysis tasks.
 Your goal is to analyze user questions and classify them into appropriate analysis types based on available analysis functions AND available data.
+The data is already prepared and ready to be used for analysis. We should skip any data selection steps as well.
 
 First, rephrase the user's question to make it more specific and clear.
 Second, classify the user's intent into one of the available analysis types.
 Third, suggest the most relevant functions and required data columns.
 Fourth, assess whether the question can be answered with the available data.
-Fifth, create a detailed step-by-step reasoning plan for the analysis.
+Fifth, create a detailed step-by-step reasoning plan for the analysis. The reasoning plan should not include any data preparation steps, data cleaning steps, or data selection steps.
 
 ### CRITICAL INSTRUCTIONS ###
 - PRIORITIZE EXACT FUNCTION MATCHES: If the user mentions specific analysis terms (like "variance", "rolling variance", "correlation", etc.), classify accordingly
@@ -121,7 +252,7 @@ Provide your response as a JSON object:
     "intent_type": "analysis_type",
     "confidence_score": 0.0-1.0,
     "rephrased_question": "clear and specific question",
-    "suggested_functions": ["function1: operation category", "function2: operation category", "function3: operation category"],
+    "suggested_functions": [function1: operation category (PIPELINE TYPE), function2: operation category (PIPELINE TYPE), function3: operation category (PIPELINE TYPE)],
     "function_categories": ["Use the Category from function definition", "Use the Category from function definition", "Use the Category from function definition"],
     "function_type_of_operations": ["Use the Type of Operation from function definition", "Use the Type of Operation from function definition", "Use the Type of Operation from function definition"],
     "reasoning": "brief explanation emphasizing specific function matches and data availability",
@@ -246,12 +377,11 @@ class AnalysisIntentPlanner:
             retrieval_helper=self.retrieval_helper
         )
         
-       
-
-
-
-
-
+        # Initialize Enhanced Function Retrieval for improved function matching
+        self.enhanced_function_retrieval = EnhancedFunctionRetrieval(
+            llm=llm,
+            retrieval_helper=self.retrieval_helper
+        )
 
     @observe(as_type="generation", capture_input=False)
     async def _classify_with_llm(self, prompt: str) -> Dict[str, Any]:
@@ -370,7 +500,6 @@ class AnalysisIntentPlanner:
                 confidence_score=0.0,
                 rephrased_question=question,
                 suggested_functions=[],
-                reasoning=f"Classification error: {str(e)}",
                 required_data_columns=[],
                 clarification_needed="I encountered an error processing your question. Please try rephrasing it.",
                 retrieved_functions=[],
@@ -380,8 +509,7 @@ class AnalysisIntentPlanner:
                 missing_columns=[],
                 available_alternatives=[],
                 data_suggestions="Unable to assess data due to classification error.",
-                reasoning_plan=[],
-                pipeline_reasoning_plan=[]
+                reasoning_plan=[]
             )
 
     async def _assess_data_feasibility_with_llm(
@@ -644,17 +772,20 @@ SCORING GUIDELINES:
 
     def get_available_analyses(self) -> Dict[str, str]:
         """Return available analysis types and their descriptions"""
-        return {
-            "time_series_analysis": "Analyze data patterns over time periods (includes variance, lead, lag analysis)",
-            "trend_analysis": "Analyze trends, growth patterns, and forecasting",
-            "segmentation_analysis": "Group users or data points into meaningful segments",
-            "cohort_analysis": "Analyze user behavior and retention over time",
-            "funnel_analysis": "Analyze user conversion funnels and paths",
-            "risk_analysis": "Perform risk analysis and portfolio assessment",
-            "anomaly_detection": "Detect outliers and anomalies in data (statistical, contextual, collective, change points)",
-            "metrics_calculation": "Calculate statistical metrics and aggregations",
-            "operations_analysis": "Statistical operations and experimental analysis"
-        }
+        # Create descriptions from the intent_specific_requirements dictionary
+        analysis_descriptions = {}
+        for intent_type, requirements in intent_specific_requirements.items():
+            # Extract a concise description from the first line of requirements
+            first_line = requirements.split('\n')[0].strip()
+            # Remove the "Need functions for comprehensive..." prefix
+            if first_line.startswith("Need functions for comprehensive"):
+                description = first_line.replace("Need functions for comprehensive ", "").replace(" including:", "")
+            else:
+                description = first_line
+            
+            analysis_descriptions[intent_type] = description
+        
+        return analysis_descriptions
 
     async def quick_feasibility_check(
         self,
@@ -1194,7 +1325,7 @@ Make the plan practical, actionable, and specific to the available data and anal
             # Create prompt for intent classification based on plan
             intent_prompt = PromptTemplate(
                 input_variables=[
-                    "question", "reasoning_plan", "selected_functions", "available_columns"
+                    "question", "reasoning_plan", "selected_functions", "available_columns", "intent_types"
                 ],
                 template="""
 You are an expert data analyst classifying the intent of a user's question based on a comprehensive reasoning plan and selected functions.
@@ -1215,17 +1346,7 @@ You are an expert data analyst classifying the intent of a user's question based
 Based on the comprehensive reasoning plan and selected functions, classify the analysis intent and assess feasibility.
 
 ### ANALYSIS TYPES ###
-- time_series_analysis: Analyze data patterns over time periods
-- trend_analysis: Analyze trends, growth patterns, forecasting
-- segmentation_analysis: Group users/data into meaningful segments
-- cohort_analysis: Analyze user behavior and retention over time
-- funnel_analysis: Analyze user conversion funnels and paths
-- risk_analysis: Perform risk analysis and portfolio assessment
-- anomaly_detection: Detect outliers and anomalies in data
-- metrics_calculation: Calculate statistical metrics and aggregations
-- operations_analysis: Statistical operations and experimental analysis
-- unclear_intent: Question is too vague or ambiguous
-- unsupported_analysis: Requested analysis is not supported by available functions
+{intent_types}
 
 ### OUTPUT FORMAT ###
 Provide your response as a JSON object:
@@ -1264,12 +1385,18 @@ Consider the reasoning plan steps and selected functions to determine the most a
                 functions_text += f"  Relevance: {func['relevance_score']}\n"
                 functions_text += f"  Category: {func['category']}\n\n"
             
+            # Format intent types for the prompt
+            intent_types_text = ""
+            for intent_type in intent_specific_requirements.keys():
+                intent_types_text += f"- {intent_type}\n"
+            
             # Format the prompt
             formatted_prompt = intent_prompt.format(
                 question=question,
                 reasoning_plan=plan_text,
                 selected_functions=functions_text,
-                available_columns=available_columns
+                available_columns=available_columns,
+                intent_types=intent_types_text
             )
             
             # Get LLM response
@@ -1282,7 +1409,8 @@ Consider the reasoning plan steps and selected functions to determine the most a
                     "question": question,
                     "reasoning_plan": plan_text,
                     "selected_functions": functions_text,
-                    "available_columns": available_columns
+                    "available_columns": available_columns,
+                    "intent_types": intent_types_text
                 })
                 
                 # Extract content from AIMessage
@@ -1469,7 +1597,7 @@ Consider the reasoning plan steps and selected functions to determine the most a
             step1_prompt = PromptTemplate(
                 input_variables=[
                     "question", "dataframe_description", "dataframe_summary", "available_columns",
-                    "all_functions", "historical_context", "instructions_context"
+                    "all_functions", "historical_context", "instructions_context", "intent_types"
                 ],
                 template="""
 You are an expert data analyst performing STEP 1 of a multi-step analysis process.
@@ -1493,22 +1621,21 @@ You are an expert data analyst performing STEP 1 of a multi-step analysis proces
 Perform the following three tasks in order:
 
 1. **REPHRASE THE QUESTION**: Create a clear, specific, and actionable version of the user's question that can be directly used for analysis.
+   - Make sure there is no data selection steps in the reasoning plan.
+   - The data is already prepared and ready to be used for analysis. We should skip any data selection steps as well.
 
 2. **CLASSIFY INTENT**: Determine the MOST SPECIFIC analysis type that matches the question. Choose the most precise classification from:
-   - time_series_analysis: Analyze data patterns over time periods (rolling windows, trends, seasonality)
-   - trend_analysis: Analyze growth patterns, forecasting, directional changes
-   - segmentation_analysis: Group users/data into meaningful segments or clusters
-   - cohort_analysis: Analyze user behavior and retention over time periods
-   - funnel_analysis: Analyze user conversion funnels and paths
-   - risk_analysis: Perform risk assessment, portfolio analysis, volatility analysis
-   - anomaly_detection: Detect outliers, anomalies, unusual patterns
-   - metrics_calculation: Calculate statistical metrics, aggregations, KPIs
-   - operations_analysis: Statistical operations, experimental analysis, A/B testing
-   - unclear_intent: Question is too vague or ambiguous
-   - unsupported_analysis: Requested analysis is not supported by available functions
+    {intent_types}
+   
 
 3. **CREATE REASONING PLAN**: Develop a step-by-step reasoning plan that outlines the logical approach to answer the question. Focus on the analysis methodology and data processing steps without specifying exact function names.
 4. **Order the steps in the reasoning plan**: Please consider the best order of the steps for the given analysis question.
+    ### CRITICAL INSTRUCTIONS  for the Steps in the Reasoning Plan###
+    - Make sure there is no data selection steps in the reasoning plan.
+    - The data is already prepared and ready to be used for analysis. We should skip any data selection steps as well.
+    - **ABSOLUTELY NO VISUALIZATION STEPS**: This system is for backend data pipeline execution only. Do not include any visualization, plotting, charting, display, or show functions in the reasoning plan.
+    - Focus only on data processing, analysis, and transformation functions that can be executed in backend pipelines.
+    - If you see any visualization-related keywords in your reasoning, replace them with appropriate data processing steps.
 
 ### OUTPUT FORMAT ###
 Provide your response as a JSON object:
@@ -1550,6 +1677,11 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
                 functions_text += f"   Category: {func['category']}\n"
                 functions_text += f"   Type: {func['type_of_operation']}\n\n"
             
+            # Format intent types for the prompt
+            intent_types_text = ""
+            for intent_type in intent_specific_requirements.keys():
+                intent_types_text += f"- {intent_type}\n"
+            
             # Get LLM response for Step 1
             try:
                 # Create the chain for Step 1 analysis
@@ -1563,7 +1695,8 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
                     "available_columns": available_columns,
                     "all_functions": functions_text,
                     "historical_context": historical_context,
-                    "instructions_context": instructions_context
+                    "instructions_context": instructions_context,
+                    "intent_types": intent_types_text
                 })
                 
                 # Extract content from AIMessage
@@ -1723,18 +1856,7 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
                     enhanced_query += f"  Expected Outcome: {expected_outcome}\n"
                 enhanced_query += "\n"
         
-        # Add specific function requirements based on intent type
-        intent_specific_requirements = {
-            "time_series_analysis": "Need functions for temporal data processing, rolling windows, time-based aggregations",
-            "trend_analysis": "Need functions for growth rate calculations, trend detection, forecasting",
-            "segmentation_analysis": "Need functions for clustering, grouping, segment identification",
-            "cohort_analysis": "Need functions for cohort formation, retention calculations, time-based grouping",
-            "funnel_analysis": "Need functions for conversion tracking, path analysis, funnel visualization",
-            "risk_analysis": "Need functions for statistical risk measures, volatility analysis, distribution fitting",
-            "anomaly_detection": "Need functions for outlier detection, statistical anomaly identification",
-            "metrics_calculation": "Need functions for statistical aggregations, KPI calculations, summary statistics",
-            "operations_analysis": "Need functions for statistical testing, experimental analysis, A/B testing"
-        }
+       
         
         if intent_type in intent_specific_requirements:
             enhanced_query += f"Specific Requirements: {intent_specific_requirements[intent_type]}\n"
@@ -1780,36 +1902,8 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
             # Identify what type of functions this step needs
             step_needs = []
             
-            # Data preparation steps
-            if any(keyword in step_title or keyword in step_desc for keyword in 
-                   ["data preparation", "data cleaning", "data preprocessing", "data validation"]):
-                step_needs.extend(["data_cleaning", "data_validation", "data_transformation"])
-            
-            # Aggregation steps
-            if any(keyword in step_title or keyword in step_desc for keyword in 
-                   ["aggregate", "summarize", "group", "calculate metrics"]):
-                step_needs.extend(["aggregation", "grouping", "metrics_calculation"])
-            
-            # Statistical analysis steps
-            if any(keyword in step_title or keyword in step_desc for keyword in 
-                   ["statistical", "correlation", "regression", "hypothesis"]):
-                step_needs.extend(["statistical_analysis", "correlation", "regression"])
-            
-            # Time series steps
-            if any(keyword in step_title or keyword in step_desc for keyword in 
-                   ["time series", "temporal", "rolling", "moving average"]):
-                step_needs.extend(["time_series", "temporal_analysis"])
-            
-            # Clustering/segmentation steps
-            if any(keyword in step_title or keyword in step_desc for keyword in 
-                   ["cluster", "segment", "group", "classification"]):
-                step_needs.extend(["clustering", "segmentation", "classification"])
-            
-            # Visualization steps
-            if any(keyword in step_title or keyword in step_desc for keyword in 
-                   ["visualize", "plot", "chart", "graph"]):
-                step_needs.extend(["visualization", "plotting"])
-            
+            # Step requirements will be determined by LLM prompting and function retrieval
+            # instead of hardcoded logic
             step_requirements[step.get("step_number", len(step_requirements) + 1)] = step_needs
         
         # Score functions based on reasoning plan alignment
@@ -1887,7 +1981,7 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
             "data_prep": 0,
             "statistical": 0,
             "machine_learning": 0,
-            "visualization": 0,
+            "data_processing": 0,
             "time_series": 0
         }
         
@@ -1901,8 +1995,8 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
                 complexity_factors["statistical"] += 1
             if any(keyword in func_name for keyword in ["cluster", "kmeans", "dbscan", "ml"]):
                 complexity_factors["machine_learning"] += 1
-            if any(keyword in func_name for keyword in ["plot", "visualize", "chart", "graph"]):
-                complexity_factors["visualization"] += 1
+            if any(keyword in func_name for keyword in ["process", "analyze", "calculate", "compute"]):
+                complexity_factors["data_processing"] += 1
             if any(keyword in func_name for keyword in ["time", "temporal", "rolling", "moving"]):
                 complexity_factors["time_series"] += 1
         
@@ -1931,7 +2025,7 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
             "data_prep": 30,  # seconds
             "statistical": 60,
             "machine_learning": 120,
-            "visualization": 45,
+            "data_processing": 45,
             "time_series": 90
         }
         
@@ -1946,8 +2040,8 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
                 total_estimated_time += time_estimates["statistical"]
             elif any(keyword in func_name for keyword in ["cluster", "kmeans", "dbscan"]):
                 total_estimated_time += time_estimates["machine_learning"]
-            elif any(keyword in func_name for keyword in ["plot", "visualize", "chart"]):
-                total_estimated_time += time_estimates["visualization"]
+            elif any(keyword in func_name for keyword in ["process", "analyze", "calculate"]):
+                total_estimated_time += time_estimates["data_processing"]
             elif any(keyword in func_name for keyword in ["time", "temporal", "rolling"]):
                 total_estimated_time += time_estimates["time_series"]
             else:
@@ -2011,13 +2105,14 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
             recommendations.append("Consider adding basic data exploration functions")
             return recommendations
         
-        # Check for visualization
-        has_visualization = any("plot" in f.get("function_name", "").lower() or 
-                               "visualize" in f.get("function_name", "").lower() 
-                               for f in functions)
+        # Check for data processing functions
+        has_data_processing = any("process" in f.get("function_name", "").lower() or 
+                                 "analyze" in f.get("function_name", "").lower() or
+                                 "calculate" in f.get("function_name", "").lower()
+                                 for f in functions)
         
-        if not has_visualization:
-            recommendations.append("Consider adding visualization functions for better insights")
+        if not has_data_processing:
+            recommendations.append("Consider adding data processing functions for better analysis")
         
         # Check for statistical validation
         has_statistical = any("statistical" in f.get("function_name", "").lower() or 
@@ -2050,7 +2145,7 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
             "trend_analysis": ["calculate_growth_rates", "calculate_moving_average", "forecast_metric", "trend_detection"],
             "segmentation_analysis": ["run_kmeans", "run_dbscan", "run_rule_based", "hierarchical_clustering"],
             "cohort_analysis": ["calculate_retention", "form_time_cohorts", "calculate_conversion", "cohort_analysis"],
-            "funnel_analysis": ["analyze_funnel", "analyze_user_paths", "compare_segments", "funnel_visualization"],
+            "funnel_analysis": ["analyze_funnel", "analyze_user_paths", "compare_segments", "funnel_analysis"],
             "risk_analysis": ["calculate_var", "monte_carlo_simulation", "fit_distribution", "risk_metrics"],
             "anomaly_detection": ["detect_statistical_outliers", "detect_contextual_anomalies", "isolation_forest"],
             "operations_analysis": ["PercentChange", "BootstrapCI", "PowerAnalysis", "statistical_testing"]
@@ -2080,6 +2175,10 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
                 if any(keyword in step_title or keyword in step_desc for keyword in 
                        ["statistical", "correlation", "regression"]):
                     fallback_functions.extend(["correlation_analysis", "regression_analysis", "statistical_testing"])
+                
+                if any(keyword in step_title or keyword in step_desc for keyword in 
+                       ["data processing", "analysis", "calculation"]):
+                    fallback_functions.extend(["data_processing", "data_analysis", "calculation_engine"])
         
         # Remove duplicates while preserving order
         seen = set()
@@ -2092,7 +2191,7 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
         # Adjust based on confidence score
         if confidence_score < 0.6:
             # Low confidence: add more general-purpose functions
-            general_functions = ["data_exploration", "summary_statistics", "basic_visualization"]
+            general_functions = ["data_exploration", "summary_statistics", "basic_analysis"]
             for func in general_functions:
                 if func not in seen:
                     unique_functions.append(func)
@@ -2110,7 +2209,7 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
         project_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        STEP 2: Use FunctionRetrieval to get relevant functions based on Step 1 output.
+        STEP 2: Efficient function selection using Step 1 plan output and ChromaDB + LLM matching.
         
         Args:
             step1_output: Output from Step 1 (rephrased question, intent, reasoning plan)
@@ -2124,7 +2223,7 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
             Dictionary with selected function information
         """
         try:
-            logger.info("Starting Step 2: Function selection using FunctionRetrieval...")
+            logger.info("Starting Step 2: Efficient function selection using Step 1 plan and ChromaDB...")
             
             # Extract key information from Step 1 output
             rephrased_question = step1_output.get("rephrased_question", question)
@@ -2135,100 +2234,73 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
             logger.info(f"Step 1 output - Intent: {intent_type}, Confidence: {confidence_score}")
             logger.info(f"Step 1 output - Reasoning plan steps: {len(reasoning_plan)}")
             
-            # Get functions for each step in the reasoning plan
+            if not reasoning_plan:
+                logger.warning("No reasoning plan available from Step 1, using fallback")
+                return self._get_fallback_function_selection(intent_type, confidence_score)
+            
             try:
+                # Use enhanced function retrieval service for improved efficiency and accuracy
+                enhanced_result = await self.enhanced_function_retrieval.retrieve_and_match_functions(
+                    reasoning_plan=reasoning_plan,
+                    question=question,
+                    rephrased_question=rephrased_question,
+                    dataframe_description=dataframe_description,
+                    dataframe_summary=dataframe_summary,
+                    available_columns=available_columns,
+                    project_id=project_id
+                )
+                
+                if not enhanced_result.step_matches:
+                    logger.warning("No function matches found, using fallback")
+                    return self._get_fallback_function_selection(intent_type, confidence_score)
+                
+                step_function_matches = enhanced_result.step_matches
+                
+                # Step 2c: Build comprehensive function details
                 all_functions = []
                 function_names_set = set()
                 specific_matches = []
                 
-                logger.info(f"Processing {len(reasoning_plan)} reasoning plan steps for function retrieval")
-                
-                for step in reasoning_plan:
-                    step_title = step.get("step_title", "")
-                    step_desc = step.get("step_description", "")
-                    step_num = step.get("step_number", 0)
-                    function_name = step.get("function_name", "")
+                for step_num, step_matches in step_function_matches.items():
+                    step = next((s for s in reasoning_plan if s.get("step_number") == step_num), {})
+                    step_title = step.get("step_title", f"Step {step_num}")
                     
-                    # Create query for this step
-                    step_query = f"Step {step_num}: {step_title} - {step_desc}"
-                    
-                    logger.info(f"Retrieving functions for Step {step_num}: {step_title}")
-                    
-                    try:
-                        # Get functions for this specific step
-                        step_function_result = await self.function_retrieval.retrieve_relevant_functions(
-                            question=step_query,
-                            dataframe_description=dataframe_description,
-                            dataframe_summary=dataframe_summary,
-                            available_columns=available_columns,
-                            project_id=project_id
-                        )
-                        
-                        logger.info(f"Step {step_num} retrieved {len(step_function_result.top_functions)} functions")
-                        
-                        # Add functions from this step (avoiding duplicates)
-                        for func_match in step_function_result.top_functions:
-                            if func_match.function_name not in function_names_set:
-                                function_names_set.add(func_match.function_name)
-                                
-                                # Create function detail
-                                function_detail = {
-                                    "function_name": func_match.function_name,
-                                    "pipe_name": func_match.pipe_name,
-                                    "description": func_match.description,
-                                    "usage_description": func_match.usage_description,
-                                    "relevance_score": func_match.relevance_score,
-                                    "reasoning": func_match.reasoning,
-                                    "priority": 1,
-                                    "step_applicability": [f"Step {step_num}"],
-                                    "data_requirements": step.get("data_requirements", []),
-                                    "expected_output": step.get("expected_output", ""),
-                                    "source_step": step_num,
-                                    "source_step_title": step_title
-                                }
-                                
-                                # Add complete function definition if available
-                                if func_match.function_definition:
-                                    function_def = func_match.function_definition
-                                    
-                                    # Add required parameters
-                                    if "required_params" in function_def:
-                                        function_detail["required_params"] = function_def["required_params"]
-                                    else:
-                                        function_detail["required_params"] = []
-                                    
-                                    # Add optional parameters
-                                    if "optional_params" in function_def:
-                                        function_detail["optional_params"] = function_def["optional_params"]
-                                    else:
-                                        function_detail["optional_params"] = []
-                                    
-                                    # Add outputs
-                                    if "outputs" in function_def:
-                                        function_detail["outputs"] = function_def["outputs"]
-                                    else:
-                                        function_detail["outputs"] = {}
-                                    
-                                    # Add category
-                                    if "category" in function_def:
-                                        function_detail["category"] = function_def["category"]
-                                    
-                                    # Add any other fields from the function definition
-                                    for key, value in function_def.items():
-                                        if key not in ["required_params", "optional_params", "outputs", "category"]:
-                                            function_detail[key] = value
-                                
-                                all_functions.append(function_detail)
-                                
-                                # Mark as specific match if high relevance
-                                if func_match.relevance_score >= 0.9:
-                                    specific_matches.append(func_match.function_name)
-                                
-                                logger.info(f"Added function {func_match.function_name} for Step {step_num}: {step_title}")
+                    for func_match in step_matches:
+                        if func_match["function_name"] not in function_names_set:
+                            function_names_set.add(func_match["function_name"])
                             
-                    except Exception as e:
-                        logger.warning(f"Failed to get functions for Step {step_num}: {e}")
-                        continue
+                            # Create comprehensive function detail
+                            function_detail = {
+                                "function_name": func_match["function_name"],
+                                "pipe_name": func_match.get("pipe_name", "unknown_pipeline"),
+                                "description": func_match.get("description", ""),
+                                "usage_description": func_match.get("usage_description", ""),
+                                "relevance_score": func_match.get("relevance_score", 0.0),
+                                "reasoning": func_match.get("reasoning", ""),
+                                "priority": 1,
+                                "step_applicability": [f"Step {step_num}"],
+                                "data_requirements": step.get("data_requirements", []),
+                                "expected_output": step.get("expected_output", ""),
+                                "source_step": step_num,
+                                "source_step_title": step_title
+                            }
+                            
+                            # Add function definition details if available
+                            if "function_definition" in func_match:
+                                function_def = func_match["function_definition"]
+                                function_detail.update({
+                                    "required_params": function_def.get("required_params", []),
+                                    "optional_params": function_def.get("optional_params", []),
+                                    "outputs": function_def.get("outputs", {}),
+                                    "category": function_def.get("category", "unknown_category"),
+                                    "type_of_operation": function_def.get("type_of_operation", "unknown_operation")
+                                })
+                            
+                            all_functions.append(function_detail)
+                            
+                            # Mark as specific match if high relevance
+                            if func_match.get("relevance_score", 0.0) >= 0.9:
+                                specific_matches.append(func_match["function_name"])
                 
                 # Sort by relevance score (highest first)
                 all_functions.sort(key=lambda x: x.get("relevance_score", 0.0), reverse=True)
@@ -2236,16 +2308,19 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
                 # Take top functions (up to 8)
                 max_functions = min(8, len(all_functions))
                 top_functions = all_functions[:max_functions]
-                top_function_names = [func["function_name"] for func in top_functions]
                 
-                logger.info(f"FunctionRetrieval completed successfully:")
-                logger.info(f"  - Retrieved {len(all_functions)} total functions from {len(reasoning_plan)} steps")
-                logger.info(f"  - Selected {len(top_function_names)} top functions")
-                logger.info(f"  - Specific matches: {specific_matches}")
+                # Format suggested functions with operation category and pipeline type
+                top_function_names = []
+                for func in top_functions:
+                    function_name = func["function_name"]
+                    category = func.get("category", "unknown_category")
+                    pipe_name = func.get("pipe_name", "unknown_pipeline")
+                    formatted_function = f"{function_name}: {category} ({pipe_name})"
+                    top_function_names.append(formatted_function)
                 
                 logger.info(f"Step 2 completed successfully:")
-                logger.info(f"  - Selected {len(top_function_names)} functions")
-                logger.info(f"  - Function names: {top_function_names}")
+                logger.info(f"  - Enhanced retrieval metrics: {enhanced_result.total_functions_retrieved} functions, {enhanced_result.total_steps_covered} steps covered, avg relevance: {enhanced_result.average_relevance_score:.2f}")
+                logger.info(f"  - Selected {len(top_function_names)} top functions")
                 logger.info(f"  - Specific matches: {specific_matches}")
                 
                 return {
@@ -2257,42 +2332,22 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
                     "estimated_execution_time": self._estimate_execution_time(top_functions, reasoning_plan),
                     "potential_issues": self._identify_potential_issues(top_functions, reasoning_plan),
                     "recommendations": self._generate_recommendations(top_functions, reasoning_plan, intent_type),
-                    "function_selection_reasoning": f"Retrieved functions from {len(reasoning_plan)} reasoning plan steps",
+                    "function_selection_reasoning": enhanced_result.reasoning,
                     "reasoning_plan_alignment": {
-                        "steps_covered": len(set(func.get("source_step", 0) for func in top_functions)),
+                        "steps_covered": enhanced_result.total_steps_covered,
                         "total_steps": len(reasoning_plan),
-                        "alignment_score": len(set(func.get("source_step", 0) for func in top_functions)) / len(reasoning_plan) if reasoning_plan else 0.0
+                        "alignment_score": enhanced_result.confidence_score
+                    },
+                    "enhanced_retrieval_metrics": {
+                        "total_functions_retrieved": enhanced_result.total_functions_retrieved,
+                        "average_relevance_score": enhanced_result.average_relevance_score,
+                        "fallback_used": enhanced_result.fallback_used
                     }
                 }
                 
             except Exception as retrieval_error:
-                logger.warning(f"FunctionRetrieval failed: {retrieval_error}")
-                # Return fallback result - use reasoning plan to guide function selection
-                fallback_functions = self._select_fallback_functions_with_reasoning(
-                    intent_type=intent_type,
-                    reasoning_plan=reasoning_plan,
-                    confidence_score=confidence_score
-                )
-                
-                # Take first 5 functions
-                unique_functions = fallback_functions[:5]
-                
-                return {
-                    "function_names": unique_functions,
-                    "function_details": [],
-                    "specific_matches": [],
-                    "total_selected": len(unique_functions),
-                    "analysis_complexity": self._assess_analysis_complexity([], reasoning_plan),
-                    "estimated_execution_time": "unknown",
-                    "potential_issues": ["FunctionRetrieval failed, using fallback"],
-                    "recommendations": ["Verify function selection manually"],
-                    "function_selection_reasoning": f"Fallback selection due to FunctionRetrieval error: {str(retrieval_error)}",
-                    "reasoning_plan_alignment": {
-                        "steps_covered": 0,
-                        "total_steps": len(reasoning_plan),
-                        "alignment_score": 0.0
-                    }
-                }
+                logger.warning(f"Efficient function selection failed: {retrieval_error}")
+                return self._get_fallback_function_selection(intent_type, confidence_score, str(retrieval_error))
             
         except Exception as e:
             logger.error(f"Error in Step 2 function selection and planning: {e}")
@@ -2312,6 +2367,56 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
                     "alignment_score": 0.0
                 }
             }
+    
+
+    
+    def _get_fallback_function_selection(
+        self,
+        intent_type: str,
+        confidence_score: float,
+        error_message: str = ""
+    ) -> Dict[str, Any]:
+        """
+        Get fallback function selection when the main process fails.
+        
+        Args:
+            intent_type: The intent type from Step 1
+            confidence_score: The confidence score from Step 1
+            error_message: Error message for debugging
+            
+        Returns:
+            Fallback function selection result
+        """
+        # Use reasoning plan to guide function selection
+        fallback_functions = self._select_fallback_functions_with_reasoning(
+            intent_type=intent_type,
+            reasoning_plan=[],  # Empty since we don't have it
+            confidence_score=confidence_score
+        )
+        
+        # Take first 5 functions and format them with category and pipeline info
+        unique_functions = fallback_functions[:5]
+        formatted_fallback_functions = []
+        for func_name in unique_functions:
+            formatted_function = f"{func_name}: unknown_category (unknown_pipeline)"
+            formatted_fallback_functions.append(formatted_function)
+        
+        return {
+            "function_names": formatted_fallback_functions,
+            "function_details": [],
+            "specific_matches": [],
+            "total_selected": len(formatted_fallback_functions),
+            "analysis_complexity": "unknown",
+            "estimated_execution_time": "unknown",
+            "potential_issues": [f"Using fallback selection: {error_message}"],
+            "recommendations": ["Verify function selection manually"],
+            "function_selection_reasoning": f"Fallback selection due to error: {error_message}",
+            "reasoning_plan_alignment": {
+                "steps_covered": 0,
+                "total_steps": 0,
+                "alignment_score": 0.0
+            }
+        }
 
     async def _step3_pipeline_reasoning_planning(
         self,
@@ -2379,7 +2484,15 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
                 ],
                 template="""
 You are an expert data pipeline architect performing STEP 3 of a multi-step analysis process.
+If there are data selection steps in the original reasoning plan, please remove them.
+The data is already prepared and ready to be used for analysis. We should skip any data selection steps as well.
 
+### CRITICAL INSTRUCTIONS ###
+- Make sure there is no data selection steps in the reasoning plan.
+- The data is already prepared and ready to be used for analysis. We should skip any data selection steps as well.
+- **ABSOLUTELY NO VISUALIZATION STEPS**: This system is for backend data pipeline execution only. Do not include any visualization, plotting, charting, display, or show functions in the reasoning plan.
+- Focus only on data processing, analysis, and transformation functions that can be executed in backend pipelines.
+- If you see any visualization-related keywords in your reasoning, replace them with appropriate data processing steps.
 ### USER QUESTION ###
 {question}
 
@@ -2425,8 +2538,15 @@ Create a detailed pipeline reasoning plan that:
 **CRITICAL EMBEDDED FUNCTION PARAMETER RULES**:
 - For function input callable, if applicable, the function parameter should contain a complete pipeline expression
 - Example: moving_apply_by_group(function=(MetricsPipe.from_dataframe(...) | Variance(...) | to_df()))
-- This embeds the MetricsPipe Variance calculation within the TimeSeriesPipe moving_apply_by_group function
+- This embeds the MetricsPipe Variance calculation within the MovingAggrPipe moving_apply_by_group function
 - Do NOT create separate pipelines for functions that should be embedded as parameters
+
+**CRITICAL PARAMETER MAPPING RULES**:
+- **Configuration parameters** (window, annualize, method, etc.) should be set to appropriate values, NOT mapped to columns
+- **Data parameters** (variable, group_column, time_column, etc.) should be mapped to actual column names
+- For calculate_growth_rates: window should be an integer (e.g., 30 for 30-day window), annualize should be boolean (True/False), method should be string ('percentage', 'log', 'cagr')
+- For GroupBy: by should be column names, agg_dict should map columns to aggregation functions
+- For aggregate_by_time: date_column should be date column, metric_columns should be numeric columns
 
 ### PIPELINE REASONING REQUIREMENTS ###
 Each pipeline reasoning step should contain:
@@ -2443,18 +2563,46 @@ Each pipeline reasoning step should contain:
 - embedded_function_parameter: For functions like moving_apply_by_group, specify if a function parameter should contain an embedded pipeline expression (e.g., "function=(MetricsPipe.from_dataframe(...) | Variance(...) | to_df())")
 - embedded_function_details: If embedded_function_parameter is true, specify the details of the embedded function (function name, parameters, pipe type)
 
+### ENHANCED METADATA REQUIREMENTS ###
+Each step should also include enhanced metadata for better pipeline generation:
+
+- **column_mapping**: Dictionary mapping DATA parameters (not configuration parameters) to actual available columns
+  - Example: {{"variable": "Transactional value", "by": "Region, Project", "date_column": "Date"}}
+  - **DO NOT MAP**: window, annualize, method, min_periods, center, output_suffix, suffix, periods, lag, lead, shift, fill_value, limit, dropna, how, axis, level, ascending, inplace, ignore_index, sort, na_position, key, keep, duplicates, verify_integrity, sort_index, sort_values, reset_index, drop, append, agg_dict, time_period, aggregation, fill_missing, include_current_period, time_name, datetime_format
+  - **ONLY MAP**: variable, columns, by, date_column, time_column, metric_columns, value_column, target_column, feature_column, label_column, category_column, region_column, project_column, department_column, cost_center_column
+  - **CORRECT EXAMPLE**: For calculate_growth_rates, column_mapping should be {{"time_column": "Date"}} and parameter_mapping should be {{"window": 30, "annualize": True, "method": "percentage"}}
+- **output_columns**: List of columns that will be created by this step
+  - Example: ["sum_Transactional value", "count_Transactional value", "mean_Transactional value"]
+- **input_columns**: List of columns required as input for this step
+  - Example: ["Transactional value", "Region", "Project", "Date"]
+- **step_dependencies**: List of step numbers this step depends on (empty for first step)
+  - Example: [1] if this step uses output from step 1
+- **data_flow**: Description of how data flows from previous steps to this step
+  - Example: "Uses aggregated data from step 1 as input"
+- **embedded_function_columns**: If embedded_function_parameter is true, specify columns needed by embedded function
+  - Example: {{"embedded_input_columns": ["Transactional value"], "embedded_output_columns": ["variance_Transactional value"]}}
+- **pipeline_type**: The pipeline type this step will use
+  - Example: "MetricsPipe", "TimeSeriesPipe", "CohortPipe"
+- **function_category**: The category/type of operation this function performs
+  - Example: "basic_metrics", "time_aggregation", "clustering"
+- **parameter_constraints**: Any constraints or validation rules for parameters
+  - Example: {{"window": "must be positive integer", "threshold": "must be between 0 and 1"}}
+- **error_handling**: How to handle potential errors or edge cases
+  - Example: "Handle missing values in group columns", "Validate time column format"
+
 **FUNCTION SELECTION PRIORITY**:
 1. **FIRST CHOICE**: Use functions from the specific_function_matches list
 2. **SECOND CHOICE**: Use other functions from the function_details that best match the step requirements
-3. **LAST RESORT**: Use "None" only if no suitable function exists for data preparation or visualization steps
+3. **LAST RESORT**: Use "None" only if no suitable function exists for data preparation or data processing steps
 
 **EMBEDDED FUNCTION PARAMETER GUIDELINES**:
-- **USE EMBEDDED PARAMETERS FOR**: moving_apply_by_group, aggregate_by_group, and similar functions that accept function parameters
+- **USE EMBEDDED PARAMETERS FOR**: moving_apply_by_group, GroupBy, and similar functions that accept function parameters
 - **EMBEDDED FUNCTION EXAMPLES**:
-  - moving_apply_by_group with Variance: function=(MetricsPipe.from_dataframe(...) | Variance(...) | to_df())
-  - moving_apply_by_group with Mean: function=(MetricsPipe.from_dataframe(...) | Mean(...) | to_df())
-  - aggregate_by_group with Sum: function=(MetricsPipe.from_dataframe(...) | Sum(...) | to_df())
+  - moving_apply_by_group with Variance: function=(MetricsPipe.from_dataframe(...) | Variance(...) -- Please add a child step with reasoning for the next agent to generate the necessary code)
+  - moving_apply_by_group with Mean: function=(MetricsPipe.from_dataframe(...) | Mean(...) -- Please add a child step with reasoning for the next agent to generate the necessary code)
+  - GroupBy with Sum: function=(MetricsPipe.from_dataframe(...) | Sum(...) -- Please add a child step with reasoning for the next agent to generate the necessary code)
 - **DO NOT EMBED FOR**: Direct function calls like Variance(), Mean(), Sum() that are used standalone
+- **IMPORTANT**: Please ensure the embedded functions are communicated properly.
 - **PIPE TYPE SEPARATION**: When embedding, ensure the embedded function uses the correct pipe type (MetricsPipe for Variance, etc.)
 
 ### MERGING STRATEGY ###
@@ -2473,6 +2621,7 @@ Provide your response as a JSON object with only the pipeline_reasoning_plan:
             "step_title": "Data Preparation and Validation",
             "step_description": "Natural language description of what this step does",
             "function_name": "function_name",
+            "pipeline_name": "pipeline_name",
             "input_processing": "How to process inputs for this function",
             "parameter_mapping": "How to map data to function parameters",
             "expected_output": "What this step produces",
@@ -2480,13 +2629,24 @@ Provide your response as a JSON object with only the pipeline_reasoning_plan:
             "considerations": "Important considerations",
             "merge_with_previous": false,
             "embedded_function_parameter": false,
-            "embedded_function_details": null
+            "embedded_function_details": null,
+            "column_mapping": {{"variable": "column1", "group_column": "column2"}},
+            "output_columns": ["output_col1", "output_col2"],
+            "input_columns": ["input_col1", "input_col2"],
+            "step_dependencies": [],
+            "data_flow": "Initial data input",
+            "embedded_function_columns": null,
+            "pipeline_type": "MetricsPipe",
+            "function_category": "basic_metrics",
+            "parameter_constraints": {{"param1": "constraint description"}},
+            "error_handling": "How to handle errors"
         }},
         {{
             "step_number": 2,
             "step_title": "Moving Apply with Embedded Variance",
             "step_description": "Apply moving variance calculation by group with embedded Variance function",
             "function_name": "moving_apply_by_group",
+            "pipeline_name": "MovingAveragePipe",
             "input_processing": "Prepare time series data with group columns",
             "parameter_mapping": "Map columns to function parameters, embed Variance as function parameter",
             "expected_output": "Rolling variance values by group over time",
@@ -2499,7 +2659,30 @@ Provide your response as a JSON object with only the pipeline_reasoning_plan:
                 "embedded_pipe": "MetricsPipe",
                 "embedded_parameters": {{"variable": "Transactional value"}},
                 "embedded_output": "variance_Transactional value"
-            }}
+            }},
+            "column_mapping": {{
+                "columns": "Transactional value",
+                "group_column": "Project, Cost center, Department",
+                "time_column": "Date",
+                "window": 5,
+                "min_periods": 1,
+                "output_suffix": "_rolling_variance"
+            }},
+            "output_columns": ["Transactional value_rolling_variance"],
+            "input_columns": ["Transactional value", "Project", "Cost center", "Department", "Date"],
+            "step_dependencies": [1],
+            "data_flow": "Uses aggregated data from step 1 as input",
+            "embedded_function_columns": {{
+                "embedded_input_columns": ["Transactional value"],
+                "embedded_output_columns": ["variance_Transactional value"]
+            }},
+            "pipeline_type": "TimeSeriesPipe",
+            "function_category": "time_aggregation",
+            "parameter_constraints": {{
+                "window": "must be positive integer",
+                "min_periods": "must be positive integer <= {{window}}"
+            }},
+            "error_handling": "Handle missing values in group columns, validate time column format"
         }}
     ]
 }}
@@ -2618,6 +2801,32 @@ When the user asks for "variance with moving apply by group", the reasoning plan
                 try:
                     step3_result = orjson.loads(response_content.strip())
                     logger.info("Step 3 LLM response parsed successfully")
+                    
+                    # Post-process: Filter out any visualization steps that might have slipped through
+                    if "pipeline_reasoning_plan" in step3_result and step3_result["pipeline_reasoning_plan"]:
+                        filtered_pipeline_plan = []
+                        for step in step3_result["pipeline_reasoning_plan"]:
+                            step_title = step.get("step_title", "").lower()
+                            step_desc = step.get("step_description", "").lower()
+                            
+                            # Check for visualization keywords
+                            visualization_keywords = [
+                                "visualize", "visualization", "plot", "plotting", "chart", "charting", 
+                                "graph", "graphing", "show", "display", "create visual", "create plot",
+                                "create chart", "create graph", "draw", "render", "present"
+                            ]
+                            
+                            has_visualization = any(keyword in step_title or keyword in step_desc 
+                                                  for keyword in visualization_keywords)
+                            
+                            if not has_visualization:
+                                filtered_pipeline_plan.append(step)
+                            else:
+                                logger.warning(f"Filtered out visualization step from pipeline: {step.get('step_title', 'Unknown')}")
+                        
+                        step3_result["pipeline_reasoning_plan"] = filtered_pipeline_plan
+                        logger.info(f"Filtered pipeline reasoning plan: {len(filtered_pipeline_plan)} steps after removing visualization steps")
+                    
                 except Exception as parse_error:
                     logger.warning(f"Failed to parse Step 3 JSON response: {parse_error}")
                     logger.warning(f"Raw response: {response_content}")
@@ -2629,6 +2838,18 @@ When the user asks for "variance with moving apply by group", the reasoning plan
                 
                 logger.info(f"Step 3 completed successfully:")
                 logger.info(f"  - Pipeline steps: {len(step3_result.get('pipeline_reasoning_plan', []))}")
+                
+                # Enhance the reasoning plan with additional metadata
+                if step3_result.get("pipeline_reasoning_plan"):
+                    enhanced_plan = await self._enhance_reasoning_plan_with_metadata(
+                        step3_result["pipeline_reasoning_plan"],
+                        available_columns,
+                        dataframe_description,
+                        dataframe_summary,
+                        function_details
+                    )
+                    step3_result["pipeline_reasoning_plan"] = enhanced_plan
+                    logger.info(f"Enhanced reasoning plan with metadata for {len(enhanced_plan)} steps")
                 
                 return step3_result
                 
@@ -2643,6 +2864,279 @@ When the user asks for "variance with moving apply by group", the reasoning plan
             return {
                 "pipeline_reasoning_plan": []
             }
+
+    async def _enhance_reasoning_plan_with_metadata(
+        self,
+        reasoning_plan: List[Dict[str, Any]],
+        available_columns: List[str],
+        dataframe_description: str,
+        dataframe_summary: str,
+        function_details: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Enhance the reasoning plan with additional metadata for better pipeline generation.
+        
+        This method adds comprehensive metadata to each reasoning plan step, including:
+        - Column mapping between function parameters and available columns
+        - Input/output column specifications
+        - Step dependencies and data flow information
+        - Pipeline type and function category details
+        - Parameter constraints and error handling
+        - Embedded function column requirements
+        
+        This enhanced metadata significantly improves the accuracy of the self-correcting
+        pipeline generator by providing clear information about:
+        1. Which columns to use for each function parameter
+        2. How data flows between steps
+        3. What constraints apply to parameters
+        4. How to handle embedded functions
+        
+        Args:
+            reasoning_plan: List of reasoning plan steps
+            available_columns: List of available columns in the dataframe
+            dataframe_description: Description of the dataframe
+            dataframe_summary: Summary of the dataframe
+            function_details: List of function details from Step 2
+            
+        Returns:
+            Enhanced reasoning plan with additional metadata for each step:
+            
+            Each step now includes:
+            - column_mapping: Dict mapping function parameters to actual columns
+            - input_columns: List of columns required as input
+            - output_columns: List of columns that will be created
+            - step_dependencies: List of step numbers this step depends on
+            - data_flow: Description of how data flows to this step
+            - pipeline_type: The pipeline type (e.g., "MetricsPipe", "TimeSeriesPipe")
+            - function_category: The type of operation (e.g., "basic_metrics", "time_aggregation")
+            - parameter_constraints: Validation rules for parameters
+            - error_handling: How to handle potential errors
+            - embedded_function_columns: Column requirements for embedded functions (if applicable)
+        """
+        if not reasoning_plan:
+            return reasoning_plan
+        
+        enhanced_plan = []
+        
+        for i, step in enumerate(reasoning_plan):
+            if not isinstance(step, dict):
+                continue
+            
+            enhanced_step = step.copy()
+            
+            # Get function details for this step
+            function_name = step.get('function_name', '')
+            function_detail = None
+            
+            # Find matching function details
+            for func in function_details:
+                if func.get('function_name') == function_name:
+                    function_detail = func
+                    break
+            
+            # Enhance with column mapping
+            if function_detail and function_name:
+                enhanced_step = await self._enhance_step_with_column_mapping(
+                    enhanced_step, function_detail, available_columns, dataframe_description
+                )
+            
+            # Enhance with pipeline type and category
+            if function_detail:
+                enhanced_step = self._enhance_step_with_pipeline_info(enhanced_step, function_detail)
+            
+            # Enhance with step dependencies and data flow
+            enhanced_step = self._enhance_step_with_dependencies(enhanced_step, i, enhanced_plan)
+            
+            # Enhance with parameter constraints and error handling
+            enhanced_step = self._enhance_step_with_constraints(enhanced_step, function_detail)
+            
+            # Enhance embedded function details if present
+            if step.get('embedded_function_parameter', False):
+                enhanced_step = await self._enhance_embedded_function_details(
+                    enhanced_step, available_columns, function_details
+                )
+            
+            enhanced_plan.append(enhanced_step)
+        
+        return enhanced_plan
+    
+    async def _enhance_step_with_column_mapping(
+        self,
+        step: Dict[str, Any],
+        function_detail: Dict[str, Any],
+        available_columns: List[str],
+        dataframe_description: str
+    ) -> Dict[str, Any]:
+        """
+        Enhance a step with basic metadata - column mapping will be handled by LLM-based function input detection
+        """
+        enhanced_step = step.copy()
+        
+        # Let the self-correcting RAG pipeline handle column mapping through LLM-based detection
+        # This avoids hardcoded column mapping logic and uses the more sophisticated approach
+        
+        # Add basic metadata that doesn't require hardcoded column mapping
+        enhanced_step['available_columns'] = available_columns
+        enhanced_step['dataframe_description'] = dataframe_description
+        enhanced_step['function_name'] = function_detail.get('function_name', '')
+        enhanced_step['pipeline_type'] = function_detail.get('category', 'Unknown')
+        enhanced_step['function_category'] = function_detail.get('type_of_operation', 'unknown')
+        
+        # Initialize empty column mapping - will be filled by LLM-based detection
+        enhanced_step['column_mapping'] = {}
+        enhanced_step['input_columns'] = []
+        enhanced_step['output_columns'] = []
+        
+        return enhanced_step
+    
+    # Column mapping is now handled by LLM-based function input detection in the self-correcting RAG pipeline
+    # This removes hardcoded column mapping logic and uses the more sophisticated approach
+    
+    def _enhance_step_with_pipeline_info(
+        self,
+        step: Dict[str, Any],
+        function_detail: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Enhance a step with pipeline type and function category information
+        """
+        enhanced_step = step.copy()
+        
+        # Get pipeline type from function detail
+        pipeline_type = function_detail.get('category', 'Unknown')
+        enhanced_step['pipeline_type'] = pipeline_type
+        
+        # Get function category from type of operation
+        function_category = function_detail.get('type_of_operation', 'unknown')
+        enhanced_step['function_category'] = function_category
+        
+        return enhanced_step
+    
+    def _enhance_step_with_dependencies(
+        self,
+        step: Dict[str, Any],
+        step_index: int,
+        previous_steps: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Enhance a step with dependencies and data flow information
+        """
+        enhanced_step = step.copy()
+        
+        if step_index == 0:
+            # First step has no dependencies
+            enhanced_step['step_dependencies'] = []
+            enhanced_step['data_flow'] = "Initial data input"
+        else:
+            # Check if this step depends on previous steps
+            dependencies = []
+            data_flow_parts = []
+            
+            for prev_step in previous_steps:
+                prev_outputs = prev_step.get('output_columns', [])
+                current_inputs = step.get('input_columns', [])
+                
+                # Check if current step uses outputs from previous step
+                if any(output in current_inputs for output in prev_outputs):
+                    dependencies.append(prev_step.get('step_number', 0))
+                    data_flow_parts.append(f"Uses {', '.join(prev_outputs)} from step {prev_step.get('step_number', 0)}")
+            
+            enhanced_step['step_dependencies'] = dependencies
+            enhanced_step['data_flow'] = "; ".join(data_flow_parts) if data_flow_parts else "Uses original dataframe"
+        
+        return enhanced_step
+    
+    def _enhance_step_with_constraints(
+        self,
+        step: Dict[str, Any],
+        function_detail: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Enhance a step with parameter constraints and error handling
+        """
+        enhanced_step = step.copy()
+        
+        # Add parameter constraints based on function type
+        parameter_constraints = {}
+        error_handling = []
+        
+        function_name = step.get('function_name', '').lower()
+        
+        # Add constraints based on function type
+        if 'window' in function_name or 'rolling' in function_name:
+            parameter_constraints['window'] = "must be positive integer"
+            parameter_constraints['min_periods'] = "must be positive integer <= window"
+        
+        if 'threshold' in function_name:
+            parameter_constraints['threshold'] = "must be between 0 and 1"
+        
+        if 'n_clusters' in function_name:
+            parameter_constraints['n_clusters'] = "must be positive integer"
+        
+        # Add error handling based on function type
+        if any(keyword in function_name for keyword in ['group', 'aggregate']):
+            error_handling.append("Handle missing values in group columns")
+        
+        if any(keyword in function_name for keyword in ['time', 'date', 'rolling']):
+            error_handling.append("Validate time column format")
+        
+        if any(keyword in function_name for keyword in ['variance', 'std', 'correlation']):
+            error_handling.append("Handle non-numeric columns")
+        
+        enhanced_step['parameter_constraints'] = parameter_constraints
+        enhanced_step['error_handling'] = "; ".join(error_handling) if error_handling else "Standard error handling"
+        
+        return enhanced_step
+    
+    async def _enhance_embedded_function_details(
+        self,
+        step: Dict[str, Any],
+        available_columns: List[str],
+        function_details: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Enhance embedded function details with column information
+        """
+        enhanced_step = step.copy()
+        
+        embedded_details = step.get('embedded_function_details', {})
+        if not embedded_details:
+            return enhanced_step
+        
+        # Find the embedded function details
+        embedded_function = embedded_details.get('embedded_function', '')
+        embedded_pipe = embedded_details.get('embedded_pipe', 'MetricsPipe')
+        
+        # Find function details for embedded function
+        embedded_func_detail = None
+        for func in function_details:
+            if func.get('function_name') == embedded_function:
+                embedded_func_detail = func
+                break
+        
+        if embedded_func_detail:
+            # Get embedded function parameters
+            embedded_params = embedded_details.get('embedded_parameters', {})
+            
+            # Map embedded function parameters to columns
+            embedded_input_columns = []
+            embedded_output_columns = []
+            
+            for param_name, param_value in embedded_params.items():
+                if param_name == 'variable':
+                    # This is the main column for the embedded function
+                    embedded_input_columns.append(param_value)
+                    # Generate output column name
+                    output_col = f"{embedded_function.lower()}_{param_value}"
+                    embedded_output_columns.append(output_col)
+            
+            # Add embedded function columns to the step
+            enhanced_step['embedded_function_columns'] = {
+                'embedded_input_columns': embedded_input_columns,
+                'embedded_output_columns': embedded_output_columns
+            }
+        
+        return enhanced_step
 
 
 # Example usage

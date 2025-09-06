@@ -1,0 +1,873 @@
+{
+    "catalog": "vulnerability_management",
+    "schema": "public",
+    "models": [
+      {
+        "name": "dev_vulnerability_instances",
+        "description": "Comprehensive vulnerability instance tracking system for CVE management, risk assessment, and remediation tracking across enterprise infrastructure. This table links vulnerabilities to specific software installations via sw_instance_id and contains CVE information for vulnerability analysis.",
+        "tableReference": {
+          "table": "dev_vulnerability_instances"
+        },
+        "columns": [
+          {
+            "name": "cve_partition_id",
+            "type": "VARCHAR",
+            "notNull": true,
+            "properties": {
+              "displayName": "CVE Partition ID",
+              "description": "Partition identifier for CVE data organization and horizontal data distribution strategy. This field enables efficient partitioning of vulnerability data across multiple storage nodes or database shards based on CVE characteristics. Common partition values include 'CURRENT_YEAR' for vulnerabilities published in the current year, 'HISTORICAL' for older vulnerabilities, 'CRITICAL' for high-severity vulnerabilities requiring immediate attention, and 'ACTIVE' for currently exploitable vulnerabilities. This partitioning improves query performance for large-scale vulnerability databases, enables parallel processing of vulnerability management operations, and supports efficient data archiving and retention policies."
+            }
+          },
+          {
+            "name": "nuid",
+            "type": "INTEGER",
+            "notNull": true,
+            "properties": {
+              "displayName": "Network Unit ID",
+              "description": "Network unit identifier that establishes the organizational hierarchy and network topology context for vulnerability instances. This field links vulnerability records to specific business units, departments, geographic locations, or network segments within the enterprise, enabling targeted risk assessment and remediation efforts. The NUID enables security teams to perform organizational-level vulnerability analysis, track compliance across different business units, and implement risk-based remediation strategies. It typically corresponds to Active Directory organizational units, network VLANs, or custom organizational hierarchies, allowing for granular vulnerability management and reporting at the business unit level."
+            }
+          },
+          {
+            "name": "dev_id",
+            "type": "INTEGER",
+            "notNull": true,
+            "properties": {
+              "displayName": "Device ID",
+              "description": "Unique device identifier representing the specific endpoint, server, workstation, or virtual machine where the vulnerability was detected and is currently present. This field serves as the primary key for device-level vulnerability tracking and enables correlation with device management systems, asset databases, and security monitoring tools. The device ID typically corresponds to hardware serial numbers, MAC addresses, or custom device identifiers from enterprise asset management systems. It supports device-centric security analysis, vulnerability impact assessment, and remediation tracking at the individual device level, enabling security teams to prioritize remediation efforts based on device criticality and business function."
+            }
+          },
+          {
+            "name": "instance_id",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Instance ID",
+              "description": "This is not a CVEID. Unique identifier for the specific vulnerability occurrence instance, providing granular tracking of individual vulnerability manifestations across the enterprise. This field enables differentiation between multiple instances of the same CVE on different devices, software installations, or network segments. This field cannot be used for identifying CVE-IDs but has to be joined with CVE Table. The instance ID is typically generated using a combination of CVE ID, device identifier, software instance, and detection timestamp to create a deterministic, collision-resistant identifier. This field is essential for tracking vulnerability lifecycle events, correlating with remediation activities, and maintaining detailed audit trails for compliance reporting. It may be empty for vulnerability instances where granular tracking is not required or when the identifier cannot be generated."
+            }
+          },
+          {
+            "name": "sw_instance_id",
+            "type": "VARCHAR",
+            "notNull": true,
+            "properties": {
+              "displayName": "Software Instance ID",
+              "description": "Cryptographic hash identifier that links this vulnerability instance to the specific software installation instance in the software inventory system. This field serves as a foreign key relationship to the software_inventory table, enabling correlation between vulnerabilities and the exact software installations that are affected. The software instance ID is typically generated using a combination of software attributes such as vendor, product name, version, installation path, and device identifier to create a deterministic, collision-resistant hash. This linkage is essential for vulnerability impact assessment, patch management coordination, and ensuring that remediation efforts target the correct software installations. It enables security teams to understand which specific software instances are vulnerable and track remediation progress at the software installation level."
+            }
+          },
+          {
+            "name": "cve_id",
+            "type": "VARCHAR",
+            "notNull": true,
+            "properties": {
+              "displayName": "CVE ID",
+              "description": "Common Vulnerabilities and Exposures (CVE) identifier following the standard CVE naming convention (e.g., CVE-2023-0054, CVE-2024-1234). This field contains the unique identifier assigned by the CVE Numbering Authority (CNA) to publicly known cybersecurity vulnerabilities. The CVE ID serves as the primary reference for vulnerability information, enabling correlation with vulnerability databases like the National Vulnerability Database (NVD), vendor security advisories, and threat intelligence feeds. This standardized identifier is essential for vulnerability tracking, security research, patch management, and compliance reporting. It enables security teams to access detailed vulnerability information, assess exploitability, and coordinate remediation efforts across the enterprise."
+            }
+          },
+          {
+            "name": "cvssv2_basescore",
+            "type": "DECIMAL",
+            "properties": {
+              "displayName": "CVSS v2 Base Score",
+              "description": "Common Vulnerability Scoring System (CVSS) version 2.0 base score representing the intrinsic characteristics of the vulnerability that are constant over time and across user environments. The score ranges from 0.0 (no impact) to 10.0 (maximum impact) and is calculated based on three metric groups: Access Vector, Access Complexity, and Authentication, along with three impact metrics: Confidentiality, Integrity, and Availability. CVSS v2 scores provide a standardized way to assess vulnerability severity and prioritize remediation efforts. While CVSS v3 is the current standard, v2 scores are maintained for historical vulnerabilities and legacy systems. This field may be empty for newer vulnerabilities that only have CVSS v3 scores or when scoring information is not available."
+            }
+          },
+          {
+            "name": "cvssv3_basescore",
+            "type": "DECIMAL",
+            "properties": {
+              "displayName": "CVSS v3 Base Score",
+              "description": "Common Vulnerability Scoring System (CVSS) version 3.x base score representing the intrinsic characteristics of the vulnerability that are constant over time and across user environments. The score ranges from 0.0 (no impact) to 10.0 (maximum impact) and is calculated based on eight base metrics: Attack Vector, Attack Complexity, Privileges Required, User Interaction, Scope, Confidentiality Impact, Integrity Impact, and Availability Impact. CVSS v3 provides more granular scoring than v2 and is the current industry standard for vulnerability severity assessment. This score is essential for vulnerability prioritization, risk assessment, and remediation planning. It enables security teams to focus on the most critical vulnerabilities first and allocate resources effectively. This field may be empty for older vulnerabilities that only have CVSS v2 scores or when scoring information is not available."
+            }
+          },
+          {
+            "name": "gtm_score",
+            "type": "DECIMAL",
+            "properties": {
+              "displayName": "GTM Score",
+              "description": "Go-To-Market (GTM) or internal risk scoring system score that represents an organization-specific vulnerability risk assessment beyond standard CVSS scoring. This field contains proprietary risk scores that may incorporate business context, threat intelligence, exploit availability, asset criticality, and organizational risk tolerance factors. GTM scores typically range from 0.0 to 100.0 and provide a more nuanced view of vulnerability risk that considers the specific business environment, threat landscape, and organizational priorities. This scoring system enables security teams to prioritize vulnerabilities based on business impact rather than just technical severity, supporting more effective resource allocation and risk management decisions. This field may be empty when GTM scoring is not available or not applicable to the vulnerability."
+            }
+          },
+          {
+            "name": "fix_versions",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Fix Versions",
+              "description": "Comma-separated list of software versions that contain fixes or patches for this specific vulnerability. This field identifies the minimum version numbers or version ranges where the vulnerability has been addressed by the vendor. Examples include '1.2.4', '2.0.1,2.1.0', or '>=3.1.0'. This information is crucial for patch management planning, vulnerability remediation prioritization, and determining whether software installations can be updated to a secure version. It enables security teams to identify which software versions are safe to deploy and helps prioritize remediation efforts based on patch availability. This field may be empty when no fixes are available, when version information is not provided by the vendor, or when the vulnerability affects end-of-life software with no planned patches."
+            }
+          },
+          {
+            "name": "patches",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Available Patches",
+              "description": "Comma-separated list of specific patches, updates, or security fixes available to remediate this vulnerability. This field contains patch identifiers, update names, or security bulletin references provided by the vendor or security community. Examples include 'KB123456', 'Security Update 2023-001', 'CVE-2023-0054-patch', or vendor-specific patch names. This information is essential for patch deployment planning, change management coordination, and ensuring that the correct remediation is applied. It enables security teams to track patch availability, coordinate with system administrators for deployment, and verify that the appropriate fixes have been applied. This field may be empty when no patches are available, when patch information is not provided, or when the vulnerability requires alternative remediation methods such as configuration changes or software removal."
+            }
+          },
+          {
+            "name": "severity",
+            "type": "INTEGER",
+            "notNull": true,
+            "properties": {
+              "displayName": "Severity Level",
+              "description": "Internal severity classification level assigned to the vulnerability based on organizational risk assessment criteria. The severity scale ranges from 1 (Low) to 4 (Critical), where 1=Low indicates minimal risk with limited impact potential, 2=Medium indicates moderate risk requiring attention, 3=High indicates significant risk requiring prompt remediation, and 4=Critical indicates maximum risk requiring immediate action. This classification considers factors such as CVSS scores, exploit availability, business impact, asset criticality, and organizational risk tolerance. The severity level drives remediation prioritization, resource allocation, and compliance reporting requirements. It enables security teams to focus efforts on the most critical vulnerabilities and ensures appropriate response times based on risk levels."
+            }
+          },
+          {
+            "name": "threat_level",
+            "type": "INTEGER",
+            "notNull": true,
+            "properties": {
+              "displayName": "Threat Level",
+              "description": "Assessed threat level based on environmental factors, threat intelligence, and exploitability conditions specific to the organization's infrastructure and threat landscape. The threat level typically ranges from 1 (Low) to 4 (Critical) and considers factors such as active exploitation in the wild, availability of proof-of-concept exploits, threat actor targeting patterns, and the organization's exposure to specific attack vectors. This assessment goes beyond CVSS base scores to incorporate real-world threat conditions, including whether the vulnerability is being actively exploited, if exploit code is publicly available, and if the organization's specific environment increases the likelihood of successful exploitation. The threat level helps prioritize vulnerabilities based on actual risk rather than theoretical impact, enabling more effective resource allocation and response planning."
+            }
+          },
+          {
+            "name": "exposure",
+            "type": "INTEGER",
+            "notNull": true,
+            "properties": {
+              "displayName": "Exposure Level",
+              "description": "Level of exposure to potential exploitation based on the organization's specific network architecture, security controls, and operational environment. The exposure level typically ranges from 1 (Low) to 4 (Critical) and considers factors such as network accessibility (internet-facing vs. internal), authentication requirements, network segmentation, security controls in place, and the criticality of the affected system or data. This assessment evaluates how easily an attacker could reach and exploit the vulnerability given the organization's current security posture. Low exposure indicates the vulnerability is protected by multiple security layers, while high exposure suggests the vulnerability is easily accessible to potential attackers. The exposure level helps security teams understand the practical exploitability of vulnerabilities in their specific environment and prioritize remediation efforts accordingly."
+            }
+          },
+          {
+            "name": "priority",
+            "type": "INTEGER",
+            "notNull": true,
+            "properties": {
+              "displayName": "Remediation Priority",
+              "description": "Priority level for remediation efforts based on a comprehensive risk assessment that combines severity, threat level, exposure, business impact, and organizational risk tolerance. The priority scale ranges from 1 (Low) to 4 (Critical), where 1=Low indicates vulnerabilities that can be addressed during routine maintenance, 2=Medium indicates vulnerabilities requiring attention within standard timeframes, 3=High indicates vulnerabilities requiring prompt remediation, and 4=Critical indicates vulnerabilities requiring immediate action and emergency response procedures. This priority level drives remediation scheduling, resource allocation, escalation procedures, and compliance reporting. It enables security teams to focus on the most important vulnerabilities first and ensures appropriate response times based on the overall risk profile of each vulnerability instance."
+            }
+          },
+          {
+            "name": "tags",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Risk Tags",
+              "description": "Comma-separated list of additional risk classification tags and metadata that provide context about the vulnerability's characteristics, associations, and special handling requirements. Common tags include 'Malware Linked' for vulnerabilities associated with malware campaigns, 'Exploit Available' for vulnerabilities with known exploits, 'Zero Day' for vulnerabilities exploited before vendor disclosure, 'Ransomware' for vulnerabilities used in ransomware attacks, 'APT' for advanced persistent threat associations, 'Public Exploit' for vulnerabilities with publicly available exploit code, and 'Wormable' for vulnerabilities that can spread automatically. These tags enable security teams to quickly identify vulnerabilities with special risk characteristics, implement additional security measures, and prioritize remediation based on threat intelligence and attack patterns. This field may be empty when no special tags are applicable to the vulnerability."
+            }
+          },
+          {
+            "name": "state",
+            "type": "VARCHAR",
+            "notNull": true,
+            "properties": {
+              "displayName": "Vulnerability State",
+              "description": "Current state of the vulnerability instance indicating its remediation status and lifecycle stage. Common states include 'ACTIVE' for vulnerabilities that are currently present and require attention, 'REMEDIATED' for vulnerabilities that have been fully fixed or patched, 'MITIGATED' for vulnerabilities that have been partially addressed through compensating controls or workarounds, 'ACCEPTED' for vulnerabilities where the organization has accepted the risk and chosen not to remediate, 'FALSE_POSITIVE' for vulnerabilities that were incorrectly identified, 'INVESTIGATING' for vulnerabilities under active investigation, and 'PENDING' for vulnerabilities awaiting remediation resources or approval. This state field is essential for tracking remediation progress, generating status reports, and ensuring that vulnerability management processes are functioning effectively. It enables security teams to monitor the overall health of the vulnerability management program and identify bottlenecks in the remediation process."
+            }
+          },
+          {
+            "name": "published_time",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "CVE Published Time",
+              "description": "Timestamp indicating when the CVE was officially published by the CVE Numbering Authority (CNA) or MITRE Corporation, making the vulnerability information publicly available. This field represents the official disclosure date when the vulnerability details, including technical information and potential impact, were released to the public. The published time is crucial for measuring exposure windows (time between vulnerability disclosure and detection/remediation), tracking vendor response times, and assessing the organization's vulnerability management effectiveness. It enables security teams to calculate how quickly vulnerabilities are detected in their environment relative to public disclosure and helps identify gaps in vulnerability intelligence and scanning processes. This field may be empty for vulnerabilities that were not assigned official CVE identifiers or when publication information is not available."
+            }
+          },
+          {
+            "name": "detected_time",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Detection Time",
+              "description": "Timestamp indicating when this specific vulnerability instance was first detected and identified in the organization's environment through vulnerability scanning, security assessment, or other detection mechanisms. This field represents the actual discovery time within the enterprise infrastructure, which may differ significantly from the CVE publication date. The detection time is essential for measuring the organization's vulnerability detection effectiveness, calculating exposure windows (time between publication and detection), and assessing the performance of vulnerability management tools and processes. It enables security teams to identify gaps in vulnerability intelligence, evaluate scanning frequency and coverage, and track improvements in detection capabilities over time. This field may be empty for vulnerabilities that were not detected through automated means or when detection tracking is not available."
+            }
+          },
+          {
+            "name": "remediation_time",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Remediation Time",
+              "description": "Timestamp indicating when the vulnerability was successfully remediated, patched, or otherwise addressed through appropriate security measures. This field represents the completion time of the remediation process, which may include patch installation, configuration changes, software updates, or implementation of compensating controls. The remediation time is essential for measuring remediation effectiveness, calculating time-to-remediation metrics, and assessing the organization's ability to respond to security vulnerabilities in a timely manner. It enables security teams to track remediation performance, identify bottlenecks in the remediation process, and ensure compliance with security policies and regulatory requirements. This field may be empty for vulnerabilities that have not yet been remediated or when remediation tracking is not available."
+            }
+          },
+          {
+            "name": "is_stale",
+            "type": "BOOLEAN",
+            "notNull": true,
+            "properties": {
+              "displayName": "Is Stale Record",
+              "description": "Boolean flag indicating whether this vulnerability record is considered stale, outdated, or no longer current. A record is marked as stale when it hasn't been updated within a defined time period, when the vulnerability is no longer detected on the system, when the affected software has been removed, or when the vulnerability data is considered unreliable. This flag helps identify records that may need to be refreshed, removed, or investigated further. Stale records can indicate vulnerabilities that have been resolved, systems that are no longer active, or issues with vulnerability scanning and data collection processes. This field is essential for maintaining data quality, identifying gaps in vulnerability management processes, and ensuring that security assessments are based on current and accurate vulnerability information."
+            }
+          },
+          {
+            "name": "raw_created_at",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Raw Data Creation Time",
+              "description": "Original timestamp indicating when this vulnerability instance was first discovered and recorded during the initial raw data collection process. This field preserves the original detection time from the vulnerability scanning tool, security assessment, or other detection mechanism, providing a historical record of when the vulnerability was first identified in the enterprise environment. The raw creation time is essential for data lineage tracking, change detection, and understanding the evolution of the vulnerability landscape over time. It helps distinguish between newly discovered vulnerabilities and existing ones, supports trend analysis for vulnerability discovery patterns, and enables correlation with other security events that may have occurred around the discovery time. This field is particularly valuable for audit trails, compliance reporting, and forensic analysis of vulnerability management processes."
+            }
+          },
+          {
+            "name": "store_created_at",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Data Store Creation Time",
+              "description": "Timestamp indicating when this vulnerability instance record was first created and stored in the data warehouse or centralized vulnerability management database. This field represents the system-generated timestamp for when the record was initially inserted into the database, providing a reliable reference point for data management and audit purposes. The store creation time is essential for data lifecycle management, backup and recovery operations, and maintaining data integrity across the vulnerability management system. It helps track when records were added to the system, supports data retention policies, and enables correlation with system maintenance activities. This field is particularly important for troubleshooting data issues, ensuring proper data governance practices, and maintaining audit trails for compliance and regulatory requirements."
+            }
+          },
+          {
+            "name": "store_updated_at",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Data Store Update Time",
+              "description": "Timestamp indicating when this vulnerability instance record was last modified or updated in the data warehouse or centralized vulnerability management database. This field represents the most recent system-generated timestamp for when any field in the record was changed, providing a reliable reference point for tracking data freshness and change history. The store update time is essential for data quality monitoring, identifying stale records, and ensuring that vulnerability information remains current and accurate. It helps track when records were last refreshed with new information, supports data retention and cleanup policies, and enables correlation with vulnerability scanning cycles and remediation activities. This field is particularly important for maintaining data integrity and ensuring that security assessments and risk calculations are based on the most recent available information."
+            }
+          },
+          {
+            "name": "process_id",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Processing Job ID",
+              "description": "Unique identifier (typically a UUID) of the data processing job, ETL pipeline, or batch process that created or last updated this vulnerability instance record. This field provides traceability back to the specific data processing workflow that handled this record, enabling debugging of data quality issues, tracking of processing performance, and correlation with system logs and monitoring data. The process ID is essential for data lineage tracking, troubleshooting data inconsistencies, and ensuring that data processing workflows are functioning correctly. It helps identify which processing job introduced specific data, supports rollback operations in case of processing errors, and enables correlation with processing metrics and performance monitoring. This field is particularly valuable for maintaining data quality, ensuring reliable data processing operations, and supporting audit requirements for vulnerability management systems."
+            }
+          },
+          {
+            "name": "cvss_score",
+            "type": "DECIMAL",
+            "isCalculated": true,
+            "expression": "COALESCE(cvssv3_basescore, cvssv2_basescore, 0.0)",
+            "properties": {
+              "displayName": "Primary CVSS Score",
+              "description": "Primary CVSS score preferring v3 over v2, defaulting to 0.0"
+            }
+          },
+          {
+            "name": "severity_category",
+            "type": "VARCHAR",
+            "isCalculated": true,
+            "expression": "CASE WHEN severity = 1 THEN 'Low' WHEN severity = 2 THEN 'Medium' WHEN severity = 3 THEN 'High' WHEN severity = 4 THEN 'Critical' ELSE 'Unknown' END",
+            "properties": {
+              "displayName": "Severity Category",
+              "description": "Human-readable severity classification"
+            }
+          },
+          {
+            "name": "priority_category",
+            "type": "VARCHAR",
+            "isCalculated": true,
+            "expression": "CASE WHEN priority = 1 THEN 'Low' WHEN priority = 2 THEN 'Medium' WHEN priority = 3 THEN 'High' WHEN priority = 4 THEN 'Critical' ELSE 'Unknown' END",
+            "properties": {
+              "displayName": "Priority Category",
+              "description": "Human-readable priority classification"
+            }
+          },
+          {
+            "name": "is_remediated",
+            "type": "BOOLEAN",
+            "isCalculated": true,
+            "expression": "CASE WHEN remediation_time IS NOT NULL THEN true ELSE false END",
+            "properties": {
+              "displayName": "Is Remediated",
+              "description": "Boolean flag indicating if the vulnerability has been remediated"
+            }
+          },
+          {
+            "name": "is_active",
+            "type": "BOOLEAN",
+            "isCalculated": true,
+            "expression": "CASE WHEN state = 'ACTIVE' THEN true ELSE false END",
+            "properties": {
+              "displayName": "Is Active",
+              "description": "Boolean flag indicating if the vulnerability is currently active"
+            }
+          },
+          {
+            "name": "is_high_severity",
+            "type": "BOOLEAN",
+            "isCalculated": true,
+            "expression": "CASE WHEN severity >= 3 THEN true ELSE false END",
+            "properties": {
+              "displayName": "Is High Severity",
+              "description": "Boolean flag indicating if the vulnerability is high or critical severity"
+            }
+          },
+          {
+            "name": "is_critical",
+            "type": "BOOLEAN",
+            "isCalculated": true,
+            "expression": "CASE WHEN severity = 4 OR priority = 4 THEN true ELSE false END",
+            "properties": {
+              "displayName": "Is Critical",
+              "description": "Boolean flag indicating if the vulnerability is critical severity or priority"
+            }
+          },
+          {
+            "name": "days_since_published",
+            "type": "INTEGER",
+            "isCalculated": true,
+            "expression": "DATEDIFF(day, published_time, CURRENT_TIMESTAMP)",
+            "properties": {
+              "displayName": "Days Since Published",
+              "description": "Number of days since the CVE was officially published"
+            }
+          },
+          {
+            "name": "days_since_detected",
+            "type": "INTEGER",
+            "isCalculated": true,
+            "expression": "DATEDIFF(day, detected_time, CURRENT_TIMESTAMP)",
+            "properties": {
+              "displayName": "Days Since Detected",
+              "description": "Number of days since the vulnerability was detected in the environment"
+            }
+          },
+          {
+            "name": "days_to_detection",
+            "type": "INTEGER",
+            "isCalculated": true,
+            "expression": "CASE WHEN published_time IS NOT NULL AND detected_time IS NOT NULL THEN DATEDIFF(day, published_time, detected_time) END",
+            "properties": {
+              "displayName": "Days to Detection",
+              "description": "Number of days from CVE publication to detection in environment"
+            }
+          },
+          {
+            "name": "days_to_remediation",
+            "type": "INTEGER",
+            "isCalculated": true,
+            "expression": "CASE WHEN detected_time IS NOT NULL AND remediation_time IS NOT NULL THEN DATEDIFF(day, detected_time, remediation_time) END",
+            "properties": {
+              "displayName": "Days to Remediation",
+              "description": "Number of days from detection to successful remediation"
+            }
+          },
+          {
+            "name": "cve_year",
+            "type": "INTEGER",
+            "isCalculated": true,
+            "expression": "CAST(SUBSTRING(cve_id, 5, 4) AS INTEGER)",
+            "properties": {
+              "displayName": "CVE Year",
+              "description": "Year component extracted from CVE ID for trend analysis"
+            }
+          },
+          {
+            "name": "has_malware_tag",
+            "type": "BOOLEAN",
+            "isCalculated": true,
+            "expression": "CASE WHEN tags LIKE '%Malware%' THEN true ELSE false END",
+            "properties": {
+              "displayName": "Has Malware Tag",
+              "description": "Boolean indicating if vulnerability is tagged as malware-related"
+            }
+          },
+          {
+            "name": "has_fix_available",
+            "type": "BOOLEAN",
+            "isCalculated": true,
+            "expression": "CASE WHEN fix_versions IS NOT NULL OR patches IS NOT NULL THEN true ELSE false END",
+            "properties": {
+              "displayName": "Has Fix Available",
+              "description": "Boolean indicating if fixes or patches are available"
+            }
+          },
+          {
+            "name": "vulnerability_age_category",
+            "type": "VARCHAR",
+            "isCalculated": true,
+            "expression": "CASE WHEN DATEDIFF(day, published_time, CURRENT_TIMESTAMP) <= 30 THEN 'New (30 days)' WHEN DATEDIFF(day, published_time, CURRENT_TIMESTAMP) <= 90 THEN 'Recent (90 days)' WHEN DATEDIFF(day, published_time, CURRENT_TIMESTAMP) <= 365 THEN 'Mature (1 year)' ELSE 'Legacy (>1 year)' END",
+            "properties": {
+              "displayName": "Vulnerability Age Category",
+              "description": "Categorical age of the vulnerability based on publication date"
+            }
+          },
+          {
+            "name": "risk_score",
+            "type": "DECIMAL",
+            "isCalculated": true,
+            "expression": "((severity * 25.0) + (threat_level * 15.0) + (exposure * 10.0) + (priority * 25.0)) / 4.0",
+            "properties": {
+              "displayName": "Composite Risk Score",
+              "description": "Weighted composite risk score combining severity, threat, exposure, and priority (0-100)"
+            }
+          }
+        ],
+        "primaryKey": "sw_instance_id,cve_id",
+        "properties": {
+          "displayName": "Vulnerability Instances",
+          "description": "Comprehensive vulnerability instance tracking and risk management system"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "name": "vulnerability_to_software_relationship",
+        "models": ["dev_vulnerability_instances", "dev_software_instances"],
+        "joinType": "MANY_TO_ONE",
+        "condition": "dev_vulnerability_instances.sw_instance_id = dev_software_instances.key AND dev_vulnerability_instances.dev_id = dev_software_instances.dev_id AND dev_vulnerability_instances.nuid = dev_software_instances.nuid",
+        "properties": {
+          "displayName": "Vulnerability to Software Relationship",
+          "description": "Relationship between vulnerability instances and their associated software installations"
+        }
+      },
+      {
+        "name": "vulnerability_to_asset_relationship",
+        "models": ["dev_vulnerability_instances", "dev_assets"],
+        "joinType": "MANY_TO_ONE",
+        "condition": "dev_vulnerability_instances.dev_id = dev_assets.dev_id AND dev_vulnerability_instances.nuid = dev_assets.nuid",
+        "properties": {
+          "displayName": "Vulnerability to Asset Relationship",
+          "description": "Relationship between vulnerability instances and their affected assets"
+        }
+      },
+      {
+        "name": "vulnerability_to_cve_relationship",
+        "models": ["dev_vulnerability_instances", "dev_cve"],
+        "joinType": "MANY_TO_ONE",
+        "condition": "dev_vulnerability_instances.cve_id = dev_cve.cve_id",
+        "properties": {
+          "displayName": "Vulnerability Instance to CVE Relationship",
+          "description": "Relationship between vulnerability instances and their CVE assessments"
+        }
+      }
+    ],
+    "metrics": [
+      {
+        "name": "vulnerability_overview_metrics",
+        "baseObject": "vulnerability_instances",
+        "description": "Core vulnerability management and risk assessment metrics",
+        "dimension": [
+          {
+            "name": "severity_category",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "priority_category",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "state",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "vulnerability_age_category",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "total_vulnerabilities",
+            "type": "INTEGER",
+            "expression": "COUNT(*)"
+          },
+          {
+            "name": "active_vulnerabilities",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_active = true THEN 1 END)"
+          },
+          {
+            "name": "remediated_vulnerabilities",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_remediated = true THEN 1 END)"
+          },
+          {
+            "name": "critical_vulnerabilities",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_critical = true THEN 1 END)"
+          },
+          {
+            "name": "high_severity_vulnerabilities",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_high_severity = true THEN 1 END)"
+          },
+          {
+            "name": "malware_linked_vulnerabilities",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN has_malware_tag = true THEN 1 END)"
+          },
+          {
+            "name": "vulnerabilities_with_fixes",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN has_fix_available = true THEN 1 END)"
+          },
+          {
+            "name": "unique_cves",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT cve_id)"
+          },
+          {
+            "name": "affected_devices",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT dev_id)"
+          },
+          {
+            "name": "remediation_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN is_remediated = true THEN 1 END) * 100.0 / COUNT(*)"
+          },
+          {
+            "name": "avg_risk_score",
+            "type": "DECIMAL",
+            "expression": "AVG(risk_score)"
+          },
+          {
+            "name": "avg_cvss_score",
+            "type": "DECIMAL",
+            "expression": "AVG(cvss_score)"
+          }
+        ],
+        "timeGrain": [
+          {
+            "name": "published_time_grain",
+            "refColumn": "published_time",
+            "dateParts": ["YEAR", "QUARTER", "MONTH", "WEEK", "DAY"]
+          },
+          {
+            "name": "detected_time_grain",
+            "refColumn": "detected_time",
+            "dateParts": ["YEAR", "QUARTER", "MONTH", "WEEK", "DAY"]
+          },
+          {
+            "name": "remediation_time_grain",
+            "refColumn": "remediation_time",
+            "dateParts": ["YEAR", "QUARTER", "MONTH", "WEEK", "DAY"]
+          }
+        ],
+        "properties": {
+          "displayName": "Vulnerability Overview Metrics",
+          "description": "Key metrics for vulnerability management and risk assessment"
+        }
+      },
+      {
+        "name": "remediation_performance_metrics",
+        "baseObject": "vulnerability_instances",
+        "description": "Vulnerability remediation effectiveness and timeliness metrics",
+        "dimension": [
+          {
+            "name": "severity_category",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "priority_category",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "avg_days_to_detection",
+            "type": "DECIMAL",
+            "expression": "AVG(days_to_detection)"
+          },
+          {
+            "name": "avg_days_to_remediation",
+            "type": "DECIMAL",
+            "expression": "AVG(days_to_remediation)"
+          },
+          {
+            "name": "fast_remediation_count",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN days_to_remediation <= 7 THEN 1 END)"
+          },
+          {
+            "name": "slow_remediation_count",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN days_to_remediation > 90 THEN 1 END)"
+          },
+          {
+            "name": "remediation_sla_compliance",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN days_to_remediation <= 30 THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN days_to_remediation IS NOT NULL THEN 1 END), 0)"
+          },
+          {
+            "name": "detection_efficiency",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN days_to_detection <= 1 THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN days_to_detection IS NOT NULL THEN 1 END), 0)"
+          }
+        ],
+        "properties": {
+          "displayName": "Remediation Performance Metrics",
+          "description": "Metrics for evaluating vulnerability remediation effectiveness and timeliness"
+        }
+      },
+      {
+        "name": "risk_assessment_metrics",
+        "baseObject": "vulnerability_instances",
+        "description": "Comprehensive risk assessment and exposure analysis metrics",
+        "dimension": [
+          {
+            "name": "cve_year",
+            "type": "INTEGER"
+          },
+          {
+            "name": "vulnerability_age_category",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "total_risk_exposure",
+            "type": "DECIMAL",
+            "expression": "SUM(risk_score)"
+          },
+          {
+            "name": "avg_threat_level",
+            "type": "DECIMAL",
+            "expression": "AVG(threat_level)"
+          },
+          {
+            "name": "avg_exposure_level",
+            "type": "DECIMAL",
+            "expression": "AVG(exposure)"
+          },
+          {
+            "name": "critical_risk_vulnerabilities",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN risk_score >= 75 THEN 1 END)"
+          },
+          {
+            "name": "high_risk_vulnerabilities",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN risk_score >= 50 AND risk_score < 75 THEN 1 END)"
+          },
+          {
+            "name": "medium_risk_vulnerabilities",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN risk_score >= 25 AND risk_score < 50 THEN 1 END)"
+          },
+          {
+            "name": "low_risk_vulnerabilities",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN risk_score < 25 THEN 1 END)"
+          }
+        ],
+        "properties": {
+          "displayName": "Risk Assessment Metrics",
+          "description": "Comprehensive metrics for vulnerability risk assessment and exposure analysis"
+        }
+      }
+    ],
+    "views": [
+      {
+        "name": "critical_vulnerabilities_dashboard",
+        "statement": "SELECT cve_id, severity_category, priority_category, COUNT(*) as instance_count, COUNT(DISTINCT dev_id) as affected_devices, AVG(risk_score) as avg_risk_score, MAX(published_time) as latest_published FROM vulnerability_instances WHERE is_critical = true AND is_active = true GROUP BY cve_id, severity_category, priority_category ORDER BY avg_risk_score DESC, affected_devices DESC LIMIT 25",
+        "properties": {
+          "displayName": "Critical Vulnerabilities Dashboard",
+          "description": "Top 25 critical vulnerabilities prioritized by risk score and device impact"
+        }
+      },
+      {
+        "name": "remediation_status_overview",
+        "statement": "SELECT state, severity_category, COUNT(*) as vulnerability_count, COUNT(*) * 100.0 / SUM(COUNT(*)) OVER () as percentage, AVG(days_to_remediation) as avg_days_to_fix FROM vulnerability_instances GROUP BY state, severity_category ORDER BY CASE severity_category WHEN 'Critical' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 ELSE 4 END, state",
+        "properties": {
+          "displayName": "Remediation Status Overview",
+          "description": "Remediation status breakdown by severity category with performance metrics"
+        }
+      },
+      {
+        "name": "vulnerability_age_analysis",
+        "statement": "SELECT vulnerability_age_category, COUNT(*) as total_count, COUNT(CASE WHEN is_active = true THEN 1 END) as active_count, COUNT(CASE WHEN is_remediated = true THEN 1 END) as remediated_count, AVG(risk_score) as avg_risk_score FROM vulnerability_instances GROUP BY vulnerability_age_category ORDER BY CASE vulnerability_age_category WHEN 'New (30 days)' THEN 1 WHEN 'Recent (90 days)' THEN 2 WHEN 'Mature (1 year)' THEN 3 ELSE 4 END",
+        "properties": {
+          "displayName": "Vulnerability Age Analysis",
+          "description": "Analysis of vulnerability distribution and risk across different age categories"
+        }
+      },
+      {
+        "name": "device_vulnerability_exposure",
+        "statement": "SELECT dev_id, COUNT(*) as total_vulnerabilities, COUNT(CASE WHEN is_critical = true THEN 1 END) as critical_vulnerabilities, COUNT(CASE WHEN is_active = true THEN 1 END) as active_vulnerabilities, AVG(risk_score) as avg_risk_score, MAX(published_time) as latest_vulnerability FROM vulnerability_instances GROUP BY dev_id HAVING COUNT(*) >= 5 ORDER BY critical_vulnerabilities DESC, avg_risk_score DESC",
+        "properties": {
+          "displayName": "Device Vulnerability Exposure",
+          "description": "Device-level vulnerability exposure analysis for devices with significant vulnerability counts"
+        }
+      },
+      {
+        "name": "remediation_performance_trends",
+        "statement": "SELECT DATE_TRUNC('month', remediation_time) as remediation_month, COUNT(*) as vulnerabilities_remediated, AVG(days_to_remediation) as avg_remediation_time, COUNT(CASE WHEN days_to_remediation <= 30 THEN 1 END) * 100.0 / COUNT(*) as sla_compliance_rate FROM vulnerability_instances WHERE remediation_time IS NOT NULL GROUP BY DATE_TRUNC('month', remediation_time) ORDER BY remediation_month DESC LIMIT 12",
+        "properties": {
+          "displayName": "Remediation Performance Trends",
+          "description": "Monthly remediation performance trends and SLA compliance rates"
+        }
+      },
+      {
+        "name": "malware_linked_vulnerabilities",
+        "statement": "SELECT cve_id, COUNT(*) as instance_count, COUNT(DISTINCT dev_id) as affected_devices, AVG(cvss_score) as avg_cvss_score, AVG(risk_score) as avg_risk_score, MIN(detected_time) as first_detected FROM vulnerability_instances WHERE has_malware_tag = true GROUP BY cve_id ORDER BY avg_risk_score DESC, affected_devices DESC",
+        "properties": {
+          "displayName": "Malware-Linked Vulnerabilities",
+          "description": "Analysis of vulnerabilities with malware associations and their risk profiles"
+        }
+      },
+      {
+        "name": "cve_trend_analysis",
+        "statement": "SELECT cve_year, COUNT(DISTINCT cve_id) as unique_cves, COUNT(*) as total_instances, AVG(cvss_score) as avg_cvss_score, COUNT(CASE WHEN is_critical = true THEN 1 END) as critical_instances FROM vulnerability_instances WHERE cve_year >= EXTRACT(YEAR FROM CURRENT_DATE) - 5 GROUP BY cve_year ORDER BY cve_year DESC",
+        "properties": {
+          "displayName": "CVE Trend Analysis",
+          "description": "Year-over-year CVE trends and severity distribution analysis"
+        }
+      },
+      {
+        "name": "unpatched_vulnerabilities_priority",
+        "statement": "SELECT cve_id, severity_category, priority_category, COUNT(*) as instance_count, COUNT(DISTINCT dev_id) as affected_devices, AVG(days_since_published) as avg_days_old, has_fix_available FROM vulnerability_instances WHERE is_active = true AND is_remediated = false GROUP BY cve_id, severity_category, priority_category, has_fix_available ORDER BY CASE severity_category WHEN 'Critical' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 ELSE 4 END, affected_devices DESC",
+        "properties": {
+          "displayName": "Unpatched Vulnerabilities Priority List",
+          "description": "Prioritized list of active, unpatched vulnerabilities requiring immediate attention"
+        }
+      }
+    ],
+    "enumDefinitions": [
+      {
+        "name": "VulnerabilityState",
+        "values": [
+          {
+            "name": "ACTIVE",
+            "value": "ACTIVE",
+            "properties": {
+              "description": "Vulnerability is currently active and requires attention"
+            }
+          },
+          {
+            "name": "REMEDIATED",
+            "value": "REMEDIATED",
+            "properties": {
+              "description": "Vulnerability has been successfully remediated"
+            }
+          },
+          {
+            "name": "MITIGATED",
+            "value": "MITIGATED",
+            "properties": {
+              "description": "Vulnerability has been mitigated but not fully remediated"
+            }
+          },
+          {
+            "name": "ACCEPTED",
+            "value": "ACCEPTED",
+            "properties": {
+              "description": "Vulnerability risk has been accepted by the organization"
+            }
+          }
+        ],
+        "properties": {
+          "displayName": "Vulnerability States",
+          "description": "Possible states for vulnerability instances"
+        }
+      },
+      {
+        "name": "SeverityLevel",
+        "values": [
+          {
+            "name": "Low",
+            "value": "Low",
+            "properties": {
+              "description": "Low severity vulnerability with minimal risk"
+            }
+          },
+          {
+            "name": "Medium",
+            "value": "Medium",
+            "properties": {
+              "description": "Medium severity vulnerability with moderate risk"
+            }
+          },
+          {
+            "name": "High",
+            "value": "High",
+            "properties": {
+              "description": "High severity vulnerability requiring prompt attention"
+            }
+          },
+          {
+            "name": "Critical",
+            "value": "Critical",
+            "properties": {
+              "description": "Critical severity vulnerability requiring immediate remediation"
+            }
+          }
+        ],
+        "properties": {
+          "displayName": "Severity Levels",
+          "description": "Severity classification levels for vulnerabilities"
+        }
+      },
+      {
+        "name": "VulnerabilityAgeCategory",
+        "values": [
+          {
+            "name": "New",
+            "value": "New (30 days)",
+            "properties": {
+              "description": "Vulnerability published within the last 30 days"
+            }
+          },
+          {
+            "name": "Recent",
+            "value": "Recent (90 days)",
+            "properties": {
+              "description": "Vulnerability published within the last 90 days"
+            }
+          },
+          {
+            "name": "Mature",
+            "value": "Mature (1 year)",
+            "properties": {
+              "description": "Vulnerability published within the last year"
+            }
+          },
+          {
+            "name": "Legacy",
+            "value": "Legacy (>1 year)",
+            "properties": {
+              "description": "Vulnerability published over a year ago"
+            }
+          }
+        ],
+        "properties": {
+          "displayName": "Vulnerability Age Categories",
+          "description": "Age-based categorization of vulnerabilities"
+        }
+      }
+    ],
+    "cumulativeMetrics": [
+      {
+        "name": "vulnerability_detection_trend",
+        "baseObject": "vulnerability_instances",
+        "description": "Track vulnerability detection patterns over time",
+        "timeColumn": "detected_time",
+        "aggregation": "COUNT",
+        "window": "DAY",
+        "measure": {
+          "name": "daily_detections",
+          "type": "INTEGER",
+          "expression": "COUNT(*)"
+        },
+        "dimensions": ["severity_category", "state"],
+        "properties": {
+          "displayName": "Vulnerability Detection Trend",
+          "description": "Daily tracking of vulnerability detection activity"
+        }
+      },
+      {
+        "name": "remediation_velocity_trend",
+        "baseObject": "vulnerability_instances",
+        "description": "Track remediation velocity over time",
+        "timeColumn": "remediation_time",
+        "aggregation": "COUNT",
+        "window": "WEEK",
+        "measure": {
+          "name": "weekly_remediations",
+          "type": "INTEGER",
+          "expression": "COUNT(CASE WHEN remediation_time IS NOT NULL THEN 1 END)"
+        },
+        "dimensions": ["severity_category"],
+        "properties": {
+          "displayName": "Remediation Velocity Trend",
+          "description": "Weekly tracking of vulnerability remediation activity"
+        }
+      },
+      {
+        "name": "risk_exposure_trend",
+        "baseObject": "vulnerability_instances",
+        "description": "Track overall risk exposure trends over time",
+        "timeColumn": "detected_time",
+        "aggregation": "SUM",
+        "window": "DAY",
+        "measure": {
+          "name": "daily_risk_exposure",
+          "type": "DECIMAL",
+          "expression": "SUM(risk_score)"
+        },
+        "dimensions": ["severity_category", "vulnerability_age_category"],
+        "properties": {
+          "displayName": "Risk Exposure Trend",
+          "description": "Daily tracking of cumulative risk exposure across the vulnerability landscape"
+        }
+      }
+    ]
+  }

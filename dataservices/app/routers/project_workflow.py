@@ -8,9 +8,10 @@ from sqlalchemy import select, update, func
 from app.core.dependencies import get_async_db_session, get_session_manager
 from app.service.models import (
     CreateDomainRequest, DomainContext, AddTableRequest, 
-    DomainResponse, TableResponse, MetricCreate, ViewCreate, CalculatedColumnCreate, EnhancedTableResponse
+    DomainResponse, TableResponse, MetricCreate, ViewCreate, CalculatedColumnCreate, EnhancedTableResponse, datasetRead, tableRead
 )
 from app.service.share_permissions import SharePermissions
+from app.service.datasource_service import DataRetriever
 import traceback
 from app.schemas.dbmodels import Domain, Dataset, Table, SQLColumn, Metric, View, CalculatedColumn
 from app.service.project_workflow_service import DomainWorkflowService, MetricsService
@@ -317,146 +318,197 @@ async def api_get_all_datasets(
             detail=f"Failed to get all datasets: {str(e)}"
         )
 
+
+@router.get("/dataset/samples/getTablesData")
+async def get_sample_data_for_dataset(
+   dataset_id: str,
+   db: AsyncSession = Depends(get_async_db_session),
+   token: str = Depends(get_token)
+):
+   try:
+       user= await SharePermissions()._validate_user(token)
+       # Use async query with selectinload for async session
+       result = await db.execute(
+           select(Dataset).options(selectinload(Dataset.tables)).filter(Dataset.dataset_id == dataset_id)
+       )
+       dataset = result.scalar_one_or_none()
+       
+       print(f"dataset {dataset}")
+       if not dataset:
+           raise ValueError("Dataset Not found")
+       
+       tables = []
+       dataset = datasetRead.model_validate(dataset)
+       for table in dataset.tables:
+           tables.append(tableRead.model_validate(table).name)
+       print("Tables", tables)
+
+       # Await the async DataRetriever method
+       tabledata = await DataRetriever(db).get_data_from_connection(
+           str(dataset.connection_id), tables
+       )
+       return tabledata
+   except Exception as e:
+       print("====Error =====")
+       traceback.print_exc()
+       print("====Error Ended here ====")
+       # Consider returning a proper error response
+       raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/dataset/{dataset_id}")
 async def api_get_dataset_details(
-    dataset_id: str,
-    db: AsyncSession = Depends(get_async_db_session),
-    token: str = Depends(get_token)
+   dataset_id: str,
+   db: AsyncSession = Depends(get_async_db_session),
+   token: str = Depends(get_token)
 ):
-    """Get details for a specific dataset, including its domain, tables, and all columns with enhanced metadata."""
-    try:
-        # Validate user
-        user = await SharePermissions()._validate_user(token)
-
-        # Load dataset with all related entities
-        stmt = (
-            select(Dataset)
-            .options(
-                selectinload(Dataset.domain),
-                selectinload(Dataset.tables).selectinload(Table.columns).selectinload(SQLColumn.calculated_column),
-                selectinload(Dataset.tables).selectinload(Table.metrics),
-                selectinload(Dataset.tables).selectinload(Table.views)
-            )
-            .where(Dataset.dataset_id == dataset_id)
-        )
-        result = await db.execute(stmt)
-        dataset = result.scalar_one_or_none()
-
-        if not dataset:
-            raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
-
-        # Permission check
-        checkPermission = await SharePermissions().check_user_permission(token, dataset.domain_id)
-        if not checkPermission['has_permission']:
-            raise HTTPException(status_code=403, detail="No permission to access this dataset")
-
-        tables_details = []
-
-        for table in dataset.tables:
-            # Metrics
-            metrics_details = [
-                {
-                    "metric_id": metric.metric_id,
-                    "name": metric.name,
-                    "display_name": metric.display_name,
-                    "description": metric.description,
-                    "metric_sql": metric.metric_sql,
-                    "metric_type": metric.metric_type,
-                    "aggregation_type": metric.aggregation_type,
-                    "format_string": metric.format_string,
-                    "created_at": metric.created_at.isoformat() if metric.created_at else None,
-                    "updated_at": metric.updated_at.isoformat() if metric.updated_at else None
-                }
-                for metric in table.metrics
-            ]
-
-            # Views
-            views_details = [
-                {
-                    "view_id": view.view_id,
-                    "name": view.name,
-                    "display_name": view.display_name,
-                    "description": view.description,
-                    "view_sql": view.view_sql,
-                    "view_type": view.view_type,
-                    "created_at": view.created_at.isoformat() if view.created_at else None,
-                    "updated_at": view.updated_at.isoformat() if view.updated_at else None
-                }
-                for view in table.views
-            ]
-
-            # Columns (physical + calculated + enhanced metadata)
-            enhanced_columns = []
-            for col in table.columns:
-                col_data = {
-                    "column_id": col.column_id,
-                    "column_name": col.name,
-                    "display_name": col.display_name,
-                    "description": col.description,
-                    "data_type": col.data_type,
-                    "usage_type": getattr(col, "usage_type", None),
-                    "json_metadata": getattr(col, "json_metadata", {}),
-                    "business_rules": getattr(col, "business_rules", []),
-                    "example_values": getattr(col, "example_values", []),
-                    "related_concepts": getattr(col, "related_concepts", []),
-                    "data_quality_checks": getattr(col, "data_quality_checks", []),
-                    "business_description": getattr(col, "business_description", None),
-                    "filtering_suggestions": getattr(col, "filtering_suggestions", []),
-                    "privacy_classification": getattr(col, "privacy_classification", None),
-                    "aggregation_suggestions": getattr(col, "aggregation_suggestions", [])
-                }
-
-                # Include calculated column info if applicable
-                if col.column_type == "calculated_column" and col.calculated_column:
-                    col_data.update({
-                        "calculated_column_id": col.calculated_column.calculated_column_id,
-                        "calculation_sql": col.calculated_column.calculation_sql,
-                        "function_id": col.calculated_column.function_id,
-                        "dependencies": col.calculated_column.dependencies
-                    })
-
-                enhanced_columns.append(col_data)
-
-            # Assemble table details
-            tables_details.append({
-                "table_id": table.table_id,
-                "name": table.name,
-                "display_name": table.display_name,
-                "description": table.description,
-                "relationships": table.json_metadata.get("key_relationships", []),
-                "enhanced_columns": enhanced_columns,
-                "total_columns": len(enhanced_columns),
-                "metrics": metrics_details,
-                "total_metrics": len(metrics_details),
-                "views": views_details,
-                "total_views": len(views_details)
-            })
-
-        # Final response
-        response = {
-            "dataset_id": dataset.dataset_id,
-            "name": dataset.name,
-            "display_name": dataset.display_name,
-            "description": dataset.description,
-            "created_at": dataset.created_at.isoformat() if dataset.created_at else None,
-            "domain": {
-                "domain_id": dataset.domain.domain_id,
-                "display_name": dataset.domain.display_name,
-                "status": dataset.domain.status
-            },
-            "tables": tables_details,
-            "table_count": len(dataset.tables)
-        }
-
-        return response
-
-    except Exception as e:
-        logger.error(f"Error getting dataset details for ID {dataset_id}: {str(e)}")
-        traceback.print_exc()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get dataset details: {str(e)}"
-        )
+   """Get details for a specific dataset, including its domain and tables."""
+   try:
+       user = await SharePermissions()._validate_user(token)
+       # Create a query to select the dataset and pre-load related entities
+       stmt = (
+           select(Dataset)
+           .options(
+               selectinload(Dataset.domain),  # Eagerly load the parent domain
+               selectinload(Dataset.tables).selectinload(Table.columns).selectinload(SQLColumn.calculated_column),  # Eagerly load tables, columns, and calculated columns
+               selectinload(Dataset.tables).selectinload(Table.metrics),  # Eagerly load metrics
+               selectinload(Dataset.tables).selectinload(Table.views)  # Eagerly load views
+           )
+           .where(Dataset.dataset_id == dataset_id)
+       )
+ 
+       result = await db.execute(stmt)
+       dataset = result.scalar_one_or_none()
+ 
+       if not dataset:
+           raise HTTPException(
+               status_code=status.HTTP_404_NOT_FOUND,
+               detail=f"Dataset with ID {dataset_id} not found"
+           )
+ 
+       domain_id = dataset.domain_id
+ 
+       checkPermission = await SharePermissions().check_user_permission(token, domain_id)
+       
+       if not checkPermission['has_permission']:
+           raise HTTPException(
+               status_code=status.HTTP_403_FORBIDDEN,
+               detail="User does not have permission to access this dataset"
+           )
+       
+       tables_details = []
+       for table in dataset.tables:
+           
+           # --- Detailed Metrics List ---
+           metrics_details = [
+               {
+                   "metric_id": metric.metric_id,
+                   "name": metric.name,
+                   "display_name": metric.display_name,
+                   "description": metric.description,
+                   "metric_sql": metric.metric_sql,
+                   "metric_type": metric.metric_type,
+                   "aggregation_type": metric.aggregation_type,
+                   "format_string": metric.format_string,
+                   "created_at": metric.created_at.isoformat() if metric.created_at else None,
+                   "updated_at": metric.updated_at.isoformat() if metric.updated_at else None
+               }
+               for metric in table.metrics
+           ]
+ 
+           # --- Detailed Views List ---
+           views_details = [
+               {
+                   "view_id": view.view_id,
+                   "name": view.name,
+                   "display_name": view.display_name,
+                   "description": view.description,
+                   "view_sql": view.view_sql,
+                   "view_type": view.view_type,
+                   "created_at": view.created_at.isoformat() if view.created_at else None,
+                   "updated_at": view.updated_at.isoformat() if view.updated_at else None
+               }
+               for view in table.views
+           ]
+           
+           # --- Detailed Calculated Columns List ---
+           calculated_columns_details = []
+           physical_columns_details = []
+           for col in table.columns:
+               if col.column_type == 'calculated_column' and col.calculated_column:
+                   calculated_columns_details.append({
+                       "column_id": col.column_id,
+                       "name": col.name,
+                       "display_name": col.display_name,
+                       "description": col.description,
+                       "data_type": col.data_type,
+                       "usage_type": col.usage_type,
+                       "calculated_column_id": col.calculated_column.calculated_column_id,
+                       "calculation_sql": col.calculated_column.calculation_sql,
+                       "function_id": col.calculated_column.function_id,
+                       "dependencies": col.calculated_column.dependencies,
+                       "created_at": col.created_at.isoformat() if col.created_at else None,
+                       "updated_at": col.updated_at.isoformat() if col.updated_at else None
+                   })
+               else:
+                   # Also include physical columns for completeness
+                   physical_columns_details.append({
+                       "column_id": col.column_id,
+                       "name": col.name,
+                       "display_name": col.display_name,
+                       "description": col.description,
+                       "data_type": col.data_type
+                   })
+ 
+           # --- Assemble all details for this table ---
+           tables_details.append({
+               "table_id": table.table_id,
+               "name": table.name,
+               "display_name": table.display_name,
+               "description": table.description,
+               "relationships": table.json_metadata.get("key_relationships", []),
+               
+               # Physical Columns
+               "columns": physical_columns_details,
+               "total_columns": len(physical_columns_details),
+ 
+               # Calculated Columns with Total
+               "calculated_columns": calculated_columns_details,
+               "total_calculated_columns": len(calculated_columns_details),
+ 
+               # Metrics with Total
+               "metrics": metrics_details,
+               "total_metrics": len(metrics_details),
+               
+               # Views with Total
+               "views": views_details,
+               "total_views": len(views_details)
+           })
+           
+       # --- Structure the final, complete response ---
+       response = {
+           "dataset_id": dataset.dataset_id,
+           "name": dataset.name,
+           "display_name": dataset.display_name,
+           "description": dataset.description,
+           "created_at": str(dataset.created_at),
+           "domain": {
+               "domain_id": dataset.domain.domain_id,
+               "display_name": dataset.domain.display_name,
+               "status": dataset.domain.status
+           },
+           "tables": tables_details,
+           "table_count": len(dataset.tables)
+       }
+       
+       return response
+ 
+   except Exception as e:
+       logger.error(f"Error getting dataset details for ID {dataset_id}: {str(e)}")
+       raise HTTPException(
+           status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+           detail=f"Failed to get dataset details: {str(e)}"
+       )
 
 @router.post("/table", response_model=EnhancedTableResponse, status_code=status.HTTP_201_CREATED)
 async def api_add_table(
@@ -593,7 +645,8 @@ async def api_add_table(
         column_count = column_count.scalar()
         
         # Get enhanced table response using service method
-        response_data = await workflow_service.get_enhanced_table_response(table, documented_table, enhanced_columns, column_count)
+        #response_data = await workflow_service.get_enhanced_table_response(table, documented_table, enhanced_columns, column_count)
+        response_data = await workflow_service.get_enhanced_table_response(table, documented_table, enhanced_columns, column_count, db)
         
         return EnhancedTableResponse(**response_data)
         

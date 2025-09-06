@@ -361,6 +361,10 @@ class Table(Base, TimestampMixin, EntityVersionMixin):
         foreign_keys="[Relationship.to_table_id]",
         back_populates="to_table",
     )
+    # Add this in relationships under  class table 
+    time_columns = relationship(
+        "TimeColumns", back_populates="table", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
         CheckConstraint(
@@ -414,7 +418,12 @@ class SQLColumn(Base, TimestampMixin, EntityVersionMixin):
         foreign_keys="[Relationship.to_column_id]",
         back_populates="to_column",
     )
+    # dbmodels under app.schemas app/schemas    
 
+    # Add this in relationships under  class SQLColumn
+    time_columns = relationship(
+        "TimeColumns", back_populates="column", cascade="all, delete-orphan"
+    )
     __table_args__ = (
         CheckConstraint(
             "column_type IN ('column', 'calculated_column')", name="check_column_type"
@@ -774,6 +783,24 @@ class ConnectionDetails(Base):
 
     def __repr__(self):
         return f"<ConnectionDetails(id={self.id}, data_source_id={self.data_source_id}, status='{self.test_status}')>"
+
+
+
+# Add this after all tables
+class TimeColumns(Base):
+    __tablename__ = 'time_columns'
+    
+    time_column_id = Column(String(50), primary_key=True, default=lambda: str(uuid.uuid4()))
+    table_id = Column(String(50), ForeignKey("tables.table_id"), nullable=False)
+    column_id = Column(String(50), ForeignKey("columns.column_id"), nullable=False)
+    time_column_name = Column(String(100), nullable=False)
+    time_column_type = Column(String(50), nullable=False)  # primary or secondary
+    time_column_format = Column(String(100), nullable=False)  # date format
+    time_column_description = Column(Text)
+    granularity = Column(String(100), nullable=False)
+    
+    table = relationship("Table", back_populates="time_columns")
+    column = relationship("SQLColumn", back_populates="time_columns")
 
 
 # ============================================================================

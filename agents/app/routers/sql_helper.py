@@ -27,6 +27,14 @@ class SQLSummaryRequest(BaseModel):
     project_id: str
     data_description: Optional[str] = None
     configuration: Optional[Dict[str, Any]] = None
+    # Additional fields for comprehensive SQL summary
+    schema_context: Optional[Dict[str, Any]] = None  # Database schema context
+    chart_config: Optional[Dict[str, Any]] = None  # Chart configuration preferences
+    summary_type: Optional[str] = "comprehensive"  # Type of summary: basic, comprehensive, detailed
+    include_metadata: Optional[bool] = True  # Whether to include metadata in response
+    include_sample_data: Optional[bool] = True  # Whether to include sample data
+    visualization_format: Optional[str] = "vega_lite"  # Preferred visualization format
+    streaming: Optional[bool] = False  # Whether to stream the results
 
 class SQLStreamingRequest(BaseModel):
     """Request model for SQL streaming summary and visualization."""
@@ -35,6 +43,13 @@ class SQLStreamingRequest(BaseModel):
     project_id: str
     data_description: Optional[str] = None
     configuration: Optional[Dict[str, Any]] = None
+    # Additional fields for comprehensive SQL summary
+    schema_context: Optional[Dict[str, Any]] = None  # Database schema context
+    chart_config: Optional[Dict[str, Any]] = None  # Chart configuration preferences
+    summary_type: Optional[str] = "comprehensive"  # Type of summary: basic, comprehensive, detailed
+    include_metadata: Optional[bool] = True  # Whether to include metadata in response
+    include_sample_data: Optional[bool] = True  # Whether to include sample data
+    visualization_format: Optional[str] = "vega_lite"  # Preferred visualization format
 
 class QueryRequirementsRequest(BaseModel):
     """Request model for query requirements analysis."""
@@ -83,13 +98,28 @@ async def generate_sql_summary_and_visualization(request: SQLSummaryRequest):
     try:
         service = get_sql_helper_service()
         query_id = str(uuid.uuid4())
+        # Merge additional configuration with existing configuration
+        merged_config = request.configuration or {}
+        if request.schema_context:
+            merged_config["schema_context"] = request.schema_context
+        if request.chart_config:
+            merged_config["chart_config"] = request.chart_config
+        if request.summary_type:
+            merged_config["summary_type"] = request.summary_type
+        if request.include_metadata is not None:
+            merged_config["include_metadata"] = request.include_metadata
+        if request.include_sample_data is not None:
+            merged_config["include_sample_data"] = request.include_sample_data
+        if request.visualization_format:
+            merged_config["visualization_format"] = request.visualization_format
+        
         result = await service.generate_sql_summary_and_visualization(
             query_id=query_id,
             sql=request.sql,
             query=request.query,
             project_id=request.project_id,
             data_description=request.data_description,
-            configuration=request.configuration
+            configuration=merged_config
         )
         return {
             "query_id": query_id,
@@ -106,6 +136,21 @@ async def stream_sql_summary_and_visualization(request: SQLStreamingRequest):
     try:
         service = get_sql_helper_service()
         query_id = str(uuid.uuid4())
+        # Merge additional configuration with existing configuration
+        merged_config = request.configuration or {}
+        if request.schema_context:
+            merged_config["schema_context"] = request.schema_context
+        if request.chart_config:
+            merged_config["chart_config"] = request.chart_config
+        if request.summary_type:
+            merged_config["summary_type"] = request.summary_type
+        if request.include_metadata is not None:
+            merged_config["include_metadata"] = request.include_metadata
+        if request.include_sample_data is not None:
+            merged_config["include_sample_data"] = request.include_sample_data
+        if request.visualization_format:
+            merged_config["visualization_format"] = request.visualization_format
+        
         async def generate_stream():
             try:
                 async for update in service.stream_sql_summary_and_visualization(
@@ -114,7 +159,7 @@ async def stream_sql_summary_and_visualization(request: SQLStreamingRequest):
                     query=request.query,
                     project_id=request.project_id,
                     data_description=request.data_description,
-                    configuration=request.configuration
+                    configuration=merged_config
                 ):
                     yield f"data: {json.dumps(update)}\n\n"
             except Exception as e:

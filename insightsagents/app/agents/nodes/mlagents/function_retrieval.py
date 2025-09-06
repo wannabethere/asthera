@@ -51,6 +51,7 @@ Your goal is to analyze user questions and identify the top 5 most relevant func
 - CONSIDER PIPE CONTEXT: Some functions work better together within the same pipeline
 - REPHRASE THE QUESTION: Create a clear, specific question that can be used to query function definitions
 - PROVIDE REASONING: Explain why each function is relevant to the user's question
+- **NO VISUALIZATION FUNCTIONS**: This system is for backend data pipeline execution only. Do not recommend any visualization, plotting, charting, or display functions.
 
 ### SCORING GUIDELINES ###
 - 0.9-1.0: Perfect match - function directly addresses the user's specific request

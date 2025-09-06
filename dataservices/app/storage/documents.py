@@ -259,13 +259,14 @@ class DocumentVectorstore:
 class DocumentChromaStore:
     """Handle Chroma vectorstore operations."""
 
-    def __init__(self, collection_name: str, vectorstore_path: str = None, embeddings_model: OpenAIEmbeddings = embeddings_model, tf_idf:bool = False):
+    def __init__(self, collection_name: str, vectorstore_path: str = None, embeddings_model: OpenAIEmbeddings = embeddings_model, tf_idf:bool = False, client=None):
         """Initialize the Chroma store.
         
         Args:
             collection_name: Name of the collection to store documents
             vectorstore_path: Optional path to store the database. Defaults to CHROMA_STORE_PATH
             embeddings_model: Optional embeddings model. Defaults to global embeddings_model
+            client: Optional ChromaDB client instance
         """
         self.collection_name = collection_name
         self.vectorstore_path = vectorstore_path or CHROMA_STORE_PATH
@@ -277,8 +278,12 @@ class DocumentChromaStore:
         self.collection = None
         self.tfidf_collection_name = f"{self.collection_name}_tfidf"
         
-        # Initialize ChromaDB wrapper (will use appropriate client type based on settings)
-        self.chroma_client = ChromaDB()
+        # Initialize ChromaDB wrapper with the provided client or create a new one
+        if client:
+            self.chroma_client = ChromaDB(client=client)
+        else:
+            # Fallback: create ChromaDB wrapper without client (will use connection_params if needed)
+            self.chroma_client = ChromaDB()
         
         # Ensure the storage directory exists
         self.initialize()

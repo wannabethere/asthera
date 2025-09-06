@@ -21,7 +21,7 @@ try:
 except ImportError:
     POSTGRES_AVAILABLE = False
 
-os.environ["OPENAI_API_KEY"] = "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"
+
 logger = logging.getLogger("lexy-ai-service")
 
 

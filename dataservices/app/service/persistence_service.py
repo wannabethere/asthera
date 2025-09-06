@@ -263,7 +263,7 @@ class UserExamplePersistenceService:
         """Persist user example to database and optionally index to ChromaDB"""
         async with self.session_manager.get_async_db_session() as session:
             try:
-                check_permissions=SharePermissions().check_user_permission(token, domain_id)
+                check_permissions= await SharePermissions().check_user_permission(token, domain_id)
                 if not check_permissions:
                     raise HTTPException(status_code=403, detail="User does not have permission to access this domain")
                 
@@ -364,7 +364,7 @@ class UserExamplePersistenceService:
             
             if domain_id:
                 # Check permission for specific domain
-                checkPermission = await self.check_user_permission(token, domain_id)
+                checkPermission = await SharePermissions().check_user_permission(token, domain_id)
                 if not checkPermission['has_permission']:
                     raise HTTPException(
                         status_code=403, 
@@ -414,7 +414,7 @@ class UserExamplePersistenceService:
             )
             result = result.scalar_one_or_none()
             domain_id=result.domain_id
-            check_permissions=SharePermissions().check_user_permission(token, domain_id)
+            check_permissions=await SharePermissions().check_user_permission(token, domain_id)
             if not check_permissions:
                 raise HTTPException(status_code=403, detail="User does not have permission to access this domain")
             

@@ -580,6 +580,7 @@ Please provide your response in proper Markdown string format.
         contexts: List[str],
         reasoning: str = "",
         configuration: Dict = None,
+        relationships: List[Dict] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """Internal method for SQL generation"""
@@ -630,6 +631,11 @@ Please provide your response in proper Markdown string format.
             # Add table names if available
             if schema_data["table_names"]:
                 instructions += f"\n### AVAILABLE TABLES ###\n{chr(10).join(schema_data['table_names'])}\n"
+            
+            # Add relationships if available
+            if relationships:
+                relationships_context = self._format_relationships_for_sql_generation(relationships)
+                instructions += f"\n### TABLE RELATIONSHIPS ###\n{relationships_context}\n"
             
             # Add query and contexts
             instructions += f"\n### DATABASE SCHEMA ###\n{chr(10).join(all_contexts)}\n\n### QUESTION ###\nUser's Question: {query}\nCurrent Time: {config.show_current_time()}\n\nLet's think step by step."
@@ -1095,7 +1101,7 @@ Please provide your response in proper Markdown string format.
                 }]
             }
     
-    async def _reason_sql_internal(self, query: str, contexts: List[str], language: str, **kwargs) -> Dict[str, Any]:
+    async def _reason_sql_internal(self, query: str, contexts: List[str], language: str, relationships: List[Dict] = None, **kwargs) -> Dict[str, Any]:
         """Internal SQL reasoning logic with enhanced metadata"""
         try:
             # Get additional metadata for better reasoning
@@ -1108,11 +1114,17 @@ Please provide your response in proper Markdown string format.
             # Format metadata for the prompt
             metadata_context = self._format_metadata_for_reasoning(metadata)
             
+            # Format relationships for the prompt
+            relationships_context = self._format_relationships_for_reasoning(relationships or [])
+            
             prompt_template = PromptTemplate(
-                input_variables=["query", "contexts", "language", "metadata_context"],
+                input_variables=["query", "contexts", "language", "metadata_context", "relationships_context"],
                 template="""
                 ### DATABASE SCHEMA ###
                 {contexts}
+                
+                ### TABLE RELATIONSHIPS ###
+                {relationships_context}
                 
                 ### ADDITIONAL METADATA FOR REASONING ###
                 {metadata_context}
@@ -1121,7 +1133,7 @@ Please provide your response in proper Markdown string format.
                 User's Question: {query}
                 Language: {language}
                 
-                Let's think step by step.
+                Let's think step by step. Consider the relationships between tables when analyzing the query and planning the SQL generation.
                 """
             )
             
@@ -1135,7 +1147,8 @@ Please provide your response in proper Markdown string format.
                 query=query,
                 contexts="\n".join(contexts),
                 language=language,
-                metadata_context=metadata_context
+                metadata_context=metadata_context,
+                relationships_context=relationships_context
             )
             prompt = full_prompt.format(system_prompt=system_prompt, user_prompt=user_prompt)
             
@@ -1148,9 +1161,66 @@ Please provide your response in proper Markdown string format.
             #logger.info(f"LLM SQL reasoning result: {result}")
             
             return {"reasoning": result, "success": True}
+            
         except Exception as e:
             logger.error(f"Error in internal SQL reasoning: {e}")
             return {"reasoning": "", "success": False, "error": str(e)}
+    
+    def _format_relationships_for_reasoning(self, relationships: List[Dict]) -> str:
+        """Format relationships for inclusion in reasoning prompts."""
+        if not relationships:
+            return "No specific table relationships identified."
+        
+        formatted_relationships = []
+        for rel in relationships:
+            name = rel.get("name", "Unnamed relationship")
+            models = rel.get("models", [])
+            join_type = rel.get("joinType", "Unknown")
+            condition = rel.get("condition", "")
+            properties = rel.get("properties", {})
+            description = properties.get("description", "")
+            
+            relationship_text = f"- **{name}**: {', '.join(models)} ({join_type})"
+            if condition:
+                relationship_text += f"\n  - Join condition: {condition}"
+            if description:
+                relationship_text += f"\n  - Description: {description}"
+            
+            formatted_relationships.append(relationship_text)
+        
+        return "\n".join(formatted_relationships)
+    
+    def _format_relationships_for_sql_generation(self, relationships: List[Dict]) -> str:
+        """Format relationships for inclusion in SQL generation prompts."""
+        if not relationships:
+            return "No specific table relationships identified."
+        
+        formatted_relationships = []
+        for rel in relationships:
+            name = rel.get("name", "Unnamed relationship")
+            models = rel.get("models", [])
+            join_type = rel.get("joinType", "Unknown")
+            condition = rel.get("condition", "")
+            properties = rel.get("properties", {})
+            description = properties.get("description", "")
+            
+            # Format for SQL generation - more technical and focused on joins
+            relationship_text = f"**{name}**: {', '.join(models)} ({join_type})"
+            if condition:
+                # Parse the condition to make it more SQL-friendly
+                condition_parts = condition.split(" = ")
+                if len(condition_parts) == 2:
+                    left_part = condition_parts[0].strip()
+                    right_part = condition_parts[1].strip()
+                    relationship_text += f"\n  - JOIN condition: {left_part} = {right_part}"
+                else:
+                    relationship_text += f"\n  - JOIN condition: {condition}"
+            if description:
+                relationship_text += f"\n  - Purpose: {description}"
+            
+            formatted_relationships.append(relationship_text)
+        
+        return "\n".join(formatted_relationships)
     
     def _format_metadata_for_reasoning(self, metadata: Dict[str, Any]) -> str:
         """Format metadata into a readable string for reasoning prompts"""
@@ -1422,6 +1492,7 @@ Please provide your response in proper Markdown string format.
         )
         
         schema_contexts = schema_data.get("schema_contexts", [])
+        relationships = schema_data.get("relationships", [])
         
         # Generate reasoning first
         # Remove schema_contexts and contexts from kwargs to avoid duplicate parameter error
@@ -1430,7 +1501,7 @@ Please provide your response in proper Markdown string format.
         kwargs_copy.pop("contexts", None)  # Also remove contexts to avoid conflict
         
         reasoning_result = await self._reason_sql_internal(
-            query, schema_contexts, kwargs.get("language", "English"), **kwargs_copy
+            query, schema_contexts, kwargs.get("language", "English"), relationships=relationships, **kwargs_copy
         )
         
         reasoning = reasoning_result.get("reasoning", "")
@@ -1441,7 +1512,7 @@ Please provide your response in proper Markdown string format.
         
         # Generate SQL with the reasoning
         sql_result = await self._generate_sql_internal(
-            query, schema_contexts, reasoning, kwargs.get("configuration", {})
+            query, schema_contexts, reasoning, kwargs.get("configuration", {}), relationships=relationships
         )
         
         # Standardize the result format

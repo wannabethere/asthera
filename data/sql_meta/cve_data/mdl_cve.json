@@ -1,0 +1,922 @@
+{
+    "catalog": "vulnerability_management",
+    "schema": "public",
+    "models": [
+      {
+        "name": "dev_cve",
+        "description": "Comprehensive vulnerability and CVE assessment data including CVSS scores, threat intelligence, risk scoring, and remediation tracking for cybersecurity risk management",
+        "tableReference": {
+          "table": "dev_cve"
+        },
+        "columns": [
+          {
+            "name": "nuid",
+            "type": "INTEGER",
+            "notNull": true,
+            "properties": {
+              "displayName": "Network Unit ID",
+              "description": "Network unit identifier that establishes the organizational hierarchy and network topology context for vulnerability assessments. This field links vulnerability records to specific business units, departments, geographic locations, or network segments within the enterprise, enabling targeted risk assessment and remediation efforts. The NUID enables security teams to perform organizational-level vulnerability analysis, track compliance across different business units, and implement risk-based remediation strategies. It typically corresponds to Active Directory organizational units, network VLANs, or custom organizational hierarchies, allowing for granular vulnerability management and reporting at the business unit level. This field is essential for understanding the organizational context of vulnerabilities and ensuring appropriate risk management across different parts of the enterprise."
+            }
+          },
+          {
+            "name": "cve_partition_id",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "CVE Partition ID",
+              "description": "Partition identifier for CVE data organization and horizontal data distribution strategy. This field enables efficient partitioning of vulnerability assessment data across multiple storage nodes or database shards based on CVE publication year or other characteristics. Common partition values include 'CVE-2017', 'CVE-2018', etc., for year-based partitioning, or 'CURRENT', 'HISTORICAL', 'CRITICAL' for risk-based partitioning. This partitioning improves query performance for large-scale vulnerability databases, enables parallel processing of vulnerability assessment operations, and supports efficient data archiving and retention policies. The partition ID helps optimize data access patterns and supports time-based analysis of vulnerability trends across different publication periods."
+            }
+          },
+          {
+            "name": "cve_id",
+            "type": "VARCHAR",
+            "notNull": true,
+            "properties": {
+              "displayName": "CVE Identifier",
+              "description": "Common Vulnerabilities and Exposures (CVE) identifier following the standard CVE naming convention (e.g., CVE-2017-1000410, CVE-2024-1234). This field contains the unique identifier assigned by the CVE Numbering Authority (CNA) to publicly known cybersecurity vulnerabilities. The CVE ID serves as the primary reference for vulnerability information, enabling correlation with vulnerability databases like the National Vulnerability Database (NVD), vendor security advisories, and threat intelligence feeds. This standardized identifier is essential for vulnerability tracking, security research, patch management, and compliance reporting. It enables security teams to access detailed vulnerability information, assess exploitability, and coordinate remediation efforts across the enterprise. The CVE ID is the cornerstone of vulnerability management and provides a universal reference point for security professionals worldwide."
+            }
+          },
+          {
+            "name": "balbix_score",
+            "type": "DECIMAL",
+            "properties": {
+              "displayName": "Balbix Risk Score",
+              "description": "Proprietary risk score calculated by the Balbix security platform using advanced machine learning algorithms and threat intelligence. This score ranges from 0-100, where higher values indicate more critical vulnerabilities requiring immediate attention. The Balbix score incorporates multiple factors including CVSS scores, exploit availability, threat intelligence, asset criticality, network exposure, and organizational context to provide a comprehensive risk assessment. Unlike standard CVSS scores, this proprietary scoring considers real-world threat conditions, business impact, and the organization's specific security posture. The score enables security teams to prioritize vulnerabilities based on actual business risk rather than just technical severity, supporting more effective resource allocation and remediation planning. This field may be empty when Balbix scoring is not available or when the vulnerability has not been processed by the Balbix platform."
+            }
+          },
+          {
+            "name": "balbix_mitigated_score",
+            "type": "DECIMAL",
+            "properties": {
+              "displayName": "Balbix Mitigated Score",
+              "description": "Risk score calculated by the Balbix platform after applying known mitigations, security controls, and compensating measures. This score ranges from 0-100 and represents the residual risk level after implementing available security measures such as patches, configuration changes, network segmentation, or other defensive controls. The mitigated score is typically lower than the base Balbix score, indicating the effectiveness of applied mitigations. This field enables security teams to measure the impact of remediation efforts, track risk reduction progress, and identify vulnerabilities where additional mitigation strategies may be needed. The difference between the base Balbix score and mitigated score provides insight into the effectiveness of current security controls and helps prioritize further remediation activities. This field may be empty when no mitigations have been applied or when mitigation scoring is not available."
+            }
+          },
+          {
+            "name": "accessibility_influence",
+            "type": "DECIMAL",
+            "properties": {
+              "displayName": "Accessibility Influence",
+              "description": "Score indicating how accessible the vulnerability is to potential attackers based on network exposure, authentication requirements, and attack surface visibility. This score ranges from 0-100, where higher values indicate vulnerabilities that are more easily accessible to attackers. The accessibility influence considers factors such as whether the vulnerable service is internet-facing, requires authentication, is behind firewalls or other security controls, and how easily an attacker can discover and reach the vulnerability. This metric helps security teams understand the practical exploitability of vulnerabilities in their specific environment, beyond just the technical severity. Vulnerabilities with high accessibility scores are more likely to be exploited and should be prioritized for remediation. This field may be empty when accessibility assessment is not available or when the vulnerability is not applicable to the organization's environment."
+            }
+          },
+          {
+            "name": "complexity_influence",
+            "type": "DECIMAL",
+            "properties": {
+              "displayName": "Complexity Influence",
+              "description": "Score indicating the complexity and difficulty of exploiting the vulnerability, ranging from 0-100 where higher values indicate more complex exploits that are harder to execute. The complexity influence considers factors such as the technical skill required to exploit the vulnerability, the number of steps involved in the attack, the availability of exploit tools, and the sophistication of the attack vector. This metric helps security teams understand the practical barriers to exploitation and assess the likelihood that less sophisticated attackers could successfully exploit the vulnerability. Vulnerabilities with low complexity scores are more likely to be exploited by script kiddies or automated attack tools, while high complexity scores indicate vulnerabilities that require advanced technical skills and resources to exploit. This field may be empty when complexity assessment is not available or when the vulnerability characteristics cannot be determined."
+            }
+          },
+          {
+            "name": "severity_influence",
+            "type": "DECIMAL",
+            "properties": {
+              "displayName": "Severity Influence",
+              "description": "Score indicating the potential impact severity of successful exploitation, ranging from 0-100 where higher values indicate more severe consequences. The severity influence considers the potential damage that could result from successful exploitation, including data breaches, system compromise, service disruption, financial impact, and reputational damage. This metric helps security teams understand the business impact of vulnerabilities and prioritize remediation based on potential consequences rather than just technical characteristics. The severity influence incorporates factors such as the type of data that could be compromised, the criticality of affected systems, the potential for lateral movement, and the overall business impact of a successful attack. This field may be empty when severity assessment is not available or when the impact cannot be determined."
+            }
+          },
+          {
+            "name": "mitigation_influence",
+            "type": "DECIMAL",
+            "properties": {
+              "displayName": "Mitigation Influence",
+              "description": "Score indicating the effectiveness and availability of mitigations, patches, and security controls for the vulnerability, ranging from 0-100 where higher values indicate more effective mitigations are available. The mitigation influence considers factors such as patch availability, ease of patch deployment, effectiveness of workarounds, availability of compensating controls, and the overall feasibility of implementing protective measures. This metric helps security teams understand how easily the vulnerability can be addressed and assess the practical challenges of remediation. Vulnerabilities with high mitigation influence scores are easier to address and may be prioritized for remediation, while low scores indicate vulnerabilities that are difficult to mitigate or require significant effort to address. This field may be empty when mitigation assessment is not available or when mitigation options cannot be determined."
+            }
+          },
+          {
+            "name": "exposure_influence",
+            "type": "DECIMAL",
+            "properties": {
+              "displayName": "Exposure Influence",
+              "description": "Score indicating how exposed the vulnerability is in the organization's specific environment, ranging from 0-100 where higher values indicate greater exposure to potential exploitation. The exposure influence considers factors such as the number of affected assets, the criticality of exposed systems, network topology, security controls in place, and the overall attack surface. This metric helps security teams understand the scope and impact of vulnerabilities within their specific infrastructure and prioritize remediation based on environmental exposure rather than just theoretical risk. Vulnerabilities with high exposure influence scores affect more systems or more critical systems and should be prioritized for remediation. This field may be empty when exposure assessment is not available or when the vulnerability is not applicable to the organization's environment."
+            }
+          },
+          {
+            "name": "age_influence",
+            "type": "DECIMAL",
+            "properties": {
+              "displayName": "Age Influence",
+              "description": "Score factor based on vulnerability age and maturity, ranging from 0-100 where higher values indicate vulnerabilities that are more mature and potentially more dangerous. The age influence considers factors such as how long the vulnerability has been publicly known, the time available for attackers to develop exploits, the maturity of exploit code, and the likelihood that patches or mitigations have been developed. Older vulnerabilities may have more mature exploit code and be more widely known to attackers, while newer vulnerabilities may have limited exploit availability but also fewer defensive measures. This metric helps security teams understand the evolution of vulnerability risk over time and prioritize vulnerabilities based on their maturity in the threat landscape. This field may be empty when age assessment is not available or when the vulnerability age cannot be determined."
+            }
+          },
+          {
+            "name": "intent_influence",
+            "type": "DECIMAL",
+            "properties": {
+              "displayName": "Intent Influence",
+              "description": "Score indicating attacker intent and targeting likelihood, ranging from 0-100 where higher values indicate vulnerabilities that are more likely to be targeted by attackers. The intent influence considers factors such as the type of vulnerability, the potential value to attackers, historical targeting patterns, threat actor preferences, and the likelihood that the vulnerability aligns with current attack trends. This metric helps security teams understand which vulnerabilities are most attractive to attackers and prioritize remediation based on actual threat actor behavior rather than just technical severity. Vulnerabilities with high intent influence scores are more likely to be exploited and should be prioritized for remediation. This field may be empty when intent assessment is not available or when threat intelligence is insufficient to determine targeting likelihood."
+            }
+          },
+          {
+            "name": "exploit_maturity_influence",
+            "type": "DECIMAL",
+            "properties": {
+              "displayName": "Exploit Maturity Influence",
+              "description": "Score indicating the maturity and availability of exploit code for the vulnerability, ranging from 0-100 where higher values indicate more mature and readily available exploit code. The exploit maturity influence considers factors such as the availability of proof-of-concept exploits, the sophistication of exploit code, the ease of weaponization, the presence of automated exploit tools, and the likelihood that the vulnerability can be exploited by less skilled attackers. This metric helps security teams understand the practical exploitability of vulnerabilities and prioritize remediation based on the availability of working exploits. Vulnerabilities with high exploit maturity influence scores are more likely to be successfully exploited and should be prioritized for remediation. This field may be empty when exploit maturity assessment is not available or when exploit information cannot be determined."
+            }
+          },
+          {
+            "name": "zero_day_prob_influence",
+            "type": "DECIMAL",
+            "properties": {
+              "displayName": "Zero Day Probability Influence",
+              "description": "Score indicating the likelihood that this vulnerability is or was a zero-day vulnerability, ranging from 0-100 where higher values indicate a greater probability of zero-day status. The zero-day probability influence considers factors such as the timing of vulnerability disclosure, the presence of active exploitation before public disclosure, the sophistication of the vulnerability, and indicators that suggest the vulnerability may have been known to attackers before being publicly disclosed. This metric helps security teams understand the potential for undisclosed vulnerabilities and assess the risk of vulnerabilities that may have been exploited before patches were available. Vulnerabilities with high zero-day probability influence scores may require immediate attention and enhanced monitoring. This field may be empty when zero-day assessment is not available or when the vulnerability characteristics cannot be determined."
+            }
+          },
+          {
+            "name": "information_impact",
+            "type": "DECIMAL",
+            "properties": {
+              "displayName": "Information Impact",
+              "description": "Score indicating the potential for information disclosure or data breach resulting from successful exploitation, ranging from 0-100 where higher values indicate greater potential for information compromise. The information impact considers factors such as the type of data that could be accessed, the sensitivity of information that might be disclosed, the potential for data exfiltration, and the impact of information disclosure on the organization. This metric helps security teams understand the data security implications of vulnerabilities and prioritize remediation based on the potential for information compromise. Vulnerabilities with high information impact scores pose significant risks to data confidentiality and should be prioritized for remediation. This field may be empty when information impact assessment is not available or when the vulnerability does not involve information disclosure."
+            }
+          },
+          {
+            "name": "bastion_impact",
+            "type": "DECIMAL",
+            "properties": {
+              "displayName": "Bastion Impact",
+              "description": "Score indicating the potential impact on bastion hosts, critical infrastructure, or high-value systems, ranging from 0-100 where higher values indicate greater potential impact on critical systems. The bastion impact considers factors such as whether the vulnerability affects critical infrastructure components, the potential for lateral movement from compromised systems, the impact on network security controls, and the risk to high-value assets. This metric helps security teams understand the potential for infrastructure compromise and prioritize remediation based on the criticality of affected systems. Vulnerabilities with high bastion impact scores pose significant risks to critical infrastructure and should be prioritized for remediation. This field may be empty when bastion impact assessment is not available or when the vulnerability does not affect critical infrastructure."
+            }
+          },
+          {
+            "name": "asset_count",
+            "type": "INTEGER",
+            "properties": {
+              "displayName": "Affected Asset Count",
+              "description": "Number of assets in the organization's environment that are affected by this vulnerability. This field represents the total count of devices, systems, applications, or other assets that have been identified as vulnerable to this specific CVE. The asset count is essential for understanding the scope and impact of vulnerabilities within the organization's infrastructure. It helps security teams prioritize remediation efforts based on the number of affected systems, assess the potential for widespread exploitation, and allocate resources appropriately. Vulnerabilities affecting many assets may require coordinated remediation efforts and should be prioritized for immediate attention. This field may be empty when asset counting is not available or when the vulnerability has not been assessed against the organization's asset inventory."
+            }
+          },
+          {
+            "name": "computed_at",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Computation Timestamp",
+              "description": "Timestamp indicating when the vulnerability scores, risk assessments, and analysis were computed by the Balbix platform or other vulnerability assessment systems. This field represents the time when the various influence scores, risk calculations, and threat intelligence analysis were performed for this specific vulnerability. The computation timestamp is essential for tracking the freshness of vulnerability assessments, understanding when risk scores were last updated, and ensuring that vulnerability data reflects the most current threat intelligence and risk calculations. It helps security teams understand the currency of vulnerability assessments and identify when re-computation may be needed due to changes in threat landscape or organizational context. This field may be empty when computation tracking is not available or when the vulnerability has not been processed by automated assessment systems."
+            }
+          },
+          {
+            "name": "rank_score",
+            "type": "DECIMAL",
+            "properties": {
+              "displayName": "Ranking Score",
+              "description": "Overall ranking score used for vulnerability prioritization and remediation planning purposes. This score typically ranges from 0-100 and represents a composite assessment that combines multiple risk factors, threat intelligence, and organizational context to provide a single numerical ranking for vulnerability prioritization. The ranking score incorporates factors such as CVSS scores, exploit availability, threat intelligence, asset criticality, business impact, and organizational risk tolerance to provide a comprehensive prioritization metric. This field enables security teams to rank vulnerabilities in order of remediation priority, ensuring that the most critical vulnerabilities are addressed first. The ranking score supports automated prioritization workflows and helps security teams focus their efforts on the vulnerabilities that pose the greatest risk to the organization. This field may be empty when ranking calculation is not available or when the vulnerability has not been processed for prioritization."
+            }
+          },
+          {
+            "name": "doc_id",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Document ID",
+              "description": "Unique document identifier for this vulnerability assessment record, serving as the primary key for the vulnerability_assessments table. This field provides a unique reference for each vulnerability record within the system, enabling efficient data retrieval, updates, and correlation with other systems. The document ID is typically generated using a combination of CVE ID, organization identifier, and other factors to ensure uniqueness across the vulnerability assessment database. This field is essential for data integrity, audit trails, and maintaining relationships between vulnerability records and other security data. It enables security teams to track specific vulnerability assessments, correlate with remediation activities, and maintain data consistency across the vulnerability management system. This field may be empty when document identification is not available or when the record has not been properly indexed."
+            }
+          },
+          {
+            "name": "rank",
+            "type": "INTEGER",
+            "properties": {
+              "displayName": "Risk Rank",
+              "description": "Numerical ranking of this vulnerability relative to all other vulnerabilities in the organization's environment, where lower numbers indicate higher priority vulnerabilities. The risk rank provides an ordinal ranking that enables security teams to quickly identify the most critical vulnerabilities requiring immediate attention. This ranking is typically calculated based on the ranking score and other risk factors, providing a simple numerical order for vulnerability prioritization. The risk rank supports automated prioritization workflows, helps security teams focus on the most critical vulnerabilities first, and enables efficient resource allocation for remediation efforts. This field may be empty when ranking calculation is not available or when the vulnerability has not been processed for prioritization."
+            }
+          },
+          {
+            "name": "assigner",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "CVE Assigner",
+              "description": "Organization or entity that assigned the CVE identifier to this vulnerability. This field identifies the CVE Numbering Authority (CNA) responsible for assigning the CVE ID, which may include organizations such as MITRE Corporation, vendor companies, security research organizations, or other authorized entities. The assigner information provides context about the source and authority of the CVE assignment, helping security teams understand the credibility and scope of the vulnerability information. For public CVEs, this field is typically empty as they are assigned by the primary CNA (MITRE), while private or vendor-specific CVEs may include the assigning organization. This field may be empty for public CVEs or when assigner information is not available."
+            }
+          },
+          {
+            "name": "description",
+            "type": "TEXT",
+            "properties": {
+              "displayName": "Vulnerability Description",
+              "description": "Detailed technical description of the vulnerability compiled from multiple sources including the CVE database, vendor advisories, security research reports, and threat intelligence feeds. This field provides comprehensive information about the vulnerability's nature, technical details, potential impact, and exploitation methods. The description may include information about affected software versions, attack vectors, potential consequences, and technical details that help security teams understand the vulnerability's characteristics and implications. This field is essential for vulnerability analysis, risk assessment, and remediation planning, providing the technical context needed to make informed security decisions. The description may be empty when detailed information is not available or when the vulnerability has not been fully characterized by security researchers."
+            }
+          },
+          {
+            "name": "references",
+            "type": "TEXT",
+            "properties": {
+              "displayName": "References",
+              "description": "JSON array of reference sources, advisories, and related documentation that provide additional information about the vulnerability. This field contains structured references to vendor security advisories, research papers, exploit databases, patch information, and other relevant documentation. The references may include URLs to vendor websites, security research publications, exploit databases, patch repositories, and other sources that provide detailed information about the vulnerability. This field is essential for vulnerability research, patch management, and understanding the full context of the vulnerability. It enables security teams to access additional technical details, verify information, and stay updated on the latest developments related to the vulnerability. This field may be empty when reference information is not available or when the vulnerability has not been fully documented by security researchers."
+            }
+          },
+          {
+            "name": "cvssv2_base_score",
+            "type": "DECIMAL",
+            "properties": {
+              "displayName": "CVSS v2 Base Score",
+              "description": "Common Vulnerability Scoring System (CVSS) version 2.0 base score representing the intrinsic characteristics of the vulnerability that are constant over time and across user environments. The score ranges from 0.0 (no impact) to 10.0 (maximum impact) and is calculated based on three metric groups: Access Vector, Access Complexity, and Authentication, along with three impact metrics: Confidentiality, Integrity, and Availability. CVSS v2 scores provide a standardized way to assess vulnerability severity and prioritize remediation efforts. While CVSS v3 is the current standard, v2 scores are maintained for historical vulnerabilities and legacy systems. This field may be empty for newer vulnerabilities that only have CVSS v3 scores or when scoring information is not available."
+            }
+          },
+          {
+            "name": "cvssv2_base_severity",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "CVSS v2 Base Severity",
+              "description": "CVSS v2 severity rating derived from the base score, providing a categorical classification of vulnerability severity. The severity levels are: 'LOW' for scores 0.0-3.9, 'MEDIUM' for scores 4.0-6.9, and 'HIGH' for scores 7.0-10.0. This categorical rating provides a quick reference for vulnerability severity assessment and helps security teams prioritize remediation efforts based on standardized severity classifications. The severity rating is essential for vulnerability management workflows, compliance reporting, and risk assessment processes. This field may be empty when CVSS v2 scoring is not available or when the vulnerability has not been assessed using the CVSS v2 framework."
+            }
+          },
+          {
+            "name": "cvssv2_vector_string",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "CVSS v2 Vector String",
+              "description": "CVSS v2 vector string encoding the detailed attack characteristics and impact metrics used to calculate the base score. The vector string follows the format 'AV:X/AC:X/Au:X/C:X/I:X/A:X' where each component represents specific attack characteristics such as Access Vector (AV), Access Complexity (AC), Authentication (Au), Confidentiality Impact (C), Integrity Impact (I), and Availability Impact (A). This vector string provides detailed information about how the vulnerability can be exploited and what the potential impact would be, enabling security teams to understand the technical details of the vulnerability beyond just the numerical score. The vector string is essential for vulnerability analysis, risk assessment, and understanding the specific attack characteristics of the vulnerability. This field may be empty when CVSS v2 vector information is not available or when the vulnerability has not been assessed using the CVSS v2 framework."
+            }
+          },
+          {
+            "name": "cvssv3_base_score",
+            "type": "DECIMAL",
+            "properties": {
+              "displayName": "CVSS v3 Base Score",
+              "description": "Common Vulnerability Scoring System (CVSS) version 3.x base score representing the intrinsic characteristics of the vulnerability that are constant over time and across user environments. The score ranges from 0.0 (no impact) to 10.0 (maximum impact) and is calculated based on eight base metrics: Attack Vector, Attack Complexity, Privileges Required, User Interaction, Scope, Confidentiality Impact, Integrity Impact, and Availability Impact. CVSS v3 provides more granular scoring than v2 and is the current industry standard for vulnerability severity assessment. This score is essential for vulnerability prioritization, risk assessment, and remediation planning. It enables security teams to focus on the most critical vulnerabilities first and allocate resources effectively. This field may be empty for older vulnerabilities that only have CVSS v2 scores or when scoring information is not available."
+            }
+          },
+          {
+            "name": "cvssv3_base_severity",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "CVSS v3 Base Severity",
+              "description": "CVSS v3 severity rating derived from the base score, providing a categorical classification of vulnerability severity. The severity levels are: 'NONE' for scores 0.0, 'LOW' for scores 0.1-3.9, 'MEDIUM' for scores 4.0-6.9, 'HIGH' for scores 7.0-8.9, and 'CRITICAL' for scores 9.0-10.0. This categorical rating provides a quick reference for vulnerability severity assessment and helps security teams prioritize remediation efforts based on standardized severity classifications. The severity rating is essential for vulnerability management workflows, compliance reporting, and risk assessment processes. This field may be empty when CVSS v3 scoring is not available or when the vulnerability has not been assessed using the CVSS v3 framework."
+            }
+          },
+          {
+            "name": "cvssv3_vector_string",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "CVSS v3 Vector String",
+              "description": "CVSS v3 vector string encoding the detailed attack characteristics and impact metrics used to calculate the base score. The vector string follows the format 'CVSS:3.X/AV:X/AC:X/PR:X/UI:X/S:X/C:X/I:X/A:X' where each component represents specific attack characteristics such as Attack Vector (AV), Attack Complexity (AC), Privileges Required (PR), User Interaction (UI), Scope (S), Confidentiality Impact (C), Integrity Impact (I), and Availability Impact (A). This vector string provides detailed information about how the vulnerability can be exploited and what the potential impact would be, enabling security teams to understand the technical details of the vulnerability beyond just the numerical score. The vector string is essential for vulnerability analysis, risk assessment, and understanding the specific attack characteristics of the vulnerability. This field may be empty when CVSS v3 vector information is not available or when the vulnerability has not been assessed using the CVSS v3 framework."
+            }
+          },
+          {
+            "name": "published_date",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Published Date",
+              "description": "Date when the vulnerability was first publicly disclosed by the CVE Numbering Authority (CNA) or MITRE Corporation, making the vulnerability information publicly available. This field represents the official disclosure date when the vulnerability details, including technical information and potential impact, were released to the public. The published date is crucial for measuring exposure windows (time between vulnerability disclosure and detection/remediation), tracking vendor response times, and assessing the organization's vulnerability management effectiveness. It enables security teams to calculate how quickly vulnerabilities are detected in their environment relative to public disclosure and helps identify gaps in vulnerability intelligence and scanning processes. This field may be empty for vulnerabilities that were not assigned official CVE identifiers or when publication information is not available."
+            }
+          },
+          {
+            "name": "last_modified_date",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Last Modified Date",
+              "description": "Date when the vulnerability record was last updated in the CVE database or vulnerability assessment system. This field represents the most recent modification to the vulnerability information, including updates to descriptions, CVSS scores, references, or other metadata. The last modified date is essential for tracking the evolution of vulnerability information over time and ensuring that vulnerability assessments reflect the most current information available. It helps security teams understand when vulnerability information was last updated and identify vulnerabilities that may need re-assessment due to changes in threat intelligence or vulnerability characteristics. This field may be empty when modification tracking is not available or when the vulnerability record has not been updated since initial creation."
+            }
+          },
+          {
+            "name": "threat_level",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Threat Level",
+              "description": "Overall threat level assessment based on environmental factors, threat intelligence, and exploitability conditions specific to the organization's infrastructure and threat landscape. The threat level typically ranges from 'LOW' to 'CRITICAL' and considers factors such as active exploitation in the wild, availability of proof-of-concept exploits, threat actor targeting patterns, and the organization's exposure to specific attack vectors. This assessment goes beyond CVSS base scores to incorporate real-world threat conditions, including whether the vulnerability is being actively exploited, if exploit code is publicly available, and if the organization's specific environment increases the likelihood of successful exploitation. The threat level helps prioritize vulnerabilities based on actual risk rather than theoretical impact, enabling more effective resource allocation and response planning. This field may be empty when threat level assessment is not available or when threat intelligence is insufficient to determine the threat level."
+            }
+          },
+          {
+            "name": "severity_level",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Severity Level",
+              "description": "Overall severity level assessment based on organizational risk assessment criteria and business impact considerations. The severity level typically ranges from 'LOW' to 'CRITICAL' and represents a comprehensive evaluation that considers factors such as CVSS scores, exploit availability, business impact, asset criticality, and organizational risk tolerance. This classification goes beyond technical severity to incorporate business context and organizational priorities, enabling security teams to prioritize vulnerabilities based on their potential impact on business operations, data security, and organizational objectives. The severity level drives remediation prioritization, resource allocation, and compliance reporting requirements. It enables security teams to focus efforts on the most critical vulnerabilities and ensures appropriate response times based on risk levels. This field may be empty when severity assessment is not available or when the vulnerability has not been evaluated for organizational impact."
+            }
+          },
+          {
+            "name": "published_year",
+            "type": "INTEGER",
+            "properties": {
+              "displayName": "Published Year",
+              "description": "Year when the vulnerability was first publicly disclosed, extracted from the published_date field for trend analysis and historical reporting purposes. This field enables security teams to analyze vulnerability trends over time, track the evolution of the threat landscape, and understand patterns in vulnerability discovery and disclosure. The published year is essential for temporal analysis, compliance reporting, and understanding how vulnerability characteristics have changed over time. It supports trend analysis for vulnerability discovery patterns, helps identify emerging threat trends, and enables correlation with other time-based security metrics. This field may be empty when the published date is not available or when the vulnerability has not been assigned an official publication date."
+            }
+          },
+          {
+            "name": "processed_date",
+            "type": "DATE",
+            "properties": {
+              "displayName": "Processing Date",
+              "description": "Date when this vulnerability record was processed by the vulnerability assessment system, including risk scoring, threat intelligence analysis, and organizational impact assessment. This field represents the date when the vulnerability was fully analyzed and integrated into the organization's vulnerability management system. The processing date is essential for tracking the timeliness of vulnerability assessment processes, understanding when vulnerability information became available for remediation planning, and measuring the effectiveness of vulnerability management workflows. It helps security teams identify bottlenecks in vulnerability processing and ensure that vulnerabilities are assessed and prioritized in a timely manner. This field may be empty when processing tracking is not available or when the vulnerability has not been fully processed by the assessment system."
+            }
+          },
+          {
+            "name": "is_critical_severity",
+            "type": "BOOLEAN",
+            "isCalculated": true,
+            "expression": "CASE WHEN cvssv3_base_severity = 'CRITICAL' OR cvssv3_base_score >= 9.0 THEN true ELSE false END",
+            "properties": {
+              "displayName": "Is Critical Severity",
+              "description": "Boolean flag indicating if vulnerability has critical severity rating"
+            }
+          },
+          {
+            "name": "is_high_risk",
+            "type": "BOOLEAN",
+            "isCalculated": true,
+            "expression": "CASE WHEN balbix_score >= 25.0 THEN true ELSE false END",
+            "properties": {
+              "displayName": "Is High Risk",
+              "description": "Boolean flag indicating high risk based on Balbix scoring threshold"
+            }
+          },
+          {
+            "name": "mitigation_effectiveness",
+            "type": "DECIMAL",
+            "isCalculated": true,
+            "expression": "CASE WHEN balbix_score > 0 THEN ((balbix_score - balbix_mitigated_score) / balbix_score) * 100.0 ELSE 0 END",
+            "properties": {
+              "displayName": "Mitigation Effectiveness %",
+              "description": "Percentage reduction in risk achieved through mitigations"
+            }
+          },
+          {
+            "name": "days_since_published",
+            "type": "INTEGER",
+            "isCalculated": true,
+            "expression": "DATEDIFF(day, published_date, CURRENT_TIMESTAMP)",
+            "properties": {
+              "displayName": "Days Since Published",
+              "description": "Number of days since vulnerability was first published"
+            }
+          },
+          {
+            "name": "vulnerability_age_category",
+            "type": "VARCHAR",
+            "isCalculated": true,
+            "expression": "CASE WHEN DATEDIFF(day, published_date, CURRENT_TIMESTAMP) <= 30 THEN 'New (30 days)' WHEN DATEDIFF(day, published_date, CURRENT_TIMESTAMP) <= 90 THEN 'Recent (90 days)' WHEN DATEDIFF(day, published_date, CURRENT_TIMESTAMP) <= 365 THEN 'Mature (1 year)' ELSE 'Old (>1 year)' END",
+            "properties": {
+              "displayName": "Vulnerability Age Category",
+              "description": "Categorical age of vulnerability based on publication date"
+            }
+          },
+          {
+            "name": "cvss_score_gap",
+            "type": "DECIMAL",
+            "isCalculated": true,
+            "expression": "ABS(COALESCE(cvssv3_base_score, 0) - COALESCE(cvssv2_base_score, 0))",
+            "properties": {
+              "displayName": "CVSS Score Gap",
+              "description": "Difference between CVSS v3 and v2 scores (indicates scoring evolution)"
+            }
+          },
+          {
+            "name": "has_exploit_available",
+            "type": "BOOLEAN",
+            "isCalculated": true,
+            "expression": "CASE WHEN exploit_maturity_influence > 50.0 THEN true ELSE false END",
+            "properties": {
+              "displayName": "Has Exploit Available",
+              "description": "Indicates if mature exploit code is likely available"
+            }
+          },
+          {
+            "name": "remediation_urgency",
+            "type": "VARCHAR",
+            "isCalculated": true,
+            "expression": "CASE WHEN balbix_score >= 25.0 AND asset_count > 0 THEN 'Urgent' WHEN balbix_score >= 15.0 AND asset_count > 0 THEN 'High' WHEN balbix_score >= 8.0 AND asset_count > 0 THEN 'Medium' ELSE 'Low' END",
+            "properties": {
+              "displayName": "Remediation Urgency",
+              "description": "Urgency level for remediation based on risk and asset exposure"
+            }
+          }
+        ],
+        "primaryKey": "doc_id",
+        "properties": {
+          "displayName": "Vulnerability Assessments",
+          "description": "Comprehensive vulnerability and CVE risk assessment data"
+        }
+      }
+    ],
+    "metrics": [
+      {
+        "name": "vulnerability_risk_metrics",
+        "baseObject": "vulnerability_assessments",
+        "description": "Core vulnerability risk and impact metrics",
+        "dimension": [
+          {
+            "name": "severity_level",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "threat_level",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "vulnerability_age_category",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "remediation_urgency",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "total_vulnerabilities",
+            "type": "INTEGER",
+            "expression": "COUNT(*)"
+          },
+          {
+            "name": "critical_vulnerabilities",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_critical_severity = true THEN 1 END)"
+          },
+          {
+            "name": "high_risk_vulnerabilities",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_high_risk = true THEN 1 END)"
+          },
+          {
+            "name": "avg_balbix_score",
+            "type": "DECIMAL",
+            "expression": "AVG(balbix_score)"
+          },
+          {
+            "name": "avg_cvss_v3_score",
+            "type": "DECIMAL",
+            "expression": "AVG(cvssv3_base_score)"
+          },
+          {
+            "name": "total_affected_assets",
+            "type": "INTEGER",
+            "expression": "SUM(asset_count)"
+          },
+          {
+            "name": "vulnerabilities_with_exploits",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN has_exploit_available = true THEN 1 END)"
+          },
+          {
+            "name": "avg_mitigation_effectiveness",
+            "type": "DECIMAL",
+            "expression": "AVG(mitigation_effectiveness)"
+          }
+        ],
+        "timeGrain": [
+          {
+            "name": "published_date_grain",
+            "refColumn": "published_date",
+            "dateParts": ["YEAR", "QUARTER", "MONTH", "WEEK", "DAY"]
+          },
+          {
+            "name": "computed_date_grain",
+            "refColumn": "computed_at",
+            "dateParts": ["YEAR", "QUARTER", "MONTH", "WEEK", "DAY"]
+          }
+        ],
+        "properties": {
+          "displayName": "Vulnerability Risk Metrics",
+          "description": "Primary metrics for vulnerability risk assessment and prioritization"
+        }
+      },
+      {
+        "name": "remediation_effectiveness_metrics",
+        "baseObject": "vulnerability_assessments",
+        "description": "Metrics tracking remediation effectiveness and mitigation impact",
+        "dimension": [
+          {
+            "name": "severity_level",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "remediation_urgency",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "avg_risk_reduction",
+            "type": "DECIMAL",
+            "expression": "AVG(balbix_score - balbix_mitigated_score)"
+          },
+          {
+            "name": "total_risk_mitigated",
+            "type": "DECIMAL",
+            "expression": "SUM(balbix_score - balbix_mitigated_score)"
+          },
+          {
+            "name": "vulnerabilities_with_mitigation",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN balbix_mitigated_score < balbix_score THEN 1 END)"
+          },
+          {
+            "name": "mitigation_coverage_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN balbix_mitigated_score < balbix_score THEN 1 END) * 100.0 / COUNT(*)"
+          }
+        ],
+        "properties": {
+          "displayName": "Remediation Effectiveness Metrics",
+          "description": "Tracking the effectiveness of vulnerability remediation efforts"
+        }
+      },
+      {
+        "name": "threat_intelligence_metrics",
+        "baseObject": "vulnerability_assessments",
+        "description": "Threat intelligence and exploit availability metrics",
+        "dimension": [
+          {
+            "name": "threat_level",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "vulnerability_age_category",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "avg_exploit_maturity",
+            "type": "DECIMAL",
+            "expression": "AVG(exploit_maturity_influence)"
+          },
+          {
+            "name": "avg_accessibility_score",
+            "type": "DECIMAL",
+            "expression": "AVG(accessibility_influence)"
+          },
+          {
+            "name": "avg_intent_score",
+            "type": "DECIMAL",
+            "expression": "AVG(intent_influence)"
+          },
+          {
+            "name": "zero_day_indicators",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN zero_day_prob_influence > 50.0 THEN 1 END)"
+          },
+          {
+            "name": "high_exposure_vulns",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN exposure_influence > 75.0 THEN 1 END)"
+          }
+        ],
+        "properties": {
+          "displayName": "Threat Intelligence Metrics",
+          "description": "Intelligence-driven metrics for understanding threat landscape"
+        }
+      },
+      {
+        "name": "cvss_analysis_metrics",
+        "baseObject": "vulnerability_assessments",
+        "description": "CVSS scoring analysis and distribution metrics",
+        "dimension": [
+          {
+            "name": "cvssv3_base_severity",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "cvssv2_base_severity",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "published_year",
+            "type": "INTEGER"
+          }
+        ],
+        "measure": [
+          {
+            "name": "avg_cvss_v2_score",
+            "type": "DECIMAL",
+            "expression": "AVG(cvssv2_base_score)"
+          },
+          {
+            "name": "avg_cvss_v3_score",
+            "type": "DECIMAL",
+            "expression": "AVG(cvssv3_base_score)"
+          },
+          {
+            "name": "cvss_v3_adoption_rate",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN cvssv3_base_score IS NOT NULL THEN 1 END) * 100.0 / COUNT(*)"
+          },
+          {
+            "name": "score_consistency_indicator",
+            "type": "DECIMAL",
+            "expression": "AVG(cvss_score_gap)"
+          }
+        ],
+        "properties": {
+          "displayName": "CVSS Analysis Metrics",
+          "description": "Analysis of CVSS scoring patterns and consistency"
+        }
+      },
+      {
+        "name": "temporal_vulnerability_metrics",
+        "baseObject": "vulnerability_assessments",
+        "description": "Time-based vulnerability trend and lifecycle metrics",
+        "dimension": [
+          {
+            "name": "published_year",
+            "type": "INTEGER"
+          },
+          {
+            "name": "vulnerability_age_category",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "vulnerabilities_published",
+            "type": "INTEGER",
+            "expression": "COUNT(*)"
+          },
+          {
+            "name": "avg_days_to_process",
+            "type": "DECIMAL",
+            "expression": "AVG(DATEDIFF(day, published_date, computed_at))"
+          },
+          {
+            "name": "avg_vulnerability_age",
+            "type": "DECIMAL",
+            "expression": "AVG(days_since_published)"
+          },
+          {
+            "name": "discovery_velocity",
+            "type": "DECIMAL",
+            "expression": "COUNT(*) * 1.0"
+          }
+        ],
+        "properties": {
+          "displayName": "Temporal Vulnerability Metrics",
+          "description": "Time-based analysis of vulnerability discovery and processing patterns"
+        }
+      },
+      {
+        "name": "asset_impact_metrics",
+        "baseObject": "vulnerability_assessments",
+        "description": "Metrics focused on asset impact and exposure",
+        "dimension": [
+          {
+            "name": "severity_level",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "remediation_urgency",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "total_asset_exposures",
+            "type": "INTEGER",
+            "expression": "SUM(asset_count)"
+          },
+          {
+            "name": "avg_assets_per_vulnerability",
+            "type": "DECIMAL",
+            "expression": "AVG(asset_count)"
+          },
+          {
+            "name": "high_impact_vulnerabilities",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN asset_count > 10 THEN 1 END)"
+          },
+          {
+            "name": "widespread_vulnerabilities",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN asset_count > 100 THEN 1 END)"
+          }
+        ],
+        "properties": {
+          "displayName": "Asset Impact Metrics",
+          "description": "Understanding vulnerability impact across asset inventory"
+        }
+      }
+    ],
+    "views": [
+      {
+        "name": "critical_vulnerabilities_dashboard",
+        "statement": "SELECT cve_id, balbix_score, cvssv3_base_score, cvssv3_base_severity, asset_count, days_since_published, has_exploit_available, remediation_urgency FROM vulnerability_assessments WHERE is_critical_severity = true OR is_high_risk = true ORDER BY balbix_score DESC LIMIT 20",
+        "properties": {
+          "displayName": "Critical Vulnerabilities Dashboard",
+          "description": "Top 20 most critical vulnerabilities requiring immediate attention"
+        }
+      },
+      {
+        "name": "remediation_priority_queue",
+        "statement": "SELECT cve_id, remediation_urgency, balbix_score, asset_count, mitigation_effectiveness, days_since_published FROM vulnerability_assessments WHERE asset_count > 0 ORDER BY CASE remediation_urgency WHEN 'Urgent' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 ELSE 4 END, balbix_score DESC",
+        "properties": {
+          "displayName": "Remediation Priority Queue",
+          "description": "Prioritized list of vulnerabilities for remediation planning"
+        }
+      },
+      {
+        "name": "exploit_availability_report",
+        "statement": "SELECT cve_id, exploit_maturity_influence, accessibility_influence, intent_influence, asset_count, published_date FROM vulnerability_assessments WHERE has_exploit_available = true ORDER BY exploit_maturity_influence DESC, asset_count DESC",
+        "properties": {
+          "displayName": "Exploit Availability Report",
+          "description": "Vulnerabilities with known exploit code requiring urgent attention"
+        }
+      },
+      {
+        "name": "vulnerability_age_analysis",
+        "statement": "SELECT vulnerability_age_category, COUNT(*) as vulnerability_count, AVG(balbix_score) as avg_risk_score, COUNT(CASE WHEN has_exploit_available = true THEN 1 END) as exploits_available FROM vulnerability_assessments GROUP BY vulnerability_age_category ORDER BY CASE vulnerability_age_category WHEN 'New (30 days)' THEN 1 WHEN 'Recent (90 days)' THEN 2 WHEN 'Mature (1 year)' THEN 3 ELSE 4 END",
+        "properties": {
+          "displayName": "Vulnerability Age Analysis",
+          "description": "Analysis of vulnerability characteristics by age category"
+        }
+      },
+      {
+        "name": "mitigation_effectiveness_summary",
+        "statement": "SELECT severity_level, COUNT(*) as total_vulns, AVG(mitigation_effectiveness) as avg_effectiveness, COUNT(CASE WHEN balbix_mitigated_score < balbix_score THEN 1 END) as mitigated_count FROM vulnerability_assessments GROUP BY severity_level ORDER BY CASE severity_level WHEN 'CRITICAL' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'MEDIUM' THEN 3 ELSE 4 END",
+        "properties": {
+          "displayName": "Mitigation Effectiveness Summary",
+          "description": "Summary of mitigation effectiveness by severity level"
+        }
+      },
+      {
+        "name": "cvss_scoring_comparison",
+        "statement": "SELECT published_year, AVG(cvssv2_base_score) as avg_cvss_v2, AVG(cvssv3_base_score) as avg_cvss_v3, COUNT(CASE WHEN cvssv3_base_score IS NOT NULL THEN 1 END) * 100.0 / COUNT(*) as v3_adoption_rate FROM vulnerability_assessments WHERE published_year IS NOT NULL GROUP BY published_year ORDER BY published_year DESC",
+        "properties": {
+          "displayName": "CVSS Scoring Comparison",
+          "description": "Year-over-year comparison of CVSS v2 vs v3 scoring trends"
+        }
+      },
+      {
+        "name": "threat_landscape_overview",
+        "statement": "SELECT threat_level, severity_level, COUNT(*) as vulnerability_count, AVG(asset_count) as avg_asset_exposure, COUNT(CASE WHEN has_exploit_available = true THEN 1 END) as exploitable_count FROM vulnerability_assessments GROUP BY threat_level, severity_level ORDER BY CASE threat_level WHEN 'CRITICAL' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'MEDIUM' THEN 3 ELSE 4 END",
+        "properties": {
+          "displayName": "Threat Landscape Overview",
+          "description": "Comprehensive overview of threat and severity distribution"
+        }
+      },
+      {
+        "name": "asset_exposure_heatmap",
+        "statement": "SELECT CASE WHEN asset_count = 0 THEN '0 Assets' WHEN asset_count <= 10 THEN '1-10 Assets' WHEN asset_count <= 50 THEN '11-50 Assets' WHEN asset_count <= 100 THEN '51-100 Assets' ELSE '100+ Assets' END as exposure_tier, severity_level, COUNT(*) as vulnerability_count FROM vulnerability_assessments GROUP BY CASE WHEN asset_count = 0 THEN '0 Assets' WHEN asset_count <= 10 THEN '1-10 Assets' WHEN asset_count <= 50 THEN '11-50 Assets' WHEN asset_count <= 100 THEN '51-100 Assets' ELSE '100+ Assets' END, severity_level",
+        "properties": {
+          "displayName": "Asset Exposure Heatmap",
+          "description": "Heatmap data showing vulnerability distribution by asset exposure and severity"
+        }
+      }
+    ],
+    "enumDefinitions": [
+      {
+        "name": "SeverityLevel",
+        "values": [
+          {
+            "name": "CRITICAL",
+            "value": "CRITICAL",
+            "properties": {
+              "description": "Critical severity vulnerabilities requiring immediate action"
+            }
+          },
+          {
+            "name": "HIGH",
+            "value": "HIGH",
+            "properties": {
+              "description": "High severity vulnerabilities with significant risk"
+            }
+          },
+          {
+            "name": "MEDIUM",
+            "value": "MEDIUM",
+            "properties": {
+              "description": "Medium severity vulnerabilities with moderate risk"
+            }
+          },
+          {
+            "name": "LOW",
+            "value": "LOW",
+            "properties": {
+              "description": "Low severity vulnerabilities with minimal risk"
+            }
+          }
+        ],
+        "properties": {
+          "displayName": "Severity Levels",
+          "description": "Standard vulnerability severity classifications"
+        }
+      },
+      {
+        "name": "RemediationUrgency",
+        "values": [
+          {
+            "name": "Urgent",
+            "value": "Urgent",
+            "properties": {
+              "description": "Requires immediate remediation within 24-48 hours"
+            }
+          },
+          {
+            "name": "High",
+            "value": "High",
+            "properties": {
+              "description": "Requires remediation within 1-2 weeks"
+            }
+          },
+          {
+            "name": "Medium",
+            "value": "Medium",
+            "properties": {
+              "description": "Requires remediation within 1 month"
+            }
+          },
+          {
+            "name": "Low",
+            "value": "Low",
+            "properties": {
+              "description": "Remediation can be scheduled in regular maintenance cycles"
+            }
+          }
+        ],
+        "properties": {
+          "displayName": "Remediation Urgency Levels",
+          "description": "Priority levels for vulnerability remediation scheduling"
+        }
+      },
+      {
+        "name": "VulnerabilityAge",
+        "values": [
+          {
+            "name": "New",
+            "value": "New (30 days)",
+            "properties": {
+              "description": "Recently published vulnerability (within 30 days)"
+            }
+          },
+          {
+            "name": "Recent",
+            "value": "Recent (90 days)",
+            "properties": {
+              "description": "Recent vulnerability (31-90 days old)"
+            }
+          },
+          {
+            "name": "Mature",
+            "value": "Mature (1 year)",
+            "properties": {
+              "description": "Established vulnerability (91-365 days old)"
+            }
+          },
+          {
+            "name": "Old",
+            "value": "Old (>1 year)",
+            "properties": {
+              "description": "Legacy vulnerability (over 1 year old)"
+            }
+          }
+        ],
+        "properties": {
+          "displayName": "Vulnerability Age Categories",
+          "description": "Age-based categorization of vulnerabilities"
+        }
+      }
+    ],
+    "cumulativeMetrics": [
+      {
+        "name": "vulnerability_discovery_trend",
+        "baseObject": "vulnerability_assessments",
+        "description": "Track vulnerability discovery and publication trends over time",
+        "timeColumn": "published_date",
+        "aggregation": "COUNT",
+        "window": "MONTH",
+        "measure": {
+          "name": "monthly_vulnerabilities",
+          "type": "INTEGER",
+          "expression": "COUNT(*)"
+        },
+        "dimensions": ["severity_level", "threat_level"],
+        "properties": {
+          "displayName": "Vulnerability Discovery Trend",
+          "description": "Monthly tracking of new vulnerability publications"
+        }
+      },
+      {
+        "name": "risk_score_evolution",
+        "baseObject": "vulnerability_assessments",
+        "description": "Track evolution of risk scores over time",
+        "timeColumn": "computed_at",
+        "aggregation": "AVG",
+        "window": "WEEK",
+        "measure": {
+          "name": "weekly_avg_risk_score",
+          "type": "DECIMAL",
+          "expression": "AVG(balbix_score)"
+        },
+        "dimensions": ["severity_level"],
+        "properties": {
+          "displayName": "Risk Score Evolution",
+          "description": "Weekly tracking of average risk scores"
+        }
+      },
+      {
+        "name": "remediation_progress_tracking",
+        "baseObject": "vulnerability_assessments",
+        "description": "Track remediation progress and effectiveness over time",
+        "timeColumn": "computed_at",
+        "aggregation": "RATE",
+        "window": "MONTH",
+        "measure": {
+          "name": "monthly_mitigation_rate",
+          "type": "DECIMAL",
+          "expression": "COUNT(CASE WHEN balbix_mitigated_score < balbix_score THEN 1 END) * 100.0 / COUNT(*)"
+        },
+        "dimensions": ["severity_level", "remediation_urgency"],
+        "properties": {
+          "displayName": "Remediation Progress Tracking",
+          "description": "Monthly tracking of remediation effectiveness and coverage"
+        }
+      }
+    ]
+  }

@@ -60,11 +60,13 @@ requests==2.32.3
 tenacity==9.1.2
 tqdm==4.67.1
 
+#External DB Dependencies
 google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib
 google-cloud-bigquery
 cx-oracle
+oracledb
 motor
 mypy
 mysql-connector-python

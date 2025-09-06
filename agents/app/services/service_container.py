@@ -1,4 +1,5 @@
-from typing import Dict, Any
+from typing import Dict, Any, TYPE_CHECKING
+import logging
 from app.services.servicebase import BaseService
 from app.services.sql.ask import AskService
 from app.services.sql.question_recommendation import QuestionRecommendation
@@ -7,11 +8,19 @@ from app.services.sql.chart_adjustment import ChartAdjustmentService
 from app.services.sql.instructions import InstructionsService
 from app.services.sql.sql_helper_services import SQLHelperService
 from app.services.writers.dashboard_service import DashboardService
-from app.services.writers.report_service import ReportService
+from app.services.writers.alert_service import AlertService, AlertCompatibilityService
 from app.agents.pipelines.pipeline_container import PipelineContainer
+from app.indexing.project_reader import ProjectReader
+from app.indexing.alert_knowledge_helper import initialize_alert_knowledge_helper
+
+logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from app.services.writers.report_service import ReportService
+    from app.core.engine import Engine
 
 class SQLServiceContainer:
-    """Container class for managing SQL-related services."""
+    """Container class for managing SQL-related and writer services."""
     
     _instance = None
     
@@ -30,7 +39,7 @@ class SQLServiceContainer:
         self._initialized = True
     
     def initialize_services(self, app_state) -> None:
-        """Initialize all SQL services with dependencies from app state.
+        """Initialize all SQL and writer services with dependencies from app state.
         
         Args:
             app_state: FastAPI app state containing dependencies
@@ -88,21 +97,54 @@ class SQLServiceContainer:
             sql_helper_service.doc_store_provider = doc_store_provider
         self.register_service("sql_helper_service", sql_helper_service)
         
-        # Initialize dashboard service
-        dashboard_service = DashboardService()
-        if session_manager:
-            dashboard_service.session_manager = session_manager
-        if doc_store_provider:
-            dashboard_service.doc_store_provider = doc_store_provider
+        # Initialize dashboard service (pure API layer - no database dependencies needed)
+        dashboard_service = self.create_dashboard_service()
         self.register_service("dashboard_service", dashboard_service)
         
-        # Initialize report service
-        report_service = ReportService()
-        if session_manager:
-            report_service.session_manager = session_manager
-        if doc_store_provider:
-            report_service.doc_store_provider = doc_store_provider
+        # Initialize report service (pure API layer - no database dependencies needed)
+        from app.core.engine_provider import EngineProvider
+        engine = EngineProvider.get_engine()
+        report_service = self.create_report_service(engine=engine)
         self.register_service("report_service", report_service)
+        
+        # Initialize ProjectReader for alert knowledge base (optional)
+        try:
+            project_reader = self.create_project_reader()
+            self.register_service("project_reader", project_reader)
+            
+            # Initialize alert knowledge helper with project reader
+            initialize_alert_knowledge_helper(project_reader)
+        except Exception as e:
+            logger.warning(f"Failed to initialize ProjectReader and alert knowledge helper: {e}")
+            # Continue without these services
+        
+        # Initialize alert service (optional)
+        try:
+            alert_service = self.create_alert_service()
+            if session_manager:
+                alert_service.session_manager = session_manager
+            if doc_store_provider:
+                alert_service.doc_store_provider = doc_store_provider
+            self.register_service("alert_service", alert_service)
+            
+            # Initialize alert compatibility service
+            alert_compatibility_service = self.create_alert_compatibility_service(alert_service)
+            if session_manager:
+                alert_compatibility_service.session_manager = session_manager
+            if doc_store_provider:
+                alert_compatibility_service.doc_store_provider = doc_store_provider
+            self.register_service("alert_compatibility_service", alert_compatibility_service)
+            
+            # Store individual alert services in app state for dependency injection
+            app_state.alert_service = alert_service
+            app_state.alert_compatibility_service = alert_compatibility_service
+            
+            logger.info("Alert services initialized successfully")
+        except Exception as e:
+            logger.warning(f"Failed to initialize alert services: {e}")
+            # Continue without alert services
+            app_state.alert_service = None
+            app_state.alert_compatibility_service = None
     
     def get_service(self, service_name: str) -> BaseService:
         """Get a service instance by name.
@@ -133,6 +175,103 @@ class SQLServiceContainer:
             Dictionary of all registered services
         """
         return self._services.copy()
+    
+    def create_dashboard_service(self) -> DashboardService:
+        """Factory method to create a dashboard service instance.
+        
+        Returns:
+            DashboardService instance with all agent pipelines initialized
+        """
+        return DashboardService()
+    
+    def create_report_service(self, engine=None):
+        """Factory method to create a report service instance.
+        
+        Args:
+            engine: Database engine instance (optional)
+        
+        Returns:
+            ReportService instance with all agent pipelines initialized
+        """
+        # Lazy import to avoid circular dependencies
+        from app.services.writers.report_service import ReportService
+        return ReportService(engine=engine)
+    
+    def create_alert_service(self):
+        """Factory method to create an alert service instance.
+        
+        Returns:
+            AlertService instance with all agent pipelines initialized
+        """
+        # Lazy import to avoid circular dependencies
+        from app.services.writers.alert_service import AlertService
+        return AlertService(pipeline_container=self.pipeline_container)
+    
+    def create_alert_compatibility_service(self, alert_service=None):
+        """Factory method to create an alert compatibility service instance.
+        
+        Args:
+            alert_service: AlertService instance (optional, will create if not provided)
+        
+        Returns:
+            AlertCompatibilityService instance with all agent pipelines initialized
+        """
+        # Lazy import to avoid circular dependencies
+        from app.services.writers.alert_service import AlertCompatibilityService
+        
+        if alert_service is None:
+            alert_service = self.create_alert_service()
+        
+        return AlertCompatibilityService(alert_service)
+    
+    def create_project_reader(self):
+        """Create a ProjectReader instance for alert knowledge base.
+        
+        Returns:
+            ProjectReader instance
+        """
+        from app.settings import get_settings
+        import chromadb
+        
+        settings = get_settings()
+        persistent_client = chromadb.PersistentClient(path=settings.CHROMA_STORE_PATH)
+        
+        return ProjectReader(
+            base_path="/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/sql_meta",
+            persistent_client=persistent_client
+        )
+    
+    def get_dashboard_service(self) -> DashboardService:
+        """Get the dashboard service instance.
+        
+        Returns:
+            DashboardService instance
+        """
+        return self.get_service("dashboard_service")
+    
+    def get_report_service(self):
+        """Get the report service instance.
+        
+        Returns:
+            ReportService instance
+        """
+        return self.get_service("report_service")
+    
+    def get_alert_service(self):
+        """Get the alert service instance.
+        
+        Returns:
+            AlertService instance
+        """
+        return self.get_service("alert_service")
+    
+    def get_alert_compatibility_service(self):
+        """Get the alert compatibility service instance.
+        
+        Returns:
+            AlertCompatibilityService instance
+        """
+        return self.get_service("alert_compatibility_service")
     
     @classmethod
     def get_instance(cls) -> 'SQLServiceContainer':

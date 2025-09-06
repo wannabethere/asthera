@@ -62,6 +62,8 @@ TEXT_TO_SQL_RULES = """
 - DON'T USE "FILTER(WHERE <expression>)" clause in the generated SQL query.
 - DON'T USE "EXTRACT(EPOCH FROM <expression>)" clause in the generated SQL query.
 - DON'T USE INTERVAL or generate INTERVAL-like expression in the generated SQL query.
+- DONT USE HAVING CLAUSE WITHOUT GROUP BY CLAUSE.
+- WHEN THRESHOLD OR CONDITIONS are found, use CTE Expressions to evaluate the conditions or thresholds.
 - ONLY USE JSON_QUERY for querying fields if "json_type":"JSON" is identified in the columns comment, NOT the deprecated JSON_EXTRACT_SCALAR function.
     - DON'T USE CAST for JSON fields, ONLY USE the following funtions:
       - LAX_BOOL for boolean fields
@@ -94,7 +96,13 @@ TEXT_TO_SQL_RULES = """
     - To JOIN ON the fields inside UNNEST(ARRAY), YOU MUST SELECT FROM the parent table ahead of the UNNEST syntax, and the alias of the UNNEST(ARRAY) SHOULD BE IN THE FORMAT unnest_table_alias(individual_item_alias)
       - For Example: `SELECT p.column_1, j.column_2 FROM parent_table AS p, join_table AS j JOIN UNNEST(p.array_column) AS unnested(array_item) ON j.id = array_item.id`
 - DON'T USE JSON_QUERY and JSON_QUERY_ARRAY when "json_type":"".
+- DONT CREATE COLUMNS WHICH ARE NOT PRESENT IN THE DATABASE SCHEMA. CHECK FOR SPELLING ERRORS IN COLUMN NAMES TO AVOID ERRORS LIKE nid instead of nuid, devid instead of dev_id, etc.
 - DON'T USE LAX_BOOL, LAX_FLOAT64, LAX_INT64, LAX_STRING when "json_type":"".
+- **RELATIONSHIP HANDLING**: When table relationships are provided, use them to create proper JOINs between tables. Pay attention to:
+  - Join types (ONE_TO_ONE, ONE_TO_MANY, MANY_TO_ONE) to determine the appropriate JOIN syntax
+  - Join conditions to ensure correct column matching between tables
+  - Use the exact column names specified in the relationship conditions
+  - Consider the relationship direction when writing JOIN clauses
 """
 
 sql_generation_system_prompt = f"""

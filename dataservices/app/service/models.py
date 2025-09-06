@@ -563,3 +563,98 @@ class ShareInfo(BaseModel):
     entity_type: EntityType = Field(..., description="Type of entity (user, team, project, workspace)")
     permission: PermissionLevel = Field(..., description="Permission level (read, read_write, admin)")
     # dataset_id: str = Field(..., description="ID of the dataset to share")
+
+
+class datasetRead(BaseModel):
+    dataset_id: str
+    domain_id: str
+    name: str
+    display_name: str
+    connection_id: UUID
+    tables: List
+    model_config = ConfigDict(from_attributes=True)
+
+class tableRead(BaseModel):
+    table_id: str
+    name: str
+    model_config = ConfigDict(from_attributes=True)
+
+
+
+
+from pydantic import BaseModel, Field, ConfigDict,field_validator,validator # Replace the 3rd line with this
+#Add at Bottom
+class TimeColumnBase(BaseModel):
+    table_id: str = Field(..., min_length=1, max_length=50)
+    column_id: str = Field(..., min_length=1, max_length=50)
+    time_column_name: Optional[str] = Field(None, min_length=1, max_length=100)
+    time_column_type: str = Field(..., min_length=1, max_length=50)
+    time_column_format: Optional[str] = Field(None, min_length=1, max_length=100)
+    time_column_description: Optional[str] = Field(None, max_length=1000)
+    granularity: str = Field(
+        ...,
+        pattern="^(hourly|daily|weekly|biweekly|monthly)$",
+        description="Granularity of the report. Must be one of: hourly, daily, weekly, biweekly, monthly."
+    )
+    
+    @validator('time_column_type')
+    def validate_type(cls, v):
+        valid_types = ['primary', 'secondary']
+        if v.lower() not in valid_types:
+            raise ValueError(f'Invalid type. Must be: {", ".join(valid_types)}')
+        return v.lower()
+    
+    @validator('time_column_format')
+    def validate_format(cls, v):
+        common_formats = [
+            '%Y-%m-%d', '%Y-%m-%d %H:%M:%S', '%d/%m/%Y', '%m/%d/%Y',
+            'YYYY-MM-DD', 'DD/MM/YYYY', 'MM/DD/YYYY', 'timestamp', 'epoch','D-MM-YYYY HH:mm:SS'
+        ]
+        v = v.strip()
+        if not v:
+            raise ValueError('Format cannot be empty')
+        return v
+    
+    @validator('table_id', 'column_id', 'time_column_name')
+    def validate_not_empty(cls, v):
+        if not v.strip():
+            raise ValueError('Field cannot be empty')
+        return v.strip()
+
+class TimeColumnCreate(TimeColumnBase):
+    pass
+    
+
+class TimeColumnResponse(TimeColumnBase):
+    time_column_id: str
+    
+    class Config:
+        from_attributes = True
+        
+
+class TimeColumnUpdate(BaseModel):
+    table_id: Optional[str] = Field(None, min_length=1, max_length=50)
+    column_id: Optional[str] = Field(None, min_length=1, max_length=50)
+    time_column_name: Optional[str] = Field(None, min_length=1, max_length=100)
+    time_column_type: Optional[str] = Field(None, min_length=1, max_length=50)
+    time_column_description: Optional[str] = Field(None, max_length=1000)
+    granularity: str = Field(
+        ...,
+        pattern="^(hourly|daily|weekly|biweekly|monthly)$",
+        description="Granularity of the report. Must be one of: hourly, daily, weekly, biweekly, monthly."
+    )
+    
+    @validator('time_column_type')
+    def validate_type(cls, v):
+        if v:
+            valid_types = ['timestamp', 'datetime', 'date', 'time', 'epoch']
+            if v.lower() not in valid_types:
+                raise ValueError(f'Invalid type. Must be: {", ".join(valid_types)}')
+            return v.lower()
+        return v
+    
+    @validator('table_id', 'column_id', 'time_column_name')
+    def validate_not_empty(cls, v):
+        if v and not v.strip():
+            raise ValueError('Field cannot be empty')
+        return v.strip() if v else v

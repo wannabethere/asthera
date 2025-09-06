@@ -1,0 +1,13 @@
+{
+  "csv_directory": "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/cvedata/data",
+  "metadata_directory": "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/sql_meta/cve_data",
+  "dry_run": false,
+  "database": {
+    "host": "unedadevpostgresql.postgres.database.azure.com",
+    "port": 5432,
+    "database": "phenom_egen_ai",
+    "user": "pixentia",
+    "password": "FLc%26dL%40M9A5Q7wI%3B",  
+    "sslmode": "require"  
+  }
+}

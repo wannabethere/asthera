@@ -37,23 +37,30 @@ class QuestionRecommendationDemo:
 
     def __init__(self):
         if not self._initialized:
-            # Initialize pipeline container
-            self.pipeline_container = PipelineContainer.initialize()
-            
-            # Initialize services
-            self.ask_service = AskService(
-                pipeline_container=self.pipeline_container,
-                allow_intent_classification=True,
-                allow_sql_generation_reasoning=True,
-                enable_enhanced_sql=True,
-                sql_scoring_config_path="app/agents/nodes/sql/utils/scoring_config.json"
-            )
-            
-            self.question_recommendation = QuestionRecommendation(
-                pipelines=self.pipeline_container.get_all_pipelines()
-            )
-            
-            self._initialized = True
+            try:
+                # Initialize pipeline container
+                self.pipeline_container = PipelineContainer.initialize()
+                
+                # Initialize services
+                self.ask_service = AskService(
+                    pipeline_container=self.pipeline_container,
+                    allow_intent_classification=True,
+                    allow_sql_generation_reasoning=True,
+                    enable_enhanced_sql=True,
+                    sql_scoring_config_path="app/agents/nodes/sql/utils/scoring_config.json"
+                )
+                
+                self.question_recommendation = QuestionRecommendation(
+                    pipelines=self.pipeline_container.get_all_pipelines()
+                )
+                
+                self._initialized = True
+                
+            except Exception as e:
+                logger.error(f"Failed to initialize pipeline container: {e}")
+                # Set a flag to indicate initialization failure
+                self._initialization_failed = True
+                self._initialized = True  # Prevent re-initialization attempts
 
     def _get_cached_schema(self, mdl: str) -> Optional[Dict]:
         """Get cached schema if available"""

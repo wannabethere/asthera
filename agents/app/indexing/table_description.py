@@ -38,6 +38,7 @@ class TableDescriptionChunker:
                     "type": chunk["mdl_type"],
                     "name": chunk["name"],
                     "description": chunk["description"],
+                    "relationships": chunk.get("relationships", []),
                     **_additional_meta(),
                 }
             }
@@ -87,24 +88,49 @@ class TableDescriptionChunker:
         views = [_structure_data("VIEW", view) for view in mdl.get("views", [])]
         logger.info(f"Processed {len(views)} views")
 
+        # Process relationships
+        logger.info("Processing relationships")
+        relationships = mdl.get("relationships", [])
+        logger.info(f"Processed {len(relationships)} relationships")
+
+        # Create a mapping of table names to their relationships
+        table_relationships = {}
+        for relationship in relationships:
+            models_in_relationship = relationship.get("models", [])
+            for table_name in models_in_relationship:
+                if table_name not in table_relationships:
+                    table_relationships[table_name] = []
+                table_relationships[table_name].append({
+                    "name": relationship.get("name", ""),
+                    "models": models_in_relationship,
+                    "joinType": relationship.get("joinType", ""),
+                    "condition": relationship.get("condition", ""),
+                    "properties": relationship.get("properties", {})
+                })
+
         # Combine all resources
         resources = models + metrics + views
         logger.info(f"Total resources found: {len(resources)}")
 
         # Create descriptions
         logger.info("Creating table descriptions")
-        descriptions = [
-            {
-                "name": resource["name"],
-                "mdl_type": resource["mdl_type"],
-                "type": "TABLE_DESCRIPTION",
-                "description": resource["properties"].get("description", ""),
-                "columns": ", ".join(resource["columns"]),
-            }
-            for resource in resources
-            if resource["name"] is not None
-        ]
-        logger.info(f"Created {len(descriptions)} table descriptions")
+        descriptions = []
+        for resource in resources:
+            if resource["name"] is not None:
+                table_name = resource["name"]
+                table_rels = table_relationships.get(table_name, [])
+                
+                description = {
+                    "name": table_name,
+                    "mdl_type": resource["mdl_type"],
+                    "type": "TABLE_DESCRIPTION",
+                    "description": resource["properties"].get("description", ""),
+                    "columns": ", ".join(resource["columns"]),
+                    "relationships": table_rels
+                }
+                descriptions.append(description)
+        
+        logger.info(f"Created {len(descriptions)} table descriptions with relationships")
         
         return descriptions
 

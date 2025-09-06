@@ -343,6 +343,15 @@ class AnalysisIntentWithSelectPipe:
         if not suggested_functions:
             return f"# Analysis pipeline code would be generated here based on {intent_type}"
         
+        # Extract function names from formatted strings (remove category and pipeline info)
+        def extract_function_name(formatted_func: str) -> str:
+            """Extract function name from 'function_name: category (pipeline)' format"""
+            if ': ' in formatted_func:
+                return formatted_func.split(': ')[0]
+            return formatted_func
+        
+        function_names = [extract_function_name(func) for func in suggested_functions]
+        
         # Generate pipeline based on intent type and suggested functions
         pipeline_templates = {
             "metrics_calculation": "MetricsPipe",
@@ -359,16 +368,16 @@ class AnalysisIntentWithSelectPipe:
         pipe_type = pipeline_templates.get(intent_type, "MetricsPipe")
         
         # Generate sample pipeline code
-        if len(suggested_functions) >= 2:
+        if len(function_names) >= 2:
             analysis_code = f"""analysis_result = (
     {pipe_type}.from_dataframe({data_var})
-    | {suggested_functions[0]}()  # Primary analysis function
-    | {suggested_functions[1]}()  # Secondary analysis function
+    | {function_names[0]}()  # Primary analysis function
+    | {function_names[1]}()  # Secondary analysis function
     ).to_df()"""
         else:
             analysis_code = f"""analysis_result = (
     {pipe_type}.from_dataframe({data_var})
-    | {suggested_functions[0]}()  # Primary analysis function
+    | {function_names[0]}()  # Primary analysis function
     ).to_df()"""
         
         return analysis_code

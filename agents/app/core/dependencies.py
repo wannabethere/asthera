@@ -1,4 +1,4 @@
-from fastapi import Depends, Request
+from fastapi import Depends, Request, HTTPException
 from typing import Dict, Any, Optional
 from app.storage.sessionmanager import get_session_manager
 from app.settings import get_settings
@@ -33,7 +33,7 @@ def get_chromadb_client():
     
     if settings.CHROMA_USE_LOCAL:
         # Use local persistent client
-        return chromadb.PersistentClient(path=settings.CHROMA_PERSIST_DIRECTORY)
+        return chromadb.PersistentClient(path=settings.CHROMA_STORE_PATH)
     else:
         # Use HTTP client (default)
         return chromadb.HttpClient(
@@ -41,8 +41,48 @@ def get_chromadb_client():
             port=settings.CHROMA_PORT
         )
 
+
+# Helper function to create LLM instances from settings
+def create_llm_instances_from_settings(settings: Dict[str, Any]):
+    """Create LLM instances from external settings configuration
+    
+    Args:
+        settings: Dictionary containing LLM configuration
+                 Expected keys: model_name, sql_parser_temp, alert_generator_temp, 
+                               critic_temp, refiner_temp
+    
+    Returns:
+        Tuple of (sql_parser_llm, alert_generator_llm, critic_llm, refiner_llm)
+    """
+    model_name = settings.get("model_name", "gpt-4o-mini")
+    from langchain_openai import ChatOpenAI
+    sql_parser_llm = ChatOpenAI(
+        model=model_name, 
+        temperature=settings.get("sql_parser_temp", 0.0)
+    )
+    alert_generator_llm = ChatOpenAI(
+        model=model_name, 
+        temperature=settings.get("alert_generator_temp", 0.1)
+    )
+    critic_llm = ChatOpenAI(
+        model=model_name, 
+        temperature=settings.get("critic_temp", 0.0)
+    )
+    refiner_llm = ChatOpenAI(
+        model=model_name, 
+        temperature=settings.get("refiner_temp", 0.2)
+    )
+    
+    return sql_parser_llm, alert_generator_llm, critic_llm, refiner_llm
+def get_chromadb_wrapper():
+    """Get ChromaDB wrapper instance using the configured client."""
+    client = get_chromadb_client()
+    from app.storage.chromadb import ChromaDB
+    return ChromaDB(client=client)
+
 def get_doc_store_provider():
     """Get the document store provider with all SQL-related stores."""
+    
     # Initialize ChromaDB client using configuration
     client = get_chromadb_client()
     
@@ -73,12 +113,29 @@ def get_doc_store_provider():
             collection_name="project_meta"
         )
     }
-    
     # Create and return the document store provider
     return DocumentStoreProvider(
         stores=sql_stores,
         default_store="sql_pairs"
     )
+
+def get_alert_service(app_state=Depends(get_app_state)):
+    """Get the alert service instance."""
+    if not hasattr(app_state, 'alert_service') or app_state.alert_service is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Alert service is not available. Please ensure the service is properly configured."
+        )
+    return app_state.alert_service
+
+def get_alert_compatibility_service(app_state=Depends(get_app_state)):
+    """Get the alert compatibility service instance."""
+    if not hasattr(app_state, 'alert_compatibility_service') or app_state.alert_compatibility_service is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Alert compatibility service is not available. Please ensure the service is properly configured."
+        )
+    return app_state.alert_compatibility_service
 
 def get_dependencies():
     """Get all dependencies for the API."""
@@ -97,24 +154,10 @@ def get_dependencies():
     # Get or create session manager with the DB config
     session_manager = get_session_manager(db_config)
         
-    # Initialize ChromaDB client using configuration
+   # Initialize ChromaDB client using configuration
     client = get_chromadb_client()
     
-    # Initialize vector stores
-    vectorstore_examples = DocumentChromaStore(
-        persistent_client=client,
-        collection_name="tools_examples_collection"
-    )
-
-    vectorstore_functions = DocumentChromaStore(
-        persistent_client=client,
-        collection_name="tools_spec_collection"
-    )
-
-    vectorstore_insights = DocumentChromaStore(
-        persistent_client=client,
-        collection_name="tools_insights_collection"
-    )
+    
     
     # Get document store provider for SQL stores
     doc_store_provider = get_doc_store_provider()
@@ -122,9 +165,6 @@ def get_dependencies():
     return {
         "session_manager": session_manager,
         "db_config": db_config,
-        "vectorstore_examples": vectorstore_examples,
-        "vectorstore_functions": vectorstore_functions,
-        "vectorstore_insights": vectorstore_insights,
         "doc_store_provider": doc_store_provider
     }
 

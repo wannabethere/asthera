@@ -563,7 +563,7 @@ class RetrievalHelper:
             )
             
             if not query_result or "documents" not in query_result or len(query_result["documents"][0]) == 0:
-                logger.warning(f"No function definition found for: {function_name}")
+                logger.warning(f"No function definition found in retrieval helper for: {function_name}")
                 result = {
                     "error": f"No function definition found for: {function_name}",
                     "function_definition": None

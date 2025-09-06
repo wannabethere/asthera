@@ -803,14 +803,42 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
             if result and result.get("post_process"):
                 post_process = result["post_process"]
                 
+                # Build comprehensive response data
+                response_data = {
+                    "executive_summary": post_process.get("executive_summary", ""),
+                    "data_overview": post_process.get("data_overview", {}),
+                    "visualization": post_process.get("visualization", {}),
+                    "metadata": result.get("metadata", {}),
+                    "sql_query": sql,  # Include the original SQL query
+                    "query": query,  # Include the original user query
+                    "project_id": project_id
+                }
+                
+                # Add additional fields if available
+                if "chart_schema" in post_process:
+                    response_data["chart_schema"] = post_process["chart_schema"]
+                if "reasoning" in post_process:
+                    response_data["reasoning"] = post_process["reasoning"]
+                if "data_count" in post_process:
+                    response_data["data_count"] = post_process["data_count"]
+                if "validation" in post_process:
+                    response_data["validation_results"] = post_process["validation"]
+                if "sample_data" in post_process:
+                    response_data["sample_data"] = post_process["sample_data"]
+                if "execution_config" in post_process:
+                    response_data["execution_config"] = post_process["execution_config"]
+                
+                # Add chart format schemas if available
+                if "plotly_schema" in post_process:
+                    response_data["plotly_schema"] = post_process["plotly_schema"]
+                if "powerbi_schema" in post_process:
+                    response_data["powerbi_schema"] = post_process["powerbi_schema"]
+                if "vega_lite_schema" in post_process:
+                    response_data["vega_lite_schema"] = post_process["vega_lite_schema"]
+                
                 return {
                     "success": True,
-                    "data": {
-                        "executive_summary": post_process.get("executive_summary", ""),
-                        "data_overview": post_process.get("data_overview", {}),
-                        "visualization": post_process.get("visualization", {}),
-                        "metadata": result.get("metadata", {})
-                    },
+                    "data": response_data,
                     "error": None
                 }
             else:
@@ -969,14 +997,43 @@ class SQLHelperService(BaseService[AskRequest, AskResultResponse]):
             # Process the final result
             if result and result.get("post_process"):
                 post_process = result["post_process"]
+                
+                # Build comprehensive response data
+                response_data = {
+                    "executive_summary": post_process.get("executive_summary", ""),
+                    "data_overview": post_process.get("data_overview", {}),
+                    "visualization": post_process.get("visualization", {}),
+                    "metadata": result.get("metadata", {}),
+                    "sql_query": sql,  # Include the original SQL query
+                    "query": query,  # Include the original user query
+                    "project_id": project_id
+                }
+                
+                # Add additional fields if available
+                if "chart_schema" in post_process:
+                    response_data["chart_schema"] = post_process["chart_schema"]
+                if "reasoning" in post_process:
+                    response_data["reasoning"] = post_process["reasoning"]
+                if "data_count" in post_process:
+                    response_data["data_count"] = post_process["data_count"]
+                if "validation" in post_process:
+                    response_data["validation_results"] = post_process["validation"]
+                if "sample_data" in post_process:
+                    response_data["sample_data"] = post_process["sample_data"]
+                if "execution_config" in post_process:
+                    response_data["execution_config"] = post_process["execution_config"]
+                
+                # Add chart format schemas if available
+                if "plotly_schema" in post_process:
+                    response_data["plotly_schema"] = post_process["plotly_schema"]
+                if "powerbi_schema" in post_process:
+                    response_data["powerbi_schema"] = post_process["powerbi_schema"]
+                if "vega_lite_schema" in post_process:
+                    response_data["vega_lite_schema"] = post_process["vega_lite_schema"]
+                
                 final_result = {
                     "status": "completed",
-                    "data": {
-                        "executive_summary": post_process.get("executive_summary", ""),
-                        "data_overview": post_process.get("data_overview", {}),
-                        "visualization": post_process.get("visualization", {}),
-                        "metadata": result.get("metadata", {})
-                    },
+                    "data": response_data,
                     "timestamp": datetime.now().isoformat()
                 }
             else:

@@ -183,7 +183,7 @@ class Settings(BaseSettings):
     CHROMA_HOST: str = "localhost"
     CHROMA_PORT: int = 8000
     CHROMA_COLLECTION_NAME: str = "default"
-    CHROMA_PERSIST_DIRECTORY: str = "chroma_db"
+    CHROMA_PERSIST_DIRECTORY: str = CHROMA_STORE_PATH
     
     # Embedding Settings
     EMBEDDING_PROVIDER: str = "openai"

@@ -1,0 +1,284 @@
+{
+    "catalog": "security_monitoring",
+    "schema": "public",
+    "models": [
+      {
+        "name": "dev_agents",
+        "description": "Security monitoring agents deployed across the infrastructure for data collection and monitoring",
+        "tableReference": {
+          "table": "dev_agents"
+        },
+        "columns": [
+          {
+            "name": "agent",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Agent",
+              "description": "Name or identifier of the security monitoring agent"
+            }
+          },
+          {
+            "name": "display_source",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Display Source",
+              "description": "Human-readable source name for the agent"
+            }
+          },
+          {
+            "name": "ref_source_id",
+            "type": "FLOAT",
+            "properties": {
+              "displayName": "Reference Source ID",
+              "description": "Reference identifier linking to the source system"
+            }
+          },
+          {
+            "name": "first_seen",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "First Seen",
+              "description": "Timestamp when the agent was first discovered or registered"
+            }
+          },
+          {
+            "name": "last_seen",
+            "type": "DATE",
+            "properties": {
+              "displayName": "Last Seen",
+              "description": "Date when the agent was last active or reported data"
+            }
+          },
+          {
+            "name": "nuid",
+            "type": "INTEGER",
+            "properties": {
+              "displayName": "Network UID",
+              "description": "Network unique identifier for the agent"
+            }
+          },
+          {
+            "name": "dev_id",
+            "type": "INTEGER",
+            "properties": {
+              "displayName": "Device ID",
+              "description": "Device identifier where the agent is deployed"
+            }
+          },
+          {
+            "name": "is_stale",
+            "type": "BOOLEAN",
+            "properties": {
+              "displayName": "Is Stale",
+              "description": "Indicates if the agent data is stale or outdated"
+            }
+          },
+          {
+            "name": "raw_created_at",
+            "type": "DATE",
+            "properties": {
+              "displayName": "Raw Created At",
+              "description": "Original creation timestamp from source system"
+            }
+          },
+          {
+            "name": "store_created_at",
+            "type": "DATE",
+            "properties": {
+              "displayName": "Store Created At",
+              "description": "Timestamp when record was created in data store"
+            }
+          },
+          {
+            "name": "store_updated_at",
+            "type": "DATE",
+            "properties": {
+              "displayName": "Store Updated At",
+              "description": "Timestamp when record was last updated in data store"
+            }
+          },
+          {
+            "name": "process_id",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Process ID",
+              "description": "Identifier of the data processing pipeline"
+            }
+          },
+          {
+            "name": "is_active",
+            "type": "BOOLEAN",
+            "isCalculated": true,
+            "expression": "CASE WHEN last_seen >= CURRENT_DATE - INTERVAL '7 days' THEN true ELSE false END",
+            "properties": {
+              "displayName": "Is Active",
+              "description": "Calculated boolean field that determines if an agent is considered operationally active based on recent communication within the last 7 days. This field is fundamental for security operations monitoring, enabling teams to quickly identify agent health issues, coverage gaps, and potential security blind spots. Used in automated alerting systems, compliance reporting, and executive dashboards showing overall security monitoring effectiveness across the enterprise."
+            }
+          },
+          {
+            "name": "days_since_last_seen",
+            "type": "INTEGER",
+            "isCalculated": true,
+            "expression": "DATEDIFF(day, last_seen, CURRENT_DATE)",
+            "properties": {
+              "displayName": "Days Since Last Seen",
+              "description": "Calculated field showing the number of days elapsed since the agent last reported data or sent a heartbeat signal. This metric is critical for prioritizing agent maintenance activities, identifying devices that may be offline or compromised, and measuring the staleness of security monitoring coverage. Values over 7 days typically require investigation, while values over 30 days may indicate permanent device decommissioning or serious technical issues requiring escalation."
+            }
+          }
+        ],
+        "primaryKey": "nuid",
+        "properties": {
+          "displayName": "Security Agents",
+          "description": "Monitoring agents deployed for security data collection"
+        }
+      }
+    ],
+    "metrics": [
+      {
+        "name": "agent_health_metrics",
+        "baseObject": "security_agents",
+        "dimension": [
+          {
+            "name": "agent",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "display_source",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "total_agents",
+            "type": "INTEGER",
+            "expression": "COUNT(*)"
+          },
+          {
+            "name": "active_agents",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_active = true THEN 1 END)"
+          },
+          {
+            "name": "stale_agents",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_stale = true THEN 1 END)"
+          },
+          {
+            "name": "inactive_agents",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_active = false THEN 1 END)"
+          },
+          {
+            "name": "agent_uptime_percentage",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN is_active = true THEN 1 END) * 100.0 / COUNT(*)"
+          },
+          {
+            "name": "avg_days_since_last_seen",
+            "type": "DECIMAL",
+            "expression": "AVG(days_since_last_seen)"
+          }
+        ],
+        "timeGrain": [
+          {
+            "name": "last_seen_grain",
+            "refColumn": "last_seen",
+            "dateParts": ["YEAR", "QUARTER", "MONTH", "WEEK", "DAY"]
+          }
+        ],
+        "properties": {
+          "displayName": "Agent Health Metrics",
+          "description": "Core health and availability metrics for security agents"
+        }
+      },
+      {
+        "name": "agent_source_analytics",
+        "baseObject": "security_agents",
+        "dimension": [
+          {
+            "name": "display_source",
+            "type": "VARCHAR"
+          },
+          {
+            "name": "agent",
+            "type": "VARCHAR"
+          }
+        ],
+        "measure": [
+          {
+            "name": "agents_by_source",
+            "type": "INTEGER",
+            "expression": "COUNT(*)"
+          },
+          {
+            "name": "active_agents_by_source",
+            "type": "INTEGER",
+            "expression": "COUNT(CASE WHEN is_active = true THEN 1 END)"
+          },
+          {
+            "name": "source_reliability_score",
+            "type": "DECIMAL",
+            "expression": "COUNT(CASE WHEN is_active = true AND is_stale = false THEN 1 END) * 100.0 / COUNT(*)"
+          },
+          {
+            "name": "unique_devices_covered",
+            "type": "INTEGER",
+            "expression": "COUNT(DISTINCT dev_id)"
+          }
+        ],
+        "properties": {
+          "displayName": "Agent Source Analytics",
+          "description": "Performance and distribution metrics by agent source"
+        }
+      }
+    ],
+    "views": [
+      {
+        "name": "agent_status_overview",
+        "statement": "SELECT agent, display_source, COUNT(*) as agent_count, COUNT(CASE WHEN is_active = true THEN 1 END) as active_count, COUNT(CASE WHEN is_stale = true THEN 1 END) as stale_count FROM security_agents GROUP BY agent, display_source ORDER BY agent_count DESC",
+        "properties": {
+          "displayName": "Agent Status Overview",
+          "description": "High-level overview of agent status by type and source"
+        }
+      },
+      {
+        "name": "inactive_agents_alert",
+        "statement": "SELECT * FROM security_agents WHERE is_active = false ORDER BY days_since_last_seen DESC",
+        "properties": {
+          "displayName": "Inactive Agents Alert",
+          "description": "List of inactive agents requiring attention"
+        }
+      },
+      {
+        "name": "agent_coverage_gaps",
+        "statement": "SELECT dev_id, COUNT(DISTINCT agent) as agent_types_deployed FROM security_agents GROUP BY dev_id HAVING COUNT(DISTINCT agent) < 3 ORDER BY agent_types_deployed ASC",
+        "properties": {
+          "displayName": "Agent Coverage Gaps",
+          "description": "Devices with potentially insufficient agent coverage"
+        }
+      }
+    ],
+    "enumDefinitions": [
+      {
+        "name": "AgentStatusEnum",
+        "values": [
+          {
+            "name": "Active",
+            "value": "Active"
+          },
+          {
+            "name": "Inactive",
+            "value": "Inactive"
+          },
+          {
+            "name": "Stale",
+            "value": "Stale"
+          }
+        ],
+        "properties": {
+          "displayName": "Agent Status",
+          "description": "Possible agent operational status values"
+        }
+      }
+    ]
+  }

@@ -24,6 +24,23 @@ from .conditional_formatting_generation_pipeline import (
     create_conditional_formatting_generation_pipeline
 )
 
+from .alert_orchestrator_pipeline import (
+    AlertOrchestratorPipeline,
+    create_alert_orchestrator_pipeline
+)
+
+from .feed_management_pipeline import (
+    FeedManagementPipeline,
+    create_feed_management_pipeline,
+    FeedConfiguration,
+    AlertSet,
+    AlertCombination,
+    FeedProcessingResult,
+    FeedManagementResult,
+    FeedStatus,
+    FeedPriority
+)
+
 __all__ = [
     # Report Orchestrator Pipeline
     "ReportOrchestratorPipeline",
@@ -40,4 +57,19 @@ __all__ = [
     # Conditional Formatting Generation Pipeline
     "ConditionalFormattingGenerationPipeline",
     "create_conditional_formatting_generation_pipeline",
+    
+    # Alert Orchestrator Pipeline
+    "AlertOrchestratorPipeline",
+    "create_alert_orchestrator_pipeline",
+    
+    # Feed Management Pipeline
+    "FeedManagementPipeline",
+    "create_feed_management_pipeline",
+    "FeedConfiguration",
+    "AlertSet",
+    "AlertCombination",
+    "FeedProcessingResult",
+    "FeedManagementResult",
+    "FeedStatus",
+    "FeedPriority",
 ]

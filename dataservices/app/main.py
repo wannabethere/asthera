@@ -13,6 +13,7 @@ from app.routers.semantics import router as semantics_router
 from app.routers.relationships import router as relationships_router
 from app.routers.recommendations import router as recommendations_router
 from app.routers.datasource_router import router as datasource_router
+from app.routers.timecolumn_router import time_column_router # Add at Top
 from app.utils.cache import set_cache_provider, InMemoryCacheProvider
 from contextlib import asynccontextmanager
 from app.core.dependencies import get_async_db_session
@@ -23,6 +24,7 @@ from app.utils.sse import add_subscriber, remove_subscriber
 from app.core.session_manager import SessionManager
 from app.core.settings import ServiceConfig
 from fastapi.middleware.cors import CORSMiddleware
+
 
 # Initialize session manager at startup
 session_manager = SessionManager(ServiceConfig())
@@ -72,6 +74,8 @@ app.include_router(semantics_router, prefix="/semantics", tags=["Semantics"])
 app.include_router(relationships_router, prefix="/relationships", tags=["Relationships"])
 app.include_router(recommendations_router, prefix="/recommendations", tags=["Recommendations"])
 app.include_router(datasource_router, prefix="/datasources", tags=["Data Sources"])
+
+app.include_router(time_column_router, prefix="/time-columns", tags=["Time Columns"]) # Add at after line number 74 or 75
 
 @app.get("/")
 def health():

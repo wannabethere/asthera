@@ -8,14 +8,15 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain.agents.agent_types import AgentType
 #from langchain_experimental.agents.agent_toolkits import create_pandas_dataframe_agent
 from langchain_openai import OpenAIEmbeddings
-
+from app.core.settings import get_settings
 import os
-os.environ["OPENAI_API_KEY"] = "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" #userdata.get('OPENAI_API_KEY')
+settings = get_settings()
+#os.environ["OPENAI_API_KEY"] = settings.OPENAI_API_KEY
 os.environ["LANGCHAIN_API_KEY"] = "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"
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_PROJECT"] = "Plan-and-execute"
 
-openai_api_key = os.getenv("OPENAI_API_KEY")
+openai_api_key = settings.OPENAI_API_KEY
 llm = ChatOpenAI(model="gpt-4o-mini")
 opus_model_id = 'claude-3-opus-20240229'
 sonnet_model_id = 'claude-3-sonnet-20240229'

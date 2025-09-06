@@ -16,6 +16,7 @@ from app.indexing.sql_pairs import SqlPairs
 from app.storage.documents import DocumentChromaStore
 from app.settings import get_settings
 from app.core.dependencies import get_doc_store_provider
+from langchain_core.documents import Document
 
 # Configure logging
 logging.basicConfig(
@@ -45,6 +46,11 @@ class ProjectReader:
         # Initialize indexing components
         logger.info("Initializing indexing components")
         self._init_components()
+        
+        # Initialize alert knowledge base
+        logger.info("Initializing alert knowledge base")
+        self._init_alert_knowledge_base()
+        
         logger.info("IndexingOrchestrator initialization complete")
 
     def _init_document_stores(self):
@@ -82,6 +88,233 @@ class ProjectReader:
             )
         }
         logger.info("All components initialized successfully")
+
+    def _init_alert_knowledge_base(self):
+        """Initialize alert knowledge base with domain-specific knowledge."""
+        logger.info("Setting up alert knowledge base")
+        
+        # Create alert knowledge base document store
+        self.alert_knowledge_store = DocumentChromaStore(
+            persistent_client=self.persistent_client,
+            collection_name="alert_knowledge_base",
+            embeddings_model=self.embeddings,
+            tf_idf=True  # Enable TF-IDF for better search
+        )
+        
+        # Initialize with alert domain knowledge
+        self._populate_alert_knowledge_base()
+        
+        logger.info("Alert knowledge base initialized successfully")
+
+    def _populate_alert_knowledge_base(self):
+        """Populate the alert knowledge base with domain-specific knowledge."""
+        logger.info("Populating alert knowledge base with domain knowledge")
+        
+        # Alert domain knowledge documents
+        knowledge_docs = [
+            # SQL Analysis Knowledge
+            {
+                "metadata": {
+                    "type": "sql_analysis",
+                    "category": "sql_patterns",
+                    "domain": "alert_generation"
+                },
+                "data": "SELECT statements with GROUP BY indicate dimensions for alert breakdowns"
+            },
+            {
+                "metadata": {
+                    "type": "sql_analysis", 
+                    "category": "aggregation_functions",
+                    "domain": "alert_generation"
+                },
+                "data": "COUNT, SUM, AVG, MIN, MAX are common aggregation functions in metrics"
+            },
+            {
+                "metadata": {
+                    "type": "sql_analysis",
+                    "category": "calculated_metrics", 
+                    "domain": "alert_generation"
+                },
+                "data": "CASE WHEN statements often create calculated percentage metrics"
+            },
+            {
+                "metadata": {
+                    "type": "sql_analysis",
+                    "category": "filters",
+                    "domain": "alert_generation"
+                },
+                "data": "WHERE clauses define filters that should be preserved in alerts"
+            },
+            {
+                "metadata": {
+                    "type": "sql_analysis",
+                    "category": "naming",
+                    "domain": "alert_generation"
+                },
+                "data": "Column aliases with AS define meaningful metric names"
+            },
+            
+            # Alert Pattern Knowledge
+            {
+                "metadata": {
+                    "type": "alert_patterns",
+                    "category": "percentage_metrics",
+                    "domain": "alert_generation"
+                },
+                "data": "Percentage metrics often need threshold alerts when they exceed normal ranges"
+            },
+            {
+                "metadata": {
+                    "type": "alert_patterns",
+                    "category": "status_metrics",
+                    "domain": "alert_generation"
+                },
+                "data": "Status-based metrics (Completed, Assigned, Expired) indicate operational health"
+            },
+            {
+                "metadata": {
+                    "type": "alert_patterns",
+                    "category": "training_metrics",
+                    "domain": "alert_generation"
+                },
+                "data": "Training completion rates below 90% typically indicate issues"
+            },
+            {
+                "metadata": {
+                    "type": "alert_patterns",
+                    "category": "expiry_metrics",
+                    "domain": "alert_generation"
+                },
+                "data": "Expiry rates above 10% suggest timing or engagement problems"
+            },
+            {
+                "metadata": {
+                    "type": "alert_patterns",
+                    "category": "assignment_metrics",
+                    "domain": "alert_generation"
+                },
+                "data": "Assignment rates above 20% may indicate capacity issues"
+            },
+            
+            # Lexy Feed Knowledge
+            {
+                "metadata": {
+                    "type": "lexy_feed",
+                    "category": "arima_conditions",
+                    "domain": "alert_generation"
+                },
+                "data": "ARIMA conditions work best for time-series data with seasonal patterns"
+            },
+            {
+                "metadata": {
+                    "type": "lexy_feed",
+                    "category": "threshold_conditions",
+                    "domain": "alert_generation"
+                },
+                "data": "Threshold-based conditions are better for business rule violations"
+            },
+            {
+                "metadata": {
+                    "type": "lexy_feed",
+                    "category": "percent_change",
+                    "domain": "alert_generation"
+                },
+                "data": "Percent change alerts are ideal for detecting relative performance shifts"
+            },
+            {
+                "metadata": {
+                    "type": "lexy_feed",
+                    "category": "value_thresholds",
+                    "domain": "alert_generation"
+                },
+                "data": "Value-based thresholds work well for operational SLA monitoring"
+            },
+            {
+                "metadata": {
+                    "type": "lexy_feed",
+                    "category": "resolution_frequency",
+                    "domain": "alert_generation"
+                },
+                "data": "Daily resolution works for operational metrics, weekly for strategic KPIs"
+            },
+            
+            # Business Context
+            {
+                "metadata": {
+                    "type": "business_context",
+                    "category": "training_metrics",
+                    "domain": "alert_generation"
+                },
+                "data": "Training metrics should alert on completion rates, expiry trends, assignment backlogs"
+            },
+            {
+                "metadata": {
+                    "type": "business_context",
+                    "category": "alert_frequency",
+                    "domain": "alert_generation"
+                },
+                "data": "Operational alerts need immediate notification, strategic alerts can be weekly"
+            },
+            {
+                "metadata": {
+                    "type": "business_context",
+                    "category": "breakdown_strategies",
+                    "domain": "alert_generation"
+                },
+                "data": "Percentage-based metrics benefit from breakdown by training type or department"
+            },
+            {
+                "metadata": {
+                    "type": "business_context",
+                    "category": "completion_tracking",
+                    "domain": "alert_generation"
+                },
+                "data": "Completion tracking should include both absolute counts and percentages"
+            }
+        ]
+        
+        # Add knowledge documents to the store
+        self.alert_knowledge_store.add_documents(knowledge_docs)
+        logger.info(f"Added {len(knowledge_docs)} knowledge documents to alert knowledge base")
+
+    def search_alert_knowledge(self, query: str, k: int = 5, search_type: str = "semantic") -> List[Dict]:
+        """Search the alert knowledge base for relevant information.
+        
+        Args:
+            query: Search query string
+            k: Number of results to return
+            search_type: Type of search ("semantic", "bm25", "tfidf", "tfidf_only")
+            
+        Returns:
+            List of search results with content and metadata
+        """
+        try:
+            if search_type == "semantic":
+                results = self.alert_knowledge_store.semantic_search(query, k=k)
+            elif search_type == "bm25":
+                results = self.alert_knowledge_store.semantic_search_with_bm25(query, k=k)
+            elif search_type == "tfidf":
+                results = self.alert_knowledge_store.semantic_search_with_tfidf(query, k=k)
+            elif search_type == "tfidf_only":
+                results = self.alert_knowledge_store.tfidf_search(query, k=k)
+            else:
+                logger.warning(f"Unknown search type: {search_type}, falling back to semantic search")
+                results = self.alert_knowledge_store.semantic_search(query, k=k)
+            
+            logger.info(f"Found {len(results)} knowledge base results for query: {query}")
+            return results
+            
+        except Exception as e:
+            logger.error(f"Error searching alert knowledge base: {str(e)}")
+            return []
+
+    def get_alert_knowledge_store(self) -> DocumentChromaStore:
+        """Get the alert knowledge base document store.
+        
+        Returns:
+            DocumentChromaStore instance for alert knowledge
+        """
+        return self.alert_knowledge_store
 
     async def read_project(self, project_key: str) -> Dict:
         """Read all project files and organize the data."""
@@ -281,6 +514,78 @@ class ProjectReader:
             logger.error(f"Error processing SQL pairs file {sql_pairs_path}: {str(e)}")
             return None
 
+    async def delete_project(self, project_id: str) -> Dict[str, Any]:
+        """Delete all data associated with a project from all document stores.
+        
+        Args:
+            project_id: The project ID to delete
+            
+        Returns:
+            Dictionary containing deletion results for each component
+        """
+        logger.info(f"Starting deletion of project: {project_id}")
+        
+        deletion_results = {
+            "project_id": project_id,
+            "components_deleted": {},
+            "total_documents_deleted": 0,
+            "errors": []
+        }
+        
+        try:
+            # Delete from each component/document store
+            for component_name, component in self.components.items():
+                try:
+                    logger.info(f"Deleting {component_name} data for project: {project_id}")
+                    
+                    # Use the clean method if available
+                    if hasattr(component, 'clean'):
+                        await component.clean(project_id=project_id)
+                        deletion_results["components_deleted"][component_name] = "cleaned"
+                        logger.info(f"Successfully cleaned {component_name} for project: {project_id}")
+                    else:
+                        # Fallback to direct document store deletion
+                        if hasattr(component, '_document_store'):
+                            result = component._document_store.delete_by_project_id(project_id)
+                            deletion_results["components_deleted"][component_name] = result
+                            deletion_results["total_documents_deleted"] += result.get("documents_deleted", 0)
+                            logger.info(f"Successfully deleted {result.get('documents_deleted', 0)} documents from {component_name}")
+                        else:
+                            logger.warning(f"Component {component_name} has no clean method or document store")
+                            deletion_results["components_deleted"][component_name] = "no_clean_method"
+                            
+                except Exception as e:
+                    error_msg = f"Error deleting {component_name} for project {project_id}: {str(e)}"
+                    logger.error(error_msg)
+                    deletion_results["errors"].append(error_msg)
+                    deletion_results["components_deleted"][component_name] = f"error: {str(e)}"
+            
+            # Also delete from any project-specific collections
+            try:
+                project_collection_name = f"project_{project_id}"
+                project_doc_store = DocumentChromaStore(
+                    persistent_client=self.persistent_client,
+                    collection_name=project_collection_name,
+                    tf_idf=True
+                )
+                project_result = project_doc_store.delete_by_project_id(project_id)
+                deletion_results["components_deleted"]["project_collection"] = project_result
+                deletion_results["total_documents_deleted"] += project_result.get("documents_deleted", 0)
+                logger.info(f"Successfully deleted {project_result.get('documents_deleted', 0)} documents from project collection")
+            except Exception as e:
+                error_msg = f"Error deleting project collection for {project_id}: {str(e)}"
+                logger.warning(error_msg)
+                deletion_results["errors"].append(error_msg)
+            
+            logger.info(f"Project deletion completed for {project_id}. Total documents deleted: {deletion_results['total_documents_deleted']}")
+            return deletion_results
+            
+        except Exception as e:
+            error_msg = f"Error during project deletion for {project_id}: {str(e)}"
+            logger.error(error_msg)
+            deletion_results["errors"].append(error_msg)
+            return deletion_results
+
 async def main():
     # Configure logging
     logging.basicConfig(
@@ -300,7 +605,7 @@ async def main():
     reader = ProjectReader(base_path, persistent_client)
     
     # Test projects
-    test_projects = ["cornerstone"]
+    test_projects = ["cve_data"]
     
     for project in test_projects:
         try:
@@ -472,6 +777,57 @@ async def main():
         except Exception as e:
             logger.error(f"Error processing project {project}: {str(e)}")
 
+async def test_delete_project():
+    """Test function to demonstrate project deletion functionality."""
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+
+    persistent_client = chromadb.PersistentClient(
+        path=settings.CHROMA_STORE_PATH
+    )
+
+    # Set up base path
+    base_path = Path("/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/sql_meta")
+    
+    # Initialize reader
+    reader = ProjectReader(base_path, persistent_client)
+    
+    # Test project deletion
+    test_project_id = "cve_data"
+    
+    try:
+        logger.info(f"\n{'='*50}")
+        logger.info(f"Testing project deletion for: {test_project_id}")
+        logger.info(f"{'='*50}")
+        
+        # Delete the project
+        deletion_result = await reader.delete_project(test_project_id)
+        
+        # Print deletion results
+        logger.info(f"\nDeletion Results for project {test_project_id}:")
+        logger.info(f"Total documents deleted: {deletion_result.get('total_documents_deleted', 0)}")
+        logger.info(f"Components processed: {len(deletion_result.get('components_deleted', {}))}")
+        
+        logger.info("\nComponent deletion results:")
+        for component, result in deletion_result.get('components_deleted', {}).items():
+            logger.info(f"  {component}: {result}")
+        
+        if deletion_result.get('errors'):
+            logger.info(f"\nErrors encountered: {len(deletion_result['errors'])}")
+            for error in deletion_result['errors']:
+                logger.error(f"  {error}")
+        else:
+            logger.info("\nNo errors encountered during deletion")
+            
+    except Exception as e:
+        logger.error(f"Error during project deletion test: {str(e)}")
+
 if __name__ == "__main__":
     import asyncio
-    asyncio.run(main()) 
+    asyncio.run(main())
+    
+    # Uncomment the line below to test project deletion
+    # asyncio.run(test_delete_project()) 

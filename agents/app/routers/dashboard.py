@@ -305,7 +305,7 @@ async def get_dashboard_templates() -> Dict[str, DashboardTemplate]:
     """
     try:
         service = get_dashboard_service()
-        templates = service._dashboard_templates
+        templates = service.get_available_templates()
         
         # Convert to response format
         response_templates = {}

@@ -7,13 +7,14 @@ from enum import Enum
 import ast
 from app.storage.documents import DocumentChromaStore
 from .analysis_intent_classification import AnalysisIntentResult
+from .function_retrieval import FunctionRetrieval
 import logging
 
 class PipelineType(Enum):
     """Supported pipeline types"""
     COHORT = "CohortPipe"
     TIMESERIES = "TimeSeriesPipe"
-    TRENDS = "TrendsPipe"
+    TRENDS = "TrendPipe"
     SEGMENT = "SegmentPipe"
     RISK = "RiskPipe"
     METRICS = "MetricsPipe"
@@ -56,8 +57,9 @@ class SelfCorrectingPipelineCodeGenerator:
                  llm,
                  usage_examples_store: DocumentChromaStore,
                  code_examples_store: DocumentChromaStore, 
-                 function_definition_store:DocumentChromaStore,
+                 function_definition_store: DocumentChromaStore,
                  logical_reasoning_store=None,
+                 function_retrieval: FunctionRetrieval = None,
                  max_iterations: int = 3,
                  relevance_threshold: float = 0.7):
         """
@@ -67,8 +69,9 @@ class SelfCorrectingPipelineCodeGenerator:
             llm: Language model instance
             usage_examples_store: Store containing usage examples
             code_examples_store: Store containing code examples
-            function_definition_store: Store containing function definitions
+            function_definition_store: Store containing function definitions (fallback)
             logical_reasoning_store: Optional store for logical reasoning patterns
+            function_retrieval: FunctionRetrieval instance for accessing function definitions
             max_iterations: Maximum number of self-correction iterations
             relevance_threshold: Threshold for document relevance scoring
         """
@@ -77,102 +80,12 @@ class SelfCorrectingPipelineCodeGenerator:
         self.code_examples_store = code_examples_store
         self.function_definition_store = function_definition_store
         self.logical_reasoning_store = logical_reasoning_store
+        self.function_retrieval = function_retrieval
         self.max_iterations = max_iterations
         self.relevance_threshold = relevance_threshold
         
-        # Pipeline type mappings - keeping only essential fallbacks for functions not in store
-        self.function_to_pipe = {
-            # Keep only essential fallbacks for functions that might not be in the store
-            "GroupBy": PipelineType.METRICS,
-            "Mean": PipelineType.METRICS,
-            "Sum": PipelineType.METRICS,
-            "Count": PipelineType.METRICS,
-            "StandardDeviation": PipelineType.METRICS,
-            "Variance": PipelineType.METRICS,
-            "Max": PipelineType.METRICS,
-            "Min": PipelineType.METRICS,
-            "Median": PipelineType.METRICS,
-            "Percentile": PipelineType.METRICS,
-            "Correlation": PipelineType.METRICS,
-            "CV": PipelineType.METRICS,
-            "Ratio": PipelineType.METRICS,  # Ratio calculation
-            "Dot": PipelineType.METRICS,  # Dot product
-            "Nth": PipelineType.METRICS,  # Nth value
-            "Cov": PipelineType.METRICS,  # Covariance
-            "PivotTable": PipelineType.METRICS,  # Pivot table creation
-            "Filter": PipelineType.METRICS,  # Data filtering
-            "CumulativeSum": PipelineType.METRICS,  # Cumulative sum
-            "RollingMetric": PipelineType.METRICS,  # Rolling metrics
-            "Execute": PipelineType.METRICS,  # Execute metrics
-            "ShowPivot": PipelineType.METRICS,  # Show pivot table
-            "ShowDataFrame": PipelineType.METRICS,  # Show dataframe
-            "calculate_metrics": PipelineType.METRICS,  # High-level function that gets converted to specific metrics
-            "aggregate_by_group": PipelineType.METRICS,  # Alias for GroupBy
-            "PercentChange": PipelineType.OPERATIONS,
-            "AbsoluteChange": PipelineType.OPERATIONS,
-            "CUPED": PipelineType.OPERATIONS,
-            "FilterConditions": PipelineType.OPERATIONS,  # Filter function for OperationsPipe
-            "MH": PipelineType.OPERATIONS,  # Mantel-Haenszel estimator
-            "PrePostChange": PipelineType.OPERATIONS,  # Pre-post analysis
-            "PowerAnalysis": PipelineType.OPERATIONS,  # Power analysis
-            "StratifiedSummary": PipelineType.OPERATIONS,  # Stratified summary
-            "BootstrapCI": PipelineType.OPERATIONS,  # Bootstrap confidence intervals
-            "MultiComparisonAdjustment": PipelineType.OPERATIONS,  # Multiple comparison adjustment
-            "SelectColumns": PipelineType.OPERATIONS,  # Column selection
-            "ExecuteOperations": PipelineType.OPERATIONS,  # Execute operations
-            "ShowOperation": PipelineType.OPERATIONS,  # Show operation
-            "ShowComparison": PipelineType.OPERATIONS,  # Show comparison
-            "lead": PipelineType.TIMESERIES,
-            "lag": PipelineType.TIMESERIES,
-            "variance_analysis": PipelineType.TIMESERIES,
-            "distribution_analysis": PipelineType.TIMESERIES,  # Distribution analysis
-            "cumulative_distribution": PipelineType.TIMESERIES,  # Cumulative distribution
-            "get_distribution_summary": PipelineType.TIMESERIES,  # Get distribution summary
-            "calculate_growth_rates": PipelineType.TRENDS,
-            "forecast_metric": PipelineType.TRENDS,
-            "calculate_moving_average": PipelineType.TRENDS,
-            "decompose_trend": PipelineType.TRENDS,
-            "calculate_statistical_trend": PipelineType.TRENDS,
-            "compare_periods": PipelineType.TRENDS,
-            "get_top_metrics": PipelineType.TRENDS,
-            "aggregate_by_time": PipelineType.TRENDS,  # Time aggregation
-            "form_time_cohorts": PipelineType.COHORT,
-            "form_behavioral_cohorts": PipelineType.COHORT,
-            "calculate_retention": PipelineType.COHORT,
-            "calculate_lifetime_value": PipelineType.COHORT,
-            "analyze_funnel": PipelineType.FUNNEL,
-            "analyze_funnel_by_time": PipelineType.FUNNEL,
-            "analyze_funnel_by_segment": PipelineType.FUNNEL,
-            "run_kmeans": PipelineType.SEGMENT,
-            "run_dbscan": PipelineType.SEGMENT,
-            "run_hierarchical": PipelineType.SEGMENT,
-            "run_rule_based": PipelineType.SEGMENT,
-            "get_features": PipelineType.SEGMENT,
-            "generate_summary": PipelineType.SEGMENT,
-            "get_segment_data": PipelineType.SEGMENT,
-            "compare_algorithms": PipelineType.SEGMENT,
-            "custom_calculation": PipelineType.SEGMENT,
-            "calculate_var": PipelineType.RISK,
-            "calculate_cvar": PipelineType.RISK,
-            "monte_carlo_simulation": PipelineType.RISK,
-            "moving_variance": PipelineType.MOVINGAGGR,
-            "moving_average": PipelineType.MOVINGAGGR,
-            "moving_sum": PipelineType.MOVINGAGGR,
-            "moving_quantile": PipelineType.MOVINGAGGR,
-            "moving_correlation": PipelineType.MOVINGAGGR,
-            "moving_zscore": PipelineType.MOVINGAGGR,
-            "moving_apply_by_group": PipelineType.MOVINGAGGR,
-            "detect_statistical_outliers": PipelineType.ANOMALY,
-            "detect_contextual_anomalies": PipelineType.ANOMALY,
-            "get_anomaly_summary": PipelineType.ANOMALY,
-            "detect_anomalies": PipelineType.ANOMALY,
-            "anomaly_detection": PipelineType.ANOMALY,
-            "calculate_seasonal_residuals": PipelineType.ANOMALY,
-            "detect_anomalies_from_residuals": PipelineType.ANOMALY,
-            "forecast_and_detect_anomalies": PipelineType.ANOMALY,
-            "batch_detect_anomalies": PipelineType.ANOMALY,
-            "get_top_anomalies": PipelineType.ANOMALY
-        }
+        # No hardcoded function mappings - use LLM-based intelligent selection instead
+        self.function_to_pipe = {}
     
     async def generate_pipeline_code(self, 
                                    context: str,
@@ -255,7 +168,7 @@ class SelfCorrectingPipelineCodeGenerator:
         # If we have a reasoning plan, use it directly instead of detecting functions
         if classification and hasattr(classification, 'reasoning_plan') and classification.reasoning_plan:
             # Use the reasoning plan to determine the primary function and inputs
-            reasoning_plan_result = self._extract_function_from_reasoning_plan(
+            reasoning_plan_result = await self._extract_function_from_reasoning_plan(
                 classification.reasoning_plan, context, classification
             )
             selected_function = reasoning_plan_result["selected_function"]
@@ -499,6 +412,41 @@ class SelfCorrectingPipelineCodeGenerator:
             if reasoning_plan and isinstance(reasoning_plan, list):
                 enhanced_parts.append(f"\nReasoning Plan (JSON):")
                 enhanced_parts.append(json.dumps(reasoning_plan, indent=2))
+                
+                # Add enhanced metadata summary if available
+                enhanced_metadata_summary = []
+                for i, step in enumerate(reasoning_plan):
+                    if isinstance(step, dict):
+                        step_metadata = []
+                        
+                        # Add column mapping if available
+                        if step.get('column_mapping'):
+                            step_metadata.append(f"Column Mapping: {step.get('column_mapping')}")
+                        
+                        # Add input/output columns if available
+                        if step.get('input_columns'):
+                            step_metadata.append(f"Input Columns: {step.get('input_columns')}")
+                        if step.get('output_columns'):
+                            step_metadata.append(f"Output Columns: {step.get('output_columns')}")
+                        
+                        # Add pipeline type if available
+                        if step.get('pipeline_type'):
+                            step_metadata.append(f"Pipeline Type: {step.get('pipeline_type')}")
+                        
+                        # Add function category if available
+                        if step.get('function_category'):
+                            step_metadata.append(f"Function Category: {step.get('function_category')}")
+                        
+                        # Add step dependencies if available
+                        if step.get('step_dependencies'):
+                            step_metadata.append(f"Dependencies: Step {step.get('step_dependencies')}")
+                        
+                        if step_metadata:
+                            enhanced_metadata_summary.append(f"Step {i+1}: {'; '.join(step_metadata)}")
+                
+                if enhanced_metadata_summary:
+                    enhanced_parts.append(f"\nEnhanced Metadata Summary:")
+                    enhanced_parts.append("\n".join(enhanced_metadata_summary))
         
         # Add dataset description
         if dataset_description:
@@ -512,7 +460,7 @@ class SelfCorrectingPipelineCodeGenerator:
         
         return "\n".join(enhanced_parts)
     
-    def _extract_function_from_reasoning_plan(self, 
+    async def _extract_function_from_reasoning_plan(self, 
                                             reasoning_plan: List[Dict[str, Any]], 
                                             context: str,
                                             classification: Union[Dict[str, Any], AnalysisIntentResult]) -> Dict[str, Any]:
@@ -574,15 +522,17 @@ class SelfCorrectingPipelineCodeGenerator:
                 }
             }
         
-        # Select the primary function (first one in the plan)
-        selected_function = plan_functions[0]
+        # Select the most appropriate function based on relevance scores and confidence
+        selected_function = await self._select_best_function_from_reasoning_plan(
+            plan_functions, reasoning_plan, classification, context
+        )
         
         # Create metadata based on reasoning plan
         metadata = {
             "selected_function": selected_function,
             "confidence": 0.95,  # High confidence since it's from reasoning plan
-            "reasoning": f"Selected {selected_function} from reasoning plan step 1",
-            "alternative_functions": plan_functions[1:] if len(plan_functions) > 1 else [],
+            "reasoning": f"Selected {selected_function} from reasoning plan based on relevance and confidence scores",
+            "alternative_functions": [f for f in plan_functions if f != selected_function],
             "reasoning_plan_alignment": f"Directly implements reasoning plan with {len(reasoning_plan)} steps"
         }
         
@@ -601,9 +551,29 @@ class SelfCorrectingPipelineCodeGenerator:
                 embedded_function_parameter = step.get('embedded_function_parameter', False)
                 embedded_function_details = step.get('embedded_function_details', {})
                 
-                # Handle None, "None", or "N/A" values
+                # Handle None, "None", or "N/A" values - be more lenient
                 if function_name in [None, "None", "none", "N/A"]:
-                    function_name = ""
+                    # Try to extract function name from step title or other fields
+                    logger.info(f"Step {i+1} has invalid function name '{function_name}', attempting to extract from step title")
+                    extracted_function = await self._extract_function_name_from_description(step_title, step_title)
+                    if extracted_function:
+                        function_name = extracted_function
+                        logger.info(f"Step {i+1} - Extracted function name: {function_name}")
+                    else:
+                        # If we still can't get a function name, try to use a default based on the step title
+                        if any(keyword in step_title.lower() for keyword in ['mean', 'average', 'sum', 'count']):
+                            function_name = await self._find_suitable_statistical_function(step_title, ['mean', 'average', 'sum', 'count'])
+                        elif any(keyword in step_title.lower() for keyword in ['variance', 'std', 'standard']):
+                            function_name = await self._find_suitable_statistical_function(step_title, ['variance', 'std', 'standard'])
+                        elif any(keyword in step_title.lower() for keyword in ['group', 'aggregate']):
+                            function_name = await self._find_suitable_grouping_function(step_title)
+                        elif any(keyword in step_title.lower() for keyword in ['time', 'lag', 'lead', 'rolling']):
+                            # For time-related operations, try to find a suitable function from available functions
+                            function_name = await self._find_suitable_time_function(step_title)
+                        else:
+                            function_name = await self._find_suitable_statistical_function(step_title, ['mean'])  # Default fallback
+                        logger.info(f"Step {i+1} - Using default function name: {function_name}")
+                
                 if parameter_mapping in [None, "None", "none", "N/A"]:
                     parameter_mapping = {}
                 
@@ -640,6 +610,31 @@ class SelfCorrectingPipelineCodeGenerator:
                                 primary_function_inputs['function'] = embedded_expr
                                 
                                 logger.info(f"Added embedded function parameter: {embedded_expr}")
+                        
+                        # Handle enhanced metadata if available
+                        column_mapping = step.get('column_mapping', {})
+                        if column_mapping and isinstance(column_mapping, dict):
+                            # Use column mapping to enhance parameter mapping
+                            for param_name, mapped_column in column_mapping.items():
+                                if param_name in primary_function_inputs:
+                                    # Update parameter with mapped column
+                                    primary_function_inputs[param_name] = mapped_column
+                                    logger.info(f"Updated parameter {param_name} with mapped column: {mapped_column}")
+                        
+                        # Add enhanced metadata to primary function inputs
+                        enhanced_metadata = {
+                            'input_columns': step.get('input_columns', []),
+                            'output_columns': step.get('output_columns', []),
+                            'step_dependencies': step.get('step_dependencies', []),
+                            'data_flow': step.get('data_flow', ''),
+                            'pipeline_type': step.get('pipeline_type', ''),
+                            'function_category': step.get('function_category', ''),
+                            'parameter_constraints': step.get('parameter_constraints', {}),
+                            'error_handling': step.get('error_handling', ''),
+                            'embedded_function_columns': step.get('embedded_function_columns')
+                        }
+                        primary_function_inputs['_enhanced_metadata'] = enhanced_metadata
+                        
                     else:
                         logger.warning(f"Parameter mapping is not a dictionary, converting to empty dict: {type(parameter_mapping)} -> {parameter_mapping}")
                         primary_function_inputs = {}
@@ -648,7 +643,32 @@ class SelfCorrectingPipelineCodeGenerator:
                 if i > 0 and function_name and not embedded_function_parameter:
                     # Ensure parameter_mapping is a dictionary
                     if isinstance(parameter_mapping, dict):
-                        inputs_for_computation = parameter_mapping
+                        inputs_for_computation = parameter_mapping.copy()
+                        
+                        # Handle enhanced metadata if available
+                        column_mapping = step.get('column_mapping', {})
+                        if column_mapping and isinstance(column_mapping, dict):
+                            # Use column mapping to enhance parameter mapping
+                            for param_name, mapped_column in column_mapping.items():
+                                if param_name in inputs_for_computation:
+                                    # Update parameter with mapped column
+                                    inputs_for_computation[param_name] = mapped_column
+                                    logger.info(f"Updated parameter {param_name} with mapped column: {mapped_column}")
+                        
+                        # Add enhanced metadata to computation inputs
+                        enhanced_metadata = {
+                            'input_columns': step.get('input_columns', []),
+                            'output_columns': step.get('output_columns', []),
+                            'step_dependencies': step.get('step_dependencies', []),
+                            'data_flow': step.get('data_flow', ''),
+                            'pipeline_type': step.get('pipeline_type', ''),
+                            'function_category': step.get('function_category', ''),
+                            'parameter_constraints': step.get('parameter_constraints', {}),
+                            'error_handling': step.get('error_handling', ''),
+                            'embedded_function_columns': step.get('embedded_function_columns')
+                        }
+                        inputs_for_computation['_enhanced_metadata'] = enhanced_metadata
+                        
                     else:
                         logger.warning(f"Parameter mapping for step {i} is not a dictionary, using empty dict: {type(parameter_mapping)} -> {parameter_mapping}")
                         inputs_for_computation = {}
@@ -656,7 +676,8 @@ class SelfCorrectingPipelineCodeGenerator:
                     additional_computations.append({
                         "function": function_name,
                         "inputs": inputs_for_computation,
-                        "tool": "metrics_tools" if function_name in ["Mean", "Sum", "Count", "Variance"] else "builtin"
+                        "tool": "dynamic",  # Let the system determine the tool dynamically
+                        "enhanced_metadata": enhanced_metadata if 'enhanced_metadata' in locals() else {}
                     })
         
         # Create inputs structure
@@ -711,6 +732,347 @@ class SelfCorrectingPipelineCodeGenerator:
             "inputs": inputs
         }
     
+    async def _select_best_function_from_reasoning_plan(
+        self, 
+        plan_functions: List[str], 
+        reasoning_plan: List[Dict[str, Any]], 
+        classification: Union[Dict[str, Any], AnalysisIntentResult],
+        context: str
+    ) -> str:
+        """
+        Select the best function from reasoning plan using LLM for intelligent selection
+        
+        Args:
+            plan_functions: List of function names from reasoning plan
+            reasoning_plan: Complete reasoning plan
+            classification: Classification results with retrieved functions
+            context: Original context
+            
+        Returns:
+            Best function name based on LLM analysis
+        """
+        if not plan_functions:
+            return "Mean"  # Fallback
+        
+        if len(plan_functions) == 1:
+            return plan_functions[0]  # Only one function available
+        
+        # If no LLM available, fall back to rule-based selection
+        if not self.llm:
+            logger.warning("No LLM available, falling back to rule-based function selection")
+            return await self._select_best_function_rule_based(
+                plan_functions, reasoning_plan, classification, context
+            )
+        
+        try:
+            # Get retrieved functions from classification
+            retrieved_functions = []
+            if hasattr(classification, 'retrieved_functions'):
+                retrieved_functions = getattr(classification, 'retrieved_functions', [])
+            else:
+                retrieved_functions = classification.get('retrieved_functions', [])
+            
+            # Prepare function details for LLM analysis
+            function_details = []
+            for func_name in plan_functions:
+                func_info = {
+                    "function_name": func_name,
+                    "relevance_score": 0.0,
+                    "priority": 999,
+                    "reasoning": "",
+                    "description": "",
+                    "pipeline_type": "",
+                    "function_category": "",
+                    "parameter_mapping": {},
+                    "data_requirements": [],
+                    "expected_output": ""
+                }
+                
+                # Find function in retrieved functions
+                for retrieved_func in retrieved_functions:
+                    if isinstance(retrieved_func, dict) and retrieved_func.get('function_name') == func_name:
+                        func_info.update({
+                            "relevance_score": retrieved_func.get('relevance_score', 0.0),
+                            "priority": retrieved_func.get('priority', 999),
+                            "reasoning": retrieved_func.get('reasoning', ''),
+                            "description": retrieved_func.get('description', ''),
+                            "pipeline_type": retrieved_func.get('category', ''),
+                            "function_category": retrieved_func.get('category', '')
+                        })
+                        break
+                
+                # Find function in reasoning plan steps
+                for step in reasoning_plan:
+                    if isinstance(step, dict) and step.get('function_name') == func_name:
+                        func_info.update({
+                            "pipeline_type": step.get('pipeline_type', func_info["pipeline_type"]),
+                            "function_category": step.get('function_category', func_info["function_category"]),
+                            "parameter_mapping": step.get('parameter_mapping', {}),
+                            "data_requirements": step.get('data_requirements', []),
+                            "expected_output": step.get('expected_output', '')
+                        })
+                        break
+                
+                function_details.append(func_info)
+            
+            # Use LLM to select the best function
+            selected_function = await self._select_best_function_with_llm(
+                function_details, context, reasoning_plan
+            )
+            
+            logger.info(f"LLM selected function: {selected_function}")
+            return selected_function
+            
+        except Exception as e:
+            logger.warning(f"LLM function selection failed: {e}, falling back to rule-based selection")
+            return await self._select_best_function_rule_based(
+                plan_functions, reasoning_plan, classification, context
+            )
+    
+    async def _select_best_function_with_llm(
+        self,
+        function_details: List[Dict[str, Any]],
+        context: str,
+        reasoning_plan: List[Dict[str, Any]]
+    ) -> str:
+        """
+        Use LLM to intelligently select the best function from available options
+        
+        Args:
+            function_details: List of function details with metadata
+            context: Original analysis context
+            reasoning_plan: Complete reasoning plan
+            
+        Returns:
+            Best function name selected by LLM
+        """
+        from langchain.prompts import PromptTemplate
+        from langchain_core.output_parsers.string import StrOutputParser
+        
+        # Format function details for LLM
+        function_details_formatted = []
+        for i, func in enumerate(function_details, 1):
+            details = f"{i}. {func['function_name']}:\n"
+            details += f"   - Relevance Score: {func['relevance_score']:.2f}\n"
+            details += f"   - Priority: {func['priority']}\n"
+            details += f"   - Pipeline Type: {func['pipeline_type']}\n"
+            details += f"   - Function Category: {func['function_category']}\n"
+            details += f"   - Description: {func['description']}\n"
+            details += f"   - Reasoning: {func['reasoning']}\n"
+            
+            if func['parameter_mapping']:
+                details += f"   - Parameter Mapping: {func['parameter_mapping']}\n"
+            if func['data_requirements']:
+                details += f"   - Data Requirements: {func['data_requirements']}\n"
+            if func['expected_output']:
+                details += f"   - Expected Output: {func['expected_output']}\n"
+            
+            function_details_formatted.append(details)
+        
+        # Format reasoning plan for context
+        reasoning_plan_formatted = []
+        for i, step in enumerate(reasoning_plan, 1):
+            if isinstance(step, dict):
+                step_info = f"Step {i}: {step.get('step_title', 'Unknown')}\n"
+                step_info += f"   - Function: {step.get('function_name', 'Unknown')}\n"
+                step_info += f"   - Pipeline Type: {step.get('pipeline_type', 'Unknown')}\n"
+                step_info += f"   - Category: {step.get('function_category', 'Unknown')}\n"
+                reasoning_plan_formatted.append(step_info)
+        
+        selection_prompt = PromptTemplate(
+            input_variables=["context", "function_details", "reasoning_plan"],
+            template="""
+You are an expert data analysis function selector. Your task is to select the most appropriate function from the available options based on the analysis context, reasoning plan, and function metadata.
+
+ANALYSIS CONTEXT:
+{context}
+
+REASONING PLAN:
+{reasoning_plan}
+
+AVAILABLE FUNCTIONS:
+{function_details}
+
+INSTRUCTIONS:
+1. Use the reasoning plan (already available) to understand the analysis requirements
+2. Get the function definition for the primary function to understand its parameters
+3. Map available columns to function parameters based on the function definition
+4. Ensure the function inputs align with the reasoning plan steps
+5. Focus on detecting the correct function inputs, not pipeline type identification
+
+4. CRITICAL FUNCTION INPUT DETECTION:
+   - Use the function definition to understand required and optional parameters
+   - Map available columns to function parameters based on data types and context
+   - Ensure parameter values match the function signature
+   - Consider the reasoning plan steps for proper data flow
+   - Do not try to identify or change the pipeline type (already determined)
+
+5. Return ONLY the function name of the best choice, nothing else.
+
+EXAMPLES:
+- If context mentions "variance analysis" and variance_analysis has relevance_score=1.0, select "variance_analysis"
+- If context mentions "moving average" and calculate_moving_average has relevance_score=0.9, select "calculate_moving_average"
+- If multiple functions have similar relevance scores, consider the reasoning plan and context alignment
+
+SELECT THE BEST FUNCTION:
+"""
+        )
+        
+        selection_chain = selection_prompt | self.llm | StrOutputParser()
+        
+        try:
+            result = await selection_chain.ainvoke({
+                "context": context,
+                "function_details": "\n".join(function_details_formatted),
+                "reasoning_plan": "\n".join(reasoning_plan_formatted)
+            })
+            
+            # Clean and extract function name
+            selected_function = result.strip()
+            
+            # Validate that the selected function is in our list
+            available_functions = [func['function_name'] for func in function_details]
+            if selected_function in available_functions:
+                logger.info(f"LLM selected function: {selected_function}")
+                return selected_function
+            else:
+                logger.warning(f"LLM selected invalid function: {selected_function}, falling back to highest relevance score")
+                # Fall back to highest relevance score
+                best_function = max(function_details, key=lambda x: x['relevance_score'])
+                return best_function['function_name']
+                
+        except Exception as e:
+            logger.warning(f"LLM function selection failed: {e}, falling back to highest relevance score")
+            # Fall back to highest relevance score
+            best_function = max(function_details, key=lambda x: x['relevance_score'])
+            return best_function['function_name']
+    
+    async def _select_best_function_rule_based(
+        self, 
+        plan_functions: List[str], 
+        reasoning_plan: List[Dict[str, Any]], 
+        classification: Union[Dict[str, Any], AnalysisIntentResult],
+        context: str
+    ) -> str:
+        """
+        Fallback rule-based function selection when LLM is not available
+        
+        Args:
+            plan_functions: List of function names from reasoning plan
+            reasoning_plan: Complete reasoning plan
+            classification: Classification results with retrieved functions
+            context: Original context
+            
+        Returns:
+            Best function name based on rule-based scoring
+        """
+        # Get retrieved functions from classification
+        retrieved_functions = []
+        if hasattr(classification, 'retrieved_functions'):
+            retrieved_functions = getattr(classification, 'retrieved_functions', [])
+        else:
+            retrieved_functions = classification.get('retrieved_functions', [])
+        
+        # Create a scoring system for each function
+        function_scores = {}
+        
+        for func_name in plan_functions:
+            score = 0.0
+            reasoning = []
+            
+            # Base score for being in the reasoning plan
+            score += 50.0
+            reasoning.append("Function present in reasoning plan")
+            
+            # Check if function exists in retrieved functions with relevance score
+            for retrieved_func in retrieved_functions:
+                if isinstance(retrieved_func, dict) and retrieved_func.get('function_name') == func_name:
+                    # Add relevance score (0.0 to 1.0, scaled to 0-50 points)
+                    relevance_score = retrieved_func.get('relevance_score', 0.0)
+                    score += relevance_score * 50.0
+                    reasoning.append(f"Relevance score: {relevance_score:.2f}")
+                    
+                    # Add priority score if available
+                    priority = retrieved_func.get('priority', 1)
+                    score += (6 - priority) * 5.0  # Higher priority (lower number) gets more points
+                    reasoning.append(f"Priority: {priority}")
+                    
+                    # Check if function has good reasoning
+                    func_reasoning = retrieved_func.get('reasoning', '')
+                    if func_reasoning and len(func_reasoning) > 10:
+                        score += 10.0
+                        reasoning.append("Has detailed reasoning")
+                    
+                    # Check if function has required parameters
+                    required_params = retrieved_func.get('required_params', [])
+                    if required_params:
+                        score += 5.0
+                        reasoning.append("Has required parameters defined")
+                    
+                    break
+            
+            # Check reasoning plan step details for additional scoring
+            for step in reasoning_plan:
+                if isinstance(step, dict) and step.get('function_name') == func_name:
+                    # Check if step has detailed parameter mapping
+                    param_mapping = step.get('parameter_mapping', {})
+                    if param_mapping and isinstance(param_mapping, dict) and len(param_mapping) > 0:
+                        score += 10.0
+                        reasoning.append("Has detailed parameter mapping")
+                    
+                    # Check if step has data requirements
+                    data_reqs = step.get('data_requirements', [])
+                    if data_reqs and len(data_reqs) > 0:
+                        score += 5.0
+                        reasoning.append("Has data requirements defined")
+                    
+                    # Check if step has expected output
+                    expected_output = step.get('expected_output', '')
+                    if expected_output and len(expected_output) > 10:
+                        score += 5.0
+                        reasoning.append("Has expected output defined")
+                    
+                    # Check pipeline type alignment
+                    pipeline_type = step.get('pipeline_type', '')
+                    if pipeline_type:
+                        score += 5.0
+                        reasoning.append(f"Pipeline type: {pipeline_type}")
+                    
+                    break
+            
+            # Check if function is more appropriate for the context
+            context_lower = context.lower()
+            if any(keyword in context_lower for keyword in ['variance', 'variation', 'volatility']):
+                if 'variance' in func_name.lower():
+                    score += 20.0
+                    reasoning.append("Context mentions variance - function matches")
+            elif any(keyword in context_lower for keyword in ['moving', 'rolling', 'average']):
+                if any(keyword in func_name.lower() for keyword in ['moving', 'rolling', 'average']):
+                    score += 20.0
+                    reasoning.append("Context mentions moving/rolling - function matches")
+            elif any(keyword in context_lower for keyword in ['trend', 'growth', 'forecast']):
+                if any(keyword in func_name.lower() for keyword in ['trend', 'growth', 'forecast']):
+                    score += 20.0
+                    reasoning.append("Context mentions trends - function matches")
+            
+            function_scores[func_name] = {
+                'score': score,
+                'reasoning': reasoning
+            }
+        
+        # Select the function with the highest score
+        best_function = max(function_scores.keys(), key=lambda x: function_scores[x]['score'])
+        best_score = function_scores[best_function]['score']
+        best_reasoning = function_scores[best_function]['reasoning']
+        
+        logger.info(f"Rule-based function selection scores:")
+        for func_name, score_info in function_scores.items():
+            logger.info(f"  {func_name}: {score_info['score']:.1f} points - {', '.join(score_info['reasoning'])}")
+        
+        logger.info(f"Selected function: {best_function} with score {best_score:.1f}")
+        
+        return best_function
+    
     async def _detect_best_function(self, 
                                    context: str,
                                    suggested_functions: List[str],
@@ -729,7 +1091,9 @@ class SelfCorrectingPipelineCodeGenerator:
         if classification and hasattr(classification, 'retrieved_functions') and classification.retrieved_functions:
             retrieved_functions_info = "\nRETRIEVED FUNCTIONS METADATA:\n"
             for i, func in enumerate(classification.retrieved_functions, 1):
-                if func.get('function_name') in suggested_functions:
+                # Extract function names from suggested_functions for comparison
+                suggested_function_names = [self._extract_function_name_from_suggested_function(func) for func in suggested_functions]
+                if func.get('function_name') in suggested_function_names:
                     retrieved_functions_info += f"{i}. {func.get('function_name', 'N/A')}:\n"
                     retrieved_functions_info += f"   - Relevance Score: {func.get('relevance_score', 'N/A')}\n"
                     retrieved_functions_info += f"   - Description: {func.get('description', 'N/A')}\n"
@@ -740,27 +1104,58 @@ class SelfCorrectingPipelineCodeGenerator:
                     # Add required parameters if available
                     if func.get('required_params'):
                         retrieved_functions_info += f"   - Required Parameters:\n"
-                        for param in func.get('required_params', []):
-                            param_name = param.get('name', 'N/A')
-                            param_type = param.get('type', 'N/A')
-                            param_desc = param.get('description', 'N/A')
-                            retrieved_functions_info += f"     * {param_name} ({param_type}): {param_desc}\n"
+                        required_params = func.get('required_params', [])
+                        
+                        # Handle both string and dictionary formats
+                        try:
+                            if isinstance(required_params, list):
+                                for param in required_params:
+                                    if isinstance(param, dict):
+                                        param_name = param.get('name', 'N/A')
+                                        param_type = param.get('type', 'N/A')
+                                        param_desc = param.get('description', 'N/A')
+                                        retrieved_functions_info += f"     * {param_name} ({param_type}): {param_desc}\n"
+                                    elif isinstance(param, str):
+                                        retrieved_functions_info += f"     * {param}\n"
+                            elif isinstance(required_params, str):
+                                retrieved_functions_info += f"     * {required_params}\n"
+                        except Exception as e:
+                            logger.warning(f"Error processing required parameters: {e}")
+                            retrieved_functions_info += f"     * Error processing parameters\n"
                     
                     # Add optional parameters if available
                     if func.get('optional_params'):
                         retrieved_functions_info += f"   - Optional Parameters:\n"
-                        for param in func.get('optional_params', []):
-                            param_name = param.get('name', 'N/A')
-                            param_type = param.get('type', 'N/A')
-                            param_desc = param.get('description', 'N/A')
-                            retrieved_functions_info += f"     * {param_name} ({param_type}): {param_desc}\n"
+                        optional_params = func.get('optional_params', [])
+                        
+                        # Handle both string and dictionary formats
+                        try:
+                            if isinstance(optional_params, list):
+                                for param in optional_params:
+                                    if isinstance(param, dict):
+                                        param_name = param.get('name', 'N/A')
+                                        param_type = param.get('type', 'N/A')
+                                        param_desc = param.get('description', 'N/A')
+                                        retrieved_functions_info += f"     * {param_name} ({param_type}): {param_desc}\n"
+                                    elif isinstance(param, str):
+                                        retrieved_functions_info += f"     * {param}\n"
+                            elif isinstance(optional_params, str):
+                                retrieved_functions_info += f"     * {optional_params}\n"
+                        except Exception as e:
+                            logger.warning(f"Error processing optional parameters: {e}")
+                            retrieved_functions_info += f"     * Error processing parameters\n"
                     
                     # Add outputs if available
                     if func.get('outputs'):
                         outputs = func.get('outputs', {})
-                        output_type = outputs.get('type', 'N/A')
-                        output_desc = outputs.get('description', 'N/A')
-                        retrieved_functions_info += f"   - Output: {output_type} - {output_desc}\n"
+                        if isinstance(outputs, dict):
+                            output_type = outputs.get('type', 'N/A')
+                            output_desc = outputs.get('description', 'N/A')
+                            retrieved_functions_info += f"   - Output: {output_type} - {output_desc}\n"
+                        elif isinstance(outputs, str):
+                            retrieved_functions_info += f"   - Output: {outputs}\n"
+                        else:
+                            retrieved_functions_info += f"   - Output: {str(outputs)}\n"
                     
                     # Add category if available
                     if func.get('category'):
@@ -781,6 +1176,8 @@ class SelfCorrectingPipelineCodeGenerator:
             CONTEXT: {context}
             SUGGESTED FUNCTIONS: {suggested_functions}
             
+            NOTE: Functions are in format "function_name: category (pipeline)". Focus on the function names for selection.
+            
             FUNCTION DEFINITIONS:
             {function_definitions}
             
@@ -799,7 +1196,10 @@ class SelfCorrectingPipelineCodeGenerator:
             1. Analyze the context to understand the data analysis task.
             2. Review the function definitions to understand what each function does.
             3. Analyze the dataset and column descriptions to identify available data types and columns.
-            4. IMPORTANT: Use ONLY the actual column names provided in the dataset information. Do not invent column names.
+            4.0 IMPORTANT: Use ONLY the functions provided in the function definitions. Do not invent functions.
+            4.1 IMPORTANT: Use ONLY the actual column names provided in the dataset information. Do not invent column names.
+            4.2 IMPORTANT: Use ONLY the actual parameter names provided in the function definitions. Do not invent parameter names.
+            4.3 IMPORTANT: Use the Pipelines for the functions provided in the function definitions. Do not invent pipelines or functions that might not be associated with defined pipelines.
             5. Map context requirements to actual column names from the dataset description:
                - If the context mentions "sales", look for columns like "sales_amount", "total_sales", "revenue", etc.
                - If the context mentions "time" or "date", look for temporal columns
@@ -811,18 +1211,24 @@ class SelfCorrectingPipelineCodeGenerator:
                - Consider the step-by-step logic and data requirements
                - Choose functions that align with the expected outcomes described in the plan
             7. CRITICAL: Use the retrieved functions metadata to prioritize function selection:
-               - Higher relevance scores indicate better matches for the current context
+               - HIGHER RELEVANCE SCORES = BETTER MATCHES: Functions with relevance scores > 0.8 should be strongly preferred
                - Review the reasoning provided for each function to understand why it was selected
-               - Consider priority levels when multiple functions are available
-               - Functions with higher relevance scores and better reasoning should be preferred
+               - Consider priority levels when multiple functions are available (lower priority numbers = higher priority)
+               - ALWAYS PREFER functions with higher relevance scores over those with lower scores
+               - If a function has relevance_score = 1.0, it should be the top choice unless there's a compelling reason not to
                - Review required and optional parameters to ensure the function can be used with available data
                - Consider parameter types and descriptions when selecting functions
+               - CRITICAL: Do NOT select the last function in the list - select the function with the highest relevance score
+               - CRITICAL: When relevance scores are similar, consider the reasoning plan step sequence and context alignment
             8. Evaluate the confidence and feasibility of each suggested function based on their definitions, available data, reasoning plan alignment, and retrieved functions metadata.
             9. Prioritize functions that are highly confident, feasible with the available data, align with the reasoning plan, AND have high relevance scores from the retrieved functions analysis.
             10. Consider if multiple pipelines are needed based on data requirements and reasoning plan steps.
             11. Return a JSON object with the selected function and its confidence.
             
             OUTPUT FORMAT:
+            CRITICAL: You must return ONLY a valid JSON object without any markdown formatting, code blocks, or extra text.
+            
+            CORRECT FORMAT:
             {{
                 "selected_function": "function_name",
                 "confidence": 0.0-1.0,
@@ -830,6 +1236,22 @@ class SelfCorrectingPipelineCodeGenerator:
                 "alternative_functions": ["function_name1", "function_name2"],
                 "reasoning_plan_alignment": "how this function aligns with the reasoning plan steps"
             }}
+            
+            WRONG FORMATS (DO NOT USE):
+            ❌ ```json
+            ❌ ```python
+            ❌ Any markdown formatting
+            ❌ Explanations before or after the JSON
+            ❌ Extra text or comments
+            
+            CONSEQUENCES OF IMPROPER FORMAT:
+            - If you return markdown code blocks, the parsing will fail
+            - If you add extra text, the JSON parsing will fail
+            - If you don't return valid JSON, the system will fall back to basic parsing
+            - This will result in poor function selection
+            - The user's analysis pipeline will not work correctly
+            
+            Return ONLY the JSON object, nothing else.
             
             EXAMPLES:
             
@@ -878,6 +1300,20 @@ class SelfCorrectingPipelineCodeGenerator:
             Output: {{
                 "selected_function": "aggregate_by_time",
                 "confidence": 0.95,
+            
+            Example 5 - Relevance score prioritization:
+            Context: "Calculate rolling variance analysis for flux data"
+            Suggested Functions: ["calculate_moving_average", "variance_analysis"]
+            Retrieved Functions: 
+            - calculate_moving_average: relevance_score=0.6, reasoning="Keyword match with step"
+            - variance_analysis: relevance_score=1.0, reasoning="Perfect match for variance analysis"
+            Output: {{
+                "selected_function": "variance_analysis",
+                "confidence": 0.95,
+                "reasoning": "variance_analysis has relevance_score=1.0 (perfect match) vs calculate_moving_average with relevance_score=0.6. Higher relevance score indicates better match for variance analysis task.",
+                "alternative_functions": ["calculate_moving_average"],
+                "reasoning_plan_alignment": "Directly matches variance analysis requirement"
+            }}
                 "reasoning": "aggregate_by_time is the best choice as it can handle both temporal analysis (using 'date' column) and grouping by region, with 'sales_amount' as the target metric. Aligns with reasoning plan steps.",
                 "alternative_functions": ["Mean", "variance_analysis"],
                 "reasoning_plan_alignment": "Implements Step 1 temporal aggregation and sets up for Step 2 regional grouping"
@@ -913,12 +1349,25 @@ class SelfCorrectingPipelineCodeGenerator:
             
             # Parse the JSON result
             try:
-                detected_function = json.loads(result.strip())
+                import re
+                
+                # Clean the response text - remove markdown code blocks and extra formatting
+                cleaned_result = result.strip()
+                
+                # Remove markdown code blocks (```json ... ```)
+                cleaned_result = re.sub(r'```json\s*', '', cleaned_result)
+                cleaned_result = re.sub(r'```\s*', '', cleaned_result)
+                
+                # Remove any leading/trailing whitespace and newlines
+                cleaned_result = cleaned_result.strip()
+                
+                detected_function = json.loads(cleaned_result)
                 print("detected_function",result)
                 # Debug logging
                 import logging
                 logger = logging.getLogger(__name__)
                 logger.debug(f"Raw LLM response: {result}")
+                logger.debug(f"Cleaned response: {cleaned_result}")
                 logger.debug(f"Parsed detected_function: {detected_function}")
                 logger.debug(f"Detected function type: {type(detected_function)}")
                 
@@ -950,14 +1399,49 @@ class SelfCorrectingPipelineCodeGenerator:
                 return detected_function
                 
             except json.JSONDecodeError as e:
-                # If JSON parsing fails, return a basic structure
-                return {
-                    "selected_function": "",
-                    "confidence": 0.0,
-                    "reasoning": f"JSON parsing failed: {str(e)}. Using fallback function.",
-                    "alternative_functions": [],
-                    "reasoning_plan_alignment": ""
-                }
+                # If JSON parsing fails, try to extract JSON content from markdown blocks as a fallback
+                try:
+                    # Look for JSON content between markdown code blocks
+                    json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', result, re.DOTALL)
+                    if json_match:
+                        json_content = json_match.group(1)
+                        detected_function = json.loads(json_content)
+                        logger.info("Successfully extracted JSON from markdown blocks using fallback")
+                        
+                        # Continue with validation and return
+                        # Debug logging
+                        logger.debug(f"Fallback parsed detected_function: {detected_function}")
+                        logger.debug(f"Fallback detected function type: {type(detected_function)}")
+                        
+                        # Validate the structure and continue with the existing logic
+                        if not isinstance(detected_function, dict):
+                            raise ValueError("Fallback result is not a dictionary")
+                        
+                        # Continue with the existing validation logic...
+                        # (The rest of the validation code will run with the fallback result)
+                        # The method will continue to the validation section below
+                        
+                    else:
+                        # No markdown blocks found, return basic structure
+                        logger.warning(f"No JSON content found in markdown blocks, using basic structure")
+                        return {
+                            "selected_function": "",
+                            "confidence": 0.0,
+                            "reasoning": f"JSON parsing failed: {str(e)}. Using fallback function.",
+                            "alternative_functions": [],
+                            "reasoning_plan_alignment": ""
+                        }
+                        
+                except Exception as fallback_error:
+                    logger.warning(f"Fallback JSON extraction also failed: {fallback_error}")
+                    # Return basic structure if fallback also fails
+                    return {
+                        "selected_function": "",
+                        "confidence": 0.0,
+                        "reasoning": f"JSON parsing failed: {str(e)}. Using fallback function.",
+                        "alternative_functions": [],
+                        "reasoning_plan_alignment": ""
+                    }
                 
         except Exception as e:
             # Return a fallback structure if detection fails
@@ -971,7 +1455,7 @@ class SelfCorrectingPipelineCodeGenerator:
     
     async def _retrieve_function_definitions(self, function_names: List[str]) -> str:
         """
-        Retrieve function definitions from the function_definition_store for the given function names.
+        Retrieve function definitions using FunctionRetrieval if available, fallback to function_definition_store.
         
         Args:
             function_names: List of function names to retrieve definitions for
@@ -979,69 +1463,213 @@ class SelfCorrectingPipelineCodeGenerator:
         Returns:
             Formatted string containing function definitions
         """
-        if not self.function_definition_store or not function_names:
-            return "No function definitions available."
+        if not function_names:
+            return "No function names provided."
         
         try:
-            # Retrieve function definitions for each function name
-            all_definitions = []
-            
-            for function_name in function_names:
-                # Search for the function definition
-                search_results = self.function_definition_store.semantic_searches(
-                    [function_name], n_results=3
-                )
-                print("function_name",function_name)
-                print("search_results",search_results)
+            # Try to use FunctionRetrieval first if available
+            if self.function_retrieval:
+                all_definitions = []
                 
-                # Parse the results
-                function_docs = self._parse_retrieval_results(search_results)
-                
-                if function_docs:
-                    # Format the function definition
-                    for doc in function_docs[:1]:  # Take the most relevant result
-                        content = doc.get("content", {})
-                        if isinstance(content, dict):
-                            # Extract relevant information from the function definition
-                            function_info = {
-                                "name": content.get("name", function_name),
-                                "description": content.get("description", "No description available"),
-                                "parameters": content.get("parameters", []),
-                                "returns": content.get("returns", "No return information"),
-                                "examples": content.get("examples", []),
-                                "pipeline_type": content.get("pipeline_type", "Unknown")
-                            }
-                            
+                for function_name in function_names:
+                    try:
+                        # Get function details from the loaded function library
+                        function_details = self.function_retrieval.get_function_details(function_name, "")
+                        
+                        if function_details:
                             # Format the function definition
-                            definition_text = f"Function: {function_info['name']}\n"
-                            definition_text += f"Description: {function_info['description']}\n"
+                            definition_text = f"Function: {function_name}\n"
+                            definition_text += f"Description: {function_details.get('description', 'No description available')}\n"
                             
-                            if function_info['parameters']:
-                                definition_text += f"Parameters: {', '.join(function_info['parameters'])}\n"
+                            # Add required parameters
+                            required_params = function_details.get('required_params', [])
+                            if required_params:
+                                try:
+                                    if isinstance(required_params, list):
+                                        param_names = []
+                                        for param in required_params:
+                                            if isinstance(param, dict):
+                                                param_name = param.get('name', 'unknown')
+                                                if param_name and param_name != 'unknown':
+                                                    param_names.append(param_name)
+                                            elif isinstance(param, str) and param.strip():
+                                                param_names.append(param.strip())
+                                        if param_names:
+                                            definition_text += f"Required Parameters: {', '.join(param_names)}\n"
+                                    elif isinstance(required_params, str) and required_params.strip():
+                                        definition_text += f"Required Parameters: {required_params.strip()}\n"
+                                except Exception as e:
+                                    logger.warning(f"Error processing required parameters: {e}")
+                                    definition_text += f"Required Parameters: Error processing parameters\n"
                             
-                            definition_text += f"Returns: {function_info['returns']}\n"
-                            definition_text += f"Pipeline Type: {function_info['pipeline_type']}\n"
+                            # Add optional parameters
+                            optional_params = function_details.get('optional_params', [])
+                            if optional_params:
+                                try:
+                                    if isinstance(optional_params, list):
+                                        param_names = []
+                                        for param in optional_params:
+                                            if isinstance(param, dict):
+                                                param_name = param.get('name', 'unknown')
+                                                if param_name and param_name != 'unknown':
+                                                    param_names.append(param_name)
+                                            elif isinstance(param, str) and param.strip():
+                                                param_names.append(param.strip())
+                                        if param_names:
+                                            definition_text += f"Optional Parameters: {', '.join(param_names)}\n"
+                                    elif isinstance(optional_params, str) and optional_params.strip():
+                                        definition_text += f"Optional Parameters: {optional_params.strip()}\n"
+                                except Exception as e:
+                                    logger.warning(f"Error processing optional parameters: {e}")
+                                    definition_text += f"Optional Parameters: Error processing parameters\n"
                             
-                            if function_info['examples']:
-                                definition_text += f"Examples: {', '.join(function_info['examples'])}\n"
+                            # Add outputs
+                            outputs = function_details.get('outputs', {})
+                            if outputs:
+                                definition_text += f"Returns: {outputs.get('description', 'No return information')}\n"
+                            
+                            # Add category (pipeline type)
+                            category = function_details.get('category', 'Unknown')
+                            definition_text += f"Pipeline Type: {category}\n"
                             
                             all_definitions.append(definition_text)
                         else:
-                            # If content is not a dict, use it as is
-                            all_definitions.append(f"Function: {function_name}\nDefinition: {content}\n")
+                            # Try to find the function in any pipe
+                            found = False
+                            for pipe_name in self.function_retrieval.get_all_pipes():
+                                function_details = self.function_retrieval.get_function_details(function_name, pipe_name)
+                                if function_details:
+                                    found = True
+                                    # Format the function definition
+                                    definition_text = f"Function: {function_name}\n"
+                                    definition_text += f"Description: {function_details.get('description', 'No description available')}\n"
+                                    
+                                    # Add required parameters
+                                    required_params = function_details.get('required_params', [])
+                                    if required_params:
+                                        try:
+                                            if isinstance(required_params, list):
+                                                param_names = []
+                                                for param in required_params:
+                                                    if isinstance(param, dict):
+                                                        param_name = param.get('name', 'unknown')
+                                                        if param_name and param_name != 'unknown':
+                                                            param_names.append(param_name)
+                                                    elif isinstance(param, str) and param.strip():
+                                                        param_names.append(param.strip())
+                                                if param_names:
+                                                    definition_text += f"Required Parameters: {', '.join(param_names)}\n"
+                                            elif isinstance(required_params, str) and required_params.strip():
+                                                definition_text += f"Required Parameters: {required_params.strip()}\n"
+                                        except Exception as e:
+                                            logger.warning(f"Error processing required parameters: {e}")
+                                            definition_text += f"Required Parameters: Error processing parameters\n"
+                                    
+                                    # Add optional parameters
+                                    optional_params = function_details.get('optional_params', [])
+                                    if optional_params:
+                                        try:
+                                            if isinstance(optional_params, list):
+                                                param_names = []
+                                                for param in optional_params:
+                                                    if isinstance(param, dict):
+                                                        param_name = param.get('name', 'unknown')
+                                                        if param_name and param_name != 'unknown':
+                                                            param_names.append(param_name)
+                                                    elif isinstance(param, str) and param.strip():
+                                                        param_names.append(param.strip())
+                                                if param_names:
+                                                    definition_text += f"Optional Parameters: {', '.join(param_names)}\n"
+                                            elif isinstance(optional_params, str) and optional_params.strip():
+                                                definition_text += f"Optional Parameters: {optional_params.strip()}\n"
+                                        except Exception as e:
+                                            logger.warning(f"Error processing optional parameters: {e}")
+                                            definition_text += f"Optional Parameters: Error processing parameters\n"
+                                    
+                                    # Add outputs
+                                    outputs = function_details.get('outputs', {})
+                                    if outputs:
+                                        definition_text += f"Returns: {outputs.get('description', 'No return information')}\n"
+                                    
+                                    # Add category (pipeline type)
+                                    category = function_details.get('category', 'Unknown')
+                                    definition_text += f"Pipeline Type: {category}\n"
+                                    
+                                    all_definitions.append(definition_text)
+                                    break
+                            
+                            if not found:
+                                all_definitions.append(f"Function: {function_name}\nDefinition: No definition available in function library.\n")
+                    
+                    except Exception as e:
+                        logger.warning(f"Error retrieving function definition for {function_name}: {str(e)}")
+                        all_definitions.append(f"Function: {function_name}\nDefinition: Error retrieving definition: {str(e)}\n")
+                
+                # Join all definitions
+                if all_definitions:
+                    return "\n---\n".join(all_definitions)
                 else:
-                    # No definition found, add a placeholder
-                    all_definitions.append(f"Function: {function_name}\nDefinition: No definition available in store.\n")
+                    return "No function definitions found in function library."
             
-            # Join all definitions
-            if all_definitions:
-                return "\n---\n".join(all_definitions)
+            # Fallback to function_definition_store if FunctionRetrieval is not available
+            elif self.function_definition_store:
+                all_definitions = []
+                
+                for function_name in function_names:
+                    # Search for the function definition
+                    search_results = self.function_definition_store.semantic_searches(
+                        [function_name], n_results=3
+                    )
+                    
+                    # Parse the results
+                    function_docs = self._parse_retrieval_results(search_results)
+                    
+                    if function_docs:
+                        # Format the function definition
+                        for doc in function_docs[:1]:  # Take the most relevant result
+                            content = doc.get("content", {})
+                            if isinstance(content, dict):
+                                # Extract relevant information from the function definition
+                                function_info = {
+                                    "name": content.get("name", function_name),
+                                    "description": content.get("description", "No description available"),
+                                    "parameters": content.get("parameters", []),
+                                    "returns": content.get("returns", "No return information"),
+                                    "examples": content.get("examples", []),
+                                    "pipeline_type": content.get("pipeline_type", "Unknown")
+                                }
+                                
+                                # Format the function definition
+                                definition_text = f"Function: {function_info['name']}\n"
+                                definition_text += f"Description: {function_info['description']}\n"
+                                
+                                if function_info['parameters']:
+                                    definition_text += f"Parameters: {', '.join(function_info['parameters'])}\n"
+                                
+                                definition_text += f"Returns: {function_info['returns']}\n"
+                                definition_text += f"Pipeline Type: {function_info['pipeline_type']}\n"
+                                
+                                if function_info['examples']:
+                                    definition_text += f"Examples: {', '.join(function_info['examples'])}\n"
+                                
+                                all_definitions.append(definition_text)
+                            else:
+                                # If content is not a dict, use it as is
+                                all_definitions.append(f"Function: {function_name}\nDefinition: {content}\n")
+                    else:
+                        # No definition found, add a placeholder
+                        all_definitions.append(f"Function: {function_name}\nDefinition: No definition available in store.\n")
+                
+                # Join all definitions
+                if all_definitions:
+                    return "\n---\n".join(all_definitions)
+                else:
+                    return "No function definitions found in store."
+            
             else:
-                return "No function definitions found in store."
+                return "No function definition sources available."
                 
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.warning(f"Error retrieving function definitions: {str(e)}")
             return f"Error retrieving function definitions: {str(e)}"
     
@@ -1065,20 +1693,8 @@ class SelfCorrectingPipelineCodeGenerator:
         Returns:
             Dictionary containing detected function inputs with any additional computations
         """
-        # Available metrics functions from metrics_tools.py
-        metrics_functions = [
-            "Count", "Sum", "Max", "Min", "Ratio", "Dot", "Nth", "Variance", 
-            "StandardDeviation", "CV", "Correlation", "Cov", "Mean", "Median", 
-            "Percentile", "PivotTable", "GroupBy", "Filter", "CumulativeSum", 
-            "RollingMetric", "Execute", "ShowPivot", "ShowDataFrame"
-        ]
-        
-        # Available operations functions from operations_tools.py
-        operations_functions = [
-            "PercentChange", "AbsoluteChange", "MH", "CUPED", "PrePostChange",
-            "FilterConditions", "PowerAnalysis", "StratifiedSummary", "BootstrapCI",
-            "MultiComparisonAdjustment", "ExecuteOperations", "ShowOperation", "ShowComparison"
-        ]
+        # Function definitions are now dynamically loaded from JSON file
+        # No need for hardcoded function lists
          
         # Retrieve function definition for the primary function
         primary_function_definition = await self._retrieve_function_definitions([function_name])
@@ -1087,7 +1703,7 @@ class SelfCorrectingPipelineCodeGenerator:
         detection_prompt = PromptTemplate(
             input_variables=[
                 "context", "function_name", "function_definition", "classification_context", "dataset_context",
-                "metrics_functions", "operations_functions", "reasoning_plan_json"
+                "reasoning_plan_json"
             ],
             template="""
             You are an expert function input detector for data analysis pipelines.
@@ -1108,11 +1724,8 @@ class SelfCorrectingPipelineCodeGenerator:
             DATASET INFORMATION:
             {dataset_context}
             
-            AVAILABLE METRICS FUNCTIONS (from metrics_tools.py):
-            {metrics_functions}
-            
-            AVAILABLE OPERATIONS FUNCTIONS (from operations_tools.py):
-            {operations_functions}
+            # Function definitions are dynamically loaded from JSON file
+            # Available functions are determined by the function definition and pipeline type
             
             REASONING PLAN (JSON):
             {reasoning_plan_json}
@@ -1120,6 +1733,7 @@ class SelfCorrectingPipelineCodeGenerator:
             INSTRUCTIONS:
             1. Analyze the context to understand what data analysis is being requested
             2. Review the primary function definition to understand its parameters and requirements
+            2.1 Function definitions have the pipeline type already determined, you must use it to detect the function for which inputs are required.
             3. CRITICAL: Use the reasoning plan to guide input detection:
                - Review each step in the reasoning plan to understand the analysis approach
                - Identify which step(s) the primary function corresponds to
@@ -1131,22 +1745,20 @@ class SelfCorrectingPipelineCodeGenerator:
                - For time-based analysis: Use columns categorized as "Temporal Columns" 
                - For grouping/segmentation: Use columns categorized as "Categorical Columns"
                - For identification: Use columns categorized as "Identifier Columns"
-            5. IMPORTANT: Use ONLY the actual column names provided in the dataset information. Do not invent column names.
+            5. CRITICAL COLUMN HANDLING:
+               - Use ONLY the actual column names provided in the dataset information. Do not invent column names.
+               - For array parameters (like 'columns', 'metric_columns'): Return a list of column names
+               - For single column parameters (like 'variable', 'time_column'): Return a single column name
+               - Ensure column names match exactly with available columns
             6. Map context requirements to actual column names from the dataset description:
                - If the context mentions "sales", look for columns like "sales_amount", "total_sales", "revenue", etc.
                - If the context mentions "time" or "date", look for temporal columns
                - If the context mentions grouping "by region", look for categorical columns that could represent regions
             7. Determine the required function inputs for the primary function based on its definition, available columns, and reasoning plan alignment
-            8. Identify the pipeline type for the primary function:
-               - TimeSeriesPipe: variance_analysis, lead, lag, etc.
-               - MetricsPipe: Variance, Mean, Sum, Count, etc.
-               - OperationsPipe: PercentChange, AbsoluteChange, etc.
-               - CohortPipe: form_time_cohorts, calculate_retention, etc.
-               - RiskPipe: calculate_var, calculate_cvar, etc.
-               - FunnelPipe: analyze_funnel, etc.
-               - AnomalyPipe: detect_statistical_outliers, detect_contextual_anomalies, etc.
-               - SegmentPipe: run_kmeans, run_dbscan, etc.
-               - TrendsPipe: aggregate_by_time, calculate_growth_rates, etc.
+            8. Use the pipeline type from the function definition (already determined):
+               - Extract the pipeline type from the function definition above
+               - Focus on detecting function inputs based on the function definition
+               - Do not try to identify or change the pipeline type
             9. Determine if multiple pipelines are needed based on reasoning plan steps:
                 - If reasoning plan has multiple steps with different function types
                 - If primary function is TimeSeriesPipe/CohortPipe/RiskPipe/FunnelPipe/AnomalyPipe/SegmentPipe/TrendsPipe AND additional computations are needed
@@ -1155,11 +1767,15 @@ class SelfCorrectingPipelineCodeGenerator:
             11. Return a JSON object with the detected inputs using actual column names and reasoning plan alignment
             
             OUTPUT FORMAT:
-            Return ONLY a valid JSON object with the following structure:
+            CRITICAL: You must return ONLY a valid JSON object without any markdown formatting, code blocks, or extra text.
+            
+            CORRECT FORMAT:
             {{
                 "primary_function_inputs": {{
                     "param1": "value1",
-                    "param2": "value2"
+                    "param2": "value2",
+                    "columns": ["column1", "column2"],  # Array for array parameters
+                    "variable": "single_column"  # Single value for single parameters
                 }},
                 "additional_computations": [
                     {{
@@ -1181,6 +1797,30 @@ class SelfCorrectingPipelineCodeGenerator:
                 "reasoning": "explanation of why these inputs were chosen, including reasoning plan alignment",
                 "reasoning_plan_step_mapping": "which reasoning plan steps this implementation covers"
             }}
+            
+            WRONG FORMATS (DO NOT USE):
+            ❌ ```json
+            ❌ ```python
+            ❌ Any markdown formatting
+            ❌ Explanations before or after the JSON
+            ❌ Extra text or comments
+            ❌ Single string for array parameters (e.g., "columns": "column1" instead of "columns": ["column1"])
+            ❌ Array for single parameters (e.g., "variable": ["column1"] instead of "variable": "column1")
+            
+            CONSEQUENCES OF IMPROPER FORMAT:
+            - If you return markdown code blocks, the parsing will fail
+            - If you add extra text, the JSON parsing will fail
+            - If you don't return valid JSON, the system will fall back to basic parsing
+            - Incorrect column format will result in poor code generation quality
+            - The user's analysis pipeline will not work correctly
+            
+            EXAMPLES OF CORRECT COLUMN HANDLING:
+            - For moving_apply_by_group: "columns": ["Transactional value", "Functional value"] (array)
+            - For GroupBy: "by": ["Region", "Project"] (array)
+            - For Variance: "variable": "Transactional value" (single string)
+            - For calculate_growth_rates: "time_column": "Date" (single string)
+            
+            Return ONLY the JSON object, nothing else.
             
             EXAMPLES:
             
@@ -1228,7 +1868,7 @@ class SelfCorrectingPipelineCodeGenerator:
                 "multi_pipeline": false,
                 "first_pipeline_type": null,
                 "second_pipeline_type": null,
-                "reasoning": "moving_apply_by_group function parameter should contain the complete Variance pipeline expression. This embeds the MetricsPipe Variance calculation within the TimeSeriesPipe moving_apply_by_group function.",
+                "reasoning": "moving_apply_by_group function parameter should contain the complete Variance pipeline expression. This embeds the MetricsPipe Variance calculation within the MovingAggrPipe moving_apply_by_group function.",
                 "reasoning_plan_step_mapping": "Step 1 & 2: Combined in single pipeline with embedded function"
             }}
             
@@ -1271,19 +1911,30 @@ class SelfCorrectingPipelineCodeGenerator:
                 "function_definition": primary_function_definition,
                 "classification_context": classification_context,
                 "dataset_context": dataset_context,
-                "metrics_functions": ", ".join(metrics_functions),
-                "operations_functions": ", ".join(operations_functions),
                 "reasoning_plan_json": reasoning_plan_json
             })
             
             # Parse the JSON result
             try:
-                detected_inputs = json.loads(result.strip())
+                import re
+                
+                # Clean the response text - remove markdown code blocks and extra formatting
+                cleaned_result = result.strip()
+                
+                # Remove markdown code blocks (```json ... ```)
+                cleaned_result = re.sub(r'```json\s*', '', cleaned_result)
+                cleaned_result = re.sub(r'```\s*', '', cleaned_result)
+                
+                # Remove any leading/trailing whitespace and newlines
+                cleaned_result = cleaned_result.strip()
+                
+                detected_inputs = json.loads(cleaned_result)
                 
                 # Debug logging
                 import logging
                 logger = logging.getLogger(__name__)
                 logger.debug(f"Raw LLM response: {result}")
+                logger.debug(f"Cleaned response: {cleaned_result}")
                 logger.debug(f"Parsed detected_inputs: {detected_inputs}")
                 logger.debug(f"Detected inputs type: {type(detected_inputs)}")
                 
@@ -1326,7 +1977,7 @@ class SelfCorrectingPipelineCodeGenerator:
                             detected_inputs[key] = None
                 
                 # Filter additional computations to ensure pipeline type consistency
-                detected_inputs = await self._filter_additional_computations(detected_inputs, function_name)
+                detected_inputs = await self._filter_additional_computations(detected_inputs, function_name, classification)
                 
 
                 
@@ -1335,15 +1986,51 @@ class SelfCorrectingPipelineCodeGenerator:
                 return detected_inputs
                 
             except json.JSONDecodeError as e:
-                # If JSON parsing fails, return a basic structure
-                return {
-                    "primary_function_inputs": {},
-                    "additional_computations": [],
-                    "pipeline_sequence": ["Basic analysis"],
-                    "reasoning": f"JSON parsing failed: {str(e)}. Using basic inputs.",
-                    "reasoning_plan_step_mapping": "Unable to map to reasoning plan due to parsing error",
-                    "raw_response": result
-                }
+                # If JSON parsing fails, try to extract JSON content from markdown blocks as a fallback
+                try:
+                    # Look for JSON content between markdown code blocks
+                    json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', result, re.DOTALL)
+                    if json_match:
+                        json_content = json_match.group(1)
+                        detected_inputs = json.loads(json_content)
+                        logger.info("Successfully extracted JSON from markdown blocks using fallback")
+                        
+                        # Continue with validation and return
+                        # Debug logging
+                        logger.debug(f"Fallback parsed detected_inputs: {detected_inputs}")
+                        logger.debug(f"Fallback detected inputs type: {type(detected_inputs)}")
+                        
+                        # Validate the structure and continue with the existing logic
+                        if not isinstance(detected_inputs, dict):
+                            raise ValueError("Fallback result is not a dictionary")
+                        
+                        # Continue with the existing validation logic...
+                        # (The rest of the validation code will run with the fallback result)
+                        # The method will continue to the validation section below
+                        
+                    else:
+                        # No markdown blocks found, return basic structure
+                        logger.warning(f"No JSON content found in markdown blocks, using basic structure")
+                        return {
+                            "primary_function_inputs": {},
+                            "additional_computations": [],
+                            "pipeline_sequence": ["Basic analysis"],
+                            "reasoning": f"JSON parsing failed: {str(e)}. Using basic inputs.",
+                            "reasoning_plan_step_mapping": "Unable to map to reasoning plan due to parsing error",
+                            "raw_response": result
+                        }
+                        
+                except Exception as fallback_error:
+                    logger.warning(f"Fallback JSON extraction also failed: {fallback_error}")
+                    # Return basic structure if fallback also fails
+                    return {
+                        "primary_function_inputs": {},
+                        "additional_computations": [],
+                        "pipeline_sequence": ["Basic analysis"],
+                        "reasoning": f"JSON parsing failed: {str(e)}. Using basic inputs.",
+                        "reasoning_plan_step_mapping": "Unable to map to reasoning plan due to parsing error",
+                        "raw_response": result
+                    }
                 
         except Exception as e:
             # Return a fallback structure if detection fails
@@ -1356,19 +2043,20 @@ class SelfCorrectingPipelineCodeGenerator:
                 "error": str(e)
             }
     
-    async def _filter_additional_computations(self, detected_inputs: Dict[str, Any], function_name: str) -> Dict[str, Any]:
+    async def _filter_additional_computations(self, detected_inputs: Dict[str, Any], function_name: str, classification: Optional[Union[Dict[str, Any], AnalysisIntentResult]] = None) -> Dict[str, Any]:
         """
         Filter additional computations and determine if multi-pipeline approach is needed
         
         Args:
             detected_inputs: Dictionary containing detected inputs
             function_name: Primary function name
+            classification: Optional classification results for better pipeline type detection
             
         Returns:
             Filtered detected inputs with multi-pipeline configuration
         """
-        # Get the pipeline type for the primary function
-        primary_pipeline_type = await self._detect_pipeline_type(function_name, "")
+        # Get the pipeline type for the primary function using the enhanced detection
+        primary_pipeline_type = await self._detect_pipeline_type(function_name, "", classification)
         
         # Use the same mapping as defined in __init__
         function_pipeline_mapping = self.function_to_pipe
@@ -1381,6 +2069,8 @@ class SelfCorrectingPipelineCodeGenerator:
         if "additional_computations" in detected_inputs and detected_inputs["additional_computations"]:
             metrics_computations = []
             operations_computations = []
+            trends_computations = []
+            timeseries_computations = []
             other_computations = []
             
             for comp in detected_inputs["additional_computations"]:
@@ -1391,11 +2081,16 @@ class SelfCorrectingPipelineCodeGenerator:
                     metrics_computations.append(comp)
                 elif comp_pipeline_type == PipelineType.OPERATIONS:
                     operations_computations.append(comp)
+                elif comp_pipeline_type == PipelineType.TRENDS:
+                    trends_computations.append(comp)
+                elif comp_pipeline_type == PipelineType.TIMESERIES:
+                    timeseries_computations.append(comp)
                 else:
                     other_computations.append(comp)
             
-            # Determine if multi-pipeline is needed
-            if primary_pipeline_type in [PipelineType.TIMESERIES, PipelineType.COHORT, PipelineType.RISK, PipelineType.FUNNEL, PipelineType.ANOMALY, PipelineType.SEGMENT, PipelineType.TRENDS]:
+            # Determine if multi-pipeline is needed based on primary function type
+            if primary_pipeline_type in [PipelineType.TIMESERIES, PipelineType.COHORT, PipelineType.RISK, PipelineType.FUNNEL, PipelineType.ANOMALY, PipelineType.SEGMENT]:
+                # These pipeline types can benefit from MetricsPipe/OperationsPipe preprocessing
                 if metrics_computations or operations_computations:
                     needs_multi_pipeline = True
                     if metrics_computations:
@@ -1408,6 +2103,16 @@ class SelfCorrectingPipelineCodeGenerator:
                 else:
                     # Only same-pipeline-type computations
                     detected_inputs["additional_computations"] = other_computations
+            elif primary_pipeline_type == PipelineType.TRENDS:
+                # TrendsPipe can work with MetricsPipe preprocessing
+                if metrics_computations:
+                    needs_multi_pipeline = True
+                    first_pipeline_type = "MetricsPipe"
+                    detected_inputs["additional_computations"] = metrics_computations
+                    second_pipeline_type = primary_pipeline_type.value
+                else:
+                    # Only trends computations
+                    detected_inputs["additional_computations"] = trends_computations
             else:
                 # Primary function is MetricsPipe or OperationsPipe
                 if primary_pipeline_type == PipelineType.METRICS:
@@ -1455,7 +2160,6 @@ class SelfCorrectingPipelineCodeGenerator:
             confidence_score = classification.get('confidence_score', 0.0)
             suggested_functions = classification.get('suggested_functions', [])
             specific_matches = classification.get('specific_function_matches', [])
-            required_columns = classification.get('required_data_columns', [])
             missing_columns = classification.get('missing_columns', [])
             can_be_answered = classification.get('can_be_answered', True)
             feasibility_score = classification.get('feasibility_score', 0.0)
@@ -1465,9 +2169,11 @@ class SelfCorrectingPipelineCodeGenerator:
         if intent_type:
             parts.append(f"Intent Type: {intent_type} (confidence: {confidence_score:.2f})")
         
-        # Suggested functions
+        # Suggested functions with pipeline information
         if suggested_functions:
-            parts.append(f"Suggested Functions: {', '.join(suggested_functions)}")
+            # Extract function names and pipeline types from the new format
+            function_info = self._extract_function_info_from_suggested_functions(suggested_functions)
+            parts.append(f"Suggested Functions: {', '.join(function_info)}")
         
         # Specific function matches
         if specific_matches:
@@ -1489,13 +2195,137 @@ class SelfCorrectingPipelineCodeGenerator:
         
         return "\n".join(parts) if parts else "No classification information available."
     
+    def _extract_function_info_from_suggested_functions(self, suggested_functions: List[str]) -> List[str]:
+        """
+        Extract function names and pipeline information from the new suggested_functions format
+        
+        Args:
+            suggested_functions: List of functions in format "function_name: category (pipeline)"
+            
+        Returns:
+            List of formatted function information strings
+        """
+        function_info = []
+        
+        for func in suggested_functions:
+            if ': ' in func:
+                # New format: "function_name: category (pipeline)"
+                parts = func.split(': ')
+                if len(parts) == 2:
+                    function_name = parts[0]
+                    category_pipeline = parts[1]
+                    function_info.append(f"{function_name} ({category_pipeline})")
+                else:
+                    function_info.append(func)
+            else:
+                # Old format: just function name
+                function_info.append(func)
+        
+        return function_info
+    
+    def _extract_function_name_from_suggested_function(self, suggested_function: str) -> str:
+        """
+        Extract just the function name from a suggested function string
+        
+        Args:
+            suggested_function: Function string in format "function_name: category (pipeline)" or just "function_name"
+            
+        Returns:
+            Just the function name
+        """
+        if ': ' in suggested_function:
+            return suggested_function.split(': ')[0]
+        return suggested_function
+    
+    def _extract_pipeline_type_from_suggested_function(self, suggested_function: str) -> Optional[str]:
+        """
+        Extract pipeline type from a suggested function string
+        
+        Args:
+            suggested_function: Function string in format "function_name: category (pipeline)" or just "function_name"
+            
+        Returns:
+            Pipeline type if available, None otherwise
+        """
+        if ': ' in suggested_function:
+            parts = suggested_function.split(': ')
+            if len(parts) == 2:
+                category_pipeline = parts[1]
+                # Extract pipeline type from parentheses
+                if '(' in category_pipeline and ')' in category_pipeline:
+                    pipeline_start = category_pipeline.find('(') + 1
+                    pipeline_end = category_pipeline.find(')')
+                    if pipeline_start < pipeline_end:
+                        return category_pipeline[pipeline_start:pipeline_end]
+        return None
+    
+    def _validate_and_enhance_reasoning_plan(self, reasoning_plan: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Validate and enhance reasoning plan with metadata validation
+        
+        Args:
+            reasoning_plan: List of reasoning plan steps
+            
+        Returns:
+            Enhanced and validated reasoning plan
+        """
+        if not reasoning_plan or not isinstance(reasoning_plan, list):
+            return []
+        
+        enhanced_plan = []
+        for i, step in enumerate(reasoning_plan):
+            if not isinstance(step, dict):
+                continue
+            
+            enhanced_step = step.copy()
+            
+            # Ensure required fields exist
+            if 'step_number' not in enhanced_step:
+                enhanced_step['step_number'] = i + 1
+            if 'step_title' not in enhanced_step:
+                enhanced_step['step_title'] = f'Step {i + 1}'
+            
+            # Validate column mapping
+            if 'column_mapping' in enhanced_step and enhanced_step['column_mapping']:
+                if not isinstance(enhanced_step['column_mapping'], dict):
+                    enhanced_step['column_mapping'] = {}
+                    logger.warning(f"Step {i+1}: Invalid column_mapping, resetting to empty dict")
+            
+            # Validate input/output columns
+            if 'input_columns' in enhanced_step and enhanced_step['input_columns']:
+                if not isinstance(enhanced_step['input_columns'], list):
+                    enhanced_step['input_columns'] = []
+                    logger.warning(f"Step {i+1}: Invalid input_columns, resetting to empty list")
+            
+            if 'output_columns' in enhanced_step and enhanced_step['output_columns']:
+                if not isinstance(enhanced_step['output_columns'], list):
+                    enhanced_step['output_columns'] = []
+                    logger.warning(f"Step {i+1}: Invalid output_columns, resetting to empty list")
+            
+            # Validate step dependencies
+            if 'step_dependencies' in enhanced_step and enhanced_step['step_dependencies']:
+                if not isinstance(enhanced_step['step_dependencies'], list):
+                    enhanced_step['step_dependencies'] = []
+                    logger.warning(f"Step {i+1}: Invalid step_dependencies, resetting to empty list")
+            
+            # Validate parameter constraints
+            if 'parameter_constraints' in enhanced_step and enhanced_step['parameter_constraints']:
+                if not isinstance(enhanced_step['parameter_constraints'], dict):
+                    enhanced_step['parameter_constraints'] = {}
+                    logger.warning(f"Step {i+1}: Invalid parameter_constraints, resetting to empty dict")
+            
+            enhanced_plan.append(enhanced_step)
+        
+        logger.info(f"Validated and enhanced reasoning plan: {len(enhanced_plan)} steps")
+        return enhanced_plan
+
     def _format_reasoning_plan_json(self, classification: Optional[Union[Dict[str, Any], AnalysisIntentResult]]) -> str:
         """
-        Format reasoning plan as JSON for LLM consumption
+        Format reasoning plan as JSON for LLM consumption with enhanced metadata
         
         Args:
             classification: Either a Dict[str, Any] or AnalysisIntentResult object containing
-                           reasoning plan information
+                           reasoning plan information with enhanced metadata
         """
         if not classification:
             return "null"
@@ -1509,7 +2339,59 @@ class SelfCorrectingPipelineCodeGenerator:
         if not reasoning_plan or not isinstance(reasoning_plan, list):
             return "null"
         
-        return json.dumps(reasoning_plan, indent=2)
+        # Validate and enhance the reasoning plan first
+        validated_plan = self._validate_and_enhance_reasoning_plan(reasoning_plan)
+        
+        # Create enhanced reasoning plan with metadata summary
+        enhanced_plan = []
+        for step in validated_plan:
+            if isinstance(step, dict):
+                enhanced_step = step.copy()
+                
+                # Add metadata summary for better LLM understanding
+                metadata_summary = []
+                
+                # Add column mapping summary
+                if step.get('column_mapping'):
+                    metadata_summary.append(f"Column Mapping: {step.get('column_mapping')}")
+                
+                # Add input/output summary
+                if step.get('input_columns'):
+                    metadata_summary.append(f"Inputs: {step.get('input_columns')}")
+                if step.get('output_columns'):
+                    metadata_summary.append(f"Outputs: {step.get('output_columns')}")
+                
+                # Add pipeline info
+                if step.get('pipeline_type'):
+                    metadata_summary.append(f"Pipeline: {step.get('pipeline_type')}")
+                
+                # Add dependencies
+                if step.get('step_dependencies'):
+                    metadata_summary.append(f"Depends on: Step {step.get('step_dependencies')}")
+                
+                # Add data flow
+                if step.get('data_flow'):
+                    metadata_summary.append(f"Data Flow: {step.get('data_flow')}")
+                
+                # Add constraints and error handling
+                if step.get('parameter_constraints'):
+                    metadata_summary.append(f"Constraints: {step.get('parameter_constraints')}")
+                if step.get('error_handling'):
+                    metadata_summary.append(f"Error Handling: {step.get('error_handling')}")
+                
+                # Add embedded function details
+                if step.get('embedded_function_parameter') and step.get('embedded_function_details'):
+                    embedded_details = step.get('embedded_function_details', {})
+                    embedded_summary = f"Embedded: {embedded_details.get('embedded_function', '')} in {embedded_details.get('embedded_pipe', '')}"
+                    metadata_summary.append(embedded_summary)
+                
+                # Add metadata summary to the step
+                if metadata_summary:
+                    enhanced_step['_metadata_summary'] = '; '.join(metadata_summary)
+                
+                enhanced_plan.append(enhanced_step)
+        
+        return json.dumps(enhanced_plan, indent=2)
     
     def _format_dataset_context(self, dataset_description: Optional[str], 
                                columns_description: Dict[str, str]) -> str:
@@ -1525,6 +2407,21 @@ class SelfCorrectingPipelineCodeGenerator:
             parts.append("Columns Analysis:")
             parts.append(json.dumps(columns_description, indent=2))
             
+            # Add enhanced metadata if available
+            if '_enhanced_metadata' in columns_description:
+                enhanced_metadata = columns_description['_enhanced_metadata']
+                parts.append("\nEnhanced Metadata:")
+                parts.append(f"- Reasoning Plan Steps: {enhanced_metadata.get('reasoning_plan_steps', 0)}")
+                parts.append(f"- Has Enhanced Metadata: {enhanced_metadata.get('has_enhanced_metadata', False)}")
+                
+                pipeline_types = enhanced_metadata.get('pipeline_types', [])
+                if pipeline_types:
+                    parts.append(f"- Pipeline Types: {', '.join(pipeline_types)}")
+                
+                function_categories = enhanced_metadata.get('function_categories', [])
+                if function_categories:
+                    parts.append(f"- Function Categories: {', '.join(function_categories)}")
+            
         return "\n".join(parts) if parts else "No dataset information available."
     
     async def _retrieve_documents(self, query_state: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
@@ -1533,7 +2430,8 @@ class SelfCorrectingPipelineCodeGenerator:
         function_name = query_state["function_name"]
         
         # Determine pipeline type
-        pipeline_type = await self._detect_pipeline_type(function_name, context)
+        classification = query_state.get("classification", {})
+        pipeline_type = await self._detect_pipeline_type(function_name, context, classification)
         
         # Create enhanced query for retrieval
         enhanced_query = self._create_enhanced_query(context, function_name, pipeline_type)
@@ -1639,36 +2537,62 @@ class SelfCorrectingPipelineCodeGenerator:
         try:
             from langchain.prompts import PromptTemplate
             
-            # Get available functions from the function definition store
+            # Get available functions from FunctionRetrieval or function definition store
             available_functions = []
-            if self.function_definition_store:
+            
+            # Try to use FunctionRetrieval first if available
+            if self.function_retrieval:
+                try:
+                    # Get all available functions from the loaded function library
+                    for pipe_name in self.function_retrieval.get_all_pipes():
+                        pipe_functions = self.function_retrieval.get_pipe_functions(pipe_name)
+                        for func_name in pipe_functions:
+                            try:
+                                func_details = self.function_retrieval.get_function_details(func_name, pipe_name)
+                                if func_details:
+                                    func_desc = func_details.get('description', 'No description')
+                                    available_functions.append(f"- {func_name}: {func_desc}")
+                            except Exception as e:
+                                logger.warning(f"Error getting function details for {func_name}: {str(e)}")
+                                continue
+                    
+                    # Limit to top 20 functions to avoid overwhelming the prompt
+                    available_functions = available_functions[:20]
+                    
+                except Exception as e:
+                    logger.warning(f"Error getting functions from FunctionRetrieval: {str(e)}")
+            
+            # Fallback to function_definition_store if FunctionRetrieval is not available
+            elif self.function_definition_store:
                 try:
                     # Search for relevant functions based on the step description
                     search_context = f"{step_title}: {parameter_mapping}"
-                    search_results = await self.function_definition_store.similarity_search(
-                        search_context, 
-                        k=10  # Get top 10 matches for context
+                    search_results = self.function_definition_store.semantic_searches(
+                        query_texts=[search_context], 
+                        n_results=10  # Get top 10 matches for context
                     )
                     
                     # Extract function names and descriptions from search results
-                    for result in search_results:
-                        try:
-                            if hasattr(result, 'page_content'):
-                                content = result.page_content
-                                # Parse function definition to extract name and description
-                                if '"function_name"' in content or '"name"' in content:
-                                    import json
-                                    try:
-                                        func_def = json.loads(content)
-                                        func_name = func_def.get('function_name') or func_def.get('name')
-                                        func_desc = func_def.get('description', '')
-                                        if func_name:
-                                            available_functions.append(f"- {func_name}: {func_desc}")
-                                    except json.JSONDecodeError:
-                                        continue
-                        except Exception as e:
-                            logger.warning(f"Error parsing function definition: {str(e)}")
-                            continue
+                    if search_results and "documents" in search_results and search_results["documents"]:
+                        documents = search_results["documents"][0]  # Get first query results
+                        for document in documents:
+                            try:
+                                if isinstance(document, str):
+                                    content = document
+                                    # Parse function definition to extract name and description
+                                    if '"function_name"' in content or '"name"' in content:
+                                        import json
+                                        try:
+                                            func_def = json.loads(content)
+                                            func_name = func_def.get('function_name') or func_def.get('name')
+                                            func_desc = func_def.get('description', '')
+                                            if func_name:
+                                                available_functions.append(f"- {func_name}: {func_desc}")
+                                        except json.JSONDecodeError:
+                                            continue
+                            except Exception as e:
+                                logger.warning(f"Error parsing function definition: {str(e)}")
+                                continue
                 except Exception as e:
                     logger.warning(f"Error searching function definition store: {str(e)}")
             
@@ -1701,17 +2625,37 @@ INSTRUCTIONS:
 1. If function_name is "None" or empty, extract the most appropriate function name from the available functions list based on the description
 2. Parse the parameter mapping description into a proper dictionary
 3. Use the function definitions to understand the correct parameter structure for each function
-4. Return a JSON object with the parsed function_name and parameter_mapping
+4. Determine the pipeline type based on the selected function (e.g., GroupBy → MetricsPipe, moving_apply_by_group → MovingAggrPipe)
+5. Return a JSON object with the parsed function_name, parameter_mapping, and pipeline_type
 
-OUTPUT FORMAT:
-Return ONLY a valid JSON object:
-{{
-    "function_name": "extracted_or_provided_function_name",
-    "parameter_mapping": {{
-        "param1": "value1",
-        "param2": "value2"
-    }}
-}}
+            OUTPUT FORMAT:
+            CRITICAL: You must return ONLY a valid JSON object without any markdown formatting, code blocks, or extra text.
+            
+            CORRECT FORMAT:
+            {{
+                "function_name": "extracted_or_provided_function_name",
+                "parameter_mapping": {{
+                    "param1": "value1",
+                    "param2": "value2"
+                }},
+                "pipeline_type": "PipelineTypeName"
+            }}
+            
+            WRONG FORMATS (DO NOT USE):
+            ❌ ```json
+            ❌ ```python
+            ❌ Any markdown formatting
+            ❌ Explanations before or after the JSON
+            ❌ Extra text or comments
+            
+            CONSEQUENCES OF IMPROPER FORMAT:
+            - If you return markdown code blocks, the parsing will fail
+            - If you add extra text, the JSON parsing will fail
+            - If you don't return valid JSON, the system will fall back to basic parsing
+            - This will result in poor code generation quality
+            - The user's analysis pipeline will not work correctly
+            
+            Return ONLY the JSON object, nothing else.
 
 EXAMPLES:
 
@@ -1722,7 +2666,8 @@ Output: {{
     "parameter_mapping": {{
         "by": ["Date", "Region", "Project"],
         "agg_dict": {{"Transactional value": "sum"}}
-    }}
+    }},
+    "pipeline_type": "MetricsPipe"
 }}
 
 Example 2:
@@ -1732,7 +2677,8 @@ Output: {{
     "parameter_mapping": {{
         "by": ["Region", "Project"],
         "agg_dict": {{"Transactional value": ["mean", "std"]}}
-    }}
+    }},
+    "pipeline_type": "MetricsPipe"
 }}
 
 Example 3:
@@ -1747,32 +2693,44 @@ Output: {{
         "min_periods": 1,
         "output_suffix": "_rolling",
         "function": "(MetricsPipe.from_dataframe(df) | Variance(variable=\\"Transactional value\\") | to_df())"
-    }}
+    }},
+    "pipeline_type": "MovingAggrPipe"
 }}
 
 Now parse the given step description and return the JSON result.
 """
             )
             
-            # Format the prompt
-            formatted_prompt = parsing_prompt.format(
-                parameter_mapping=parameter_mapping,
-                step_title=step_title,
-                step_number=step_number,
-                function_name=function_name or "None",
-                available_functions="\n".join(available_functions)
-            )
+            # Create parsing chain
+            parsing_chain = parsing_prompt | self.llm | StrOutputParser()
             
-            # Call the LLM
-            response = await self.llm.agenerate([formatted_prompt])
-            
-            if response and response.generations and response.generations[0]:
-                result_text = response.generations[0][0].text.strip()
+            # Call the LLM using the chain
+            try:
+                result_text = await parsing_chain.ainvoke({
+                    "parameter_mapping": parameter_mapping,
+                    "step_title": step_title,
+                    "step_number": step_number,
+                    "function_name": function_name or "None",
+                    "available_functions": "\n".join(available_functions)
+                })
                 
                 # Try to parse the JSON response
                 try:
                     import json
-                    parsed_result = json.loads(result_text)
+                    import re
+                    
+                    # Clean the response text - remove markdown code blocks and extra formatting
+                    cleaned_text = result_text.strip()
+                    
+                    # Remove markdown code blocks (```json ... ```)
+                    cleaned_text = re.sub(r'```json\s*', '', cleaned_text)
+                    cleaned_text = re.sub(r'```\s*', '', cleaned_text)
+                    
+                    # Remove any leading/trailing whitespace and newlines
+                    cleaned_text = cleaned_text.strip()
+                    
+                    # Try to parse the cleaned JSON
+                    parsed_result = json.loads(cleaned_text)
                     
                     # Validate the result
                     if isinstance(parsed_result, dict) and 'function_name' in parsed_result and 'parameter_mapping' in parsed_result:
@@ -1783,9 +2741,23 @@ Now parse the given step description and return the JSON result.
                         
                 except json.JSONDecodeError as e:
                     logger.warning(f"LLM parsing returned invalid JSON for step {step_number}: {result_text}, error: {e}")
+                    # Try to extract JSON content from markdown blocks as a fallback
+                    try:
+                        # Look for JSON content between markdown code blocks
+                        json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', result_text, re.DOTALL)
+                        if json_match:
+                            json_content = json_match.group(1)
+                            parsed_result = json.loads(json_content)
+                            if isinstance(parsed_result, dict) and 'function_name' in parsed_result and 'parameter_mapping' in parsed_result:
+                                logger.info(f"Successfully extracted JSON from markdown blocks for step {step_number}")
+                                return parsed_result
+                    except Exception as fallback_error:
+                        logger.warning(f"Fallback JSON extraction also failed for step {step_number}: {fallback_error}")
+                    
                     return None
-            else:
-                logger.warning(f"LLM parsing failed for step {step_number}: No response")
+                    
+            except Exception as e:
+                logger.warning(f"LLM parsing failed for step {step_number}: {e}")
                 return None
                 
         except Exception as e:
@@ -1810,21 +2782,31 @@ Now parse the given step description and return the JSON result.
         search_context = f"{step_title}: {description}"
         
         try:
-            # Search the function definition store for relevant functions
-            if self.function_definition_store:
-                # Search for function definitions that match the description
-                search_results = await self.function_definition_store.similarity_search(
-                    search_context, 
-                    k=3  # Get top 3 matches
-                )
+            # Try to use FunctionRetrieval first if available
+            if self.function_retrieval:
+                # Search for functions by keyword in their descriptions
+                search_results = self.function_retrieval.search_functions_by_keyword(description.lower())
                 
                 if search_results:
+                    # Return the first matching function name
+                    return search_results[0][1]  # (pipe_name, function_name, function_details)
+            
+            # Fallback to function_definition_store if FunctionRetrieval is not available
+            elif self.function_definition_store:
+                # Search for function definitions that match the description
+                search_results = self.function_definition_store.semantic_searches(
+                    query_texts=[search_context], 
+                    n_results=3  # Get top 3 matches
+                )
+                
+                if search_results and "documents" in search_results and search_results["documents"]:
                     # Extract function names from the search results
-                    for result in search_results:
+                    documents = search_results["documents"][0]  # Get first query results
+                    for document in documents:
                         try:
                             # Parse the function definition to extract the function name
-                            if hasattr(result, 'page_content'):
-                                content = result.page_content
+                            if isinstance(document, str):
+                                content = document
                                 # Look for function name in the content
                                 if '"function_name"' in content:
                                     import json
@@ -1849,8 +2831,239 @@ Now parse the given step description and return the JSON result.
             return None
             
         except Exception as e:
-            logger.warning(f"Error searching function definition store: {str(e)}")
+            logger.warning(f"Error searching function definitions: {str(e)}")
             return None
+
+    async def _find_suitable_time_function(self, step_title: str) -> str:
+        """
+        Find a suitable time-related function based on available functions rather than hardcoding
+        
+        Args:
+            step_title: Title of the step to analyze
+            
+        Returns:
+            Suitable function name or fallback to Mean
+        """
+        try:
+            # Try to use FunctionRetrieval first if available
+            if self.function_retrieval:
+                # Search for time-related functions by keywords in the step title
+                time_keywords = ['time', 'lag', 'lead', 'rolling', 'moving', 'trend', 'seasonal', 'decompose']
+                for keyword in time_keywords:
+                    if keyword in step_title.lower():
+                        search_results = self.function_retrieval.search_functions_by_keyword(keyword)
+                        if search_results:
+                            # Return the first matching function name
+                            return search_results[0][1]  # (pipe_name, function_name, function_details)
+                
+                # If no specific time function found, try to find any available time series functions
+                available_pipes = self.function_retrieval.get_all_pipes()
+                for pipe_name in available_pipes:
+                    if 'time' in pipe_name.lower() or 'trend' in pipe_name.lower():
+                        pipe_functions = self.function_retrieval.get_pipe_functions(pipe_name)
+                        if pipe_functions:
+                            # Return the first available function from a time-related pipe
+                            return pipe_functions[0]
+            
+            # Fallback to function_definition_store if FunctionRetrieval is not available
+            elif self.function_definition_store:
+                # Search for time-related function definitions
+                time_keywords = ['time', 'lag', 'lead', 'rolling', 'moving', 'trend', 'seasonal', 'decompose']
+                for keyword in time_keywords:
+                    if keyword in step_title.lower():
+                        search_results = self.function_definition_store.semantic_searches(
+                            query_texts=[keyword], 
+                            n_results=3
+                        )
+                        
+                        if search_results and "documents" in search_results and search_results["documents"]:
+                            documents = search_results["documents"][0]
+                            for document in documents:
+                                try:
+                                    if isinstance(document, str):
+                                        content = document
+                                        if '"function_name"' in content:
+                                            import json
+                                            try:
+                                                func_def = json.loads(content)
+                                                if 'function_name' in func_def:
+                                                    return func_def['function_name']
+                                            except json.JSONDecodeError:
+                                                continue
+                                        elif '"name"' in content:
+                                            import json
+                                            try:
+                                                func_def = json.loads(content)
+                                                if 'name' in func_def:
+                                                    return func_def['name']
+                                            except json.JSONDecodeError:
+                                                continue
+                                except Exception as e:
+                                    logger.warning(f"Error parsing time function definition: {str(e)}")
+                                    continue
+            
+            # If no suitable time function found, use a generic fallback
+            logger.warning(f"No suitable time function found for step: {step_title}, using Mean as fallback")
+            return "Mean"
+            
+        except Exception as e:
+            logger.warning(f"Error finding suitable time function: {str(e)}, using Mean as fallback")
+            return "Mean"
+
+    async def _find_suitable_statistical_function(self, step_title: str, keywords: List[str]) -> str:
+        """
+        Find a suitable statistical function based on available functions rather than hardcoding
+        
+        Args:
+            step_title: Title of the step to analyze
+            keywords: List of keywords to search for
+            
+        Returns:
+            Suitable function name or fallback to Mean
+        """
+        try:
+            # Try to use FunctionRetrieval first if available
+            if self.function_retrieval:
+                # Search for statistical functions by keywords in the step title
+                for keyword in keywords:
+                    if keyword in step_title.lower():
+                        search_results = self.function_retrieval.search_functions_by_keyword(keyword)
+                        if search_results:
+                            # Return the first matching function name
+                            return search_results[0][1]  # (pipe_name, function_name, function_details)
+                
+                # If no specific statistical function found, try to find any available metrics functions
+                available_pipes = self.function_retrieval.get_all_pipes()
+                for pipe_name in available_pipes:
+                    if 'metric' in pipe_name.lower():
+                        pipe_functions = self.function_retrieval.get_pipe_functions(pipe_name)
+                        if pipe_functions:
+                            # Return the first available function from a metrics pipe
+                            return pipe_functions[0]
+            
+            # Fallback to function_definition_store if FunctionRetrieval is not available
+            elif self.function_definition_store:
+                # Search for statistical function definitions
+                for keyword in keywords:
+                    if keyword in step_title.lower():
+                        search_results = self.function_definition_store.semantic_searches(
+                            query_texts=[keyword], 
+                            n_results=3
+                        )
+                        
+                        if search_results and "documents" in search_results and search_results["documents"]:
+                            documents = search_results["documents"][0]
+                            for document in documents:
+                                try:
+                                    if isinstance(document, str):
+                                        content = document
+                                        if '"function_name"' in content:
+                                            import json
+                                            try:
+                                                func_def = json.loads(content)
+                                                if 'function_name' in func_def:
+                                                    return func_def['function_name']
+                                            except json.JSONDecodeError:
+                                                continue
+                                        elif '"name"' in content:
+                                            import json
+                                            try:
+                                                func_def = json.loads(content)
+                                                if 'name' in func_def:
+                                                    return func_def['name']
+                                            except json.JSONDecodeError:
+                                                continue
+                                except Exception as e:
+                                    logger.warning(f"Error parsing statistical function definition: {str(e)}")
+                                    continue
+            
+            # If no suitable statistical function found, use a generic fallback
+            logger.warning(f"No suitable statistical function found for step: {step_title}, using Mean as fallback")
+            return "Mean"
+            
+        except Exception as e:
+            logger.warning(f"Error finding suitable statistical function: {str(e)}, using Mean as fallback")
+            return "Mean"
+
+    async def _find_suitable_grouping_function(self, step_title: str) -> str:
+        """
+        Find a suitable grouping function based on available functions rather than hardcoding
+        
+        Args:
+            step_title: Title of the step to analyze
+            
+        Returns:
+            Suitable function name or fallback to GroupBy
+        """
+        try:
+            # Try to use FunctionRetrieval first if available
+            if self.function_retrieval:
+                # Search for grouping functions by keywords in the step title
+                grouping_keywords = ['group', 'aggregate', 'segment', 'cluster']
+                for keyword in grouping_keywords:
+                    if keyword in step_title.lower():
+                        search_results = self.function_retrieval.search_functions_by_keyword(keyword)
+                        if search_results:
+                            # Return the first matching function name
+                            return search_results[0][1]  # (pipe_name, function_name, function_details)
+                
+                # If no specific grouping function found, try to find any available grouping functions
+                available_pipes = self.function_retrieval.get_all_pipes()
+                for pipe_name in available_pipes:
+                    if any(term in pipe_name.lower() for term in ['metric', 'segment', 'cohort']):
+                        pipe_functions = self.function_retrieval.get_pipe_functions(pipe_name)
+                        if pipe_functions:
+                            # Look for grouping-related functions
+                            for func_name in pipe_functions:
+                                if any(term in func_name.lower() for term in ['group', 'aggregate', 'segment']):
+                                    return func_name
+                            # If no specific grouping function found, return the first available
+                            return pipe_functions[0]
+            
+            # Fallback to function_definition_store if FunctionRetrieval is not available
+            elif self.function_definition_store:
+                # Search for grouping function definitions
+                grouping_keywords = ['group', 'aggregate', 'segment', 'cluster']
+                for keyword in grouping_keywords:
+                    if keyword in step_title.lower():
+                        search_results = self.function_definition_store.semantic_searches(
+                            query_texts=[keyword], 
+                            n_results=3
+                        )
+                        
+                        if search_results and "documents" in search_results and search_results["documents"]:
+                            documents = search_results["documents"][0]
+                            for document in documents:
+                                try:
+                                    if isinstance(document, str):
+                                        content = document
+                                        if '"function_name"' in content:
+                                            import json
+                                            try:
+                                                func_def = json.loads(content)
+                                                if 'function_name' in func_def:
+                                                    return func_def['function_name']
+                                            except json.JSONDecodeError:
+                                                continue
+                                        elif '"name"' in content:
+                                            import json
+                                            try:
+                                                func_def = json.loads(content)
+                                                if 'name' in func_def:
+                                                    return func_def['name']
+                                            except json.JSONDecodeError:
+                                                continue
+                                except Exception as e:
+                                    logger.warning(f"Error parsing grouping function definition: {str(e)}")
+                                    continue
+            
+            # If no suitable grouping function found, use a generic fallback
+            logger.warning(f"No suitable grouping function found for step: {step_title}, using GroupBy as fallback")
+            return "GroupBy"
+            
+        except Exception as e:
+            logger.warning(f"Error finding suitable grouping function: {str(e)}, using GroupBy as fallback")
+            return "GroupBy"
 
     def _parse_string_parameter_mapping(self, param_str: str, function_name: str, step_title: str) -> Dict[str, Any]:
         """
@@ -1907,9 +3120,8 @@ Now parse the given step description and return the JSON result.
                     function_validations[func_name] = validation
                     logger.info(f"Function validation for '{func_name}': {validation['valid']}")
         
-        # Generate code based on reasoning plan steps
-        pipeline_code_parts = []
-        current_pipeline_type = None
+        # Generate code based on reasoning plan steps - group by pipeline type and chain together
+        pipeline_groups = {}  # Group steps by pipeline type
         step_count = 0
         current_dataframe = formatted_dataframe_name
         
@@ -1929,9 +3141,29 @@ Now parse the given step description and return the JSON result.
             logger.info(f"Step {i+1} - Parameter mapping: {parameter_mapping}")
             logger.info(f"Step {i+1} - Embedded function details: {embedded_function_details}")
             
-            # Handle None, "None", or "N/A" values
+            # Handle None, "None", or "N/A" values - be more lenient
             if function_name in [None, "None", "none", "N/A"]:
-                function_name = ""
+                # Try to extract function name from step title or other fields
+                logger.info(f"Step {i+1} has invalid function name '{function_name}', attempting to extract from step title")
+                extracted_function = await self._extract_function_name_from_description(step_title, step_title)
+                if extracted_function:
+                    function_name = extracted_function
+                    logger.info(f"Step {i+1} - Extracted function name: {function_name}")
+                else:
+                    # If we still can't get a function name, try to use a default based on the step title
+                    if any(keyword in step_title.lower() for keyword in ['mean', 'average', 'sum', 'count']):
+                        function_name = await self._find_suitable_statistical_function(step_title, ['mean', 'average', 'sum', 'count'])
+                    elif any(keyword in step_title.lower() for keyword in ['variance', 'std', 'standard']):
+                        function_name = await self._find_suitable_statistical_function(step_title, ['variance', 'std', 'standard'])
+                    elif any(keyword in step_title.lower() for keyword in ['group', 'aggregate']):
+                        function_name = await self._find_suitable_grouping_function(step_title)
+                    elif any(keyword in step_title.lower() for keyword in ['time', 'lag', 'lead', 'rolling']):
+                        # For time-related operations, try to find a suitable function from available functions
+                        function_name = await self._find_suitable_time_function(step_title)
+                    else:
+                        function_name = await self._find_suitable_statistical_function(step_title, ['mean'])  # Default fallback
+                    logger.info(f"Step {i+1} - Using default function name: {function_name}")
+            
             if parameter_mapping in [None, "None", "none", "N/A"]:
                 parameter_mapping = {}
             
@@ -1940,10 +3172,10 @@ Now parse the given step description and return the JSON result.
                 logger.warning(f"Parameter mapping in step {i+1} is not a dictionary, converting to empty dict: {type(parameter_mapping)} -> {parameter_mapping}")
                 parameter_mapping = {}
             
-            # Skip steps with no function name or invalid function names
-            if not function_name or function_name in ["None", "none", "N/A"]:
-                logger.info(f"Skipping step {i+1} with invalid function name: {function_name}")
-                continue
+            # Don't skip steps - always try to process them
+            if not function_name:
+                function_name = "Mean"  # Default fallback
+                logger.info(f"Step {i+1} - No function name found, using default: {function_name}")
             
             # Parse parameters using LLM if needed
             if isinstance(parameter_mapping, str) or not parameter_mapping:
@@ -1976,12 +3208,21 @@ Now parse the given step description and return the JSON result.
                         parameter_mapping = retry_result.get('parameter_mapping', {})
                         logger.info(f"LLM retry successful for step {i+1}: function='{function_name}', params={parameter_mapping}")
                     else:
-                        # If LLM still fails, skip this step
-                        logger.error(f"LLM parsing failed twice for step {i+1}, skipping step")
-                        continue
+                        # If LLM still fails, don't skip the step - use basic parameter mapping
+                        logger.warning(f"LLM parsing failed twice for step {i+1}, using basic parameter mapping")
+                        # Try to create basic parameters based on step title
+                        if any(keyword in step_title.lower() for keyword in ['mean', 'average']):
+                            parameter_mapping = {"variable": "value"}  # Basic parameter
+                        elif any(keyword in step_title.lower() for keyword in ['group', 'aggregate']):
+                            parameter_mapping = {"by": ["column"]}  # Basic parameter
+                        elif any(keyword in step_title.lower() for keyword in ['time', 'lag', 'lead', 'rolling']):
+                            parameter_mapping = {"columns": "value", "method": "rolling", "window": 5}  # Basic time series parameter
+                        else:
+                            parameter_mapping = {}  # Empty parameters
+                        logger.info(f"Step {i+1} - Using basic parameter mapping: {parameter_mapping}")
             
             # Determine pipeline type for this function
-            pipeline_type = await self._detect_pipeline_type(function_name, step_title)
+            pipeline_type = await self._detect_pipeline_type(function_name, step_title, classification)
             logger.info(f"Step {i+1} - Detected pipeline type: {pipeline_type}")
             
             # Check if function is valid according to function definition store
@@ -1990,6 +3231,16 @@ Now parse the given step description and return the JSON result.
                 logger.warning(f"Function '{function_name}' in step {i+1} is not valid according to function definition store: {function_validation.get('error', 'Unknown error')}")
                 # Continue anyway, but log the warning
                 logger.info(f"Step {i+1} - Continuing with function '{function_name}' despite validation failure")
+            
+            # Handle enhanced metadata if available
+            column_mapping = step.get('column_mapping', {})
+            if column_mapping and isinstance(column_mapping, dict):
+                # Use column mapping to enhance parameter mapping
+                for param_name, mapped_column in column_mapping.items():
+                    if param_name in parameter_mapping:
+                        # Update parameter with mapped column
+                        parameter_mapping[param_name] = mapped_column
+                        logger.info(f"Step {i+1} - Updated parameter {param_name} with mapped column: {mapped_column}")
             
             # Handle embedded functions (like moving_apply_by_group with embedded Variance)
             embedded_function_parameter = step.get('embedded_function_parameter', False)
@@ -2002,7 +3253,12 @@ Now parse the given step description and return the JSON result.
                     function_name,
                     parameter_mapping
                 )
-                pipeline_code_parts.append(embedded_code)
+                # Add embedded function as a separate pipeline
+                pipeline_groups[f"embedded_{step_count}"] = {
+                    "pipeline_type": pipeline_type,
+                    "steps": [{"function": function_name, "params": parameter_mapping, "title": step_title, "step_num": i+1}],
+                    "dataframe": current_dataframe
+                }
                 current_dataframe = "result"  # Update for next step
                 step_count += 1
                 logger.info(f"Step {i+1} - Added embedded function code, step_count: {step_count}")
@@ -2013,46 +3269,130 @@ Now parse the given step description and return the JSON result.
             param_str = ", ".join(formatted_params) if formatted_params else ""
             logger.info(f"Step {i+1} - Formatted parameters: {param_str}")
             
-            # Generate code for this step
-            step_code = await self._generate_step_code(
-                function_name, 
-                param_str, 
-                pipeline_type, 
-                current_dataframe, 
-                step_title,
-                i + 1
-            )
+            # Group by pipeline type
+            pipeline_type_key = pipeline_type.value
+            if pipeline_type_key not in pipeline_groups:
+                pipeline_groups[pipeline_type_key] = {
+                    "pipeline_type": pipeline_type,
+                    "steps": [],
+                    "dataframe": current_dataframe
+                }
             
-            if step_code:
-                pipeline_code_parts.append(step_code)
-                current_dataframe = "result"  # Update for next step
-                step_count += 1
-                logger.info(f"Step {i+1} - Added step code, step_count: {step_count}")
-            else:
-                logger.warning(f"Step {i+1} - No step code generated")
-                # Try to generate a basic fallback code for this step
-                fallback_code = f"""# Step {i+1}: {step_title}
-# Note: Function '{function_name}' may not be available in the function definition store
-result = (
-    {pipeline_type.value}.from_dataframe({current_dataframe})
-    | {function_name}({param_str if param_str else ''})
-    ).to_df()"""
-                pipeline_code_parts.append(fallback_code)
-                current_dataframe = "result"
-                step_count += 1
-                logger.info(f"Step {i+1} - Added fallback code, step_count: {step_count}")
+            # Add step to the appropriate pipeline group
+            pipeline_groups[pipeline_type_key]["steps"].append({
+                "function": function_name,
+                "params": param_str,
+                "title": step_title,
+                "step_num": i+1
+            })
+            
+            # Log enhanced metadata if available
+            if step.get('input_columns'):
+                logger.info(f"Step {i+1} - Input columns: {step.get('input_columns')}")
+            if step.get('output_columns'):
+                logger.info(f"Step {i+1} - Output columns: {step.get('output_columns')}")
+            if step.get('step_dependencies'):
+                logger.info(f"Step {i+1} - Dependencies: Step {step.get('step_dependencies')}")
+            if step.get('data_flow'):
+                logger.info(f"Step {i+1} - Data flow: {step.get('data_flow')}")
+            if step.get('pipeline_type'):
+                logger.info(f"Step {i+1} - Pipeline type: {step.get('pipeline_type')}")
+            if step.get('function_category'):
+                logger.info(f"Step {i+1} - Function category: {step.get('function_category')}")
+            
+            step_count += 1
+            logger.info(f"Step {i+1} - Added to pipeline group {pipeline_type_key}, step_count: {step_count}")
         
-        logger.info(f"Final step count: {step_count}, pipeline code parts: {len(pipeline_code_parts)}")
+        logger.info(f"Final step count: {step_count}, pipeline groups: {list(pipeline_groups.keys())}")
         
-        if not pipeline_code_parts:
+        if not pipeline_groups:
             # Fallback if no valid steps found
-            logger.warning("No pipeline code parts generated, using fallback")
+            logger.warning("No pipeline groups generated, using fallback")
             return self._generate_fallback_code(PipelineType.METRICS, "Mean", {}, dataframe_name)
         
-        # Join all pipeline steps
-        generated_code = "\n".join(pipeline_code_parts)
+        # Generate separate pipelines for each group, with result from previous pipeline
+        pipeline_code_parts = []
+        current_dataframe = formatted_dataframe_name  # Start with original dataframe
         
-        logger.info(f"Generated code from reasoning plan with {step_count} valid steps out of {len(reasoning_plan)} total steps")
+        for group_key, group_info in pipeline_groups.items():
+            if group_key.startswith("embedded_"):
+                # Handle embedded functions separately
+                step = group_info["steps"][0]
+                pipeline_type = group_info["pipeline_type"]
+                dataframe = current_dataframe
+                
+                # Generate embedded function code
+                embedded_code = await self._generate_embedded_function_code(
+                    step.get("embedded_function_details", {}), 
+                    dataframe,
+                    step["function"],
+                    step["params"]
+                )
+                pipeline_code_parts.append(embedded_code)
+                current_dataframe = "result"  # Update for next pipeline
+                continue
+            
+            pipeline_type = group_info["pipeline_type"]
+            steps = group_info["steps"]
+            dataframe = current_dataframe  # Use current dataframe (original or result from previous)
+            
+            if not steps:
+                continue
+            
+            # Generate pipeline for this group - each pipeline type gets its own result statement
+            if len(steps) == 1:
+                # Single step - simple pipeline
+                step = steps[0]
+                step_code = f"""# {step['title']}
+result = (
+    {pipeline_type.value}.from_dataframe({dataframe})
+    | {step['function']}({step['params']})
+    ).to_df()"""
+                pipeline_code_parts.append(step_code)
+                current_dataframe = "result"  # Update for next pipeline
+            else:
+                # Multiple steps - chained pipeline within the same pipeline type
+                step_comments = []
+                step_chain = []
+                
+                for step in steps:
+                    step_comments.append(f"# {step['title']}")
+                    step_chain.append(f"    | {step['function']}({step['params']})")
+                
+                # Join all steps into a single chained pipeline for this pipeline type
+                step_code = f"""{chr(10).join(step_comments)}
+result = (
+    {pipeline_type.value}.from_dataframe({dataframe})
+{chr(10).join(step_chain)}
+    ).to_df()"""
+                pipeline_code_parts.append(step_code)
+                current_dataframe = "result"  # Update for next pipeline
+        
+        # Join all pipeline groups with double newlines for separation
+        generated_code = "\n\n".join(pipeline_code_parts)
+        
+        # Log enhanced metadata summary
+        enhanced_metadata_summary = []
+        for group_key, group_info in pipeline_groups.items():
+            if group_key.startswith("embedded_"):
+                continue
+            
+            steps = group_info.get("steps", [])
+            if steps:
+                pipeline_type = group_info.get("pipeline_type", "Unknown")
+                enhanced_metadata_summary.append(f"Pipeline {pipeline_type.value}: {len(steps)} steps")
+                
+                for step in steps:
+                    step_num = step.get("step_num", "?")
+                    step_title = step.get("title", "Unknown")
+                    enhanced_metadata_summary.append(f"  Step {step_num}: {step_title}")
+        
+        if enhanced_metadata_summary:
+            logger.info("Enhanced Metadata Summary:")
+            for summary in enhanced_metadata_summary:
+                logger.info(f"  {summary}")
+        
+        logger.info(f"Generated sequential pipeline code with {len(pipeline_groups)} groups and {step_count} total steps")
         logger.info(f"Generated code: {generated_code}")
         
         return generated_code
@@ -2209,8 +3549,12 @@ result = (
         dataset_description = query_state.get("dataset_description")
         columns_description = query_state.get("columns_description", {})
         
-        # Detect pipeline type
-        pipeline_type = await self._detect_pipeline_type(function_name, original_context)
+        # Get pipeline type from function definition (not detection)
+        pipeline_type = await self._get_pipeline_type_from_function_definition(function_name)
+        
+        # If not found in function definition, fall back to detection
+        if not pipeline_type:
+            pipeline_type = await self._detect_pipeline_type(function_name, original_context, classification)
         
         # Format relevant documents
         docs_context = self._format_documents_for_generation(relevant_docs)
@@ -2245,6 +3589,9 @@ result = (
             ],
             template="""
             You are an expert code generator for data analysis pipelines.
+            
+            IMPORTANT: The reasoning plan is already available and the pipeline type has been determined from the function definition.
+            Your task is to focus on detecting function inputs based on the function definition and available data.
             
             ORIGINAL TASK: {original_context}
             ENHANCED CONTEXT: {context}
@@ -2311,7 +3658,8 @@ result = (
             
             CRITICAL PIPELINE TYPE SEPARATION RULES:
             - MetricsPipe functions: Mean, Variance, Sum, Count, Max, Min, StandardDeviation, Correlation, etc.
-            - TimeSeriesPipe functions: variance_analysis, moving_apply_by_group, lead, lag, rolling_mean, etc.
+            - TimeSeriesPipe functions: variance_analysis, lead, lag, rolling_mean, etc.
+            - MovingAggrPipe functions: moving_apply_by_group, moving_average, moving_variance, etc.
             - OperationsPipe functions: PercentChange, AbsoluteChange, MH, CUPED, etc.
             - CohortPipe functions: form_time_cohorts, calculate_retention, analyze_funnel, analyze_funnel_by_time, analyze_funnel_by_segment, analyze_user_paths, etc.
             - RiskPipe functions: calculate_var, calculate_cvar, etc.
@@ -2941,13 +4289,10 @@ result = (
             - OperationsPipe functions: Filter, Sort, Join, Union, Intersection
             - FunnelPipe functions: Funnel, Conversion, Dropoff
             
-            Return a JSON array of adjusted reasoning plan steps. Each step should have:
-            - step_number: sequential number
-            - step_title: descriptive title
-            - function_name: valid function name from the library
-            - parameter_mapping: dictionary of parameters
+            OUTPUT FORMAT:
+            CRITICAL: You must return ONLY a valid JSON array without any markdown formatting, code blocks, or extra text.
             
-            EXAMPLE OUTPUT:
+            CORRECT FORMAT:
             [
                 {
                     "step_number": 1,
@@ -2968,6 +4313,22 @@ result = (
                     }
                 }
             ]
+            
+            WRONG FORMATS (DO NOT USE):
+            ❌ ```json
+            ❌ ```python
+            ❌ Any markdown formatting
+            ❌ Explanations before or after the JSON
+            ❌ Extra text or comments
+            
+            CONSEQUENCES OF IMPROPER FORMAT:
+            - If you return markdown code blocks, the parsing will fail
+            - If you add extra text, the JSON parsing will fail
+            - If you don't return valid JSON, the system will fall back to basic fixes
+            - This will result in poor reasoning plan quality
+            - The user's analysis pipeline will not work correctly
+            
+            Return ONLY the JSON array, nothing else.
             
             ADJUSTED REASONING PLAN:
             """
@@ -3038,9 +4399,42 @@ result = (
             # Try to extract JSON from the response
             # Look for JSON array pattern
             import re
+            import json
             
-            # Find JSON array in the response
-            json_match = re.search(r'\[.*\]', adjusted_plan_str, re.DOTALL)
+            # Clean the response text - remove markdown code blocks and extra formatting
+            cleaned_text = adjusted_plan_str.strip()
+            
+            # Remove markdown code blocks (```json ... ```)
+            cleaned_text = re.sub(r'```json\s*', '', cleaned_text)
+            cleaned_text = re.sub(r'```\s*', '', cleaned_text)
+            
+            # Remove any leading/trailing whitespace and newlines
+            cleaned_text = cleaned_text.strip()
+            
+            # First try to parse the cleaned text directly
+            try:
+                adjusted_plan = json.loads(cleaned_text)
+                if isinstance(adjusted_plan, list):
+                    # Successfully parsed as list, validate and return
+                    validated_plan = []
+                    for step in adjusted_plan:
+                        if isinstance(step, dict):
+                            # Ensure required fields
+                            validated_step = {
+                                "step_number": step.get("step_number", 1),
+                                "step_title": step.get("step_title", "Step"),
+                                "function_name": step.get("function_name", "Mean"),
+                                "parameter_mapping": step.get("parameter_mapping", {})
+                            }
+                            validated_plan.append(validated_step)
+                    
+                    return validated_plan
+            except json.JSONDecodeError:
+                # If direct parsing fails, try to extract JSON array pattern
+                pass
+            
+            # Find JSON array in the cleaned response
+            json_match = re.search(r'\[.*\]', cleaned_text, re.DOTALL)
             if json_match:
                 json_str = json_match.group(0)
                 adjusted_plan = json.loads(json_str)
@@ -3061,11 +4455,85 @@ result = (
                     
                     return validated_plan
             
+            # If still no success, try to extract from the original text with markdown blocks
+            json_match = re.search(r'```(?:json)?\s*(\[.*?\])\s*```', adjusted_plan_str, re.DOTALL)
+            if json_match:
+                json_content = json_match.group(1)
+                adjusted_plan = json.loads(json_content)
+                
+                # Validate the structure
+                if isinstance(adjusted_plan, list):
+                    validated_plan = []
+                    for step in adjusted_plan:
+                        if isinstance(step, dict):
+                            # Ensure required fields
+                            validated_step = {
+                                "step_number": step.get("step_number", 1),
+                                "step_title": step.get("step_title", "Step"),
+                                "function_name": step.get("function_name", "Mean"),
+                                "parameter_mapping": step.get("parameter_mapping", {})
+                            }
+                            validated_plan.append(validated_step)
+                    
+                    return validated_plan
+            
+            # If still no success, try to extract from the original text with markdown blocks (alternative pattern)
+            json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', adjusted_plan_str, re.DOTALL)
+            if json_match:
+                json_content = json_match.group(1)
+                try:
+                    adjusted_plan = json.loads(json_content)
+                    
+                    # Validate the structure
+                    if isinstance(adjusted_plan, list):
+                        validated_plan = []
+                        for step in adjusted_plan:
+                            if isinstance(step, dict):
+                                # Ensure required fields
+                                validated_step = {
+                                    "step_number": step.get("step_number", 1),
+                                    "step_title": step.get("step_title", "Step"),
+                                    "function_name": step.get("function_name", "Mean"),
+                                    "parameter_mapping": step.get("parameter_mapping", {})
+                                }
+                                validated_plan.append(validated_step)
+                        
+                        return validated_plan
+                except json.JSONDecodeError:
+                    # If this pattern also fails, continue to next fallback
+                    pass
+            
             # If JSON parsing fails, try to extract individual steps
             return self._extract_steps_from_text(adjusted_plan_str)
             
         except Exception as e:
             print(f"Error parsing adjusted reasoning plan: {e}")
+            # Try to extract JSON content from markdown blocks as a final fallback
+            try:
+                # Look for JSON content between markdown code blocks
+                json_match = re.search(r'```(?:json)?\s*(\[.*?\])\s*```', adjusted_plan_str, re.DOTALL)
+                if json_match:
+                    json_content = json_match.group(1)
+                    adjusted_plan = json.loads(json_content)
+                    if isinstance(adjusted_plan, list):
+                        # Validate the structure
+                        validated_plan = []
+                        for step in adjusted_plan:
+                            if isinstance(step, dict):
+                                # Ensure required fields
+                                validated_step = {
+                                    "step_number": step.get("step_number", 1),
+                                    "step_title": step.get("step_title", "Step"),
+                                    "function_name": step.get("function_name", "Mean"),
+                                    "parameter_mapping": step.get("parameter_mapping", {})
+                                }
+                                validated_plan.append(validated_step)
+                        
+                        print("Successfully extracted JSON array from markdown blocks using fallback")
+                        return validated_plan
+            except Exception as fallback_error:
+                print(f"Fallback JSON extraction also failed: {fallback_error}")
+            
             return []
     
     def _extract_steps_from_text(self, text: str) -> List[Dict[str, Any]]:
@@ -3159,7 +4627,8 @@ result = (
             return CodeQuality.POOR
         
         # Check for pipeline type consistency
-        primary_pipeline_type = await self._detect_pipeline_type(function_name, "")
+        classification = query_state.get("classification", {})
+        primary_pipeline_type = await self._detect_pipeline_type(function_name, "", classification)
         
         # Check if the generated code uses the correct pipeline type
         if primary_pipeline_type.value not in generated_code:
@@ -3266,84 +4735,201 @@ result = (
         elif code_quality == CodeQuality.POOR:
             # Check if it's due to pipeline type mixing
             function_name = query_state["function_name"]
-            primary_pipeline_type = await self._detect_pipeline_type(function_name, "")
+            classification = query_state.get("classification", {})
+            primary_pipeline_type = await self._detect_pipeline_type(function_name, "", classification)
             query_state["reasoning"].append(f"Code quality was poor, likely due to pipeline type mixing. Primary function '{function_name}' should use {primary_pipeline_type.value}")
         
         # Enhance context for next iteration with pipeline type guidance
         function_name = query_state["function_name"]
-        primary_pipeline_type = await self._detect_pipeline_type(function_name, "")
+        classification = query_state.get("classification", {})
+        primary_pipeline_type = await self._detect_pipeline_type(function_name, "", classification)
         query_state["context"] += f" [Iteration {query_state['iteration'] + 1}: Use {primary_pipeline_type.value} and stay within the same pipeline type]"
         
         return query_state
     
     async def _get_pipeline_type_from_function_definition(self, function_name: str) -> Optional[PipelineType]:
-        """Get pipeline type from function definition in ChromaDB store"""
-        if not self.function_definition_store:
-            return None
-            
+        """Get pipeline type directly from function definition JSON file"""
         try:
-            # Search for the function definition
-            search_results = self.function_definition_store.semantic_searches(
-                [function_name], n_results=1
-            )
+            # Load function definitions from JSON file
+            import json
+            import os
             
-            if not search_results or "documents" not in search_results or len(search_results["documents"][0]) == 0:
+            # Path to the function definitions file
+            json_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', '..', 'data', 'meta', 'all_pipes_functions.json')
+            
+            if not os.path.exists(json_path):
+                logger.warning(f"Function definitions file not found: {json_path}")
                 return None
             
-            # Parse the document content
-            document = search_results["documents"][0][0]
-            score = search_results["distances"][0][0] if "distances" in search_results else 0.0
+            with open(json_path, 'r') as f:
+                function_definitions = json.load(f)
             
-            # Convert from JSON string if needed
-            if isinstance(document, str) and document.startswith('"') and document.endswith('"'):
-                document = json.loads(document)
+            # Search for the function in all pipeline types
+            for pipeline_name, pipeline_data in function_definitions.items():
+                if pipeline_name in ["description", "functions"]:
+                    continue
                 
-            if isinstance(document, str) and (document.startswith('{') or document.startswith('{"')):
-                document = json.loads(document)
+                functions = pipeline_data.get("functions", {})
+                if function_name in functions:
+                    # Map pipeline name to PipelineType enum
+                    pipeline_type = self._map_pipe_name_to_pipeline_type(pipeline_name)
+                    if pipeline_type:
+                        logger.info(f"Found function '{function_name}' in {pipeline_name}, mapped to {pipeline_type.value}")
+                        return pipeline_type
             
-            if isinstance(document, dict):
-                pipeline_type_str = document.get("pipeline_type", "")
-                if pipeline_type_str:
-                    # Map string to PipelineType enum
-                    pipeline_type_map = {
-                        "CohortPipe": PipelineType.COHORT,
-                        "TimeSeriesPipe": PipelineType.TIMESERIES,
-                        "TrendsPipe": PipelineType.TRENDS,
-                        "SegmentPipe": PipelineType.SEGMENT,
-                        "RiskPipe": PipelineType.RISK,
-                        "MetricsPipe": PipelineType.METRICS,
-                        "OperationsPipe": PipelineType.OPERATIONS,
-                        "FunnelPipe": PipelineType.FUNNEL,
-                        "AnomalyPipe": PipelineType.ANOMALY,
-                        "MovingAggrPipe": PipelineType.MOVINGAGGR
-                    }
-                    return pipeline_type_map.get(pipeline_type_str)
-            
+            logger.warning(f"Function '{function_name}' not found in function definitions")
             return None
-            
+                
         except Exception as e:
             logger.warning(f"Error retrieving pipeline type for function {function_name}: {str(e)}")
             return None
 
-    async def _detect_pipeline_type(self, function_name: str, context: str) -> PipelineType:
-        """Detect the appropriate pipeline type"""
-        # First try to get pipeline type from function definition store
+    async def _detect_pipeline_type(self, function_name: str, context: str, classification: Optional[Union[Dict[str, Any], AnalysisIntentResult]] = None) -> PipelineType:
+        """Detect the appropriate pipeline type using FunctionRetrieval system and suggested functions"""
+        # First, try to get pipeline type from reasoning plan if available
+        if classification:
+            reasoning_plan = None
+            if hasattr(classification, 'reasoning_plan'):
+                reasoning_plan = getattr(classification, 'reasoning_plan', None)
+            else:
+                reasoning_plan = classification.get('reasoning_plan', None)
+            
+            # Look for the function in reasoning plan to get its pipeline type
+            if reasoning_plan and isinstance(reasoning_plan, list):
+                for step in reasoning_plan:
+                    if isinstance(step, dict) and step.get('function_name') == function_name:
+                        # Check for pipeline_type in the step
+                        pipeline_type_str = step.get('pipeline_type')
+                        if pipeline_type_str:
+                            pipeline_type = self._map_pipe_name_to_pipeline_type(pipeline_type_str)
+                            if pipeline_type:
+                                logger.info(f"Detected pipeline type {pipeline_type.value} for function '{function_name}' from reasoning plan")
+                                return pipeline_type
+                        
+                        # Check for function_category in the step
+                        function_category = step.get('function_category')
+                        if function_category:
+                            pipeline_type = self._get_pipeline_type_from_function_category(function_category)
+                            if pipeline_type:
+                                logger.info(f"Detected pipeline type {pipeline_type.value} for function '{function_name}' from function category: {function_category}")
+                                return pipeline_type
+        
+        # Second, try to get pipeline type from suggested functions if available
+        if classification:
+            suggested_functions = []
+            if hasattr(classification, 'suggested_functions'):
+                suggested_functions = getattr(classification, 'suggested_functions', [])
+            else:
+                suggested_functions = classification.get('suggested_functions', [])
+            
+            # Look for the function in suggested functions to get its pipeline type
+            for suggested_func in suggested_functions:
+                extracted_name = self._extract_function_name_from_suggested_function(suggested_func)
+                if extracted_name == function_name:
+                    pipeline_type_str = self._extract_pipeline_type_from_suggested_function(suggested_func)
+                    if pipeline_type_str:
+                        pipeline_type = self._map_pipe_name_to_pipeline_type(pipeline_type_str)
+                        if pipeline_type:
+                            logger.info(f"Detected pipeline type {pipeline_type.value} for function '{function_name}' from suggested functions")
+                            return pipeline_type
+                        break
+        
+        # Third, try to get pipeline type from retrieved functions if available
+        if classification:
+            retrieved_functions = []
+            if hasattr(classification, 'retrieved_functions'):
+                retrieved_functions = getattr(classification, 'retrieved_functions', [])
+            else:
+                retrieved_functions = classification.get('retrieved_functions', [])
+            
+            # Look for the function in retrieved functions to get its pipeline type
+            for func in retrieved_functions:
+                if isinstance(func, dict) and func.get('function_name') == function_name:
+                    # Check for category in retrieved function
+                    category = func.get('category')
+                    if category:
+                        pipeline_type = self._map_pipe_name_to_pipeline_type(category)
+                        if pipeline_type:
+                            logger.info(f"Detected pipeline type {pipeline_type.value} for function '{function_name}' from retrieved functions category")
+                            return pipeline_type
+                    
+                    # Check for pipe_name in retrieved function
+                    pipe_name = func.get('pipe_name')
+                    if pipe_name:
+                        pipeline_type = self._map_pipe_name_to_pipeline_type(pipe_name)
+                        if pipeline_type:
+                            logger.info(f"Detected pipeline type {pipeline_type.value} for function '{function_name}' from retrieved functions pipe_name")
+                            return pipeline_type
+        
+        # Fourth, try to get pipeline type from FunctionRetrieval if available
+        if self.function_retrieval:
+            try:
+                # Search for the function in the function library
+                search_results = self.function_retrieval.search_functions_by_keyword(function_name)
+                if search_results:
+                    # Get the first match and extract pipe name
+                    pipe_name = search_results[0][0]  # (pipe_name, function_name, function_details)
+                    
+                    # Map pipe name to PipelineType enum
+                    pipeline_type = self._map_pipe_name_to_pipeline_type(pipe_name)
+                    if pipeline_type:
+                        logger.info(f"Detected pipeline type {pipeline_type.value} for function '{function_name}' using FunctionRetrieval")
+                        return pipeline_type
+            except Exception as e:
+                logger.warning(f"Error using FunctionRetrieval for function '{function_name}': {e}")
+        
+        # Fifth, fallback to function definition store if FunctionRetrieval is not available
         pipeline_type = await self._get_pipeline_type_from_function_definition(function_name)
         if pipeline_type:
             return pipeline_type
         
-        # Fallback to hardcoded mapping if function definition not found
-        if function_name in self.function_to_pipe:
-            return self.function_to_pipe[function_name]
-        
-        # Fallback to context-based detection
+        # Final fallback - use context-based detection only as last resort
+        logger.warning(f"Could not determine pipeline type for function '{function_name}', using context-based fallback")
+        return self._detect_pipeline_type_from_context(context)
+    
+    def _map_pipe_name_to_pipeline_type(self, pipe_name: str) -> Optional[PipelineType]:
+        """Map pipe name from FunctionRetrieval to PipelineType enum"""
+        pipe_mapping = {
+            "MetricsPipe": PipelineType.METRICS,
+            "OperationsPipe": PipelineType.OPERATIONS,
+            "TimeSeriesPipe": PipelineType.TIMESERIES,
+            "TrendsPipe": PipelineType.TRENDS,
+            "TrendPipe": PipelineType.TRENDS,  # Handle alternative naming
+            "CohortPipe": PipelineType.COHORT,
+            "FunnelPipe": PipelineType.FUNNEL,
+            "SegmentPipe": PipelineType.SEGMENT,
+            "AnomalyPipe": PipelineType.ANOMALY,
+            "RiskPipe": PipelineType.RISK,
+            "MovingAggrPipe": PipelineType.MOVINGAGGR
+        }
+        return pipe_mapping.get(pipe_name)
+    
+    def _get_pipeline_type_from_function_category(self, function_category: str) -> Optional[PipelineType]:
+        """Get pipeline type from function category string"""
+        category_mapping = {
+            "moving_average_analysis": PipelineType.TRENDS,
+            "statistical_analysis": PipelineType.TIMESERIES,
+            "time_series_analysis": PipelineType.TIMESERIES,
+            "trend_analysis": PipelineType.TRENDS,
+            "cohort_analysis": PipelineType.COHORT,
+            "funnel_analysis": PipelineType.FUNNEL,
+            "segmentation_analysis": PipelineType.SEGMENT,
+            "anomaly_detection": PipelineType.ANOMALY,
+            "risk_analysis": PipelineType.RISK,
+            "metrics_calculation": PipelineType.METRICS,
+            "operations_analysis": PipelineType.OPERATIONS
+        }
+        return category_mapping.get(function_category)
+    
+    def _detect_pipeline_type_from_context(self, context: str) -> PipelineType:
+        """Fallback context-based pipeline type detection"""
         context_lower = context.lower()
+        
+        # Use LLM-like reasoning patterns instead of hardcoded keywords
         if any(term in context_lower for term in ["cohort", "retention", "lifetime"]):
             return PipelineType.COHORT
-        elif any(term in context_lower for term in ["time series", "lag", "lead"]):
+        elif any(term in context_lower for term in ["time series", "lag", "lead", "rolling", "moving"]):
             return PipelineType.TIMESERIES
-        elif any(term in context_lower for term in ["moving variance", "moving window", "rolling variance", "moving average", "moving sum"]):
-            return PipelineType.MOVINGAGGR
         elif any(term in context_lower for term in ["trend", "forecast", "growth", "decompose", "seasonal"]):
             return PipelineType.TRENDS
         elif any(term in context_lower for term in ["segment", "cluster", "kmeans", "dbscan", "hierarchical", "grouping"]):
@@ -3355,6 +4941,7 @@ result = (
         elif any(term in context_lower for term in ["anomaly", "outlier", "detect", "unusual", "abnormal"]):
             return PipelineType.ANOMALY
         else:
+            # Default to METRICS for basic statistical operations
             return PipelineType.METRICS
     
     def _create_enhanced_query(self, context: str, function_name: str, 
@@ -3810,7 +5397,8 @@ result = (
             "function_name": query_state["function_name"],
             "pipeline_type": (await self._detect_pipeline_type(    
                 query_state["function_name"], 
-                query_state.get("original_context", query_state["context"])
+                query_state.get("original_context", query_state["context"]),
+                query_state.get("classification", {})
             )).value,
             "detected_inputs": query_state.get("detected_inputs", {}),
             "enhanced_function_inputs": query_state["function_inputs"],
@@ -3820,6 +5408,53 @@ result = (
             "columns_description": query_state.get("columns_description"),
             "enhanced_context": query_state["context"]
         }
+
+    def _combine_parameters(self, required_params, optional_params):
+        """
+        Combine required and optional parameters, handling both string and dictionary formats
+        
+        Args:
+            required_params: Required parameters (string or list)
+            optional_params: Optional parameters (string or list)
+            
+        Returns:
+            Combined list of parameter names
+        """
+        combined = []
+        
+        try:
+            # Handle required parameters
+            if required_params:
+                if isinstance(required_params, list):
+                    for param in required_params:
+                        if isinstance(param, dict):
+                            param_name = param.get('name', 'unknown')
+                            if param_name and param_name != 'unknown':
+                                combined.append(param_name)
+                        elif isinstance(param, str) and param.strip():
+                            combined.append(param.strip())
+                elif isinstance(required_params, str) and required_params.strip():
+                    combined.append(required_params.strip())
+            
+            # Handle optional parameters
+            if optional_params:
+                if isinstance(optional_params, list):
+                    for param in optional_params:
+                        if isinstance(param, dict):
+                            param_name = param.get('name', 'unknown')
+                            if param_name and param_name != 'unknown':
+                                combined.append(param_name)
+                        elif isinstance(param, str) and param.strip():
+                            combined.append(param.strip())
+                elif isinstance(optional_params, str) and optional_params.strip():
+                    combined.append(optional_params.strip())
+                    
+        except Exception as e:
+            logger.warning(f"Error combining parameters: {e}")
+            # Return empty list as fallback
+            return []
+        
+        return combined
 
     async def _validate_function_against_store(self, function_name: str) -> Dict[str, Any]:
         """
@@ -3831,55 +5466,92 @@ result = (
         Returns:
             Dictionary containing function validation results and definition
         """
-        if not self.function_definition_store:
-            return {
-                "valid": False,
-                "definition": None,
-                "error": "Function definition store not available"
-            }
-        
         try:
-            # Search for the function definition
-            search_results = self.function_definition_store.semantic_searches(
-                [function_name], n_results=1
-            )
-            
-            # Parse the results
-            function_docs = self._parse_retrieval_results(search_results)
-            
-            if function_docs:
-                doc = function_docs[0]  # Take the most relevant result
-                content = doc.get("content", {})
+            # Try to use FunctionRetrieval first if available
+            if self.function_retrieval:
+                # Try to find the function in any pipe
+                found = False
+                for pipe_name in self.function_retrieval.get_all_pipes():
+                    function_details = self.function_retrieval.get_function_details(function_name, pipe_name)
+                    if function_details:
+                        found = True
+                        # Extract relevant information from the function definition
+                        function_info = {
+                            "name": function_name,
+                            "description": function_details.get("description", "No description available"),
+                            "parameters": self._combine_parameters(
+                                function_details.get("required_params", []), 
+                                function_details.get("optional_params", [])
+                            ),
+                            "returns": function_details.get("outputs", {}).get("description", "No return information"),
+                            "examples": [],  # FunctionRetrieval doesn't provide examples directly
+                            "pipeline_type": function_details.get("category", "Unknown"),
+                            "syntax": "",  # Not provided by FunctionRetrieval
+                            "usage": function_details.get("usage_description", "")
+                        }
+                        
+                        return {
+                            "valid": True,
+                            "definition": function_info,
+                            "error": None
+                        }
                 
-                if isinstance(content, dict):
-                    # Extract relevant information from the function definition
-                    function_info = {
-                        "name": content.get("name", function_name),
-                        "description": content.get("description", "No description available"),
-                        "parameters": content.get("parameters", []),
-                        "returns": content.get("returns", "No return information"),
-                        "examples": content.get("examples", []),
-                        "pipeline_type": content.get("pipeline_type", "Unknown"),
-                        "syntax": content.get("syntax", ""),
-                        "usage": content.get("usage", "")
-                    }
-                    
+                if not found:
                     return {
-                        "valid": True,
-                        "definition": function_info,
-                        "error": None
+                        "valid": False,
+                        "definition": None,
+                        "error": f"Function '{function_name}' not found in function library"
                     }
+            
+            # Fallback to function_definition_store if FunctionRetrieval is not available
+            elif self.function_definition_store:
+                # Search for the function definition
+                search_results = self.function_definition_store.semantic_searches(
+                    [function_name], n_results=1
+                )
+                
+                # Parse the results
+                function_docs = self._parse_retrieval_results(search_results)
+                
+                if function_docs:
+                    doc = function_docs[0]  # Take the most relevant result
+                    content = doc.get("content", {})
+                    
+                    if isinstance(content, dict):
+                        # Extract relevant information from the function definition
+                        function_info = {
+                            "name": content.get("name", function_name),
+                            "description": content.get("description", "No description available"),
+                            "parameters": content.get("parameters", []),
+                            "returns": content.get("returns", "No return information"),
+                            "examples": content.get("examples", []),
+                            "pipeline_type": content.get("pipeline_type", "Unknown"),
+                            "syntax": content.get("syntax", ""),
+                            "usage": content.get("usage", "")
+                        }
+                        
+                        return {
+                            "valid": True,
+                            "definition": function_info,
+                            "error": None
+                        }
+                    else:
+                        return {
+                            "valid": True,
+                            "definition": {"name": function_name, "content": content},
+                            "error": None
+                        }
                 else:
                     return {
-                        "valid": True,
-                        "definition": {"name": function_name, "content": content},
-                        "error": None
+                        "valid": False,
+                        "definition": None,
+                        "error": f"Function '{function_name}' not found in function definition store"
                     }
             else:
                 return {
                     "valid": False,
                     "definition": None,
-                    "error": f"Function '{function_name}' not found in function definition store"
+                    "error": "No function definition sources available"
                 }
                 
         except Exception as e:

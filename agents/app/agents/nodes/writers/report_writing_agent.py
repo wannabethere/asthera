@@ -3,13 +3,13 @@ Report Writing Agent with Self-Correcting RAG Architecture
 
 This module implements an intelligent report writing agent that:
 1. Takes thread component questions selected for report generation
-2. Uses a self-correcting RAG architecture with LangChain agents
+2. Uses a self-correcting RAG architecture with DocumentChromaStore
 3. Evaluates content quality and relevance
 4. Incorporates writer actor types and business goals
 5. Generates comprehensive, well-structured reports
 
-This version is completely independent of database models and can operate
-with any data structure that matches the defined data classes.
+This version uses DocumentChromaStore for vector operations and is refactored
+to the retrieval module for better organization.
 """
 
 import logging
@@ -19,23 +19,14 @@ from datetime import datetime
 from enum import Enum
 from dataclasses import dataclass
 
-from langchain.agents import AgentExecutor, create_openai_functions_agent
-from langchain.agents.agent import AgentFinish
-from langchain.agents.format_scratchpad import format_log_to_messages
-from langchain.agents.output_parsers import OpenAIFunctionsAgentOutputParser
-from langchain.chat_models import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.schema import BaseMessage, HumanMessage, AIMessage
-from langchain.tools import BaseTool, tool
-from langchain.retrievers import ChromaRetriever
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import Chroma
-from langchain.schema.document import Document
+from langchain_openai import ChatOpenAI
+from langchain_openai import OpenAIEmbeddings
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
-from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
+
+# Import our custom DocumentChromaStore
+from app.storage.documents import DocumentChromaStore
 
 logger = logging.getLogger(__name__)
 
@@ -184,17 +175,17 @@ class ContentQualityEvaluator:
 
 
 class SelfCorrectingRAG:
-    """Self-correcting RAG system for report generation"""
+    """Self-correcting RAG system for report generation using DocumentChromaStore"""
     
-    def __init__(self, llm: ChatOpenAI, embeddings: OpenAIEmbeddings):
+    def __init__(self, llm: ChatOpenAI, embeddings: OpenAIEmbeddings, collection_name: str = "report_writing"):
         self.llm = llm
         self.embeddings = embeddings
-        self.vectorstore = None
-        self.retriever = None
+        self.collection_name = collection_name
+        self.document_store = None
         self.correction_history = []
     
     def build_knowledge_base(self, thread_components: List[ThreadComponentData]) -> None:
-        """Build knowledge base from thread components"""
+        """Build knowledge base from thread components using DocumentChromaStore"""
         documents = []
         
         for component in thread_components:
@@ -210,38 +201,51 @@ class SelfCorrectingRAG:
                 if component.table_config:
                     doc_content += f"Table: {component.table_config}\n"
                 
-                documents.append(Document(
-                    page_content=doc_content,
-                    metadata={
+                # Create document in the format expected by DocumentChromaStore
+                doc_data = {
+                    "metadata": {
                         "component_id": str(component.id),
                         "component_type": component.component_type.value,
                         "sequence_order": component.sequence_order,
-                        "created_at": component.created_at.isoformat() if component.created_at else None
-                    }
-                ))
+                        "created_at": component.created_at.isoformat() if component.created_at else None,
+                        "source": "thread_component"
+                    },
+                    "data": doc_content
+                }
+                
+                documents.append(doc_data)
         
-        # Create vector store
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=200
+        # Initialize DocumentChromaStore
+        self.document_store = DocumentChromaStore(
+            collection_name=self.collection_name,
+            tf_idf=True  # Enable TF-IDF for better search
         )
         
-        split_docs = text_splitter.split_documents(documents)
-        self.vectorstore = Chroma.from_documents(
-            documents=split_docs,
-            embedding=self.embeddings
-        )
-        self.retriever = self.vectorstore.as_retriever(
-            search_kwargs={"k": 5}
-        )
+        # Add documents to the store
+        if documents:
+            self.document_store.add_documents(documents)
+            logger.info(f"Added {len(documents)} documents to knowledge base")
     
-    def retrieve_relevant_context(self, query: str) -> List[Document]:
-        """Retrieve relevant context for a query"""
-        if not self.retriever:
+    def retrieve_relevant_context(self, query: str, k: int = 5) -> List[Dict[str, Any]]:
+        """Retrieve relevant context for a query using DocumentChromaStore"""
+        if not self.document_store:
             return []
         
         try:
-            return self.retriever.get_relevant_documents(query)
+            # Use semantic search with TF-IDF for better results
+            results = self.document_store.semantic_search_with_tfidf(query, k=k)
+            
+            # Convert results to a format compatible with the existing code
+            formatted_results = []
+            for result in results:
+                # Create a mock Document object for compatibility
+                formatted_results.append({
+                    "page_content": result["content"],
+                    "metadata": result["metadata"],
+                    "score": result.get("combined_score", result.get("semantic_score", 0.0))
+                })
+            
+            return formatted_results
         except Exception as e:
             logger.error(f"Error retrieving context: {e}")
             return []
@@ -290,10 +294,12 @@ class ReportWritingAgent:
     
     def __init__(self, 
                  llm: ChatOpenAI = None,
-                 embeddings: OpenAIEmbeddings = None):
+                 embeddings: OpenAIEmbeddings = None,
+                 collection_name: str = "report_writing"):
         self.llm = llm or ChatOpenAI(temperature=0.1)
         self.embeddings = embeddings or OpenAIEmbeddings()
-        self.rag_system = SelfCorrectingRAG(self.llm, self.embeddings)
+        self.collection_name = collection_name
+        self.rag_system = SelfCorrectingRAG(self.llm, self.embeddings, collection_name)
         self.quality_evaluator = ContentQualityEvaluator(self.llm)
     
     def generate_report(self, 
@@ -468,9 +474,9 @@ class ReportWritingAgent:
         )
         
         try:
-            # Retrieve relevant context
-            context_docs = self.rag_system.retrieve_relevant_context(section.title)
-            context_text = "\n".join([doc.page_content for doc in context_docs])
+            # Retrieve relevant context using DocumentChromaStore
+            context_results = self.rag_system.retrieve_relevant_context(section.title)
+            context_text = "\n".join([result["page_content"] for result in context_results])
             
             chain = LLMChain(llm=self.llm, prompt=content_prompt)
             content = chain.run({
@@ -551,24 +557,25 @@ class ReportWritingAgent:
 
 
 # Utility functions for external use
-def create_report_writing_agent(llm: ChatOpenAI = None) -> ReportWritingAgent:
+def create_report_writing_agent(llm: ChatOpenAI = None, collection_name: str = "report_writing") -> ReportWritingAgent:
     """Factory function to create report writing agent"""
-    return ReportWritingAgent(llm=llm)
+    return ReportWritingAgent(llm=llm, collection_name=collection_name)
 
 
 def generate_report_from_data(workflow_data: ReportWorkflowData,
                              thread_components: List[ThreadComponentData],
                              writer_actor: WriterActorType,
                              business_goal: BusinessGoal,
-                             llm: ChatOpenAI = None) -> Dict[str, Any]:
+                             llm: ChatOpenAI = None,
+                             collection_name: str = "report_writing") -> Dict[str, Any]:
     """Convenience function to generate report from data classes"""
-    agent = create_report_writing_agent(llm)
+    agent = create_report_writing_agent(llm, collection_name)
     return agent.generate_report(workflow_data, thread_components, writer_actor, business_goal)
 
 
 # Example usage function
 def example_usage():
-    """Example of how to use the refactored agent"""
+    """Example of how to use the refactored agent with DocumentChromaStore"""
     
     # Create sample data
     workflow_data = ReportWorkflowData(
@@ -604,8 +611,8 @@ def example_usage():
         timeframe="Q4 2024"
     )
     
-    # Generate report
-    agent = create_report_writing_agent()
+    # Generate report using DocumentChromaStore
+    agent = create_report_writing_agent(collection_name="example_report")
     result = agent.generate_report(
         workflow_data=workflow_data,
         thread_components=thread_components,
@@ -614,3 +621,16 @@ def example_usage():
     )
     
     return result
+
+
+if __name__ == "__main__":
+    # Test the refactored agent
+    try:
+        result = example_usage()
+        print("✅ Report generation successful!")
+        print(f"📊 Generated {len(result['final_content'])} sections")
+        print(f"📈 Quality grade: {result['quality_assessment']['overall_grade']}")
+    except Exception as e:
+        print(f"❌ Error testing agent: {e}")
+        import traceback
+        traceback.print_exc()

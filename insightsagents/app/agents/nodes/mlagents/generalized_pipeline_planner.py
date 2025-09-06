@@ -2100,7 +2100,12 @@ class GeneralizedAnalysisAgent:
         # Use the suggested function if no specific function was provided
         target_function = step.function_name
         if not target_function and suggested_functions:
-            target_function = suggested_functions[0]
+            # Extract function name from formatted string (remove category and pipeline info)
+            formatted_func = suggested_functions[0]
+            if ': ' in formatted_func:
+                target_function = formatted_func.split(': ')[0]
+            else:
+                target_function = formatted_func
         
         # Extract inputs using the specialized extractor
         if hasattr(extractor, 'extract_inputs'):
