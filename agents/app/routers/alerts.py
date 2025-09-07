@@ -1,5 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel, Field
 from typing import Dict, List, Any, Optional, Union
 import asyncio
@@ -10,11 +9,11 @@ import traceback
 import httpx
 
 # Import the SQL-to-Alert agent
-from sql_to_alert_agent import SQLToAlertAgent, SQLAlertRequest, SQLAlertResult, TelliusFeedConfiguration
+from app.agents.nodes.writers.alerts_agent import SQLToAlertAgent, SQLAlertRequest, SQLAlertResult
 
 # Enhanced request/response models
 class SQLAlertAPIRequest(BaseModel):
-    """API request model for SQL-to-Alert generation"""
+    """API request model for SQL-to-Alert generation - matches SQLAlertRequest structure"""
     sql: str = Field(..., description="SQL query to analyze")
     query: str = Field(..., description="Natural language description of the query") 
     project_id: str = Field(..., description="Project identifier")
@@ -22,6 +21,7 @@ class SQLAlertAPIRequest(BaseModel):
     configuration: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Additional configuration")
     alert_request: str = Field(..., description="Natural language alert request")
     session_id: Optional[str] = Field(None, description="Session identifier for multi-turn conversations")
+    sample_data: Optional[Dict[str, Any]] = Field(None, description="Sample data from SQL execution")
     
     # Advanced options
     enable_pattern_detection: bool = Field(True, description="Enable specialized pattern handlers")
@@ -32,7 +32,7 @@ class SQLAlertAPIRequest(BaseModel):
 class SQLAlertAPIResponse(BaseModel):
     """API response model"""
     feed_configuration: Dict[str, Any]
-    tellius_api_payload: Dict[str, Any]
+    feed_api_payload: Dict[str, Any]
     sql_analysis: Dict[str, Any]
     confidence_score: float
     processing_time_ms: float
@@ -53,7 +53,7 @@ class AlertValidationResponse(BaseModel):
     validation_score: float
     issues: List[str]
     suggestions: List[str]
-    tellius_compatibility: bool
+    feed_compatibility: bool
     estimated_alert_frequency: str
 
 class AlertPreviewRequest(BaseModel):
@@ -71,10 +71,10 @@ class AlertPreviewResponse(BaseModel):
     metric_trends: Dict[str, Any]
     recommendations: List[str]
 
-class TelliusIntegrationRequest(BaseModel):
-    """Request for direct Tellius integration"""
+class FeedIntegrationRequest(BaseModel):
+    """Request for direct Feed integration"""
     feed_configuration: Dict[str, Any]
-    tellius_api_endpoint: str
+    feed_api_endpoint: str
     api_key: str
     auto_activate: bool = True
 
@@ -84,37 +84,42 @@ class BatchAlertRequest(BaseModel):
     parallel_processing: bool = True
     max_concurrent: int = 5
 
+# Create router instance
+router = APIRouter(prefix="/api/sql-alerts", tags=["sql-alerts"])
+
 # Global agent instance
 agent: Optional[SQLToAlertAgent] = None
 
-"""
-@app.on_event("startup")
-async def startup_event():
-    #Initialize the SQL-to-Alert agent on startup
-    global agent
-    try:
-        agent = SQLToAlertAgent()
-        print("SQL-to-Alert Agent initialized successfully")
-    except Exception as e:
-        print(f"Failed to initialize SQL-to-Alert agent: {e}")
-        raise
-
 def get_agent() -> SQLToAlertAgent:
-    #Dependency to get the agent instance
+    """Dependency to get the agent instance"""
+    global agent
     if agent is None:
-        raise HTTPException(status_code=503, detail="Agent not initialized")
+        try:
+            # Initialize the SQL-to-Alert agent
+            agent = SQLToAlertAgent()
+        except Exception as e:
+            raise HTTPException(status_code=503, detail=f"Failed to initialize agent: {str(e)}")
     return agent
-"""
+
+def initialize_agent() -> None:
+    """Initialize the agent instance"""
+    global agent
+    if agent is None:
+        try:
+            agent = SQLToAlertAgent()
+        except Exception as e:
+            raise HTTPException(status_code=503, detail=f"Failed to initialize agent: {str(e)}")
+
 # Main Endpoints
 
-@app.post("/api/sql-alerts/generate", response_model=SQLAlertAPIResponse)
+@router.post("/generate", response_model=SQLAlertAPIResponse)
 async def generate_sql_alert(
     request: SQLAlertAPIRequest,
     background_tasks: BackgroundTasks,
     agent: SQLToAlertAgent = Depends(get_agent)
 ) -> SQLAlertAPIResponse:
     """
-    Generate Tellius Feed alert configuration from SQL query and natural language request
+    Generate Feed alert configuration from SQL query and natural language request
     """
     start_time = datetime.now()
     session_id = request.session_id or str(uuid.uuid4())
@@ -134,8 +139,8 @@ async def generate_sql_alert(
         # Generate alert using Self-RAG pipeline
         result = await agent.generate_alert(agent_request)
         
-        # Create Tellius API payload
-        tellius_payload = agent.create_tellius_api_payload(result)
+        # Create Lexy API payload
+        lexy_payload = agent.create_lexy_api_payload(result)
         
         # Calculate processing time
         processing_time = (datetime.now() - start_time).total_seconds() * 1000
@@ -147,7 +152,7 @@ async def generate_sql_alert(
         
         return SQLAlertAPIResponse(
             feed_configuration=result.feed_configuration.dict(),
-            tellius_api_payload=tellius_payload,
+            feed_api_payload=lexy_payload,  # Using lexy_payload for backward compatibility
             sql_analysis=result.sql_analysis.dict(),
             confidence_score=result.confidence_score,
             processing_time_ms=processing_time,
@@ -164,7 +169,7 @@ async def generate_sql_alert(
             detail=f"Error generating SQL alert: {str(e)}"
         )
 
-@app.post("/api/sql-alerts/validate", response_model=AlertValidationResponse)
+@router.post("/validate", response_model=AlertValidationResponse)
 async def validate_alert_configuration(
     request: AlertValidationRequest,
     agent: SQLToAlertAgent = Depends(get_agent)
@@ -197,7 +202,7 @@ async def validate_alert_configuration(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Validation error: {str(e)}")
 
-@app.post("/api/sql-alerts/preview", response_model=AlertPreviewResponse)
+@router.post("/preview", response_model=AlertPreviewResponse)
 async def preview_alert_behavior(
     request: AlertPreviewRequest
 ) -> AlertPreviewResponse:
@@ -213,34 +218,34 @@ async def preview_alert_behavior(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Preview error: {str(e)}")
 
-@app.post("/api/sql-alerts/tellius-integration")
-async def integrate_with_tellius(
-    request: TelliusIntegrationRequest,
+@router.post("/feed-integration")
+async def integrate_with_feed(
+    request: FeedIntegrationRequest,
     background_tasks: BackgroundTasks
 ) -> Dict[str, Any]:
     """
-    Directly integrate with Tellius API to create Feed
+    Directly integrate with Feed API to create Feed
     """
     try:
-        # Add background task for Tellius integration
+        # Add background task for Feed integration
         background_tasks.add_task(
-            _create_tellius_feed,
+            _create_feed,
             request.feed_configuration,
-            request.tellius_api_endpoint,
+            request.feed_api_endpoint,
             request.api_key,
             request.auto_activate
         )
         
         return {
             "status": "integration_started",
-            "message": "Tellius Feed creation initiated in background",
+            "message": " Feed creation initiated in background",
             "estimated_completion": "30-60 seconds"
         }
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Integration error: {str(e)}")
 
-@app.post("/api/sql-alerts/batch", response_model=Dict[str, Any])
+@router.post("/batch", response_model=Dict[str, Any])
 async def generate_batch_alerts(
     request: BatchAlertRequest,
     agent: SQLToAlertAgent = Depends(get_agent)
@@ -324,7 +329,7 @@ async def generate_batch_alerts(
 
 # Specialized endpoints for common patterns
 
-@app.post("/api/sql-alerts/training-completion")
+@router.post("/training-completion")
 async def generate_training_completion_alert(
     sql: str,
     completion_threshold: float = 90.0,
@@ -342,9 +347,9 @@ async def generate_training_completion_alert(
         alert_request=f"Alert when completion rate is below {completion_threshold}% or expiry rate exceeds {expiry_threshold}%"
     )
     
-    return await generate_sql_alert(request, None, agent)
+    return await generate_sql_alert(request, BackgroundTasks(), agent)
 
-@app.post("/api/sql-alerts/percentage-anomaly")
+@router.post("/percentage-anomaly")
 async def generate_percentage_anomaly_alert(
     sql: str,
     metric_name: str,
@@ -361,11 +366,11 @@ async def generate_percentage_anomaly_alert(
         alert_request=f"Use ARIMA-based anomaly detection to alert on unusual patterns in {metric_name}"
     )
     
-    return await generate_sql_alert(request, None, agent)
+    return await generate_sql_alert(request, BackgroundTasks(), agent)
 
 # Utility endpoints
 
-@app.get("/api/sql-alerts/patterns")
+@router.get("/patterns")
 async def get_supported_patterns() -> Dict[str, Any]:
     """
     Get list of supported alert patterns and their configurations
@@ -397,10 +402,10 @@ async def get_supported_patterns() -> Dict[str, Any]:
         }
     }
 
-@app.get("/api/sql-alerts/tellius-conditions")
-async def get_tellius_condition_types() -> Dict[str, Any]:
+@router.get("/feed-conditions")
+async def get_feed_condition_types() -> Dict[str, Any]:
     """
-    Get available Tellius condition types and their use cases
+    Get available Feed condition types and their use cases
     """
     return {
         "intelligent_arima": {
@@ -429,7 +434,7 @@ async def get_tellius_condition_types() -> Dict[str, Any]:
         }
     }
 
-@app.delete("/api/sql-alerts/sessions/{session_id}")
+@router.delete("/sessions/{session_id}")
 async def clear_session(
     session_id: str,
     agent: SQLToAlertAgent = Depends(get_agent)
@@ -441,7 +446,7 @@ async def clear_session(
     else:
         raise HTTPException(status_code=404, detail="Session not found")
 
-@app.get("/api/sql-alerts/health")
+@router.get("/health")
 async def health_check() -> Dict[str, Any]:
     """Health check endpoint"""
     return {
@@ -453,7 +458,7 @@ async def health_check() -> Dict[str, Any]:
         "supported_features": [
             "sql_analysis",
             "self_rag_pipeline", 
-            "tellius_integration",
+            "feed_integration",
             "batch_processing",
             "pattern_detection",
             "alert_validation"
@@ -529,7 +534,7 @@ def _validate_alert_config(
         "validation_score": validation_score,
         "issues": issues,
         "suggestions": suggestions,
-        "tellius_compatibility": True,  # Assume compatible for now
+        "feed_compatibility": True,  # Assume compatible for now
         "estimated_alert_frequency": "Medium"  # Would calculate based on conditions
     }
 
@@ -560,13 +565,13 @@ def _simulate_alert_behavior(request: AlertPreviewRequest) -> Dict[str, Any]:
         ]
     }
 
-async def _create_tellius_feed(
+async def _create_feed(
     feed_config: Dict[str, Any],
     api_endpoint: str,
     api_key: str,
     auto_activate: bool
 ):
-    """Background task to create Tellius Feed via API"""
+    """Background task to create Feed via API"""
     try:
         async with httpx.AsyncClient() as client:
             headers = {
@@ -581,10 +586,12 @@ async def _create_tellius_feed(
             )
             
             if response.status_code == 200:
-                print(f"Successfully created Tellius Feed: {response.json()}")
+                print(f"Successfully created Feed: {response.json()}")
             else:
-                print(f"Failed to create Tellius Feed: {response.status_code} - {response.text}")
+                print(f"Failed to create Feed: {response.status_code} - {response.text}")
                 
     except Exception as e:
-        print(f"Error creating Tellius Feed: {e}")
+        print(f"Error creating   Feed: {e}")
 
+# Export the router for use in main application
+__all__ = ["router", "initialize_agent"]

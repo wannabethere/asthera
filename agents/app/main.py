@@ -16,7 +16,9 @@ from app.routers import (
     sql_helper_router,
     dashboard_router,
     report_router,
-    alert_router
+    alert_router,
+    sql_alerts_router
+
 )
 #from app.services.sql.routers import ask, ask_feedback, question_recommendation
 from app.core.middleware import RequestLoggingMiddleware
@@ -177,6 +179,7 @@ app.include_router(sql_helper_router)
 app.include_router(dashboard_router)
 app.include_router(report_router)
 app.include_router(alert_router)
+app.include_router(sql_alerts_router)
 
 @app.get("/api/health")
 async def health_check():

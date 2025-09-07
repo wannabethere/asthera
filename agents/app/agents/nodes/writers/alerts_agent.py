@@ -16,6 +16,8 @@ from datetime import datetime
 import sqlparse
 from sqlparse.sql import Statement, Token, TokenList
 from sqlparse.tokens import Keyword, Name
+from app.core.dependencies import create_llm_instances_from_settings
+
 
 # Protocol for LLM interface
 class LLMProtocol(Protocol):
@@ -111,7 +113,9 @@ class SQLAlertResult(BaseModel):
     confidence_score: float
     critique_notes: List[str]
     suggestions: List[str]
-    
+
+
+
 class SQLToAlertAgent:
     """Self-RAG Agent for converting SQL + Natural Language to Lexy Feed Alerts
     
@@ -126,12 +130,9 @@ class SQLToAlertAgent:
         refiner_llm: LLM instance for refining configurations based on critique
     """
     
-    def __init__(self, 
-                 sql_parser_llm: LLMProtocol,
-                 alert_generator_llm: LLMProtocol,
-                 critic_llm: LLMProtocol,
-                 refiner_llm: LLMProtocol):
+    def __init__(self):
         # Use provided LLM instances
+        sql_parser_llm, alert_generator_llm, critic_llm, refiner_llm = create_llm_instances_from_settings()
         self.sql_parser_llm = sql_parser_llm
         self.alert_generator_llm = alert_generator_llm
         self.critic_llm = critic_llm

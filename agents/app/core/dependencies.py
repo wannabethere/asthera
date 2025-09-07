@@ -43,17 +43,22 @@ def get_chromadb_client():
 
 
 # Helper function to create LLM instances from settings
-def create_llm_instances_from_settings(settings: Dict[str, Any]):
+def create_llm_instances_from_settings(custom_settings: Optional[Dict[str, Any]] = None):
     """Create LLM instances from external settings configuration
     
     Args:
-        settings: Dictionary containing LLM configuration
-                 Expected keys: model_name, sql_parser_temp, alert_generator_temp, 
-                               critic_temp, refiner_temp
+        custom_settings: Optional dictionary containing LLM configuration
+                        Expected keys: model_name, sql_parser_temp, alert_generator_temp, 
+                                      critic_temp, refiner_temp
+                        If not provided, will use default settings from get_settings()
     
     Returns:
         Tuple of (sql_parser_llm, alert_generator_llm, critic_llm, refiner_llm)
     """
+    if custom_settings:
+        settings = custom_settings
+    else:
+        settings = get_settings()
     model_name = settings.get("model_name", "gpt-4o-mini")
     from langchain_openai import ChatOpenAI
     sql_parser_llm = ChatOpenAI(

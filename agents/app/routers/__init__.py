@@ -7,6 +7,7 @@ from app.routers.sql_helper import router as sql_helper_router
 from app.routers.dashboard import router as dashboard_router
 from app.routers.report import router as report_router
 from app.routers.alert_router import router as alert_router
+from app.routers.alerts import router as sql_alerts_router
 
 __all__ = [
     "ask_router",
@@ -17,5 +18,6 @@ __all__ = [
     "sql_helper_router",
     "dashboard_router",
     "report_router",
-    "alert_router"
+    "alert_router",
+    "sql_alerts_router"
 ]

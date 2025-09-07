@@ -6,8 +6,8 @@ and the compatibility layer for main.py integration.
 """
 
 from typing import Dict, Any, Optional, List
-from fastapi import APIRouter, HTTPException, Depends, Query
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 import traceback
 import uuid
 from datetime import datetime
@@ -17,32 +17,64 @@ from app.services.writers.alert_service import (
     AlertCreate, AlertResponseCompatibility, Configs, Condition,
     AlertSet, AlertCombination, FeedManagementRequest
 )
-from app.core.dependencies import get_alert_service, get_alert_compatibility_service
+from app.services.service_container import SQLServiceContainer
 
 # Create router
 router = APIRouter(prefix="/alerts", tags=["alerts"])
 
 
 # =============================================================================
-# DEPENDENCY INJECTION
+# SERVICE CONTAINER ACCESS
 # =============================================================================
-# Dependencies are now imported from app.core.dependencies
+
+def get_alert_service():
+    """Get the AlertService instance from the service container."""
+    container = SQLServiceContainer.get_instance()
+    return container.get_service("alert_service")
+
+def get_alert_compatibility_service():
+    """Get the AlertCompatibilityService instance from the service container."""
+    container = SQLServiceContainer.get_instance()
+    return container.get_service("alert_compatibility_service")
+
+
+# =============================================================================
+# REQUEST MODELS
+# =============================================================================
+
+# Note: We use AlertCreate from the service models instead of custom request models
+# AlertCreate has the structure: input, config, session_id, project_id, etc.
+
+class BatchAlertCreateRequest(BaseModel):
+    """Request model for batch alert creation"""
+    alerts: List[AlertCreate] = Field(..., description="List of AlertCreate requests")
+    project_id: Optional[str] = Field(None, description="Default project ID for all alerts")
+
+
+class FeedCreationRequest(BaseModel):
+    """Request model for creating a feed with AlertCreate requests"""
+    feed_id: str = Field(..., description="Unique identifier for the feed")
+    feed_name: str = Field(..., description="Human-readable name for the feed")
+    project_id: str = Field(..., description="Project identifier")
+    alerts: List[AlertCreate] = Field(..., description="List of AlertCreate requests for the feed")
+    description: Optional[str] = Field(None, description="Description of the feed")
+    data_description: Optional[str] = Field(None, description="Description of the data")
+    alert_sets: Optional[List[AlertSet]] = Field(None, description="Alert sets for the feed")
+    global_configuration: Optional[Dict[str, Any]] = Field(None, description="Global configuration for the feed")
+    notification_settings: Optional[Dict[str, Any]] = Field(None, description="Notification settings")
+    schedule_settings: Optional[Dict[str, Any]] = Field(None, description="Schedule settings")
+    priority: AlertPriority = Field(AlertPriority.MEDIUM, description="Alert priority")
+    tags: Optional[List[str]] = Field(None, description="Tags for the feed")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional metadata")
+    configuration: Optional[Dict[str, Any]] = Field(None, description="Configuration overrides")
 
 
 # =============================================================================
 # RESPONSE MODELS
 # =============================================================================
 
-class AlertServiceResponse(BaseModel):
-    """Response model for alert service endpoints"""
-    success: bool
-    data: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
-
-
 class AlertCompatibilityResponse(BaseModel):
-    """Response model for alert compatibility endpoints"""
+    """Response model for alert compatibility endpoints - all endpoints use this"""
     success: bool
     data: Optional[AlertResponseCompatibility] = None
     error: Optional[str] = None
@@ -53,38 +85,24 @@ class AlertCompatibilityResponse(BaseModel):
 # ALERT SERVICE ENDPOINTS (Native Service)
 # =============================================================================
 
-@router.post("/service/create-single", response_model=AlertServiceResponse)
+@router.post("/service/create-single", response_model=AlertCompatibilityResponse)
 async def create_single_alert(
-    sql_queries: List[str],
-    natural_language_query: str,
-    alert_request: str,
-    project_id: str,
-    data_description: Optional[str] = None,
-    session_id: Optional[str] = None,
-    additional_context: Optional[Dict[str, Any]] = None,
-    configuration: Optional[Dict[str, Any]] = None,
-    alert_service = Depends(get_alert_service)
+    request: AlertCreate
 ):
-    """Create a single alert using the native alert service."""
+    """Create a single alert using the compatibility service."""
     try:
-        result = await alert_service.create_single_alert(
-            sql_queries=sql_queries,
-            natural_language_query=natural_language_query,
-            alert_request=alert_request,
-            project_id=project_id,
-            data_description=data_description,
-            session_id=session_id,
-            additional_context=additional_context,
-            configuration=configuration
-        )
+        compatibility_service = get_alert_compatibility_service()
+        result = await compatibility_service.process_alert_create(request)
         
-        return AlertServiceResponse(
+        return AlertCompatibilityResponse(
             success=True,
-            data=result.dict(),
+            data=result,
             metadata={
                 "endpoint": "create_single_alert",
                 "processed_at": datetime.now().isoformat(),
-                "request_type": result.request_type
+                "service_created": result.service_created,
+                "project_id": result.project_id,
+                "session_id": result.session_id
             }
         )
         
@@ -96,52 +114,74 @@ async def create_single_alert(
         )
 
 
-@router.post("/service/create-feed", response_model=AlertServiceResponse)
-async def create_feed(
-    feed_id: str,
-    feed_name: str,
-    project_id: str,
-    alert_combinations: List[AlertCombination],
-    description: Optional[str] = None,
-    data_description: Optional[str] = None,
-    alert_sets: Optional[List[AlertSet]] = None,
-    global_configuration: Optional[Dict[str, Any]] = None,
-    notification_settings: Optional[Dict[str, Any]] = None,
-    schedule_settings: Optional[Dict[str, Any]] = None,
-    priority: AlertPriority = AlertPriority.MEDIUM,
-    tags: Optional[List[str]] = None,
-    metadata: Optional[Dict[str, Any]] = None,
-    configuration: Optional[Dict[str, Any]] = None,
-    alert_service = Depends(get_alert_service)
+@router.post("/service/create-multiple", response_model=List[AlertCompatibilityResponse])
+async def create_multiple_alerts(
+    request: BatchAlertCreateRequest
 ):
-    """Create a feed using the native alert service."""
+    """Create multiple alerts using the compatibility service."""
     try:
-        result = await alert_service.create_feed(
-            feed_id=feed_id,
-            feed_name=feed_name,
-            project_id=project_id,
-            alert_combinations=alert_combinations,
-            description=description,
-            data_description=data_description,
-            alert_sets=alert_sets,
-            global_configuration=global_configuration,
-            notification_settings=notification_settings,
-            schedule_settings=schedule_settings,
-            priority=priority,
-            tags=tags,
-            metadata=metadata,
-            configuration=configuration
-        )
+        compatibility_service = get_alert_compatibility_service()
+        results = []
         
-        return AlertServiceResponse(
-            success=True,
-            data=result.dict(),
-            metadata={
-                "endpoint": "create_feed",
-                "processed_at": datetime.now().isoformat(),
-                "request_type": result.request_type
-            }
+        for alert in request.alerts:
+            # Use provided project_id or fall back to individual alert's project_id
+            project_id = request.project_id or alert.project_id
+            result = await compatibility_service.process_alert_create(alert, project_id)
+            
+            results.append(AlertCompatibilityResponse(
+                success=True,
+                data=result,
+                metadata={
+                    "endpoint": "create_multiple_alerts",
+                    "processed_at": datetime.now().isoformat(),
+                    "service_created": result.service_created,
+                    "project_id": result.project_id,
+                    "session_id": result.session_id
+                }
+            ))
+        
+        return results
+        
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error creating multiple alerts: {str(e)}"
         )
+
+
+@router.post("/service/create-feed", response_model=List[AlertCompatibilityResponse])
+async def create_feed(
+    request: FeedCreationRequest
+):
+    """Create a feed using the compatibility service with AlertCreate requests."""
+    try:
+        compatibility_service = get_alert_compatibility_service()
+        results = []
+        
+        # Process each alert in the feed
+        for alert in request.alerts:
+            # Set the project_id from the feed request if not set in the alert
+            if not alert.project_id:
+                alert.project_id = request.project_id
+            
+            result = await compatibility_service.process_alert_create(alert, request.project_id)
+            
+            results.append(AlertCompatibilityResponse(
+                success=True,
+                data=result,
+                metadata={
+                    "endpoint": "create_feed",
+                    "processed_at": datetime.now().isoformat(),
+                    "service_created": result.service_created,
+                    "project_id": result.project_id,
+                    "session_id": result.session_id,
+                    "feed_id": request.feed_id,
+                    "feed_name": request.feed_name
+                }
+            ))
+        
+        return results
         
     except Exception as e:
         traceback.print_exc()
@@ -151,22 +191,24 @@ async def create_feed(
         )
 
 
-@router.post("/service/process-request", response_model=AlertServiceResponse)
+@router.post("/service/process-request", response_model=AlertCompatibilityResponse)
 async def process_alert_request(
-    request: AlertRequest,
-    alert_service = Depends(get_alert_service)
+    request: AlertCreate
 ):
-    """Process a generic alert request using the native alert service."""
+    """Process a generic alert request using the compatibility service."""
     try:
-        result = await alert_service.process_request(request)
+        compatibility_service = get_alert_compatibility_service()
+        result = await compatibility_service.process_alert_create(request)
         
-        return AlertServiceResponse(
+        return AlertCompatibilityResponse(
             success=True,
-            data=result.dict(),
+            data=result,
             metadata={
                 "endpoint": "process_alert_request",
                 "processed_at": datetime.now().isoformat(),
-                "request_type": result.request_type
+                "service_created": result.service_created,
+                "project_id": result.project_id,
+                "session_id": result.session_id
             }
         )
         
@@ -185,11 +227,11 @@ async def process_alert_request(
 @router.post("/compatibility/create", response_model=AlertCompatibilityResponse)
 async def create_alert_compatibility(
     alert_create: AlertCreate,
-    project_id: Optional[str] = None,
-    compatibility_service = Depends(get_alert_compatibility_service)
+    project_id: Optional[str] = None
 ):
     """Create an alert using the compatibility service (main.py integration)."""
     try:
+        compatibility_service = get_alert_compatibility_service()
         result = await compatibility_service.process_alert_create(
             alert_create=alert_create,
             project_id=project_id
@@ -215,15 +257,17 @@ async def create_alert_compatibility(
         )
 
 
+
+
 @router.post("/compatibility/create-from-response", response_model=AlertCompatibilityResponse)
 async def create_alerts_from_response(
     alert_response: AlertResponseCompatibility,
     project_id: Optional[str] = None,
-    session_id: Optional[str] = None,
-    compatibility_service = Depends(get_alert_compatibility_service)
+    session_id: Optional[str] = None
 ):
     """Create alerts from AlertResponseCompatibility using the compatibility service."""
     try:
+        compatibility_service = get_alert_compatibility_service()
         result = await compatibility_service.create_alerts_from_response(
             alert_response=alert_response,
             project_id=project_id,
@@ -256,11 +300,11 @@ async def create_alerts_from_response(
 
 @router.post("/ask/alertbuilder/ai")
 async def ai_alert_create(
-    alert: AlertCreate,
-    compatibility_service = Depends(get_alert_compatibility_service)
+    alert: AlertCreate
 ):
     """Main.py compatibility endpoint - exact API match."""
     try:
+        compatibility_service = get_alert_compatibility_service()
         # Process the request
         result = await compatibility_service.process_alert_create(alert)
         
@@ -287,6 +331,8 @@ async def ai_alert_create(
             status_code=500,
             detail=f"Error processing alert request: {str(e)}"
         )
+
+
 
 
 @router.post("/ask/alertbuilder/ai/debug")
@@ -334,13 +380,13 @@ async def list_sessions():
 # =============================================================================
 
 @router.get("/health")
-async def health_check(
-    alert_service = Depends(get_alert_service),
-    compatibility_service = Depends(get_alert_compatibility_service)
-):
+async def health_check():
     """Health check endpoint for alert services."""
     try:
         # Check if services are available
+        alert_service = get_alert_service()
+        compatibility_service = get_alert_compatibility_service()
+        
         return {
             "status": "healthy",
             "services": {
@@ -358,9 +404,10 @@ async def health_check(
 
 
 @router.get("/service/info")
-async def get_service_info(alert_service = Depends(get_alert_service)):
+async def get_service_info():
     """Get information about the alert service."""
     try:
+        alert_service = get_alert_service()
         return {
             "service_type": "AlertService",
             "pipeline_container_available": hasattr(alert_service, '_pipeline_container'),
@@ -374,9 +421,10 @@ async def get_service_info(alert_service = Depends(get_alert_service)):
 
 
 @router.get("/compatibility/info")
-async def get_compatibility_info(compatibility_service = Depends(get_alert_compatibility_service)):
+async def get_compatibility_info():
     """Get information about the alert compatibility service."""
     try:
+        compatibility_service = get_alert_compatibility_service()
         return {
             "service_type": "AlertCompatibilityService",
             "underlying_service_available": compatibility_service.get_underlying_alert_service() is not None,
@@ -397,25 +445,27 @@ async def get_compatibility_info(compatibility_service = Depends(get_alert_compa
 
 @router.post("/compatibility/batch-create", response_model=List[AlertCompatibilityResponse])
 async def batch_create_alerts(
-    alerts: List[AlertCreate],
-    project_id: Optional[str] = None,
-    compatibility_service = Depends(get_alert_compatibility_service)
+    request: BatchAlertCreateRequest
 ):
     """Create multiple alerts in batch using the compatibility service."""
     try:
+        compatibility_service = get_alert_compatibility_service()
         results = []
-        for alert in alerts:
-            result = await compatibility_service.process_alert_create(
-                alert_create=alert,
-                project_id=project_id
-            )
+        
+        for alert in request.alerts:
+            # Use provided project_id or fall back to individual alert's project_id
+            project_id = request.project_id or alert.project_id
+            result = await compatibility_service.process_alert_create(alert, project_id)
+            
             results.append(AlertCompatibilityResponse(
                 success=True,
                 data=result,
                 metadata={
                     "endpoint": "batch_create_alerts",
                     "processed_at": datetime.now().isoformat(),
-                    "service_created": result.service_created
+                    "service_created": result.service_created,
+                    "project_id": result.project_id,
+                    "session_id": result.session_id
                 }
             ))
         
@@ -427,3 +477,5 @@ async def batch_create_alerts(
             status_code=500,
             detail=f"Error in batch alert creation: {str(e)}"
         )
+
+

@@ -1,0 +1,28 @@
+{
+    "testimonials": [
+        {
+            "id": "user1",
+            "name": "Document Analysis agent",
+            "feedback": [
+                {
+                    "id": "q1",
+                    "question": "Read 10,000 documents and extract critical insights in seconds",
+                    "description":"Scan contracts, invoices, and reports for red flags and hidden gems. Turn documents into structured and actionable data in Airtable."
+                   
+                }
+            ]
+        },
+        {
+            "id": "user2",
+            "name": "Web analytics agent",
+            "feedback": [
+                {
+                    "id": "q1b",
+                    "question": "Research the web for always-on intel",
+                    "description":"Scan contracts, invoices, and reports for red flags and hidden gems. Turn documents into structured and actionable data in Airtable."
+                   
+                }
+            ]
+        }
+    ]
+}

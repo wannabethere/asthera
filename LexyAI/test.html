@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Documentation Viewer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .documentation-container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .doc-header {
+            background: linear-gradient(120deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(79, 70, 229, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .doc-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .title-area h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .title-area p {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 1.1rem;
+        }
+
+        .search-box {
+            position: relative;
+            width: 300px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 0.8rem 1rem 0.8rem 3rem;
+            border-radius: 50px;
+            border: none;
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            font-size: 1rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.25);
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+        }
+
+        .search-box input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .doc-body {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .sidebar {
+            flex: 0 0 280px;
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+            align-self: flex-start;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .sidebar h3 {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            color: #64748b;
+            letter-spacing: 0.05em;
+            margin-bottom: 1.2rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .toc-item {
+            display: block;
+            padding: 0.7rem 1rem;
+            margin-bottom: 0.4rem;
+            border-radius: 10px;
+            color: #475569;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .toc-item:hover {
+            background: #f1f5f9;
+            color: #4f46e5;
+        }
+
+        .toc-item.level-1 {
+            font-weight: 600;
+            color: #1e293b;
+            background: #f8fafc;
+            border-left: 4px solid #4f46e5;
+        }
+
+        .toc-item.level-2 {
+            padding-left: 2rem;
+            font-size: 0.95rem;
+        }
+
+        .toc-item.level-3 {
+            padding-left: 3rem;
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+
+        .toc-item.active {
+            background: #eef2ff;
+            color: #4f46e5;
+        }
+
+        .content {
+            flex: 1;
+            background: white;
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .markdown-content {
+            max-width: 100%;
+        }
+
+        .markdown-content h1 {
+            font-size: 2.2rem;
+            color: #1e293b;
+            margin: 2.5rem 0 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .markdown-content h2 {
+            font-size: 1.8rem;
+            color: #1e293b;
+            margin: 2rem 0 1rem;
+        }
+
+        .markdown-content h3 {
+            font-size: 1.4rem;
+            color: #334155;
+            margin: 1.5rem 0 0.8rem;
+        }
+
+        .markdown-content p {
+            margin-bottom: 1.2rem;
+            color: #475569;
+            line-height: 1.7;
+        }
+
+        .markdown-content code {
+            background: #f1f5f9;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            color: #475569;
+        }
+
+        .markdown-content pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 12px;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .markdown-content blockquote {
+            border-left: 4px solid #4f46e5;
+            background: #f8fafc;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .markdown-content blockquote p {
+            margin-bottom: 0;
+            color: #475569;
+            font-style: italic;
+        }
+
+        .markdown-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .markdown-content th, .markdown-content td {
+            padding: 0.8rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .markdown-content th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .markdown-content tr:hover {
+            background: #f1f5f9;
+        }
+
+        .feedback-section {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .feedback-section h3 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #334155;
+        }
+
+        .feedback-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .feedback-btn {
+            padding: 0.7rem 1.5rem;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            color: #64748b;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .feedback-btn:hover {
+            background: #f8fafc;
+            color: #4f46e5;
+            border-color: #c7d2fe;
+        }
+
+        .scroll-top-btn {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #4f46e5;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+            transition: all 0.3s ease;
+            border: none;
+            font-size: 1.2rem;
+        }
+
+        .scroll-top-btn:hover {
+            background: #4338ca;
+            transform: translateY(-3px);
+        }
+
+        @media (max-width: 992px) {
+            .doc-body {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                flex: 0 0 auto;
+                width: 100%;
+                max-height: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1.5rem;
+            }
+            
+            .search-box {
+                width: 100%;
+            }
+            
+            .doc-header {
+                padding: 1.5rem;
+            }
+            
+            .content {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="documentation-container">
+        <header class="doc-header">
+            <div class="header-content">
+                <div class="logo-area">
+                    <div class="logo">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <div class="title-area">
+                        <h1>Agent Documentation</h1>
+                        <p>Complete guide to our intelligent agent system</p>
+                    </div>
+                </div>
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" placeholder="Search documentation...">
+                </div>
+            </div>
+        </header>
+        
+        <div class="doc-body">
+            <aside class="sidebar">
+                <h3>Table of Contents</h3>
+                <a href="#introduction" class="toc-item level-1 active">Introduction</a>
+                <a href="#getting-started" class="toc-item level-1">Getting Started</a>
+                <a href="#installation" class="toc-item level-2">Installation</a>
+                <a href="#configuration" class="toc-item level-2">Configuration</a>
+                <a href="#authentication" class="toc-item level-2">Authentication</a>
+                <a href="#core-concepts" class="toc-item level-1">Core Concepts</a>
+                <a href="#agents" class="toc-item level-2">Agents</a>
+                <a href="#workflows" class="toc-item level-2">Workflows</a>
+                <a href="#knowledge-base" class="toc-item level-2">Knowledge Base</a>
+                <a href="#api-reference" class="toc-item level-1">API Reference</a>
+                <a href="#endpoints" class="toc-item level-2">Endpoints</a>
+                <a href="#authentication" class="toc-item level-3">Authentication Methods</a>
+                <a href="#query-params" class="toc-item level-3">Query Parameters</a>
+                <a href="#response-codes" class="toc-item level-3">Response Codes</a>
+                <a href="#examples" class="toc-item level-1">Examples</a>
+                <a href="#troubleshooting" class="toc-item level-1">Troubleshooting</a>
+                <a href="#faq" class="toc-item level-1">FAQ</a>
+            </aside>
+            
+            <main class="content">
+                <div class="markdown-content">
+                    <h1 id="introduction">Introduction</h1>
+                    <p>Our intelligent agent system is designed to help you automate complex workflows, analyze data, and interact with users in natural language. This documentation provides a comprehensive guide to implementing and using our agent platform.</p>
+                    
+                    <h2>Key Features</h2>
+                    <p>The agent system includes several powerful features:</p>
+                    <ul>
+                        <li>Natural language processing capabilities</li>
+                        <li>Integration with multiple data sources</li>
+                        <li>Customizable workflows</li>
+                        <li>Real-time analytics dashboard</li>
+                        <li>Secure authentication system</li>
+                    </ul>
+                    
+                    <h2 id="getting-started">Getting Started</h2>
+                    <p>To get started with our agent system, you'll need to follow a few simple steps to set up your environment and initialize your first agent.</p>
+                    
+                    <h3 id="installation">Installation</h3>
+                    <p>You can install the agent SDK using npm:</p>
+                    <pre><code>npm install @agent-sdk/core</code></pre>
+                    
+                    <p>Or via yarn:</p>
+                    <pre><code>yarn add @agent-sdk/core</code></pre>
+                    
+                    <h3 id="configuration">Configuration</h3>
+                    <p>After installation, you need to configure your agent with your API keys and environment settings:</p>
+                    <pre><code>const agent = new Agent({
+                        apiKey: 'your-api-key',
+                        environment: 'production',
+                        logLevel: 'info'
+                        });</code>
+                    </pre>
+                    
+                    <h3 id="authentication">Authentication</h3>
+                    <p>All API requests require authentication using your API key. You can find your API key in the dashboard after signing up for an account.</p>
+                    
+                    <blockquote>
+                        <p>Important: Keep your API key secure and never expose it in client-side code.</p>
+                    </blockquote>
+                    
+                    <h2 id="core-concepts">Core Concepts</h2>
+                    <p>Understanding these core concepts will help you make the most of our agent system.</p>
+                    
+                    <h3 id="agents">Agents</h3>
+                    <p>Agents are the core components of our system. Each agent is designed to perform specific tasks and can be customized with different capabilities.</p>
+                    
+                    <h3 id="workflows">Workflows</h3>
+                    <p>Workflows define how agents process information and execute tasks. You can create custom workflows to automate complex processes.</p>
+                    
+                    <h3 id="knowledge-base">Knowledge Base</h3>
+                    <p>The knowledge base stores information that agents can access to answer questions and perform tasks more effectively.</p>
+                    
+                    <h2 id="api-reference">API Reference</h2>
+                    <p>Our API follows RESTful principles and returns JSON responses. The base URL for all API requests is:</p>
+                    <pre><code>https://api.agentplatform.com/v1</code></pre>
+                    
+                    <h3 id="endpoints">Endpoints</h3>
+                    <p>The main API endpoints include:</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Endpoint</th>
+                                <th>Method</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>/agents</code></td>
+                                <td>GET, POST</td>
+                                <td>List and create agents</td>
+                            </tr>
+                            <tr>
+                                <td><code>/agents/{id}</code></td>
+                                <td>GET, PUT, DELETE</td>
+                                <td>Retrieve, update, or delete an agent</td>
+                            </tr>
+                            <tr>
+                                <td><code>/workflows</code></td>
+                                <td>GET, POST</td>
+                                <td>List and create workflows</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div class="feedback-section">
+                        <h3>Was this documentation helpful?</h3>
+                        <div class="feedback-buttons">
+                            <button class="feedback-btn">Yes</button>
+                            <button class="feedback-btn">No</button>
+                            <button class="feedback-btn">Need Improvement</button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <button class="scroll-top-btn">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <script>
+        // Simple scroll to top functionality
+        document.querySelector('.scroll-top-btn').addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+        
+        // Show/hide scroll to top button based on scroll position
+        window.addEventListener('scroll', () => {
+            const scrollBtn = document.querySelector('.scroll-top-btn');
+            if (window.scrollY > 300) {
+                scrollBtn.style.display = 'flex';
+            } else {
+                scrollBtn.style.display = 'none';
+            }
+        });
+        
+        // Table of contents highlighting
+        const tocItems = document.querySelectorAll('.toc-item');
+        const contentSections = document.querySelectorAll('h1, h2, h3');
+        
+        // Simple active state for demo purposes
+        tocItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                tocItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>
