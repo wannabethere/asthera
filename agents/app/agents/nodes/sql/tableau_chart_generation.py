@@ -1,6 +1,7 @@
 import logging
 from typing import Any, Dict, Optional, List
 import asyncio
+import json
 
 import orjson
 from langchain.agents import AgentType, initialize_agent
@@ -53,6 +54,20 @@ class TableauChartGenerationAgent:
         
         {tableau_chart_generation_instructions}
         
+        ### EXISTING CHART SCHEMA CONSIDERATION ###
+        
+        If an existing chart schema is provided, you should:
+        1. FIRST evaluate if the existing chart schema is suitable for the current data and query
+        2. If the existing schema is appropriate, REUSE it with minimal modifications (like updating field names to match current data)
+        3. If the existing schema is not suitable, generate a new one that better fits the current requirements
+        4. In your reasoning, explain whether you reused the existing schema or generated a new one and why
+        
+        When reusing an existing schema:
+        - Keep the same chart type and overall structure
+        - Update field names to match the current data columns
+        - Preserve styling, colors, and layout preferences
+        - Only modify what's necessary for the new data
+        
         ### OUTPUT FORMAT ###
         
         Please provide your chain of thought reasoning, chart type, and the Tableau visualization configuration in JSON format.
@@ -81,7 +96,7 @@ class TableauChartGenerationAgent:
         
         # User prompt template
         self.user_prompt_template = PromptTemplate(
-            input_variables=["query", "sql", "sample_data", "sample_column_values", "column_metadata", "language"],
+            input_variables=["query", "sql", "sample_data", "sample_column_values", "column_metadata", "language", "existing_chart_schema"],
             template="""
             ### INPUT ###
             Question: {query}
@@ -90,6 +105,7 @@ class TableauChartGenerationAgent:
             Sample Column Values: {sample_column_values}
             Column Metadata: {column_metadata}
             Language: {language}
+            Existing Chart Schema: {existing_chart_schema}
             
             Please analyze the data and user question step by step to create the most appropriate Tableau visualization.
             """
@@ -118,9 +134,19 @@ class TableauChartGenerationAgent:
         sql: str,
         data: Dict[str, Any],
         language: str = "English",
-        remove_data_from_chart_config: bool = True
+        remove_data_from_chart_config: bool = True,
+        existing_chart_schema: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Generate Tableau chart configuration using the agent"""
+        """Generate Tableau chart configuration using the agent
+        
+        Args:
+            query: Natural language query
+            sql: SQL query
+            data: Data dictionary with columns and data
+            language: Language for the chart
+            remove_data_from_chart_config: Whether to remove data from config
+            existing_chart_schema: Optional existing chart schema to consider for reuse
+        """
         try:
             # Preprocess data
             preprocessed_data = self.data_preprocessor.run(data)
@@ -132,7 +158,8 @@ class TableauChartGenerationAgent:
                 sample_data=preprocessed_data["sample_data"],
                 sample_column_values=preprocessed_data["sample_column_values"],
                 column_metadata=preprocessed_data["column_metadata"],
-                language=language
+                language=language,
+                existing_chart_schema=json.dumps(existing_chart_schema) if existing_chart_schema else "None"
             )
             
             # Generate chart using LLM directly (more controlled approach)
@@ -226,9 +253,20 @@ class TableauChartGenerationPipeline:
         data: Dict[str, Any],
         language: str = "English",
         remove_data_from_chart_config: bool = True,
-        export_format: Optional[str] = None
+        export_format: Optional[str] = None,
+        existing_chart_schema: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Run the complete Tableau chart generation pipeline"""
+        """Run the complete Tableau chart generation pipeline
+        
+        Args:
+            query: Natural language query
+            sql: SQL query
+            data: Data dictionary with columns and data
+            language: Language for the chart
+            remove_data_from_chart_config: Whether to remove data from config
+            export_format: Optional export format
+            existing_chart_schema: Optional existing chart schema to consider for reuse
+        """
         logger.info("Tableau Chart Generation pipeline is running...")
         
         try:
@@ -238,7 +276,8 @@ class TableauChartGenerationPipeline:
                 sql=sql,
                 data=data,
                 language=language,
-                remove_data_from_chart_config=remove_data_from_chart_config
+                remove_data_from_chart_config=remove_data_from_chart_config,
+                existing_chart_schema=existing_chart_schema
             )
             
             # Add export functionality if requested

@@ -11,6 +11,7 @@ from app.agents.nodes.writers.dashboard_models import DashboardConfiguration
 from app.services.servicebase import BaseService
 from app.core.engine_provider import EngineProvider
 from app.core.dependencies import get_llm
+from app.services.workflow_integration import get_workflow_integration_service
 
 logger = logging.getLogger("lexy-ai-service")
 
@@ -68,6 +69,9 @@ class DashboardService(BaseService):
         # Configuration cache and execution history
         self._configuration_cache = {}
         self._execution_history = []
+        
+        # Initialize workflow integration service
+        self._workflow_integration = get_workflow_integration_service()
         
         # Initialize default dashboard templates
         self._initialize_default_templates()
@@ -645,9 +649,9 @@ class DashboardService(BaseService):
                 validation["valid"] = False
                 validation["issues"].append(f"Query {index}: SQL must contain SELECT statement")
         
-        # Check chart_id
-        if "chart_id" not in query_data:
-            validation["warnings"].append(f"Query {index}: Consider adding chart_id for better organization")
+        # Check chart_schema
+        if "chart_schema" not in query_data or not query_data.get("chart_schema"):
+            validation["warnings"].append(f"Query {index}: Consider adding chart_schema for better visualization")
         
         return validation
     
@@ -674,8 +678,8 @@ class DashboardService(BaseService):
                     if not isinstance(chart, dict):
                         validation["valid"] = False
                         validation["issues"].append(f"Chart {i} must be a dictionary")
-                    elif "chart_id" not in chart:
-                        validation["warnings"].append(f"Chart {i}: Consider adding chart_id")
+                    elif "chart_schema" not in chart or not chart.get("chart_schema"):
+                        validation["warnings"].append(f"Chart {i}: Consider adding chart_schema")
         
         return validation
     
@@ -780,6 +784,486 @@ class DashboardService(BaseService):
             }
         }
     
+    async def render_dashboard_from_workflow_db(
+        self,
+        workflow_id: str,
+        project_id: str,
+        natural_language_query: Optional[str] = None,
+        additional_context: Optional[Dict[str, Any]] = None,
+        time_filters: Optional[Dict[str, Any]] = None,
+        render_options: Optional[Dict[str, Any]] = None,
+        status_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None
+    ) -> Dict[str, Any]:
+        """
+        Render dashboard from workflow database model
+        
+        Args:
+            workflow_id: Workflow ID from database
+            project_id: Project identifier
+            natural_language_query: Natural language query for conditional formatting
+            additional_context: Additional context for rendering
+            time_filters: Time-based filters
+            render_options: Options for rendering (preview, full, etc.)
+            status_callback: Callback for status updates
+            
+        Returns:
+            Complete dashboard result with workflow-driven configuration
+        """
+        try:
+            # Use workflow integration service to render dashboard
+            workflow_result = await self._workflow_integration.render_dashboard_from_workflow(
+                workflow_id=workflow_id,
+                project_id=project_id,
+                natural_language_query=natural_language_query,
+                additional_context=additional_context,
+                time_filters=time_filters,
+                render_options=render_options
+            )
+            
+            if not workflow_result.get("success"):
+                raise ValueError(workflow_result.get("error", f"Failed to render workflow {workflow_id}"))
+            
+            # Extract data from workflow result
+            dashboard_queries = workflow_result["dashboard_queries"]
+            dashboard_context = workflow_result["dashboard_context"]
+            
+            # Send initial status update
+            self._send_status_update(
+                status_callback,
+                "workflow_dashboard_rendering_started",
+                {
+                    "workflow_id": workflow_id,
+                    "project_id": project_id,
+                    "total_queries": len(dashboard_queries),
+                    "workflow_state": workflow_result.get("workflow_metadata", {}).get("state"),
+                    "render_mode": render_options.get("mode", "full") if render_options else "full"
+                }
+            )
+            
+            # Process dashboard with conditional formatting
+            result = await self.process_dashboard_with_conditional_formatting(
+                natural_language_query=natural_language_query,
+                dashboard_queries=dashboard_queries,
+                project_id=project_id,
+                dashboard_context=dashboard_context,
+                additional_context=additional_context,
+                time_filters=time_filters,
+                status_callback=status_callback
+            )
+            
+            # Add workflow metadata to result
+            result["workflow_metadata"] = {
+                "workflow_id": workflow_id,
+                "workflow_state": workflow_result.get("workflow_metadata", {}).get("state"),
+                "workflow_type": "dashboard_workflow",
+                "dashboard_template": dashboard_context.get("template"),
+                "workflow_source": "database",
+                "render_options": render_options or {},
+                "transformed_at": workflow_result.get("transformed_at")
+            }
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error rendering dashboard from workflow DB: {e}")
+            self._send_status_update(
+                status_callback,
+                "workflow_dashboard_rendering_failed",
+                {
+                    "error": str(e),
+                    "workflow_id": workflow_id,
+                    "project_id": project_id
+                }
+            )
+            raise
+    
+    async def render_dashboard_from_workflow_data(
+        self,
+        workflow_data: Dict[str, Any],
+        project_id: str,
+        natural_language_query: Optional[str] = None,
+        additional_context: Optional[Dict[str, Any]] = None,
+        time_filters: Optional[Dict[str, Any]] = None,
+        render_options: Optional[Dict[str, Any]] = None,
+        status_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None
+    ) -> Dict[str, Any]:
+        """
+        Render dashboard from workflow data passed in request
+        
+        Args:
+            workflow_data: Complete workflow data from request
+            project_id: Project identifier
+            natural_language_query: Natural language query for conditional formatting
+            additional_context: Additional context for rendering
+            time_filters: Time-based filters
+            render_options: Options for rendering (preview, full, etc.)
+            status_callback: Callback for status updates
+            
+        Returns:
+            Complete dashboard result with workflow-driven configuration
+        """
+        try:
+            # Extract workflow information
+            workflow_id = workflow_data.get("workflow_id")
+            workflow_state = workflow_data.get("state")
+            thread_components = workflow_data.get("thread_components", [])
+            workflow_metadata = workflow_data.get("workflow_metadata", {})
+            
+            # Transform workflow data to dashboard format
+            dashboard_queries = self._extract_queries_from_workflow_components(thread_components)
+            dashboard_context = self._create_dashboard_context_from_workflow_data(workflow_data)
+            
+            # Send initial status update
+            self._send_status_update(
+                status_callback,
+                "workflow_dashboard_rendering_started",
+                {
+                    "workflow_id": workflow_id,
+                    "project_id": project_id,
+                    "total_queries": len(dashboard_queries),
+                    "workflow_state": workflow_state,
+                    "render_mode": render_options.get("mode", "full") if render_options else "full",
+                    "total_components": len(thread_components)
+                }
+            )
+            
+            # Process dashboard with conditional formatting
+            result = await self.process_dashboard_with_conditional_formatting(
+                natural_language_query=natural_language_query,
+                dashboard_queries=dashboard_queries,
+                project_id=project_id,
+                dashboard_context=dashboard_context,
+                additional_context=additional_context,
+                time_filters=time_filters,
+                status_callback=status_callback
+            )
+            
+            # Add workflow metadata to result
+            result["workflow_metadata"] = {
+                "workflow_id": workflow_id,
+                "workflow_state": workflow_state,
+                "workflow_type": "dashboard_workflow",
+                "workflow_source": "request_data",
+                "total_components": len(thread_components),
+                "dashboard_template": workflow_metadata.get("dashboard_template"),
+                "dashboard_layout": workflow_metadata.get("dashboard_layout"),
+                "refresh_rate": workflow_metadata.get("refresh_rate")
+            }
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error rendering dashboard from workflow data: {e}")
+            self._send_status_update(
+                status_callback,
+                "workflow_dashboard_rendering_failed",
+                {
+                    "error": str(e),
+                    "workflow_id": workflow_data.get("workflow_id"),
+                    "project_id": project_id
+                }
+            )
+            raise
+    
+    def _extract_queries_from_workflow_components(self, thread_components: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Extract dashboard queries from workflow thread components"""
+        queries = []
+        
+        try:
+            for component in thread_components:
+                component_type = component.get("component_type", "").lower()
+                
+                # Only process components that have SQL queries
+                if component.get("sql_query") and component_type in ["chart", "table", "metric", "sql_summary"]:
+                    query_data = {
+                        "chart_schema": component.get("chart_schema", {}),
+                        "sql": component.get("sql_query", ""),
+                        "query": component.get("question", ""),
+                        "data_description": component.get("description", ""),
+                        "component_type": component_type,
+                        "sequence_order": component.get("sequence_order", 0),
+                        "configuration": component.get("configuration", {}),
+                        "chart_config": component.get("chart_config", {}),
+                        "table_config": component.get("table_config", {}),
+                        "alert_config": component.get("alert_config", {}),
+                        "executive_summary": component.get("executive_summary"),
+                        "data_overview": component.get("data_overview", {}),
+                        "visualization_data": component.get("visualization_data", {}),
+                        "sample_data": component.get("sample_data", {}),
+                        "thread_metadata": component.get("thread_metadata", {}),
+                        "reasoning": component.get("reasoning"),
+                        "data_count": component.get("data_count"),
+                        "validation_results": component.get("validation_results", {})
+                    }
+                    queries.append(query_data)
+            
+            # Sort by sequence order
+            queries.sort(key=lambda x: x.get("sequence_order", 0))
+            
+            return queries
+            
+        except Exception as e:
+            logger.error(f"Error extracting queries from workflow components: {e}")
+            return []
+    
+    def _create_dashboard_context_from_workflow_data(self, workflow_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create dashboard context from workflow data"""
+        try:
+            workflow_metadata = workflow_data.get("workflow_metadata", {})
+            thread_components = workflow_data.get("thread_components", [])
+            
+            # Extract available columns from components
+            available_columns = set()
+            data_types = {}
+            
+            for component in thread_components:
+                if component.get("data_overview"):
+                    overview = component["data_overview"]
+                    if "columns" in overview:
+                        for col in overview["columns"]:
+                            available_columns.add(col.get("name", ""))
+                            data_types[col.get("name", "")] = col.get("type", "string")
+            
+            # Create dashboard context
+            context = {
+                "title": workflow_metadata.get("report_title", f"Dashboard from Workflow {workflow_data.get('workflow_id')}"),
+                "description": workflow_metadata.get("report_description", "Dashboard generated from workflow configuration"),
+                "template": workflow_metadata.get("dashboard_template", "default"),
+                "layout": workflow_metadata.get("dashboard_layout", "grid"),
+                "refresh_rate": workflow_metadata.get("refresh_rate", 300),
+                "available_columns": list(available_columns),
+                "data_types": data_types,
+                "workflow_id": workflow_data.get("workflow_id"),
+                "workflow_state": workflow_data.get("state"),
+                "workflow_metadata": workflow_metadata,
+                "total_components": len(thread_components),
+                "charts": [comp for comp in thread_components if comp.get("component_type") in ["chart", "sql_summary"]],
+                "tables": [comp for comp in thread_components if comp.get("component_type") == "table"],
+                "metrics": [comp for comp in thread_components if comp.get("component_type") == "metric"],
+                "alerts": [comp for comp in thread_components if comp.get("component_type") == "alert"]
+            }
+            
+            return context
+            
+        except Exception as e:
+            logger.error(f"Error creating dashboard context from workflow data: {e}")
+            # Return basic context
+            return {
+                "title": "Dashboard from Workflow",
+                "description": "Dashboard generated from workflow configuration",
+                "template": "default",
+                "layout": "grid",
+                "refresh_rate": 300,
+                "available_columns": [],
+                "data_types": {},
+                "workflow_id": workflow_data.get("workflow_id", "unknown"),
+                "workflow_state": workflow_data.get("state", "unknown"),
+                "total_components": len(workflow_data.get("thread_components", []))
+            }
+    
+    async def _fetch_workflow_from_db(self, workflow_id: str) -> Optional[Dict[str, Any]]:
+        """Fetch workflow data from database using workflow integration service"""
+        try:
+            # Use workflow integration service to fetch from database
+            workflow_data = await self._workflow_integration.fetch_workflow_from_db(workflow_id)
+            
+            if workflow_data:
+                logger.info(f"Successfully fetched workflow {workflow_id} from database")
+            else:
+                logger.warning(f"Workflow {workflow_id} not found in database")
+            
+            return workflow_data
+            
+        except Exception as e:
+            logger.error(f"Error fetching workflow from database: {e}")
+            return None
+    
+    def _extract_queries_from_workflow_components(self, workflow_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Extract dashboard queries from workflow thread components"""
+        try:
+            components = workflow_data.get("thread_components", [])
+            queries = []
+            
+            for component in components:
+                if component.get("component_type") in ["chart", "table", "metric"]:
+                    query_data = {
+                        "chart_schema": component.get("chart_schema", {}),
+                        "sql": component.get("sql", ""),
+                        "query": component.get("query", ""),
+                        "data_description": component.get("data_description", ""),
+                        "project_id": workflow_data.get("project_id", "default"),
+                        "configuration": component.get("configuration", {}),
+                        "chart_config": component.get("chart_config", {}),
+                        "table_config": component.get("table_config", {}),
+                        "alert_config": component.get("alert_config", {})
+                    }
+                    queries.append(query_data)
+            
+            return queries
+            
+        except Exception as e:
+            logger.error(f"Error extracting queries from workflow components: {e}")
+            return []
+    
+    def _create_dashboard_context_from_workflow(self, workflow_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create dashboard context from workflow data"""
+        try:
+            metadata = workflow_data.get("workflow_metadata", {})
+            components = workflow_data.get("thread_components", [])
+            
+            # Create base dashboard context
+            context = {
+                "title": f"Dashboard from Workflow {workflow_data.get('id', 'Unknown')}",
+                "description": "Dashboard generated from workflow configuration",
+                "template": metadata.get("dashboard_template", "operational_dashboard"),
+                "layout": metadata.get("dashboard_layout", "grid_2x2"),
+                "refresh_rate": metadata.get("refresh_rate", 300),
+                "auto_refresh": metadata.get("auto_refresh", True),
+                "responsive": metadata.get("responsive", True),
+                "theme": metadata.get("theme", "default"),
+                "custom_styling": metadata.get("custom_styling", {}),
+                "interactive_features": metadata.get("interactive_features", []),
+                "export_options": metadata.get("export_options", ["pdf", "png", "csv"]),
+                "sharing_config": metadata.get("sharing_config", {}),
+                "alert_config": metadata.get("alert_config", {}),
+                "performance_config": metadata.get("performance_config", {}),
+                "workflow_id": workflow_data.get("id"),
+                "workflow_state": workflow_data.get("state"),
+                "workflow_metadata": metadata
+            }
+            
+            # Add component-specific configurations
+            context["components"] = []
+            context["charts"] = []
+            context["available_columns"] = []
+            context["data_types"] = {}
+            
+            for comp in components:
+                component_config = {
+                    "id": comp.get("id"),
+                    "type": comp.get("component_type"),
+                    "title": comp.get("question"),
+                    "description": comp.get("description"),
+                    "sequence_order": comp.get("sequence_order"),
+                    "configuration": comp.get("configuration", {}),
+                    "chart_config": comp.get("chart_config"),
+                    "table_config": comp.get("table_config"),
+                    "alert_config": comp.get("alert_config")
+                }
+                context["components"].append(component_config)
+                
+                # Add chart configuration
+                if comp.get("component_type") == "chart":
+                    chart_config = {
+                        "chart_schema": comp.get("chart_schema", {}),
+                        "type": comp.get("chart_config", {}).get("type", "bar"),
+                        "columns": ["category", "value"],  # Default columns
+                        "query": comp.get("query")
+                    }
+                    context["charts"].append(chart_config)
+            
+            return context
+            
+        except Exception as e:
+            logger.error(f"Error creating dashboard context from workflow: {e}")
+            # Return basic context
+            return {
+                "title": "Dashboard from Workflow",
+                "description": "Dashboard generated from workflow configuration",
+                "template": "operational_dashboard",
+                "layout": "grid_2x2",
+                "workflow_id": workflow_data.get("id", "unknown")
+            }
+    
+    async def get_workflow_components(self, workflow_id: str) -> List[Dict[str, Any]]:
+        """Get workflow components for a specific workflow"""
+        try:
+            # Use workflow integration service to get components
+            components = await self._workflow_integration.fetch_workflow_components(workflow_id)
+            
+            # Format components for API response
+            formatted_components = []
+            for comp in components:
+                formatted_comp = {
+                    "id": comp.get("id"),
+                    "component_type": comp.get("component_type"),
+                    "question": comp.get("question"),
+                    "description": comp.get("description"),
+                    "sequence_order": comp.get("sequence_order"),
+                    "configuration": comp.get("configuration", {}),
+                    "chart_config": comp.get("chart_config", {}),
+                    "table_config": comp.get("table_config", {}),
+                    "alert_config": comp.get("alert_config", {}),
+                    "sql": comp.get("sql", ""),
+                    "query": comp.get("query", ""),
+                    "data_description": comp.get("data_description", "")
+                }
+                formatted_components.append(formatted_comp)
+            
+            return formatted_components
+            
+        except Exception as e:
+            logger.error(f"Error getting workflow components: {e}")
+            return []
+    
+    async def get_workflow_status(self, workflow_id: str) -> Dict[str, Any]:
+        """Get workflow status and metadata"""
+        try:
+            # Use workflow integration service to get status
+            status = await self._workflow_integration.get_workflow_status(workflow_id)
+            return status
+            
+        except Exception as e:
+            logger.error(f"Error getting workflow status: {e}")
+            return {
+                "workflow_id": workflow_id,
+                "status": "error",
+                "error": str(e)
+            }
+    
+    async def preview_dashboard_from_workflow(
+        self,
+        workflow_id: str,
+        preview_options: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Preview dashboard from workflow without full rendering"""
+        try:
+            # Fetch workflow data
+            workflow_data = await self._fetch_workflow_from_db(workflow_id)
+            
+            if not workflow_data:
+                raise ValueError(f"Workflow {workflow_id} not found")
+            
+            # Extract queries (limited for preview)
+            dashboard_queries = self._extract_queries_from_workflow_components(workflow_data)
+            
+            # Limit queries for preview
+            max_preview_queries = preview_options.get("max_queries", 2) if preview_options else 2
+            dashboard_queries = dashboard_queries[:max_preview_queries]
+            
+            # Create dashboard context
+            dashboard_context = self._create_dashboard_context_from_workflow(workflow_data)
+            
+            # Execute limited dashboard (preview mode)
+            result = await self.execute_dashboard_only(
+                dashboard_queries=dashboard_queries,
+                project_id="preview_project"
+            )
+            
+            # Add preview metadata
+            result["preview_metadata"] = {
+                "workflow_id": workflow_id,
+                "preview_mode": True,
+                "total_queries_previewed": len(dashboard_queries),
+                "preview_options": preview_options or {}
+            }
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error previewing dashboard from workflow: {e}")
+            raise
+
     def clear_cache(self):
         """Clear configuration and execution caches"""
         self._configuration_cache.clear()
@@ -803,13 +1287,33 @@ async def example_dashboard_service_usage():
     # Sample dashboard queries
     dashboard_queries = [
         {
-            "chart_id": "sales_chart",
+            "chart_schema": {
+                "type": "vega_lite",
+                "spec": {
+                    "mark": "bar",
+                    "encoding": {
+                        "x": {"field": "region", "type": "nominal"},
+                        "y": {"field": "sales", "type": "quantitative"}
+                    }
+                },
+                "title": "Sales by Region"
+            },
             "sql": "SELECT region, SUM(sales_amount) as sales FROM sales_data GROUP BY region",
             "query": "Show sales by region",
             "data_description": "Sales data by region"
         },
         {
-            "chart_id": "performance_chart",
+            "chart_schema": {
+                "type": "vega_lite",
+                "spec": {
+                    "mark": "line",
+                    "encoding": {
+                        "x": {"field": "date", "type": "temporal"},
+                        "y": {"field": "performance_score", "type": "quantitative"}
+                    }
+                },
+                "title": "Performance Over Time"
+            },
             "sql": "SELECT date, performance_score FROM performance_data ORDER BY date",
             "query": "Show performance over time",
             "data_description": "Performance trends over time"
@@ -820,13 +1324,33 @@ async def example_dashboard_service_usage():
     dashboard_context = {
         "charts": [
             {
-                "chart_id": "sales_chart",
+                "chart_schema": {
+                    "type": "vega_lite",
+                    "spec": {
+                        "mark": "bar",
+                        "encoding": {
+                            "x": {"field": "region", "type": "nominal"},
+                            "y": {"field": "sales", "type": "quantitative"}
+                        }
+                    },
+                    "title": "Sales by Region"
+                },
                 "type": "bar",
                 "columns": ["region", "sales"],
                 "query": "Show sales by region"
             },
             {
-                "chart_id": "performance_chart",
+                "chart_schema": {
+                    "type": "vega_lite",
+                    "spec": {
+                        "mark": "line",
+                        "encoding": {
+                            "x": {"field": "date", "type": "temporal"},
+                            "y": {"field": "performance_score", "type": "quantitative"}
+                        }
+                    },
+                    "title": "Performance Over Time"
+                },
                 "type": "line",
                 "columns": ["date", "performance_score"],
                 "query": "Show performance over time"

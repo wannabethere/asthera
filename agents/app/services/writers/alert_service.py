@@ -377,7 +377,28 @@ class AlertService(BaseService[AlertRequest, AlertResponse]):
             raise RuntimeError("Feed management pipeline is not available. Please ensure the pipeline is properly configured.")
         
         # Convert request to FeedConfiguration format
-        from app.agents.pipelines.writers.feed_management_pipeline import FeedConfiguration, FeedStatus
+        from app.agents.pipelines.writers.feed_management_pipeline import FeedConfiguration, FeedStatus, AlertCombination as FeedAlertCombination, FeedPriority
+        
+        # Convert AlertCombination objects from alert_service to feed_management_pipeline format
+        feed_alert_combinations = []
+        for alert_combination in request.alert_combinations:
+            # Convert AlertPriority to FeedPriority
+            feed_priority = FeedPriority(alert_combination.priority.value) if alert_combination.priority else FeedPriority.MEDIUM
+            
+            feed_alert_combination = FeedAlertCombination(
+                alert_request=alert_combination.alert_request,
+                sql_query=alert_combination.sql_query,
+                natural_language_query=alert_combination.natural_language_query,
+                alert_id=alert_combination.alert_id,
+                alert_name=alert_combination.alert_name,
+                configuration=alert_combination.configuration,
+                priority=feed_priority,
+                tags=alert_combination.tags
+            )
+            feed_alert_combinations.append(feed_alert_combination)
+        
+        # Convert AlertPriority to FeedPriority for the feed
+        feed_priority = FeedPriority(request.priority.value) if request.priority else FeedPriority.MEDIUM
         
         feed_config = FeedConfiguration(
             feed_id=request.feed_id,
@@ -386,12 +407,12 @@ class AlertService(BaseService[AlertRequest, AlertResponse]):
             project_id=request.project_id,
             data_description=request.data_description,
             alert_sets=request.alert_sets,
-            alert_combinations=request.alert_combinations,
+            alert_combinations=feed_alert_combinations,
             global_configuration=request.global_configuration,
             notification_settings=request.notification_settings,
             schedule_settings=request.schedule_settings,
             status=FeedStatus.PENDING,
-            priority=request.priority,
+            priority=feed_priority,
             tags=request.tags,
             metadata=request.metadata
         )
@@ -613,7 +634,7 @@ class AlertServiceCompatibility:
             
             alert_set = self.convert_condition_to_alert_set(condition, alert_id, alert_name)
             
-            # Convert AlertSet to AlertCombination
+            # Convert AlertSet to AlertCombination (using alert_service AlertCombination)
             alert_combination = AlertCombination(
                 alert_request=alert_response.reasoning,
                 sql_query=alert_set.sql_query,
@@ -649,8 +670,7 @@ class AlertServiceCompatibility:
             schedule_settings=alert_response.schedule_settings,
             priority=alert_response.priority or AlertPriority.MEDIUM,
             tags=alert_response.tags or [],
-            metadata=alert_response.metadata,
-            session_id=session_id
+            metadata=alert_response.metadata
         )
     
     def convert_service_response_to_compatibility(

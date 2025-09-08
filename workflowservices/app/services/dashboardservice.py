@@ -1,3 +1,4 @@
+import traceback
 from typing import Optional, List, Dict, Any, Union
 from uuid import UUID
 import uuid
@@ -9,7 +10,7 @@ from app.models.dbmodels import Dashboard, DashboardVersion
 from app.models.thread import Thread, Workflow
 from app.models.workspace import Workspace, Project
 from app.models.schema import DashboardCreate, DashboardUpdate, DashboardResponse
-
+import json
 class DashboardService(BaseService):
     """Service for managing dashboards with workflow integration"""
     
@@ -39,9 +40,10 @@ class DashboardService(BaseService):
             user_id, "workspace", workspace_id, "create"
         ):
             raise PermissionError("User doesn't have permission to create dashboard in this workspace")
-        
+        print("crossed all the db conditions")
         # Validate workflow exists and user has access
         if workflow_id:
+            print("Entered if worlflowid")
             stmt = select(Workflow).where(Workflow.id == workflow_id)
             result = await self.db.execute(stmt)
             workflow = result.scalar_one_or_none()
@@ -52,53 +54,60 @@ class DashboardService(BaseService):
                 user_id, "thread", workflow.thread_id, "read"
             ):
                 raise PermissionError("User doesn't have access to this workflow")
-        
-        # Create dashboard
-        dashboard = Dashboard(
-            name=dashboard_data.name,
-            description=dashboard_data.description,
-            DashboardType=dashboard_data.DashboardType,
-            is_active=dashboard_data.is_active,
-            content=dashboard_data.content,
-            version="1.0"
-        )
-        
-        self.db.add(dashboard)
-        await self.db.flush()
-        
-        # Create initial version
-        version = DashboardVersion(
-            dashboard_id=dashboard.id,
-            version="1.0",
-            content=dashboard_data.content
-        )
-        self.db.add(version)
-        
-        # Store metadata for permissions and associations
-        metadata = {
-            "created_by": str(user_id),
-            "workflow_id": str(workflow_id) if workflow_id else None,
-            "project_id": str(project_id) if project_id else None,
-            "workspace_id": str(workspace_id) if workspace_id else None,
-            "sharing_permission": sharing_permission.value,
-            "shared_with": [str(uid) for uid in shared_with] if shared_with else []
-        }
-        
-        # Add to ChromaDB for searchability
-        await self._add_to_chroma(
-            self.collection_name,
-            str(dashboard.id),
-            {
-                "name": dashboard.name,
-                "description": dashboard.description,
-                "type": dashboard.DashboardType,
-                "content": dashboard.content
-            },
-            metadata
-        )
-        
-        await self.db.commit()
-        return dashboard
+        try:
+
+            # Create dashboard
+            dashboard = Dashboard(
+                name=dashboard_data.name,
+                description=dashboard_data.description,
+                DashboardType=dashboard_data.DashboardType,
+                is_active=dashboard_data.is_active,
+                content=dashboard_data.content,
+                version="1.0"
+            )
+            
+            self.db.add(dashboard)
+            await self.db.flush()
+            
+            # Create initial version
+            version = DashboardVersion(
+                dashboard_id=dashboard.id,
+                version="1.0",
+                content=dashboard_data.content
+            )
+            self.db.add(version)
+            
+            # Store metadata for permissions and associations
+            metadata = {
+                "created_by": str(user_id),
+                "workflow_id": str(workflow_id) if workflow_id else None,
+                "project_id": str(project_id) if project_id else None,
+                "workspace_id": str(workspace_id) if workspace_id else None,
+                "sharing_permission": sharing_permission.value,
+                "shared_with": [str(uid) for uid in shared_with] if shared_with else None
+            }
+            if isinstance(metadata['shared_with'], list):
+                metadata['shared_with'] = json.dumps(metadata['shared_with'])  
+            metadata = {k: v for k, v in metadata.items() if v is not None}
+            print(f"Metadata is {metadata}")
+            
+            # Add to ChromaDB for searchability
+            await self._add_to_chroma(
+                self.collection_name,
+                str(dashboard.id),
+                {
+                    "name": dashboard.name,
+                    "description": dashboard.description,
+                    "type": dashboard.DashboardType,
+                    "content": dashboard.content
+                },
+                metadata
+            )
+            
+            await self.db.commit()
+            return dashboard
+        except Exception as e:
+            traceback.print_exc()
     
     async def get_dashboard(
         self,
@@ -336,7 +345,7 @@ class DashboardService(BaseService):
         
         # Get dashboard and check ownership
         collection = await self._create_chroma_collection(self.collection_name)
-        result = await collection.get(ids=[str(dashboard_id)])
+        result =  collection.get(ids=[str(dashboard_id)])
         
         if not result["ids"]:
             raise ValueError(f"Dashboard {dashboard_id} not found")
@@ -349,7 +358,7 @@ class DashboardService(BaseService):
         # Update sharing permissions
         metadata["sharing_permission"] = permission_level.value
         metadata["shared_with"] = [str(uid) for uid in share_with]
-        
+        metadata["shared_with"] = json.dumps(metadata["shared_with"])
         # Update in ChromaDB
         stmt = select(Dashboard).where(Dashboard.id == dashboard_id)
         result = await self.db.execute(stmt)

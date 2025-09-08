@@ -316,13 +316,37 @@ async def example_using_dashboard_service():
     # Sample dashboard queries
     dashboard_queries = [
         {
-            "chart_id": "training_chart",
+            "chart_schema": {
+                "type": "vega_lite",
+                "spec": {
+                    "mark": "bar",
+                    "encoding": {
+                        "x": {"field": "division", "type": "nominal", "axis": {"title": "Division"}},
+                        "y": {"field": "total", "type": "quantitative", "axis": {"title": "Total Records"}}
+                    }
+                },
+                "title": "Training Records by Division",
+                "width": 400,
+                "height": 300
+            },
             "sql": "SELECT division, COUNT(*) as total FROM csod_training_records GROUP BY division",
             "query": "Training records by division",
             "data_description": "Training data analysis"
         },
         {
-            "chart_id": "employee_chart",
+            "chart_schema": {
+                "type": "vega_lite",
+                "spec": {
+                    "mark": "bar",
+                    "encoding": {
+                        "x": {"field": "department", "type": "nominal", "axis": {"title": "Department"}},
+                        "y": {"field": "count", "type": "quantitative", "axis": {"title": "Employee Count"}}
+                    }
+                },
+                "title": "Employee Count by Department",
+                "width": 400,
+                "height": 300
+            },
             "sql": "SELECT department, COUNT(*) as count FROM employee_records GROUP BY department",
             "query": "Employee count by department",
             "data_description": "Employee distribution"
@@ -333,13 +357,33 @@ async def example_using_dashboard_service():
     dashboard_context = {
         "charts": [
             {
-                "chart_id": "training_chart",
+                "chart_schema": {
+                    "type": "vega_lite",
+                    "spec": {
+                        "mark": "bar",
+                        "encoding": {
+                            "x": {"field": "division", "type": "nominal"},
+                            "y": {"field": "total", "type": "quantitative"}
+                        }
+                    },
+                    "title": "Training Records by Division"
+                },
                 "type": "bar",
                 "columns": ["division", "total"],
                 "query": "Training records by division"
             },
             {
-                "chart_id": "employee_chart",
+                "chart_schema": {
+                    "type": "plotly",
+                    "data": [{
+                        "type": "pie",
+                        "labels": ["HR", "IT", "Finance", "Operations"],
+                        "values": [25, 30, 20, 25]
+                    }],
+                    "layout": {
+                        "title": "Employee Count by Department"
+                    }
+                },
                 "type": "pie",
                 "columns": ["department", "count"],
                 "query": "Employee count by department"
@@ -426,7 +470,17 @@ async def example_service_container_integration():
     # Test basic dashboard execution
     queries = [
         {
-            "chart_id": "simple_test",
+            "chart_schema": {
+                "type": "vega_lite",
+                "spec": {
+                    "mark": "bar",
+                    "encoding": {
+                        "x": {"field": "column1", "type": "nominal"},
+                        "y": {"field": "column2", "type": "quantitative"}
+                    }
+                },
+                "title": "Simple Test Chart"
+            },
             "sql": "SELECT 'test' as column1, 42 as column2",
             "query": "Simple test query",
             "data_description": "Test data"

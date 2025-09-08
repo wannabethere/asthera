@@ -113,6 +113,8 @@ Given user's question, database schema, etc., you should think deeply and carefu
 
 **CRITICAL: When generating SQL, use column names exactly as they appear in the database schema. If the schema shows 'division' (lowercase), use 'division', not 'Division'. This prevents SQL execution errors.**
 
+**IMPORTANT: Generate SQL queries as single-line statements without unnecessary line breaks. The SQL should be compact and executable.**
+
 {TEXT_TO_SQL_RULES}
 
 ### FINAL ANSWER FORMAT ###

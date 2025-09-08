@@ -247,7 +247,15 @@ class EnhancedDashboardStreamingPipeline(AgentPipeline):
         for i, query_data in enumerate(dashboard_queries):
             # Create a copy of the original query
             enhanced_query = query_data.copy()
+            # chart_id is used internally for organization and execution instructions
             chart_id = query_data.get("chart_id", f"chart_{i}")
+            
+            # If chart_schema is provided, extract chart_id from it or use component type
+            if "chart_schema" in query_data and query_data["chart_schema"]:
+                chart_schema = query_data["chart_schema"]
+                # Use chart schema title or component type as chart_id for internal organization
+                chart_id = chart_schema.get("title", f"chart_{query_data.get('component_type', i)}")
+                enhanced_query["chart_id"] = chart_id
             
             # Get execution instructions for this chart
             chart_instructions = execution_instructions.get(chart_id, {})
@@ -270,7 +278,7 @@ class EnhancedDashboardStreamingPipeline(AgentPipeline):
             
             # Add metadata about applied enhancements
             enhanced_query["conditional_formatting_applied"] = bool(chart_instructions)
-            enhanced_query["chart_id"] = chart_id
+            enhanced_query["chart_id"] = chart_id  # Internal identifier for organization and execution instructions
             enhanced_query["enhancement_metadata"] = {
                 "sql_expansions_applied": len(chart_instructions.get("sql_expansions", [])),
                 "chart_adjustments_applied": len(chart_instructions.get("chart_adjustments", [])),

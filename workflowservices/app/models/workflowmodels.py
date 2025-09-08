@@ -2,11 +2,18 @@ from enum import Enum
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timezone
 from uuid import UUID
+from sqlalchemy.ext.mutable import MutableList, MutableDict
 import uuid
 
 def utc_now():
-    """Get current UTC datetime for SQLAlchemy defaults"""
-    return datetime.now(timezone.utc)
+    """
+    Get current UTC datetime.
+
+    This creates a timezone-aware datetime and then removes the timezone
+    information, making it naive, which is required for a
+    'TIMESTAMP WITHOUT TIME ZONE' database column.
+    """
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 from pydantic import BaseModel, Field
 from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean, UUID as SQLUUID, JSON, Integer, Enum as SQLEnum
 from sqlalchemy.orm import relationship
@@ -103,7 +110,7 @@ class ShareType(str, Enum):
 # Database Models for Workflow Management
 class DashboardWorkflow(Base):
     __tablename__ = "dashboard_workflows"
-    
+
     id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     dashboard_id = Column(SQLUUID(as_uuid=True), ForeignKey("dashboards.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(SQLUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
@@ -114,7 +121,7 @@ class DashboardWorkflow(Base):
     created_at = Column(DateTime, default=utc_now)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
     completed_at = Column(DateTime, nullable=True)
-    
+
     # Relationships
     thread_components = relationship("ThreadComponent", back_populates="workflow", cascade="all, delete-orphan")
     share_configs = relationship("ShareConfiguration", back_populates="workflow", cascade="all, delete-orphan")
@@ -124,50 +131,50 @@ class DashboardWorkflow(Base):
 
 class ThreadComponent(Base):
     __tablename__ = "thread_components"
-    
+
     id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("dashboard_workflows.id", ondelete="CASCADE"), nullable=True)
     report_workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("report_workflows.id", ondelete="CASCADE"), nullable=True)
     thread_message_id = Column(SQLUUID(as_uuid=True), ForeignKey("thread_messages.id", ondelete="SET NULL"), nullable=True)
     component_type = Column(SQLEnum(ComponentType), nullable=False)
     sequence_order = Column(Integer, nullable=False)
-    
+
     # Component content
     question = Column(String, nullable=True)
     description = Column(String, nullable=True)
     overview = Column(JSON, nullable=True)
     chart_config = Column(JSON, nullable=True)
     table_config = Column(JSON, nullable=True)
-    
     # SQL Summary specific fields
     sql_query = Column(String, nullable=True)  # The SQL query executed
     executive_summary = Column(String, nullable=True)  # Executive summary text
     data_overview = Column(JSON, nullable=True)  # Data overview statistics
     visualization_data = Column(JSON, nullable=True)  # Visualization configuration and data
     sample_data = Column(JSON, nullable=True)  # Sample data for preview
-    metadata = Column(JSON, nullable=True)  # Query execution metadata
+    thread_metadata = Column(JSON, nullable=True)  # Query execution metadata
     chart_schema = Column(JSON, nullable=True)  # Chart schema (vega_lite, plotly, etc.)
     reasoning = Column(String, nullable=True)  # Reasoning behind the analysis
     data_count = Column(Integer, nullable=True)  # Number of records processed
     validation_results = Column(JSON, nullable=True)  # Data validation results
-    
+
+
     # Alert-specific configuration (when component_type is ALERT)
     alert_config = Column(JSON, nullable=True)  # Alert type, severity, conditions
     alert_status = Column(SQLEnum(AlertStatus), nullable=True)  # Current alert status
     last_triggered = Column(DateTime, nullable=True)  # When alert was last triggered
     trigger_count = Column(Integer, default=0)  # Number of times triggered
-    
+
     # Configuration for the component
     configuration = Column(JSON, default={})
     is_configured = Column(Boolean, default=False)
-    
+
     created_at = Column(DateTime, default=utc_now)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
-    
+
     # Relationships
     workflow = relationship("DashboardWorkflow", back_populates="thread_components", foreign_keys=[workflow_id])
     report_workflow = relationship("ReportWorkflow", back_populates="thread_components", foreign_keys=[report_workflow_id])
-    
+
     @classmethod
     def create_sql_summary_component(
         cls,
@@ -180,7 +187,7 @@ class ThreadComponent(Base):
         description: Optional[str] = None
     ) -> "ThreadComponent":
         """Create a ThreadComponent for SQL summary data.
-        
+
         Args:
             workflow_id: ID of the dashboard workflow
             report_workflow_id: ID of the report workflow
@@ -189,7 +196,7 @@ class ThreadComponent(Base):
             sql_summary_data: Data from SQL summary response
             question: Optional question text
             description: Optional description text
-            
+
         Returns:
             ThreadComponent instance configured for SQL summary
         """
@@ -203,7 +210,7 @@ class ThreadComponent(Base):
             description=description,
             is_configured=True
         )
-        
+
         if sql_summary_data:
             # Map SQL summary response data to component fields
             component.sql_query = sql_summary_data.get("sql_query")
@@ -216,7 +223,7 @@ class ThreadComponent(Base):
             component.reasoning = sql_summary_data.get("reasoning")
             component.data_count = sql_summary_data.get("data_count")
             component.validation_results = sql_summary_data.get("validation_results")
-            
+
             # Store additional chart schemas in configuration
             additional_config = {}
             if "plotly_schema" in sql_summary_data:
@@ -227,15 +234,16 @@ class ThreadComponent(Base):
                 additional_config["vega_lite_schema"] = sql_summary_data["vega_lite_schema"]
             if "execution_config" in sql_summary_data:
                 additional_config["execution_config"] = sql_summary_data["execution_config"]
-            
+
             if additional_config:
                 component.configuration = additional_config
-        
+
         return component
+
 
 class ShareConfiguration(Base):
     __tablename__ = "share_configurations"
-    
+
     id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("dashboard_workflows.id", ondelete="CASCADE"), nullable=True)
     report_workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("report_workflows.id", ondelete="CASCADE"), nullable=True)
@@ -245,14 +253,14 @@ class ShareConfiguration(Base):
     notification_sent = Column(Boolean, default=False)
     accepted = Column(Boolean, nullable=True)
     created_at = Column(DateTime, default=utc_now)
-    
+
     # Relationships
     workflow = relationship("DashboardWorkflow", back_populates="share_configs", foreign_keys=[workflow_id])
     report_workflow = relationship("ReportWorkflow", back_populates="share_configs", foreign_keys=[report_workflow_id])
 
 class ScheduleConfiguration(Base):
     __tablename__ = "schedule_configurations"
-    
+
     id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("dashboard_workflows.id", ondelete="CASCADE"), nullable=True)
     report_workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("report_workflows.id", ondelete="CASCADE"), nullable=True)
@@ -268,14 +276,14 @@ class ScheduleConfiguration(Base):
     configuration = Column(JSON, default={})
     created_at = Column(DateTime, default=utc_now)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
-    
+
     # Relationships
     workflow = relationship("DashboardWorkflow", back_populates="schedule_config", foreign_keys=[workflow_id])
     report_workflow = relationship("ReportWorkflow", back_populates="schedule_config", foreign_keys=[report_workflow_id])
 
 class IntegrationConfig(Base):
     __tablename__ = "integration_configs"
-    
+
     id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("dashboard_workflows.id", ondelete="CASCADE"), nullable=True)
     report_workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("report_workflows.id", ondelete="CASCADE"), nullable=True)
@@ -290,14 +298,14 @@ class IntegrationConfig(Base):
     error_message = Column(String, nullable=True)
     created_at = Column(DateTime, default=utc_now)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
-    
+
     # Relationships
     workflow = relationship("DashboardWorkflow", back_populates="integrations", foreign_keys=[workflow_id])
     report_workflow = relationship("ReportWorkflow", back_populates="integrations", foreign_keys=[report_workflow_id])
 
 class WorkflowVersion(Base):
     __tablename__ = "workflow_versions"
-    
+
     id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("dashboard_workflows.id", ondelete="CASCADE"), nullable=True)
     report_workflow_id = Column(SQLUUID(as_uuid=True), ForeignKey("report_workflows.id", ondelete="CASCADE"), nullable=True)
@@ -306,7 +314,7 @@ class WorkflowVersion(Base):
     snapshot_data = Column(JSON, nullable=False)  # Complete snapshot of workflow state
     created_by = Column(SQLUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, default=utc_now)
-    
+
     # Relationships
     workflow = relationship("DashboardWorkflow", back_populates="workflow_versions", foreign_keys=[workflow_id])
     report_workflow = relationship("ReportWorkflow", back_populates="workflow_versions", foreign_keys=[report_workflow_id])
@@ -314,18 +322,22 @@ class WorkflowVersion(Base):
 # Report Workflow Model
 class ReportWorkflow(Base):
     __tablename__ = "report_workflows"
-    
+
     id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     report_id = Column(SQLUUID(as_uuid=True), ForeignKey("reports.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(SQLUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     state = Column(SQLEnum(WorkflowState), nullable=False, default=WorkflowState.DRAFT)
+    report_template = Column(String, nullable=False)
+    sections = Column(MutableList.as_mutable(JSON), default=[])
+    data_sources = Column(MutableList.as_mutable(JSON), default=[])
+    formatting = Column(MutableDict.as_mutable(JSON), default={})
     current_step = Column(Integer, default=0)
     workflow_metadata = Column(JSON, default={})
     error_message = Column(String, nullable=True)
     created_at = Column(DateTime, default=utc_now)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
     completed_at = Column(DateTime, nullable=True)
-    
+
     # Relationships
     thread_components = relationship("ThreadComponent", back_populates="report_workflow", cascade="all, delete-orphan")
     share_configs = relationship("ShareConfiguration", back_populates="report_workflow", cascade="all, delete-orphan")
@@ -342,7 +354,6 @@ class ThreadComponentCreate(BaseModel):
     chart_config: Optional[Dict[str, Any]] = None
     table_config: Optional[Dict[str, Any]] = None
     configuration: Dict[str, Any] = Field(default_factory=dict)
-    
     # SQL Summary specific fields
     sql_query: Optional[str] = None
     executive_summary: Optional[str] = None
@@ -363,7 +374,6 @@ class ThreadComponentUpdate(BaseModel):
     table_config: Optional[Dict[str, Any]] = None
     configuration: Optional[Dict[str, Any]] = None
     is_configured: Optional[bool] = None
-    
     # SQL Summary specific fields
     sql_query: Optional[str] = None
     executive_summary: Optional[str] = None
@@ -391,7 +401,6 @@ class ThreadComponentResponse(BaseModel):
     is_configured: bool
     created_at: datetime
     updated_at: datetime
-    
     # SQL Summary specific fields
     sql_query: Optional[str] = None
     executive_summary: Optional[str] = None
@@ -463,7 +472,6 @@ class AlertThreadComponentCreate(BaseModel):
     escalation_config: Dict[str, Any] = Field(default_factory=dict)  # Escalation rules
     cooldown_period: int = 300  # Cooldown in seconds
     configuration: Dict[str, Any] = Field(default_factory=dict)
-    
     # SQL Summary specific fields (for SQL-based alerts)
     sql_query: Optional[str] = None
     executive_summary: Optional[str] = None
@@ -475,6 +483,7 @@ class AlertThreadComponentCreate(BaseModel):
     reasoning: Optional[str] = None
     data_count: Optional[int] = None
     validation_results: Optional[Dict[str, Any]] = None
+
 
 class AlertThreadComponentUpdate(BaseModel):
     question: Optional[str] = None
@@ -489,7 +498,6 @@ class AlertThreadComponentUpdate(BaseModel):
     cooldown_period: Optional[int] = None
     configuration: Optional[Dict[str, Any]] = None
     alert_status: Optional[AlertStatus] = None
-    
     # SQL Summary specific fields (for SQL-based alerts)
     sql_query: Optional[str] = None
     executive_summary: Optional[str] = None
@@ -518,7 +526,6 @@ class AlertThreadComponentResponse(BaseModel):
     is_configured: bool
     created_at: datetime
     updated_at: datetime
-    
     # SQL Summary specific fields (for SQL-based alerts)
     sql_query: Optional[str] = None
     executive_summary: Optional[str] = None
@@ -530,6 +537,6 @@ class AlertThreadComponentResponse(BaseModel):
     reasoning: Optional[str] = None
     data_count: Optional[int] = None
     validation_results: Optional[Dict[str, Any]] = None
-    
+
     class Config:
         from_attributes = True

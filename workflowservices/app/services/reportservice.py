@@ -9,7 +9,8 @@ from app.models.dbmodels import Report, ReportVersion
 from app.models.thread import Thread, Workflow
 from app.models.workspace import Workspace, Project
 from app.models.schema import ReportCreate, ReportUpdate, ReportResponse
-
+import traceback
+import json
 class ReportService(BaseService):
     """Service for managing reports with workflow integration"""
     
@@ -40,65 +41,75 @@ class ReportService(BaseService):
         ):
             raise PermissionError("User doesn't have permission to create report in this workspace")
         
-        # Validate workflow exists and user has access
-        if workflow_id:
-            stmt = select(Workflow).where(Workflow.id == workflow_id)
-            result = await self.db.execute(stmt)
-            workflow = result.scalar_one_or_none()
-            
-            if not workflow:
-                raise ValueError(f"Workflow {workflow_id} not found")
-            if workflow.user_id != user_id and not await self._check_user_permission(
-                user_id, "thread", workflow.thread_id, "read"
-            ):
-                raise PermissionError("User doesn't have access to this workflow")
-        
-        # Create report
-        report = Report(
-            name=report_data.name,
-            description=report_data.description,
-            reportType=report_data.reportType,
-            is_active=report_data.is_active,
-            content=report_data.content,
-            version="1.0"
-        )
-        
-        self.db.add(report)
-        await self.db.flush()
-        
-        # Create initial version
-        version = ReportVersion(
-            report_id=report.id,
-            version="1.0",
-            content=report_data.content
-        )
-        self.db.add(version)
-        
-        # Store metadata for permissions and associations
-        metadata = {
-            "created_by": str(user_id),
-            "workflow_id": str(workflow_id) if workflow_id else None,
-            "project_id": str(project_id) if project_id else None,
-            "workspace_id": str(workspace_id) if workspace_id else None,
-            "sharing_permission": sharing_permission.value,
-            "shared_with": [str(uid) for uid in shared_with] if shared_with else []
-        }
-        
-        # Add to ChromaDB for searchability
-        await self._add_to_chroma(
-            self.collection_name,
-            str(report.id),
-            {
-                "name": report.name,
-                "description": report.description,
-                "type": report.reportType,
-                "content": report.content
-            },
-            metadata
-        )
-        
-        await self.db.commit()
-        return report
+        try:
+
+                # Validate workflow exists and user has access
+                if workflow_id:
+                    stmt = select(Workflow).where(Workflow.id == workflow_id)
+                    result = await self.db.execute(stmt)
+                    workflow = result.scalar_one_or_none()
+                    
+                    if not workflow:
+                        raise ValueError(f"Workflow {workflow_id} not found")
+                    if workflow.user_id != user_id and not await self._check_user_permission(
+                        user_id, "thread", workflow.thread_id, "read"
+                    ):
+                        raise PermissionError("User doesn't have access to this workflow")
+                
+                # Create report
+                report = Report(
+                    name=report_data.name,
+                    description=report_data.description,
+                    reportType=report_data.reportType,
+                    is_active=report_data.is_active,
+                    content=report_data.content,
+                    version="1.0"
+                )
+                
+                self.db.add(report)
+                await self.db.flush()
+                
+                # Create initial version
+                version = ReportVersion(
+                    report_id=report.id,
+                    version="1.0",
+                    content=report_data.content
+                )
+                self.db.add(version)
+                
+                # Store metadata for permissions and associations
+                metadata = {
+                    "created_by": str(user_id),
+                    "workflow_id": str(workflow_id) if workflow_id else None,
+                    "project_id": str(project_id) if project_id else None,
+                    "workspace_id": str(workspace_id) if workspace_id else None,
+                    "sharing_permission": sharing_permission.value,
+                    "shared_with": [str(uid) for uid in shared_with] if shared_with else None
+                }
+                if isinstance(metadata["shared_with"],list):
+                    metadata["shared_with"] = json.dumps(metadata["shared_with"])
+
+                metadata = {k: v for k, v in metadata.items() if v is not None}
+                
+                # Add to ChromaDB for searchability
+                await self._add_to_chroma(
+                    self.collection_name,
+                    str(report.id),
+                    {
+                        "name": report.name,
+                        "description": report.description,
+                        "type": report.reportType,
+                        "content": report.content
+                    },
+                    metadata
+                )
+                
+                await self.db.commit()
+                return report
+        except Exception as e:
+                print("==================Error in create report =================")
+                traceback.print_exc()
+                print("====================Error Ended==================")
     
     async def get_report(
         self,

@@ -149,10 +149,38 @@ class PandasEngine(Engine):
             return None
             
         try:
-            return pd.read_sql_query(sql, self._postgres_engine)
+            # Clean the SQL query to avoid formatting issues
+            cleaned_sql = self._clean_sql_for_execution(sql)
+            logger.info(f"Executing PostgreSQL query: {cleaned_sql[:100]}...")
+            return pd.read_sql_query(cleaned_sql, self._postgres_engine)
         except Exception as e:
             logger.warning(f"PostgreSQL query failed: {e}")
+            logger.warning(f"SQL that failed: {sql}")
             return None
+    
+    def _clean_sql_for_execution(self, sql: str) -> str:
+        """Clean SQL query for execution to avoid common issues"""
+        if not sql:
+            return ""
+        
+        # Remove leading/trailing whitespace
+        sql = sql.strip()
+        
+        # Replace multiple whitespace characters with single spaces
+        import re
+        sql = re.sub(r'\s+', ' ', sql)
+        
+        # Ensure proper spacing around SQL keywords
+        sql = re.sub(r'\b(SELECT|FROM|WHERE|GROUP BY|ORDER BY|HAVING|UNION|JOIN|INNER JOIN|LEFT JOIN|RIGHT JOIN|FULL JOIN)\b', r' \1 ', sql, flags=re.IGNORECASE)
+        
+        # Clean up multiple spaces
+        sql = re.sub(r'\s+', ' ', sql)
+        
+        # Ensure semicolon at the end if not present
+        if not sql.endswith(';'):
+            sql = sql + ';'
+            
+        return sql.strip()
 
     def _execute_sqlite_query(self, sql: str) -> Optional[pd.DataFrame]:
         """Execute query using SQLite connection"""
@@ -194,20 +222,32 @@ class PandasEngine(Engine):
                     select_columns = [str(col).strip() for col in token.get_identifiers()]
                 elif isinstance(token, sqlparse.sql.Identifier) and token.get_name().upper() != 'FROM':
                     select_columns = [token.get_name()]
-                elif isinstance(token, sqlparse.sql.Limit):
-                    # Extract LIMIT value
-                    limit_tokens = token.tokens
-                    for limit_token in limit_tokens:
-                        if isinstance(limit_token, sqlparse.sql.Literal):
+                elif str(token).upper() == 'LIMIT':
+                    # Extract LIMIT value from next token
+                    if i + 1 < len(tokens):
+                        next_token = tokens[i + 1]
+                        # Check if it's a literal number token
+                        if hasattr(next_token, 'ttype') and next_token.ttype in sqlparse.tokens.Literal.Number:
                             try:
-                                limit_value = int(str(limit_token))
+                                limit_value = int(str(next_token))
                             except ValueError:
-                                logger.warning(f"Invalid LIMIT value: {limit_token}")
+                                logger.warning(f"Invalid LIMIT value: {next_token}")
+                        elif str(next_token).isdigit():
+                            try:
+                                limit_value = int(str(next_token))
+                            except ValueError:
+                                logger.warning(f"Invalid LIMIT value: {next_token}")
                 elif str(token).upper() == 'OFFSET':
                     # Extract OFFSET value from next token
                     if i + 1 < len(tokens):
                         next_token = tokens[i + 1]
-                        if isinstance(next_token, sqlparse.sql.Literal):
+                        # Check if it's a literal number token
+                        if hasattr(next_token, 'ttype') and next_token.ttype in sqlparse.tokens.Literal.Number:
+                            try:
+                                offset_value = int(str(next_token))
+                            except ValueError:
+                                logger.warning(f"Invalid OFFSET value: {next_token}")
+                        elif str(next_token).isdigit():
                             try:
                                 offset_value = int(str(next_token))
                             except ValueError:

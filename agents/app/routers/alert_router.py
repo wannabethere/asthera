@@ -15,9 +15,18 @@ from datetime import datetime
 from app.services.writers.alert_service import (
     AlertRequest, AlertResponse, AlertRequestType, AlertPriority,
     AlertCreate, AlertResponseCompatibility, Configs, Condition,
-    AlertSet, AlertCombination, FeedManagementRequest
+    AlertSet, AlertCombination, FeedManagementRequest, SingleAlertRequest
 )
 from app.services.service_container import SQLServiceContainer
+from app.core.sql_validation import (
+    SQLValidationService, 
+    SQLAlertConditionValidator,
+    ValidationResult, 
+    AlertConditionType, 
+    ThresholdOperator,
+    LexyFeedCondition
+)
+from app.core.pandas_engine import PandasEngine
 
 # Create router
 router = APIRouter(prefix="/alerts", tags=["alerts"])
@@ -49,6 +58,31 @@ class BatchAlertCreateRequest(BaseModel):
     """Request model for batch alert creation"""
     alerts: List[AlertCreate] = Field(..., description="List of AlertCreate requests")
     project_id: Optional[str] = Field(None, description="Default project ID for all alerts")
+
+
+class SQLQueryPair(BaseModel):
+    """SQL query pair model that accepts 'sql' field and maps to AlertCombination"""
+    sql: str = Field(..., description="SQL query for the alert")
+    natural_language_query: str = Field(..., description="Natural language description of the query")
+    alert_request: str = Field(..., description="Natural language description of the alert requirements")
+    sample_data: Optional[Dict[str, Any]] = Field(None, description="Sample data for the alert")
+    
+    def to_alert_combination(self) -> AlertCombination:
+        """Convert to AlertCombination model"""
+        return AlertCombination(
+            sql_query=self.sql,
+            natural_language_query=self.natural_language_query,
+            alert_request=self.alert_request
+        )
+
+
+class SQLQueryPairRequest(BaseModel):
+    """Request model for SQL query pair with alert creation"""
+    sql_query_pair: SQLQueryPair = Field(..., description="SQL query pair containing alert information")
+    project_id: str = Field(..., description="Project identifier")
+    data_description: Optional[str] = Field(None, description="Description of the data")
+    configuration: Optional[Dict[str, Any]] = Field(None, description="Configuration overrides")
+    session_id: Optional[str] = Field(None, description="Session identifier")
 
 
 class FeedCreationRequest(BaseModel):
@@ -87,12 +121,27 @@ class AlertCompatibilityResponse(BaseModel):
 
 @router.post("/service/create-single", response_model=AlertCompatibilityResponse)
 async def create_single_alert(
-    request: AlertCreate
+    request: SQLQueryPairRequest
 ):
-    """Create a single alert using the compatibility service."""
+    """Create a single alert using the compatibility service with SQL query pair."""
     try:
         compatibility_service = get_alert_compatibility_service()
-        result = await compatibility_service.process_alert_create(request)
+        
+        # Convert SQLQueryPair to AlertCombination and then to AlertCreate format
+        alert_combination = request.sql_query_pair.to_alert_combination()
+        
+        # Create a combined input string from the alert combination
+        combined_input = f"Alert Request: {alert_combination.alert_request}\n\nNatural Language Query: {alert_combination.natural_language_query}\n\nSQL Query: {alert_combination.sql_query}"
+        
+        alert_create = AlertCreate(
+            input=combined_input,
+            project_id=request.project_id,
+            data_description=request.data_description,
+            session_id=request.session_id,
+            configuration=request.configuration
+        )
+        
+        result = await compatibility_service.process_alert_create(alert_create)
         
         return AlertCompatibilityResponse(
             success=True,
@@ -102,7 +151,8 @@ async def create_single_alert(
                 "processed_at": datetime.now().isoformat(),
                 "service_created": result.service_created,
                 "project_id": result.project_id,
-                "session_id": result.session_id
+                "session_id": result.session_id,
+                "sql_query_pair_processed": True
             }
         )
         
@@ -111,6 +161,52 @@ async def create_single_alert(
         raise HTTPException(
             status_code=500,
             detail=f"Error creating single alert: {str(e)}"
+        )
+
+
+@router.post("/service/create-single-direct", response_model=AlertCompatibilityResponse)
+async def create_single_alert_direct(
+    request: AlertCombination,
+    project_id: str,
+    data_description: Optional[str] = None,
+    configuration: Optional[Dict[str, Any]] = None,
+    session_id: Optional[str] = None
+):
+    """Create a single alert directly using AlertCombination model."""
+    try:
+        compatibility_service = get_alert_compatibility_service()
+        
+        # Convert AlertCombination to AlertCreate format
+        combined_input = f"Alert Request: {request.alert_request}\n\nNatural Language Query: {request.natural_language_query}\n\nSQL Query: {request.sql_query}"
+        
+        alert_create = AlertCreate(
+            input=combined_input,
+            project_id=project_id,
+            data_description=data_description,
+            session_id=session_id,
+            configuration=configuration
+        )
+        
+        result = await compatibility_service.process_alert_create(alert_create)
+        
+        return AlertCompatibilityResponse(
+            success=True,
+            data=result,
+            metadata={
+                "endpoint": "create_single_alert_direct",
+                "processed_at": datetime.now().isoformat(),
+                "service_created": result.service_created,
+                "project_id": result.project_id,
+                "session_id": result.session_id,
+                "alert_combination_processed": True
+            }
+        )
+        
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error creating single alert directly: {str(e)}"
         )
 
 
@@ -476,6 +572,130 @@ async def batch_create_alerts(
         raise HTTPException(
             status_code=500,
             detail=f"Error in batch alert creation: {str(e)}"
+        )
+
+
+# =============================================================================
+# VALIDATION ENDPOINTS
+# =============================================================================
+
+class ConditionValidationRequest(BaseModel):
+    """Request model for validating alert conditions"""
+    sql_query: str = Field(..., description="SQL query to execute for validation")
+    condition_type: AlertConditionType = Field(..., description="Type of condition to validate")
+    operator: ThresholdOperator = Field(..., description="Threshold operator")
+    threshold_value: float = Field(..., description="Threshold value to compare against")
+    metric_column: Optional[str] = Field(default=None, description="Specific column to extract value from")
+    use_cache: bool = Field(default=True, description="Whether to use caching for SQL execution")
+
+
+class ConditionValidationResponse(BaseModel):
+    """Response model for condition validation"""
+    is_valid: bool = Field(..., description="Whether the validation was successful")
+    current_value: Optional[float] = Field(default=None, description="Current value from SQL query")
+    threshold_value: Optional[float] = Field(default=None, description="Threshold value used for comparison")
+    condition_met: Optional[bool] = Field(default=None, description="Whether the condition is currently met")
+    error_message: Optional[str] = Field(default=None, description="Error message if validation failed")
+    validation_timestamp: datetime = Field(..., description="Timestamp when validation was performed")
+    execution_time_ms: Optional[float] = Field(default=None, description="Execution time in milliseconds")
+
+
+@router.post("/validate-condition", response_model=ConditionValidationResponse)
+async def validate_alert_condition(request: ConditionValidationRequest):
+    """
+    Validate an alert condition by executing SQL and checking threshold conditions
+    
+    This endpoint uses the SQLAlertConditionValidator to validate threshold-based
+    alert conditions using the existing execute_sql methods from PandasEngine.
+    """
+    try:
+        # Get the alert service to access the engine
+        alert_service = get_alert_service()
+        
+        # For this example, we'll create a simple PandasEngine
+        # In practice, you'd get the engine from your service configuration
+        engine = PandasEngine()
+        
+        # Create the validation service
+        validation_service = SQLValidationService(engine)
+        
+        # Validate the condition using the core service
+        result = await validation_service.validate_condition_by_type(
+            sql_query=request.sql_query,
+            condition_type=request.condition_type,
+            operator=request.operator,
+            threshold_value=request.threshold_value,
+            metric_column=request.metric_column,
+            use_cache=request.use_cache
+        )
+        
+        return ConditionValidationResponse(
+            is_valid=result.is_valid,
+            current_value=result.current_value,
+            threshold_value=result.threshold_value,
+            condition_met=result.condition_met,
+            error_message=result.error_message,
+            validation_timestamp=result.validation_timestamp,
+            execution_time_ms=result.execution_time_ms
+        )
+        
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error validating condition: {str(e)}"
+        )
+
+
+@router.post("/validate-threshold", response_model=ConditionValidationResponse)
+async def validate_threshold_condition(
+    sql_query: str,
+    operator: ThresholdOperator,
+    threshold_value: float,
+    metric_column: Optional[str] = None,
+    use_cache: bool = True
+):
+    """
+    Validate a simple threshold condition
+    
+    This is a simplified endpoint for validating basic threshold conditions
+    without requiring a full condition object.
+    """
+    try:
+        # Get the alert service to access the engine
+        alert_service = get_alert_service()
+        
+        # Create a simple PandasEngine (in practice, get from service config)
+        engine = PandasEngine()
+        
+        # Create the validation service
+        validation_service = SQLValidationService(engine)
+        
+        # Validate the threshold condition
+        result = await validation_service.validate_threshold_condition(
+            sql_query=sql_query,
+            condition_type=AlertConditionType.THRESHOLD_VALUE,
+            operator=operator,
+            threshold_value=threshold_value,
+            metric_column=metric_column,
+            use_cache=use_cache
+        )
+        
+        return ConditionValidationResponse(
+            is_valid=result.is_valid,
+            current_value=result.current_value,
+            threshold_value=result.threshold_value,
+            condition_met=result.condition_met,
+            error_message=result.error_message,
+            validation_timestamp=result.validation_timestamp,
+            execution_time_ms=result.execution_time_ms
+        )
+        
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error validating threshold condition: {str(e)}"
         )
 
 

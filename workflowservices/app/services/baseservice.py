@@ -5,9 +5,11 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, or_, select
 import chromadb
-from app.core.settings import get_settings
+from app.core.settings import get_settings,Settings
 import json
 from enum import Enum
+import traceback
+
 
 settings = get_settings()
 
@@ -23,56 +25,121 @@ class BaseService:
     
     def __init__(self, db: AsyncSession, chroma_client: chromadb.Client = None):
         self.db = db
-        self.chroma_client = chroma_client or chromadb.Client(Settings(
-            chroma_db_impl="duckdb+parquet",
-            persist_directory="./chroma_db"
-        ))
+        # self.chroma_client = chroma_client or chromadb.Client(Settings(
+        #     chroma_db_impl="duckdb+parquet",
+        #     persist_directory="./chroma_db"
+        # ))
+        self.chroma_client = chromadb.PersistentClient(path=settings.CHROMA_STORE_PATH)
         
-    async def _check_user_permission(
-        self, 
-        user_id: UUID, 
-        resource_type: str, 
-        resource_id: UUID, 
-        action: str
-    ) -> bool:
-        """Check if user has permission to perform action on resource"""
-        from app.models.rbac import Role, Permission, user_roles
+    # async def _check_user_permission(
+    #     self, 
+    #     user_id: UUID, 
+    #     resource_type: str, 
+    #     resource_id: UUID, 
+    #     action: str
+    # ) -> bool:
+    #     """Check if user has permission to perform action on resource"""
+    #     from app.models.rbac import Role, Permission, user_roles
         
-        # Check system roles first (superuser, system_admin)
-        stmt = select(Role).join(user_roles).where(
-            and_(
-                user_roles.c.user_id == user_id,
-                Role.role_type == "system",
-                Role.name.in_(["superuser", "system_admin"])
-            )
-        )
-        result = await self.db.execute(stmt)
-        user_system_roles = result.scalars().all()
+    #     # Check system roles first (superuser, system_admin)
+    #     stmt = select(Role).join(user_roles).where(
+    #         and_(
+    #             user_roles.c.user_id == user_id,
+    #             Role.role_type == "system",
+    #             Role.name.in_(["superuser", "system_admin","user"])
+    #         )
+    #     )
+    #     result = await self.db.execute(stmt)
+    #     user_system_roles = result.scalars().all()
         
-        if user_system_roles:
-            return True
-            
-        # Check resource-specific permissions
-        permission_stmt = select(Permission).join(
-            Role.permissions
-        ).join(
-            user_roles,
-            Role.id == user_roles.c.role_id
-        ).where(
-            and_(
-                user_roles.c.user_id == user_id,
-                or_(
-                    user_roles.c.object_id == resource_id,
-                    user_roles.c.object_id.is_(None)  # Global permissions
-                ),
-                Permission.resource_type == resource_type,
-                Permission.action == action
-            )
-        )
-        
-        result = await self.db.execute(permission_stmt)
-        return result.scalar_one_or_none() is not None
+    #     if user_system_roles:
+    #         return True
+    #     print(f"I am after user_system_roles")    
+    #     # Check resource-specific permissions
+    #     permission_stmt = select(Permission).join(
+    #         Role.permissions
+    #     ).join(
+    #         user_roles,
+    #         Role.id == user_roles.c.role_id
+    #     ).where(
+    #         and_(
+    #             user_roles.c.user_id == user_id,
+    #             or_(
+    #                 user_roles.c.object_id == resource_id,
+    #                 user_roles.c.object_id.is_(None)  # Global permissions
+    #             ),
+    #             Permission.resource_type == resource_type,
+    #             Permission.action == action
+    #         )
+    #     )
+    #     print("I am after permission")
+    #     result = await self.db.execute(permission_stmt)
+    #     return result.scalar_one_or_none() is not None
     
+
+    async def _check_user_permission(
+    self, 
+    user_id: UUID, 
+    resource_type: str, 
+    resource_id: UUID, 
+    action: str
+) -> bool:
+        """Check if user has permission to perform action on resource"""
+        
+        try:
+            from app.models.rbac import Role, Permission, user_roles
+            # Check system roles first (superuser, system_admin, user)
+            stmt = select(Role).join(user_roles).where(
+                and_(
+                    user_roles.c.user_id == user_id,
+                    Role.role_type.in_(["system", "external"]),
+                    Role.name.in_(["superuser", "system_admin", "user"])
+                )
+            )
+            result = await self.db.execute(stmt)
+            user_system_roles = result.scalars().all()
+
+            if user_system_roles:
+                return True
+            
+            print("I am after user_system_roles")
+
+        except Exception:
+            print("Error while checking system roles:")
+            traceback.print_exc()
+            return False  # You may choose to raise or return False
+
+        try:
+            # Check resource-specific permissions
+            permission_stmt = select(Permission).join(
+                Role.permissions
+            ).join(
+                user_roles,
+                Role.id == user_roles.c.role_id
+            ).where(
+                and_(
+                    user_roles.c.user_id == user_id,
+                    or_(
+                        user_roles.c.object_id == resource_id,
+                        user_roles.c.object_id.is_(None)  # Global permissions
+                    ),
+                    Permission.resource_type == resource_type,
+                    Permission.action == action
+                )
+            )
+
+            print("I am after permission")
+
+            result = await self.db.execute(permission_stmt)
+            result=result.scalar_one_or_none() is not None
+            print(f"result is {result}")
+            return result
+
+        except Exception:
+            print("Error while checking resource-specific permissions:")
+            traceback.print_exc()
+            return False  # You may choose to raise or return False
+
     async def _get_user_accessible_resources(
         self,
         user_id: UUID,
@@ -146,7 +213,7 @@ class BaseService:
         # Convert content to searchable text
         text_content = json.dumps(content, default=str)
         
-        await collection.add(
+        collection.add(
             documents=[text_content],
             ids=[document_id],
             metadatas=[metadata]
@@ -165,7 +232,7 @@ class BaseService:
         # Convert content to searchable text
         text_content = json.dumps(content, default=str)
         
-        await collection.update(
+        collection.update(
             documents=[text_content],
             ids=[document_id],
             metadatas=[metadata]

@@ -9,6 +9,8 @@ from app.indexing.alert_knowledge_helper import get_alert_knowledge_helper
 import json
 import uuid
 import re
+import asyncio
+import aiohttp
 from typing import Dict, List, Any, Optional, Tuple, Union, Protocol
 from pydantic import BaseModel, Field
 from enum import Enum
@@ -17,6 +19,42 @@ import sqlparse
 from sqlparse.sql import Statement, Token, TokenList
 from sqlparse.tokens import Keyword, Name
 from app.core.dependencies import create_llm_instances_from_settings
+from app.agents.nodes.writers.alert_models import LexyFeedConfiguration, SQLAnalysis, SQLAlertResult, SQLAlertRequest, AlertConditionType, ThresholdOperator, ScheduleType
+from app.core.sql_validation import SQLAlertConditionValidator, ValidationResult
+
+
+class MarkdownJsonOutputParser(JsonOutputParser):
+    """Custom JSON parser that can extract JSON from markdown-formatted responses"""
+    
+    def parse(self, text: str) -> Dict[str, Any]:
+        """Parse JSON from text that may contain markdown formatting"""
+        try:
+            # First try to parse as pure JSON
+            return super().parse(text)
+        except Exception:
+            # If that fails, try to extract JSON from markdown
+            try:
+                # Look for JSON in code blocks
+                json_pattern = r'```json\s*(.*?)\s*```'
+                match = re.search(json_pattern, text, re.DOTALL)
+                
+                if match:
+                    json_text = match.group(1)
+                    return json.loads(json_text)
+                
+                # Look for JSON objects directly (more flexible)
+                json_pattern = r'\{.*\}'
+                match = re.search(json_pattern, text, re.DOTALL)
+                
+                if match:
+                    json_text = match.group(0)
+                    return json.loads(json_text)
+                
+                # If no JSON found, raise the original error
+                raise ValueError("No valid JSON found in response")
+                
+            except Exception as e:
+                raise ValueError(f"Failed to parse JSON from markdown response: {e}")
 
 
 # Protocol for LLM interface
@@ -25,94 +63,7 @@ class LLMProtocol(Protocol):
     def invoke(self, input: Any) -> Any: ...
     async def ainvoke(self, input: Any) -> Any: ...
 
-# Enums for alert types
-class AlertConditionType(str, Enum):
-    INTELLIGENT_ARIMA = "intelligent_arima"
-    THRESHOLD_CHANGE = "threshold_change"
-    THRESHOLD_PERCENT_CHANGE = "threshold_percent_change"
-    THRESHOLD_ABSOLUTE_CHANGE = "threshold_absolute_change"
-    THRESHOLD_VALUE = "threshold_value"
 
-class SCHEDULE_STATUS(str, Enum):
-    SCHEDULED = "scheduled"
-    INACTIVE = "inactive"
-    ACTIVE = "active"
-
-class ScheduleType(str, Enum):
-    STATUS = SCHEDULE_STATUS
-    CRON_SCHEDULE = "cron_schedule"
-
-class ThresholdOperator(str, Enum):
-    GREATER_THAN = ">"
-    LESS_THAN = "<"
-    GREATER_EQUAL = ">="
-    LESS_EQUAL = "<="
-    EQUALS = "="
-    NOT_EQUALS = "!="
-
-# Input Models
-class SQLAlertRequest(BaseModel):
-    """Request structure for SQL-to-Alert generation"""
-    sql: str
-    query: str  # Natural language description
-    project_id: str
-    data_description: Optional[str] = None
-    configuration: Optional[Dict[str, Any]] = None
-    alert_request: str  # Natural language alert request
-    session_id: Optional[str] = None
-    sample_data: Optional[Dict[str, Any]] = None  # Sample data from SQL execution
-
-class SQLAnalysis(BaseModel):
-    """Parsed SQL structure"""
-    tables: List[str]
-    columns: List[str]
-    metrics: List[str]  # Derived/calculated columns
-    dimensions: List[str]  # Group by columns
-    filters: List[Dict[str, Any]]
-    aggregations: List[Dict[str, str]]  # column -> aggregation type
-
-# Output Models
-class LexyFeedCondition(BaseModel):
-    """Lexy Feed condition configuration"""
-    condition_type: AlertConditionType
-    threshold_type: Optional[str] = None  # For threshold-based conditions
-    operator: Optional[ThresholdOperator] = None
-    value: Optional[Union[float, int]] = None
-    
-class LexyFeedMetric(BaseModel):
-    """Lexy Feed metric configuration"""
-    domain: str
-    dataset_id: str
-    measure: str
-    aggregation: str
-    resolution: str = "Daily"  # Daily, Weekly, Monthly, Quarterly, Yearly
-    filters: List[Dict[str, Any]] = []
-    drilldown_dimensions: List[str] = []
-
-class LexyFeedNotification(BaseModel):
-    """Lexy Feed notification settings"""
-    schedule_type: ScheduleType
-    metric_name: str
-    email_addresses: List[str] = []
-    subject: str
-    email_message: str
-    include_feed_report: bool = True
-    custom_schedule: Optional[Dict[str, Any]] = None
-
-class LexyFeedConfiguration(BaseModel):
-    """Complete Lexy Feed configuration"""
-    metric: LexyFeedMetric
-    condition: LexyFeedCondition
-    notification: LexyFeedNotification
-    column_selection: Dict[str, List[str]]  # included/excluded columns
-    
-class SQLAlertResult(BaseModel):
-    """Final result with critique and confidence"""
-    feed_configuration: LexyFeedConfiguration
-    sql_analysis: SQLAnalysis
-    confidence_score: float
-    critique_notes: List[str]
-    suggestions: List[str]
 
 
 
@@ -130,9 +81,11 @@ class SQLToAlertAgent:
         refiner_llm: LLM instance for refining configurations based on critique
     """
     
-    def __init__(self):
-        # Use provided LLM instances
-        sql_parser_llm, alert_generator_llm, critic_llm, refiner_llm = create_llm_instances_from_settings()
+    def __init__(self, sql_parser_llm=None, alert_generator_llm=None, critic_llm=None, refiner_llm=None):
+        # Use provided LLM instances or create default ones
+        if sql_parser_llm is None or alert_generator_llm is None or critic_llm is None or refiner_llm is None:
+            sql_parser_llm, alert_generator_llm, critic_llm, refiner_llm = create_llm_instances_from_settings()
+        
         self.sql_parser_llm = sql_parser_llm
         self.alert_generator_llm = alert_generator_llm
         self.critic_llm = critic_llm
@@ -148,6 +101,220 @@ class SQLToAlertAgent:
         self.pipeline = self._build_pipeline()
     
     
+    def _fix_enum_values(self, config_dict: Dict[str, Any]) -> Dict[str, Any]:
+        """Fix enum values and data type issues in configuration dictionary"""
+        import re
+        
+        # Helper function to extract enum value from string representation
+        def extract_enum_value(value_str: str, enum_class) -> str:
+            if isinstance(value_str, str) and '<' in value_str and '>' in value_str:
+                # Extract the actual value from string like "<AlertConditionType.THRESHOLD_VALUE: 'threshold_value'>"
+                match = re.search(r": '([^']+)'", value_str)
+                if match:
+                    return match.group(1)
+            return value_str
+        
+        # Helper function to map enum names to values and handle invalid values
+        def map_enum_value(value_str: str, enum_class, default_value: str = None) -> str:
+            if not isinstance(value_str, str):
+                return default_value or list(enum_class)[0].value
+            
+            # First try to find by value
+            for enum_item in enum_class:
+                if enum_item.value == value_str:
+                    return value_str
+            
+            # Then try to find by name
+            for enum_item in enum_class:
+                if enum_item.name == value_str:
+                    return enum_item.value
+            
+            # Handle common mappings for AlertConditionType
+            if enum_class == AlertConditionType:
+                mapping = {
+                    'THRESHOLD_STATIC': 'threshold_value',
+                    'STATIC_THRESHOLD': 'threshold_value',
+                    'VALUE_THRESHOLD': 'threshold_value',
+                    'THRESHOLD': 'threshold_value'
+                }
+                if value_str in mapping:
+                    return mapping[value_str]
+            
+            # Handle common mappings for ThresholdOperator
+            if enum_class == ThresholdOperator:
+                mapping = {
+                    'GREATER_THAN': '>',
+                    'LESS_THAN': '<',
+                    'GREATER_EQUAL': '>=',
+                    'LESS_EQUAL': '<=',
+                    'EQUALS': '=',
+                    'NOT_EQUALS': '!=',
+                    'GT': '>',
+                    'LT': '<',
+                    'GTE': '>=',
+                    'LTE': '<=',
+                    'EQ': '=',
+                    'NE': '!='
+                }
+                if value_str in mapping:
+                    return mapping[value_str]
+            
+            # Return default value if no match found
+            return default_value or list(enum_class)[0].value
+        
+        # Helper function to convert list to string (take first element or join)
+        def list_to_string(value, field_name: str = "") -> str:
+            if isinstance(value, list):
+                if len(value) == 0:
+                    return ""
+                elif len(value) == 1:
+                    return str(value[0])
+                else:
+                    # For multiple values, join them or take the first one based on field
+                    if field_name in ["measure", "aggregation"]:
+                        return str(value[0])  # Take first for single-value fields
+                    else:
+                        return ", ".join(str(v) for v in value)
+            return str(value) if value is not None else ""
+        
+        # Fix condition_type
+        if "condition" in config_dict and "condition_type" in config_dict["condition"]:
+            config_dict["condition"]["condition_type"] = map_enum_value(
+                config_dict["condition"]["condition_type"], 
+                AlertConditionType,
+                "threshold_value"  # Default fallback
+            )
+        
+        # Fix operator
+        if "condition" in config_dict and "operator" in config_dict["condition"]:
+            config_dict["condition"]["operator"] = map_enum_value(
+                config_dict["condition"]["operator"], 
+                ThresholdOperator,
+                ">"  # Default fallback
+            )
+        
+        # Fix schedule_type
+        if "notification" in config_dict and "schedule_type" in config_dict["notification"]:
+            config_dict["notification"]["schedule_type"] = map_enum_value(
+                config_dict["notification"]["schedule_type"], 
+                ScheduleType,
+                "scheduled"  # Default fallback
+            )
+        
+        # Fix metric fields that should be strings
+        if "metric" in config_dict:
+            metric = config_dict["metric"]
+            
+            # Fix measure field (should be string, not list)
+            if "measure" in metric:
+                metric["measure"] = list_to_string(metric["measure"], "measure")
+            
+            # Fix aggregation field (should be string, not list)
+            if "aggregation" in metric:
+                metric["aggregation"] = list_to_string(metric["aggregation"], "aggregation")
+            
+            # Fix domain field (should be string, not list)
+            if "domain" in metric:
+                metric["domain"] = list_to_string(metric["domain"], "domain")
+            
+            # Fix dataset_id field (should be string, not list)
+            if "dataset_id" in metric:
+                metric["dataset_id"] = list_to_string(metric["dataset_id"], "dataset_id")
+            
+            # Fix resolution field (should be string, not list)
+            if "resolution" in metric:
+                metric["resolution"] = list_to_string(metric["resolution"], "resolution")
+        
+        # Fix notification fields that should be strings
+        if "notification" in config_dict:
+            notification = config_dict["notification"]
+            
+            # Fix metric_name field (should be string, not list)
+            if "metric_name" in notification:
+                notification["metric_name"] = list_to_string(notification["metric_name"], "metric_name")
+            
+            # Fix subject field (should be string, not list)
+            if "subject" in notification:
+                notification["subject"] = list_to_string(notification["subject"], "subject")
+            
+            # Fix email_message field (should be string, not list)
+            if "email_message" in notification:
+                notification["email_message"] = list_to_string(notification["email_message"], "email_message")
+            
+            # Fix custom_schedule field (should be dict or None, not string)
+            if "custom_schedule" in notification:
+                custom_schedule = notification["custom_schedule"]
+                if isinstance(custom_schedule, str):
+                    # Convert string to a proper schedule dict or set to None
+                    if custom_schedule.strip():
+                        notification["custom_schedule"] = {
+                            "description": custom_schedule,
+                            "schedule": custom_schedule,
+                            "timezone": "UTC"
+                        }
+                    else:
+                        notification["custom_schedule"] = None
+                elif not isinstance(custom_schedule, dict) and custom_schedule is not None:
+                    # If it's not a string or dict, set to None
+                    notification["custom_schedule"] = None
+        
+        # Fix condition fields that should be strings
+        if "condition" in config_dict:
+            condition = config_dict["condition"]
+            
+            # Fix threshold_type field (should be string, not list)
+            if "threshold_type" in condition:
+                condition["threshold_type"] = list_to_string(condition["threshold_type"], "threshold_type")
+        
+        # Ensure all required fields have default values
+        self._ensure_default_values(config_dict)
+        
+        return config_dict
+    
+    def _ensure_default_values(self, config_dict: Dict[str, Any]) -> None:
+        """Ensure all required fields have appropriate default values"""
+        
+        # Ensure notification has default values
+        if "notification" in config_dict:
+            notification = config_dict["notification"]
+            
+            # Set default custom_schedule if missing or None
+            if "custom_schedule" not in notification or notification["custom_schedule"] is None:
+                notification["custom_schedule"] = None
+            
+            # Set default email_addresses if missing
+            if "email_addresses" not in notification:
+                notification["email_addresses"] = []
+            
+            # Set default include_feed_report if missing
+            if "include_feed_report" not in notification:
+                notification["include_feed_report"] = True
+        
+        # Ensure metric has default values
+        if "metric" in config_dict:
+            metric = config_dict["metric"]
+            
+            # Set default drilldown_dimensions if missing
+            if "drilldown_dimensions" not in metric:
+                metric["drilldown_dimensions"] = []
+            
+            # Set default filters if missing
+            if "filters" not in metric:
+                metric["filters"] = []
+        
+        # Ensure column_selection has default values
+        if "column_selection" not in config_dict:
+            config_dict["column_selection"] = {
+                "included": [],
+                "excluded": []
+            }
+        else:
+            column_selection = config_dict["column_selection"]
+            if "included" not in column_selection:
+                column_selection["included"] = []
+            if "excluded" not in column_selection:
+                column_selection["excluded"] = []
+
     def _build_pipeline(self):
         """Build Self-RAG pipeline for SQL-to-Alert generation"""
         
@@ -335,7 +502,7 @@ Rules:
 Example for training completion: Alert when completion percentage < 90% or expiry rate > 10%
 """)
         
-        chain = generation_prompt | self.alert_generator_llm | JsonOutputParser()
+        chain = generation_prompt | self.alert_generator_llm | MarkdownJsonOutputParser()
         
         config_result = await chain.ainvoke({
             "tables": sql_analysis.tables,
@@ -348,6 +515,9 @@ Example for training completion: Alert when completion percentage < 90% or expir
             "domain_context": domain_context[:3],  # Top 3 relevant docs
             "sample_data_context": sample_data_context
         })
+        
+        # Fix enum values in the configuration
+        config_result = self._fix_enum_values(config_result)
         
         # Convert to Pydantic models
         metric = LexyFeedMetric(**config_result["metric"])
@@ -395,7 +565,7 @@ Return JSON evaluation:
 }}
 """)
         
-        chain = critique_prompt | self.critic_llm | JsonOutputParser()
+        chain = critique_prompt | self.critic_llm | MarkdownJsonOutputParser()
         
         return await chain.ainvoke({
             "alert_request": request.alert_request,
@@ -429,7 +599,7 @@ Generate an improved configuration addressing all critique points.
 Return the same JSON structure as before but with improvements.
 """)
             
-            chain = refinement_prompt | self.refiner_llm | JsonOutputParser()
+            chain = refinement_prompt | self.refiner_llm | MarkdownJsonOutputParser()
             
             refined_result = await chain.ainvoke({
                 "feed_config": feed_config.dict(),
@@ -438,6 +608,9 @@ Return the same JSON structure as before but with improvements.
                 "sql_analysis": sql_analysis.dict(),
                 "alert_request": request.alert_request
             })
+            
+            # Fix enum values in the refined configuration
+            refined_result = self._fix_enum_values(refined_result)
             
             # Convert back to Pydantic models
             metric = LexyFeedMetric(**refined_result["metric"])

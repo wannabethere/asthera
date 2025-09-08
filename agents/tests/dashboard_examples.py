@@ -31,9 +31,50 @@ class DashboardExamples:
         
         charts = []
         for i in range(chart_count):
+            chart_types = ["bar", "line", "pie"]
+            chart_type = chart_types[i % 3]
+            
+            # Create chart schema based on type
+            if chart_type == "bar":
+                chart_schema = {
+                    "type": "vega_lite",
+                    "spec": {
+                        "mark": "bar",
+                        "encoding": {
+                            "x": {"field": columns[0], "type": "nominal"},
+                            "y": {"field": columns[1], "type": "quantitative"}
+                        }
+                    },
+                    "title": f"Chart {i+1} - Bar Chart"
+                }
+            elif chart_type == "line":
+                chart_schema = {
+                    "type": "vega_lite",
+                    "spec": {
+                        "mark": "line",
+                        "encoding": {
+                            "x": {"field": columns[0], "type": "temporal"},
+                            "y": {"field": columns[1], "type": "quantitative"}
+                        }
+                    },
+                    "title": f"Chart {i+1} - Line Chart"
+                }
+            else:  # pie
+                chart_schema = {
+                    "type": "plotly",
+                    "data": [{
+                        "type": "pie",
+                        "labels": ["A", "B", "C", "D"],
+                        "values": [25, 30, 20, 25]
+                    }],
+                    "layout": {
+                        "title": f"Chart {i+1} - Pie Chart"
+                    }
+                }
+            
             chart = {
-                "chart_id": f"chart_{i+1}",
-                "type": ["bar", "line", "pie"][i % 3],
+                "chart_schema": chart_schema,
+                "type": chart_type,
                 "columns": columns[:4],  # Use first 4 columns
                 "query": f"Sample query for chart {i+1}"
             }
@@ -58,21 +99,59 @@ class DashboardExamples:
         """Generate sample dashboard queries"""
         return [
             {
-                "chart_id": "sales_chart",
+                "chart_schema": {
+                    "type": "vega_lite",
+                    "spec": {
+                        "mark": "bar",
+                        "encoding": {
+                            "x": {"field": "region", "type": "nominal", "axis": {"title": "Region"}},
+                            "y": {"field": "sales", "type": "quantitative", "axis": {"title": "Sales ($)"}}
+                        }
+                    },
+                    "title": "Sales by Region",
+                    "width": 400,
+                    "height": 300
+                },
                 "sql": "SELECT region, SUM(sales_amount) as sales FROM sales_data GROUP BY region;",
                 "query": "Show sales by region",
                 "data_description": "Sales data by region",
                 "project_id": "example_project"
             },
             {
-                "chart_id": "performance_chart",
+                "chart_schema": {
+                    "type": "vega_lite",
+                    "spec": {
+                        "mark": "line",
+                        "encoding": {
+                            "x": {"field": "date", "type": "temporal", "axis": {"title": "Date"}},
+                            "y": {"field": "performance_score", "type": "quantitative", "axis": {"title": "Performance Score"}},
+                            "color": {"value": "#1f77b4"}
+                        }
+                    },
+                    "title": "Performance Over Time",
+                    "width": 600,
+                    "height": 300
+                },
                 "sql": "SELECT date, performance_score FROM performance_data ORDER BY date;",
                 "query": "Show performance over time",
                 "data_description": "Performance trends over time",
                 "project_id": "example_project"
             },
             {
-                "chart_id": "profit_chart",
+                "chart_schema": {
+                    "type": "plotly",
+                    "data": [{
+                        "type": "pie",
+                        "labels": ["Electronics", "Clothing", "Books", "Home", "Sports"],
+                        "values": [30, 25, 20, 15, 10],
+                        "hole": 0.3
+                    }],
+                    "layout": {
+                        "title": "Average Profit by Category",
+                        "height": 400,
+                        "showlegend": True
+                    }
+                },
                 "sql": "SELECT category, AVG(profit) as avg_profit FROM sales_data GROUP BY category;",
                 "query": "Show average profit by category",
                 "data_description": "Profit analysis by category",

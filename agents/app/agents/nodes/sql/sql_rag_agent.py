@@ -455,6 +455,30 @@ Please provide your response in proper Markdown string format.
             func=retrieve_samples_func
         )
     
+    def _clean_sql_query(self, sql: str) -> str:
+        """Clean SQL query by removing unnecessary newlines and normalizing whitespace"""
+        if not sql:
+            return ""
+        
+        # Remove leading/trailing whitespace
+        sql = sql.strip()
+        
+        # Replace multiple whitespace characters (including newlines) with single spaces
+        import re
+        sql = re.sub(r'\s+', ' ', sql)
+        
+        # Ensure proper spacing around SQL keywords
+        sql = re.sub(r'\b(SELECT|FROM|WHERE|GROUP BY|ORDER BY|HAVING|UNION|JOIN|INNER JOIN|LEFT JOIN|RIGHT JOIN|FULL JOIN)\b', r' \1 ', sql, flags=re.IGNORECASE)
+        
+        # Clean up multiple spaces
+        sql = re.sub(r'\s+', ' ', sql)
+        
+        # Ensure semicolon at the end if not present
+        if not sql.endswith(';'):
+            sql = sql + ';'
+            
+        return sql.strip()
+
     def _extract_sql_from_content(self, content: str) -> Dict[str, Any]:
         """Extract SQL query and parsed entities from content that may contain explanations"""
         try:
@@ -462,9 +486,10 @@ Please provide your response in proper Markdown string format.
             try:
                 json_data = json.loads(content)
                 if isinstance(json_data, dict):
-                    
+                    # Clean SQL by removing unnecessary newlines and normalizing whitespace
+                    sql = self._clean_sql_query(json_data.get("sql", ""))
                     return {
-                        "sql": json_data.get("sql", "").strip(),
+                        "sql": sql,
                         "parsed_entities": json_data.get("parsed_entities", {})
                     }
             except json.JSONDecodeError:
@@ -478,8 +503,10 @@ Please provide your response in proper Markdown string format.
                     json_str = json_match.group(0)
                     json_data = json.loads(json_str)
                     if isinstance(json_data, dict):
+                        # Clean SQL by removing unnecessary newlines and normalizing whitespace
+                        sql = self._clean_sql_query(json_data.get("sql", ""))
                         return {
-                            "sql": json_data.get("sql", "").strip(),
+                            "sql": sql,
                             "parsed_entities": json_data.get("parsed_entities", {})
                         }
                 except json.JSONDecodeError:
@@ -488,24 +515,27 @@ Please provide your response in proper Markdown string format.
             # If no valid JSON found, look for SQL code block
             sql_match = re.search(r'```sql\n(.*?)\n```', content, re.DOTALL)
             if sql_match:
+                sql = self._clean_sql_query(sql_match.group(1))
                 return {
-                    "sql": sql_match.group(1).strip(),
+                    "sql": sql,
                     "parsed_entities": {}
                 }
             
             # If no code block, look for SQL statement
             sql_match = re.search(r'SELECT.*?;', content, re.DOTALL | re.IGNORECASE)
             if sql_match:
+                sql = self._clean_sql_query(sql_match.group(0))
                 return {
-                    "sql": sql_match.group(0).strip(),
+                    "sql": sql,
                     "parsed_entities": {}
                 }
             
             # If still no match, try to find any SQL-like content
             sql_match = re.search(r'(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP).*?;', content, re.DOTALL | re.IGNORECASE)
             if sql_match:
+                sql = self._clean_sql_query(sql_match.group(0))
                 return {
-                    "sql": sql_match.group(0).strip(),
+                    "sql": sql,
                     "parsed_entities": {}
                 }
             

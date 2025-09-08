@@ -366,6 +366,8 @@ class DashboardStreamingPipeline(AgentPipeline):
             query = query_data.get("query", "")
             data_description = query_data.get("data_description", "")
             query_configuration = query_data.get("configuration", {})
+            chart_schema = query_data.get("chart_schema", {})
+            existing_chart_schema = query_data.get("existing_chart_schema", {})
             
             # Merge with global timeout configuration
             merged_config = {
@@ -377,8 +379,16 @@ class DashboardStreamingPipeline(AgentPipeline):
             # Filter out project_id from kwargs to avoid duplicate parameter error
             filtered_kwargs = {k: v for k, v in kwargs.items() if k != 'project_id'}
             
+            # Add chart schema to the execution parameters if available
+            if chart_schema:
+                filtered_kwargs["chart_schema"] = chart_schema
+            
+            # Add existing chart schema to the execution parameters if available
+            if existing_chart_schema:
+                filtered_kwargs["existing_chart_schema"] = existing_chart_schema
+            
             # Debug logging to see what's being passed
-            logger.debug(f"SQL execution pipeline call - query: {query[:50]}..., sql: {sql[:50]}..., project_id: {project_id}, filtered_kwargs keys: {list(filtered_kwargs.keys())}")
+            logger.debug(f"SQL execution pipeline call - query: {query[:50]}..., sql: {sql[:50]}..., project_id: {project_id}, has_chart_schema: {bool(chart_schema)}, filtered_kwargs keys: {list(filtered_kwargs.keys())}")
             
             execution_result = await self._sql_execution_pipeline.run(
                 query=query,

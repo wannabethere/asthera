@@ -11,7 +11,7 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_chroma import Chroma
 from langchain_core.documents import Document as LangchainDocument
 import chromadb
-from app.settings import get_settings
+from app.core.settings import get_settings
 from collections import defaultdict
 from sklearn.feature_extraction.text import TfidfVectorizer
 from enum import Enum, auto

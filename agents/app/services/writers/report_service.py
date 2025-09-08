@@ -18,6 +18,7 @@ from app.agents.pipelines.pipeline_container import PipelineContainer
 from app.services.servicebase import BaseService
 from app.core.engine import Engine
 from app.core.dependencies import get_llm
+from app.services.workflow_integration import get_workflow_integration_service
 
 
 
@@ -80,6 +81,9 @@ class ReportService(BaseService):
         self._configuration_cache = {}
         self._execution_history = []
         self._report_templates = {}
+        
+        # Initialize workflow integration service
+        self._workflow_integration = get_workflow_integration_service()
         
         # Initialize default report templates
         self._initialize_default_templates()
@@ -1070,6 +1074,496 @@ class ReportService(BaseService):
             }
         }
     
+    async def render_report_from_workflow_db(
+        self,
+        workflow_id: str,
+        project_id: str,
+        natural_language_query: Optional[str] = None,
+        additional_context: Optional[Dict[str, Any]] = None,
+        time_filters: Optional[Dict[str, Any]] = None,
+        render_options: Optional[Dict[str, Any]] = None,
+        report_template: Optional[str] = None,
+        writer_actor: Optional[str] = None,
+        business_goal: Optional[str] = None,
+        status_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None
+    ) -> Dict[str, Any]:
+        """
+        Render report from workflow database model
+        
+        Args:
+            workflow_id: Workflow ID from database
+            project_id: Project identifier
+            natural_language_query: Natural language query for conditional formatting
+            additional_context: Additional context for rendering
+            time_filters: Time-based filters
+            render_options: Options for rendering (preview, full, etc.)
+            report_template: Report template to use
+            writer_actor: Writer actor type
+            business_goal: Business goal configuration
+            status_callback: Callback for status updates
+            
+        Returns:
+            Complete report result with workflow-driven configuration
+        """
+        try:
+            # Use workflow integration service to render report
+            workflow_result = await self._workflow_integration.render_dashboard_from_workflow(
+                workflow_id=workflow_id,
+                project_id=project_id,
+                natural_language_query=natural_language_query,
+                additional_context=additional_context,
+                time_filters=time_filters,
+                render_options=render_options
+            )
+            
+            if not workflow_result.get("success"):
+                raise ValueError(workflow_result.get("error", f"Failed to render workflow {workflow_id}"))
+            
+            # Extract data from workflow result
+            report_queries = workflow_result["dashboard_queries"]  # Reuse dashboard queries structure
+            report_context = workflow_result["dashboard_context"]  # Reuse dashboard context structure
+            
+            # Convert dashboard context to report context
+            report_context = self._convert_dashboard_to_report_context(report_context)
+            
+            # Determine writer actor and business goal
+            writer_actor_type = self._parse_writer_actor(writer_actor)
+            business_goal_obj = self._parse_business_goal(business_goal)
+            
+            # Send initial status update
+            self._send_status_update(
+                status_callback,
+                "workflow_report_rendering_started",
+                {
+                    "workflow_id": workflow_id,
+                    "project_id": project_id,
+                    "total_queries": len(report_queries),
+                    "workflow_state": workflow_result.get("workflow_metadata", {}).get("state"),
+                    "render_mode": render_options.get("mode", "full") if render_options else "full",
+                    "report_template": report_template,
+                    "writer_actor": str(writer_actor_type) if writer_actor_type else None
+                }
+            )
+            
+            # Generate comprehensive report
+            result = await self.generate_comprehensive_report(
+                report_queries=report_queries,
+                project_id=project_id,
+                report_context=report_context,
+                natural_language_query=natural_language_query,
+                report_template=report_template,
+                writer_actor=writer_actor_type,
+                business_goal=business_goal_obj,
+                additional_context=additional_context,
+                time_filters=time_filters,
+                status_callback=status_callback
+            )
+            
+            # Add workflow metadata to result
+            result["workflow_metadata"] = {
+                "workflow_id": workflow_id,
+                "workflow_state": workflow_result.get("workflow_metadata", {}).get("state"),
+                "workflow_type": "report_workflow",
+                "report_template": report_template,
+                "workflow_source": "database",
+                "render_options": render_options or {},
+                "transformed_at": workflow_result.get("transformed_at")
+            }
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error rendering report from workflow DB: {e}")
+            self._send_status_update(
+                status_callback,
+                "workflow_report_rendering_failed",
+                {
+                    "error": str(e),
+                    "workflow_id": workflow_id,
+                    "project_id": project_id
+                }
+            )
+            raise
+    
+    def _convert_dashboard_to_report_context(self, dashboard_context: Dict[str, Any]) -> Dict[str, Any]:
+        """Convert dashboard context to report context format"""
+        try:
+            return {
+                "title": dashboard_context.get("title", "Report from Workflow"),
+                "description": dashboard_context.get("description", "Report generated from workflow configuration"),
+                "sections": ["executive_summary", "analysis", "conclusions", "recommendations"],
+                "available_columns": dashboard_context.get("available_columns", []),
+                "data_types": dashboard_context.get("data_types", {}),
+                "workflow_id": dashboard_context.get("workflow_id"),
+                "workflow_state": dashboard_context.get("workflow_state"),
+                "workflow_metadata": dashboard_context.get("workflow_metadata", {}),
+                "template": dashboard_context.get("template"),
+                "layout": dashboard_context.get("layout"),
+                "charts": dashboard_context.get("charts", []),
+                "components": dashboard_context.get("components", [])
+            }
+        except Exception as e:
+            logger.error(f"Error converting dashboard to report context: {e}")
+            return {
+                "title": "Report from Workflow",
+                "description": "Report generated from workflow configuration",
+                "sections": ["executive_summary", "analysis", "conclusions"],
+                "available_columns": [],
+                "data_types": {},
+                "workflow_id": dashboard_context.get("workflow_id", "unknown")
+            }
+    
+    def _parse_writer_actor(self, writer_actor: Optional[str]) -> Optional[WriterActorType]:
+        """Parse writer actor string to WriterActorType enum"""
+        if not writer_actor:
+            return None
+        
+        try:
+            return WriterActorType[writer_actor.upper()]
+        except KeyError:
+            logger.warning(f"Unknown writer actor: {writer_actor}")
+            return None
+    
+    def _parse_business_goal(self, business_goal: Optional[str]) -> Optional[BusinessGoal]:
+        """Parse business goal string to BusinessGoal object"""
+        if not business_goal:
+            return None
+        
+        try:
+            # If it's a JSON string, parse it
+            if isinstance(business_goal, str) and business_goal.startswith("{"):
+                import json
+                goal_dict = json.loads(business_goal)
+                return BusinessGoal(**goal_dict)
+            else:
+                # Simple string mapping
+                goal_mapping = {
+                    "strategic": BusinessGoal(
+                        primary_objective="Strategic decision making",
+                        target_audience=["executives", "stakeholders"],
+                        decision_context="High-level strategic planning",
+                        success_metrics=["strategic alignment", "decision quality"],
+                        timeframe="quarterly"
+                    ),
+                    "operational": BusinessGoal(
+                        primary_objective="Operational insights",
+                        target_audience=["operations team", "managers"],
+                        decision_context="Day-to-day operational decisions",
+                        success_metrics=["efficiency", "productivity"],
+                        timeframe="weekly"
+                    ),
+                    "performance": BusinessGoal(
+                        primary_objective="Performance optimization",
+                        target_audience=["performance team", "management"],
+                        decision_context="Performance improvement decisions",
+                        success_metrics=["performance metrics", "optimization results"],
+                        timeframe="monthly"
+                    )
+                }
+                return goal_mapping.get(business_goal.lower())
+        except Exception as e:
+            logger.warning(f"Error parsing business goal: {e}")
+            return None
+    
+    async def get_workflow_components(self, workflow_id: str) -> List[Dict[str, Any]]:
+        """Get workflow components for a specific workflow"""
+        try:
+            # Use workflow integration service to get components
+            components = await self._workflow_integration.fetch_workflow_components(workflow_id)
+            
+            # Format components for API response
+            formatted_components = []
+            for comp in components:
+                formatted_comp = {
+                    "component_id": comp.get("id"),
+                    "component_type": comp.get("component_type"),
+                    "question": comp.get("question"),
+                    "description": comp.get("description"),
+                    "sequence_order": comp.get("sequence_order"),
+                    "configuration": comp.get("configuration", {}),
+                    "chart_config": comp.get("chart_config", {}),
+                    "table_config": comp.get("table_config", {}),
+                    "alert_config": comp.get("alert_config", {}),
+                    "sql": comp.get("sql", ""),
+                    "query": comp.get("query", ""),
+                    "data_description": comp.get("data_description", "")
+                }
+                formatted_components.append(formatted_comp)
+            
+            return formatted_components
+            
+        except Exception as e:
+            logger.error(f"Error getting workflow components: {e}")
+            return []
+    
+    async def get_workflow_status(self, workflow_id: str) -> Dict[str, Any]:
+        """Get workflow status and metadata"""
+        try:
+            # Use workflow integration service to get status
+            status = await self._workflow_integration.get_workflow_status(workflow_id)
+            return status
+            
+        except Exception as e:
+            logger.error(f"Error getting workflow status: {e}")
+            return {
+                "workflow_id": workflow_id,
+                "status": "error",
+                "error": str(e)
+            }
+    
+    async def preview_report_from_workflow(
+        self,
+        workflow_id: str,
+        preview_options: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Preview report from workflow without full rendering"""
+        try:
+            # Use workflow integration service to render report
+            workflow_result = await self._workflow_integration.render_dashboard_from_workflow(
+                workflow_id=workflow_id,
+                project_id="preview_project",
+                natural_language_query=None,
+                additional_context={"preview_mode": True},
+                time_filters={},
+                render_options=preview_options or {}
+            )
+            
+            if not workflow_result.get("success"):
+                raise ValueError(workflow_result.get("error", f"Failed to preview workflow {workflow_id}"))
+            
+            # Extract data from workflow result
+            report_queries = workflow_result["dashboard_queries"]
+            report_context = workflow_result["dashboard_context"]
+            
+            # Convert dashboard context to report context
+            report_context = self._convert_dashboard_to_report_context(report_context)
+            
+            # Limit queries for preview
+            max_preview_queries = preview_options.get("max_queries", 2) if preview_options else 2
+            report_queries = report_queries[:max_preview_queries]
+            
+            # Generate simple report for preview
+            result = await self.generate_simple_report(
+                report_queries=report_queries,
+                project_id="preview_project",
+                report_context=report_context
+            )
+            
+            # Add preview metadata
+            result["preview_metadata"] = {
+                "workflow_id": workflow_id,
+                "preview_mode": True,
+                "total_queries_previewed": len(report_queries),
+                "preview_options": preview_options or {}
+            }
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error previewing report from workflow: {e}")
+            raise
+    
+    async def render_report_from_workflow_data(
+        self,
+        workflow_data: Dict[str, Any],
+        project_id: str,
+        natural_language_query: Optional[str] = None,
+        additional_context: Optional[Dict[str, Any]] = None,
+        time_filters: Optional[Dict[str, Any]] = None,
+        render_options: Optional[Dict[str, Any]] = None,
+        report_template: Optional[str] = None,
+        writer_actor: Optional[str] = None,
+        business_goal: Optional[str] = None,
+        status_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None
+    ) -> Dict[str, Any]:
+        """
+        Render report from workflow data passed in request
+        
+        Args:
+            workflow_data: Complete workflow data from request
+            project_id: Project identifier
+            natural_language_query: Natural language query for conditional formatting
+            additional_context: Additional context for rendering
+            time_filters: Time-based filters
+            render_options: Options for rendering (preview, full, etc.)
+            report_template: Report template to use
+            writer_actor: Writer actor type
+            business_goal: Business goal configuration
+            status_callback: Callback for status updates
+            
+        Returns:
+            Complete report result with workflow-driven configuration
+        """
+        try:
+            # Extract workflow information
+            workflow_id = workflow_data.get("workflow_id")
+            workflow_state = workflow_data.get("state")
+            thread_components = workflow_data.get("thread_components", [])
+            workflow_metadata = workflow_data.get("workflow_metadata", {})
+            
+            # Transform workflow data to report format
+            report_queries = self._extract_queries_from_workflow_components(thread_components)
+            report_context = self._create_report_context_from_workflow_data(workflow_data)
+            
+            # Determine writer actor and business goal
+            writer_actor_type = self._parse_writer_actor(writer_actor or workflow_metadata.get("writer_actor"))
+            business_goal_obj = self._parse_business_goal(business_goal or str(workflow_metadata.get("business_goal", "")))
+            
+            # Send initial status update
+            self._send_status_update(
+                status_callback,
+                "workflow_report_rendering_started",
+                {
+                    "workflow_id": workflow_id,
+                    "project_id": project_id,
+                    "total_queries": len(report_queries),
+                    "workflow_state": workflow_state,
+                    "render_mode": render_options.get("mode", "full") if render_options else "full",
+                    "total_components": len(thread_components),
+                    "report_template": report_template,
+                    "writer_actor": str(writer_actor_type) if writer_actor_type else None
+                }
+            )
+            
+            # Generate comprehensive report
+            result = await self.generate_comprehensive_report(
+                report_queries=report_queries,
+                project_id=project_id,
+                report_context=report_context,
+                natural_language_query=natural_language_query,
+                report_template=report_template,
+                writer_actor=writer_actor_type,
+                business_goal=business_goal_obj,
+                additional_context=additional_context,
+                time_filters=time_filters,
+                status_callback=status_callback
+            )
+            
+            # Add workflow metadata to result
+            result["workflow_metadata"] = {
+                "workflow_id": workflow_id,
+                "workflow_state": workflow_state,
+                "workflow_type": "report_workflow",
+                "workflow_source": "request_data",
+                "total_components": len(thread_components),
+                "report_template": report_template,
+                "writer_actor": str(writer_actor_type) if writer_actor_type else None,
+                "business_goal": str(business_goal_obj) if business_goal_obj else None,
+                "dashboard_template": workflow_metadata.get("dashboard_template"),
+                "dashboard_layout": workflow_metadata.get("dashboard_layout"),
+                "refresh_rate": workflow_metadata.get("refresh_rate")
+            }
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error rendering report from workflow data: {e}")
+            self._send_status_update(
+                status_callback,
+                "workflow_report_rendering_failed",
+                {
+                    "error": str(e),
+                    "workflow_id": workflow_data.get("workflow_id"),
+                    "project_id": project_id
+                }
+            )
+            raise
+    
+    def _extract_queries_from_workflow_components(self, thread_components: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Extract report queries from workflow thread components"""
+        queries = []
+        
+        try:
+            for component in thread_components:
+                component_type = component.get("component_type", "").lower()
+                
+                # Only process components that have SQL queries
+                if component.get("sql_query") and component_type in ["chart", "table", "metric", "sql_summary"]:
+                    query_data = {
+                        "chart_schema": component.get("chart_schema", {}),
+                        "sql": component.get("sql_query", ""),
+                        "query": component.get("question", ""),
+                        "data_description": component.get("description", ""),
+                        "component_type": component_type,
+                        "sequence_order": component.get("sequence_order", 0),
+                        "configuration": component.get("configuration", {}),
+                        "chart_config": component.get("chart_config", {}),
+                        "table_config": component.get("table_config", {}),
+                        "alert_config": component.get("alert_config", {}),
+                        "executive_summary": component.get("executive_summary"),
+                        "data_overview": component.get("data_overview", {}),
+                        "visualization_data": component.get("visualization_data", {}),
+                        "sample_data": component.get("sample_data", {}),
+                        "thread_metadata": component.get("thread_metadata", {}),
+                        "reasoning": component.get("reasoning"),
+                        "data_count": component.get("data_count"),
+                        "validation_results": component.get("validation_results", {})
+                    }
+                    queries.append(query_data)
+            
+            # Sort by sequence order
+            queries.sort(key=lambda x: x.get("sequence_order", 0))
+            
+            return queries
+            
+        except Exception as e:
+            logger.error(f"Error extracting queries from workflow components: {e}")
+            return []
+    
+    def _create_report_context_from_workflow_data(self, workflow_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create report context from workflow data"""
+        try:
+            workflow_metadata = workflow_data.get("workflow_metadata", {})
+            thread_components = workflow_data.get("thread_components", [])
+            
+            # Extract available columns from components
+            available_columns = set()
+            data_types = {}
+            
+            for component in thread_components:
+                if component.get("data_overview"):
+                    overview = component["data_overview"]
+                    if "columns" in overview:
+                        for col in overview["columns"]:
+                            available_columns.add(col.get("name", ""))
+                            data_types[col.get("name", "")] = col.get("type", "string")
+            
+            # Create report context
+            context = {
+                "title": workflow_metadata.get("report_title", f"Report from Workflow {workflow_data.get('workflow_id')}"),
+                "description": workflow_metadata.get("report_description", "Report generated from workflow configuration"),
+                "sections": workflow_metadata.get("report_sections", ["executive_summary", "analysis", "conclusions", "recommendations"]),
+                "available_columns": list(available_columns),
+                "data_types": data_types,
+                "workflow_id": workflow_data.get("workflow_id"),
+                "workflow_state": workflow_data.get("state"),
+                "workflow_metadata": workflow_metadata,
+                "total_components": len(thread_components),
+                "template": workflow_metadata.get("dashboard_template", "default"),
+                "layout": workflow_metadata.get("dashboard_layout", "grid"),
+                "refresh_rate": workflow_metadata.get("refresh_rate", 300),
+                "charts": [comp for comp in thread_components if comp.get("component_type") in ["chart", "sql_summary"]],
+                "tables": [comp for comp in thread_components if comp.get("component_type") == "table"],
+                "metrics": [comp for comp in thread_components if comp.get("component_type") == "metric"],
+                "alerts": [comp for comp in thread_components if comp.get("component_type") == "alert"]
+            }
+            
+            return context
+            
+        except Exception as e:
+            logger.error(f"Error creating report context from workflow data: {e}")
+            # Return basic context
+            return {
+                "title": "Report from Workflow",
+                "description": "Report generated from workflow configuration",
+                "sections": ["executive_summary", "analysis", "conclusions"],
+                "available_columns": [],
+                "data_types": {},
+                "workflow_id": workflow_data.get("workflow_id", "unknown"),
+                "workflow_state": workflow_data.get("state", "unknown"),
+                "total_components": len(workflow_data.get("thread_components", []))
+            }
+
     def clear_cache(self):
         """Clear configuration and execution caches"""
         self._configuration_cache.clear()

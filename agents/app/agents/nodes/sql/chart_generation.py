@@ -2,6 +2,7 @@ import logging
 from typing import Any, Dict, Optional, List
 import asyncio
 import os
+import json
 
 import orjson
 from langchain.agents import AgentType, initialize_agent
@@ -58,6 +59,20 @@ class VegaLiteChartGenerationAgent:
         
         {chart_generation_instructions}
         
+        ### EXISTING CHART SCHEMA CONSIDERATION ###
+        
+        If an existing chart schema is provided, you should:
+        1. FIRST evaluate if the existing chart schema is suitable for the current data and query
+        2. If the existing schema is appropriate, REUSE it with minimal modifications (like updating field names to match current data)
+        3. If the existing schema is not suitable, generate a new one that better fits the current requirements
+        4. In your reasoning, explain whether you reused the existing schema or generated a new one and why
+        
+        When reusing an existing schema:
+        - Keep the same chart type and overall structure
+        - Update field names to match the current data columns
+        - Preserve styling, colors, and layout preferences
+        - Only modify what's necessary for the new data
+        
         ### CRITICAL INSTRUCTION ###
         
         You MUST respond with ONLY a valid JSON object. Do NOT include:
@@ -103,7 +118,7 @@ class VegaLiteChartGenerationAgent:
         
         # User prompt template
         self.user_prompt_template = PromptTemplate(
-            input_variables=["query", "sql", "sample_data", "sample_column_values", "language"],
+            input_variables=["query", "sql", "sample_data", "sample_column_values", "language", "existing_chart_schema"],
             template="""
             ### INPUT ###
             Question: {query}
@@ -111,6 +126,7 @@ class VegaLiteChartGenerationAgent:
             Sample Data: {sample_data}
             Sample Column Values: {sample_column_values}
             Language: {language}
+            Existing Chart Schema: {existing_chart_schema}
             
             Please think step by step
             """
@@ -158,20 +174,31 @@ class VegaLiteChartGenerationAgent:
         sql: str,
         data: Dict[str, Any],
         language: str = "English",
-        remove_data_from_chart_schema: bool = True
+        remove_data_from_chart_schema: bool = True,
+        existing_chart_schema: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Generate Vega-Lite chart schema using the agent"""
+        """Generate Vega-Lite chart schema using the agent
+        
+        Args:
+            query: Natural language query
+            sql: SQL query
+            data: Data dictionary with columns and data
+            language: Language for the chart
+            remove_data_from_chart_schema: Whether to remove data from schema
+            existing_chart_schema: Optional existing chart schema to consider for reuse
+        """
         try:
             # Preprocess data
             preprocessed_data = self.data_preprocessor.run(data)
             
-            # Create the prompt
+            # Create the prompt with existing chart schema if provided
             prompt = self.user_prompt_template.format(
                 query=query,
                 sql=sql,
                 sample_data=preprocessed_data["sample_data"],
                 sample_column_values=preprocessed_data["sample_column_values"],
-                language=language
+                language=language,
+                existing_chart_schema=json.dumps(existing_chart_schema) if existing_chart_schema else "None"
             )
             
             # Generate chart using LLM directly (more controlled approach)
@@ -371,9 +398,20 @@ class VegaLiteChartGenerationPipeline:
         data: Dict[str, Any],
         language: str = "English",
         remove_data_from_chart_schema: bool = True,
-        export_format: Optional[str] = None
+        export_format: Optional[str] = None,
+        existing_chart_schema: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Run the complete Vega-Lite chart generation pipeline"""
+        """Run the complete Vega-Lite chart generation pipeline
+        
+        Args:
+            query: Natural language query
+            sql: SQL query
+            data: Data dictionary with columns and data
+            language: Language for the chart
+            remove_data_from_chart_schema: Whether to remove data from schema
+            export_format: Optional export format
+            existing_chart_schema: Optional existing chart schema to consider for reuse
+        """
         logger.info("Vega-Lite Chart Generation pipeline is running...")
         
         try:
@@ -386,7 +424,8 @@ class VegaLiteChartGenerationPipeline:
                 sql=sql,
                 data=data,
                 language=language,
-                remove_data_from_chart_schema=remove_data_from_chart_schema
+                remove_data_from_chart_schema=remove_data_from_chart_schema,
+                existing_chart_schema=existing_chart_schema
             )
             print("result for vega lite chart generation pipeline", result)
             # Add export functionality if requested
@@ -454,6 +493,7 @@ class ChartGeneration:
         data: dict,
         language: str,
         remove_data_from_chart_schema: Optional[bool] = True,
+        existing_chart_schema: Optional[Dict[str, Any]] = None
     ) -> dict:
         """Run chart generation with original interface"""
         result = await self.pipeline.run(
@@ -461,7 +501,8 @@ class ChartGeneration:
             sql=sql,
             data=data,
             language=language,
-            remove_data_from_chart_schema=remove_data_from_chart_schema
+            remove_data_from_chart_schema=remove_data_from_chart_schema,
+            existing_chart_schema=existing_chart_schema
         )
         
         # Transform result to match original output format

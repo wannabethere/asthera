@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from typing import Dict, Any, Optional, List, Union
 from pydantic import BaseModel, Field
+from uuid import UUID
 
 from app.services.service_container import SQLServiceContainer
 
@@ -35,6 +36,67 @@ class ReportRequest(BaseModel):
     time_filters: Optional[Dict[str, Any]] = Field(default_factory=dict)
     workflow_data: Optional[Union[Dict[str, Any], str]] = None
     configuration: Optional[Dict[str, Any]] = Field(default_factory=dict)
+
+class WorkflowReportComponent(BaseModel):
+    """Model for workflow report component data"""
+    id: UUID
+    component_type: str
+    sequence_order: int
+    question: Optional[str] = None
+    description: Optional[str] = None
+    overview: Optional[Dict[str, Any]] = None
+    chart_config: Optional[Dict[str, Any]] = None
+    table_config: Optional[Dict[str, Any]] = None
+    sql_query: Optional[str] = None
+    executive_summary: Optional[str] = None
+    data_overview: Optional[Dict[str, Any]] = None
+    visualization_data: Optional[Dict[str, Any]] = None
+    sample_data: Optional[Dict[str, Any]] = None
+    thread_metadata: Optional[Dict[str, Any]] = None
+    chart_schema: Optional[Dict[str, Any]] = None
+    reasoning: Optional[str] = None
+    data_count: Optional[int] = None
+    validation_results: Optional[Dict[str, Any]] = None
+    alert_config: Optional[Dict[str, Any]] = None
+    alert_status: Optional[str] = None
+    last_triggered: Optional[str] = None
+    trigger_count: Optional[int] = None
+    configuration: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    is_configured: Optional[bool] = False
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+class ReportWorkflowMetadata(BaseModel):
+    """Model for report workflow metadata"""
+    dashboard_template: Optional[str] = None
+    dashboard_layout: Optional[str] = None
+    refresh_rate: Optional[int] = None
+    report_title: Optional[str] = None
+    report_description: Optional[str] = None
+    report_sections: Optional[List[str]] = None
+    writer_actor: Optional[str] = None
+    business_goal: Optional[Dict[str, Any]] = None
+    custom_config: Optional[Dict[str, Any]] = Field(default_factory=dict)
+
+class ReportWorkflowRequest(BaseModel):
+    """Request model for report generation from workflow data"""
+    workflow_id: UUID
+    project_id: str
+    state: str
+    current_step: int
+    workflow_metadata: ReportWorkflowMetadata
+    thread_components: List[WorkflowReportComponent]
+    natural_language_query: Optional[str] = None
+    additional_context: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    time_filters: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    render_options: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    report_template: Optional[str] = None
+    writer_actor: Optional[str] = None
+    business_goal: Optional[str] = None
+    error_message: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    completed_at: Optional[str] = None
 
 class SimpleReportRequest(BaseModel):
     """Request model for simple report generation"""
@@ -200,6 +262,64 @@ async def generate_report_from_workflow(
         raise HTTPException(
             status_code=500,
             detail=f"Error generating report from workflow: {str(e)}"
+        )
+
+@router.post("/render-from-workflow", response_model=ReportResponse)
+async def render_report_from_workflow(
+    request: ReportWorkflowRequest,
+    background_tasks: BackgroundTasks
+) -> ReportResponse:
+    """
+    Render report from workflow data.
+    
+    This endpoint processes workflow data passed in the request and renders
+    the report using the agents based on the workflow configuration.
+    """
+    try:
+        service = get_report_service()
+        
+        # Convert request to workflow data format
+        workflow_data = {
+            "workflow_id": str(request.workflow_id),
+            "state": request.state,
+            "current_step": request.current_step,
+            "workflow_metadata": request.workflow_metadata.dict() if request.workflow_metadata else {},
+            "thread_components": [comp.dict() for comp in request.thread_components],
+            "error_message": request.error_message,
+            "created_at": request.created_at,
+            "updated_at": request.updated_at,
+            "completed_at": request.completed_at
+        }
+        
+        # Process report from workflow data
+        result = await service.render_report_from_workflow_data(
+            workflow_data=workflow_data,
+            project_id=request.project_id,
+            natural_language_query=request.natural_language_query,
+            additional_context=request.additional_context,
+            time_filters=request.time_filters,
+            render_options=request.render_options,
+            report_template=request.report_template,
+            writer_actor=request.writer_actor,
+            business_goal=request.business_goal
+        )
+        
+        return ReportResponse(
+            success=result.get("post_process", {}).get("success", False),
+            report_data=result.get("post_process"),
+            orchestration_metadata=result.get("post_process", {}).get("orchestration_metadata"),
+            workflow_metadata=result.get("workflow_metadata"),
+            metadata={
+                "project_id": request.project_id,
+                "workflow_id": str(request.workflow_id),
+                "timestamp": result.get("metadata", {}).get("timestamp")
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error rendering report from workflow: {str(e)}"
         )
 
 @router.post("/generate-simple", response_model=ReportResponse)
@@ -452,6 +572,92 @@ async def clear_cache() -> Dict[str, str]:
         raise HTTPException(
             status_code=500,
             detail=f"Error clearing cache: {str(e)}"
+        )
+
+@router.get("/workflow/{workflow_id}/components")
+async def get_workflow_components(workflow_id: UUID) -> Dict[str, Any]:
+    """
+    Get workflow components for a specific workflow.
+    
+    This endpoint retrieves all thread components associated with
+    a workflow that can be used for report rendering.
+    """
+    try:
+        service = get_report_service()
+        
+        # Get workflow components
+        components = await service.get_workflow_components(workflow_id)
+        
+        return {
+            "workflow_id": str(workflow_id),
+            "components": components,
+            "total_components": len(components)
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving workflow components: {str(e)}"
+        )
+
+@router.get("/workflow/{workflow_id}/status")
+async def get_workflow_status(workflow_id: UUID) -> Dict[str, Any]:
+    """
+    Get workflow status and metadata.
+    
+    This endpoint retrieves the current status and metadata
+    for a specific workflow.
+    """
+    try:
+        service = get_report_service()
+        
+        # Get workflow status
+        status = await service.get_workflow_status(workflow_id)
+        
+        return status
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving workflow status: {str(e)}"
+        )
+
+@router.post("/workflow/{workflow_id}/preview")
+async def preview_workflow_report(
+    workflow_id: UUID,
+    preview_options: Optional[Dict[str, Any]] = None
+) -> ReportResponse:
+    """
+    Preview report from workflow without full rendering.
+    
+    This endpoint provides a quick preview of how the report
+    would look based on the workflow configuration.
+    """
+    try:
+        service = get_report_service()
+        
+        # Preview report from workflow
+        result = await service.preview_report_from_workflow(
+            workflow_id=workflow_id,
+            preview_options=preview_options or {}
+        )
+        
+        return ReportResponse(
+            success=result.get("post_process", {}).get("success", False),
+            report_data=result.get("post_process"),
+            orchestration_metadata=result.get("post_process", {}).get("orchestration_metadata"),
+            workflow_metadata=result.get("workflow_metadata"),
+            metadata={
+                "workflow_id": str(workflow_id),
+                "preview_mode": True,
+                "timestamp": result.get("metadata", {}).get("timestamp")
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error previewing workflow report: {str(e)}"
         )
 
 @router.get("/health")

@@ -35,10 +35,10 @@ async def create_dashboard_workflow(
     This initializes a draft dashboard and starts the workflow process.
     """
     orchestrator = WorkflowOrchestrator(db)
-    
+
     try:
-        result = orchestrator.create_workflow(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+        result = await orchestrator.create_workflow(
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_type=WorkflowType.DASHBOARD,
             name=name,
             description=description,
@@ -66,10 +66,10 @@ async def create_report_workflow(
     This initializes a draft report with the specified template.
     """
     orchestrator = WorkflowOrchestrator(db)
-    
+
     try:
-        result = orchestrator.create_workflow(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+        result = await orchestrator.create_workflow(
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_type=WorkflowType.REPORT,
             name=name,
             description=description,
@@ -97,14 +97,15 @@ async def add_dashboard_component(
     Components include: question, description, overview, chart, table
     """
     orchestrator = WorkflowOrchestrator(db)
-    
+
     step_data = component.dict()
+    print(f"step_data: {step_data}")
     if thread_message_id:
         step_data["thread_message_id"] = thread_message_id
-    
+
     try:
         result = await orchestrator.execute_workflow_step(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id,
             step_name="add_component",
             step_data=step_data
@@ -126,10 +127,10 @@ async def configure_dashboard_component(
     Configuration includes layout, styling, data mappings, etc.
     """
     orchestrator = WorkflowOrchestrator(db)
-    
+
     try:
         result = await orchestrator.execute_workflow_step(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id,
             step_name="configure_component",
             step_data={
@@ -150,17 +151,17 @@ async def configure_dashboard_sharing(
 ):
     """
     Configure sharing for the dashboard
-    
+
     Share with users, teams, projects, or via email
     """
     orchestrator = WorkflowOrchestrator(db)
-    
+
     try:
         result = await orchestrator.execute_workflow_step(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id,
             step_name="share",
-            step_data=share_config.dict()
+            step_data=share_config.model_dump()
         )
         return result
     except Exception as e:
@@ -175,17 +176,17 @@ async def schedule_dashboard(
 ):
     """
     Configure scheduling for the dashboard
-    
+
     Options: once, hourly, daily, weekly, monthly, cron, realtime
     """
     orchestrator = WorkflowOrchestrator(db)
-    
+
     try:
         result = await orchestrator.execute_workflow_step(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id,
             step_name="schedule",
-            step_data=schedule_config.dict()
+            step_data=schedule_config.model_dump()
         )
         return result
     except Exception as e:
@@ -200,17 +201,17 @@ async def configure_dashboard_integrations(
 ):
     """
     Configure integrations for publishing the dashboard
-    
+
     Supports: Tableau, PowerBI, Slack, Teams, Email, etc.
     """
     orchestrator = WorkflowOrchestrator(db)
-    
+
     try:
         result = await orchestrator.execute_workflow_step(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id,
             step_name="add_integrations",
-            step_data={"integrations": [i.dict() for i in integrations]}
+            step_data={"integrations": [i.model_dump() for i in integrations]}
         )
         return result
     except Exception as e:
@@ -225,22 +226,22 @@ async def publish_dashboard(
 ):
     """
     Publish the dashboard to all configured integrations
-    
+
     This finalizes the workflow and makes the dashboard active.
     """
     orchestrator = WorkflowOrchestrator(db)
-    
+
     try:
         result = await orchestrator.execute_workflow_step(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id,
             step_name="publish",
             step_data={}
         )
-        
+
         # Optionally trigger background tasks for large publishes
         # background_tasks.add_task(publish_to_external_systems, workflow_id)
-        
+
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -257,10 +258,10 @@ async def add_report_section(
 ):
     """Add a section to the report"""
     orchestrator = WorkflowOrchestrator(db)
-    
+
     try:
         result = await orchestrator.execute_workflow_step(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id,
             step_name="add_section",
             step_data={
@@ -281,10 +282,10 @@ async def configure_report_data_sources(
 ):
     """Configure data sources for the report"""
     orchestrator = WorkflowOrchestrator(db)
-    
+
     try:
         result = await orchestrator.execute_workflow_step(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id,
             step_name="configure_data_sources",
             step_data={"data_sources": data_sources}
@@ -302,10 +303,10 @@ async def preview_report(
 ):
     """Generate a preview of the report"""
     orchestrator = WorkflowOrchestrator(db)
-    
+
     try:
         result = await orchestrator.execute_workflow_step(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id,
             step_name="preview",
             step_data={"format": format_type}
@@ -325,7 +326,7 @@ async def execute_batch_steps(
 ):
     """
     Execute multiple workflow steps in sequence
-    
+
     Example:
     [
         {"name": "add_component", "data": {...}},
@@ -334,10 +335,10 @@ async def execute_batch_steps(
     ]
     """
     orchestrator = WorkflowOrchestrator(db)
-    
+
     try:
         results = await orchestrator.execute_workflow_batch(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id,
             steps=steps
         )
@@ -355,10 +356,10 @@ async def get_workflow_status(
 ):
     """Get the current status and progress of a workflow"""
     orchestrator = WorkflowOrchestrator(db)
-    
+
     try:
-        status = orchestrator.get_workflow_status(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+        status = await orchestrator.get_workflow_status(
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id
         )
         return status
@@ -375,14 +376,14 @@ async def list_workflows(
 ):
     """List all workflows for the current user"""
     orchestrator = WorkflowOrchestrator(db)
-    
-    workflows = orchestrator.list_user_workflows(
-        user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+
+    workflows = await orchestrator.list_user_workflows(
+        user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
         workflow_type=workflow_type,
         state=state,
         limit=limit
     )
-    
+
     return {"workflows": workflows, "count": len(workflows)}
 
 @router.delete("/{workflow_id}")
@@ -395,12 +396,12 @@ async def cancel_workflow(
     """Cancel an active workflow"""
     orchestrator = WorkflowOrchestrator(db)
     try:
-        success = orchestrator.cancel_workflow(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+        success = await orchestrator.cancel_workflow(
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id,
             reason=reason
         )
-        
+
         if success:
             return {"message": "Workflow cancelled successfully"}
         else:
@@ -417,8 +418,8 @@ async def resume_workflow(
     """Resume a paused or failed workflow"""
     orchestrator = WorkflowOrchestrator(db)
     try:
-        status = orchestrator.resume_workflow(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+        status = await orchestrator.resume_workflow(
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id
         )
         return status
@@ -436,8 +437,8 @@ async def example_complete_dashboard_workflow(
     Example endpoint showing a complete dashboard workflow from start to finish
     """
     orchestrator = WorkflowOrchestrator(db)
-    user_id = UUID("12345678-1234-5678-1234-567812345678")  # current_user.id
-    
+    user_id = UUID("1e0cba86-110a-4d45-a205-182963880d75")  # current_user.id
+
     try:
         # Step 1: Create workflow
         workflow = orchestrator.create_workflow(
@@ -447,7 +448,7 @@ async def example_complete_dashboard_workflow(
             description="Quarterly sales performance dashboard"
         )
         workflow_id = UUID(workflow["workflow_id"])
-        
+
         # Step 2: Add components
         steps = [
             {
@@ -480,14 +481,14 @@ async def example_complete_dashboard_workflow(
                 }
             }
         ]
-        
+
         # Execute component additions
         batch_results = await orchestrator.execute_workflow_batch(
             user_id=user_id,
             workflow_id=workflow_id,
             steps=steps
         )
-        
+
         # Step 3: Share
         await orchestrator.execute_workflow_step(
             user_id=user_id,
@@ -499,7 +500,7 @@ async def example_complete_dashboard_workflow(
                 "permissions": {"view": True, "edit": False}
             }
         )
-        
+
         # Step 4: Schedule
         await orchestrator.execute_workflow_step(
             user_id=user_id,
@@ -511,7 +512,7 @@ async def example_complete_dashboard_workflow(
                 "configuration": {"day_of_week": "monday", "time": "09:00"}
             }
         )
-        
+
         # Step 5: Add integrations
         await orchestrator.execute_workflow_step(
             user_id=user_id,
@@ -536,7 +537,7 @@ async def example_complete_dashboard_workflow(
                 ]
             }
         )
-        
+
         # Step 6: Publish
         final_result = await orchestrator.execute_workflow_step(
             user_id=user_id,
@@ -544,14 +545,14 @@ async def example_complete_dashboard_workflow(
             step_name="publish",
             step_data={}
         )
-        
+
         return {
             "success": True,
             "workflow_id": str(workflow_id),
             "dashboard_id": workflow["resource_id"],
             "final_state": final_result
         }
-        
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -583,8 +584,8 @@ async def create_n8n_workflow(
     """
     orchestrator = WorkflowOrchestrator(db)
     try:
-        result = orchestrator.create_n8n_workflow(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+        result = await orchestrator.create_n8n_workflow(
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id
         )
         return result
@@ -602,8 +603,8 @@ async def get_n8n_workflow_status(
     """
     orchestrator = WorkflowOrchestrator(db)
     try:
-        result = orchestrator.get_n8n_workflow_status(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+        result = await orchestrator.get_n8n_workflow_status(
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id
         )
         return result
@@ -620,7 +621,7 @@ async def list_all_n8n_workflows(
     """
     orchestrator = WorkflowOrchestrator(db)
     try:
-        result = orchestrator.list_all_n8n_workflows()
+        result = await orchestrator.list_all_n8n_workflows()
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -636,8 +637,8 @@ async def delete_n8n_workflow(
     """
     orchestrator = WorkflowOrchestrator(db)
     try:
-        result = orchestrator.delete_n8n_workflow(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+        result = await orchestrator.delete_n8n_workflow(
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id
         )
         return result
@@ -658,8 +659,8 @@ async def add_alert_thread_component(
     """
     orchestrator = WorkflowOrchestrator(db)
     try:
-        result = orchestrator.add_alert_thread_component(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+        result = await orchestrator.add_alert_thread_component(
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id,
             alert_data=alert_data
         )
@@ -680,8 +681,8 @@ async def update_alert_thread_component(
     """
     orchestrator = WorkflowOrchestrator(db)
     try:
-        result = orchestrator.update_alert_thread_component(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+        result = await orchestrator.update_alert_thread_component(
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id,
             component_id=component_id,
             update_data=update_data
@@ -703,8 +704,8 @@ async def test_alert_thread_component(
     """
     orchestrator = WorkflowOrchestrator(db)
     try:
-        result = orchestrator.test_alert_thread_component(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+        result = await orchestrator.test_alert_thread_component(
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id,
             component_id=component_id,
             test_data=test_data or {}
@@ -726,8 +727,8 @@ async def trigger_alert_thread_component(
     """
     orchestrator = WorkflowOrchestrator(db)
     try:
-        result = orchestrator.trigger_alert_thread_component(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+        result = await orchestrator.trigger_alert_thread_component(
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id,
             component_id=component_id,
             trigger_data=trigger_data or {}
@@ -750,8 +751,8 @@ async def add_report_alert_thread_component(
     """
     orchestrator = WorkflowOrchestrator(db)
     try:
-        result = orchestrator.add_report_alert_thread_component(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+        result = await orchestrator.add_report_alert_thread_component(
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id,
             alert_data=alert_data
         )
@@ -759,10 +760,10 @@ async def add_report_alert_thread_component(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.patch("/reports/{workflow_id}/alerts/{component_id}")
+@router.patch("/reports/{workflow_id}/alerts/{alert_id}")
 async def update_report_alert_thread_component(
     workflow_id: UUID,
-    component_id: UUID,
+    alert_id: UUID,
     update_data: AlertThreadComponentUpdate,
     db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
@@ -772,10 +773,10 @@ async def update_report_alert_thread_component(
     """
     orchestrator = WorkflowOrchestrator(db)
     try:
-        result = orchestrator.update_report_alert_thread_component(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+        result = await orchestrator.update_report_alert_thread_component(
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id,
-            component_id=component_id,
+            alert_id=alert_id,
             update_data=update_data
         )
         return result
@@ -793,18 +794,18 @@ async def get_report_alert_thread_components(
     """
     orchestrator = WorkflowOrchestrator(db)
     try:
-        result = orchestrator.get_report_alert_thread_components(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+        result = await orchestrator.get_report_alert_thread_components(
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id
         )
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.delete("/reports/{workflow_id}/alerts/{component_id}")
+@router.delete("/reports/{workflow_id}/alerts/{alert_id}")
 async def delete_report_alert_thread_component(
     workflow_id: UUID,
-    component_id: UUID,
+    alert_id: UUID,
     db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
 ):
@@ -813,19 +814,19 @@ async def delete_report_alert_thread_component(
     """
     orchestrator = WorkflowOrchestrator(db)
     try:
-        result = orchestrator.delete_report_alert_thread_component(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+        result = await orchestrator.delete_report_alert_thread_component(
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id,
-            component_id=component_id
+            alert_id=str(alert_id)
         )
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.post("/reports/{workflow_id}/alerts/{component_id}/test")
+@router.post("/reports/{workflow_id}/alerts/{alert_id}/test")
 async def test_report_alert_thread_component(
     workflow_id: UUID,
-    component_id: UUID,
+    alert_id: UUID,
     test_data: Dict[str, Any] = None,
     db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
@@ -835,20 +836,20 @@ async def test_report_alert_thread_component(
     """
     orchestrator = WorkflowOrchestrator(db)
     try:
-        result = orchestrator.test_report_alert_thread_component(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+        result = await orchestrator.test_report_alert_thread_component(
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id,
-            component_id=component_id,
+            alert_id=alert_id,
             test_data=test_data or {}
         )
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.post("/reports/{workflow_id}/alerts/{component_id}/trigger")
+@router.post("/reports/{workflow_id}/alerts/{alert_id}/trigger")
 async def trigger_report_alert_thread_component(
     workflow_id: UUID,
-    component_id: UUID,
+    alert_id: UUID,
     trigger_data: Dict[str, Any] = None,
     db: AsyncSession = Depends(get_async_db_session),
     # current_user = Depends(get_current_user)
@@ -858,10 +859,10 @@ async def trigger_report_alert_thread_component(
     """
     orchestrator = WorkflowOrchestrator(db)
     try:
-        result = orchestrator.trigger_report_alert_thread_component(
-            user_id=UUID("12345678-1234-5678-1234-567812345678"),  # current_user.id
+        result = await orchestrator.trigger_report_alert_thread_component(
+            user_id=UUID("1e0cba86-110a-4d45-a205-182963880d75"),  # current_user.id
             workflow_id=workflow_id,
-            component_id=component_id,
+            alert_id=alert_id,
             trigger_data=trigger_data or {}
         )
         return result

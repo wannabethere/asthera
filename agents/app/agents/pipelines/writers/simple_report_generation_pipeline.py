@@ -245,10 +245,58 @@ class SimpleReportGenerationPipeline(AgentPipeline):
                     continue
                 
                 # Execute the query using the engine
-                result = await self._engine.execute_query(
-                    sql_query,
-                    timeout=self._configuration["timeout_seconds"]
-                )
+                # Check if chart_schema is provided for this query
+                chart_schema = query_info.get("chart_schema")
+                
+                if chart_schema:
+                    # If chart schema is provided, use the data summarization pipeline
+                    # which supports chart schema execution
+                    from app.agents.pipelines.sql_execution import DataSummarizationPipeline
+                    
+                    # Create a temporary data summarization pipeline for chart execution
+                    temp_pipeline = DataSummarizationPipeline(
+                        name="temp_chart_execution",
+                        version="1.0.0",
+                        description="Temporary pipeline for chart execution",
+                        llm=get_llm(),
+                        retrieval_helper=RetrievalHelper(),
+                        engine=self._engine
+                    )
+                    
+                    # Execute with chart schema
+                    chart_result = await temp_pipeline.run(
+                        query=query_info.get("query", ""),
+                        sql=sql_query,
+                        data_description=query_info.get("data_description", ""),
+                        project_id=project_id,
+                        chart_schema=chart_schema
+                    )
+                    
+                    # Extract data from chart result
+                    if chart_result.get("post_process", {}).get("success"):
+                        result = {
+                            "data": chart_result.get("post_process", {}).get("data", []),
+                            "columns": chart_result.get("post_process", {}).get("columns", []),
+                            "execution_time": chart_result.get("post_process", {}).get("execution_time", 0),
+                            "success": True,
+                            "chart_schema": chart_result.get("post_process", {}).get("visualization", {}).get("chart_schema", {}),
+                            "chart_type": chart_result.get("post_process", {}).get("visualization", {}).get("chart_type", ""),
+                            "reasoning": chart_result.get("post_process", {}).get("visualization", {}).get("reasoning", "")
+                        }
+                    else:
+                        result = {
+                            "data": [],
+                            "columns": [],
+                            "execution_time": 0,
+                            "success": False,
+                            "error": chart_result.get("post_process", {}).get("error", "Chart execution failed")
+                        }
+                else:
+                    # Execute the query using the engine normally
+                    result = await self._engine.execute_query(
+                        sql_query,
+                        timeout=self._configuration["timeout_seconds"]
+                    )
                 
                 query_results[query_id] = {
                     "name": query_name,
@@ -258,7 +306,10 @@ class SimpleReportGenerationPipeline(AgentPipeline):
                     "row_count": len(result.get("data", [])),
                     "execution_time": result.get("execution_time", 0),
                     "success": result.get("success", False),
-                    "error": result.get("error")
+                    "error": result.get("error"),
+                    "chart_schema": result.get("chart_schema", {}),
+                    "chart_type": result.get("chart_type", ""),
+                    "reasoning": result.get("reasoning", "")
                 }
                 
                 logger.info(f"Executed query {query_id}: {len(result.get('data', []))} rows")

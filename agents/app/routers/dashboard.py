@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from typing import Dict, Any, Optional, List, Union
 from pydantic import BaseModel, Field
+from uuid import UUID
 
 from app.services.service_container import SQLServiceContainer
 
@@ -9,7 +10,7 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 # Request/Response Models
 class DashboardQuery(BaseModel):
     """Model for dashboard query data"""
-    chart_id: str
+    chart_schema: Dict[str, Any]
     sql: str
     query: str
     data_description: Optional[str] = None
@@ -43,6 +44,78 @@ class DashboardRequest(BaseModel):
     additional_context: Optional[Dict[str, Any]] = Field(default_factory=dict)
     time_filters: Optional[Dict[str, Any]] = Field(default_factory=dict)
     workflow_data: Optional[Union[Dict[str, Any], str]] = None
+
+class WorkflowComponentData(BaseModel):
+    """Model for workflow component data"""
+    id: UUID
+    component_type: str
+    sequence_order: int
+    question: Optional[str] = None
+    description: Optional[str] = None
+    overview: Optional[Dict[str, Any]] = None
+    chart_config: Optional[Dict[str, Any]] = None
+    table_config: Optional[Dict[str, Any]] = None
+    sql_query: Optional[str] = None
+    executive_summary: Optional[str] = None
+    data_overview: Optional[Dict[str, Any]] = None
+    visualization_data: Optional[Dict[str, Any]] = None
+    sample_data: Optional[Dict[str, Any]] = None
+    thread_metadata: Optional[Dict[str, Any]] = None
+    chart_schema: Optional[Dict[str, Any]] = None
+    reasoning: Optional[str] = None
+    data_count: Optional[int] = None
+    validation_results: Optional[Dict[str, Any]] = None
+    alert_config: Optional[Dict[str, Any]] = None
+    alert_status: Optional[str] = None
+    last_triggered: Optional[str] = None
+    trigger_count: Optional[int] = None
+    configuration: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    is_configured: Optional[bool] = False
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+class WorkflowMetadata(BaseModel):
+    """Model for workflow metadata"""
+    dashboard_template: Optional[str] = None
+    dashboard_layout: Optional[str] = None
+    refresh_rate: Optional[int] = None
+    report_title: Optional[str] = None
+    report_description: Optional[str] = None
+    report_sections: Optional[List[str]] = None
+    writer_actor: Optional[str] = None
+    business_goal: Optional[Dict[str, Any]] = None
+    custom_config: Optional[Dict[str, Any]] = Field(default_factory=dict)
+
+class DashboardWorkflowRequest(BaseModel):
+    """Request model for dashboard generation from workflow data"""
+    workflow_id: UUID
+    project_id: str
+    state: str
+    current_step: int
+    workflow_metadata: WorkflowMetadata
+    thread_components: List[WorkflowComponentData]
+    natural_language_query: Optional[str] = None
+    additional_context: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    time_filters: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    render_options: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    error_message: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    completed_at: Optional[str] = None
+
+class WorkflowComponentQuery(BaseModel):
+    """Model for workflow component query data"""
+    component_id: UUID
+    chart_schema: Dict[str, Any]
+    sql: str
+    query: str
+    data_description: Optional[str] = None
+    component_type: str
+    sequence_order: int
+    configuration: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    chart_config: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    table_config: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    alert_config: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 class DashboardOnlyRequest(BaseModel):
     """Request model for dashboard execution without conditional formatting"""
@@ -182,6 +255,51 @@ async def generate_dashboard_from_workflow(
         raise HTTPException(
             status_code=500,
             detail=f"Error generating dashboard from workflow: {str(e)}"
+        )
+
+@router.post("/render-from-workflow", response_model=DashboardResponse)
+async def render_dashboard_from_workflow(
+    request: DashboardWorkflowRequest,
+    background_tasks: BackgroundTasks
+) -> DashboardResponse:
+    """
+    Render dashboard from workflow data.
+    
+    This endpoint processes workflow data passed in the request and renders
+    the dashboard using the agents based on the workflow configuration.
+    """
+    try:
+        service = get_dashboard_service()
+        
+        # Convert request to workflow data format
+        workflow_data = {
+            "workflow_id": str(request.workflow_id),
+            "state": request.state,
+            "current_step": request.current_step,
+            "workflow_metadata": request.workflow_metadata.dict() if request.workflow_metadata else {},
+            "thread_components": [comp.dict() for comp in request.thread_components],
+            "error_message": request.error_message,
+            "created_at": request.created_at,
+            "updated_at": request.updated_at,
+            "completed_at": request.completed_at
+        }
+        
+        # Process dashboard from workflow data
+        result = await service.render_dashboard_from_workflow_data(
+            workflow_data=workflow_data,
+            project_id=request.project_id,
+            natural_language_query=request.natural_language_query,
+            additional_context=request.additional_context,
+            time_filters=request.time_filters,
+            render_options=request.render_options
+        )
+        
+        return DashboardResponse(**result)
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error rendering dashboard from workflow: {str(e)}"
         )
 
 @router.post("/execute-only", response_model=DashboardResponse)
@@ -375,6 +493,82 @@ async def clear_cache() -> Dict[str, str]:
         raise HTTPException(
             status_code=500,
             detail=f"Error clearing cache: {str(e)}"
+        )
+
+@router.get("/workflow/{workflow_id}/components")
+async def get_workflow_components(workflow_id: UUID) -> Dict[str, Any]:
+    """
+    Get workflow components for a specific workflow.
+    
+    This endpoint retrieves all thread components associated with
+    a workflow that can be used for dashboard rendering.
+    """
+    try:
+        service = get_dashboard_service()
+        
+        # Get workflow components
+        components = await service.get_workflow_components(workflow_id)
+        
+        return {
+            "workflow_id": str(workflow_id),
+            "components": components,
+            "total_components": len(components)
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving workflow components: {str(e)}"
+        )
+
+@router.get("/workflow/{workflow_id}/status")
+async def get_workflow_status(workflow_id: UUID) -> Dict[str, Any]:
+    """
+    Get workflow status and metadata.
+    
+    This endpoint retrieves the current status and metadata
+    for a specific workflow.
+    """
+    try:
+        service = get_dashboard_service()
+        
+        # Get workflow status
+        status = await service.get_workflow_status(workflow_id)
+        
+        return status
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving workflow status: {str(e)}"
+        )
+
+@router.post("/workflow/{workflow_id}/preview")
+async def preview_workflow_dashboard(
+    workflow_id: UUID,
+    preview_options: Optional[Dict[str, Any]] = None
+) -> DashboardResponse:
+    """
+    Preview dashboard from workflow without full rendering.
+    
+    This endpoint provides a quick preview of how the dashboard
+    would look based on the workflow configuration.
+    """
+    try:
+        service = get_dashboard_service()
+        
+        # Preview dashboard from workflow
+        result = await service.preview_dashboard_from_workflow(
+            workflow_id=workflow_id,
+            preview_options=preview_options or {}
+        )
+        
+        return DashboardResponse(**result)
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error previewing workflow dashboard: {str(e)}"
         )
 
 @router.get("/health")

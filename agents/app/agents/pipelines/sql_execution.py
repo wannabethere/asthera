@@ -552,7 +552,9 @@ class DataSummarizationPipeline(AgentPipeline):
         query: str,
         sql: str,
         data_description: str,
-        language: str = "English"
+        language: str = "English",
+        chart_schema: Optional[Dict[str, Any]] = None,
+        existing_chart_schema: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Generate chart for a specific batch of data"""
         try:
@@ -573,7 +575,64 @@ class DataSummarizationPipeline(AgentPipeline):
                 # Use existing chart generation pipelines
                 chart_result = None
                 
-                if chart_format == "vega_lite":
+                # If chart_schema is provided, use it directly instead of generating
+                if chart_schema:
+                    logger.info("Using provided chart schema for chart generation")
+                    try:
+                        # Create ChartExecutor instance
+                        chart_executor = ChartExecutor(db_engine=self._engine)
+                        
+                        # Create execution configuration
+                        exec_config = ChartExecutionConfig(
+                            page_size=self._configuration.get("page_size", 1000),
+                            max_rows=self._configuration.get("max_rows", 10000),
+                            enable_pagination=self._configuration.get("enable_pagination", True),
+                            sort_by=self._configuration.get("sort_by"),
+                            sort_order=self._configuration.get("sort_order", "ASC"),
+                            timeout_seconds=self._configuration.get("timeout_seconds", 30),
+                            cache_results=self._configuration.get("cache_results", True),
+                            cache_ttl_seconds=self._configuration.get("cache_ttl_seconds", 300)
+                        )
+                        
+                        # Execute the chart with the provided schema
+                        execution_result = await chart_executor.execute_chart(
+                            chart_schema=chart_schema,
+                            sql_query=sql,
+                            config=exec_config,
+                            db_engine=self._engine
+                        )
+                        
+                        if execution_result.get("success", False):
+                            # Chart execution successful
+                            executed_schema = execution_result.get("chart_schema", {})
+                            data_count = execution_result.get("data_count", 0)
+                            validation = execution_result.get("validation", {})
+                            
+                            chart_result = {
+                                "success": True,
+                                "chart_data": {
+                                    "chart_schema": executed_schema,
+                                    "chart_type": chart_schema.get("type", "vega_lite"),
+                                    "reasoning": f"Chart generated using provided schema for query: {query}",
+                                    "format": chart_schema.get("type", "vega_lite"),
+                                    "data_count": data_count
+                                },
+                                "execution_info": {
+                                    "data_count": data_count,
+                                    "validation": validation,
+                                    "execution_config": execution_result.get("execution_config", {})
+                                }
+                            }
+                        else:
+                            chart_result = {
+                                "success": False,
+                                "error": f"Chart execution failed: {execution_result.get('error', 'Unknown error')}"
+                            }
+                            
+                    except Exception as e:
+                        logger.error(f"Error executing provided chart schema: {str(e)}")
+                        chart_result = {"success": False, "error": str(e)}
+                elif chart_format == "vega_lite":
                     # Use the chart generation pipeline passed to constructor
                     try:
                         # Use the chart generator directly
@@ -582,7 +641,8 @@ class DataSummarizationPipeline(AgentPipeline):
                             sql=sql,
                             data=chart_data,
                             language=language,
-                            remove_data_from_chart_schema=True
+                            remove_data_from_chart_schema=True,
+                            existing_chart_schema=existing_chart_schema
                         )
                         print("chart_result in data summarization pipeline in generate_chart_for_batch", pipeline_result)
                         
@@ -1122,12 +1182,17 @@ class DataSummarizationPipeline(AgentPipeline):
                                     
                                     if chart_batch_df is not None:
                                         chart_language = self._configuration.get("chart_language", "English")
+                                        # Get chart schema from kwargs if provided
+                                        provided_chart_schema = kwargs.get("chart_schema")
+                                        existing_chart_schema = kwargs.get("existing_chart_schema")
                                         chart_result = await self._generate_chart_for_batch(
                                             batch_df=chart_batch_df,
                                             query=query,
                                             sql=sql,
                                             data_description=data_description_str,
-                                            language=chart_language
+                                            language=chart_language,
+                                            chart_schema=provided_chart_schema,
+                                            existing_chart_schema=existing_chart_schema
                                         )
                                         
                                         # Send status update for chart generation complete

@@ -50,32 +50,42 @@ def create_llm_instances_from_settings(custom_settings: Optional[Dict[str, Any]]
         custom_settings: Optional dictionary containing LLM configuration
                         Expected keys: model_name, sql_parser_temp, alert_generator_temp, 
                                       critic_temp, refiner_temp
-                        If not provided, will use default settings from get_settings()
+                        If not provided, will use default settings
     
     Returns:
         Tuple of (sql_parser_llm, alert_generator_llm, critic_llm, refiner_llm)
     """
     if custom_settings:
-        settings = custom_settings
+        # Use custom settings dictionary
+        model_name = custom_settings.get("model_name", "gpt-4o-mini")
+        sql_parser_temp = custom_settings.get("sql_parser_temp", 0.0)
+        alert_generator_temp = custom_settings.get("alert_generator_temp", 0.1)
+        critic_temp = custom_settings.get("critic_temp", 0.0)
+        refiner_temp = custom_settings.get("refiner_temp", 0.2)
     else:
-        settings = get_settings()
-    model_name = settings.get("model_name", "gpt-4o-mini")
+        # Use default settings
+        model_name = "gpt-4o-mini"
+        sql_parser_temp = 0.0
+        alert_generator_temp = 0.1
+        critic_temp = 0.0
+        refiner_temp = 0.2
+    
     from langchain_openai import ChatOpenAI
     sql_parser_llm = ChatOpenAI(
         model=model_name, 
-        temperature=settings.get("sql_parser_temp", 0.0)
+        temperature=sql_parser_temp
     )
     alert_generator_llm = ChatOpenAI(
         model=model_name, 
-        temperature=settings.get("alert_generator_temp", 0.1)
+        temperature=alert_generator_temp
     )
     critic_llm = ChatOpenAI(
         model=model_name, 
-        temperature=settings.get("critic_temp", 0.0)
+        temperature=critic_temp
     )
     refiner_llm = ChatOpenAI(
         model=model_name, 
-        temperature=settings.get("refiner_temp", 0.2)
+        temperature=refiner_temp
     )
     
     return sql_parser_llm, alert_generator_llm, critic_llm, refiner_llm

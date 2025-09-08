@@ -146,7 +146,7 @@ class FeedManagementPipeline(AgentPipeline):
         if not alert_agent:
             if not llm_settings:
                 llm_settings = {
-                    "model_name": "gemini-2.0-flash",
+                    "model_name": "gpt-4o-mini",
                     "sql_parser_temp": 0.0,
                     "alert_generator_temp": 0.1,
                     "critic_temp": 0.0,
@@ -156,7 +156,7 @@ class FeedManagementPipeline(AgentPipeline):
             # Import here to avoid circular imports
             from app.agents.nodes.writers.alerts_agent import SQLToAlertAgent
             from app.core.dependencies import create_llm_instances_from_settings
-            sql_parser_llm, alert_generator_llm, critic_llm, refiner_llm = create_llm_instances_from_settings(llm_settings)
+            sql_parser_llm, alert_generator_llm, critic_llm, refiner_llm = create_llm_instances_from_settings()
             
             self._alert_agent = SQLToAlertAgent(
                 sql_parser_llm=sql_parser_llm,
@@ -719,13 +719,33 @@ class FeedManagementPipeline(AgentPipeline):
         # Convert each successful result to API payload format
         for result in successful_results:
             if result.feed_configuration:
-                api_payload = self._alert_agent.create_lexy_api_payload(
-                    type('SQLAlertResult', (), {
-                        'feed_configuration': type('LexyFeedConfiguration', (), result.feed_configuration)(),
-                        'confidence_score': result.confidence_score,
-                        'sql_analysis': type('SQLAnalysis', (), result.sql_analysis)()
-                    })()
+                # Import the required models
+                from app.agents.nodes.writers.alerts_agent import LexyFeedConfiguration, LexyFeedMetric, LexyFeedCondition, LexyFeedNotification, SQLAnalysis, SQLAlertResult
+                
+                # Reconstruct the Pydantic models from dictionaries
+                metric = LexyFeedMetric(**result.feed_configuration["metric"])
+                condition = LexyFeedCondition(**result.feed_configuration["condition"])
+                notification = LexyFeedNotification(**result.feed_configuration["notification"])
+                
+                feed_config = LexyFeedConfiguration(
+                    metric=metric,
+                    condition=condition,
+                    notification=notification,
+                    column_selection=result.feed_configuration["column_selection"]
                 )
+                
+                sql_analysis = SQLAnalysis(**result.sql_analysis)
+                
+                # Create proper SQLAlertResult
+                sql_alert_result = SQLAlertResult(
+                    feed_configuration=feed_config,
+                    sql_analysis=sql_analysis,
+                    confidence_score=result.confidence_score,
+                    critique_notes=result.critique_notes,
+                    suggestions=result.suggestions
+                )
+                
+                api_payload = self._alert_agent.create_lexy_api_payload(sql_alert_result)
                 combined_configs["feeds"].append(api_payload)
         
         return combined_configs
