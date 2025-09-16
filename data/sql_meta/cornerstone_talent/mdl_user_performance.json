@@ -1,0 +1,262 @@
+{
+    "catalog": "cornerstone_talent",
+    "schema": "talent_performance",
+    "models": [
+      {
+        "name": "PerformanceData_csod",
+        "tableReference": {
+          "catalog": "cornerstone_talent", 
+          "schema": "talent_performance",
+          "table": "PerformanceData_csod"
+        },
+        "columns": [
+          {
+            "name": "userId",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "User ID",
+              "description": "Identifier for users in the performance data table",
+              "usage_type": "identifier",
+              "business_importance": "high",
+              "typical_cardinality": "high",
+              "privacy_classification": "internal",
+              "common_patterns": "USR###",
+              "business_rules": "Can be null, Should not be used as a primary key",
+              "business_description": "Unique identifier assigned to each user for tracking performance data",
+              "data_quality_checks": "Check for null values, Validate format against expected user ID patterns",
+              "filtering_suggestions": "Filter by user ID to analyze specific user performance"
+            }
+          },
+          {
+            "name": "taskName",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Task Name",
+              "description": "The name of the task assigned to an employee within the performance management system.",
+              "usage_type": "attribute",
+              "business_importance": "medium",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "business_rules": "Can be null, Should accurately reflect the task being performed",
+              "business_description": "This column represents the specific task that is part of the performance evaluation process for employees.",
+              "data_quality_checks": "Ensure task names are descriptive and relevant, Check for consistency in naming conventions",
+              "filtering_suggestions": "Filter by task status, Filter by user ID"
+            }
+          },
+          {
+            "name": "taskId",
+            "type": "bigint",
+            "notNull": false,
+            "properties": {
+              "display_name": "Task ID",
+              "description": "Identifier for each task within the performance data.",
+              "usage_type": "identifier",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "TASK###",
+              "business_rules": "Can be null, Should be unique within the context of a specific performance review",
+              "business_description": "Unique identifier for tasks assigned to employees in the performance management system.",
+              "data_quality_checks": "Check for null values, Validate format to ensure it is a valid string representation of a bigint",
+              "filtering_suggestions": "Filter by taskStatus, Filter by userId",
+              "aggregation_suggestions": "COUNT, GROUP BY taskId"
+            }
+          },
+          {
+            "name": "taskFinalRating",
+            "type": "double",
+            "notNull": false,
+            "properties": {
+              "display_name": "Task Final Rating",
+              "description": "Final rating assigned to a task based on performance evaluation.",
+              "usage_type": "attribute",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "1, 2, 3, 4, 5",
+              "business_rules": "Can be null if the task has not been rated yet, Should reflect a valid rating scale defined by the organization",
+              "business_description": "This column represents the final rating given to a specific task, reflecting the performance assessment of the employee on that task.",
+              "data_quality_checks": "Ensure ratings are within the defined scale (e.g., 1 to 5), Check for consistency with related performance metrics",
+              "filtering_suggestions": "Filter by taskStatus, Filter by userId",
+              "aggregation_suggestions": "AVERAGE(taskFinalRating), COUNT(taskFinalRating)"
+            }
+          },
+          {
+            "name": "taskStatus",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Task Status",
+              "description": "Indicates the current status of a task within the performance evaluation process.",
+              "usage_type": "attribute",
+              "business_importance": "moderate",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "Not Started, In Progress, Completed, On Hold",
+              "business_rules": "Can be null, Should reflect valid task statuses such as 'Not Started', 'In Progress', 'Completed', 'On Hold'",
+              "business_description": "This column represents the status of a specific task assigned to an employee, which can be used to track progress and completion in performance evaluations.",
+              "data_quality_checks": "Ensure values are from a predefined list of valid statuses, Check for null values where applicable",
+              "filtering_suggestions": "Filter by specific task statuses, Filter by userId to see individual task statuses",
+              "aggregation_suggestions": "COUNT of tasks by status, Percentage of tasks in each status"
+            }
+          },
+          {
+            "name": "stepAssignedTo",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Step Assigned To",
+              "description": "Indicates the user or employee to whom a specific step in the performance task is assigned.",
+              "usage_type": "attribute",
+              "business_importance": "moderate",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "business_rules": "Can be null if the step is not assigned to anyone, Should reference a valid userId from the userId column",
+              "business_description": "This column represents the individual responsible for completing a particular step in the performance evaluation process.",
+              "data_quality_checks": "Check for valid userId references, Ensure no invalid characters are present in the text",
+              "filtering_suggestions": "Filter by userId, Filter by taskId"
+            }
+          },
+          {
+            "name": "stepTitle",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Step Title",
+              "description": "Title of the performance step associated with a task.",
+              "usage_type": "attribute",
+              "business_importance": "moderate",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "business_rules": "Can be null, Should accurately reflect the step's purpose",
+              "business_description": "This column represents the title of a specific step within a performance task, providing context for the evaluation process.",
+              "data_quality_checks": "Ensure consistency in naming conventions, Check for excessive length",
+              "filtering_suggestions": "Filter by taskName, Filter by stepStatus"
+            }
+          },
+          {
+            "name": "stepStatus",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Step Status",
+              "description": "Indicates the current status of a performance step within the talent performance process.",
+              "usage_type": "attribute",
+              "business_importance": "moderate",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "Not Started, In Progress, Completed",
+              "business_rules": "Can be null, Should reflect valid status options such as 'Not Started', 'In Progress', 'Completed', etc.",
+              "business_description": "This column represents the status of a specific step in the performance evaluation process, which can help in tracking progress and identifying bottlenecks.",
+              "data_quality_checks": "Ensure values are within predefined status options, Check for null values where applicable",
+              "filtering_suggestions": "Filter by specific stepStatus values, Filter by userId to see individual performance steps",
+              "aggregation_suggestions": "COUNT by stepStatus, GROUP BY stepStatus"
+            }
+          },
+          {
+            "name": "startDate",
+            "type": "timestamp",
+            "notNull": false,
+            "properties": {
+              "display_name": "Start Date",
+              "description": "The date when the performance task starts, represented as a string in timestamp format without time zone.",
+              "usage_type": "timestamp",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "YYYY-MM-DD",
+              "business_rules": "Can be null if the task has not started yet, Should follow the format 'YYYY-MM-DD' for consistency",
+              "business_description": "Indicates the initiation date of a performance-related task for an employee.",
+              "data_quality_checks": "Validate format to ensure it matches 'YYYY-MM-DD', Check for logical consistency with other date fields (e.g., startDate should be before completionDate)",
+              "filtering_suggestions": "Filter by specific start dates, Filter by tasks that started within a certain date range",
+              "aggregation_suggestions": "COUNT of tasks started within a specific period, Average duration from startDate to completionDate"
+            }
+          },
+          {
+            "name": "completionDate",
+            "type": "timestamp",
+            "notNull": false,
+            "properties": {
+              "display_name": "Completion Date",
+              "description": "Date when the task was completed, represented as a timestamp without time zone.",
+              "usage_type": "timestamp",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "YYYY-MM-DD",
+              "business_rules": "Can be null if the task is not completed, Should be in a valid date format",
+              "business_description": "This column indicates the date on which a specific task was completed by an employee, providing insights into task performance and timelines.",
+              "data_quality_checks": "Validate date format, Check for logical consistency with startDate and stepDueDate",
+              "filtering_suggestions": "Filter by specific userId, Filter by taskName or taskStatus",
+              "aggregation_suggestions": "COUNT of completed tasks, Average completion time per task"
+            }
+          },
+          {
+            "name": "expirationDate",
+            "type": "timestamp",
+            "notNull": false,
+            "properties": {
+              "display_name": "Expiration Date",
+              "description": "The date when a performance task or evaluation expires.",
+              "usage_type": "timestamp",
+              "business_importance": "moderate",
+              "typical_cardinality": "low",
+              "privacy_classification": "internal",
+              "common_patterns": "YYYY-MM-DD",
+              "business_rules": "Can be null if the task does not have an expiration date, Should be in a valid date format (YYYY-MM-DD)",
+              "business_description": "This column indicates the expiration date for a specific performance task, which is relevant for tracking the validity of performance evaluations.",
+              "data_quality_checks": "Validate date format, Check for logical consistency with startDate and completionDate",
+              "filtering_suggestions": "Filter by tasks that are expired, Filter by tasks that are active"
+            }
+          },
+          {
+            "name": "stepDueDate",
+            "type": "timestamp",
+            "notNull": false,
+            "properties": {
+              "display_name": "Step Due Date",
+              "description": "The date by which a specific step in the performance task is due.",
+              "usage_type": "timestamp",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "YYYY-MM-DD",
+              "business_rules": "Can be null, Should be in valid date format",
+              "business_description": "This column represents the deadline for completing a specific step in the performance evaluation process.",
+              "data_quality_checks": "Check for valid date format, Ensure dates are not in the past unless specified",
+              "filtering_suggestions": "Filter by due date range, Filter by task status",
+              "aggregation_suggestions": "COUNT, MAX, MIN"
+            }
+          },
+          {
+            "name": "stepSubmissionDate",
+            "type": "timestamp",
+            "notNull": false,
+            "properties": {
+              "display_name": "Step Submission Date",
+              "description": "The date when the step was submitted in the performance evaluation process.",
+              "usage_type": "timestamp",
+              "business_importance": "moderate",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "YYYY-MM-DD",
+              "business_rules": "Can be null if the step has not been submitted yet, Should be in a valid date format",
+              "business_description": "This column represents the date on which a specific step in the performance evaluation process was submitted by the employee.",
+              "data_quality_checks": "Validate date format, Check for null values where submission is expected",
+              "filtering_suggestions": "Filter by specific submission dates, Filter by userId to see submissions by individual employees",
+              "aggregation_suggestions": "COUNT of submissions by date, Average submission date per task"
+            }
+          }
+        ],
+        "properties": {
+          "description": "This table contains detailed performance data for employees, including task assignments, ratings, and status updates within the Cornerstone Talent Performance module.",
+          "business_purpose": "To provide a comprehensive view of employee performance metrics, enabling Talent Admins and managers to assess and improve employee productivity and engagement.",
+          "data_lineage": "Data is sourced from the Cornerstone Talent Performance module, populated through employee interactions with assigned tasks and performance evaluations.",
+          "data_retention": "Data is retained for a period of 5 years to comply with performance review cycles.",
+          "update_frequency": "real-time"
+        }
+      }
+    ]
+  }

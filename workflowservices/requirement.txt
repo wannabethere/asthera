@@ -1,13 +1,33 @@
-Python 3.11
-
-FastAPI
-
-Pydantic v2
-
-SQLAlchemy
-
-Postgres
-
-Uvicorn
+aiofiles
+alembic
+black
+fastapi
+httpx
+isort
+langchain
+langchain-community
+langchain-core
+langchain-openai
+langgraph
+mypy
+openai
+passlib[bcrypt]
+prometheus-client
+psycopg2
+psycopg2-binary
+pydantic
+pytest
+pytest-asyncio
+python-jose[cryptography]
+python-multipart
+sqlalchemy
+structlog
+tiktoken
+uvicorn
+asyncpg
+langchain_chroma
+scikit-learn
+chromadb
+pandas
 
 Alembic (optional) for migrations

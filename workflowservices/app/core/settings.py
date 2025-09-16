@@ -117,7 +117,7 @@ class Settings(BaseSettings):
     SQLITE_USE_MEMORY: bool = False  # Whether to use in-memory SQLite database
     
     # API Keys and Security
-    OPENAI_API_KEY: str = "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"
+    OPENAI_API_KEY: str = "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"
     
     # API Configuration
     API_HOST: str = "0.0.0.0"
@@ -177,13 +177,13 @@ class Settings(BaseSettings):
     # Vector Store Settings
     VECTOR_STORE_PATH: str = "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/lexy/data/vector_store"
     CHROMA_STORE_PATH: str = "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/lexy/data/chroma_db"
-    
+    #CHROMA_STORE_PATH: str = "./chromadb"
     # ChromaDB Settings
-    CHROMA_USE_LOCAL: bool = True
-    CHROMA_HOST: str = "localhost"
-    CHROMA_PORT: int = 8000
+    CHROMA_USE_LOCAL: bool = False
+    CHROMA_HOST: str = "ec2-54-161-71-105.compute-1.amazonaws.com"
+    CHROMA_PORT: int = 8888
     CHROMA_COLLECTION_NAME: str = "default"
-    CHROMA_PERSIST_DIRECTORY: str = "chroma_db"
+    CHROMA_PERSIST_DIRECTORY: str = CHROMA_STORE_PATH
     
     # N8n Store Specific ChromaDB Settings
     N8N_STORE_COLLECTION_NAME: str = "n8n_store"

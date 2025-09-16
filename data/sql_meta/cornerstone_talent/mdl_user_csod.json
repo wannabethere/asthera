@@ -1,0 +1,239 @@
+{
+    "catalog": "cornerstone_talent",
+    "schema": "talent_performance",
+    "models": [
+      {
+        "name": "User_csod",
+        "tableReference": {
+          "catalog": "cornerstone_talent", 
+          "schema": "talent_performance",
+          "table": "User_csod"
+        },
+        "primaryKey": "userId",
+        "columns": [
+          {
+            "name": "userId",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "User ID",
+              "description": "Identifier for users in the Cornerstone talent system",
+              "usage_type": "identifier",
+              "business_importance": "high",
+              "typical_cardinality": "high",
+              "privacy_classification": "internal",
+              "business_rules": "Can be null, Should not be duplicated within the same context",
+              "business_description": "A unique identifier assigned to each user within the Cornerstone talent performance system, used to track user-related data.",
+              "data_quality_checks": "Check for null values, Validate format to ensure it is a valid string",
+              "filtering_suggestions": "Filter by user status, Filter by division"
+            }
+          },
+          {
+            "name": "userName",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "User Name",
+              "description": "The name of the user as registered in the system.",
+              "usage_type": "identifier",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "business_rules": "Can be null, Should be unique within the context of the userId",
+              "business_description": "This column represents the username of employees within the Cornerstone talent management system, used for identification and login purposes.",
+              "data_quality_checks": "Check for duplicates against userId, Validate format to ensure it meets username standards",
+              "filtering_suggestions": "Filter by userStatus, Filter by division"
+            }
+          },
+          {
+            "name": "fullName",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Full Name",
+              "description": "The complete name of the user, including first and last names.",
+              "usage_type": "attribute",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "business_rules": "Can be null, Should not contain special characters",
+              "business_description": "Represents the full name of the employee as recorded in the system, used for identification and reporting purposes.",
+              "data_quality_checks": "Check for leading or trailing spaces, Validate format to ensure it contains at least a first and last name",
+              "filtering_suggestions": "Filter by user status, Filter by division"
+            }
+          },
+          {
+            "name": "email",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Email",
+              "description": "Column representing the email address of the user.",
+              "usage_type": "attribute",
+              "business_importance": "moderate",
+              "typical_cardinality": "high",
+              "privacy_classification": "internal",
+              "common_patterns": "*@*.*",
+              "business_rules": "Can be null, Must follow standard email format",
+              "business_description": "Email address used for communication and notifications related to employee performance and talent management.",
+              "data_quality_checks": "Validate email format, Check for duplicates",
+              "filtering_suggestions": "Filter by user status, Filter by division"
+            }
+          },
+          {
+            "name": "managerId",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Manager ID",
+              "description": "Identifier for the manager of the user, represented as a string.",
+              "usage_type": "identifier",
+              "business_importance": "moderate",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "business_rules": "Can be null if the user does not have a manager, Should reference a valid userId in the User_csod table if present",
+              "business_description": "This column represents the unique identifier for the manager associated with a user in the Cornerstone talent data.",
+              "data_quality_checks": "Check for valid userId references if managerId is not null, Ensure no invalid characters are present in the managerId",
+              "filtering_suggestions": "Filter by managerId to analyze users under specific managers, Filter by userStatus to see active/inactive users under a manager"
+            }
+          },
+          {
+            "name": "managerName",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Manager Name",
+              "description": "The name of the manager associated with the user.",
+              "usage_type": "attribute",
+              "business_importance": "moderate",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "business_rules": "Can be null if the user does not have a manager, Should reflect the current manager's name",
+              "business_description": "This column represents the name of the manager for each employee, which is essential for understanding reporting structures within the organization.",
+              "data_quality_checks": "Ensure names are properly formatted (e.g., no numbers or special characters), Check for consistency with managerId column",
+              "filtering_suggestions": "Filter by specific manager names, Filter by user status to see active/inactive employees under a manager"
+            }
+          },
+          {
+            "name": "position",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Position",
+              "description": "Column representing the job position of the user within the organization.",
+              "usage_type": "attribute",
+              "business_importance": "moderate",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "business_rules": "Can be null if the user is not assigned a position, Should accurately reflect the user's current job title",
+              "business_description": "The specific role or title held by the employee, which is relevant for performance evaluations and organizational structure.",
+              "data_quality_checks": "Ensure consistency in naming conventions, Validate against a predefined list of valid positions if available",
+              "filtering_suggestions": "Filter by specific positions, Filter by department or division"
+            }
+          },
+          {
+            "name": "division",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Division",
+              "description": "Column representing the division within the organization to which the user belongs.",
+              "usage_type": "attribute",
+              "business_importance": "moderate",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "Sales, Marketing, Engineering",
+              "business_rules": "Can be null, Should reflect the current division of the employee",
+              "business_description": "This column indicates the specific division of the company that the employee is associated with, which can be used for organizational analysis and reporting.",
+              "data_quality_checks": "Validate against known divisions, Check for consistency in naming conventions",
+              "filtering_suggestions": "Filter by specific division, Filter by user status within division",
+              "aggregation_suggestions": "COUNT by division, GROUP BY division"
+            }
+          },
+          {
+            "name": "location",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Location",
+              "description": "Column representing the geographical location of the user.",
+              "usage_type": "attribute",
+              "business_importance": "medium",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "City, State, Country",
+              "business_rules": "Can be null, Should contain valid location names",
+              "business_description": "This column indicates the physical or geographical location associated with the user, which can be used for reporting and analysis of user distribution across different regions.",
+              "data_quality_checks": "Check for empty values, Validate against a list of known locations",
+              "filtering_suggestions": "Filter by specific location, Filter by user status and location",
+              "aggregation_suggestions": "COUNT by location, GROUP BY location"
+            }
+          },
+          {
+            "name": "userStatus",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "User Status",
+              "description": "Indicates the current status of the user within the system.",
+              "usage_type": "attribute",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "Active, Inactive, On Leave",
+              "business_rules": "Can be null, Values may include 'Active', 'Inactive', 'On Leave'",
+              "business_description": "This column represents whether a user is active, inactive, or on leave, which is crucial for understanding user engagement and performance tracking.",
+              "data_quality_checks": "Ensure values are within the defined set of statuses, Check for null values where applicable",
+              "filtering_suggestions": "Filter by Active users, Filter by Inactive users",
+              "aggregation_suggestions": "COUNT by userStatus, PERCENTAGE of users by status"
+            }
+          },
+          {
+            "name": "lastLogindate",
+            "type": "date",
+            "notNull": false,
+            "properties": {
+              "display_name": "Last Login Date",
+              "description": "The date when the user last logged into the system.",
+              "usage_type": "timestamp",
+              "business_importance": "moderate",
+              "typical_cardinality": "high",
+              "privacy_classification": "internal",
+              "common_patterns": "YYYY-MM-DD",
+              "business_rules": "Can be null if the user has never logged in, Should be in a valid date format (YYYY-MM-DD)",
+              "business_description": "This column represents the most recent date that a user accessed their account, which can be used to track user engagement and activity levels.",
+              "data_quality_checks": "Check for valid date format, Ensure that if a date is present, it is not in the future",
+              "filtering_suggestions": "Filter by specific date ranges, Filter by user status to see active vs inactive users",
+              "aggregation_suggestions": "COUNT of users who logged in within a specific timeframe, MAX of last login dates to find the most recent activity"
+            }
+          },
+          {
+            "name": "startDate",
+            "type": "date",
+            "notNull": false,
+            "properties": {
+              "display_name": "Start Date",
+              "description": "The date when the user started in the organization, represented as a string in date format.",
+              "usage_type": "timestamp",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "YYYY-MM-DD",
+              "business_rules": "Can be null if the start date is not available, Should follow a valid date format (e.g., YYYY-MM-DD) if provided",
+              "business_description": "Indicates the commencement date of an employee's tenure within the organization, which is crucial for performance evaluations and tenure-related analyses.",
+              "data_quality_checks": "Validate date format, Check for logical consistency with userStatus (e.g., startDate should not be after lastLogindate)",
+              "filtering_suggestions": "Filter users by start date range, Filter by userStatus to analyze active vs. inactive users",
+              "aggregation_suggestions": "COUNT of users by start date, Average tenure calculation based on start date"
+            }
+          }
+        ],
+        "properties": {
+          "description": "This table contains essential employee information related to talent management, including user details, managerial hierarchy, and employment status.",
+          "business_purpose": "The User_csod table serves as a foundational source for managing employee performance data, enabling effective talent management and decision-making within the organization.",
+          "data_lineage": "Data is sourced from Cornerstone's talent management system, populated through regular updates from HR systems and user activity logs.",
+          "data_retention": "Data is retained for a period of 5 years to comply with organizational policies and legal requirements.",
+          "update_frequency": "daily"
+        }
+      }
+    ]
+  }

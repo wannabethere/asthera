@@ -1,0 +1,348 @@
+{
+    "catalog": "cornerstone_learn",
+    "schema": "csod_learn_datamodel",
+    "models": [
+      {
+        "name": "Transcript_csod",
+        "tableReference": {
+          "catalog": "cornerstone_learn", 
+          "schema": "csod_learn_datamodel",
+          "table": "Transcript_csod"
+        },
+        "columns": [
+          {
+            "name": "loID",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Learning Object ID",
+              "description": "Identifier for learning objects in the Cornerstone Learn system.",
+              "usage_type": "identifier",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "LO###",
+              "business_rules": "Can be null, Should be unique within the context of the learning objects",
+              "business_description": "This column represents the unique identifier for each learning object associated with employee training and compliance activities.",
+              "data_quality_checks": "Check for null values, Validate format to ensure it meets VARCHAR standards",
+              "filtering_suggestions": "Filter by userID, Filter by trainingStatus",
+              "aggregation_suggestions": "COUNT, GROUP BY loID"
+            }
+          },
+          {
+            "name": "userID",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "User ID",
+              "description": "Identifier for users in the system, representing each learner's unique account.",
+              "usage_type": "identifier",
+              "business_importance": "high",
+              "typical_cardinality": "high",
+              "privacy_classification": "internal",
+              "common_patterns": "USR###",
+              "business_rules": "Can be null, Should be unique within the context of user records",
+              "business_description": "A unique identifier assigned to each user participating in training activities, used to track their learning performance and compliance.",
+              "data_quality_checks": "Check for duplicates in user records, Validate format to ensure it meets VARCHAR standards",
+              "filtering_suggestions": "Filter by userID to analyze specific learner performance, Filter by trainingStatus to assess compliance",
+              "aggregation_suggestions": "COUNT, GROUP BY userID"
+            }
+          },
+          {
+            "name": "isCompleted",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Is Completed",
+              "description": "Indicates whether the training activity has been completed by the learner.",
+              "usage_type": "flag",
+              "business_importance": "high",
+              "typical_cardinality": "low",
+              "privacy_classification": "internal",
+              "common_patterns": "true, false",
+              "business_rules": "Can be null, Values must be 'true' or 'false'",
+              "example_values": "true, false",
+              "business_description": "This column represents the completion status of a training activity for an employee. A value of 'true' indicates that the training has been completed, while 'false' indicates it has not.",
+              "data_quality_checks": "Check for valid boolean values, Ensure no unexpected values are present",
+              "filtering_suggestions": "Filter by completion status, Filter by userID",
+              "aggregation_suggestions": "COUNT, SUM"
+            }
+          },
+          {
+            "name": "isOverdue",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Is Overdue",
+              "description": "Indicates whether a training assignment is overdue based on the due date.",
+              "usage_type": "flag",
+              "business_importance": "high",
+              "typical_cardinality": "low",
+              "privacy_classification": "internal",
+              "common_patterns": "Yes, No",
+              "business_rules": "Can be null, Values must be 'Yes' or 'No'",
+              "example_values": "Yes, No",
+              "business_description": "This column represents whether a training assignment has passed its due date, which is critical for tracking compliance and learner performance.",
+              "data_quality_checks": "Check for valid values ('Yes', 'No'), Ensure no unexpected values are present",
+              "filtering_suggestions": "Filter by overdue status, Filter by userID",
+              "aggregation_suggestions": "COUNT, SUM"
+            }
+          },
+          {
+            "name": "isAssigned",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Is Assigned",
+              "description": "Indicates whether a training module is assigned to a user.",
+              "usage_type": "flag",
+              "business_importance": "high",
+              "typical_cardinality": "low",
+              "privacy_classification": "internal",
+              "common_patterns": "true, false",
+              "business_rules": "Can be null if the training is not assigned, Should reflect true/false values indicating assignment status",
+              "business_description": "This column represents the assignment status of a training module to a user, helping to track which users have been assigned specific training.",
+              "data_quality_checks": "Validate that values are either 'true' or 'false', Check for null values where assignment is expected",
+              "filtering_suggestions": "Filter by assigned status, Filter by userID to see assignments per user",
+              "aggregation_suggestions": "COUNT of assigned trainings, COUNT of unassigned trainings"
+            }
+          },
+          {
+            "name": "score",
+            "type": "bigint",
+            "notNull": false,
+            "properties": {
+              "display_name": "Score",
+              "description": "Column representing the performance score of a learner in the training module.",
+              "usage_type": "measure",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "numeric score",
+              "business_rules": "Can be null if the training is not completed, Should be a numeric value representing performance",
+              "business_description": "This score indicates the level of achievement or performance of an employee in their learning activities.",
+              "data_quality_checks": "Validate that the score is a numeric value, Check for any unexpected characters in the score",
+              "filtering_suggestions": "Filter by userID, Filter by trainingStatus",
+              "aggregation_suggestions": "AVERAGE, SUM"
+            }
+          },
+          {
+            "name": "success",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Success",
+              "description": "Indicates whether the learner successfully completed the training module.",
+              "usage_type": "flag",
+              "business_importance": "high",
+              "typical_cardinality": "low",
+              "privacy_classification": "internal",
+              "common_patterns": "true, false",
+              "business_rules": "Can be null if the training is not yet completed, Should reflect 'true' for successful completions and 'false' for failures",
+              "business_description": "This column represents the success status of a learner in completing a training module, which is crucial for assessing employee learning performance.",
+              "data_quality_checks": "Ensure values are either 'true' or 'false' or null, Check for consistency with the isCompleted column",
+              "filtering_suggestions": "Filter by success status to analyze completion rates, Filter by userID to assess individual performance",
+              "aggregation_suggestions": "COUNT of successful completions, PERCENTAGE of successful completions against total attempts"
+            }
+          },
+          {
+            "name": "timeSpent",
+            "type": "bigint",
+            "notNull": false,
+            "properties": {
+              "display_name": "Time Spent",
+              "description": "Duration of time spent by the user on a specific learning activity, recorded in a VARCHAR format representing a numeric value.",
+              "usage_type": "measure",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "[0-9]+, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9",
+              "business_rules": "Can be null if the user has not started the activity, Should be a valid numeric representation in string format",
+              "business_description": "This column captures the amount of time a user has spent on a learning activity, which is crucial for analyzing user engagement and performance in training programs.",
+              "data_quality_checks": "Validate that the value can be converted to a numeric type, Check for excessively high values that may indicate data entry errors",
+              "filtering_suggestions": "Filter by userID, Filter by isCompleted status",
+              "aggregation_suggestions": "SUM, AVERAGE"
+            }
+          },
+          {
+            "name": "satisfiedLate",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Satisfied Late",
+              "description": "Indicates whether the learner was satisfied with the training completed after the due date.",
+              "usage_type": "attribute",
+              "business_importance": "high",
+              "typical_cardinality": "low",
+              "privacy_classification": "internal",
+              "common_patterns": "Yes, No",
+              "business_rules": "Can be null if the training was completed on time, Should reflect a binary satisfaction status (e.g., satisfied, not satisfied)",
+              "business_description": "This column captures the satisfaction level of learners who completed their training late, providing insights into learner experience and training effectiveness.",
+              "data_quality_checks": "Check for valid satisfaction responses (e.g., 'Yes', 'No'), Ensure consistency with completion dates",
+              "filtering_suggestions": "Filter by trainingStatus, Filter by isOverdue",
+              "aggregation_suggestions": "COUNT of satisfiedLate responses, Percentage of satisfiedLate against total late completions"
+            }
+          },
+          {
+            "name": "trainingStatus",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Training Status",
+              "description": "Indicates the current status of the training for a user.",
+              "usage_type": "attribute",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "Assigned, In Progress, Completed, Overdue",
+              "business_rules": "Can be null if no training is assigned, Must reflect valid statuses such as 'Assigned', 'In Progress', 'Completed', 'Overdue'",
+              "business_description": "This column represents whether a training module is currently assigned, completed, overdue, or in progress for a user.",
+              "data_quality_checks": "Ensure values are one of the predefined statuses, Check for null values only when no training is assigned",
+              "filtering_suggestions": "Filter by userID, Filter by trainingStatus",
+              "aggregation_suggestions": "COUNT by status, GROUP BY userID and trainingStatus"
+            }
+          },
+          {
+            "name": "cancellationDate",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Cancellation Date",
+              "description": "Date when the training or learning activity was cancelled.",
+              "usage_type": "timestamp",
+              "business_importance": "moderate",
+              "typical_cardinality": "low",
+              "privacy_classification": "internal",
+              "common_patterns": "YYYY-MM-DD",
+              "business_rules": "Can be null if the training was not cancelled, Should be in a valid date format (YYYY-MM-DD)",
+              "business_description": "This column represents the date on which a training session or learning activity was cancelled by the user or the system.",
+              "data_quality_checks": "Check for valid date format, Ensure that cancellationDate is not later than completionDate",
+              "filtering_suggestions": "Filter by specific cancellation dates, Filter by userID to see cancellations per user",
+              "aggregation_suggestions": "COUNT of cancellations by date, COUNT of cancellations by userID"
+            }
+          },
+          {
+            "name": "registrationDate",
+            "type": "timestamp",
+            "notNull": false,
+            "properties": {
+              "display_name": "Registration Date",
+              "description": "The date when the user registered for the training or course.",
+              "usage_type": "timestamp",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "YYYY-MM-DD",
+              "business_rules": "Can be null if the user has not registered for a training, Should be in a valid date format (YYYY-MM-DD)",
+              "business_description": "This column captures the date of registration for each training session, which is essential for tracking user engagement and compliance with training requirements.",
+              "data_quality_checks": "Validate date format, Check for future dates, Ensure consistency with other date fields",
+              "filtering_suggestions": "Filter by registration date range, Filter by userID",
+              "aggregation_suggestions": "COUNT by month, GROUP BY year"
+            }
+          },
+          {
+            "name": "attemptStartDate",
+            "type": "timestamp",
+            "notNull": false,
+            "properties": {
+              "display_name": "Attempt Start Date",
+              "description": "The date when the learning attempt started, represented as a timestamp without time zone.",
+              "usage_type": "timestamp",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "YYYY-MM-DD",
+              "business_rules": "Can be null if the attempt has not started, Should be in a valid date format",
+              "business_description": "This column indicates the start date of a learner's attempt to complete a training module.",
+              "data_quality_checks": "Validate date format, Check for null values where applicable",
+              "filtering_suggestions": "Filter by specific date ranges, Filter by userID to analyze individual attempts",
+              "aggregation_suggestions": "COUNT attempts by date, GROUP BY date for daily reports"
+            }
+          },
+          {
+            "name": "completionDate",
+            "type": "timestamp",
+            "notNull": false,
+            "properties": {
+              "display_name": "Completion Date",
+              "description": "The date when the training or learning activity was completed by the user.",
+              "usage_type": "timestamp",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "YYYY-MM-DD",
+              "business_rules": "Can be null if the training is not completed, Should be in a valid date format (YYYY-MM-DD)",
+              "business_description": "This column represents the date on which a learner has completed a specific training module or activity, which is crucial for tracking compliance and performance in learning activities.",
+              "data_quality_checks": "Validate date format, Check for logical consistency with other date fields (e.g., cannot be after dueDate)",
+              "filtering_suggestions": "Filter by completion date range, Filter by userID to see individual completion dates",
+              "aggregation_suggestions": "COUNT of completed trainings, AVERAGE time to completion"
+            }
+          },
+          {
+            "name": "assignedDate",
+            "type": "timestamp",
+            "notNull": false,
+            "properties": {
+              "display_name": "Assigned Date",
+              "description": "The date when the training or learning activity was assigned to the user.",
+              "usage_type": "timestamp",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "YYYY-MM-DD",
+              "business_rules": "Can be null if the training has not been assigned yet, Should be in a valid date format",
+              "business_description": "This column represents the date on which a specific training or learning activity was assigned to an employee, which is crucial for tracking compliance and performance in learning activities.",
+              "data_quality_checks": "Validate date format, Check for null values where applicable",
+              "filtering_suggestions": "Filter by assignedDate to analyze training assignments over time, Filter by userID to see assignments for specific employees",
+              "aggregation_suggestions": "COUNT of assignments by date, GROUP BY assignedDate for trend analysis"
+            }
+          },
+          {
+            "name": "dueDate",
+            "type": "timestamp",
+            "notNull": false,
+            "properties": {
+              "display_name": "Due Date",
+              "description": "The date by which a training or compliance activity must be completed.",
+              "usage_type": "timestamp",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "YYYY-MM-DD",
+              "business_rules": "Can be null if the training is not time-sensitive, Must be in a valid date format",
+              "business_description": "This column represents the deadline for learners to complete their assigned training or compliance activities.",
+              "data_quality_checks": "Validate date format, Check for logical consistency with other date fields (e.g., registrationDate, completionDate)",
+              "filtering_suggestions": "Filter by due date range, Filter by completion status",
+              "aggregation_suggestions": "COUNT of trainings due by date, SUM of overdue trainings"
+            }
+          },
+          {
+            "name": "expiryDate",
+            "type": "timestamp",
+            "notNull": false,
+            "properties": {
+              "display_name": "Expiry Date",
+              "description": "The date when the training or compliance activity expires.",
+              "usage_type": "timestamp",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "YYYY-MM-DD",
+              "business_rules": "Can be null if the training does not have an expiration date, Should be in a valid date format",
+              "business_description": "This column indicates the expiration date of a training or compliance activity, which is crucial for tracking learner performance and compliance requirements.",
+              "data_quality_checks": "Validate date format, Check for future dates if applicable",
+              "filtering_suggestions": "Filter by expiry date range, Filter by userID to see individual training expirations",
+              "aggregation_suggestions": "COUNT of expired trainings, COUNT of trainings expiring within a certain period"
+            }
+          }
+        ],
+        "properties": {
+          "description": "This table contains detailed records of employee learning activities, including completion status, scores, and timestamps for various training events.",
+          "business_purpose": "The Transcript_csod table serves as a foundational data source for analyzing employee learning performance, enabling organizations to track training effectiveness and compliance.",
+          "data_lineage": "Data is sourced from the Cornerstone OnDemand (CSOD) learning management system, populated in real-time as users engage with training modules.",
+          "data_retention": "Data is retained for a period of 5 years to comply with training and development regulations.",
+          "update_frequency": "real-time"
+        }
+      }
+    ]
+  }

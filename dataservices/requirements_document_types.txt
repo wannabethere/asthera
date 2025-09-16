@@ -1,0 +1,22 @@
+# Additional dependencies for extended document type support
+
+# Word document processing
+python-docx>=0.8.11
+
+# Google Docs API support
+google-api-python-client>=2.0.0
+google-auth-httplib2>=0.1.0
+google-auth-oauthlib>=1.0.0
+
+# Optional: Enhanced markdown processing for wiki content
+markdown>=3.4.0
+bleach>=5.0.0
+
+# Optional: Additional document format support
+python-pptx>=0.6.21  # PowerPoint support
+openpyxl>=3.0.0      # Excel support
+python-docx2txt>=0.8  # Alternative Word processing
+
+# Optional: Enhanced text processing
+nltk>=3.8.0
+spacy>=3.4.0

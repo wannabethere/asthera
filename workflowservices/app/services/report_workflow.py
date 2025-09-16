@@ -9,9 +9,10 @@ import traceback
 
 def utc_now():
     """Get current UTC datetime for SQLAlchemy defaults"""
-    return datetime.now(timezone.utc)
+    return datetime.now()
 
-from app.services.baseservice import BaseService, SharingPermission
+from app.services.baseservice import BaseService
+from app.models.workflowmodels import SharingPermission
 from app.services.reportservice import ReportService
 from app.models.workflowmodels import (
     WorkflowState, ComponentType, ShareType, ScheduleType, IntegrationType,
@@ -84,6 +85,65 @@ class ReportWorkflowService(BaseService):
 
         return workflow, report
 
+    async def share_report(self, user_id: UUID, report_id: UUID, share_with: List[UUID], permission_level: SharingPermission=SharingPermission.USER):
+        try:
+            return await self.report_service.share_report(user_id, report_id, share_with, permission_level)
+        except Exception as e:
+            print("======== Error in share_report============")
+            traceback.print_exc()
+            print("===============Error ended heree =================")
+            await self.db.rollback()
+            raise e
+
+    async def share_report_workflow(
+        self,
+        user_id: UUID,
+        workflow_id: UUID,
+        share_with: List[UUID],
+        permission_level: SharingPermission = SharingPermission.USER
+    ) -> Dict[str, Any]:
+        """Share report through workflow with state validation"""
+        try:
+            workflow = await self._get_report_workflow(workflow_id, user_id)
+            
+            # Validate state - allow sharing in more states including ACTIVE
+            if workflow.state not in [WorkflowState.CONFIGURED, WorkflowState.SHARING, WorkflowState.CONFIGURING, WorkflowState.ACTIVE, WorkflowState.PUBLISHED]:
+                raise ValueError(f"Cannot share report in {workflow.state} state")
+            
+            # Share the report
+            result = await self.report_service.share_report(
+                user_id=user_id,
+                report_id=workflow.report_id,
+                share_with=share_with,
+                permission_level=permission_level
+            )
+            
+            # Update workflow state if needed
+            if workflow.state == WorkflowState.CONFIGURED:
+                workflow.state = WorkflowState.SHARING
+                workflow.current_step = 4
+            elif workflow.state not in [WorkflowState.ACTIVE, WorkflowState.PUBLISHED]:
+                workflow.state = WorkflowState.SHARED
+                workflow.current_step = 5
+            
+            # Create version
+            await self._create_workflow_version(workflow, user_id, note="Report shared")
+            
+            await self.db.commit()
+            
+            return {
+                "success": True,
+                "shared_with": len(share_with),
+                "permission_level": permission_level.value,
+                "workflow_state": workflow.state.value
+            }
+        except Exception as e:
+            print("======== Error in share_report_workflow============")
+            traceback.print_exc()
+            print("===============Error ended heree =================")
+            await self.db.rollback()
+            raise e
+
     async def add_report_section(
         self,
         user_id: UUID,
@@ -95,7 +155,7 @@ class ReportWorkflowService(BaseService):
         try:
             workflow = await self._get_report_workflow(workflow_id, user_id)
 
-            if workflow.state not in [WorkflowState.DRAFT, WorkflowState.CONFIGURING]:
+            if workflow.state not in [WorkflowState.DRAFT, WorkflowState.CONFIGURING, WorkflowState.ACTIVE, WorkflowState.PUBLISHED]:
                 raise ValueError(f"Cannot add sections in {workflow.state} state")
 
             # Add section
@@ -227,6 +287,24 @@ class ReportWorkflowService(BaseService):
             "generated_at": utc_now().isoformat()
         }
 
+    def _convert_to_utc(self, dt: datetime, timezone_str: str) -> Optional[datetime]:
+        """Convert datetime to UTC, handling both naive and timezone-aware datetimes"""
+        if dt is None:
+            return None
+        
+        try:
+            import pytz
+            if dt.tzinfo is None:
+                # If naive datetime, assume it's in the specified timezone
+                tz = pytz.timezone(timezone_str)
+                return tz.localize(dt).astimezone(pytz.UTC).replace(tzinfo=None)
+            else:
+                # If timezone-aware, convert to UTC
+                return dt.astimezone(pytz.UTC).replace(tzinfo=None)
+        except Exception as e:
+            print(f"ERROR: Failed to convert datetime to UTC: {e}")
+            return dt.replace(tzinfo=None) if dt.tzinfo else dt
+
     async def schedule_report_generation(
         self,
         user_id: UUID,
@@ -237,24 +315,164 @@ class ReportWorkflowService(BaseService):
         """Schedule automatic report generation and distribution"""
 
         workflow = await self._get_report_workflow(workflow_id, user_id)
+        
+        # Validate state - allow scheduling in more states including ACTIVE
+        if workflow.state not in [WorkflowState.CONFIGURED, WorkflowState.SHARED, WorkflowState.SCHEDULED, WorkflowState.ACTIVE, WorkflowState.PUBLISHED]:
+            raise ValueError(f"Cannot schedule report in {workflow.state} state")
+
+        # Convert datetime to GMT/UTC for consistent storage using utility function
+        start_date_gmt = self._convert_to_utc(schedule_config.start_date, schedule_config.timezone)
+        end_date_gmt = self._convert_to_utc(schedule_config.end_date, schedule_config.timezone)
 
         # Similar to dashboard scheduling but with report-specific options
         schedule_data = {
             "schedule_type": schedule_config.schedule_type.value,
             "cron_expression": schedule_config.cron_expression,
-            "timezone": schedule_config.timezone,
+            "timezone": "UTC",  # Store as UTC
+            "start_date": start_date_gmt.isoformat() if start_date_gmt else None,
+            "end_date": end_date_gmt.isoformat() if end_date_gmt else None,
+            "original_timezone": schedule_config.timezone,  # Keep original timezone for reference
             "recipients": recipients or [],
             "format": schedule_config.configuration.get("format", "pdf"),
             "delivery_method": schedule_config.configuration.get("delivery_method", "email")
         }
 
-        workflow.metadata["schedule"] = schedule_data
-        workflow.state = WorkflowState.SCHEDULED
-        workflow.current_step = 6
+        workflow.workflow_metadata["schedule"] = schedule_data
+        
+        # Update state - only transition to SCHEDULED if not already ACTIVE/PUBLISHED
+        if workflow.state not in [WorkflowState.ACTIVE, WorkflowState.PUBLISHED]:
+            workflow.state = WorkflowState.SCHEDULED
+            workflow.current_step = 6
 
         await self.db.commit()
 
         return schedule_data
+
+    async def get_report_by_id(
+        self,
+        user_id: UUID,
+        report_id: UUID,
+        workflow_id: Optional[UUID] = None
+    ) -> Dict[str, Any]:
+        """Get a specific report by ID with all details including sharing, scheduling, and integrations"""
+        
+        # Get report
+        stmt = select(Report).where(Report.id == report_id)
+        result = await self.db.execute(stmt)
+        report = result.scalar_one_or_none()
+        
+        if not report:
+            raise ValueError(f"Report {report_id} not found")
+        
+        # Get workflow if not provided
+        if not workflow_id:
+            stmt = select(ReportWorkflow).where(ReportWorkflow.report_id == report_id)
+            result = await self.db.execute(stmt)
+            workflow = result.scalar_one_or_none()
+        else:
+            workflow = await self._get_report_workflow(workflow_id, user_id)
+        
+        if not workflow:
+            raise ValueError(f"Workflow not found for report {report_id}")
+        
+        # Get sharing information from report service
+        sharing_info = await self.report_service.get_report_sharing_info(user_id, report_id)
+        
+        # Get schedule configuration from workflow metadata
+        schedule_config = None
+        if workflow.workflow_metadata and "schedule" in workflow.workflow_metadata:
+            schedule_data = workflow.workflow_metadata["schedule"]
+            schedule_config = {
+                "schedule_type": schedule_data.get("schedule_type"),
+                "cron_expression": schedule_data.get("cron_expression"),
+                "timezone": schedule_data.get("timezone"),
+                "start_date": schedule_data.get("start_date"),
+                "end_date": schedule_data.get("end_date"),
+                "original_timezone": schedule_data.get("original_timezone"),
+                "recipients": schedule_data.get("recipients", []),
+                "format": schedule_data.get("format"),
+                "delivery_method": schedule_data.get("delivery_method")
+            }
+        
+        # Get sections
+        sections = workflow.sections or []
+        
+        # Get data sources
+        data_sources = workflow.data_sources or []
+        
+        # Get formatting
+        formatting = workflow.formatting or {}
+        
+        # Get alert components
+        alert_components = []
+        if workflow.workflow_metadata and "alerts" in workflow.workflow_metadata:
+            for alert in workflow.workflow_metadata["alerts"]:
+                alert_components.append({
+                    "id": alert["id"],
+                    "question": alert["question"],
+                    "description": alert["description"],
+                    "alert_type": alert["alert_config"]["alert_type"],
+                    "severity": alert["alert_config"]["severity"],
+                    "alert_status": alert["alert_status"],
+                    "trigger_count": alert["trigger_count"],
+                    "last_triggered": alert["last_triggered"],
+                    "created_at": alert["created_at"]
+                })
+        
+        # Get draft changes
+        draft_changes = workflow.workflow_metadata.get("draft_changes", {})
+        
+        return {
+            "report": {
+                "id": str(report.id),
+                "name": report.name,
+                "description": report.description,
+                "content": report.content,
+                "metadata": report.metadata,
+                "version": report.version,
+                "is_active": report.is_active,
+                "created_at": report.created_at.isoformat(),
+                "updated_at": report.updated_at.isoformat()
+            },
+            "workflow": {
+                "id": str(workflow.id),
+                "state": workflow.state.value,
+                "current_step": workflow.current_step,
+                "report_template": workflow.report_template,
+                "created_at": workflow.created_at.isoformat(),
+                "updated_at": workflow.updated_at.isoformat(),
+                "completed_at": workflow.completed_at.isoformat() if workflow.completed_at else None
+            },
+            "sharing": {
+                "shared_with": sharing_info.get("shared_with", []),
+                "permission_level": sharing_info.get("permission_level"),
+                "total_shared": len(sharing_info.get("shared_with", []))
+            },
+            "scheduling": {
+                "configuration": schedule_config,
+                "has_schedule": schedule_config is not None
+            },
+            "sections": {
+                "list": sections,
+                "total_sections": len(sections)
+            },
+            "data_sources": {
+                "list": data_sources,
+                "total_sources": len(data_sources)
+            },
+            "formatting": formatting,
+            "components": {
+                "alert_components": alert_components,
+                "total_components": len(alert_components)
+            },
+            "draft_changes": {
+                "has_draft_changes": draft_changes.get("has_draft_changes", False),
+                "last_edited_at": draft_changes.get("last_edited_at"),
+                "edited_by": draft_changes.get("edited_by"),
+                "last_published_at": draft_changes.get("last_published_at"),
+                "published_by": draft_changes.get("published_by")
+            }
+        }
 
     async def publish_report(
         self,
@@ -279,6 +497,7 @@ class ReportWorkflowService(BaseService):
         # Check if there are draft changes to apply
         draft_changes = workflow.workflow_metadata.get("draft_changes", {})
         has_draft_changes = draft_changes.get("has_draft_changes", False)
+        print("has_draft_changes: ", has_draft_changes)
 
         if has_draft_changes:
             # Apply draft changes to the published report
@@ -304,13 +523,14 @@ class ReportWorkflowService(BaseService):
                 content=report.content
             )
             self.db.add(version)
+            print("Report version updated")
 
             # Clear draft changes
             draft_changes["has_draft_changes"] = False
             draft_changes["last_published_at"] = utc_now().isoformat()
             draft_changes["published_by"] = str(user_id)
             workflow.workflow_metadata["draft_changes"] = draft_changes
-
+            print("Draft changes cleared")
             # Update ChromaDB with new content
             await self._update_chroma(
                 self.report_service.collection_name,
@@ -330,7 +550,7 @@ class ReportWorkflowService(BaseService):
             )
 
         publish_results = {}
-
+        print("Publish results: ", publish_results)
         # Generate final report in requested formats
         formats = publish_options.get("formats", ["pdf", "html"])
         for format_type in formats:
@@ -355,20 +575,29 @@ class ReportWorkflowService(BaseService):
         if publish_options.get("save_to_drive"):
             await self._save_to_google_drive(report, workflow, publish_results)
 
+        if publish_options.get("send_to_teams"):
+            await self._send_to_teams(report, workflow, publish_results)
+
+        if publish_options.get("publish_to_cornerstone"):
+            await self._publish_to_cornerstone(report, workflow, publish_results)
+        print("Publish results: ", publish_results,publish_options)
         # Update report status
         report.is_active = True
         report.updated_at = utc_now()
+        print("Report updated")
 
         # Update workflow
         workflow.state = WorkflowState.ACTIVE
         workflow.completed_at = utc_now()
+        print("Workflow completed")
         workflow.current_step = 8
+        print("Workflow current step updated")
 
         # Create final version
         await self._create_workflow_version(workflow, user_id, note="Published with changes" if has_draft_changes else "Published")
-
+        print("Workflow version created")
         await self.db.commit()
-
+        print("Workflow committed")
         return {
             "report_id": str(report.id),
             "workflow_id": str(workflow.id),
@@ -919,6 +1148,16 @@ class ReportWorkflowService(BaseService):
     async def _save_to_google_drive(self, report: Report, workflow: ReportWorkflow, files: Dict[str, Any]):
         """Save report to Google Drive"""
         # Placeholder - would use Google Drive API
+        pass
+
+    async def _send_to_teams(self, report: Report, workflow: ReportWorkflow, files: Dict[str, Any]):
+        """Send report to Microsoft Teams"""
+        # Placeholder - would use Microsoft Teams Graph API
+        pass
+
+    async def _publish_to_cornerstone(self, report: Report, workflow: ReportWorkflow, files: Dict[str, Any]):
+        """Publish report to Cornerstone OnDemand"""
+        # Placeholder - would use Cornerstone REST API
         pass
 
     # ==================== Alert Helper Methods ====================
@@ -1502,17 +1741,18 @@ class ReportWorkflowService(BaseService):
         note: str = None
     ):
         """Create a workflow version for audit trail"""
-        from app.models.workflowmodels import WorkflowVersion
-        
-        # Get current version number
-        stmt = select(func.max(WorkflowVersion.version_number)).where(
-            WorkflowVersion.report_workflow_id == workflow.id
-        )
-        result = await self.db.execute(stmt)
-        max_version = result.scalar() or 0
-        
-        # Create version
-        version = WorkflowVersion(
+        try:
+            from app.models.workflowmodels import WorkflowVersion
+            print("Creating workflow version")
+            # Get current version number
+            stmt = select(func.max(WorkflowVersion.version_number)).where(
+                WorkflowVersion.report_workflow_id == workflow.id
+            )
+            result = await self.db.execute(stmt)
+            max_version = result.scalar() or 0
+            print("Current version number: ", max_version)
+            # Create version
+            version = WorkflowVersion(
             report_workflow_id=workflow.id,
             version_number=max_version + 1,
             state=workflow.state,
@@ -1524,6 +1764,12 @@ class ReportWorkflowService(BaseService):
                 "note": note
             },
             created_by=user_id
-        )
-        
-        self.db.add(version)
+            )
+            print("Version line")
+            self.db.add(version)
+            print("Version added db")
+            # await self.db.commit()
+        except Exception as e:
+            print("================== Error in workflow create ===================")
+            traceback.print_exc()
+            print("====================== Error Ended here=====================")

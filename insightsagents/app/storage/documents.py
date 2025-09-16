@@ -286,21 +286,51 @@ class DocumentChromaStore:
         try:
             if self.collection:
                 return
-            logger.info(f"Initializing Chroma store at {self.vectorstore_path} with collection {self.collection_name}")
-            print("initializing Chroma store at", self.vectorstore_path, self.collection_name)  
-            # Initialize the persistent client with the specified path
+            logger.info(f"Initializing Chroma store with collection {self.collection_name}")
+            print("initializing Chroma store with collection", self.collection_name)  
             
+            # Test the client connection first
+            try:
+                # Log the client type being used
+                client_type = type(self.persistent_client).__name__
+                logger.info(f"Using ChromaDB client type: {client_type}")
+                
+                # Try to list existing collections to test connection
+                existing_collections = self.persistent_client.list_collections()
+                logger.info(f"Successfully connected to ChromaDB. Found {len(existing_collections)} existing collections")
+            except Exception as e:
+                logger.error(f"Failed to connect to ChromaDB: {e}")
+                raise
             
             # Get or create the collection
-            self.collection = self.persistent_client.get_or_create_collection(
-                name=self.collection_name,
-                metadata={"description": f"Document collection for {self.collection_name}"}
-            )
-            if self.tf_idf:
-                self.tfidf_collection = self.persistent_client.get_or_create_collection(
-                    name=self.tfidf_collection_name,
-                    metadata={"hnsw:space": "cosine", "description": f"TF-IDF collection for {self.collection_name}"}
+            logger.info(f"Creating collection '{self.collection_name}' without metadata")
+            
+            try:
+                # Try with minimal metadata first
+                self.collection = self.persistent_client.get_or_create_collection(
+                    name=self.collection_name,
+                    metadata={"description": f"Collection for {self.collection_name}"}
                 )
+            except Exception as e:
+                logger.warning(f"Failed to create collection with metadata, trying without: {e}")
+                # Try without any metadata
+                self.collection = self.persistent_client.get_or_create_collection(
+                    name=self.collection_name
+                )
+            if self.tf_idf:
+                try:
+                    self.tfidf_collection = self.persistent_client.get_or_create_collection(
+                        name=self.tfidf_collection_name,
+                        metadata={
+                            "hnsw:space": "cosine", 
+                            "description": f"TF-IDF collection for {self.collection_name}"
+                        }
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to create TF-IDF collection with metadata, trying without: {e}")
+                    self.tfidf_collection = self.persistent_client.get_or_create_collection(
+                        name=self.tfidf_collection_name
+                    )
             # Initialize the Langchain Chroma wrapper
             self.vectorstore = Chroma(
                 client=self.persistent_client,

@@ -1,0 +1,358 @@
+{
+    "catalog": "cornerstone_learn",
+    "schema": "csod_learn_datamodel",
+    "models": [
+      {
+        "name": "Activity_csod",
+        "tableReference": {
+          "catalog": "cornerstone_learn", 
+          "schema": "csod_learn_datamodel",
+          "table": "Activity_csod"
+        },
+        "primaryKey": "loID",
+        "columns": [
+          {
+            "name": "loID",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Learning Object ID",
+              "description": "Identifier for learning objects in the Activity_csod table",
+              "usage_type": "identifier",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "LO###",
+              "business_rules": "Can be null, Should be unique within the context of the learning activities",
+              "business_description": "A unique identifier for each learning activity, used to track and manage learning performance within the Cornerstone system.",
+              "data_quality_checks": "Check for null values, Validate format to ensure it meets VARCHAR standards",
+              "filtering_suggestions": "Filter by activityType, Filter by isActive status",
+              "aggregation_suggestions": "COUNT, GROUP BY activityType"
+            }
+          },
+          {
+            "name": "activityName",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Activity Name",
+              "description": "Name of the activity associated with learning or compliance.",
+              "usage_type": "attribute",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "business_rules": "Can be null, Should accurately reflect the activity being described",
+              "business_description": "This column represents the name of the learning activity or compliance task that employees are required to complete.",
+              "data_quality_checks": "Ensure the name is descriptive and relevant to the activity, Check for consistency in naming conventions",
+              "filtering_suggestions": "Filter by activityType, Filter by isActive status",
+              "aggregation_suggestions": "COUNT of activities by name, GROUP BY activityName for reporting"
+            }
+          },
+          {
+            "name": "activityCode",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Activity Code",
+              "description": "A code representing a specific activity within the Cornerstone Learn system.",
+              "usage_type": "attribute",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "ACT###",
+              "business_rules": "Can be null, Should follow a predefined format if applicable",
+              "business_description": "This column identifies the type of activity that learners can engage in, such as training sessions, compliance courses, or certifications.",
+              "data_quality_checks": "Check for valid activity codes against the defined list, Ensure no leading or trailing spaces",
+              "filtering_suggestions": "Filter by activityType, Filter by isActive status",
+              "aggregation_suggestions": "COUNT, GROUP BY activityCode"
+            }
+          },
+          {
+            "name": "isCompliance",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Compliance Status",
+              "description": "Indicates whether the activity is related to compliance requirements.",
+              "usage_type": "flag",
+              "business_importance": "high",
+              "typical_cardinality": "low",
+              "privacy_classification": "internal",
+              "common_patterns": "true, false",
+              "business_rules": "Can be null, indicating that compliance status is not applicable for some activities. If true, the activity must be completed by learners to maintain compliance.",
+              "business_description": "This column specifies if an activity is a compliance-related task that learners must complete to meet regulatory or organizational standards.",
+              "data_quality_checks": "Ensure values are either true or false. Check for null values where compliance is expected.",
+              "filtering_suggestions": "Filter by compliance status (true/false), Filter by activity type to see compliance-related activities",
+              "aggregation_suggestions": "COUNT of compliance activities, Percentage of completed compliance activities"
+            }
+          },
+          {
+            "name": "activityType",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Activity Type",
+              "description": "Type of activity associated with learning events in the system.",
+              "usage_type": "attribute",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "Compliance, Certification, Training",
+              "business_rules": "Can be null, Must be a valid activity type defined in the system",
+              "business_description": "This column categorizes the type of learning activity, such as training, compliance, or certification, which is essential for understanding employee learning performance.",
+              "data_quality_checks": "Validate against predefined list of activity types, Check for null values where applicable",
+              "filtering_suggestions": "Filter by specific activity types, Filter by compliance status",
+              "aggregation_suggestions": "COUNT by activityType, SUM of estimatedDuration by activityType"
+            }
+          },
+          {
+            "name": "estimatedDuration",
+            "type": "bigint",
+            "notNull": false,
+            "properties": {
+              "display_name": "Estimated Duration",
+              "description": "Estimated duration of the activity in hours or minutes.",
+              "usage_type": "attribute",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "[0-9]+, [0-9]+[h|m]",
+              "business_rules": "Can be null if the duration is not specified, Should be a positive numeric value if provided",
+              "business_description": "This column represents the expected time required for a learner to complete the activity, which is crucial for planning and scheduling training sessions.",
+              "data_quality_checks": "Validate that the value is numeric if not null, Check for excessively high or low values that may indicate data entry errors",
+              "filtering_suggestions": "Filter by activity type, Filter by compliance status",
+              "aggregation_suggestions": "AVERAGE, SUM"
+            }
+          },
+          {
+            "name": "isCertification",
+            "type": "bigint",
+            "notNull": false,
+            "properties": {
+              "display_name": "Is Certification",
+              "description": "Indicates whether the activity is a certification program.",
+              "usage_type": "flag",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "Yes, No",
+              "business_rules": "Can be null, Values should be either 'Yes' or 'No' to indicate certification status",
+              "business_description": "This column identifies if a specific learning activity is classified as a certification, which is crucial for compliance tracking and employee development.",
+              "data_quality_checks": "Check for valid values ('Yes', 'No'), Ensure no unexpected values are present",
+              "filtering_suggestions": "Filter by certification status, Filter by activity type",
+              "aggregation_suggestions": "COUNT of certification activities, SUM of estimated durations for certification activities"
+            }
+          },
+          {
+            "name": "isActive",
+            "type": "bigint",
+            "notNull": false,
+            "properties": {
+              "display_name": "Is Active",
+              "description": "Indicates whether the activity is currently active or not.",
+              "usage_type": "flag",
+              "business_importance": "high",
+              "typical_cardinality": "low",
+              "privacy_classification": "internal",
+              "common_patterns": "true, false",
+              "business_rules": "Can be null, Values must be 'true' or 'false'",
+              "example_values": "true, false",
+              "business_description": "This column represents the active status of an activity in the Cornerstone Learn system, determining if the activity is available for learners.",
+              "data_quality_checks": "Check for valid boolean values, Ensure no unexpected values are present",
+              "filtering_suggestions": "Filter by active status, Filter by compliance activities",
+              "aggregation_suggestions": "COUNT, SUM"
+            }
+          },
+          {
+            "name": "owner",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Owner",
+              "description": "Column representing the individual or entity responsible for the activity.",
+              "usage_type": "attribute",
+              "business_importance": "moderate",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "business_rules": "Can be null, Should accurately reflect the responsible party for the activity",
+              "business_description": "The owner of the activity, which could be a person or department responsible for managing or overseeing the activity.",
+              "data_quality_checks": "Ensure that the owner is a valid reference to an existing entity, Check for consistency in naming conventions",
+              "filtering_suggestions": "Filter by owner to analyze activities managed by specific individuals or departments"
+            }
+          },
+          {
+            "name": "cost",
+            "type": "bigint",
+            "notNull": false,
+            "properties": {
+              "display_name": "Cost",
+              "description": "Represents the cost associated with an activity in the Cornerstone Learn platform.",
+              "usage_type": "measure",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "numeric value",
+              "business_rules": "Can be null if the activity is free, Should be a valid numeric value if provided",
+              "business_description": "The cost incurred for participating in a specific learning activity, which may include training sessions, certifications, or compliance activities.",
+              "data_quality_checks": "Ensure the value is a valid numeric format, Check for consistency in currency representation",
+              "filtering_suggestions": "Filter by activity type, Filter by compliance status",
+              "aggregation_suggestions": "SUM, AVERAGE"
+            }
+          },
+          {
+            "name": "currency",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Currency",
+              "description": "Column representing the currency type used for cost-related activities.",
+              "usage_type": "attribute",
+              "business_importance": "moderate",
+              "typical_cardinality": "low",
+              "privacy_classification": "internal",
+              "common_patterns": "[A-Z]{3}",
+              "business_rules": "Can be null if no cost is associated with the activity, Should conform to standard currency codes (e.g., USD, EUR)",
+              "business_description": "This column indicates the currency in which the costs of activities are denominated, allowing for financial analysis and reporting.",
+              "data_quality_checks": "Validate against a list of standard currency codes, Check for null values where cost is present",
+              "filtering_suggestions": "Filter by specific currency types, Filter by activities with associated costs",
+              "aggregation_suggestions": "SUM(cost) grouped by currency"
+            }
+          },
+          {
+            "name": "subject",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Subject",
+              "description": "Column representing the subject of the activity in the CSOD system.",
+              "usage_type": "attribute",
+              "business_importance": "moderate",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "business_rules": "Can be null, Should accurately reflect the subject of the activity",
+              "business_description": "The subject area or topic that the activity covers, which is essential for categorizing and filtering learning activities.",
+              "data_quality_checks": "Ensure subject is descriptive and relevant to the activity, Check for consistency in subject naming conventions",
+              "filtering_suggestions": "Filter by subject to analyze specific learning topics, Use in conjunction with activityType for detailed reporting"
+            }
+          },
+          {
+            "name": "provider",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Provider",
+              "description": "The entity or organization that offers the activity or course.",
+              "usage_type": "attribute",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "business_rules": "Can be null if the activity is internal, Should be populated for external activities",
+              "business_description": "This column represents the provider of the learning activity, which can be an internal department or an external vendor.",
+              "data_quality_checks": "Check for valid provider names, Ensure consistency in naming conventions",
+              "filtering_suggestions": "Filter by provider to analyze specific activities, Filter by compliance status to see provider effectiveness",
+              "aggregation_suggestions": "COUNT by provider, GROUP BY provider for reporting"
+            }
+          },
+          {
+            "name": "instructor",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Instructor",
+              "description": "Name of the instructor responsible for the activity.",
+              "usage_type": "attribute",
+              "business_importance": "moderate",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "business_rules": "Can be null if no instructor is assigned, Should be a valid name format",
+              "business_description": "The instructor who leads or facilitates the learning activity, providing guidance and support to learners.",
+              "data_quality_checks": "Check for empty values, Validate name format",
+              "filtering_suggestions": "Filter by instructor name, Filter by activity type"
+            }
+          },
+          {
+            "name": "facility",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Facility",
+              "description": "Column representing the facility where the activity takes place.",
+              "usage_type": "attribute",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "business_rules": "Can be null, Should accurately reflect the facility name",
+              "business_description": "This column indicates the specific facility associated with a learning activity, which is important for tracking and reporting on employee learning performance.",
+              "data_quality_checks": "Validate against a list of known facilities, Check for spelling errors",
+              "filtering_suggestions": "Filter by specific facility, Filter by activity type",
+              "aggregation_suggestions": "COUNT by facility, GROUP BY facility"
+            }
+          },
+          {
+            "name": "eventCode",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Event Code",
+              "description": "A code representing a specific event in the Activity table.",
+              "usage_type": "attribute",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "EVT###",
+              "business_rules": "Can be null, Should follow a predefined format if applicable",
+              "business_description": "This column identifies the type of event associated with an activity, which can be used to categorize and analyze learning activities.",
+              "data_quality_checks": "Check for valid event codes against a predefined list, Ensure no leading or trailing spaces",
+              "filtering_suggestions": "Filter by eventCode to analyze specific events, Filter by isActive to see only current events",
+              "aggregation_suggestions": "COUNT by eventCode, GROUP BY eventCode"
+            }
+          },
+          {
+            "name": "activityStartDate",
+            "type": "timestamp",
+            "notNull": false,
+            "properties": {
+              "display_name": "Activity Start Date",
+              "description": "The date when the activity is scheduled to start, represented as a string in timestamp format without time zone.",
+              "usage_type": "timestamp",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "YYYY-MM-DD",
+              "business_rules": "Can be null if the activity has not been scheduled, Should follow the format 'YYYY-MM-DD HH:MM:SS' if populated",
+              "business_description": "This column indicates the start date of an activity within the Cornerstone Learn platform, which is essential for tracking and reporting on employee learning performance.",
+              "data_quality_checks": "Validate format to ensure it matches the expected timestamp format, Check for null values where applicable",
+              "filtering_suggestions": "Filter by specific date ranges, Filter by activity type to analyze compliance activities",
+              "aggregation_suggestions": "COUNT of activities starting on a specific date, GROUP BY activityStartDate for trend analysis"
+            }
+          },
+          {
+            "name": "activityEndDate",
+            "type": "timestamp",
+            "notNull": false,
+            "properties": {
+              "display_name": "Activity End Date",
+              "description": "The date when the activity concludes, represented as a timestamp without time zone.",
+              "usage_type": "timestamp",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "YYYY-MM-DD",
+              "business_rules": "Can be null if the activity is ongoing, Should be populated for completed activities",
+              "business_description": "This column indicates the end date of an activity, which is crucial for tracking compliance and performance in learning activities.",
+              "data_quality_checks": "Ensure the date format is valid, Check for logical consistency with activityStartDate",
+              "filtering_suggestions": "Filter by specific activity types, Filter by compliance status",
+              "aggregation_suggestions": "COUNT of activities ending within a specific period, SUM of estimated durations for activities ending in a given timeframe"
+            }
+          }
+        ],
+        "properties": {
+          "description": "This table contains detailed information about various learning activities within the Cornerstone OnDemand (CSOD) platform, including compliance, certification, and logistical details.",
+          "business_purpose": "The Activity_csod table serves as a foundational data source for generating insights and analytics related to employee learning performance, enabling organizations to track compliance, manage training costs, and optimize learning resources.",
+          "data_lineage": "Data is sourced from the Cornerstone OnDemand platform, populated through automated ETL processes that extract, transform, and load learning activity data.",
+          "data_retention": "Data is retained for a period of 5 years to comply with regulatory and organizational policies.",
+          "update_frequency": "daily"
+        }
+      }
+    ]
+  } 

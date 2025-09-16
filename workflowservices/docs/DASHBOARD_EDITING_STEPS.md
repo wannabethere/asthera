@@ -523,9 +523,9 @@ DRAFT → CONFIGURING → CONFIGURED → SHARING → SHARED → SCHEDULING → S
 These new steps integrate seamlessly with the existing workflow steps:
 
 - `configure_component` - Configure existing components
-- `share` - Configure sharing settings  
-- `schedule` - Set up scheduling
-- `add_integrations` - Add external integrations
+- `share` - Configure sharing settings (now works with ACTIVE dashboards)
+- `schedule` - Set up scheduling (now works with ACTIVE dashboards)
+- `add_integrations` - Add external integrations (now works with ACTIVE dashboards)
 - `publish` - Publish the dashboard (now handles draft changes)
 
 ### Key Benefits
@@ -536,6 +536,119 @@ These new steps integrate seamlessly with the existing workflow steps:
 4. **Version Control**: Complete audit trail of all changes
 5. **Collaborative Editing**: Multiple users can work on drafts without conflicts
 6. **State Management**: Clear separation between draft and published states
+7. **Enhanced Workflow Flexibility**: Share, schedule, and configure integrations even for active dashboards
+8. **Continuous Improvement**: Add alerts and components to live dashboards without disrupting users
+
+## Enhanced Workflow Capabilities
+
+### Active Dashboard Management
+
+The system now supports managing active dashboards without disrupting their current state:
+
+#### Sharing Active Dashboards
+```python
+# Share an active dashboard with new users
+result = await orchestrator.execute_workflow_step(
+    user_id=UUID("user-id-here"),
+    workflow_id=UUID("workflow-id-here"),
+    step_name="share",
+    step_data={
+        "target_ids": ["new-user-1", "new-user-2"],
+        "share_type": "user",
+        "permissions": {"view": True, "edit": False}
+    }
+)
+print(f"Dashboard shared with {result['shared_with']} users")
+```
+
+#### Scheduling Active Dashboards
+```python
+# Add scheduling to an active dashboard
+result = await orchestrator.execute_workflow_step(
+    user_id=UUID("user-id-here"),
+    workflow_id=UUID("workflow-id-here"),
+    step_name="schedule",
+    step_data={
+        "schedule_type": "daily",
+        "cron_expression": "0 9 * * *",  # 9 AM daily
+        "timezone": "UTC",
+        "configuration": {
+            "auto_refresh": True,
+            "notify_on_failure": True
+        }
+    }
+)
+print(f"Schedule configured: {result['schedule_type']}")
+```
+
+#### Adding Integrations to Active Dashboards
+```python
+# Add integrations to an active dashboard
+result = await orchestrator.execute_workflow_step(
+    user_id=UUID("user-id-here"),
+    workflow_id=UUID("workflow-id-here"),
+    step_name="add_integrations",
+    step_data={
+        "integrations": [
+            {
+                "integration_type": "slack",
+                "connection_config": {
+                    "webhook_url": "https://hooks.slack.com/...",
+                    "channel": "#analytics"
+                },
+                "mapping_config": {
+                    "title_field": "dashboard_name",
+                    "content_field": "summary"
+                }
+            }
+        ]
+    }
+)
+print(f"Integrations added: {result['integrations_count']}")
+```
+
+#### Adding Alerts to Active Dashboards
+```python
+# Add alert components to an active dashboard
+result = await orchestrator.execute_workflow_step(
+    user_id=UUID("user-id-here"),
+    workflow_id=UUID("workflow-id-here"),
+    step_name="add_alert_component",
+    step_data={
+        "alert_type": "threshold",
+        "severity": "high",
+        "question": "Alert when performance drops",
+        "description": "Monitor key metrics and alert on anomalies",
+        "condition_config": {
+            "metric": "response_time",
+            "operator": "greater_than",
+            "threshold": 5000
+        },
+        "notification_channels": ["email", "slack"]
+    }
+)
+print(f"Alert component added: {result['component_id']}")
+```
+
+### State-Aware Operations
+
+All operations now intelligently handle different workflow states:
+
+- **DRAFT/CONFIGURING**: Normal workflow progression
+- **ACTIVE/PUBLISHED**: Operations preserve current state while allowing enhancements
+- **Other States**: Operations follow appropriate state transitions
+
+### Workflow State Matrix
+
+| Operation | DRAFT | CONFIGURING | CONFIGURED | SHARED | SCHEDULED | ACTIVE | PUBLISHED |
+|-----------|-------|-------------|------------|--------|-----------|--------|-----------|
+| **Edit Dashboard** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Add Component** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Add Alert** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Share** | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Schedule** | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| **Integrations** | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **Publish** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
 
 The new editing steps provide a complete solution for managing dashboard content and components throughout the workflow lifecycle with proper version control and draft management.
 

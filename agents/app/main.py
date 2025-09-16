@@ -17,7 +17,10 @@ from app.routers import (
     dashboard_router,
     report_router,
     alert_router,
-    sql_alerts_router
+    sql_alerts_router,
+    document_planning_router,
+    enhanced_rag_router,
+    document_persistence_router
 
 )
 #from app.services.sql.routers import ask, ask_feedback, question_recommendation
@@ -180,6 +183,9 @@ app.include_router(dashboard_router)
 app.include_router(report_router)
 app.include_router(alert_router)
 app.include_router(sql_alerts_router)
+app.include_router(document_planning_router)
+app.include_router(enhanced_rag_router)
+app.include_router(document_persistence_router)
 
 @app.get("/api/health")
 async def health_check():

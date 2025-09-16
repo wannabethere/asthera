@@ -104,13 +104,31 @@ class IndexingOrchestrator:
         instructions_path = project_path / "instructions.json"
         if instructions_path.exists():
             logger.info(f"Loading instructions from: {instructions_path}")
-            with open(instructions_path, "r") as f:
-                instructions_data = json.load(f)
-                instructions = [
-                    Instruction(**instruction)
-                    for instruction in instructions_data
-                ]
-            logger.info(f"Loaded {len(instructions)} instructions")
+            try:
+                # Check if file is empty
+                if instructions_path.stat().st_size == 0:
+                    logger.warning(f"Instructions file is empty: {instructions_path}")
+                else:
+                    with open(instructions_path, "r") as f:
+                        content = f.read().strip()
+                        
+                    if not content:
+                        logger.warning(f"Instructions file contains only whitespace: {instructions_path}")
+                    else:
+                        try:
+                            instructions_data = json.loads(content)
+                            if isinstance(instructions_data, list) and len(instructions_data) > 0:
+                                instructions = [
+                                    Instruction(**instruction)
+                                    for instruction in instructions_data
+                                ]
+                                logger.info(f"Loaded {len(instructions)} instructions")
+                            else:
+                                logger.warning(f"Instructions file contains invalid data structure: {instructions_path}")
+                        except json.JSONDecodeError as e:
+                            logger.error(f"Invalid JSON in instructions file {instructions_path}: {str(e)}")
+            except Exception as e:
+                logger.error(f"Error loading instructions file {instructions_path}: {str(e)}")
         else:
             logger.warning(f"Instructions file not found: {instructions_path}")
             
@@ -119,9 +137,30 @@ class IndexingOrchestrator:
         sql_pairs_path = project_path / "sql_pairs.json"
         if sql_pairs_path.exists():
             logger.info(f"Loading SQL pairs from: {sql_pairs_path}")
-            with open(sql_pairs_path, "r") as f:
-                sql_pairs = json.load(f)
-            logger.info(f"Loaded {len(sql_pairs)} SQL pairs")
+            try:
+                # Check if file is empty
+                if sql_pairs_path.stat().st_size == 0:
+                    logger.warning(f"SQL pairs file is empty: {sql_pairs_path}")
+                else:
+                    with open(sql_pairs_path, "r") as f:
+                        content = f.read().strip()
+                        
+                    if not content:
+                        logger.warning(f"SQL pairs file contains only whitespace: {sql_pairs_path}")
+                    else:
+                        try:
+                            sql_pairs = json.loads(content)
+                            if isinstance(sql_pairs, list) and len(sql_pairs) > 0:
+                                logger.info(f"Loaded {len(sql_pairs)} SQL pairs")
+                            else:
+                                logger.warning(f"SQL pairs file contains invalid data structure: {sql_pairs_path}")
+                                sql_pairs = []
+                        except json.JSONDecodeError as e:
+                            logger.error(f"Invalid JSON in SQL pairs file {sql_pairs_path}: {str(e)}")
+                            sql_pairs = []
+            except Exception as e:
+                logger.error(f"Error loading SQL pairs file {sql_pairs_path}: {str(e)}")
+                sql_pairs = []
         else:
             logger.warning(f"SQL pairs file not found: {sql_pairs_path}")
         

@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 import asyncio
 from enum import Enum
+import traceback
 
 def utc_now():
     """Get current UTC datetime for SQLAlchemy defaults"""
@@ -128,6 +129,9 @@ class WorkflowOrchestrator:
 
         return result
 
+    
+        
+
     # ==================== Workflow Step Execution ====================
 
     async def execute_workflow_step(
@@ -135,7 +139,7 @@ class WorkflowOrchestrator:
         user_id: UUID,
         workflow_id: UUID,
         step_name: str,
-        step_data: Dict[str, Any]
+        step_data: Union[Dict[str, Any], List[Dict[str, Any]]]
     ) -> Dict[str, Any]:
         """Execute a specific workflow step"""
 
@@ -163,18 +167,27 @@ class WorkflowOrchestrator:
         user_id: UUID,
         workflow_id: UUID,
         step_name: str,
-        step_data: Dict[str, Any]
+        step_data: Union[Dict[str, Any], List[Dict[str, Any]]]
     ) -> Dict[str, Any]:
         """Execute dashboard workflow step"""
 
         if step_name == "add_component":
-            component = await self.dashboard_workflow_service.add_thread_component(
-                user_id=user_id,
-                workflow_id=workflow_id,
-                component_data=ThreadComponentCreate(**step_data),
-                thread_message_id=step_data.get("thread_message_id")
-            )
-            return {"component_id": str(component.id), "success": True}
+            if isinstance(step_data, list):
+                components = await self.dashboard_workflow_service.add_thread_components(
+                    user_id=user_id,
+                    workflow_id=workflow_id,
+                    components=[ThreadComponentCreate(**component) for component in step_data],
+                    thread_message_id=step_data[0].get("thread_message_id")
+                )
+                return {"component_ids": [str(c.id) for c in components], "success": True}
+            else:
+                component = await self.dashboard_workflow_service.add_thread_component(
+                    user_id=user_id,
+                    workflow_id=workflow_id,
+                    component_data=ThreadComponentCreate(**step_data),
+                    thread_message_id=step_data.get("thread_message_id")
+                )
+                return {"component_id": str(component.id), "success": True}
 
         elif step_name == "configure_component":
             component = await self.dashboard_workflow_service.configure_thread_component(
@@ -205,12 +218,17 @@ class WorkflowOrchestrator:
             }
 
         elif step_name == "add_integrations":
-            integrations = await self.dashboard_workflow_service.configure_integrations(
+            try:
+                integrations = await self.dashboard_workflow_service.configure_integrations(
                 user_id=user_id,
                 workflow_id=workflow_id,
                 integration_configs=[IntegrationConfigCreate(**i) for i in step_data["integrations"]]
             )
-            return {"integrations_count": len(integrations), "success": True}
+                return {"integrations_count": len(integrations), "success": True}
+            except Exception as e:
+                print("================== Error in configure_integrations ==================")
+                traceback.print_exc()
+                print("===============Error ended here =================")
 
         elif step_name == "edit_dashboard":
             # Edit dashboard basic information
@@ -336,6 +354,14 @@ class WorkflowOrchestrator:
                 format_type=step_data.get("format", "html")
             )
             return preview
+        elif step_name == "share":
+            result = await self.report_workflow_service.share_report_workflow(
+                user_id=user_id,
+                workflow_id=workflow_id,
+                share_with=step_data.get("share_with"),
+                permission_level=step_data.get("permission_level")
+            )
+            return result
 
         elif step_name == "schedule":
             schedule = await self.report_workflow_service.schedule_report_generation(
@@ -579,6 +605,54 @@ class WorkflowOrchestrator:
                 })
 
         return workflows[:limit]
+
+    async def get_all_dashboards(self,user_id,state,limit):
+        return await self.dashboard_workflow_service.get_all_dashboards(user_id,state,limit)
+
+    async def get_dashboard_by_id(
+        self,
+        user_id: UUID,
+        dashboard_id: Optional[UUID] = None,
+        workflow_id: Optional[UUID] = None
+    ) -> Dict[str, Any]:
+        """Get a specific dashboard by ID with all details including sharing, scheduling, and integrations"""
+        
+        if not dashboard_id and not workflow_id:
+            raise ValueError("Either dashboard_id or workflow_id must be provided")
+        
+        if workflow_id:
+            # Get dashboard_id from workflow
+            workflow = await self.dashboard_workflow_service._get_workflow(workflow_id, user_id)
+            dashboard_id = workflow.dashboard_id
+        
+        return await self.dashboard_workflow_service.get_dashboard_by_id(
+            user_id=user_id,
+            dashboard_id=dashboard_id,
+            workflow_id=workflow_id
+        )
+
+    async def get_report_by_id(
+        self,
+        user_id: UUID,
+        report_id: Optional[UUID] = None,
+        workflow_id: Optional[UUID] = None
+    ) -> Dict[str, Any]:
+        """Get a specific report by ID with all details including sharing, scheduling, and integrations"""
+        
+        if not report_id and not workflow_id:
+            raise ValueError("Either report_id or workflow_id must be provided")
+        
+        if workflow_id:
+            # Get report_id from workflow
+            workflow = await self.report_workflow_service._get_report_workflow(workflow_id, user_id)
+            report_id = workflow.report_id
+        
+        return await self.report_workflow_service.get_report_by_id(
+            user_id=user_id,
+            report_id=report_id,
+            workflow_id=workflow_id
+        )
+        
 
     async def cancel_workflow(
         self,

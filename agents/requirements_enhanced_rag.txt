@@ -1,0 +1,26 @@
+# Enhanced Self-RAG Agent Dependencies
+# Additional requirements for the enhanced self-rag agent with document planning and web search
+
+# TF-IDF and text processing
+scikit-learn>=1.3.0
+numpy>=1.24.0
+
+# Web search
+tavily-python>=0.3.0
+
+# Document planning (if not already included)
+pydantic>=2.0.0
+langchain>=0.1.0
+langchain-openai>=0.1.0
+langgraph>=0.1.0
+
+# Vector operations
+chromadb>=0.4.0
+
+# Additional text processing
+nltk>=3.8.0
+spacy>=3.7.0
+
+# Optional: For advanced text analysis
+textstat>=0.7.0
+wordcloud>=1.9.0

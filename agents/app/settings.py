@@ -134,7 +134,7 @@ class Settings(BaseSettings):
     CHROMA_STORE_PATH: str = "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/lexy/data/chroma_db"
     
     # ChromaDB Settings
-    CHROMA_USE_LOCAL: bool = True  # Default to HTTP client
+    CHROMA_USE_LOCAL: bool = False  # Default to HTTP client
     CHROMA_HOST: str = "ec2-54-161-71-105.compute-1.amazonaws.com"  # Default EC2 host
     CHROMA_PORT: int = 8888  # Default EC2 port
     CHROMA_COLLECTION_NAME: str = "default"
@@ -143,6 +143,11 @@ class Settings(BaseSettings):
     # Embedding Settings
     EMBEDDING_PROVIDER: str = "openai"
     EMBEDDING_MODEL: str = "text-embedding-3-small"
+    
+    # Tavily search settings
+    TAVILY_API_KEY: Optional[str] = None
+    TAVILY_SEARCH_DEPTH: str = "basic"  # basic, advanced
+    TAVILY_MAX_RESULTS: int = 5
     
     # KPI Strategy Map Settings
     KPI_PATTERNS_FILE: str = "../config/kpistrategies.yaml"
@@ -394,7 +399,14 @@ def get_settings() -> Settings:
         Settings: Application settings
     """
     logger.debug("Creating new Settings instance")
-    return Settings()
+    settings = Settings()
+    logger.info(f"Settings loaded - CHROMA_USE_LOCAL: {settings.CHROMA_USE_LOCAL}, CHROMA_HOST: {settings.CHROMA_HOST}, CHROMA_PORT: {settings.CHROMA_PORT}")
+    return settings
+
+def clear_settings_cache():
+    """Clear the settings cache to force reload of settings."""
+    get_settings.cache_clear()
+    logger.info("Settings cache cleared")
 
 def load_environment_variables(env_file=None):
     """

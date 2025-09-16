@@ -12,6 +12,7 @@ from app.storage.documents import DocumentChromaStore
 from app.core.dependencies import get_doc_store_provider
 from app.settings import get_settings
 import chromadb
+from app.core.dependencies import get_chromadb_client
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ class AlertKnowledgeHelper:
             else:
                 # Create a new knowledge store connection
                 settings = get_settings()
-                persistent_client = chromadb.PersistentClient(path=settings.CHROMA_STORE_PATH)
+                persistent_client = get_chromadb_client()
                 
                 self.alert_knowledge_store = DocumentChromaStore(
                     persistent_client=persistent_client,

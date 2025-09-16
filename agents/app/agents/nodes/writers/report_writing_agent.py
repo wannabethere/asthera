@@ -216,7 +216,10 @@ class SelfCorrectingRAG:
                 documents.append(doc_data)
         
         # Initialize DocumentChromaStore
+        from app.core.dependencies import get_chromadb_client
+        persistent_client = get_chromadb_client()
         self.document_store = DocumentChromaStore(
+            persistent_client=persistent_client,
             collection_name=self.collection_name,
             tf_idf=True  # Enable TF-IDF for better search
         )

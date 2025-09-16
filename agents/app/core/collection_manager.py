@@ -61,7 +61,9 @@ class CollectionManager:
                 # Create new collection if it doesn't exist
                 collection = self.client.create_collection(
                     name=collection_name,
-                    metadata={"description": f"Collection for {collection_name}"}
+                    metadata={
+                        "description": f"Collection for {collection_name}"
+                    }
                 )
             
             # Cache the collection

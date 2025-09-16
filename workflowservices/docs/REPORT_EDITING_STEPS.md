@@ -438,7 +438,8 @@ These new steps integrate seamlessly with the existing workflow steps:
 - `configure_data_sources` - Configure data sources
 - `configure_formatting` - Configure report formatting
 - `preview` - Generate report preview
-- `schedule` - Set up scheduling
+- `share` - Configure sharing settings (now works with ACTIVE reports)
+- `schedule` - Set up scheduling (now works with ACTIVE reports)
 - `publish` - Publish the report (now handles draft changes)
 
 ### Key Benefits
@@ -451,5 +452,115 @@ These new steps integrate seamlessly with the existing workflow steps:
 6. **State Management**: Clear separation between draft and published states
 7. **Section Management**: Full CRUD operations for report sections
 8. **Content Preview**: See how the report will look with all changes applied
+9. **Enhanced Workflow Flexibility**: Share and schedule even for active reports
+10. **Continuous Improvement**: Add sections and alerts to live reports without disrupting users
+
+## Enhanced Workflow Capabilities
+
+### Active Report Management
+
+The system now supports managing active reports without disrupting their current state:
+
+#### Sharing Active Reports
+```python
+# Share an active report with new users
+result = await orchestrator.execute_workflow_step(
+    user_id=UUID("user-id-here"),
+    workflow_id=UUID("workflow-id-here"),
+    step_name="share",
+    step_data={
+        "share_with": [UUID("new-user-1"), UUID("new-user-2")],
+        "permission_level": "user"
+    }
+)
+print(f"Report shared with {result['shared_with']} users")
+```
+
+#### Scheduling Active Reports
+```python
+# Add scheduling to an active report
+result = await orchestrator.execute_workflow_step(
+    user_id=UUID("user-id-here"),
+    workflow_id=UUID("workflow-id-here"),
+    step_name="schedule",
+    step_data={
+        "schedule_type": "weekly",
+        "cron_expression": "0 8 * * 1",  # 8 AM every Monday
+        "timezone": "UTC",
+        "recipients": ["manager@company.com", "analyst@company.com"],
+        "configuration": {
+            "format": "pdf",
+            "delivery_method": "email"
+        }
+    }
+)
+print(f"Schedule configured: {result['schedule_type']}")
+```
+
+#### Adding Sections to Active Reports
+```python
+# Add new sections to an active report
+result = await orchestrator.execute_workflow_step(
+    user_id=UUID("user-id-here"),
+    workflow_id=UUID("workflow-id-here"),
+    step_name="add_section",
+    step_data={
+        "section_type": "executive_summary",
+        "section_config": {
+            "title": "Updated Executive Summary",
+            "content": "New insights and recommendations...",
+            "sql_query": "SELECT * FROM latest_metrics",
+            "reasoning": "Updated summary provides current insights for decision making",
+            "formatting": {
+                "font_size": 12,
+                "font_weight": "bold"
+            }
+        }
+    }
+)
+print(f"Section added: {result['section_id']}")
+```
+
+#### Adding Alert Components to Active Reports
+```python
+# Add alert components to an active report
+result = await orchestrator.execute_workflow_step(
+    user_id=UUID("user-id-here"),
+    workflow_id=UUID("workflow-id-here"),
+    step_name="add_report_alert_thread_component",
+    step_data={
+        "alert_type": "threshold",
+        "severity": "medium",
+        "question": "Alert when report data shows anomalies",
+        "description": "Monitor report metrics and alert on unexpected patterns",
+        "condition_config": {
+            "metric": "error_rate",
+            "operator": "greater_than",
+            "threshold": 0.05
+        },
+        "notification_channels": ["email", "slack"]
+    }
+)
+print(f"Alert component added: {result['alert_id']}")
+```
+
+### State-Aware Operations
+
+All operations now intelligently handle different workflow states:
+
+- **DRAFT/CONFIGURING**: Normal workflow progression
+- **ACTIVE/PUBLISHED**: Operations preserve current state while allowing enhancements
+- **Other States**: Operations follow appropriate state transitions
+
+### Workflow State Matrix
+
+| Operation | DRAFT | CONFIGURING | CONFIGURED | SHARED | SCHEDULED | ACTIVE | PUBLISHED |
+|-----------|-------|-------------|------------|--------|-----------|--------|-----------|
+| **Edit Report** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Add Section** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Add Alert** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Share** | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Schedule** | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Publish** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
 
 The new editing steps provide a complete solution for managing report content and sections throughout the workflow lifecycle with proper version control and draft management.

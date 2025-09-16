@@ -1,0 +1,17 @@
+"Alert me daily if sales revenue drops below $10,000 via slack to channel #sales-alerts",
+       
+"query": "How many new vulnerabilities were detected each week for Google Chrome?",
+  "project_id": "cve_data", — For each request , sql, reasoning and data
+
+
+Alert creation: 
+
+
+n8n : -->  Start, run the query, check the data for the alert and send alert to slack #ChannelName
+
+-- assume that all this through APIs.
+
+
+   "Send weekly slack notification to sales team when conversion rate is less than 5%",
+        "Create an anomaly detection alert for user engagement metrics",
+        "Monitor customer churn rate and alert immediately if it exceeds 15%"

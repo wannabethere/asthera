@@ -67,3 +67,13 @@ Questions:
 • Has overall compliance (`isCompliant`) improved since last year?
 • Do completion rates for new hires differ from veteran employees?
 • How has the mix of `ActivityType` (e.g., 'Technical' vs. 'Soft Skills') evolved?
+
+ML Questions:
+
+What are the training completion rate trends by division over the past year?
+
+How do training completion patterns vary seasonally across different divisions?
+
+Which employees have anomalous training completion behaviors that might need attention?
+
+Can we segment employees into groups based on their learning and performance characteristics?

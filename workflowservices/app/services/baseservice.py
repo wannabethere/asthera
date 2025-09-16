@@ -9,16 +9,12 @@ from app.core.settings import get_settings,Settings
 import json
 from enum import Enum
 import traceback
+from app.models.workflowmodels import SharingPermission
+from app.core.dependencies import get_chromadb_client
 
 
 settings = get_settings()
 
-class SharingPermission(Enum):
-    PRIVATE = "private"
-    USER = "user"
-    TEAM = "team"
-    WORKSPACE = "workspace"
-    DEFAULT = "default"
 
 class BaseService:
     """Base service class with common functionality for all services"""
@@ -29,7 +25,7 @@ class BaseService:
         #     chroma_db_impl="duckdb+parquet",
         #     persist_directory="./chroma_db"
         # ))
-        self.chroma_client = chromadb.PersistentClient(path=settings.CHROMA_STORE_PATH)
+        self.chroma_client = get_chromadb_client()
         
     # async def _check_user_permission(
     #     self, 

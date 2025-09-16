@@ -55,6 +55,9 @@ class Dashboard(Base):
     versions = relationship(
         "DashboardVersion", back_populates="dashboard", cascade="all, delete-orphan"
     )
+    workflows = relationship(
+        "DashboardWorkflow", back_populates="dashboard", cascade="all, delete-orphan"
+    )
 
     # Indexes
     __table_args__ = (

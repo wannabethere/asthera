@@ -21,6 +21,12 @@ from app.models.dbmodels import Base
 from app.models.user import User
 from app.models.thread import ThreadMessage
 
+class SharingPermission(Enum):
+    PRIVATE = "private"
+    USER = "user"
+    TEAM = "team"
+    WORKSPACE = "workspace"
+    DEFAULT = "default"
 # Workflow States
 class WorkflowState(str, Enum):
     DRAFT = "draft"
@@ -43,6 +49,7 @@ class IntegrationType(str, Enum):
     POWERBI = "powerbi"
     SLACK = "slack"
     TEAMS = "teams"
+    CORNERSTONE = "cornerstone"
     EMAIL = "email"
     WEBHOOK = "webhook"
     GOOGLE_SHEETS = "google_sheets"
@@ -116,7 +123,7 @@ class DashboardWorkflow(Base):
     user_id = Column(SQLUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     state = Column(SQLEnum(WorkflowState), nullable=False, default=WorkflowState.DRAFT)
     current_step = Column(Integer, default=0)
-    workflow_metadata = Column(JSON, default={})
+    workflow_metadata = Column(MutableDict.as_mutable(JSON), default={})
     error_message = Column(String, nullable=True)
     created_at = Column(DateTime, default=utc_now)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
@@ -128,7 +135,7 @@ class DashboardWorkflow(Base):
     schedule_config = relationship("ScheduleConfiguration", back_populates="workflow", uselist=False, cascade="all, delete-orphan")
     integrations = relationship("IntegrationConfig", back_populates="workflow", cascade="all, delete-orphan")
     workflow_versions = relationship("WorkflowVersion", back_populates="workflow", cascade="all, delete-orphan")
-
+    dashboard = relationship("Dashboard", back_populates="workflows", foreign_keys=[dashboard_id])
 class ThreadComponent(Base):
     __tablename__ = "thread_components"
 
@@ -420,6 +427,10 @@ class ShareConfigCreate(BaseModel):
     share_type: ShareType
     target_ids: List[str]  # Can be UUIDs or emails
     permissions: Dict[str, Any] = Field(default_factory=dict)
+
+class ShareReportCreate(BaseModel):
+    share_with: List[UUID]
+    permission_level: SharingPermission
 
 class ScheduleConfigCreate(BaseModel):
     schedule_type: ScheduleType

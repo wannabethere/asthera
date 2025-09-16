@@ -6,6 +6,9 @@ from app.storage.documents import DocumentChromaStore, CHROMA_STORE_PATH
 from langchain_openai import ChatOpenAI
 import chromadb
 from app.core.provider import DocumentStoreProvider
+import logging
+
+logger = logging.getLogger(__name__)
 
 def get_app_state(request: Request):
     """Get the FastAPI app state."""
@@ -29,17 +32,33 @@ def get_llm(temperature: float = 0.0, model: str = "gpt-4o-mini"):
 
 def get_chromadb_client():
     """Get ChromaDB client based on configuration settings."""
+    # Clear settings cache to ensure we get the latest settings
+    from app.settings import clear_settings_cache
+    clear_settings_cache()
+    
     settings = get_settings()
+    
+    logger.info(f"ChromaDB configuration: CHROMA_USE_LOCAL={settings.CHROMA_USE_LOCAL}, CHROMA_STORE_PATH={settings.CHROMA_STORE_PATH}")
     
     if settings.CHROMA_USE_LOCAL:
         # Use local persistent client
+        logger.info(f"Creating local PersistentClient with path: {settings.CHROMA_STORE_PATH}")
         return chromadb.PersistentClient(path=settings.CHROMA_STORE_PATH)
     else:
         # Use HTTP client (default)
-        return chromadb.HttpClient(
-            host=settings.CHROMA_HOST, 
-            port=settings.CHROMA_PORT
-        )
+        logger.info(f"Creating HTTP client with host: {settings.CHROMA_HOST}, port: {settings.CHROMA_PORT}")
+        try:
+            return chromadb.HttpClient(
+                host=settings.CHROMA_HOST, 
+                port=settings.CHROMA_PORT,
+                settings=chromadb.Settings(
+                    anonymized_telemetry=False,
+                    allow_reset=True
+                )
+            )
+        except Exception as e:
+            logger.error(f"Failed to create HTTP client: {e}")
+            raise
 
 
 # Helper function to create LLM instances from settings
@@ -126,7 +145,16 @@ def get_doc_store_provider():
         "project_meta": DocumentChromaStore(
             persistent_client=client,
             collection_name="project_meta"
+        ),
+        "document_insights": DocumentChromaStore(
+            persistent_client=client,
+            collection_name="document_insights"
+        ),
+        "document_planning": DocumentChromaStore(
+            persistent_client=client,   
+            collection_name="document_planning"
         )
+
     }
     # Create and return the document store provider
     return DocumentStoreProvider(
@@ -183,14 +211,12 @@ def get_dependencies():
         "doc_store_provider": doc_store_provider
     }
 
-"""
-def get_ask_service() -> AskService:
-    #Get AskService instance
-    return AskService()
+def get_document_service(app_state=Depends(get_app_state)):
+    """Get the document persistence service from app state."""
+    if not hasattr(app_state, 'document_persistence_service') or app_state.document_persistence_service is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Document persistence service is not available. Please ensure the service is properly configured."
+        )
+    return app_state.document_persistence_service
 
-def get_question_recommendation_service() -> QuestionRecommendation:
-    #Get QuestionRecommendation service instance
-    pipeline_container = PipelineContainer.get_instance()
-    return QuestionRecommendation(pipeline_container.get_all_pipelines())
-
-"""

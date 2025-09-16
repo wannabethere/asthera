@@ -24,9 +24,13 @@ def get_session_manager() -> SessionManager:
 
 def get_llm(temperature: float = 0.0, model: str = "gpt-4o-mini"):
     """Get LLM instance for AI operations"""
-    api_key = os.getenv("OPENAI_API_KEY")
+    from app.core.settings import get_settings
+    
+    settings = get_settings()
+    api_key = settings.OPENAI_API_KEY
+    
     if not api_key:
-        raise ValueError("OPENAI_API_KEY environment variable is required")
+        raise ValueError("OPENAI_API_KEY is not configured in settings")
     
     return ChatOpenAI(
         model=model,
@@ -141,9 +145,13 @@ def get_chromadb_client():
 
 def get_embeddings():
     """Get OpenAI embeddings instance"""
-    api_key = os.getenv("OPENAI_API_KEY")
+    from app.core.settings import get_settings
+    
+    settings = get_settings()
+    api_key = settings.OPENAI_API_KEY
+    
     if not api_key:
-        raise ValueError("OPENAI_API_KEY environment variable is required")
+        raise ValueError("OPENAI_API_KEY is not configured in settings")
     
     return OpenAIEmbeddings(
         model="text-embedding-3-small",

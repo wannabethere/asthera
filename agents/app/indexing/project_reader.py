@@ -32,8 +32,14 @@ class ProjectReader:
         self.base_path = Path(base_path)
         print(f"Initializing IndexingOrchestrator with base path: {base_path}")
 
-        self.persistent_client = persistent_client#chromadb.HttpClient(host='ec2-54-161-71-105.compute-1.amazonaws.com', port=8888)
-        self.embeddings = OpenAIEmbeddings(
+        # Use provided client or get one from dependencies
+        if persistent_client is not None:
+            self.persistent_client = persistent_client
+        else:
+            from app.core.dependencies import get_chromadb_client
+            self.persistent_client = get_chromadb_client()
+            
+        self.embeddings = embeddings or OpenAIEmbeddings(
             model="text-embedding-3-small",
             openai_api_key=settings.OPENAI_API_KEY
         )
@@ -449,15 +455,46 @@ class ProjectReader:
             return None
             
         logger.info(f"Processing instructions file: {instructions_path}")
-        with open(instructions_path, "r") as f:
-            instructions_data = json.load(f)
+        
+        try:
+            # Check if file is empty
+            if instructions_path.stat().st_size == 0:
+                logger.warning(f"Instructions file is empty: {instructions_path}")
+                return None
+            
+            with open(instructions_path, "r") as f:
+                content = f.read().strip()
+                
+            # Check if content is empty after stripping whitespace
+            if not content:
+                logger.warning(f"Instructions file contains only whitespace: {instructions_path}")
+                return None
+                
+            # Try to parse JSON
+            try:
+                instructions_data = json.loads(content)
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid JSON in instructions file {instructions_path}: {str(e)}")
+                logger.error(f"File content preview: {content[:200]}...")
+                return None
+            
+            # Validate that we have valid data
+            if not isinstance(instructions_data, list):
+                logger.warning(f"Instructions file does not contain a list: {instructions_path}")
+                return None
+                
+            # Check if list is empty
+            if len(instructions_data) == 0:
+                logger.warning(f"Instructions file contains empty list: {instructions_path}")
+                return None
+            
+            # Create Instruction objects
             instructions = [
                 Instruction(**instruction)
                 for instruction in instructions_data
             ]
-        logger.info(f"Loaded {len(instructions)} instructions")
+            logger.info(f"Loaded {len(instructions)} instructions")
             
-        try:
             # Process instructions using the Instructions component
             results = await self.components["instructions"].run(
                 instructions=instructions,
@@ -492,10 +529,44 @@ class ProjectReader:
             return None
             
         logger.info(f"Processing SQL pairs file: {sql_pairs_path}")
-        with open(sql_pairs_path, "r") as f:
-            sql_pairs_data = json.load(f)
-            
+        
         try:
+            # Check if file is empty
+            if sql_pairs_path.stat().st_size == 0:
+                logger.warning(f"SQL pairs file is empty: {sql_pairs_path}")
+                return None
+            
+            with open(sql_pairs_path, "r") as f:
+                content = f.read().strip()
+                
+            # Check if content is empty after stripping whitespace
+            if not content:
+                logger.warning(f"SQL pairs file contains only whitespace: {sql_pairs_path}")
+                return None
+                
+            # Try to parse JSON
+            try:
+                sql_pairs_data = json.loads(content)
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid JSON in SQL pairs file {sql_pairs_path}: {str(e)}")
+                logger.error(f"File content preview: {content[:200]}...")
+                return None
+            
+            # Validate that we have valid data
+            if not isinstance(sql_pairs_data, (list, dict)):
+                logger.warning(f"SQL pairs file does not contain valid data structure: {sql_pairs_path}")
+                return None
+                
+            # If it's a list, check if it's empty
+            if isinstance(sql_pairs_data, list) and len(sql_pairs_data) == 0:
+                logger.warning(f"SQL pairs file contains empty list: {sql_pairs_path}")
+                return None
+                
+            # If it's a dict, check if it has meaningful content
+            if isinstance(sql_pairs_data, dict) and not sql_pairs_data:
+                logger.warning(f"SQL pairs file contains empty dictionary: {sql_pairs_path}")
+                return None
+            
             # Process SQL pairs using the SqlPairs component
             results_str = await self.components["sql_pairs"].run(
                 sql_pairs=sql_pairs_data,
@@ -593,11 +664,10 @@ async def main():
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
 
-    persistent_client = chromadb.PersistentClient(
-        path=settings.CHROMA_STORE_PATH
-    )
+    # Use the dependency injection pattern for consistency
+    from app.core.dependencies import get_chromadb_client
+    persistent_client = get_chromadb_client()
 
-    #persistent_client = chromadb.HttpClient(host='ec2-54-161-71-105.compute-1.amazonaws.com', port=8888)
     # Set up base path
     base_path = Path("/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/sql_meta")
     
@@ -605,7 +675,7 @@ async def main():
     reader = ProjectReader(base_path, persistent_client)
     
     # Test projects
-    test_projects = ["cve_data"]
+    test_projects = ["cornerstone_talent" ] #, "cornerstone_talent"]
     
     for project in test_projects:
         try:
@@ -785,9 +855,9 @@ async def test_delete_project():
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
 
-    persistent_client = chromadb.PersistentClient(
-        path=settings.CHROMA_STORE_PATH
-    )
+    # Use the dependency injection pattern for consistency
+    from app.core.dependencies import get_chromadb_client
+    persistent_client = get_chromadb_client()
 
     # Set up base path
     base_path = Path("/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/sql_meta")

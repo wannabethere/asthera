@@ -9,9 +9,11 @@ from app.services.sql.instructions import InstructionsService
 from app.services.sql.sql_helper_services import SQLHelperService
 from app.services.writers.dashboard_service import DashboardService
 from app.services.writers.alert_service import AlertService, AlertCompatibilityService
+from app.services.docs.document_persistence_service import DocumentPersistenceService, create_document_persistence_service
 from app.agents.pipelines.pipeline_container import PipelineContainer
 from app.indexing.project_reader import ProjectReader
 from app.indexing.alert_knowledge_helper import initialize_alert_knowledge_helper
+from app.storage.sessionmanager import SessionManager
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +120,24 @@ class SQLServiceContainer:
             logger.warning(f"Failed to initialize ProjectReader and alert knowledge helper: {e}")
             # Continue without these services
         
+        # Initialize document persistence service
+        try:
+            document_persistence_service = self.create_document_persistence_service(session_manager)
+            if session_manager:
+                document_persistence_service.session_manager = session_manager
+            if doc_store_provider:
+                document_persistence_service.doc_store_provider = doc_store_provider
+            self.register_service("document_persistence_service", document_persistence_service)
+            
+            # Store in app state for dependency injection
+            app_state.document_persistence_service = document_persistence_service
+            
+            logger.info("Document persistence service initialized successfully")
+        except Exception as e:
+            logger.warning(f"Failed to initialize document persistence service: {e}")
+            # Continue without document persistence service
+            app_state.document_persistence_service = None
+
         # Initialize alert service (optional)
         try:
             alert_service = self.create_alert_service()
@@ -224,6 +244,17 @@ class SQLServiceContainer:
         
         return AlertCompatibilityService(alert_service)
     
+    def create_document_persistence_service(self, session_manager: SessionManager):
+        """Factory method to create a document persistence service instance.
+        
+        Args:
+            session_manager: SessionManager instance for database operations
+        
+        Returns:
+            DocumentPersistenceService instance
+        """
+        return create_document_persistence_service(session_manager)
+
     def create_project_reader(self):
         """Create a ProjectReader instance for alert knowledge base.
         
@@ -272,6 +303,14 @@ class SQLServiceContainer:
             AlertCompatibilityService instance
         """
         return self.get_service("alert_compatibility_service")
+    
+    def get_document_persistence_service(self):
+        """Get the document persistence service instance.
+        
+        Returns:
+            DocumentPersistenceService instance
+        """
+        return self.get_service("document_persistence_service")
     
     @classmethod
     def get_instance(cls) -> 'SQLServiceContainer':

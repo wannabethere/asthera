@@ -2692,10 +2692,48 @@ Output: {{
         "window": 7,
         "min_periods": 1,
         "output_suffix": "_rolling",
-        "function": "(MetricsPipe.from_dataframe(df) | Variance(variable=\\"Transactional value\\") | to_df())"
+        "function": "variance"
     }},
     "pipeline_type": "MovingAggrPipe"
 }}
+
+Example 4:
+Input: "Calculate 5-day rolling mean by group"
+Output: {{
+    "function_name": "moving_apply_by_group",
+    "parameter_mapping": {{
+        "columns": "Transactional value",
+        "group_column": "Region, Project",
+        "time_column": "Date",
+        "window": 5,
+        "min_periods": 1,
+        "output_suffix": "_rolling_mean",
+        "function": "mean"
+    }},
+    "pipeline_type": "MovingAggrPipe"
+}}
+
+Example 5:
+Input: "Apply moving standard deviation by group"
+Output: {{
+    "function_name": "moving_apply_by_group",
+    "parameter_mapping": {{
+        "columns": "Transactional value",
+        "group_column": "Region, Project",
+        "time_column": "Date",
+        "window": 7,
+        "min_periods": 1,
+        "output_suffix": "_rolling_std",
+        "function": "std"
+    }},
+    "pipeline_type": "MovingAggrPipe"
+}}
+
+EMBEDDED FUNCTION RULES:
+- For moving_apply_by_group, the "function" parameter should be a simple function name from group aggregation functions
+- Common embedded functions: variance, mean, std, sum, count, min, max, median
+- Do NOT use complex pipeline expressions for the function parameter
+- The function parameter should be just the function name (e.g., "variance", not "Variance()" or complex expressions)
 
 Now parse the given step description and return the JSON result.
 """
@@ -3065,6 +3103,57 @@ Now parse the given step description and return the JSON result.
             logger.warning(f"Error finding suitable grouping function: {str(e)}, using GroupBy as fallback")
             return "GroupBy"
 
+    def _generate_basic_parameter_mapping(self, step_title: str, function_name: str) -> Dict[str, Any]:
+        """
+        Generate basic parameter mapping based on step title and function name
+        
+        Args:
+            step_title: Title of the step
+            function_name: Name of the function
+            
+        Returns:
+            Basic parameter mapping dictionary
+        """
+        # Try to create basic parameters based on step title and function name
+        if any(keyword in step_title.lower() for keyword in ['mean', 'average']):
+            return {"variable": "value"}  # Basic parameter
+        elif any(keyword in step_title.lower() for keyword in ['group', 'aggregate']):
+            return {"by": ["column"]}  # Basic parameter
+        elif any(keyword in step_title.lower() for keyword in ['time', 'lag', 'lead', 'rolling']):
+            return {"columns": "value", "method": "rolling", "window": 5}  # Basic time series parameter
+        elif any(keyword in step_title.lower() for keyword in ['anomaly', 'outlier', 'anomalies']) or function_name.startswith('detect_'):
+            # Anomaly detection functions need specific parameters
+            if function_name == 'detect_contextual_anomalies':
+                return {
+                    "columns": "Transactional value",
+                    "time_column": "Date",
+                    "method": "residual",
+                    "model_type": "ewm",
+                    "threshold": 3.0,
+                    "window": 30
+                }
+            elif function_name == 'detect_statistical_outliers':
+                return {
+                    "columns": "Transactional value",
+                    "method": "zscore",
+                    "threshold": 3.0
+                }
+            elif function_name == 'detect_collective_anomalies':
+                return {
+                    "columns": ["Transactional value"],
+                    "time_column": "Date",
+                    "method": "isolation_forest",
+                    "contamination": 0.1
+                }
+            else:
+                return {
+                    "columns": "Transactional value",
+                    "time_column": "Date",
+                    "threshold": 3.0
+                }
+        else:
+            return {}  # Empty parameters
+
     def _parse_string_parameter_mapping(self, param_str: str, function_name: str, step_title: str) -> Dict[str, Any]:
         """
         Parse string parameter mappings into proper dictionaries
@@ -3177,11 +3266,14 @@ Now parse the given step description and return the JSON result.
                 function_name = "Mean"  # Default fallback
                 logger.info(f"Step {i+1} - No function name found, using default: {function_name}")
             
-            # Parse parameters using LLM if needed
-            if isinstance(parameter_mapping, str) or not parameter_mapping:
-                # Always use LLM for parsing - it's more reliable than hardcoded logic
+            # Use the rich metadata from reasoning plan instead of re-parsing
+            if isinstance(parameter_mapping, dict) and parameter_mapping:
+                # Use the parameter mapping directly from reasoning plan
+                logger.info(f"Step {i+1} - Using parameter mapping from reasoning plan: {parameter_mapping}")
+            elif isinstance(parameter_mapping, str) and parameter_mapping:
+                # Try to parse string parameter mapping using LLM
                 parsed_result = await self._parse_reasoning_plan_step_with_llm(
-                    str(parameter_mapping) if parameter_mapping else "", 
+                    parameter_mapping, 
                     step_title, 
                     i+1, 
                     function_name
@@ -3193,37 +3285,48 @@ Now parse the given step description and return the JSON result.
                     parameter_mapping = parsed_result.get('parameter_mapping', {})
                     logger.info(f"LLM parsed step {i+1}: function='{function_name}', params={parameter_mapping}")
                 else:
-                    # If LLM parsing fails, try one more time with more context
-                    logger.warning(f"LLM parsing failed for step {i+1}, retrying with enhanced context")
-                    enhanced_context = f"Step: {step_title}. Description: {parameter_mapping}. Function: {function_name}"
-                    retry_result = await self._parse_reasoning_plan_step_with_llm(
-                        enhanced_context, 
-                        step_title, 
-                        i+1, 
-                        function_name
-                    )
-                    
-                    if retry_result:
-                        function_name = retry_result.get('function_name', function_name)
-                        parameter_mapping = retry_result.get('parameter_mapping', {})
-                        logger.info(f"LLM retry successful for step {i+1}: function='{function_name}', params={parameter_mapping}")
+                    # If LLM parsing fails, use column_mapping as fallback
+                    column_mapping = step.get('column_mapping', {})
+                    if column_mapping and isinstance(column_mapping, dict):
+                        parameter_mapping = column_mapping
+                        logger.info(f"Step {i+1} - Using column_mapping as parameter mapping: {parameter_mapping}")
                     else:
-                        # If LLM still fails, don't skip the step - use basic parameter mapping
-                        logger.warning(f"LLM parsing failed twice for step {i+1}, using basic parameter mapping")
-                        # Try to create basic parameters based on step title
-                        if any(keyword in step_title.lower() for keyword in ['mean', 'average']):
-                            parameter_mapping = {"variable": "value"}  # Basic parameter
-                        elif any(keyword in step_title.lower() for keyword in ['group', 'aggregate']):
-                            parameter_mapping = {"by": ["column"]}  # Basic parameter
-                        elif any(keyword in step_title.lower() for keyword in ['time', 'lag', 'lead', 'rolling']):
-                            parameter_mapping = {"columns": "value", "method": "rolling", "window": 5}  # Basic time series parameter
-                        else:
-                            parameter_mapping = {}  # Empty parameters
+                        # Last resort: use basic parameter mapping
+                        parameter_mapping = self._generate_basic_parameter_mapping(step_title, function_name)
                         logger.info(f"Step {i+1} - Using basic parameter mapping: {parameter_mapping}")
+            else:
+                # No parameter mapping provided, use column_mapping or generate basic one
+                column_mapping = step.get('column_mapping', {})
+                if column_mapping and isinstance(column_mapping, dict):
+                    parameter_mapping = column_mapping
+                    logger.info(f"Step {i+1} - Using column_mapping as parameter mapping: {parameter_mapping}")
+                else:
+                    parameter_mapping = self._generate_basic_parameter_mapping(step_title, function_name)
+                    logger.info(f"Step {i+1} - Using basic parameter mapping: {parameter_mapping}")
             
-            # Determine pipeline type for this function
-            pipeline_type = await self._detect_pipeline_type(function_name, step_title, classification)
-            logger.info(f"Step {i+1} - Detected pipeline type: {pipeline_type}")
+            # Determine pipeline type for this function - use metadata first, then detect
+            pipeline_type_str = step.get('pipeline_type')
+            if pipeline_type_str and pipeline_type_str != "unknown_category":
+                # Use pipeline type from reasoning plan metadata
+                pipeline_type = self._map_pipe_name_to_pipeline_type(pipeline_type_str)
+                if pipeline_type:
+                    logger.info(f"Step {i+1} - Using pipeline type from reasoning plan: {pipeline_type}")
+                else:
+                    # Fallback to detection if mapping fails
+                    pipeline_type = await self._detect_pipeline_type(function_name, step_title, classification)
+                    logger.info(f"Step {i+1} - Detected pipeline type (fallback): {pipeline_type}")
+            else:
+                # No pipeline type in metadata or it's unknown_category, detect it
+                pipeline_type = await self._detect_pipeline_type(function_name, step_title, classification)
+                logger.info(f"Step {i+1} - Detected pipeline type: {pipeline_type}")
+            
+            # Validate step intent consistency
+            step_intent_validation = self._validate_single_step_intent(step, classification, i+1)
+            if not step_intent_validation["valid"]:
+                logger.warning(f"Step {i+1} intent validation failed: {step_intent_validation['issues']}")
+                # Try to fix the step intent
+                step = self._fix_step_intent(step, classification, step_intent_validation)
+                logger.info(f"Step {i+1} - Applied intent fixes: {step.get('step_title', 'Unknown')}")
             
             # Check if function is valid according to function definition store
             function_validation = function_validations.get(function_name, {"valid": False, "definition": None})
@@ -3246,22 +3349,21 @@ Now parse the given step description and return the JSON result.
             embedded_function_parameter = step.get('embedded_function_parameter', False)
             if embedded_function_details and embedded_function_parameter:
                 logger.info(f"Step {i+1} - Processing embedded function")
-                # Generate embedded function code
-                embedded_code = await self._generate_embedded_function_code(
-                    embedded_function_details, 
-                    current_dataframe,
-                    function_name,
-                    parameter_mapping
-                )
-                # Add embedded function as a separate pipeline
+                # Add embedded function as a separate pipeline group
                 pipeline_groups[f"embedded_{step_count}"] = {
                     "pipeline_type": pipeline_type,
-                    "steps": [{"function": function_name, "params": parameter_mapping, "title": step_title, "step_num": i+1}],
+                    "steps": [{
+                        "function": function_name, 
+                        "params": parameter_mapping, 
+                        "title": step_title, 
+                        "step_num": i+1,
+                        "embedded_function_details": embedded_function_details
+                    }],
                     "dataframe": current_dataframe
                 }
                 current_dataframe = "result"  # Update for next step
                 step_count += 1
-                logger.info(f"Step {i+1} - Added embedded function code, step_count: {step_count}")
+                logger.info(f"Step {i+1} - Added embedded function to pipeline group, step_count: {step_count}")
                 continue
             
             # Format parameters using the parameter mapping
@@ -3321,9 +3423,14 @@ Now parse the given step description and return the JSON result.
                 pipeline_type = group_info["pipeline_type"]
                 dataframe = current_dataframe
                 
-                # Generate embedded function code
+                # Generate embedded function code with enhanced context
+                embedded_details = step.get("embedded_function_details", {})
+                # Add context information to embedded details
+                embedded_details["context"] = step.get("title", "embedded function step")
+                embedded_details["step_title"] = step.get("title", "embedded function step")
+                
                 embedded_code = await self._generate_embedded_function_code(
-                    step.get("embedded_function_details", {}), 
+                    embedded_details, 
                     dataframe,
                     step["function"],
                     step["params"]
@@ -3437,12 +3544,93 @@ result = (
         
         return formatted_params
     
+    async def _detect_embedded_function_from_context(self, context: str, step_title: str) -> Optional[str]:
+        """
+        Detect embedded function from context and step title using LLM
+        
+        Args:
+            context: Analysis context
+            step_title: Step title
+            
+        Returns:
+            Detected embedded function name or None
+        """
+        try:
+            from langchain.prompts import PromptTemplate
+            
+            # Available group aggregation functions
+            available_embedded_functions = [
+                "variance", "mean", "std", "sum", "count", "min", "max", "median",
+                "first", "last", "nunique", "quantile", "skew", "kurtosis"
+            ]
+            
+            detection_prompt = PromptTemplate(
+                input_variables=["context", "step_title", "available_functions"],
+                template="""
+You are an expert at detecting embedded functions for moving window operations.
+
+CONTEXT: {context}
+STEP TITLE: {step_title}
+AVAILABLE EMBEDDED FUNCTIONS: {available_functions}
+
+TASK: From the context and step title, determine which group aggregation function should be used as an embedded function for moving_apply_by_group.
+
+RULES:
+1. Look for keywords that indicate specific statistical operations
+2. Common patterns:
+   - "variance" or "variability" → variance
+   - "mean" or "average" → mean
+   - "standard deviation" or "std" → std
+   - "sum" or "total" → sum
+   - "count" or "number" → count
+   - "minimum" or "min" → min
+   - "maximum" or "max" → max
+   - "median" → median
+
+3. If no specific function is mentioned, default to "mean" for general aggregation
+
+4. Return ONLY the function name, nothing else.
+
+EXAMPLES:
+- "5-day rolling variance" → variance
+- "Calculate rolling mean" → mean
+- "Moving average" → mean
+- "Rolling standard deviation" → std
+- "Rolling sum" → sum
+- "Rolling count" → count
+
+Return the function name:
+"""
+            )
+            
+            detection_chain = detection_prompt | self.llm | StrOutputParser()
+            
+            result = await detection_chain.ainvoke({
+                "context": context,
+                "step_title": step_title,
+                "available_functions": ", ".join(available_embedded_functions)
+            })
+            
+            # Clean and validate the result
+            detected_function = result.strip().lower()
+            
+            if detected_function in available_embedded_functions:
+                logger.info(f"Detected embedded function: {detected_function}")
+                return detected_function
+            else:
+                logger.warning(f"Detected function '{detected_function}' not in available functions, using 'mean' as fallback")
+                return "mean"
+                
+        except Exception as e:
+            logger.error(f"Error detecting embedded function: {str(e)}")
+            return "mean"  # Safe fallback
+    
     async def _generate_embedded_function_code(self, embedded_details: Dict[str, Any], 
                                              current_dataframe: str, 
                                              parent_function: str,
                                              parent_params: Dict[str, Any]) -> str:
         """
-        Generate code for embedded functions (like moving_apply_by_group with embedded Variance)
+        Generate code for embedded functions (like moving_apply_by_group with embedded group aggregation functions)
         
         Args:
             embedded_details: Details about the embedded function
@@ -3454,34 +3642,55 @@ result = (
             Generated code string
         """
         embedded_function = embedded_details.get('embedded_function', '')
-        embedded_pipe = embedded_details.get('embedded_pipe', 'MetricsPipe')
         embedded_parameters = embedded_details.get('embedded_parameters', {})
         
-        # Format embedded function parameters
-        embedded_param_str = ""
-        if embedded_parameters:
-            embedded_params = []
-            for key, value in embedded_parameters.items():
-                if isinstance(value, str):
-                    embedded_params.append(f"{key}='{value}'")
-                else:
-                    embedded_params.append(f"{key}={value}")
-            embedded_param_str = ", ".join(embedded_params)
+        if not embedded_function:
+            logger.warning("No embedded function specified in embedded_details, attempting to detect from context")
+            # Try to detect from context using LLM
+            try:
+                # Get context from the step or use a default
+                context = embedded_details.get('context', 'moving window operation')
+                step_title = embedded_details.get('step_title', 'embedded function step')
+                embedded_function = await self._detect_embedded_function_from_context(context, step_title)
+                logger.info(f"Detected embedded function from context: {embedded_function}")
+            except Exception as e:
+                logger.error(f"Error detecting embedded function from context: {str(e)}")
+                embedded_function = "mean"  # Safe fallback
+                logger.info(f"Using fallback embedded function: {embedded_function}")
         
-        # Generate the embedded function expression
-        if embedded_param_str:
-            embedded_expr = f"({embedded_pipe}.from_dataframe(...) | {embedded_function}({embedded_param_str}) | to_df())"
-        else:
-            embedded_expr = f"({embedded_pipe}.from_dataframe(...) | {embedded_function}() | to_df())"
+        if not embedded_function:
+            logger.warning("Still no embedded function after detection, using fallback")
+            return self._generate_fallback_code(PipelineType.METRICS, parent_function, parent_params, current_dataframe)
+        
+        # Validate that the embedded function exists
+        valid_embedded_functions = [
+            "variance", "mean", "std", "sum", "count", "min", "max", "median",
+            "first", "last", "nunique", "quantile", "skew", "kurtosis"
+        ]
+        
+        if embedded_function not in valid_embedded_functions:
+            logger.warning(f"Embedded function '{embedded_function}' not in valid functions, using 'mean' as fallback")
+            embedded_function = "mean"
+        
+        # Import the group aggregation function
+        import_statement = f"from insightsagents.app.tools.mltools.group_aggregation_functions import {embedded_function}"
         
         # Format parent function parameters
         parent_formatted_params = self._format_parameters_for_function(parent_params, parent_function)
         
-        # Replace the function parameter with the embedded expression
-        for i, param in enumerate(parent_formatted_params):
-            if param.startswith("function="):
-                parent_formatted_params[i] = f"function={embedded_expr}"
-                break
+        # Add the function parameter with the embedded function name
+        # Check if function parameter already exists
+        function_param_exists = any(param.startswith("function=") for param in parent_formatted_params)
+        
+        if not function_param_exists:
+            # Add the function parameter
+            parent_formatted_params.append(f"function={embedded_function}")
+        else:
+            # Replace existing function parameter
+            for i, param in enumerate(parent_formatted_params):
+                if param.startswith("function="):
+                    parent_formatted_params[i] = f"function={embedded_function}"
+                    break
         
         parent_param_str = ", ".join(parent_formatted_params)
         
@@ -3489,12 +3698,16 @@ result = (
         pipeline_type = await self._detect_pipeline_type(parent_function, "embedded_function")
         
         if parent_param_str:
-            return f"""result = (
+            return f"""{import_statement}
+
+result = (
     {pipeline_type.value}.from_dataframe({current_dataframe})
     | {parent_function}({parent_param_str})
     ).to_df()"""
         else:
-            return f"""result = (
+            return f"""{import_statement}
+
+result = (
     {pipeline_type.value}.from_dataframe({current_dataframe})
     | {parent_function}()
     ).to_df()"""
@@ -4053,7 +4266,9 @@ result = (
             "quality_score": 0.0,
             "issues": [],
             "suggestions": [],
-            "plan_adjustments": []
+            "plan_adjustments": [],
+            "intent_consistency": True,
+            "step_intent_issues": []
         }
         
         if not reasoning_plan or not isinstance(reasoning_plan, list):
@@ -4135,6 +4350,15 @@ result = (
                         if isinstance(value, str) and len(value) == 0:
                             evaluation["issues"].append(f"Step {i+1} has empty parameter value for {key}")
         
+        # Validate step intents and consistency
+        intent_validation = self._validate_step_intents(reasoning_plan, query_state)
+        evaluation["intent_consistency"] = intent_validation["consistent"]
+        evaluation["step_intent_issues"] = intent_validation["issues"]
+        
+        # Add intent issues to main issues list
+        if intent_validation["issues"]:
+            evaluation["issues"].extend(intent_validation["issues"])
+        
         # Calculate quality score based on issues
         total_checks = len(reasoning_plan) * 3 + 3  # Basic checks per step + overall checks
         issue_count = len(evaluation["issues"])
@@ -4146,6 +4370,302 @@ result = (
             evaluation["suggestions"].append("Ensure all functions are from the same pipeline type or follow valid multi-pipeline patterns")
         
         return evaluation
+    
+    def _validate_step_intents(self, reasoning_plan: List[Dict[str, Any]], 
+                             query_state: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validate step intents and check consistency with overall analysis intent
+        
+        Args:
+            reasoning_plan: List of reasoning plan steps
+            query_state: Current query state with classification info
+            
+        Returns:
+            Dictionary with intent validation results
+        """
+        validation = {
+            "consistent": True,
+            "issues": [],
+            "suggestions": []
+        }
+        
+        if not reasoning_plan or not isinstance(reasoning_plan, list):
+            return validation
+        
+        # Get overall analysis intent from query state
+        classification = query_state.get("classification")
+        overall_intent = None
+        if classification:
+            if hasattr(classification, 'intent_type'):
+                overall_intent = classification.intent_type
+            elif isinstance(classification, dict):
+                overall_intent = classification.get('intent_type')
+        
+        # Validate each step's intent
+        for i, step in enumerate(reasoning_plan):
+            if not isinstance(step, dict):
+                continue
+            
+            step_number = i + 1
+            step_title = step.get('step_title', f'Step {step_number}')
+            step_description = step.get('step_description', '')
+            function_name = step.get('function_name', '')
+            pipeline_type = step.get('pipeline_type', '')
+            function_category = step.get('function_category', '')
+            
+            # Check if step intent aligns with overall analysis intent
+            if overall_intent and self._is_intent_mismatch(overall_intent, step, step_title, step_description):
+                validation["issues"].append(
+                    f"Step {step_number} intent mismatch: '{step_title}' doesn't align with overall intent '{overall_intent}'"
+                )
+                validation["consistent"] = False
+            
+            # Check for missing intent indicators
+            if not step_title and not step_description:
+                validation["issues"].append(f"Step {step_number} missing clear intent indicators")
+            
+            # Check for conflicting pipeline types within the same step
+            if pipeline_type and function_category:
+                if self._is_pipeline_category_mismatch(pipeline_type, function_category):
+                    validation["issues"].append(
+                        f"Step {step_number} pipeline type '{pipeline_type}' conflicts with function category '{function_category}'"
+                    )
+                    validation["consistent"] = False
+            
+            # Check for embedded function intent consistency
+            embedded_function_parameter = step.get('embedded_function_parameter', False)
+            embedded_function_details = step.get('embedded_function_details', {})
+            if embedded_function_parameter and embedded_function_details:
+                embedded_function = embedded_function_details.get('embedded_function', '')
+                if embedded_function and not self._is_embedded_function_appropriate(function_name, embedded_function):
+                    validation["issues"].append(
+                        f"Step {step_number} embedded function '{embedded_function}' not appropriate for '{function_name}'"
+                    )
+                    validation["consistent"] = False
+        
+        # Check overall step sequence consistency
+        sequence_issues = self._validate_step_sequence(reasoning_plan, overall_intent)
+        if sequence_issues:
+            validation["issues"].extend(sequence_issues)
+            validation["consistent"] = False
+        
+        return validation
+    
+    def _is_intent_mismatch(self, overall_intent: str, step: Dict[str, Any], 
+                           step_title: str, step_description: str) -> bool:
+        """
+        Check if a step's intent mismatches with the overall analysis intent
+        """
+        # Define intent keywords for each analysis type
+        intent_keywords = {
+            "time_series_analysis": ["time", "series", "rolling", "window", "lag", "lead", "trend", "variance", "moving"],
+            "trend_analysis": ["trend", "growth", "forecast", "prediction", "rate", "change"],
+            "segmentation_analysis": ["segment", "group", "cluster", "category", "class"],
+            "cohort_analysis": ["cohort", "retention", "lifetime", "period", "cohort"],
+            "funnel_analysis": ["funnel", "conversion", "journey", "path", "step"],
+            "risk_analysis": ["risk", "var", "monte", "carlo", "volatility", "portfolio"],
+            "anomaly_detection": ["anomaly", "outlier", "detection", "unusual", "abnormal"],
+            "metrics_calculation": ["metric", "statistic", "mean", "sum", "count", "aggregate"],
+            "operations_analysis": ["operation", "test", "experiment", "ab", "confidence", "interval"]
+        }
+        
+        # Get keywords for the overall intent
+        expected_keywords = intent_keywords.get(overall_intent, [])
+        if not expected_keywords:
+            return False
+        
+        # Check if step content matches expected keywords
+        step_content = f"{step_title} {step_description}".lower()
+        has_matching_keywords = any(keyword in step_content for keyword in expected_keywords)
+        
+        # If no matching keywords found, it might be a mismatch
+        return not has_matching_keywords
+    
+    def _is_pipeline_category_mismatch(self, pipeline_type: str, function_category: str) -> bool:
+        """
+        Check if pipeline type and function category are compatible
+        """
+        # Define compatible mappings
+        compatible_mappings = {
+            "MetricsPipe": ["basic_metrics", "statistical_metrics", "aggregation"],
+            "TimeSeriesPipe": ["time_aggregation", "time_series", "rolling", "lag_lead"],
+            "CohortPipe": ["cohort_analysis", "retention", "lifetime_value"],
+            "FunnelPipe": ["funnel_analysis", "conversion", "user_journey"],
+            "TrendPipe": ["trend_analysis", "growth", "forecasting"],
+            "SegmentPipe": ["segmentation", "clustering", "grouping"],
+            "RiskPipe": ["risk_analysis", "var", "monte_carlo"],
+            "AnomalyPipe": ["anomaly_detection", "outlier", "detection"],
+            "OperationsPipe": ["operations_analysis", "ab_testing", "experiments"],
+            "MovingAggrPipe": ["moving_aggregation", "rolling", "time_series"]
+        }
+        
+        compatible_categories = compatible_mappings.get(pipeline_type, [])
+        return function_category not in compatible_categories
+    
+    def _is_embedded_function_appropriate(self, parent_function: str, embedded_function: str) -> bool:
+        """
+        Check if embedded function is appropriate for the parent function
+        """
+        # Define appropriate embedded functions for each parent function
+        appropriate_embeddings = {
+            "moving_apply_by_group": ["mean", "sum_values", "count_values", "max_value", "min_value", 
+                                    "std_dev", "variance", "median", "unique_count", "mode", 
+                                    "weighted_average", "geometric_mean", "harmonic_mean", 
+                                    "interquartile_range", "mad", "percent_change", "absolute_change"],
+            "GroupBy": ["mean", "sum_values", "count_values", "max_value", "min_value", 
+                       "std_dev", "variance", "median", "unique_count", "mode"],
+            "aggregate_by_time": ["mean", "sum_values", "count_values", "max_value", "min_value"]
+        }
+        
+        appropriate_functions = appropriate_embeddings.get(parent_function, [])
+        return embedded_function in appropriate_functions
+    
+    def _validate_step_sequence(self, reasoning_plan: List[Dict[str, Any]], overall_intent: str) -> List[str]:
+        """
+        Validate the sequence of steps for logical flow
+        """
+        issues = []
+        
+        if not reasoning_plan or len(reasoning_plan) < 2:
+            return issues
+        
+        # Check for logical step ordering based on intent
+        if overall_intent == "time_series_analysis":
+            # For time series, data preparation should come before analysis
+            first_step = reasoning_plan[0]
+            if "preparation" not in first_step.get('step_title', '').lower():
+                issues.append("Time series analysis should start with data preparation step")
+        
+        elif overall_intent == "funnel_analysis":
+            # For funnel analysis, data selection should come before conversion analysis
+            has_data_selection = any("selection" in step.get('step_title', '').lower() 
+                                   for step in reasoning_plan[:2])
+            if not has_data_selection:
+                issues.append("Funnel analysis should include data selection step early in sequence")
+        
+        # Check for dependency issues
+        for i, step in enumerate(reasoning_plan):
+            step_dependencies = step.get('step_dependencies', [])
+            if step_dependencies:
+                for dep in step_dependencies:
+                    if dep > i + 1:  # Dependencies should reference previous steps
+                        issues.append(f"Step {i+1} has invalid dependency on future step {dep}")
+        
+        return issues
+    
+    def _validate_single_step_intent(self, step: Dict[str, Any], 
+                                   classification: Union[Dict[str, Any], AnalysisIntentResult], 
+                                   step_number: int) -> Dict[str, Any]:
+        """
+        Validate a single step's intent against the overall classification
+        """
+        validation = {
+            "valid": True,
+            "issues": [],
+            "suggestions": []
+        }
+        
+        if not step or not isinstance(step, dict):
+            validation["valid"] = False
+            validation["issues"].append("Step is not a valid dictionary")
+            return validation
+        
+        # Get overall intent
+        overall_intent = None
+        if classification:
+            if hasattr(classification, 'intent_type'):
+                overall_intent = classification.intent_type
+            elif isinstance(classification, dict):
+                overall_intent = classification.get('intent_type')
+        
+        if not overall_intent:
+            return validation
+        
+        step_title = step.get('step_title', f'Step {step_number}')
+        step_description = step.get('step_description', '')
+        function_name = step.get('function_name', '')
+        
+        # Check intent alignment
+        if self._is_intent_mismatch(overall_intent, step, step_title, step_description):
+            validation["valid"] = False
+            validation["issues"].append(f"Step intent doesn't align with overall intent '{overall_intent}'")
+            validation["suggestions"].append(f"Consider adjusting step title or description to include keywords related to '{overall_intent}'")
+        
+        # Check embedded function appropriateness
+        embedded_function_parameter = step.get('embedded_function_parameter', False)
+        embedded_function_details = step.get('embedded_function_details', {})
+        if embedded_function_parameter and embedded_function_details:
+            embedded_function = embedded_function_details.get('embedded_function', '')
+            if embedded_function and not self._is_embedded_function_appropriate(function_name, embedded_function):
+                validation["valid"] = False
+                validation["issues"].append(f"Embedded function '{embedded_function}' not appropriate for '{function_name}'")
+                validation["suggestions"].append(f"Use appropriate embedded functions for '{function_name}'")
+        
+        return validation
+    
+    def _fix_step_intent(self, step: Dict[str, Any], 
+                        classification: Union[Dict[str, Any], AnalysisIntentResult], 
+                        validation: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Fix step intent issues based on validation results
+        """
+        fixed_step = step.copy()
+        
+        # Get overall intent
+        overall_intent = None
+        if classification:
+            if hasattr(classification, 'intent_type'):
+                overall_intent = classification.intent_type
+            elif isinstance(classification, dict):
+                overall_intent = classification.get('intent_type')
+        
+        if not overall_intent:
+            return fixed_step
+        
+        # Fix intent mismatch by updating step title/description
+        if "intent doesn't align" in str(validation.get('issues', [])):
+            step_title = fixed_step.get('step_title', '')
+            step_description = fixed_step.get('step_description', '')
+            
+            # Add intent-specific keywords to step title
+            intent_keywords = {
+                "time_series_analysis": ["Time Series", "Rolling", "Window"],
+                "trend_analysis": ["Trend", "Growth", "Forecast"],
+                "segmentation_analysis": ["Segmentation", "Grouping", "Clustering"],
+                "cohort_analysis": ["Cohort", "Retention", "Lifetime"],
+                "funnel_analysis": ["Funnel", "Conversion", "Journey"],
+                "risk_analysis": ["Risk", "VaR", "Volatility"],
+                "anomaly_detection": ["Anomaly", "Outlier", "Detection"],
+                "metrics_calculation": ["Metrics", "Statistics", "Aggregation"],
+                "operations_analysis": ["Operations", "Testing", "Analysis"]
+            }
+            
+            keywords = intent_keywords.get(overall_intent, [])
+            if keywords and not any(keyword.lower() in step_title.lower() for keyword in keywords):
+                # Add appropriate keyword to step title
+                fixed_step['step_title'] = f"{keywords[0]} {step_title}"
+                logger.info(f"Fixed step title to include intent keyword: {fixed_step['step_title']}")
+        
+        # Fix embedded function issues
+        if "Embedded function" in str(validation.get('issues', [])):
+            embedded_function_details = fixed_step.get('embedded_function_details', {})
+            function_name = fixed_step.get('function_name', '')
+            
+            if embedded_function_details and function_name:
+                # Get appropriate embedded functions
+                appropriate_embeddings = {
+                    "moving_apply_by_group": ["mean", "sum_values", "count_values", "variance"],
+                    "GroupBy": ["mean", "sum_values", "count_values"],
+                    "aggregate_by_time": ["mean", "sum_values", "count_values"]
+                }
+                
+                appropriate_functions = appropriate_embeddings.get(function_name, ["mean"])
+                if appropriate_functions:
+                    embedded_function_details['embedded_function'] = appropriate_functions[0]
+                    fixed_step['embedded_function_details'] = embedded_function_details
+                    logger.info(f"Fixed embedded function to: {appropriate_functions[0]}")
+        
+        return fixed_step
     
     async def _adjust_reasoning_plan(self, reasoning_plan: List[Dict[str, Any]], 
                                    evaluation: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -4276,6 +4796,10 @@ result = (
             4. Fix parameter mapping issues
             5. Maintain the logical flow and intent of the original plan
             6. Use only functions that are available in the function library
+            7. **CRITICAL**: Ensure step intents align with the overall analysis intent
+            8. **CRITICAL**: Fix any step intent mismatches identified in the evaluation
+            9. **CRITICAL**: Ensure embedded functions are appropriate for their parent functions
+            10. **CRITICAL**: Maintain proper step sequence based on analysis type
             
             AVAILABLE FUNCTION TYPES (from the documents):
             - MetricsPipe functions: GroupBy, Mean, Sum, Count, StandardDeviation, Variance, Max, Min, Median, Percentile, Correlation
@@ -4786,7 +5310,34 @@ result = (
 
     async def _detect_pipeline_type(self, function_name: str, context: str, classification: Optional[Union[Dict[str, Any], AnalysisIntentResult]] = None) -> PipelineType:
         """Detect the appropriate pipeline type using FunctionRetrieval system and suggested functions"""
-        # First, try to get pipeline type from reasoning plan if available
+        # First, try to get pipeline type from retrieved functions (most reliable source)
+        if classification:
+            retrieved_functions = []
+            if hasattr(classification, 'retrieved_functions'):
+                retrieved_functions = getattr(classification, 'retrieved_functions', [])
+            else:
+                retrieved_functions = classification.get('retrieved_functions', [])
+            
+            # Look for the function in retrieved functions to get its pipeline type
+            for func in retrieved_functions:
+                if isinstance(func, dict) and func.get('function_name') == function_name:
+                    # Check for pipe_name in retrieved function (most reliable)
+                    pipe_name = func.get('pipe_name')
+                    if pipe_name:
+                        pipeline_type = self._map_pipe_name_to_pipeline_type(pipe_name)
+                        if pipeline_type:
+                            logger.info(f"Detected pipeline type {pipeline_type.value} for function '{function_name}' from retrieved functions pipe_name")
+                            return pipeline_type
+                    
+                    # Check for category in retrieved function
+                    category = func.get('category')
+                    if category and category != "unknown_category":
+                        pipeline_type = self._map_pipe_name_to_pipeline_type(category)
+                        if pipeline_type:
+                            logger.info(f"Detected pipeline type {pipeline_type.value} for function '{function_name}' from retrieved functions category")
+                            return pipeline_type
+        
+        # Second, try to get pipeline type from reasoning plan if available
         if classification:
             reasoning_plan = None
             if hasattr(classification, 'reasoning_plan'):
@@ -4798,9 +5349,9 @@ result = (
             if reasoning_plan and isinstance(reasoning_plan, list):
                 for step in reasoning_plan:
                     if isinstance(step, dict) and step.get('function_name') == function_name:
-                        # Check for pipeline_type in the step
+                        # Check for pipeline_type in the step (only if not unknown_category)
                         pipeline_type_str = step.get('pipeline_type')
-                        if pipeline_type_str:
+                        if pipeline_type_str and pipeline_type_str != "unknown_category":
                             pipeline_type = self._map_pipe_name_to_pipeline_type(pipeline_type_str)
                             if pipeline_type:
                                 logger.info(f"Detected pipeline type {pipeline_type.value} for function '{function_name}' from reasoning plan")
@@ -4808,7 +5359,7 @@ result = (
                         
                         # Check for function_category in the step
                         function_category = step.get('function_category')
-                        if function_category:
+                        if function_category and function_category != "unknown_operation":
                             pipeline_type = self._get_pipeline_type_from_function_category(function_category)
                             if pipeline_type:
                                 logger.info(f"Detected pipeline type {pipeline_type.value} for function '{function_name}' from function category: {function_category}")
@@ -4834,34 +5385,7 @@ result = (
                             return pipeline_type
                         break
         
-        # Third, try to get pipeline type from retrieved functions if available
-        if classification:
-            retrieved_functions = []
-            if hasattr(classification, 'retrieved_functions'):
-                retrieved_functions = getattr(classification, 'retrieved_functions', [])
-            else:
-                retrieved_functions = classification.get('retrieved_functions', [])
-            
-            # Look for the function in retrieved functions to get its pipeline type
-            for func in retrieved_functions:
-                if isinstance(func, dict) and func.get('function_name') == function_name:
-                    # Check for category in retrieved function
-                    category = func.get('category')
-                    if category:
-                        pipeline_type = self._map_pipe_name_to_pipeline_type(category)
-                        if pipeline_type:
-                            logger.info(f"Detected pipeline type {pipeline_type.value} for function '{function_name}' from retrieved functions category")
-                            return pipeline_type
-                    
-                    # Check for pipe_name in retrieved function
-                    pipe_name = func.get('pipe_name')
-                    if pipe_name:
-                        pipeline_type = self._map_pipe_name_to_pipeline_type(pipe_name)
-                        if pipeline_type:
-                            logger.info(f"Detected pipeline type {pipeline_type.value} for function '{function_name}' from retrieved functions pipe_name")
-                            return pipeline_type
-        
-        # Fourth, try to get pipeline type from FunctionRetrieval if available
+        # Third, try to get pipeline type from FunctionRetrieval if available
         if self.function_retrieval:
             try:
                 # Search for the function in the function library
@@ -4878,7 +5402,7 @@ result = (
             except Exception as e:
                 logger.warning(f"Error using FunctionRetrieval for function '{function_name}': {e}")
         
-        # Fifth, fallback to function definition store if FunctionRetrieval is not available
+        # Fourth, fallback to function definition store if FunctionRetrieval is not available
         pipeline_type = await self._get_pipeline_type_from_function_definition(function_name)
         if pipeline_type:
             return pipeline_type
@@ -5108,20 +5632,21 @@ result = (
             replacement2 = rf'{method_name}(\2)'
             code = re.sub(pattern2, replacement2, code)
         
-        # CRITICAL: Handle the case where we need to embed MetricsPipe functions as function parameters in TimeSeriesPipe
-        # Pattern: moving_apply_by_group(function=Variance, ...) -> function=(MetricsPipe.from_dataframe(...) | Variance(...) | to_df())
-        for func_param, method_name in function_conversions.items():
-            # Look for moving_apply_by_group with function parameter
-            pattern = rf'moving_apply_by_group\s*\(\s*function\s*=\s*{func_param}\s*,([^)]*)\)'
-            if re.search(pattern, code):
-                # Extract the dataframe name from the context
-                dataframe_match = re.search(r'(\w+Pipe\.from_dataframe\([^)]+\))', code)
-                if dataframe_match:
-                    dataframe_expr = dataframe_match.group(1)
-                    # Convert to embedded function format
-                    replacement = rf'function=({dataframe_expr} | {method_name}(variable=\'Transactional value\') | to_df()),\1'
-                    code = re.sub(pattern, replacement, code)
-                    logger.info(f"Converted function={func_param} to embedded pipeline expression")
+        # DISABLED: This conversion was causing complex pipeline expressions instead of simple function names
+        # The embedded function generation now handles this correctly by using simple function names
+        # Pattern: moving_apply_by_group(function=mean, ...) should stay as function=mean
+        # for func_param, method_name in function_conversions.items():
+        #     # Look for moving_apply_by_group with function parameter
+        #     pattern = rf'moving_apply_by_group\s*\(\s*function\s*=\s*{func_param}\s*,([^)]*)\)'
+        #     if re.search(pattern, code):
+        #         # Extract the dataframe name from the context
+        #         dataframe_match = re.search(r'(\w+Pipe\.from_dataframe\([^)]+\))', code)
+        #         if dataframe_match:
+        #             dataframe_expr = dataframe_match.group(1)
+        #             # Convert to embedded function format
+        #             replacement = rf'function=({dataframe_expr} | {method_name}(variable=\'Transactional value\') | to_df()),\1'
+        #             code = re.sub(pattern, replacement, code)
+        #             logger.info(f"Converted function={func_param} to embedded pipeline expression")
         
         # Fix other common function parameter issues
         # Pattern: method='rolling' -> method='rolling' (keep quotes for string values)

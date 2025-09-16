@@ -65,6 +65,159 @@ class N8nWorkflowCreator:
             "workflow_id": str(workflow.id)
         }
     
+    def create_report_workflow(
+        self,
+        report,
+        workflow,
+        components: List[ThreadComponent],
+        share_configs: List[ShareConfiguration],
+        schedule_config: Optional[ScheduleConfiguration],
+        integrations: List[IntegrationConfig]
+    ) -> Dict[str, Any]:
+        """
+        Create an n8n workflow JSON for an active report following the standardized pattern:
+        Trigger/Scheduled Trigger → Start → Call render/alert (API Call) → Check alert condition (API Call) → If yes → Send to integration
+        """
+        
+        # Generate workflow structure based on report components and configuration
+        n8n_workflow = self._generate_report_workflow_structure(
+            report, workflow, components, share_configs, schedule_config, integrations
+        )
+        
+        # Save to file
+        filename = f"report_{report.id}_{workflow.id}.json"
+        file_path = self.output_dir / filename
+        
+        with open(file_path, 'w') as f:
+            json.dump(n8n_workflow, f, indent=2, default=str)
+        
+        return {
+            "workflow_json": n8n_workflow,
+            "file_path": str(file_path),
+            "filename": filename,
+            "report_id": str(report.id),
+            "workflow_id": str(workflow.id)
+        }
+    
+    def _generate_report_workflow_structure(
+        self,
+        report,
+        workflow,
+        components: List[ThreadComponent],
+        share_configs: List[ShareConfiguration],
+        schedule_config: Optional[ScheduleConfiguration],
+        integrations: List[IntegrationConfig]
+    ) -> Dict[str, Any]:
+        """Generate the standardized n8n workflow structure for reports"""
+        
+        # Create base workflow
+        n8n_workflow = {
+            "name": f"Report Workflow - {report.name}",
+            "nodes": [],
+            "connections": {},
+            "active": True,
+            "settings": {
+                "executionOrder": "v1"
+            },
+            "versionId": "1.0.0",
+            "meta": {
+                "instanceId": str(workflow.id),
+                "templateCredsSetupCompleted": True
+            },
+            "tags": [
+                {"createdAt": datetime.utcnow().isoformat(), "name": "report"},
+                {"createdAt": datetime.utcnow().isoformat(), "name": report.name.lower().replace(" ", "_")}
+            ]
+        }
+        
+        # 1. Add trigger node (Manual or Scheduled)
+        trigger_node = self._create_trigger_node(schedule_config)
+        n8n_workflow["nodes"].append(trigger_node)
+        
+        # 2. Add Start node
+        start_node = self._create_report_start_node()
+        n8n_workflow["nodes"].append(start_node)
+        
+        # 3. Add Render/Alert API Call node
+        render_node = self._create_report_render_api_node(report, workflow, components)
+        n8n_workflow["nodes"].append(render_node)
+        
+        # 4. Add Alert Condition Check node (for alert components)
+        alert_check_node = self._create_alert_condition_node(components)
+        n8n_workflow["nodes"].append(alert_check_node)
+        
+        # 5. Add Integration nodes (conditionally executed)
+        integration_nodes = self._create_integration_nodes(integrations)
+        n8n_workflow["nodes"].extend(integration_nodes)
+        
+        # Create standardized connections
+        n8n_workflow["connections"] = self._create_standardized_connections(
+            trigger_node, start_node, render_node, alert_check_node, integration_nodes
+        )
+        
+        return n8n_workflow
+    
+    def _create_report_start_node(self) -> Dict[str, Any]:
+        """Create the Start node for report workflows"""
+        return {
+            "id": "start_node",
+            "name": "Start",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.3,
+            "position": [460, 300],
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "workflow_type",
+                            "value": "report"
+                        },
+                        {
+                            "name": "timestamp",
+                            "value": "={{ new Date().toISOString() }}"
+                        }
+                    ]
+                }
+            }
+        }
+    
+    def _create_report_render_api_node(self, report, workflow, components: List[ThreadComponent]) -> Dict[str, Any]:
+        """Create the Render/Alert API Call node for reports"""
+        return {
+            "id": "render_api_node",
+            "name": "Render Report/Alert",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [680, 300],
+            "parameters": {
+                "url": "{{ $env.BASE_URL }}/api/workflows/{{ $json.workflow_id }}/render-report",
+                "method": "POST",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpBasicAuth",
+                "sendBody": True,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "report_id",
+                            "value": "{{ $json.report_id }}"
+                        },
+                        {
+                            "name": "workflow_id",
+                            "value": "{{ $json.workflow_id }}"
+                        },
+                        {
+                            "name": "components",
+                            "value": "{{ JSON.stringify($json.components) }}"
+                        },
+                        {
+                            "name": "render_type",
+                            "value": "report"
+                        }
+                    ]
+                }
+            }
+        }
+    
     def _generate_workflow_structure(
         self,
         dashboard: Dashboard,
@@ -74,7 +227,9 @@ class N8nWorkflowCreator:
         schedule_config: Optional[ScheduleConfiguration],
         integrations: List[IntegrationConfig]
     ) -> Dict[str, Any]:
-        """Generate the n8n workflow structure"""
+        """Generate the standardized n8n workflow structure:
+        Trigger/Scheduled Trigger → Start → Call render/alert (API Call) → Check alert condition (API Call) → If yes → Send to integration
+        """
         
         # Create base workflow
         n8n_workflow = {
@@ -96,31 +251,149 @@ class N8nWorkflowCreator:
             ]
         }
         
-        # Add trigger node based on schedule
+        # 1. Add trigger node (Manual or Scheduled)
         trigger_node = self._create_trigger_node(schedule_config)
         n8n_workflow["nodes"].append(trigger_node)
         
-        # Add data processing nodes for each component
-        component_nodes = []
-        for i, component in enumerate(components):
-            component_node = self._create_component_node(component, i)
-            n8n_workflow["nodes"].append(component_node)
-            component_nodes.append(component_node)
+        # 2. Add Start node
+        start_node = self._create_start_node()
+        n8n_workflow["nodes"].append(start_node)
         
-        # Add sharing nodes
-        sharing_nodes = self._create_sharing_nodes(share_configs)
-        n8n_workflow["nodes"].extend(sharing_nodes)
+        # 3. Add Render/Alert API Call node
+        render_node = self._create_render_api_node(dashboard, workflow, components)
+        n8n_workflow["nodes"].append(render_node)
         
-        # Add integration nodes
+        # 4. Add Alert Condition Check node (for alert components)
+        alert_check_node = self._create_alert_condition_node(components)
+        n8n_workflow["nodes"].append(alert_check_node)
+        
+        # 5. Add Integration nodes (conditionally executed)
         integration_nodes = self._create_integration_nodes(integrations)
         n8n_workflow["nodes"].extend(integration_nodes)
         
-        # Create connections between nodes
-        n8n_workflow["connections"] = self._create_node_connections(
-            trigger_node, component_nodes, sharing_nodes, integration_nodes
+        # Create standardized connections
+        n8n_workflow["connections"] = self._create_standardized_connections(
+            trigger_node, start_node, render_node, alert_check_node, integration_nodes
         )
         
         return n8n_workflow
+    
+    def _create_start_node(self) -> Dict[str, Any]:
+        """Create the Start node that initializes the workflow"""
+        return {
+            "id": "start_node",
+            "name": "Start",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.3,
+            "position": [460, 300],
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "workflow_type",
+                            "value": "dashboard"
+                        },
+                        {
+                            "name": "timestamp",
+                            "value": "={{ new Date().toISOString() }}"
+                        }
+                    ]
+                }
+            }
+        }
+    
+    def _create_render_api_node(self, dashboard: Dashboard, workflow: DashboardWorkflow, components: List[ThreadComponent]) -> Dict[str, Any]:
+        """Create the Render/Alert API Call node"""
+        return {
+            "id": "render_api_node",
+            "name": "Render Dashboard/Alert",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [680, 300],
+            "parameters": {
+                "url": "{{ $env.BASE_URL }}/api/workflows/{{ $json.workflow_id }}/render",
+                "method": "POST",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpBasicAuth",
+                "sendBody": True,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "dashboard_id",
+                            "value": "{{ $json.dashboard_id }}"
+                        },
+                        {
+                            "name": "workflow_id",
+                            "value": "{{ $json.workflow_id }}"
+                        },
+                        {
+                            "name": "components",
+                            "value": "{{ JSON.stringify($json.components) }}"
+                        },
+                        {
+                            "name": "render_type",
+                            "value": "dashboard"
+                        }
+                    ]
+                }
+            }
+        }
+    
+    def _create_alert_condition_node(self, components: List[ThreadComponent]) -> Dict[str, Any]:
+        """Create the Alert Condition Check node"""
+        # Check if there are any alert components
+        has_alerts = any(comp.component_type == ComponentType.ALERT for comp in components)
+        
+        if not has_alerts:
+            # If no alerts, just pass through
+            return {
+                "id": "alert_check_node",
+                "name": "Alert Check (Pass Through)",
+                "type": "n8n-nodes-base.set",
+                "typeVersion": 3.3,
+                "position": [900, 300],
+                "parameters": {
+                    "values": {
+                        "string": [
+                            {
+                                "name": "alert_triggered",
+                                "value": "false"
+                            },
+                            {
+                                "name": "alert_conditions_met",
+                                "value": "false"
+                            }
+                        ]
+                    }
+                }
+            }
+        
+        return {
+            "id": "alert_check_node",
+            "name": "Check Alert Conditions",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [900, 300],
+            "parameters": {
+                "url": "{{ $env.BASE_URL }}/api/workflows/{{ $json.workflow_id }}/check-alerts",
+                "method": "POST",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpBasicAuth",
+                "sendBody": True,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "dashboard_data",
+                            "value": "={{ $json }}"
+                        },
+                        {
+                            "name": "alert_components",
+                            "value": "={{ JSON.stringify($json.alert_components) }}"
+                        }
+                    ]
+                }
+            }
+        }
     
     def _create_trigger_node(self, schedule_config: Optional[ScheduleConfiguration]) -> Dict[str, Any]:
         """Create the trigger node based on schedule configuration"""
@@ -385,8 +658,243 @@ class N8nWorkflowCreator:
                         "fileContent": "={{ JSON.stringify($json) }}"
                     }
                 })
+            elif integration.integration_type == IntegrationType.TEAMS:
+                nodes.append({
+                    "id": f"teams_{integration.id}",
+                    "name": "Microsoft Teams Integration",
+                    "type": "n8n-nodes-base.if",
+                    "typeVersion": 2,
+                    "position": [1120 + (i * 200), 400],
+                    "parameters": {
+                        "conditions": {
+                            "options": {
+                                "caseSensitive": True,
+                                "leftValue": "",
+                                "typeValidation": "strict"
+                            },
+                            "conditions": [
+                                {
+                                    "id": "condition1",
+                                    "leftValue": "={{ $json.alert_triggered }}",
+                                    "rightValue": "true",
+                                    "operator": {
+                                        "type": "string",
+                                        "operation": "equals"
+                                    }
+                                }
+                            ],
+                            "combinator": "and"
+                        },
+                        "options": {}
+                    }
+                })
+                
+                # Add Teams action node inside the IF condition
+                teams_action_node = {
+                    "id": f"teams_action_{integration.id}",
+                    "name": "Send to Teams",
+                    "type": "n8n-nodes-base.microsoftTeams",
+                    "typeVersion": 1,
+                    "position": [1320 + (i * 200), 300],
+                    "parameters": {
+                        "operation": "postMessage",
+                        "channelId": "={{ $json.mapping_config.channel_id }}",
+                        "message": "Dashboard Update: {{ $json.dashboard_name }}",
+                        "attachments": [
+                            {
+                                "contentType": "application/vnd.microsoft.card.adaptive",
+                                "content": {
+                                    "type": "AdaptiveCard",
+                                    "body": [
+                                        {
+                                            "type": "TextBlock",
+                                            "text": "{{ $json.dashboard_name }}",
+                                            "weight": "Bolder",
+                                            "size": "Medium"
+                                        },
+                                        {
+                                            "type": "TextBlock",
+                                            "text": "{{ $json.dashboard_description }}",
+                                            "wrap": True
+                                        }
+                                    ],
+                                    "actions": [
+                                        {
+                                            "type": "Action.OpenUrl",
+                                            "title": "View Dashboard",
+                                            "url": "={{ $json.dashboard_url }}"
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                }
+                nodes.append(teams_action_node)
+            elif integration.integration_type == IntegrationType.CORNERSTONE:
+                nodes.append({
+                    "id": f"cornerstone_{integration.id}",
+                    "name": "Cornerstone Integration Check",
+                    "type": "n8n-nodes-base.if",
+                    "typeVersion": 2,
+                    "position": [1120 + (i * 200), 500],
+                    "parameters": {
+                        "conditions": {
+                            "options": {
+                                "caseSensitive": True,
+                                "leftValue": "",
+                                "typeValidation": "strict"
+                            },
+                            "conditions": [
+                                {
+                                    "id": "condition1",
+                                    "leftValue": "={{ $json.alert_triggered }}",
+                                    "rightValue": "true",
+                                    "operator": {
+                                        "type": "string",
+                                        "operation": "equals"
+                                    }
+                                }
+                            ],
+                            "combinator": "and"
+                        },
+                        "options": {}
+                    }
+                })
+                
+                # Add Cornerstone action node inside the IF condition
+                cornerstone_action_node = {
+                    "id": f"cornerstone_action_{integration.id}",
+                    "name": "Publish to Cornerstone",
+                    "type": "n8n-nodes-base.httpRequest",
+                    "typeVersion": 4.1,
+                    "position": [1320 + (i * 200), 500],
+                    "parameters": {
+                        "url": "https://api.cornerstoneondemand.com/api/v1/courses/{{ $json.mapping_config.course_id }}/modules/{{ $json.mapping_config.module_id }}/content",
+                        "method": "POST",
+                        "authentication": "genericCredentialType",
+                        "genericAuthType": "httpBasicAuth",
+                        "sendBody": True,
+                        "bodyParameters": {
+                            "parameters": [
+                                {
+                                    "name": "content_type",
+                                    "value": "dashboard"
+                                },
+                                {
+                                    "name": "title",
+                                    "value": "={{ $json.dashboard_name }}"
+                                },
+                                {
+                                    "name": "description",
+                                    "value": "={{ $json.dashboard_description }}"
+                                },
+                                {
+                                    "name": "dashboard_data",
+                                    "value": "={{ JSON.stringify($json) }}"
+                                },
+                                {
+                                    "name": "dashboard_url",
+                                    "value": "={{ $json.dashboard_url }}"
+                                }
+                            ]
+                        }
+                    }
+                }
+                nodes.append(cornerstone_action_node)
         
         return nodes
+    
+    def _create_standardized_connections(
+        self,
+        trigger_node: Dict[str, Any],
+        start_node: Dict[str, Any],
+        render_node: Dict[str, Any],
+        alert_check_node: Dict[str, Any],
+        integration_nodes: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Create standardized connections following the pattern:
+        Trigger → Start → Render/Alert → Check Alert Condition → (If yes) → Send to Integration
+        """
+        
+        connections = {}
+        
+        # 1. Trigger → Start
+        connections[trigger_node["id"]] = {
+            "main": [
+                [
+                    {
+                        "node": start_node["id"],
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+        
+        # 2. Start → Render/Alert
+        connections[start_node["id"]] = {
+            "main": [
+                [
+                    {
+                        "node": render_node["id"],
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+        
+        # 3. Render/Alert → Alert Check
+        connections[render_node["id"]] = {
+            "main": [
+                [
+                    {
+                        "node": alert_check_node["id"],
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+        
+        # 4. Alert Check → Integrations (conditional)
+        if integration_nodes:
+            # Connect to all integration check nodes in parallel
+            integration_connections = []
+            for integration_node in integration_nodes:
+                # Only connect to the IF condition nodes, not the action nodes
+                if integration_node["type"] == "n8n-nodes-base.if":
+                    integration_connections.append({
+                        "node": integration_node["id"],
+                        "type": "main",
+                        "index": 0
+                    })
+            
+            connections[alert_check_node["id"]] = {
+                "main": [
+                    integration_connections
+                ]
+            }
+            
+            # Add connections from IF condition nodes to their action nodes
+            for i, integration_node in enumerate(integration_nodes):
+                if integration_node["type"] == "n8n-nodes-base.if":
+                    # Find the corresponding action node
+                    action_node_id = f"{integration_node['id'].replace('_', '_action_')}"
+                    connections[integration_node["id"]] = {
+                        "main": [
+                            [
+                                {
+                                    "node": action_node_id,
+                                    "type": "main",
+                                    "index": 0
+                                }
+                            ]
+                        ]
+                    }
+        
+        return connections
     
     def _create_node_connections(
         self,

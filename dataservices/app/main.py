@@ -14,6 +14,7 @@ from app.routers.relationships import router as relationships_router
 from app.routers.recommendations import router as recommendations_router
 from app.routers.datasource_router import router as datasource_router
 from app.routers.timecolumn_router import time_column_router # Add at Top
+from app.routers.document_router import router as document_router
 from app.utils.cache import set_cache_provider, InMemoryCacheProvider
 from contextlib import asynccontextmanager
 from app.core.dependencies import get_async_db_session
@@ -76,6 +77,7 @@ app.include_router(recommendations_router, prefix="/recommendations", tags=["Rec
 app.include_router(datasource_router, prefix="/datasources", tags=["Data Sources"])
 
 app.include_router(time_column_router, prefix="/time-columns", tags=["Time Columns"]) # Add at after line number 74 or 75
+app.include_router(document_router, prefix="/documents", tags=["Documents"]) # Document processing with persistence service
 
 @app.get("/")
 def health():

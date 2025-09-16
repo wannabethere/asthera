@@ -1,0 +1,69 @@
+{
+  "name": "Dashboard Workflow - Test Dashboard Workflow",
+  "nodes": [
+    {
+      "id": "trigger_manual",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "component_c2f83fec-6715-4913-b48d-7c1234eb3df7",
+      "name": "Question: Which training has the highest drop-off rate (i.e., the number of 'Registered' or 'Approved' statuses that did not result in 'Completed')",
+      "options": {}
+    },
+    {
+      "id": "component_6cdcebab-3a8b-4a18-8d9a-f13550976296",
+      "name": "Question: Are there specific users who have a high number of overdue trainings across different curriculums?",
+      "options": {}
+    }
+  ],
+  "connections": {
+    "trigger_manual": {
+      "main": [
+        [
+          {
+            "node": "component_c2f83fec-6715-4913-b48d-7c1234eb3df7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "component_c2f83fec-6715-4913-b48d-7c1234eb3df7": {
+      "main": [
+        [
+          {
+            "node": "component_6cdcebab-3a8b-4a18-8d9a-f13550976296",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1.0.0",
+  "meta": {
+    "instanceId": "d9518a2f-5fd4-4768-b577-26de98f193ed",
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [
+    {
+      "createdAt": "2025-09-09T21:33:40.557116",
+      "name": "dashboard"
+    },
+    {
+      "createdAt": "2025-09-09T21:33:40.557116",
+      "name": "test_dashboard_workflow"
+    }
+  ]
+}

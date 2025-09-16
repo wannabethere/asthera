@@ -1,0 +1,44 @@
+{
+  "project_id": "cornerstone_learning",
+  "description": "Cornerstone OnDemand learning management system data for training records, user activities, and compliance tracking",
+  "title": "Cornerstone Learning Management System",
+  "tables": [
+    {
+      "name": "Activity_csod",
+      "display_name": "Learning Activities",
+      "description": "Learning activities and courses catalog with compliance, certification, and training details",
+      "mdl_file": "mdl_training_activity.json",
+      "ddl_file": "ddl_training_activity.json"
+    },
+    {
+      "name": "Transcript_csod", 
+      "display_name": "Learning Transcripts",
+      "description": "Employee learning records including completion status, scores, and training progress",
+      "mdl_file": "mdl_transcript_csod.json",
+      "ddl_file": "ddl_transcript_csod.json"
+    },
+    {
+      "name": "User_csod",
+      "display_name": "Learning Users",
+      "description": "User profiles and organizational structure for learning management",
+      "mdl_file": "mdl_user_csod.json", 
+      "ddl_file": "ddl_user_csod.json"
+    }
+  ],
+  "knowledge_base": [
+    {
+      "name": "cornerstone_learning_knowledge_base",
+      "display_name": "Cornerstone Learning Knowledge Base",
+      "description": "Knowledge base for Cornerstone Learning Management System with training analytics and compliance insights",
+      "file_path": "instructions.json"
+    }
+  ],
+  "examples": [
+    {
+      "name": "cornerstone_learning_examples",
+      "display_name": "Cornerstone Learning Examples",
+      "description": "Example SQL queries and analytics for Cornerstone Learning data",
+      "file_path": "sql_pairs.json"
+    }
+  ]
+}

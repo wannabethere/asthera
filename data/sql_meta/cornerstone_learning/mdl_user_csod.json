@@ -1,0 +1,246 @@
+{
+    "catalog": "cornerstone_learn",
+    "schema": "csod_learn_datamodel",
+    "models": [
+      {
+        "name": "User_csod",
+        "tableReference": {
+          "catalog": "cornerstone_learn", 
+          "schema": "csod_learn_datamodel",
+          "table": "User_csod"
+        },
+        "primaryKey": "userId",
+        "columns": [
+          {
+            "name": "userId",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "User ID",
+              "description": "Unique identifier for users in the Cornerstone system.",
+              "usage_type": "identifier",
+              "business_importance": "high",
+              "typical_cardinality": "high",
+              "privacy_classification": "internal",
+              "common_patterns": "USR###",
+              "business_rules": "Can be null, Should be unique within the context of user records",
+              "business_description": "A unique identifier assigned to each user for tracking their learning performance and activities within the CSOD platform.",
+              "data_quality_checks": "Check for null values, Validate format to ensure it meets VARCHAR standards",
+              "filtering_suggestions": "Filter by userStatus, Filter by division, Filter by location",
+              "aggregation_suggestions": "COUNT, DISTINCT COUNT"
+            }
+          },
+          {
+            "name": "userName",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "User Name",
+              "description": "Column representing the username of the user in the system.",
+              "usage_type": "identifier",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "user_###",
+              "business_rules": "Must be unique within the system, Can be null if the user has not set a username",
+              "business_description": "The username is used to identify users within the Cornerstone Learn platform and is essential for user authentication and tracking learning activities.",
+              "data_quality_checks": "Check for duplicates in the userName column, Validate format to ensure it meets username criteria",
+              "filtering_suggestions": "Filter by userStatus, Filter by division",
+              "aggregation_suggestions": "COUNT, GROUP BY userName"
+            }
+          },
+          {
+            "name": "fullName",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Full Name",
+              "description": "The complete name of the user as recorded in the system.",
+              "usage_type": "attribute",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "business_rules": "Can be null, Should not contain special characters",
+              "business_description": "This column represents the full name of the user, which is essential for identifying individuals in reports and dashboards.",
+              "data_quality_checks": "Check for leading or trailing spaces, Validate format to ensure it contains at least a first and last name",
+              "filtering_suggestions": "Filter by user status, Filter by division"
+            }
+          },
+          {
+            "name": "email",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Email",
+              "description": "Column representing the email address of the user.",
+              "usage_type": "attribute",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "confidential",
+              "common_patterns": "*@*.*",
+              "business_rules": "Must be a valid email format, Can be null if the user has not provided an email",
+              "business_description": "Email address used for communication and notifications related to learning activities.",
+              "data_quality_checks": "Validate email format, Check for duplicates within the user base",
+              "filtering_suggestions": "Filter by user status, Filter by division"
+            }
+          },
+          {
+            "name": "managerId",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Manager ID",
+              "description": "Identifier for the manager of the user, represented as a string.",
+              "usage_type": "identifier",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "USR###",
+              "business_rules": "Can be null if the user does not have a manager, Should reference a valid userId in the User_csod table if not null",
+              "business_description": "This column represents the unique identifier of the user's manager, which can be used to establish reporting relationships within the organization.",
+              "data_quality_checks": "Check for valid userId references in the User_csod table, Ensure that if present, the managerId corresponds to an existing manager",
+              "filtering_suggestions": "Filter by managerId to analyze users under specific managers, Filter by userStatus to see active/inactive users under a manager"
+            }
+          },
+          {
+            "name": "managerName",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Manager Name",
+              "description": "The name of the manager associated with the user.",
+              "usage_type": "attribute",
+              "business_importance": "moderate",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "business_rules": "Can be null if the user does not have a manager assigned, Should reflect the current manager's name",
+              "business_description": "This column represents the name of the user's manager, which is important for understanding reporting structures within the organization.",
+              "data_quality_checks": "Ensure the name is formatted correctly (e.g., no special characters), Check for consistency with the managerId column",
+              "filtering_suggestions": "Filter by division, Filter by user status"
+            }
+          },
+          {
+            "name": "position",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Position",
+              "description": "The job title or role of the user within the organization.",
+              "usage_type": "attribute",
+              "business_importance": "moderate",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "Manager, Senior Developer, HR Specialist",
+              "business_rules": "Can be null if the user does not have a defined position, Should accurately reflect the user's current job title",
+              "business_description": "This column represents the position held by the user, which is essential for understanding their role in the organization and for reporting on employee performance and compliance.",
+              "data_quality_checks": "Ensure that the position is a valid job title recognized by the organization, Check for consistency in naming conventions (e.g., avoid abbreviations)",
+              "filtering_suggestions": "Filter by specific positions to analyze performance metrics, Filter by division to see position distribution",
+              "aggregation_suggestions": "COUNT by position, GROUP BY position for performance analysis"
+            }
+          },
+          {
+            "name": "division",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Division",
+              "description": "Column representing the division within the organization to which a user belongs.",
+              "usage_type": "attribute",
+              "business_importance": "moderate",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "Sales, Marketing, HR, IT",
+              "business_rules": "Can be null, Should reflect the current division of the user",
+              "business_description": "This column indicates the specific division of the company that the user is associated with, which can be used to analyze user performance and compliance within different divisions.",
+              "data_quality_checks": "Ensure values are consistent with predefined divisions, Check for typos or incorrect entries",
+              "filtering_suggestions": "Filter by specific division, Filter by user status within division",
+              "aggregation_suggestions": "COUNT by division, GROUP BY division"
+            }
+          },
+          {
+            "name": "location",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "Location",
+              "description": "Column representing the geographical location of the user.",
+              "usage_type": "attribute",
+              "business_importance": "moderate",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "City, State, Country",
+              "business_rules": "Can be null, Should accurately reflect the user's current location",
+              "business_description": "Indicates the physical or virtual location where the user is based, which can impact training and compliance activities.",
+              "data_quality_checks": "Validate against known location formats, Check for consistency with user profiles",
+              "filtering_suggestions": "Filter by specific locations, Filter by user status and location",
+              "aggregation_suggestions": "COUNT by location, GROUP BY location"
+            }
+          },
+          {
+            "name": "userStatus",
+            "type": "string",
+            "notNull": false,
+            "properties": {
+              "display_name": "User Status",
+              "description": "Indicates the current status of the user within the system.",
+              "usage_type": "attribute",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "Active, Inactive, On Leave",
+              "business_rules": "Can be null, Valid statuses include 'Active', 'Inactive', 'On Leave'",
+              "business_description": "This column represents whether a user is active, inactive, or on leave, which is crucial for understanding user engagement and compliance with learning activities.",
+              "data_quality_checks": "Ensure values are one of the predefined statuses, Check for null values where applicable",
+              "filtering_suggestions": "Filter by active users, Filter by inactive users",
+              "aggregation_suggestions": "COUNT by user status, PERCENTAGE of active vs inactive users"
+            }
+          },
+          {
+            "name": "lastLogindate",
+            "type": "date",
+            "notNull": false,
+            "properties": {
+              "display_name": "Last Login Date",
+              "description": "The date when the user last logged into the system.",
+              "usage_type": "timestamp",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "YYYY-MM-DD",
+              "business_rules": "Can be null if the user has never logged in, Should be in a valid date format (YYYY-MM-DD)",
+              "business_description": "This column represents the most recent date that a user accessed their account, which is crucial for tracking user engagement and compliance with learning activities.",
+              "data_quality_checks": "Ensure the date format is consistent, Check for null values where applicable",
+              "filtering_suggestions": "Filter by specific date ranges, Filter by user status to see active vs inactive users",
+              "aggregation_suggestions": "COUNT of users who logged in within a specific timeframe, MAX last login date to find the most recent activity"
+            }
+          },
+          {
+            "name": "startDate",
+            "type": "date",
+            "notNull": false,
+            "properties": {
+              "display_name": "Start Date",
+              "description": "The date when the user started their learning activities.",
+              "usage_type": "timestamp",
+              "business_importance": "high",
+              "typical_cardinality": "medium",
+              "privacy_classification": "internal",
+              "common_patterns": "YYYY-MM-DD",
+              "business_rules": "Can be null if the user has not started any learning activities, Should be in a valid date format (YYYY-MM-DD)",
+              "business_description": "This column represents the start date of the user's learning journey within the Cornerstone system, which is crucial for tracking compliance and performance.",
+              "data_quality_checks": "Validate date format, Check for future dates",
+              "filtering_suggestions": "Filter by specific start date, Filter by date range",
+              "aggregation_suggestions": "COUNT of users by start date, Average start date for compliance activities"
+            }
+          }
+        ],
+        "properties": {
+          "description": "This table contains essential user information for employees within the Cornerstone Learning system, including identifiers, contact details, and organizational structure.",
+          "business_purpose": "The User_csod table serves as a foundational data source for generating insights into employee learning performance, enabling effective management and reporting within the organization.",
+          "data_lineage": "Data is sourced from the Cornerstone Learning platform and is populated through regular data extraction processes.",
+          "data_retention": "Data is retained for a period of 5 years to comply with organizational policies.",
+          "update_frequency": "daily"
+        }
+      }
+    ]
+  }

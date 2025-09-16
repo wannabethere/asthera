@@ -1,0 +1,37 @@
+{
+  "project_id": "cornerstone_talent",
+  "description": "Cornerstone OnDemand talent management system data for performance tracking, employee evaluations, and talent development",
+  "title": "Cornerstone Talent Management System",
+  "tables": [
+    {
+      "name": "PerformanceData_csod",
+      "display_name": "Performance Data",
+      "description": "Employee performance metrics including task assignments, ratings, and evaluation status",
+      "mdl_file": "mdl_user_performance.json",
+      "ddl_file": "ddl_user_performance.json"
+    },
+    {
+      "name": "User_csod",
+      "display_name": "Talent Users",
+      "description": "Employee profiles and organizational structure for talent management",
+      "mdl_file": "mdl_user_csod.json",
+      "ddl_file": "ddl_user_csod.json"
+    }
+  ],
+  "knowledge_base": [
+    {
+      "name": "cornerstone_talent_knowledge_base",
+      "display_name": "Cornerstone Talent Knowledge Base",
+      "description": "Knowledge base for Cornerstone Talent Management System with performance analytics and talent insights",
+      "file_path": "instructions.json"
+    }
+  ],
+  "examples": [
+    {
+      "name": "cornerstone_talent_examples",
+      "display_name": "Cornerstone Talent Examples",
+      "description": "Example SQL queries and analytics for Cornerstone Talent data",
+      "file_path": "sql_pairs.json"
+    }
+  ]
+}

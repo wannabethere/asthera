@@ -7,6 +7,7 @@ from uuid import uuid4
 from langchain.schema import Document as LangchainDocument
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
+from langchain_community.vectorstores.utils import filter_complex_metadata
 from langchain_openai import OpenAIEmbeddings
 from langchain_chroma import Chroma
 from langchain_core.documents import Document as LangchainDocument
@@ -325,21 +326,51 @@ class DocumentChromaStore:
         try:
             if self.collection:
                 return
-            logger.info(f"Initializing Chroma store at {self.vectorstore_path} with collection {self.collection_name}")
-            print("initializing Chroma store at", self.vectorstore_path, self.collection_name)  
-            # Initialize the persistent client with the specified path
+            logger.info(f"Initializing Chroma store with collection {self.collection_name}")
+            print("initializing Chroma store with collection", self.collection_name)  
             
+            # Test the client connection first
+            try:
+                # Log the client type being used
+                client_type = type(self.persistent_client).__name__
+                logger.info(f"Using ChromaDB client type: {client_type}")
+                
+                # Try to list existing collections to test connection
+                existing_collections = self.persistent_client.list_collections()
+                logger.info(f"Successfully connected to ChromaDB. Found {len(existing_collections)} existing collections")
+            except Exception as e:
+                logger.error(f"Failed to connect to ChromaDB: {e}")
+                raise
             
             # Get or create the collection
-            self.collection = self.persistent_client.get_or_create_collection(
-                name=self.collection_name,
-                metadata={"description": f"Document collection for {self.collection_name}"}
-            )
-            if self.tf_idf:
-                self.tfidf_collection = self.persistent_client.get_or_create_collection(
-                    name=self.tfidf_collection_name,
-                    metadata={"hnsw:space": "cosine", "description": f"TF-IDF collection for {self.collection_name}"}
+            logger.info(f"Creating collection '{self.collection_name}' without metadata")
+            
+            try:
+                # Try with minimal metadata first
+                self.collection = self.persistent_client.get_or_create_collection(
+                    name=self.collection_name,
+                    metadata={"description": f"Collection for {self.collection_name}"}
                 )
+            except Exception as e:
+                logger.warning(f"Failed to create collection with metadata, trying without: {e}")
+                # Try without any metadata
+                self.collection = self.persistent_client.get_or_create_collection(
+                    name=self.collection_name
+                )
+            if self.tf_idf:
+                try:
+                    self.tfidf_collection = self.persistent_client.get_or_create_collection(
+                        name=self.tfidf_collection_name,
+                        metadata={
+                            "hnsw:space": "cosine", 
+                            "description": f"TF-IDF collection for {self.collection_name}"
+                        }
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to create TF-IDF collection with metadata, trying without: {e}")
+                    self.tfidf_collection = self.persistent_client.get_or_create_collection(
+                        name=self.tfidf_collection_name
+                    )
             # Initialize the Langchain Chroma wrapper
             self.vectorstore = Chroma(
                 client=self.persistent_client,
@@ -414,29 +445,37 @@ class DocumentChromaStore:
                     ids.append(document_id)
         
         if documents:
+            # Filter complex metadata from documents before adding to ChromaDB
+            try:
+                filtered_documents = filter_complex_metadata(documents)
+                logger.info(f"Filtered complex metadata from {len(documents)} documents")
+            except Exception as e:
+                logger.warning(f"Error filtering complex metadata: {e}. Using original documents.")
+                filtered_documents = documents
+            
             # Compute embeddings for all documents
-            embeddings = self.compute_document_embeddings(documents)
+            embeddings = self.compute_document_embeddings(filtered_documents)
             
             if embeddings:
                 # Add documents with pre-computed embeddings
                 self.vectorstore.add_documents(
-                    documents=documents,
+                    documents=filtered_documents,
                     ids=ids,
                     embeddings=embeddings
                 )
                 
                 # Add TF-IDF vectors if enabled
                 if self.tf_idf:
-                    self.add_tfidf_vectors(documents=documents, ids=ids)
+                    self.add_tfidf_vectors(documents=filtered_documents, ids=ids)
                 
-                logger.info(f"Added {len(documents)} documents with embeddings to the vectorstore.")
-                print("documents added to the vectorstore", len(documents))
+                logger.info(f"Added {len(filtered_documents)} documents with embeddings to the vectorstore.")
+                print("documents added to the vectorstore", len(filtered_documents))
             else:
                 # Fallback to regular document addition if embedding computation fails
-                self.vectorstore.add_documents(documents=documents, ids=ids)
+                self.vectorstore.add_documents(documents=filtered_documents, ids=ids)
                 if self.tf_idf:
-                    self.add_tfidf_vectors(documents=documents, ids=ids)
-                logger.info(f"Added {len(documents)} documents to the vectorstore (without pre-computed embeddings).")
+                    self.add_tfidf_vectors(documents=filtered_documents, ids=ids)
+                logger.info(f"Added {len(filtered_documents)} documents to the vectorstore (without pre-computed embeddings).")
         else:
             logger.warning("No valid documents were found to add to the vectorstore.")
 
@@ -452,11 +491,27 @@ class DocumentChromaStore:
             # Generate TF-IDF vectors
             tfidf_matrix = self.vectorizer.fit_transform(texts)
             metadata_list = [doc.metadata for doc in documents]
-            ids = [str(uuid.uuid4()) for _ in range(len(texts))]
+            tfidf_ids = [str(uuid.uuid4()) for _ in range(len(texts))]
+            
+            # Filter complex metadata for TF-IDF collection as well
+            try:
+                filtered_metadata_list = []
+                for metadata in metadata_list:
+                    # Create a temporary document to filter metadata
+                    temp_doc = LangchainDocument(page_content="", metadata=metadata)
+                    filtered_docs = filter_complex_metadata([temp_doc])
+                    if filtered_docs:
+                        filtered_metadata_list.append(filtered_docs[0].metadata)
+                    else:
+                        filtered_metadata_list.append(metadata)
+            except Exception as e:
+                logger.warning(f"Error filtering complex metadata for TF-IDF: {e}. Using original metadata.")
+                filtered_metadata_list = metadata_list
+            
             self.tfidf_collection.add(
                 embeddings=tfidf_matrix.toarray(),
-                ids=ids,
-                metadatas=metadata_list
+                ids=tfidf_ids,
+                metadatas=filtered_metadata_list
             )
             logger.info(f"Added {len(texts)} TF-IDF vectors to collection {self.tfidf_collection_name}")
         else:

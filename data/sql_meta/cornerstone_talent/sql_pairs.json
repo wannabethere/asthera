@@ -1,0 +1,137 @@
+[
+    {
+      "categories": ["performance_evaluation", "rating_analysis"],
+      "question": "What is the average task rating by division and position for completed tasks?",
+      "sql": "SELECT u.division, u.position, COUNT(p.taskId) as completed_tasks, AVG(CAST(p.taskFinalRating as DECIMAL)) as avg_rating, MIN(CAST(p.taskFinalRating as DECIMAL)) as min_rating, MAX(CAST(p.taskFinalRating as DECIMAL)) as max_rating, COUNT(DISTINCT u.userId) as employees_evaluated FROM User_csod u JOIN PerformanceData_csod p ON u.userId = p.userId WHERE p.taskStatus = 'Completed' AND p.taskFinalRating IS NOT NULL AND u.division IS NOT NULL AND u.position IS NOT NULL GROUP BY u.division, u.position HAVING COUNT(p.taskId) >= 3 ORDER BY u.division, avg_rating DESC",
+      "context": "Direct Visualization - Heatmap. Shows performance rating patterns across organizational structure for talent development planning.",
+      "document": "cornerstone_talent.mdl.json - performance_evaluation_metrics",
+      "samples": [],
+      "instructions": "Analyze performance ratings across organizational structure to identify high-performing divisions and positions, and areas needing development support."
+    },
+    {
+      "categories": ["manager_effectiveness", "team_performance"],
+      "question": "Which managers have the highest average team performance ratings and completion rates?",
+      "sql": "SELECT u.managerName, u.division, COUNT(DISTINCT u.userId) as team_size, COUNT(p.taskId) as total_tasks, COUNT(CASE WHEN p.taskStatus = 'Completed' THEN 1 END) as completed_tasks, (COUNT(CASE WHEN p.taskStatus = 'Completed' THEN 1 END) * 100.0 / COUNT(p.taskId)) as completion_rate, AVG(CASE WHEN p.taskStatus = 'Completed' AND p.taskFinalRating IS NOT NULL THEN CAST(p.taskFinalRating as DECIMAL) END) as avg_team_rating, COUNT(CASE WHEN p.taskStatus = 'In Progress' THEN 1 END) as tasks_in_progress, COUNT(CASE WHEN p.stepDueDate IS NOT NULL AND CAST(p.stepDueDate as DATE) < GETDATE() AND p.taskStatus != 'Completed' THEN 1 END) as overdue_tasks FROM User_csod u JOIN PerformanceData_csod p ON u.userId = p.userId WHERE u.managerName IS NOT NULL AND u.userStatus = 'Active' GROUP BY u.managerName, u.division HAVING COUNT(p.taskId) >= 10 ORDER BY avg_team_rating DESC, completion_rate DESC",
+      "context": "Dashboard Widget - Manager Performance Scorecard. Evaluates manager effectiveness in driving team performance and task completion.",
+      "document": "cornerstone_talent.mdl.json - manager_effectiveness_metrics",
+      "samples": [],
+      "instructions": "Identify top-performing managers based on team ratings and completion rates to recognize excellence and identify coaching opportunities."
+    },
+    {
+      "categories": ["task_management", "workflow_analysis"],
+      "question": "What is the average time from task start to completion by task type and division?",
+      "sql": "SELECT u.division, p.taskName, COUNT(p.taskId) as completed_tasks, AVG(DATEDIFF(day, CAST(p.startDate as DATE), CAST(p.completionDate as DATE))) as avg_completion_days, MIN(DATEDIFF(day, CAST(p.startDate as DATE), CAST(p.completionDate as DATE))) as min_completion_days, MAX(DATEDIFF(day, CAST(p.startDate as DATE), CAST(p.completionDate as DATE))) as max_completion_days, AVG(CAST(p.taskFinalRating as DECIMAL)) as avg_rating, COUNT(CASE WHEN CAST(p.completionDate as DATE) > CAST(p.stepDueDate as DATE) THEN 1 END) as late_completions FROM User_csod u JOIN PerformanceData_csod p ON u.userId = p.userId WHERE p.taskStatus = 'Completed' AND p.startDate IS NOT NULL AND p.completionDate IS NOT NULL AND u.division IS NOT NULL GROUP BY u.division, p.taskName HAVING COUNT(p.taskId) >= 5 ORDER BY avg_completion_days ASC, avg_rating DESC",
+      "context": "Dashboard Widget - Task Efficiency Analysis. Measures task completion velocity and quality across divisions and task types.",
+      "document": "cornerstone_talent.mdl.json - task_efficiency_metrics",
+      "samples": [],
+      "instructions": "Analyze task completion patterns to identify efficient processes and optimize task assignment and timeline expectations."
+    },
+    {
+      "categories": ["performance_trends", "employee_development"],
+      "question": "How do employee performance ratings trend over time by position level?",
+      "sql": "SELECT u.position, FORMAT(CAST(p.completionDate as DATE), 'yyyy-MM') as completion_month, COUNT(p.taskId) as tasks_completed, AVG(CAST(p.taskFinalRating as DECIMAL)) as avg_monthly_rating, COUNT(DISTINCT u.userId) as employees_active, SUM(CASE WHEN CAST(p.taskFinalRating as DECIMAL) >= 4 THEN 1 ELSE 0 END) as high_performance_tasks, (SUM(CASE WHEN CAST(p.taskFinalRating as DECIMAL) >= 4 THEN 1 ELSE 0 END) * 100.0 / COUNT(p.taskId)) as high_performance_rate FROM User_csod u JOIN PerformanceData_csod p ON u.userId = p.userId WHERE p.taskStatus = 'Completed' AND p.taskFinalRating IS NOT NULL AND p.completionDate IS NOT NULL AND u.position IS NOT NULL GROUP BY u.position, FORMAT(CAST(p.completionDate as DATE), 'yyyy-MM') ORDER BY u.position, completion_month",
+      "context": "Direct Visualization - Timeline/Line Chart. Shows performance trends over time to identify improvement patterns and seasonal effects.",
+      "document": "cornerstone_talent.mdl.json - performance_trend_analysis",
+      "samples": [],
+      "instructions": "Track performance rating trends over time by position to identify development patterns and inform talent strategy."
+    },
+    {
+      "categories": ["step_analysis", "process_efficiency"],
+      "question": "Which performance evaluation steps have the highest completion rates and shortest cycle times?",
+      "sql": "SELECT p.stepTitle, COUNT(p.userId) as total_steps, COUNT(CASE WHEN p.stepStatus = 'Completed' THEN 1 END) as completed_steps, (COUNT(CASE WHEN p.stepStatus = 'Completed' THEN 1 END) * 100.0 / COUNT(p.userId)) as step_completion_rate, AVG(CASE WHEN p.stepSubmissionDate IS NOT NULL AND p.startDate IS NOT NULL THEN DATEDIFF(day, CAST(p.startDate as DATE), CAST(p.stepSubmissionDate as DATE)) END) as avg_step_duration, COUNT(CASE WHEN p.stepDueDate IS NOT NULL AND p.stepSubmissionDate IS NOT NULL AND CAST(p.stepSubmissionDate as DATE) > CAST(p.stepDueDate as DATE) THEN 1 END) as late_submissions, COUNT(CASE WHEN p.stepStatus = 'In Progress' THEN 1 END) as steps_in_progress FROM PerformanceData_csod p WHERE p.stepTitle IS NOT NULL GROUP BY p.stepTitle HAVING COUNT(p.userId) >= 10 ORDER BY step_completion_rate DESC, avg_step_duration ASC",
+      "context": "Dashboard Widget - Process Step Analysis. Identifies bottlenecks and efficiency opportunities in performance evaluation workflows.",
+      "document": "cornerstone_talent.mdl.json - process_step_metrics",
+      "samples": [],
+      "instructions": "Analyze individual performance evaluation steps to optimize workflow design and identify process improvement opportunities."
+    },
+    {
+      "categories": ["employee_performance", "individual_analytics"],
+      "question": "Which employees have the most consistent high performance across multiple tasks?",
+      "sql": "SELECT u.userId, u.fullName, u.position, u.division, u.managerName, COUNT(p.taskId) as total_tasks, COUNT(CASE WHEN p.taskStatus = 'Completed' THEN 1 END) as completed_tasks, AVG(CAST(p.taskFinalRating as DECIMAL)) as avg_rating, MIN(CAST(p.taskFinalRating as DECIMAL)) as min_rating, MAX(CAST(p.taskFinalRating as DECIMAL)) as max_rating, STDEV(CAST(p.taskFinalRating as DECIMAL)) as rating_consistency, COUNT(CASE WHEN CAST(p.taskFinalRating as DECIMAL) >= 4 THEN 1 END) as high_performance_tasks, (COUNT(CASE WHEN CAST(p.taskFinalRating as DECIMAL) >= 4 THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN p.taskFinalRating IS NOT NULL THEN 1 END), 0)) as high_performance_rate FROM User_csod u JOIN PerformanceData_csod p ON u.userId = p.userId WHERE p.taskFinalRating IS NOT NULL AND u.userStatus = 'Active' GROUP BY u.userId, u.fullName, u.position, u.division, u.managerName HAVING COUNT(CASE WHEN p.taskFinalRating IS NOT NULL THEN 1 END) >= 5 ORDER BY avg_rating DESC, rating_consistency ASC",
+      "context": "Dashboard Widget - High Performer Identification. Identifies consistent top performers for recognition and development opportunities.",
+      "document": "cornerstone_talent.mdl.json - individual_performance_metrics",
+      "samples": [],
+      "instructions": "Identify employees with consistently high performance ratings for talent development, succession planning, and recognition programs."
+    },
+    {
+      "categories": ["deadline_management", "compliance_tracking"],
+      "question": "What percentage of performance tasks are completed on time by division and manager?",
+      "sql": "SELECT u.division, u.managerName, COUNT(p.taskId) as total_tasks, COUNT(CASE WHEN p.taskStatus = 'Completed' THEN 1 END) as completed_tasks, COUNT(CASE WHEN p.taskStatus = 'Completed' AND p.completionDate IS NOT NULL AND p.stepDueDate IS NOT NULL AND CAST(p.completionDate as DATE) <= CAST(p.stepDueDate as DATE) THEN 1 END) as on_time_completions, COUNT(CASE WHEN p.taskStatus = 'Completed' AND p.completionDate IS NOT NULL AND p.stepDueDate IS NOT NULL AND CAST(p.completionDate as DATE) > CAST(p.stepDueDate as DATE) THEN 1 END) as late_completions, (COUNT(CASE WHEN p.taskStatus = 'Completed' AND p.completionDate IS NOT NULL AND p.stepDueDate IS NOT NULL AND CAST(p.completionDate as DATE) <= CAST(p.stepDueDate as DATE) THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN p.taskStatus = 'Completed' AND p.stepDueDate IS NOT NULL THEN 1 END), 0)) as on_time_rate, COUNT(CASE WHEN p.stepDueDate IS NOT NULL AND CAST(p.stepDueDate as DATE) < GETDATE() AND p.taskStatus != 'Completed' THEN 1 END) as currently_overdue FROM User_csod u JOIN PerformanceData_csod p ON u.userId = p.userId WHERE u.division IS NOT NULL AND u.managerName IS NOT NULL GROUP BY u.division, u.managerName HAVING COUNT(p.taskId) >= 5 ORDER BY on_time_rate DESC",
+      "context": "Dashboard Widget - Deadline Compliance Analysis. Tracks deadline adherence for performance management process optimization.",
+      "document": "cornerstone_talent.mdl.json - deadline_compliance_metrics",
+      "samples": [],
+      "instructions": "Monitor deadline compliance across divisions and managers to identify process bottlenecks and support needs."
+    },
+    {
+      "categories": ["new_employee_analysis", "onboarding_performance"],
+      "question": "How do recently hired employees perform in their first performance evaluations compared to tenured employees?",
+      "sql": "WITH employee_tenure AS (SELECT u.userId, u.fullName, u.position, u.division, u.startDate, DATEDIFF(month, CAST(u.startDate as DATE), GETDATE()) as tenure_months, CASE WHEN DATEDIFF(month, CAST(u.startDate as DATE), GETDATE()) <= 6 THEN 'New (0-6 months)' WHEN DATEDIFF(month, CAST(u.startDate as DATE), GETDATE()) <= 12 THEN 'Recent (7-12 months)' WHEN DATEDIFF(month, CAST(u.startDate as DATE), GETDATE()) <= 24 THEN 'Developing (1-2 years)' ELSE 'Tenured (2+ years)' END as tenure_category FROM User_csod u WHERE u.startDate IS NOT NULL AND u.userStatus = 'Active') SELECT et.tenure_category, et.division, COUNT(DISTINCT et.userId) as employee_count, COUNT(p.taskId) as total_tasks, AVG(CAST(p.taskFinalRating as DECIMAL)) as avg_rating, COUNT(CASE WHEN p.taskStatus = 'Completed' THEN 1 END) as completed_tasks, (COUNT(CASE WHEN p.taskStatus = 'Completed' THEN 1 END) * 100.0 / COUNT(p.taskId)) as completion_rate, AVG(CASE WHEN p.startDate IS NOT NULL AND p.completionDate IS NOT NULL THEN DATEDIFF(day, CAST(p.startDate as DATE), CAST(p.completionDate as DATE)) END) as avg_completion_days FROM employee_tenure et JOIN PerformanceData_csod p ON et.userId = p.userId WHERE p.taskFinalRating IS NOT NULL GROUP BY et.tenure_category, et.division ORDER BY et.tenure_category, et.division",
+      "context": "Dashboard Widget - Tenure-Based Performance Analysis. Compares performance across employee tenure groups for onboarding optimization.",
+      "document": "cornerstone_talent.mdl.json - tenure_performance_analysis",
+      "samples": [],
+      "instructions": "Analyze performance patterns by employee tenure to optimize onboarding processes and identify development needs for new hires."
+    },
+    {
+      "categories": ["task_assignment", "workload_analysis"],
+      "question": "What is the distribution of task assignments and completion rates across different step owners?",
+      "sql": "SELECT p.stepAssignedTo, COUNT(p.taskId) as assigned_tasks, COUNT(CASE WHEN p.stepStatus = 'Completed' THEN 1 END) as completed_steps, (COUNT(CASE WHEN p.stepStatus = 'Completed' THEN 1 END) * 100.0 / COUNT(p.taskId)) as step_completion_rate, COUNT(CASE WHEN p.stepStatus = 'In Progress' THEN 1 END) as steps_in_progress, COUNT(CASE WHEN p.stepStatus = 'Not Started' THEN 1 END) as steps_not_started, AVG(CASE WHEN p.stepSubmissionDate IS NOT NULL AND p.startDate IS NOT NULL THEN DATEDIFF(day, CAST(p.startDate as DATE), CAST(p.stepSubmissionDate as DATE)) END) as avg_step_completion_time, COUNT(CASE WHEN p.stepDueDate IS NOT NULL AND CAST(p.stepDueDate as DATE) < GETDATE() AND p.stepStatus != 'Completed' THEN 1 END) as overdue_steps FROM PerformanceData_csod p WHERE p.stepAssignedTo IS NOT NULL GROUP BY p.stepAssignedTo HAVING COUNT(p.taskId) >= 5 ORDER BY step_completion_rate DESC, assigned_tasks DESC",
+      "context": "Dashboard Widget - Step Owner Workload Analysis. Monitors task distribution and performance across step assignees.",
+      "document": "cornerstone_talent.mdl.json - step_owner_metrics",
+      "samples": [],
+      "instructions": "Analyze workload distribution across step owners to balance assignments and identify high-performing process participants."
+    },
+    {
+      "categories": ["performance_lifecycle", "evaluation_cycle"],
+      "question": "What is the typical performance evaluation lifecycle from start to completion by task type?",
+      "sql": "SELECT p.taskName, COUNT(p.taskId) as total_tasks, COUNT(CASE WHEN p.taskStatus = 'Completed' THEN 1 END) as completed_tasks, AVG(CASE WHEN p.startDate IS NOT NULL AND p.completionDate IS NOT NULL THEN DATEDIFF(day, CAST(p.startDate as DATE), CAST(p.completionDate as DATE)) END) as avg_total_cycle_time, AVG(CASE WHEN p.startDate IS NOT NULL AND p.stepSubmissionDate IS NOT NULL THEN DATEDIFF(day, CAST(p.startDate as DATE), CAST(p.stepSubmissionDate as DATE)) END) as avg_submission_time, COUNT(CASE WHEN p.stepStatus = 'In Progress' THEN 1 END) as currently_in_progress, COUNT(CASE WHEN p.expirationDate IS NOT NULL AND CAST(p.expirationDate as DATE) <= DATEADD(month, 1, GETDATE()) THEN 1 END) as expiring_soon, AVG(CAST(p.taskFinalRating as DECIMAL)) as avg_final_rating FROM PerformanceData_csod p WHERE p.taskName IS NOT NULL GROUP BY p.taskName HAVING COUNT(p.taskId) >= 10 ORDER BY avg_total_cycle_time ASC, avg_final_rating DESC",
+      "context": "Dashboard Widget - Evaluation Lifecycle Analysis. Maps complete performance evaluation process timelines by task type.",
+      "document": "cornerstone_talent.mdl.json - evaluation_lifecycle_metrics",
+      "samples": [],
+      "instructions": "Understand complete evaluation lifecycles to optimize process design and set realistic timeline expectations."
+    },
+    {
+      "categories": ["location_analysis", "geographic_performance"],
+      "question": "How does employee performance vary across different office locations?",
+      "sql": "SELECT u.location, u.division, COUNT(DISTINCT u.userId) as employee_count, COUNT(p.taskId) as total_tasks, AVG(CAST(p.taskFinalRating as DECIMAL)) as avg_location_rating, COUNT(CASE WHEN p.taskStatus = 'Completed' THEN 1 END) as completed_tasks, (COUNT(CASE WHEN p.taskStatus = 'Completed' THEN 1 END) * 100.0 / COUNT(p.taskId)) as completion_rate, COUNT(CASE WHEN CAST(p.taskFinalRating as DECIMAL) >= 4 THEN 1 END) as high_performance_tasks, (COUNT(CASE WHEN CAST(p.taskFinalRating as DECIMAL) >= 4 THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN p.taskFinalRating IS NOT NULL THEN 1 END), 0)) as high_performance_rate, AVG(CASE WHEN p.startDate IS NOT NULL AND p.completionDate IS NOT NULL THEN DATEDIFF(day, CAST(p.startDate as DATE), CAST(p.completionDate as DATE)) END) as avg_completion_days FROM User_csod u JOIN PerformanceData_csod p ON u.userId = p.userId WHERE u.location IS NOT NULL AND p.taskFinalRating IS NOT NULL GROUP BY u.location, u.division HAVING COUNT(p.taskId) >= 10 ORDER BY avg_location_rating DESC, completion_rate DESC",
+      "context": "Direct Visualization - Geographic Heatmap. Shows performance patterns across office locations for resource allocation decisions.",
+      "document": "cornerstone_talent.mdl.json - geographic_performance_metrics",
+      "samples": [],
+      "instructions": "Analyze performance differences across geographic locations to identify best practices and support needs."
+    },
+    {
+      "categories": ["rating_distribution", "performance_calibration"],
+      "question": "What is the distribution of performance ratings across managers to identify potential calibration issues?",
+      "sql": "SELECT u.managerName, u.division, COUNT(p.taskId) as tasks_rated, AVG(CAST(p.taskFinalRating as DECIMAL)) as avg_rating, MIN(CAST(p.taskFinalRating as DECIMAL)) as min_rating, MAX(CAST(p.taskFinalRating as DECIMAL)) as max_rating, STDEV(CAST(p.taskFinalRating as DECIMAL)) as rating_variance, COUNT(CASE WHEN CAST(p.taskFinalRating as DECIMAL) = 1 THEN 1 END) as rating_1_count, COUNT(CASE WHEN CAST(p.taskFinalRating as DECIMAL) = 2 THEN 1 END) as rating_2_count, COUNT(CASE WHEN CAST(p.taskFinalRating as DECIMAL) = 3 THEN 1 END) as rating_3_count, COUNT(CASE WHEN CAST(p.taskFinalRating as DECIMAL) = 4 THEN 1 END) as rating_4_count, COUNT(CASE WHEN CAST(p.taskFinalRating as DECIMAL) = 5 THEN 1 END) as rating_5_count, (COUNT(CASE WHEN CAST(p.taskFinalRating as DECIMAL) >= 4 THEN 1 END) * 100.0 / COUNT(p.taskId)) as high_rating_percentage FROM User_csod u JOIN PerformanceData_csod p ON u.userId = p.userId WHERE u.managerName IS NOT NULL AND p.taskFinalRating IS NOT NULL AND p.taskStatus = 'Completed' GROUP BY u.managerName, u.division HAVING COUNT(p.taskId) >= 10 ORDER BY avg_rating DESC, rating_variance ASC",
+      "context": "Dashboard Widget - Rating Calibration Analysis. Identifies potential rating bias and calibration needs across managers.",
+      "document": "cornerstone_talent.mdl.json - rating_calibration_metrics",
+      "samples": [],
+      "instructions": "Analyze rating distributions across managers to ensure fair and consistent performance evaluations and identify calibration training needs."
+    },
+    {
+      "categories": ["task_complexity", "performance_difficulty"],
+      "question": "Which tasks have the lowest completion rates and ratings, indicating potential complexity or design issues?",
+      "sql": "SELECT p.taskName, COUNT(p.taskId) as total_assignments, COUNT(CASE WHEN p.taskStatus = 'Completed' THEN 1 END) as completions, (COUNT(CASE WHEN p.taskStatus = 'Completed' THEN 1 END) * 100.0 / COUNT(p.taskId)) as completion_rate, AVG(CAST(p.taskFinalRating as DECIMAL)) as avg_rating, COUNT(CASE WHEN p.taskStatus = 'Not Started' THEN 1 END) as not_started, COUNT(CASE WHEN p.taskStatus = 'In Progress' THEN 1 END) as in_progress, COUNT(CASE WHEN p.stepDueDate IS NOT NULL AND CAST(p.stepDueDate as DATE) < GETDATE() AND p.taskStatus != 'Completed' THEN 1 END) as overdue_tasks, AVG(CASE WHEN p.startDate IS NOT NULL AND p.completionDate IS NOT NULL THEN DATEDIFF(day, CAST(p.startDate as DATE), CAST(p.completionDate as DATE)) END) as avg_completion_time, COUNT(CASE WHEN CAST(p.taskFinalRating as DECIMAL) <= 2 THEN 1 END) as low_ratings FROM PerformanceData_csod p WHERE p.taskName IS NOT NULL GROUP BY p.taskName HAVING COUNT(p.taskId) >= 15 ORDER BY completion_rate ASC, avg_rating ASC",
+      "context": "Dashboard Widget - Task Difficulty Analysis. Identifies challenging tasks that may need redesign or additional support.",
+      "document": "cornerstone_talent.mdl.json - task_difficulty_metrics",
+      "samples": [],
+      "instructions": "Identify tasks with low completion rates and ratings to redesign difficult evaluations and improve performance management processes."
+    },
+    {
+      "categories": ["employee_engagement", "participation_analysis"],
+      "question": "Which employees have the highest task completion rates and fastest response times?",
+      "sql": "SELECT u.userId, u.fullName, u.position, u.division, u.managerName, COUNT(p.taskId) as assigned_tasks, COUNT(CASE WHEN p.taskStatus = 'Completed' THEN 1 END) as completed_tasks, (COUNT(CASE WHEN p.taskStatus = 'Completed' THEN 1 END) * 100.0 / COUNT(p.taskId)) as completion_rate, COUNT(CASE WHEN p.stepStatus = 'In Progress' THEN 1 END) as tasks_in_progress, AVG(CASE WHEN p.startDate IS NOT NULL AND p.stepSubmissionDate IS NOT NULL THEN DATEDIFF(day, CAST(p.startDate as DATE), CAST(p.stepSubmissionDate as DATE)) END) as avg_response_time, AVG(CASE WHEN p.taskStatus = 'Completed' AND p.taskFinalRating IS NOT NULL THEN CAST(p.taskFinalRating as DECIMAL) END) as avg_completed_rating, COUNT(CASE WHEN p.stepDueDate IS NOT NULL AND p.stepSubmissionDate IS NOT NULL AND CAST(p.stepSubmissionDate as DATE) <= CAST(p.stepDueDate as DATE) THEN 1 END) as on_time_submissions FROM User_csod u JOIN PerformanceData_csod p ON u.userId = p.userId WHERE u.userStatus = 'Active' GROUP BY u.userId, u.fullName, u.position, u.division, u.managerName HAVING COUNT(p.taskId) >= 5 ORDER BY completion_rate DESC, avg_response_time ASC",
+      "context": "Dashboard Widget - Employee Engagement Analysis. Identifies highly engaged employees based on participation and responsiveness.",
+      "document": "cornerstone_talent.mdl.json - employee_engagement_metrics",
+      "samples": [],
+      "instructions": "Identify highly engaged employees with strong completion rates and responsiveness for recognition and mentoring opportunities."
+    },
+    {
+      "categories": ["performance_forecasting", "predictive_analytics"],
+      "question": "Based on current task progress, predict which employees are at risk of missing upcoming deadlines?",
+      "sql": "WITH current_tasks AS (SELECT u.userId, u.fullName, u.position, u.division, u.managerName, COUNT(p.taskId) as active_tasks, COUNT(CASE WHEN p.stepStatus = 'In Progress' THEN 1 END) as in_progress_tasks, COUNT(CASE WHEN p.stepDueDate IS NOT NULL AND CAST(p.stepDueDate as DATE) <= DATEADD(day, 7, GETDATE()) THEN 1 END) as due_within_week, COUNT(CASE WHEN p.stepDueDate IS NOT NULL AND CAST(p.stepDueDate as DATE) < GETDATE() THEN 1 END) as already_overdue, AVG(CASE WHEN p.startDate IS NOT NULL THEN DATEDIFF(day, CAST(p.startDate as DATE), GETDATE()) END) as avg_task_age FROM User_csod u JOIN PerformanceData_csod p ON u.userId = p.userId WHERE p.taskStatus IN ('Not Started', 'In Progress') AND u.userStatus = 'Active' GROUP BY u.userId, u.fullName, u.position, u.division, u.managerName), historical_performance AS (SELECT u.userId, AVG(CASE WHEN p.startDate IS NOT NULL AND p.completionDate IS NOT NULL THEN DATEDIFF(day, CAST(p.startDate as DATE), CAST(p.completionDate as DATE)) END) as avg_historical_completion_time, (COUNT(CASE WHEN p.stepDueDate IS NOT NULL AND p.completionDate IS NOT NULL AND CAST(p.completionDate as DATE) <= CAST(p.stepDueDate as DATE) THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN p.stepDueDate IS NOT NULL AND p.completionDate IS NOT NULL THEN 1 END), 0)) as historical_on_time_rate FROM User_csod u JOIN PerformanceData_csod p ON u.userId = p.userId WHERE p.taskStatus = 'Completed' GROUP BY u.userId) SELECT ct.userId, ct.fullName, ct.position, ct.division, ct.managerName, ct.active_tasks, ct.due_within_week, ct.already_overdue, ct.avg_task_age, hp.avg_historical_completion_time, hp.historical_on_time_rate, CASE WHEN ct.already_overdue > 0 AND hp.historical_on_time_rate < 70 THEN 'High Risk' WHEN ct.due_within_week > 0 AND (hp.historical_on_time_rate < 80 OR ct.avg_task_age > hp.avg_historical_completion_time) THEN 'Medium Risk' ELSE 'Low Risk' END as risk_level FROM current_tasks ct LEFT JOIN historical_performance hp ON ct.userId = hp.userId WHERE ct.active_tasks > 0 ORDER BY CASE WHEN risk_level = 'High Risk' THEN 1 WHEN risk_level = 'Medium Risk' THEN 2 ELSE 3 END, ct.due_within_week DESC",
+      "context": "Dashboard Widget - Deadline Risk Prediction. Identifies employees at risk of missing deadlines for proactive intervention.",
+      "document": "cornerstone_talent.mdl.json - predictive_deadline_analytics",
+      "samples": [],
+      "instructions": "Predict deadline risks using historical performance patterns and current task status to enable proactive support and intervention."
+    }
+]

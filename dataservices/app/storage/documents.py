@@ -277,6 +277,7 @@ class DocumentChromaStore:
         self.tfidf_vectorstore = None
         self.collection = None
         self.tfidf_collection_name = f"{self.collection_name}_tfidf"
+        self.persistent_client = client
         
         # Initialize ChromaDB wrapper with the provided client or create a new one
         if client:
@@ -314,14 +315,14 @@ class DocumentChromaStore:
             
             # Initialize the Langchain Chroma wrapper
             self.vectorstore = Chroma(
-                client=self.chroma_client.client,
+                client=self.persistent_client,
                 collection_name=self.collection_name,
                 embedding_function=self.embeddings_model,
             )
             
             if self.tf_idf:
                 self.tfidf_vectorstore = Chroma(
-                    client=self.chroma_client.client,
+                    client=self.persistent_client,
                     collection_name=self.tfidf_collection_name,
                     embedding_function=self.embeddings_model,
                 )
@@ -415,23 +416,41 @@ class DocumentChromaStore:
 
     def add_tfidf_vectors(self, documents: List[LangchainDocument], ids: List[str]):
         if not self.tf_idf:
+            logger.warning("TF-IDF not enabled, skipping TF-IDF vector storage")
             return
         if documents:
-            # TF-IDF indexing
-            # Note: TfidfVectorizer().fit_transform(...) recomputes the TF-IDF each time. If your corpus grows dynamically, consider persisting the vectorizer using joblib or pickle.
-            
+            logger.info(f"Adding {len(documents)} documents to TF-IDF collection")
             # Extract page contents
             texts = [doc.page_content for doc in documents]
-            # Generate TF-IDF vectors
-            tfidf_matrix = self.vectorizer.fit_transform(texts)
             metadata_list = [doc.metadata for doc in documents]
             ids = [str(uuid.uuid4()) for _ in range(len(texts))]
+            
+            # Get all existing documents from TF-IDF collection to refit vectorizer
+            try:
+                existing_docs = self.chroma_client.get_all_records(self.tfidf_collection_name)
+                existing_texts = existing_docs.get('documents', [])
+                all_texts = existing_texts + texts
+                logger.info(f"Found {len(existing_texts)} existing documents, adding {len(texts)} new documents")
+            except Exception as e:
+                # If collection doesn't exist or is empty, use only current documents
+                logger.info(f"TF-IDF collection doesn't exist or is empty, using only current documents: {e}")
+                all_texts = texts
+            
+            # Fit vectorizer with all documents (existing + new)
+            logger.info(f"Fitting TF-IDF vectorizer with {len(all_texts)} total documents")
+            tfidf_matrix = self.vectorizer.fit_transform(all_texts)
+            logger.info(f"TF-IDF vectorizer fitted successfully. Matrix shape: {tfidf_matrix.shape}")
+            
+            # Get TF-IDF vectors for only the new documents
+            new_docs_start_idx = len(all_texts) - len(texts)
+            new_tfidf_matrix = tfidf_matrix[new_docs_start_idx:]
+            
             # Use ChromaDB wrapper to add TF-IDF vectors with embeddings
             self.chroma_client.add_documents_with_embeddings(
                 collection_name=self.tfidf_collection_name,
                 documents=texts,
                 ids=ids,
-                embeddings=tfidf_matrix.toarray(),
+                embeddings=new_tfidf_matrix.toarray(),
                 metadata=metadata_list
             )
             logger.info(f"Added {len(texts)} TF-IDF vectors to collection {self.tfidf_collection_name}")
@@ -652,6 +671,11 @@ class DocumentChromaStore:
         """
         if not self.tf_idf or not self.tfidf_collection:
             logger.warning("TF-IDF search not enabled or collection not initialized.")
+            return []
+        
+        # Check if vectorizer is fitted
+        if not hasattr(self.vectorizer, 'vocabulary_'):
+            logger.error("The TF-IDF vectorizer is not fitted")
             return []
             
         try:

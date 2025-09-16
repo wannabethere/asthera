@@ -2536,10 +2536,11 @@ Create a detailed pipeline reasoning plan that:
 **CRITICAL**: If after the replan step the order is incorrect, please consider the best order of the steps for the given analysis question.
 
 **CRITICAL EMBEDDED FUNCTION PARAMETER RULES**:
-- For function input callable, if applicable, the function parameter should contain a complete pipeline expression
-- Example: moving_apply_by_group(function=(MetricsPipe.from_dataframe(...) | Variance(...) | to_df()))
-- This embeds the MetricsPipe Variance calculation within the MovingAggrPipe moving_apply_by_group function
+- For function input callable, if applicable, the function parameter should contain the function name from group aggregation functions
+- Example: moving_apply_by_group(function=variance) where 'variance' is a function from group_aggregation_functions
+- This embeds the group aggregation function directly within the MovingAggrPipe moving_apply_by_group function
 - Do NOT create separate pipelines for functions that should be embedded as parameters
+- Use function names from the group aggregation functions: mean, sum_values, count_values, max_value, min_value, std_dev, variance, median, unique_count, mode, weighted_average, geometric_mean, harmonic_mean, interquartile_range, mad, percent_change, absolute_change, etc.
 
 **CRITICAL PARAMETER MAPPING RULES**:
 - **Configuration parameters** (window, annualize, method, etc.) should be set to appropriate values, NOT mapped to columns
@@ -2560,8 +2561,8 @@ Each pipeline reasoning step should contain:
 - data_requirements: What data/columns are needed for this step
 - considerations: Any important considerations or potential issues
 - merge_with_previous: Whether this step can be merged with previous similar steps
-- embedded_function_parameter: For functions like moving_apply_by_group, specify if a function parameter should contain an embedded pipeline expression (e.g., "function=(MetricsPipe.from_dataframe(...) | Variance(...) | to_df())")
-- embedded_function_details: If embedded_function_parameter is true, specify the details of the embedded function (function name, parameters, pipe type)
+- embedded_function_parameter: For functions like moving_apply_by_group, specify if a function parameter should contain a group aggregation function name (e.g., "function=variance")
+- embedded_function_details: If embedded_function_parameter is true, specify the details of the embedded function (function name from group aggregation functions, no pipe type needed)
 
 ### ENHANCED METADATA REQUIREMENTS ###
 Each step should also include enhanced metadata for better pipeline generation:
@@ -2598,12 +2599,12 @@ Each step should also include enhanced metadata for better pipeline generation:
 **EMBEDDED FUNCTION PARAMETER GUIDELINES**:
 - **USE EMBEDDED PARAMETERS FOR**: moving_apply_by_group, GroupBy, and similar functions that accept function parameters
 - **EMBEDDED FUNCTION EXAMPLES**:
-  - moving_apply_by_group with Variance: function=(MetricsPipe.from_dataframe(...) | Variance(...) -- Please add a child step with reasoning for the next agent to generate the necessary code)
-  - moving_apply_by_group with Mean: function=(MetricsPipe.from_dataframe(...) | Mean(...) -- Please add a child step with reasoning for the next agent to generate the necessary code)
-  - GroupBy with Sum: function=(MetricsPipe.from_dataframe(...) | Sum(...) -- Please add a child step with reasoning for the next agent to generate the necessary code)
+  - moving_apply_by_group with variance: function=variance (from group aggregation functions)
+  - moving_apply_by_group with mean: function=mean (from group aggregation functions)
+  - moving_apply_by_group with sum_values: function=sum_values (from group aggregation functions)
 - **DO NOT EMBED FOR**: Direct function calls like Variance(), Mean(), Sum() that are used standalone
-- **IMPORTANT**: Please ensure the embedded functions are communicated properly.
-- **PIPE TYPE SEPARATION**: When embedding, ensure the embedded function uses the correct pipe type (MetricsPipe for Variance, etc.)
+- **IMPORTANT**: Use function names from group_aggregation_functions module
+- **FUNCTION NAMES**: Use lowercase with underscores: variance, mean, sum_values, count_values, max_value, min_value, std_dev, median, unique_count, mode, weighted_average, geometric_mean, harmonic_mean, interquartile_range, mad, percent_change, absolute_change, etc.
 
 ### MERGING STRATEGY ###
 - For pipeline type functions, try to merge similar data preparation steps
@@ -2655,9 +2656,8 @@ Provide your response as a JSON object with only the pipeline_reasoning_plan:
             "merge_with_previous": false,
             "embedded_function_parameter": true,
             "embedded_function_details": {{
-                "embedded_function": "Variance",
-                "embedded_pipe": "MetricsPipe",
-                "embedded_parameters": {{"variable": "Transactional value"}},
+                "embedded_function": "variance",
+                "embedded_parameters": {{"column": "Transactional value"}},
                 "embedded_output": "variance_Transactional value"
             }},
             "column_mapping": {{
@@ -2695,8 +2695,8 @@ Focus on creating clear, actionable reasoning steps that the next agent can use 
 When the user asks for "variance with moving apply by group", the reasoning plan should specify:
 - Step 1: Use moving_apply_by_group as the primary function
 - embedded_function_parameter: true
-- embedded_function_details: Specify Variance as the embedded function with MetricsPipe
-- This tells the code generation agent to create: function=(MetricsPipe.from_dataframe(...) | Variance(...) | to_df())
+- embedded_function_details: Specify variance as the embedded function from group aggregation functions
+- This tells the code generation agent to create: function=variance
 - NOT separate pipelines for Variance and moving_apply_by_group
 """
             )
