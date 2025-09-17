@@ -14,10 +14,13 @@ class AlertConditionType(str, Enum):
     THRESHOLD_VALUE = "threshold_value"
 
 class ScheduleType(str, Enum):
-    SCHEDULED = "scheduled"
-    INACTIVE = "inactive"
-    ACTIVE = "active"
-    CRON_SCHEDULE = "cron_schedule"
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+    QUARTERLY = "quarterly"
+    YEARLY = "yearly"
+    CUSTOM = "custom"
+    NEVER = "never"
 
 class ThresholdOperator(str, Enum):
     GREATER_THAN = ">"
@@ -79,14 +82,30 @@ class LexyFeedNotification(BaseModel):
 class LexyFeedConfiguration(BaseModel):
     """Complete Lexy Feed configuration"""
     metric: LexyFeedMetric
-    condition: LexyFeedCondition
+    conditions: List[LexyFeedCondition]  # Support multiple conditions
     notification: LexyFeedNotification
     column_selection: Dict[str, List[str]]  # included/excluded columns
     
+    # Backward compatibility - if single condition is provided, wrap it in a list
+    def __init__(self, **data):
+        if 'condition' in data and 'conditions' not in data:
+            data['conditions'] = [data.pop('condition')]
+        elif 'conditions' not in data:
+            data['conditions'] = []
+        super().__init__(**data)
+    
+class AlertClarification(BaseModel):
+    """Clarification request for ambiguous alert conditions"""
+    needs_clarification: bool = True
+    clarification_questions: List[str]
+    ambiguous_elements: List[str]
+    suggested_improvements: List[str]
+
 class SQLAlertResult(BaseModel):
     """Final result with critique and confidence"""
-    feed_configuration: LexyFeedConfiguration
-    sql_analysis: SQLAnalysis
-    confidence_score: float
-    critique_notes: List[str]
-    suggestions: List[str]
+    feed_configuration: Optional[LexyFeedConfiguration] = None
+    sql_analysis: Optional[SQLAnalysis] = None
+    confidence_score: float = 0.0
+    critique_notes: List[str] = []
+    suggestions: List[str] = []
+    clarification: Optional[AlertClarification] = None

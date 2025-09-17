@@ -2,9 +2,104 @@ from typing import Dict, Any, Optional, List, Union
 from pydantic import BaseModel, Field
 from datetime import datetime
 from enum import Enum
+import re
 
 from app.services.servicebase import BaseService
 from app.agents.pipelines.pipeline_container import PipelineContainer
+
+
+def parse_alert_request(alert_request: str) -> Dict[str, Any]:
+    """
+    Parse alert request text to extract threshold values, condition types, and metrics.
+    
+    Args:
+        alert_request: Natural language alert request text
+        
+    Returns:
+        Dictionary containing parsed values:
+        - condition_type: The type of condition (greaterthan, lessthan, etc.)
+        - threshold_value: The numeric threshold value
+        - metric_name: The metric being monitored
+        - operator: The comparison operator
+    """
+    if not alert_request:
+        return {
+            "condition_type": "greaterthan",
+            "threshold_value": "0",
+            "metric_name": "default_metric",
+            "operator": ">"
+        }
+    
+    # Convert to lowercase for easier matching
+    text = alert_request.lower()
+    
+    # Extract numeric threshold value
+    threshold_value = "0"
+    number_patterns = [
+        r'greater than (\d+(?:,\d{3})*(?:\.\d+)?)',
+        r'less than (\d+(?:,\d{3})*(?:\.\d+)?)',
+        r'above (\d+(?:,\d{3})*(?:\.\d+)?)',
+        r'below (\d+(?:,\d{3})*(?:\.\d+)?)',
+        r'exceeds (\d+(?:,\d{3})*(?:\.\d+)?)',
+        r'(\d+(?:,\d{3})*(?:\.\d+)?) or more',
+        r'(\d+(?:,\d{3})*(?:\.\d+)?) or less',
+        r'(\d+(?:,\d{3})*(?:\.\d+)?) or higher',
+        r'(\d+(?:,\d{3})*(?:\.\d+)?) or lower'
+    ]
+    
+    for pattern in number_patterns:
+        match = re.search(pattern, text)
+        if match:
+            threshold_value = match.group(1).replace(',', '')  # Remove commas
+            break
+    
+    # Determine condition type and operator
+    condition_type = "greaterthan"
+    operator = ">"
+    
+    if any(word in text for word in ['greater than', 'above', 'exceeds', 'more than', 'higher than']):
+        condition_type = "greaterthan"
+        operator = ">"
+    elif any(word in text for word in ['less than', 'below', 'lower than']):
+        condition_type = "lessthan"
+        operator = "<"
+    elif any(word in text for word in ['equal to', 'equals', 'exactly']):
+        condition_type = "equals"
+        operator = "="
+    elif any(word in text for word in ['not equal', 'not equals', 'different from']):
+        condition_type = "notequals"
+        operator = "!="
+    
+    # Extract metric name (look for common patterns)
+    metric_name = "default_metric"
+    metric_patterns = [
+        r'(\w+_count)',
+        r'(\w+_total)',
+        r'(\w+_value)',
+        r'(\w+_amount)',
+        r'(\w+_number)',
+        r'count of (\w+)',
+        r'total (\w+)',
+        r'number of (\w+)',
+        r'(\w+)\s+is\s+greater\s+than',  # "user_count is greater than"
+        r'(\w+)\s+is\s+less\s+than',     # "user_count is less than"
+        r'(\w+)\s+is\s+above',           # "user_count is above"
+        r'(\w+)\s+is\s+below',           # "user_count is below"
+        r'(\w+)\s+exceeds',              # "user_count exceeds"
+    ]
+    
+    for pattern in metric_patterns:
+        match = re.search(pattern, text)
+        if match:
+            metric_name = match.group(1)
+            break
+    
+    return {
+        "condition_type": condition_type,
+        "threshold_value": threshold_value,
+        "metric_name": metric_name,
+        "operator": operator
+    }
 
 
 class AlertRequestType(str, Enum):
@@ -79,8 +174,7 @@ class FeedManagementRequest(BaseModel):
 
 class AlertRequest(BaseModel):
     """Union request model that can handle both single alerts and feed management"""
-    request_type: AlertRequestType = Field(..., description="Type of alert request")
-    
+    request_type: AlertRequestType = Field(..., description="Type of alert request")    
     # Single alert fields
     sql_queries: Optional[List[str]] = Field(default=None, description="List of SQL queries for single alert")
     natural_language_query: Optional[str] = Field(default=None, description="Natural language description for single alert")
@@ -683,36 +777,232 @@ class AlertServiceCompatibility:
         result = service_response.result
         metadata = service_response.metadata
         
-        # Try to extract alert information from the result and metadata
-        alert_name = "Generated Alert"
-        summary = "Alert generated from service"
-        reasoning = "Alert created using alert service"
-        conditions = []
-        notification_group = "default"
-        
-        # Extract from result metadata if available
-        if "metadata" in result:
-            result_metadata = result["metadata"]
-            alert_name = result_metadata.get("alert_name", alert_name)
-            summary = result_metadata.get("summary", summary)
-            reasoning = result_metadata.get("reasoning", reasoning)
-            notification_group = result_metadata.get("notification_group", notification_group)
-        
-        # Extract service-managed fields
-        project_id = metadata.get("event_id")  # Using event_id as project identifier
-        session_id = metadata.get("session_id")
-        feed_id = result.get("feed_id")
-        feed_name = result.get("feed_name")
-        global_configuration = result.get("global_configuration", {})
-        notification_settings = result.get("notification_settings")
-        schedule_settings = result.get("schedule_settings")
-        priority = result.get("priority", AlertPriority.MEDIUM)
-        tags = result.get("tags", [])
-        service_metadata = {
-            "pipeline_name": metadata.get("pipeline_name"),
-            "pipeline_version": metadata.get("pipeline_version"),
-            "execution_timestamp": metadata.get("execution_timestamp")
-        }
+        # Handle alert orchestrator pipeline response format
+        if "post_process" in result:
+            post_process = result["post_process"]
+            alert_results = post_process.get("alert_results", [])
+            orchestration_metadata = post_process.get("orchestration_metadata", {})
+            
+            # Extract alert information from the first alert result
+            alert_name = "Generated Alert"
+            summary = "Alert generated from service"
+            reasoning = "Alert created using alert service"
+            conditions = []
+            notification_group = "default"
+            
+            # First try to get from alert_results
+            if alert_results:
+                first_alert = alert_results[0]
+                feed_config = first_alert.get("feed_configuration", {})
+                condition = feed_config.get("condition", {})
+                metric = feed_config.get("metric", {})
+                notification = feed_config.get("notification", {})
+                
+                # Extract alert name and summary
+                alert_name = notification.get("metric_name", "Generated Alert")
+                metric_name = metric.get("measure", "default_metric")
+                condition_value = condition.get("value", 0)
+                summary = f"Alert for {metric_name} with threshold {condition_value}"
+                reasoning = "Alert generated from service"
+                
+                # Extract values directly from the Pydantic model dictionaries
+                # The .dict() method converts enums to their string values
+                
+                # Get schedule from notification schedule_type (already converted to string by .dict())
+                schedule_type = notification.get("schedule_type", "scheduled")
+                
+                # Get the actual frequency from the notification or derive from resolution
+                # The LLM should determine the appropriate frequency based on the alert context
+                custom_schedule = notification.get("custom_schedule")
+                frequency = notification.get("frequency")  # This might be set by the LLM
+                
+                # Use schedule_type directly from LLM response
+                # The LLM now generates the correct schedule format directly
+                valid_schedules = ["daily", "weekly", "monthly", "quarterly", "yearly", "custom", "never"]
+                schedule = schedule_type if schedule_type in valid_schedules else "daily"
+                
+                # Get timecolumn from metric resolution (already converted to string by .dict())
+                resolution = metric.get("resolution", "Daily")
+                # Map resolution to timecolumn format
+                timecolumn_map = {
+                    "Daily": "rolling",
+                    "Weekly": "weekly",
+                    "Monthly": "monthly",
+                    "Quarterly": "quarterly",
+                    "Yearly": "yearly"
+                }
+                timecolumn = timecolumn_map.get(resolution, "rolling")
+                
+                # Convert conditions to Condition format (support multiple conditions)
+                conditions = []
+                
+                # Check if we have multiple conditions or single condition
+                conditions_list = feed_config.get("conditions", [])
+                if not conditions_list and condition:
+                    # Backward compatibility: convert single condition to list
+                    conditions_list = [condition]
+                
+                if conditions_list:
+                    for i, cond in enumerate(conditions_list):
+                        # Get condition type (already converted to string by .dict())
+                        condition_type_value = cond.get("condition_type", "threshold_value")
+                        
+                        # Get the actual operator from the condition
+                        operator = cond.get("operator", ">")
+                        
+                        # Get the condition value
+                        cond_value = cond.get("value", 0)
+                        
+                        # Map operator to condition type format
+                        operator_map = {
+                            ">": "greaterthan",
+                            ">=": "greaterthan",  # Greater than or equal maps to greaterthan
+                            "<": "lessthan",
+                            "<=": "lessthan",     # Less than or equal maps to lessthan
+                            "=": "equals",
+                            "!=": "notequals"
+                        }
+                        condition_type = operator_map.get(operator, "greaterthan")
+                        
+                        # Create condition name with index if multiple conditions
+                        condition_name = alert_name
+                        if len(conditions_list) > 1:
+                            condition_name = f"{alert_name} - Condition {i+1}"
+                        
+                        conditions.append(Condition(
+                            conditionType=condition_type,
+                            metricselected=metric_name,
+                            schedule=schedule,
+                            timecolumn=timecolumn,
+                            value=str(cond_value),
+                            alert_id=f"generated_alert_{i}",
+                            alert_name=condition_name,
+                            priority=AlertPriority.MEDIUM,
+                            created_at=datetime.now()
+                        ))
+            else:
+                # If no alert_results, try to extract from the pipeline result directly
+                # This handles the case where the alert agent returns the configuration directly
+                if hasattr(service_response, 'result') and 'feed_configuration' in str(service_response.result):
+                    # The result contains a LexyFeedConfiguration object
+                    # We need to extract the condition information from it
+                    try:
+                        # Parse the string representation to extract the condition value
+                        result_str = str(service_response.result)
+                        
+                        # Extract condition value using regex
+                        import re
+                        value_match = re.search(r'value=(\d+)', result_str)
+                        condition_type_match = re.search(r'condition_type=<AlertConditionType\.(\w+):', result_str)
+                        operator_match = re.search(r'operator=<ThresholdOperator\.(\w+):', result_str)
+                        metric_match = re.search(r'measure=\'([^\']+)\'', result_str)
+                        schedule_type_match = re.search(r'schedule_type=<ScheduleType\.(\w+):', result_str)
+                        resolution_match = re.search(r'resolution=\'([^\']+)\'', result_str)
+                        
+                        condition_value = value_match.group(1) if value_match else "0"
+                        condition_type = condition_type_match.group(1).lower() if condition_type_match else "threshold_value"
+                        operator = operator_match.group(1) if operator_match else ">"
+                        metric_name = metric_match.group(1) if metric_match else "default_metric"
+                        schedule_type = schedule_type_match.group(1).lower() if schedule_type_match else "scheduled"
+                        resolution = resolution_match.group(1) if resolution_match else "Daily"
+                        
+                        # Map operator to condition type format
+                        operator_map = {
+                            ">": "greaterthan",
+                            ">=": "greaterthan",  # Greater than or equal maps to greaterthan
+                            "<": "lessthan",
+                            "<=": "lessthan",     # Less than or equal maps to lessthan
+                            "=": "equals",
+                            "!=": "notequals"
+                        }
+                        mapped_condition_type = operator_map.get(operator, "greaterthan")
+                        
+                        # Use schedule_type directly from LLM response
+                        # The LLM now generates the correct schedule format directly
+                        valid_schedules = ["daily", "weekly", "monthly", "quarterly", "yearly", "custom", "never"]
+                        schedule = schedule_type if schedule_type in valid_schedules else "daily"
+                        
+                        # Map resolution to timecolumn format
+                        timecolumn_map = {
+                            "Daily": "rolling",
+                            "Weekly": "weekly",
+                            "Monthly": "monthly",
+                            "Quarterly": "quarterly",
+                            "Yearly": "yearly"
+                        }
+                        timecolumn = timecolumn_map.get(resolution, "rolling")
+                        
+                        conditions = [Condition(
+                            conditionType=mapped_condition_type,
+                            metricselected=metric_name,
+                            schedule=schedule,
+                            timecolumn=timecolumn,
+                            value=condition_value,
+                            alert_id="generated_alert",
+                            alert_name="Generated Alert",
+                            priority=AlertPriority.MEDIUM,
+                            created_at=datetime.now()
+                        )]
+                        
+                        alert_name = "Generated Alert"
+                        summary = f"Alert for {metric_name} with threshold {condition_value}"
+                        reasoning = "Alert generated from service"
+                        
+                    except Exception as e:
+                        # Fallback to default condition
+                        conditions = [Condition(
+                            conditionType="greaterthan",
+                            metricselected="default_metric",
+                            schedule="daily",
+                            timecolumn="rolling",
+                            value="0",
+                            alert_id="default_alert",
+                            alert_name="Default Alert",
+                            priority=AlertPriority.MEDIUM,
+                            created_at=datetime.now()
+                        )]
+            
+            # Extract service-managed fields
+            project_id = orchestration_metadata.get("project_id")
+            session_id = metadata.get("session_id")
+            service_metadata = {
+                "pipeline_name": metadata.get("pipeline_name"),
+                "pipeline_version": metadata.get("pipeline_version"),
+                "execution_timestamp": metadata.get("execution_timestamp"),
+                "orchestration_metadata": orchestration_metadata
+            }
+            
+        else:
+            # Fallback to original format for backward compatibility
+            alert_name = "Generated Alert"
+            summary = "Alert generated from service"
+            reasoning = "Alert created using alert service"
+            conditions = []
+            notification_group = "default"
+            
+            # Extract from result metadata if available
+            if "metadata" in result:
+                result_metadata = result["metadata"]
+                alert_name = result_metadata.get("alert_name", alert_name)
+                summary = result_metadata.get("summary", summary)
+                reasoning = result_metadata.get("reasoning", reasoning)
+                notification_group = result_metadata.get("notification_group", notification_group)
+            
+            # Extract service-managed fields
+            project_id = metadata.get("event_id")  # Using event_id as project identifier
+            session_id = metadata.get("session_id")
+            feed_id = result.get("feed_id")
+            feed_name = result.get("feed_name")
+            global_configuration = result.get("global_configuration", {})
+            notification_settings = result.get("notification_settings")
+            schedule_settings = result.get("schedule_settings")
+            priority = result.get("priority", AlertPriority.MEDIUM)
+            tags = result.get("tags", [])
+            service_metadata = {
+                "pipeline_name": metadata.get("pipeline_name"),
+                "pipeline_version": metadata.get("pipeline_version"),
+                "execution_timestamp": metadata.get("execution_timestamp")
+            }
         
         # Create a basic condition if none exist
         if not conditions:
@@ -739,13 +1029,13 @@ class AlertServiceCompatibility:
             # Service-managed fields
             project_id=project_id,
             session_id=session_id,
-            feed_id=feed_id,
-            feed_name=feed_name,
-            global_configuration=global_configuration,
-            notification_settings=notification_settings,
-            schedule_settings=schedule_settings,
-            priority=priority,
-            tags=tags,
+            feed_id=result.get("feed_id"),
+            feed_name=result.get("feed_name"),
+            global_configuration=result.get("global_configuration", {}),
+            notification_settings=result.get("notification_settings"),
+            schedule_settings=result.get("schedule_settings"),
+            priority=result.get("priority", AlertPriority.MEDIUM),
+            tags=result.get("tags", []),
             metadata=result,
             created_at=datetime.now(),
             updated_at=datetime.now(),
@@ -761,49 +1051,36 @@ class AlertServiceCompatibility:
         """Process an AlertCreate request and return a compatibility response
         
         This method handles the full flow from AlertCreate to service response
-        and back to compatibility format.
+        and back to compatibility format using the alert orchestrator pipeline.
         """
         # Use provided project_id or fall back to default
         project_id = project_id or alert_create.project_id or self.default_project_id
         
-        # Create a basic AlertResponseCompatibility from the AlertCreate
-        # This is a simplified version - in practice, you'd use your AI service
-        # to generate the actual alert response
-        alert_response = AlertResponseCompatibility(
-            type="finished",
-            question=alert_create.config.question if alert_create.config else "Generated from input",
-            alertname=f"Alert for: {alert_create.input[:50]}...",
-            summary=f"Alert generated from: {alert_create.input}",
-            reasoning="Generated from user input",
-            conditions=[
-                Condition(
-                    conditionType="greaterthan",
-                    metricselected="default_metric",
-                    schedule="daily",
-                    timecolumn="rolling",
-                    value="0"
-                )
-            ],
-            notificationgroup="default",
-            # Service-managed fields
-            project_id=project_id,
-            session_id=alert_create.session_id,
-            global_configuration=alert_create.configuration,
-            priority=alert_create.priority,
-            tags=alert_create.tags,
-            metadata=alert_create.metadata,
-            created_at=datetime.now()
-        )
-        
-        # Process through the service
         try:
-            service_response = await self.create_alerts_from_response(
-                alert_response=alert_response,
+            # Extract SQL query and natural language query from the input
+            # For now, we'll use the input as both SQL and natural language query
+            # In a real implementation, you might want to parse this more intelligently
+            sql_queries = [alert_create.input]  # Use input as SQL query
+            natural_language_query = alert_create.input  # Use input as natural language query
+            alert_request = alert_create.input  # Use input as alert request
+            
+            # Create an AlertRequest for the alert service
+            alert_request_obj = AlertRequest(
+                request_type=AlertRequestType.SINGLE_ALERT,
+                sql_queries=sql_queries,
+                natural_language_query=natural_language_query,
+                alert_request=alert_request,
                 project_id=project_id,
-                session_id=alert_create.session_id
+                data_description=alert_create.data_description,
+                session_id=alert_create.session_id,
+                additional_context=alert_create.additional_context,
+                configuration=alert_create.configuration
             )
             
-            # Convert back to compatibility format
+            # Process through the alert service using the orchestrator pipeline
+            service_response = await self.alert_service.process_request(alert_request_obj)
+            
+            # Convert the service response to compatibility format
             return self.convert_service_response_to_compatibility(service_response)
             
         except Exception as e:

@@ -336,10 +336,22 @@ class DocumentChromaStore:
                 logger.info(f"Using ChromaDB client type: {client_type}")
                 
                 # Try to list existing collections to test connection
-                existing_collections = self.persistent_client.list_collections()
-                logger.info(f"Successfully connected to ChromaDB. Found {len(existing_collections)} existing collections")
+                try:
+                    existing_collections = self.persistent_client.list_collections()
+                    logger.info(f"Successfully connected to ChromaDB. Found {len(existing_collections)} existing collections")
+                except Exception as list_error:
+                    # If list_collections fails with '_type' error, log warning but continue
+                    if "'_type'" in str(list_error):
+                        logger.warning(f"ChromaDB list_collections failed with '_type' error: {list_error}")
+                        logger.warning("This might be a version compatibility issue, but continuing with collection creation...")
+                    else:
+                        logger.warning(f"ChromaDB list_collections failed: {list_error}, but continuing...")
             except Exception as e:
                 logger.error(f"Failed to connect to ChromaDB: {e}")
+                # Check if it's a specific '_type' error
+                if "'_type'" in str(e):
+                    logger.error("ChromaDB '_type' error detected. This might be a version compatibility issue.")
+                    logger.error("Try updating ChromaDB or check client configuration.")
                 raise
             
             # Get or create the collection
@@ -351,12 +363,38 @@ class DocumentChromaStore:
                     name=self.collection_name,
                     metadata={"description": f"Collection for {self.collection_name}"}
                 )
+                logger.info(f"Successfully created collection '{self.collection_name}' with metadata")
             except Exception as e:
                 logger.warning(f"Failed to create collection with metadata, trying without: {e}")
-                # Try without any metadata
-                self.collection = self.persistent_client.get_or_create_collection(
-                    name=self.collection_name
-                )
+                # Check if it's a specific '_type' error
+                if "'_type'" in str(e):
+                    logger.warning("ChromaDB '_type' error during collection creation with metadata. Trying without metadata...")
+                try:
+                    # Try without any metadata
+                    self.collection = self.persistent_client.get_or_create_collection(
+                        name=self.collection_name
+                    )
+                    logger.info(f"Successfully created collection '{self.collection_name}' without metadata")
+                except Exception as e2:
+                    logger.error(f"Failed to create collection even without metadata: {e2}")
+                    if "'_type'" in str(e2):
+                        logger.error("ChromaDB '_type' error persists. This is likely a version compatibility issue.")
+                        # Try one more time with a different approach
+                        try:
+                            logger.info("Attempting alternative collection creation approach...")
+                            # Try to get existing collection first
+                            try:
+                                self.collection = self.persistent_client.get_collection(name=self.collection_name)
+                                logger.info(f"Found existing collection '{self.collection_name}'")
+                            except:
+                                # If get fails, try create with minimal parameters
+                                self.collection = self.persistent_client.create_collection(name=self.collection_name)
+                                logger.info(f"Created new collection '{self.collection_name}' using create_collection")
+                        except Exception as e3:
+                            logger.error(f"All collection creation attempts failed: {e3}")
+                            raise
+                    else:
+                        raise
             if self.tf_idf:
                 try:
                     self.tfidf_collection = self.persistent_client.get_or_create_collection(
@@ -366,11 +404,35 @@ class DocumentChromaStore:
                             "description": f"TF-IDF collection for {self.collection_name}"
                         }
                     )
+                    logger.info(f"Successfully created TF-IDF collection '{self.tfidf_collection_name}' with metadata")
                 except Exception as e:
                     logger.warning(f"Failed to create TF-IDF collection with metadata, trying without: {e}")
-                    self.tfidf_collection = self.persistent_client.get_or_create_collection(
-                        name=self.tfidf_collection_name
-                    )
+                    # Check if it's a specific '_type' error
+                    if "'_type'" in str(e):
+                        logger.warning("ChromaDB '_type' error during TF-IDF collection creation with metadata. Trying without metadata...")
+                    try:
+                        self.tfidf_collection = self.persistent_client.get_or_create_collection(
+                            name=self.tfidf_collection_name
+                        )
+                        logger.info(f"Successfully created TF-IDF collection '{self.tfidf_collection_name}' without metadata")
+                    except Exception as e2:
+                        logger.error(f"Failed to create TF-IDF collection even without metadata: {e2}")
+                        if "'_type'" in str(e2):
+                            logger.error("ChromaDB '_type' error persists for TF-IDF collection.")
+                            # Try alternative approach for TF-IDF collection
+                            try:
+                                logger.info("Attempting alternative TF-IDF collection creation approach...")
+                                try:
+                                    self.tfidf_collection = self.persistent_client.get_collection(name=self.tfidf_collection_name)
+                                    logger.info(f"Found existing TF-IDF collection '{self.tfidf_collection_name}'")
+                                except:
+                                    self.tfidf_collection = self.persistent_client.create_collection(name=self.tfidf_collection_name)
+                                    logger.info(f"Created new TF-IDF collection '{self.tfidf_collection_name}' using create_collection")
+                            except Exception as e3:
+                                logger.error(f"All TF-IDF collection creation attempts failed: {e3}")
+                                raise
+                        else:
+                            raise
             # Initialize the Langchain Chroma wrapper
             self.vectorstore = Chroma(
                 client=self.persistent_client,

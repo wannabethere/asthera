@@ -54,8 +54,9 @@ class TrainingAlertExamples:
         
         print(f"🎯 Generated Alert: {result.feed_configuration.notification.metric_name}")
         print(f"📊 Metric: {result.feed_configuration.metric.measure}")
-        print(f"🎚️ Condition: {result.feed_configuration.condition.condition_type.value}")
-        print(f"🔢 Threshold: {result.feed_configuration.condition.operator} {result.feed_configuration.condition.value}")
+        print(f"🎚️ Conditions: {len(result.feed_configuration.conditions)} condition(s)")
+        for i, cond in enumerate(result.feed_configuration.conditions):
+            print(f"  Condition {i+1}: {cond.condition_type.value} {cond.operator} {cond.value}")
         print(f"📅 Schedule: {result.feed_configuration.notification.schedule_type.value}")
         print(f"🎯 Dimensions: {result.feed_configuration.metric.drilldown_dimensions}")
         print(f"⭐ Confidence: {result.confidence_score:.2f}")
@@ -84,7 +85,7 @@ class TrainingAlertExamples:
         
         print(f"🎯 Generated Alert: {result.feed_configuration.notification.metric_name}")
         print(f"📊 Primary Metric: {result.feed_configuration.metric.measure}")
-        print(f"🎚️ Condition Type: {result.feed_configuration.condition.condition_type.value}")
+        print(f"🎚️ Condition Type: {result.feed_configuration.conditions[0].condition_type.value if result.feed_configuration.conditions else 'None'}")
         print(f"📧 Notification: {result.feed_configuration.notification.email_message}")
         print(f"⭐ Confidence: {result.confidence_score:.2f}")
         
@@ -106,7 +107,7 @@ class TrainingAlertExamples:
         result = await self.agent.generate_alert(request)
         
         print(f"🤖 AI-Powered Alert: {result.feed_configuration.notification.metric_name}")
-        print(f"🧠 Uses ARIMA: {result.feed_configuration.condition.condition_type == 'intelligent_arima'}")
+        print(f"🧠 Uses ARIMA: {result.feed_configuration.conditions[0].condition_type.value == 'intelligent_arima' if result.feed_configuration.conditions else False}")
         print(f"📊 Tracking: {result.feed_configuration.metric.measure}")
         print(f"🎯 Dimensions: {result.feed_configuration.metric.drilldown_dimensions}")
         print(f"⭐ Confidence: {result.confidence_score:.2f}")
@@ -130,7 +131,7 @@ class TrainingAlertExamples:
         
         print(f"📈 Trend Alert: {result.feed_configuration.notification.metric_name}")
         print(f"📊 Tracking Changes In: {result.feed_configuration.metric.measure}")
-        print(f"🎚️ Condition: {result.feed_configuration.condition.condition_type.value}")
+        print(f"🎚️ Condition: {result.feed_configuration.conditions[0].condition_type.value if result.feed_configuration.conditions else 'None'}")
         print(f"📅 Resolution: {result.feed_configuration.metric.resolution}")
         print(f"⭐ Confidence: {result.confidence_score:.2f}")
         
@@ -176,11 +177,13 @@ class TrainingAlertExamples:
                     "aggregation": config.metric.aggregation,
                     "resolution": config.metric.resolution
                 },
-                "condition": {
-                    "type": config.condition.condition_type.value,
-                    "operator": config.condition.operator.value if config.condition.operator else None,
-                    "value": config.condition.value
-                },
+                "conditions": [
+                    {
+                        "type": cond.condition_type.value,
+                        "operator": cond.operator.value if cond.operator else None,
+                        "value": cond.value
+                    } for cond in config.conditions
+                ],
                 "filters": config.metric.filters,
                 "drilldownDimensions": config.metric.drilldown_dimensions,
                 "notification": {
@@ -238,7 +241,7 @@ async def run_complete_demo():
     for i, (name, result) in enumerate(results, 1):
         print(f"\n{i}. {name}")
         print(f"   📊 Metric: {result.feed_configuration.metric.measure}")
-        print(f"   🎚️ Condition: {result.feed_configuration.condition.condition_type.value}")
+        print(f"   🎚️ Condition: {result.feed_configuration.conditions[0].condition_type.value if result.feed_configuration.conditions else 'None'}")
         print(f"   ⭐ Confidence: {result.confidence_score:.2f}")
         print(f"   📧 Schedule: {result.feed_configuration.notification.schedule_type.value}")
     

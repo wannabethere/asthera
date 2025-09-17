@@ -7,8 +7,13 @@ from langchain_openai import ChatOpenAI
 import chromadb
 from app.core.provider import DocumentStoreProvider
 import logging
+from functools import lru_cache
 
 logger = logging.getLogger(__name__)
+
+# Global cache for ChromaDB client and document store provider
+_chromadb_client_cache = None
+_doc_store_provider_cache = None
 
 def get_app_state(request: Request):
     """Get the FastAPI app state."""
@@ -31,7 +36,13 @@ def get_llm(temperature: float = 0.0, model: str = "gpt-4o-mini"):
     )
 
 def get_chromadb_client():
-    """Get ChromaDB client based on configuration settings."""
+    """Get ChromaDB client based on configuration settings with caching."""
+    global _chromadb_client_cache
+    
+    if _chromadb_client_cache is not None:
+        logger.info("Returning cached ChromaDB client (no re-initialization needed)")
+        return _chromadb_client_cache
+    
     # Clear settings cache to ensure we get the latest settings
     from app.settings import clear_settings_cache
     clear_settings_cache()
@@ -43,12 +54,12 @@ def get_chromadb_client():
     if settings.CHROMA_USE_LOCAL:
         # Use local persistent client
         logger.info(f"Creating local PersistentClient with path: {settings.CHROMA_STORE_PATH}")
-        return chromadb.PersistentClient(path=settings.CHROMA_STORE_PATH)
+        _chromadb_client_cache = chromadb.PersistentClient(path=settings.CHROMA_STORE_PATH)
     else:
         # Use HTTP client (default)
         logger.info(f"Creating HTTP client with host: {settings.CHROMA_HOST}, port: {settings.CHROMA_PORT}")
         try:
-            return chromadb.HttpClient(
+            _chromadb_client_cache = chromadb.HttpClient(
                 host=settings.CHROMA_HOST, 
                 port=settings.CHROMA_PORT,
                 settings=chromadb.Settings(
@@ -59,6 +70,8 @@ def get_chromadb_client():
         except Exception as e:
             logger.error(f"Failed to create HTTP client: {e}")
             raise
+    
+    return _chromadb_client_cache
 
 
 # Helper function to create LLM instances from settings
@@ -115,7 +128,14 @@ def get_chromadb_wrapper():
     return ChromaDB(client=client)
 
 def get_doc_store_provider():
-    """Get the document store provider with all SQL-related stores."""
+    """Get the document store provider with all SQL-related stores with caching."""
+    global _doc_store_provider_cache
+    
+    if _doc_store_provider_cache is not None:
+        logger.info("Returning cached document store provider (no re-initialization needed)")
+        return _doc_store_provider_cache
+    
+    logger.info("Creating new document store provider (first time initialization)")
     
     # Initialize ChromaDB client using configuration
     client = get_chromadb_client()
@@ -157,10 +177,19 @@ def get_doc_store_provider():
 
     }
     # Create and return the document store provider
-    return DocumentStoreProvider(
+    _doc_store_provider_cache = DocumentStoreProvider(
         stores=sql_stores,
         default_store="sql_pairs"
     )
+    
+    return _doc_store_provider_cache
+
+def clear_chromadb_cache():
+    """Clear the ChromaDB client and document store provider cache."""
+    global _chromadb_client_cache, _doc_store_provider_cache
+    _chromadb_client_cache = None
+    _doc_store_provider_cache = None
+    logger.info("Cleared ChromaDB client and document store provider cache")
 
 def get_alert_service(app_state=Depends(get_app_state)):
     """Get the alert service instance."""

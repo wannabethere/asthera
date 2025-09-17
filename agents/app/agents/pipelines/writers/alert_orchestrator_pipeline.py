@@ -61,7 +61,7 @@ class AlertOrchestratorPipeline(AgentPipeline):
         if not alert_agent:
             if not llm_settings:
                 llm_settings = {
-                    "model_name": "gemini-2.0-flash",
+                    "model_name": "gpt-4o-mini",
                     "sql_parser_temp": 0.0,
                     "alert_generator_temp": 0.1,
                     "critic_temp": 0.0,
@@ -226,6 +226,35 @@ class AlertOrchestratorPipeline(AgentPipeline):
                 # Generate alert configuration
                 if self._configuration["enable_alert_generation"]:
                     alert_result = await self._alert_agent.generate_alert(alert_request_obj)
+                    
+                    # Check if clarification is needed
+                    if alert_result.clarification and alert_result.clarification.needs_clarification:
+                        self._send_status_update(
+                            status_callback,
+                            "clarification_required",
+                            {
+                                "project_id": project_id,
+                                "query_index": i,
+                                "clarification_questions": alert_result.clarification.clarification_questions,
+                                "ambiguous_elements": alert_result.clarification.ambiguous_elements,
+                                "suggested_improvements": alert_result.clarification.suggested_improvements
+                            }
+                        )
+                        # Return clarification response immediately
+                        return {
+                            "status": "clarification_required",
+                            "project_id": project_id,
+                            "query_index": i,
+                            "clarification": {
+                                "questions": alert_result.clarification.clarification_questions,
+                                "ambiguous_elements": alert_result.clarification.ambiguous_elements,
+                                "suggested_improvements": alert_result.clarification.suggested_improvements
+                            },
+                            "alert_results": [],
+                            "sql_analysis": None,
+                            "execution_time": (datetime.now() - start_time).total_seconds()
+                        }
+                    
                     alert_results.append(alert_result)
                     
                     # Combine SQL analysis from multiple queries
@@ -245,7 +274,7 @@ class AlertOrchestratorPipeline(AgentPipeline):
                             "project_id": project_id,
                             "query_index": i,
                             "confidence_score": alert_result.confidence_score,
-                            "alert_type": alert_result.feed_configuration.condition.condition_type.value
+                            "alert_type": alert_result.feed_configuration.conditions[0].condition_type.value if alert_result.feed_configuration and alert_result.feed_configuration.conditions else "unknown"
                         }
                     )
                 else:
@@ -423,10 +452,12 @@ class AlertOrchestratorPipeline(AgentPipeline):
         # Group alerts by condition type
         alerts_by_type = {}
         for result in alert_results:
-            condition_type = result.feed_configuration.condition.condition_type.value
-            if condition_type not in alerts_by_type:
-                alerts_by_type[condition_type] = []
-            alerts_by_type[condition_type].append(result)
+            if result.feed_configuration and result.feed_configuration.conditions:
+                # Use the first condition for grouping
+                condition_type = result.feed_configuration.conditions[0].condition_type.value
+                if condition_type not in alerts_by_type:
+                    alerts_by_type[condition_type] = []
+                alerts_by_type[condition_type].append(result)
         
         # Create combined configurations
         combined_configs = {
@@ -551,9 +582,22 @@ class AlertOrchestratorPipeline(AgentPipeline):
             return None
         
         try:
+            # Clean the SQL query first to remove any wrapping text
+            from app.core.engine import clean_generation_result
+            cleaned_sql = clean_generation_result(sql_query)
+            
             # Create a sample SQL query with LIMIT
             sample_limit = self._configuration.get("sample_data_limit", 10)
-            sample_sql = f"SELECT * FROM ({sql_query}) as sample_query LIMIT {sample_limit}"
+            
+            # Check if the SQL already has a LIMIT clause
+            if 'LIMIT' in cleaned_sql.upper():
+                # If it already has a LIMIT, use the original query
+                sample_sql = cleaned_sql
+            else:
+                # Add LIMIT to the cleaned SQL
+                sample_sql = f"{cleaned_sql} LIMIT {sample_limit}"
+            
+            logger.info(f"Executing sample data query: {sample_sql[:100]}...")
             
             # Execute the sample query
             result = await self._sql_execution_pipeline.run(
@@ -568,11 +612,22 @@ class AlertOrchestratorPipeline(AgentPipeline):
                 if data:
                     # Convert to the format expected by the alert agent
                     columns = list(data[0].keys()) if data else []
-                    return {
+                    
+                    # Add additional metadata for better SQL parsing
+                    sample_data = {
                         "columns": columns,
-                        "data": data
+                        "data": data,
+                        "row_count": len(data),
+                        "sample_limit": sample_limit,
+                        "original_sql": sql_query,
+                        "cleaned_sql": cleaned_sql,
+                        "executed_sql": sample_sql
                     }
+                    
+                    logger.info(f"Successfully fetched {len(data)} sample rows with columns: {columns}")
+                    return sample_data
             
+            logger.warning("No data returned from sample query")
             return None
             
         except Exception as e:

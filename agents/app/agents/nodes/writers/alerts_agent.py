@@ -19,20 +19,20 @@ import sqlparse
 from sqlparse.sql import Statement, Token, TokenList
 from sqlparse.tokens import Keyword, Name
 from app.core.dependencies import create_llm_instances_from_settings
-from app.agents.nodes.writers.alert_models import LexyFeedConfiguration, SQLAnalysis, SQLAlertResult, SQLAlertRequest, AlertConditionType, ThresholdOperator, ScheduleType
+from app.agents.nodes.writers.alert_models import LexyFeedConfiguration, LexyFeedMetric, LexyFeedCondition, LexyFeedNotification, SQLAnalysis, SQLAlertResult, SQLAlertRequest, AlertConditionType, ThresholdOperator, ScheduleType
 from app.core.sql_validation import SQLAlertConditionValidator, ValidationResult
 
 
 class MarkdownJsonOutputParser(JsonOutputParser):
-    """Custom JSON parser that can extract JSON from markdown-formatted responses"""
+    """Custom JSON parser that can extract JSON from markdown-formatted responses and handle comments"""
     
     def parse(self, text: str) -> Dict[str, Any]:
-        """Parse JSON from text that may contain markdown formatting"""
+        """Parse JSON from text that may contain markdown formatting and comments"""
         try:
             # First try to parse as pure JSON
             return super().parse(text)
         except Exception:
-            # If that fails, try to extract JSON from markdown
+            # If that fails, try to extract and clean JSON from markdown
             try:
                 # Look for JSON in code blocks
                 json_pattern = r'```json\s*(.*?)\s*```'
@@ -40,21 +40,60 @@ class MarkdownJsonOutputParser(JsonOutputParser):
                 
                 if match:
                     json_text = match.group(1)
-                    return json.loads(json_text)
+                else:
+                    # Look for JSON objects directly (more flexible)
+                    json_pattern = r'\{.*\}'
+                    match = re.search(json_pattern, text, re.DOTALL)
+                    
+                    if match:
+                        json_text = match.group(0)
+                    else:
+                        raise ValueError("No valid JSON found in response")
                 
-                # Look for JSON objects directly (more flexible)
-                json_pattern = r'\{.*\}'
-                match = re.search(json_pattern, text, re.DOTALL)
+                # Clean the JSON text by removing comments and fixing enum values
+                cleaned_json = self._clean_json_text(json_text)
                 
-                if match:
-                    json_text = match.group(0)
-                    return json.loads(json_text)
-                
-                # If no JSON found, raise the original error
-                raise ValueError("No valid JSON found in response")
+                return json.loads(cleaned_json)
                 
             except Exception as e:
                 raise ValueError(f"Failed to parse JSON from markdown response: {e}")
+    
+    def _clean_json_text(self, json_text: str) -> str:
+        """Clean JSON text by removing comments and fixing common issues"""
+        # Remove single-line comments (// comments)
+        lines = json_text.split('\n')
+        cleaned_lines = []
+        
+        for line in lines:
+            # Remove comments but preserve the line structure
+            if '//' in line:
+                # Find the // and remove everything after it, but keep the line if it has content before //
+                comment_pos = line.find('//')
+                if comment_pos > 0:
+                    # Check if there's actual content before the comment
+                    content_before_comment = line[:comment_pos].strip()
+                    if content_before_comment and not content_before_comment.endswith(','):
+                        # Add comma if the line ends with content but no comma
+                        cleaned_lines.append(content_before_comment + ',')
+                    elif content_before_comment:
+                        cleaned_lines.append(content_before_comment)
+                # If the line starts with //, skip it entirely
+            else:
+                cleaned_lines.append(line)
+        
+        # Join the lines back together
+        cleaned_json = '\n'.join(cleaned_lines)
+        
+        # Fix enum values that are wrapped in angle brackets
+        cleaned_json = re.sub(r'<(\w+)\.(\w+):\s*[\'"](\w+)[\'"]\s*>', r'"\3"', cleaned_json)
+        
+        # Remove trailing commas before closing braces/brackets
+        cleaned_json = re.sub(r',\s*([}\]])', r'\1', cleaned_json)
+        
+        # Fix any remaining issues with null values
+        cleaned_json = cleaned_json.replace('null', 'null')
+        
+        return cleaned_json
 
 
 # Protocol for LLM interface
@@ -177,21 +216,36 @@ class SQLToAlertAgent:
                         return ", ".join(str(v) for v in value)
             return str(value) if value is not None else ""
         
-        # Fix condition_type
-        if "condition" in config_dict and "condition_type" in config_dict["condition"]:
-            config_dict["condition"]["condition_type"] = map_enum_value(
-                config_dict["condition"]["condition_type"], 
-                AlertConditionType,
-                "threshold_value"  # Default fallback
-            )
-        
-        # Fix operator
-        if "condition" in config_dict and "operator" in config_dict["condition"]:
-            config_dict["condition"]["operator"] = map_enum_value(
-                config_dict["condition"]["operator"], 
-                ThresholdOperator,
-                ">"  # Default fallback
-            )
+        # Fix conditions (support both single condition and multiple conditions)
+        if "conditions" in config_dict:
+            # Handle multiple conditions
+            for condition in config_dict["conditions"]:
+                if "condition_type" in condition:
+                    condition["condition_type"] = map_enum_value(
+                        condition["condition_type"], 
+                        AlertConditionType,
+                        "threshold_value"  # Default fallback
+                    )
+                if "operator" in condition:
+                    condition["operator"] = map_enum_value(
+                        condition["operator"], 
+                        ThresholdOperator,
+                        ">"  # Default fallback
+                    )
+        elif "condition" in config_dict:
+            # Handle single condition for backward compatibility
+            if "condition_type" in config_dict["condition"]:
+                config_dict["condition"]["condition_type"] = map_enum_value(
+                    config_dict["condition"]["condition_type"], 
+                    AlertConditionType,
+                    "threshold_value"  # Default fallback
+                )
+            if "operator" in config_dict["condition"]:
+                config_dict["condition"]["operator"] = map_enum_value(
+                    config_dict["condition"]["operator"], 
+                    ThresholdOperator,
+                    ">"  # Default fallback
+                )
         
         # Fix schedule_type
         if "notification" in config_dict and "schedule_type" in config_dict["notification"]:
@@ -423,20 +477,29 @@ Focus on identifying:
         domain_context = inputs["domain_context"]
         sample_data = request.sample_data
         
-        # Prepare sample data context for the prompt
+        # Prepare enhanced sample data context for the prompt
         sample_data_context = ""
         if sample_data and sample_data.get("data"):
+            data = sample_data.get("data", [])
+            columns = sample_data.get('columns', [])
+            
+            # Analyze data patterns for better alert generation
+            data_analysis = self._analyze_sample_data(data, columns)
+            
             sample_data_context = f"""
 Sample Data from SQL Execution:
-- Columns: {sample_data.get('columns', [])}
-- Sample Rows (first 5): {sample_data.get('data', [])[:5]}
-- Total Sample Size: {len(sample_data.get('data', []))}
+- Columns: {columns}
+- Sample Rows (first 5): {data[:5]}
+- Total Sample Size: {len(data)}
+- Data Analysis: {data_analysis}
 
 Use this sample data to:
-1. Set realistic threshold values based on actual data ranges
-2. Identify the most appropriate metric to track
-3. Determine suitable alert conditions based on data patterns
-4. Set meaningful notification messages with actual data context
+1. Set realistic threshold values based on actual data ranges and patterns
+2. Choose appropriate condition types based on data distribution and variance
+3. Validate that the metric selection makes sense with the actual data structure
+4. Set appropriate resolution (Daily/Weekly/Monthly) based on data frequency and business context
+5. Generate meaningful alert names and descriptions based on actual data values
+6. Set appropriate operators (>, <, =, etc.) based on data trends and business logic
 """
         
         generation_prompt = ChatPromptTemplate.from_template("""
@@ -454,6 +517,8 @@ Original Query: {query}
 Domain Context: {domain_context}
 {sample_data_context}
 
+IMPORTANT: You must respond with ONLY valid JSON. Do not include any markdown formatting, comments, or explanatory text. The response must be parseable JSON.
+
 Generate a JSON Feed configuration:
 {{
     "metric": {{
@@ -469,19 +534,27 @@ Generate a JSON Feed configuration:
         }}],
         "drilldown_dimensions": ["dimension1", "dimension2"]
     }},
-    "condition": {{
-        "condition_type": "intelligent_arima|threshold_value|threshold_percent_change|threshold_change",
-        "threshold_type": "based_on_value|based_on_change|based_on_percent_change",
-        "operator": ">|<|>=|<=|=|!=",
-        "value": 10.0
-    }},
+    "conditions": [
+        {{
+            "condition_type": "intelligent_arima|threshold_value|threshold_percent_change|threshold_change",
+            "threshold_type": "based_on_value|based_on_change|based_on_percent_change",
+            "operator": ">|<|>=|<=|=|!=",
+            "value": 10.0
+        }},
+        {{
+            "condition_type": "intelligent_arima|threshold_value|threshold_percent_change|threshold_change",
+            "threshold_type": "based_on_value|based_on_change|based_on_percent_change",
+            "operator": ">|<|>=|<=|=|!=",
+            "value": 20.0
+        }}
+    ],
     "notification": {{
-        "schedule_type": "scheduled|cron_schedule",
+        "schedule_type": "daily|weekly|monthly|quarterly|yearly|custom|never",
         "metric_name": "descriptive_alert_name",
         "email_addresses": ["admin@company.com"],
         "subject": "Alert: [Metric Name] Threshold Exceeded",
         "email_message": "The tracked metric has exceeded the threshold...",
-        "include_feed_report": true
+        "include_feed_report": true,
     }},
     "column_selection": {{
         "included": ["columns_for_insight_generation"],
@@ -491,15 +564,48 @@ Generate a JSON Feed configuration:
 
 Rules:
 1. For percentage metrics like completion rates, use threshold_percent_change or threshold_value
-2. For operational metrics, use Daily resolution and scheduled schedule
-3. For strategic metrics, use Weekly/Monthly resolution
-4. Include relevant dimensions for breakdown analysis
-5. Set appropriate thresholds based on business context AND sample data ranges
-6. Use ARIMA for time-series patterns, thresholds for business rules
-7. If sample data is available, use it to set realistic threshold values
-8. Base notification messages on actual data patterns from the sample
+2. For operational metrics, use Daily resolution and daily schedule_type
+3. For strategic metrics, use Weekly/Monthly resolution with weekly/monthly schedule_type
+4. Choose schedule_type based on business urgency: daily for critical ops, weekly for monitoring, monthly for strategic
+5. Include relevant dimensions for breakdown analysis
+6. Set appropriate thresholds based on business context AND sample data ranges
+7. Use ARIMA for time-series patterns, thresholds for business rules
+8. If sample data is available, use it to set realistic threshold values
+9. Base notification messages on actual data patterns from the sample
+10. Extract multiple conditions when the input describes multiple metrics or thresholds
+11. Each condition should have its own threshold value and operator
+12. Use only the exact enum values: "intelligent_arima", "threshold_value", "threshold_percent_change", "threshold_change" for condition_type
+13. Use only the exact enum values: "daily", "weekly", "monthly", "quarterly", "yearly", "custom", "never" for schedule_type
+14. Use only the exact enum values: ">", "<", ">=", "<=", "=", "!=" for operator
+15. Use only the exact enum values: "Daily", "Weekly", "Monthly", "Quarterly", "Yearly" for resolution
 
-Example for training completion: Alert when completion percentage < 90% or expiry rate > 10%
+IMPORTANT: If the input is ambiguous or unclear, return a clarification response instead of guessing:
+- If you cannot determine the specific metric, threshold values, or operators
+- If the business context is unclear
+- If multiple interpretations are possible
+- If critical information is missing
+
+Return format for clarification:
+{{
+    "needs_clarification": true,
+    "clarification_questions": [
+        "What specific metric should be monitored?",
+        "What threshold value should trigger the alert?",
+        "What operator should be used (>, <, =, etc.)?"
+    ],
+    "ambiguous_elements": [
+        "Unclear metric definition",
+        "Missing threshold value"
+    ],
+    "suggested_improvements": [
+        "Specify the exact column name for the metric",
+        "Provide a specific threshold value",
+        "Clarify the business context"
+    ]
+}}
+
+Example for training completion: Alert when completion percentage < 90% AND expiry rate > 10%
+This should generate two conditions: one for completion < 90% and another for expiry > 10%
 """)
         
         chain = generation_prompt | self.alert_generator_llm | MarkdownJsonOutputParser()
@@ -516,17 +622,39 @@ Example for training completion: Alert when completion percentage < 90% or expir
             "sample_data_context": sample_data_context
         })
         
+        # Debug logging: Log the raw JSON result from the LLM
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"DEBUG: Raw JSON result from alert generator: {config_result}")
+        logger.info(f"DEBUG: Type of config_result: {type(config_result)}")
+        
+        # Check if this is a clarification response
+        if config_result.get("needs_clarification", False):
+            logger.info("Alert generation requires clarification from user")
+            return None  # Return None to indicate clarification needed
+        
         # Fix enum values in the configuration
         config_result = self._fix_enum_values(config_result)
         
+        # Debug logging: Log the result after enum fixing
+        logger.info(f"DEBUG: JSON result after enum fixing: {config_result}")
+        
         # Convert to Pydantic models
         metric = LexyFeedMetric(**config_result["metric"])
-        condition = LexyFeedCondition(**config_result["condition"])
+        
+        # Handle multiple conditions
+        conditions = []
+        if "conditions" in config_result:
+            for cond_data in config_result["conditions"]:
+                conditions.append(LexyFeedCondition(**cond_data))
+        elif "condition" in config_result:
+            conditions.append(LexyFeedCondition(**config_result["condition"]))
+        
         notification = LexyFeedNotification(**config_result["notification"])
         
         return LexyFeedConfiguration(
             metric=metric,
-            condition=condition,
+            conditions=conditions,
             notification=notification,
             column_selection=config_result["column_selection"]
         )
@@ -537,41 +665,78 @@ Example for training completion: Alert when completion percentage < 90% or expir
         request = inputs["request"]
         sql_analysis = inputs["sql_analysis"]
         feed_config = inputs["feed_configuration"]
+        sample_data = request.sample_data
         
+        # Prepare sample data context for critique
+        sample_data_context = ""
+        if sample_data and sample_data.get("data"):
+            data = sample_data.get("data", [])
+            columns = sample_data.get('columns', [])
+            data_analysis = self._analyze_sample_data(data, columns)
+            
+            sample_data_context = f"""
+Sample Data Context:
+- Columns: {columns}
+- Sample Rows: {data[:3]}
+- Data Analysis: {data_analysis}
+- Use this data to validate threshold values and condition appropriateness
+"""
+
         critique_prompt = ChatPromptTemplate.from_template("""
 Evaluate the generated Lexy Feed configuration for correctness and effectiveness:
 
 Original Request: {alert_request}
 SQL Analysis: {sql_analysis}
 Generated Configuration: {feed_config}
+{sample_data_context}
+
+IMPORTANT: You must respond with ONLY valid JSON. Do not include any markdown formatting, comments, or explanatory text.
 
 Evaluate on these criteria:
 1. Does the metric selection match the SQL analysis?
 2. Is the condition type appropriate for the alert request?
-3. Are the threshold values reasonable for the business context?
+3. Are the threshold values reasonable based on the sample data and business context?
 4. Does the resolution (Daily/Weekly/Monthly) fit the use case?
 5. Are the drilldown dimensions relevant?
 6. Is the notification schedule appropriate?
+7. Is the original request clear and unambiguous?
+8. Do the threshold values make sense given the actual data ranges?
+
+If the original request is ambiguous or unclear, return a clarification response instead of evaluating the configuration.
 
 Return JSON evaluation:
 {{
-    "is_valid": boolean,
-    "confidence_score": 0.0-1.0,
+    "is_valid": true,
+    "confidence_score": 0.8,
     "critique_notes": ["specific issues found"],
     "suggestions": ["specific improvements"],
-    "metric_appropriateness": 0.0-1.0,
-    "condition_appropriateness": 0.0-1.0,
-    "notification_appropriateness": 0.0-1.0
+    "metric_appropriateness": 0.9,
+    "condition_appropriateness": 0.8,
+    "notification_appropriateness": 0.7,
+    "needs_clarification": false,
+    "clarification_questions": [],
+    "ambiguous_elements": [],
+    "suggested_improvements": []
 }}
+
+If clarification is needed, set "is_valid": false, "needs_clarification": true, and provide specific questions and ambiguous elements.
 """)
         
         chain = critique_prompt | self.critic_llm | MarkdownJsonOutputParser()
         
-        return await chain.ainvoke({
+        critique_result = await chain.ainvoke({
             "alert_request": request.alert_request,
             "sql_analysis": sql_analysis.dict(),
-            "feed_config": feed_config.dict()
+            "feed_config": feed_config.dict(),
+            "sample_data_context": sample_data_context
         })
+        
+        # Debug logging: Log the critique result
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"DEBUG: Critique result: {critique_result}")
+        
+        return critique_result
     
     async def _refine_alert_configuration(self, inputs: Dict) -> SQLAlertResult:
         """Refine the alert configuration based on critique"""
@@ -595,8 +760,51 @@ Suggestions: {suggestions}
 SQL Analysis: {sql_analysis}
 Alert Request: {alert_request}
 
+IMPORTANT: You must respond with ONLY valid JSON. Do not include any markdown formatting, comments, or explanatory text. The response must be parseable JSON.
+
 Generate an improved configuration addressing all critique points.
-Return the same JSON structure as before but with improvements.
+Return the same JSON structure as before but with improvements:
+{{
+    "metric": {{
+        "domain": "domain_name",
+        "dataset_id": "dataset_identifier",
+        "measure": "primary_metric_to_track",
+        "aggregation": "SUM|AVG|COUNT|etc",
+        "resolution": "Daily|Weekly|Monthly",
+        "filters": [{{
+            "column": "filter_column",
+            "operator": "equals|contains|greater_than|etc",
+            "value": "filter_value"
+        }}],
+        "drilldown_dimensions": ["dimension1", "dimension2"]
+    }},
+    "conditions": [
+        {{
+            "condition_type": "intelligent_arima|threshold_value|threshold_percent_change|threshold_change",
+            "threshold_type": "based_on_value|based_on_change|based_on_percent_change",
+            "operator": ">|<|>=|<=|=|!=",
+            "value": 10.0
+        }},
+        {{
+            "condition_type": "intelligent_arima|threshold_value|threshold_percent_change|threshold_change",
+            "threshold_type": "based_on_value|based_on_change|based_on_percent_change",
+            "operator": ">|<|>=|<=|=|!=",
+            "value": 20.0
+        }}
+    ],
+    "notification": {{
+        "schedule_type": "daily|weekly|monthly|quarterly|yearly|custom|never",
+        "metric_name": "descriptive_alert_name",
+        "email_addresses": ["admin@company.com"],
+        "subject": "Alert: [Metric Name] Threshold Exceeded",
+        "email_message": "The tracked metric has exceeded the threshold...",
+        "include_feed_report": true,
+    }},
+    "column_selection": {{
+        "included": ["columns_for_insight_generation"],
+        "excluded": ["date_columns", "id_columns"]
+    }}
+}}
 """)
             
             chain = refinement_prompt | self.refiner_llm | MarkdownJsonOutputParser()
@@ -608,6 +816,11 @@ Return the same JSON structure as before but with improvements.
                 "sql_analysis": sql_analysis.dict(),
                 "alert_request": request.alert_request
             })
+            
+            # Debug logging: Log the refinement result
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"DEBUG: Refinement result: {refined_result}")
             
             # Fix enum values in the refined configuration
             refined_result = self._fix_enum_values(refined_result)
@@ -635,6 +848,11 @@ Return the same JSON structure as before but with improvements.
     async def generate_alert(self, request: SQLAlertRequest) -> SQLAlertResult:
         """Main method to generate Lexy Feed alert from SQL + natural language"""
         
+        # Debug logging: Log the input request
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"DEBUG: generate_alert called with request: {request}")
+        
         # Store session if provided
         if request.session_id:
             if request.session_id not in self.sessions:
@@ -643,8 +861,60 @@ Return the same JSON structure as before but with improvements.
         # Run the Self-RAG pipeline
         result = await self.pipeline.ainvoke({"request": request})
         
+        # Debug logging: Log the pipeline result
+        logger.info(f"DEBUG: Pipeline result: {result}")
+        logger.info(f"DEBUG: Pipeline result type: {type(result)}")
+        
+        # Check if the result indicates clarification is needed
+        if hasattr(result, 'feed_configuration') and result.feed_configuration is None:
+            # This indicates clarification is needed
+            logger.info("Alert generation requires clarification from user")
+            return result
+        
         return result
     
+    def _analyze_sample_data(self, data: List[Dict], columns: List[str]) -> str:
+        """Analyze sample data to provide insights for alert generation"""
+        if not data or not columns:
+            return "No data available for analysis"
+        
+        analysis = []
+        
+        # Analyze each column
+        for column in columns:
+            values = [row.get(column) for row in data if row.get(column) is not None]
+            if not values:
+                continue
+                
+            # Try to determine data type and patterns
+            try:
+                # Check if numeric
+                numeric_values = []
+                for val in values:
+                    try:
+                        numeric_values.append(float(val))
+                    except (ValueError, TypeError):
+                        break
+                
+                if numeric_values:
+                    min_val = min(numeric_values)
+                    max_val = max(numeric_values)
+                    avg_val = sum(numeric_values) / len(numeric_values)
+                    
+                    analysis.append(f"{column}: numeric (min={min_val:.2f}, max={max_val:.2f}, avg={avg_val:.2f})")
+                else:
+                    # String/categorical analysis
+                    unique_values = list(set(str(v) for v in values))
+                    if len(unique_values) <= 5:
+                        analysis.append(f"{column}: categorical ({unique_values})")
+                    else:
+                        analysis.append(f"{column}: text ({len(unique_values)} unique values)")
+                        
+            except Exception:
+                analysis.append(f"{column}: unknown type")
+        
+        return "; ".join(analysis) if analysis else "Unable to analyze data"
+
     def create_lexy_api_payload(self, result: SQLAlertResult) -> Dict[str, Any]:
         """Convert result to Lexy API payload format"""
         
@@ -661,12 +931,14 @@ Return the same JSON structure as before but with improvements.
                     "filters": config.metric.filters,
                     "drilldownDimensions": config.metric.drilldown_dimensions
                 },
-                "condition": {
-                    "type": config.condition.condition_type.value,
-                    "thresholdType": config.condition.threshold_type,
-                    "operator": config.condition.operator.value if config.condition.operator else None,
-                    "value": config.condition.value
-                },
+                "conditions": [
+                    {
+                        "type": cond.condition_type.value,
+                        "thresholdType": cond.threshold_type,
+                        "operator": cond.operator.value if cond.operator else None,
+                        "value": cond.value
+                    } for cond in config.conditions
+                ],
                 "notification": {
                     "scheduleType": config.notification.schedule_type.value,
                     "metricName": config.notification.metric_name,
@@ -720,7 +992,7 @@ class AlertPatternHandlers:
                 "value": 90.0  # Alert when completion < 90%
             },
             "notification": {
-                "schedule_type": "scheduled",
+                "schedule_type": "daily",
                 "metric_name": "Training Completion Rate Alert",
                 "subject": "Training Completion Below Threshold"
             }
@@ -743,7 +1015,7 @@ class AlertPatternHandlers:
                 "value": None
             },
             "notification": {
-                "schedule_type": "scheduled",
+                "schedule_type": "daily",
                 "metric_name": f"{percentage_metrics[0]} Anomaly Detection"
             }
         }
@@ -800,8 +1072,9 @@ async def example_usage():
         
         print("Generated Alert Configuration:")
         print(f"Metric: {result.feed_configuration.metric.measure}")
-        print(f"Condition: {result.feed_configuration.condition.condition_type}")
-        print(f"Threshold: {result.feed_configuration.condition.operator} {result.feed_configuration.condition.value}")
+        print(f"Conditions: {len(result.feed_configuration.conditions)} condition(s)")
+        for i, cond in enumerate(result.feed_configuration.conditions):
+            print(f"  Condition {i+1}: {cond.condition_type} {cond.operator} {cond.value}")
         print(f"Confidence: {result.confidence_score:.2f}")
         
         # Convert to Lexy API format

@@ -58,6 +58,21 @@ def clean_generation_result(result: str) -> str:
     def _normalize_whitespace(s: str) -> str:
         return re.sub(r"\s+", " ", s).strip()
 
+    # First, try to extract SQL from wrapped format
+    # Look for patterns like "SQL Query: SELECT ..." or "SELECT * FROM (Alert Request: ... SQL Query: ...)"
+    sql_patterns = [
+        r"SQL Query:\s*(SELECT.*?)(?:\s*LIMIT\s+\d+)?$",  # SQL Query: SELECT ... LIMIT 10
+        r"SELECT\s+\*\s+FROM\s+\([^)]*SQL Query:\s*(SELECT.*?)\)",  # SELECT * FROM (Alert Request: ... SQL Query: ...)
+        r"```sql\s*(SELECT.*?)\s*```",  # ```sql SELECT ... ```
+        r"```\s*(SELECT.*?)\s*```",  # ``` SELECT ... ```
+    ]
+    
+    for pattern in sql_patterns:
+        match = re.search(pattern, result, re.DOTALL | re.IGNORECASE)
+        if match:
+            result = match.group(1).strip()
+            break
+    
     return (
         _normalize_whitespace(result)
         .replace("\\n", " ")
@@ -79,13 +94,30 @@ def remove_limit_statement(sql: str) -> str:
 
 def add_quotes(sql: str) -> Tuple[str, str]:
     try:
+        # Clean the SQL first to remove any wrapping text
+        cleaned_sql = clean_generation_result(sql)
+        
         # Disable automatic quoting to prevent issues with PostgreSQL case sensitivity
         # The original code used identify=True which caused problems with column names
         quoted_sql = sqlglot.transpile(
-            sql, read="trino", identify=False, error_level=sqlglot.ErrorLevel.RAISE
+            cleaned_sql, read="trino", identify=False, error_level=sqlglot.ErrorLevel.RAISE
         )[0]
     except Exception as e:
-        logger.exception(f"Error in sqlglot.transpile to {sql}: {e}")
+        logger.exception(f"Error in sqlglot.transpile for SQL: {sql[:100]}... Error: {e}")
+        
+        # Try to extract just the SELECT statement if the error is due to wrapping
+        try:
+            # Look for SELECT statement in the original SQL
+            select_match = re.search(r'(SELECT\s+.*?)(?:\s*LIMIT\s+\d+)?$', sql, re.DOTALL | re.IGNORECASE)
+            if select_match:
+                select_sql = select_match.group(1).strip()
+                quoted_sql = sqlglot.transpile(
+                    select_sql, read="trino", identify=False, error_level=sqlglot.ErrorLevel.RAISE
+                )[0]
+                logger.info(f"Successfully extracted and processed SQL: {select_sql[:100]}...")
+                return quoted_sql, ""
+        except Exception as extract_error:
+            logger.warning(f"Failed to extract SELECT statement: {extract_error}")
 
         return "", str(e)
 
