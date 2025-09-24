@@ -159,6 +159,89 @@ class SegmentationPipe(BasePipe):
         
         return output_df
     
+    def merge_to_df(self, base_df: pd.DataFrame, analysis_name: Optional[str] = None, include_metadata: bool = False, **kwargs) -> pd.DataFrame:
+        """
+        Merge segmentation results into the base dataframe as new columns.
+        
+        Parameters:
+        -----------
+        base_df : pd.DataFrame
+            The base dataframe to merge results into
+        analysis_name : str, optional
+            Name of the specific analysis to merge. If None, uses the current analysis
+        include_metadata : bool, default=False
+            Whether to include metadata columns in the output DataFrame
+        **kwargs : dict
+            Additional arguments (unused for this pipeline)
+            
+        Returns:
+        --------
+        pd.DataFrame
+            Base dataframe with segmentation results merged as new columns
+        """
+        result_df = base_df.copy()
+        
+        # Add pipeline identification
+        result_df['pipeline_type'] = 'segmentation'
+        result_df['pipeline_has_results'] = len(self.segmentation_results) > 0
+        
+        if not self.segmentation_results:
+            return result_df
+        
+        # Determine which analysis to use
+        if analysis_name is None:
+            if self.current_analysis is None:
+                # Use the last analysis
+                analysis_name = list(self.segmentation_results.keys())[-1]
+                # Skip summary results
+                while analysis_name.endswith('_summary') and len(self.segmentation_results) > 1:
+                    analysis_name = list(self.segmentation_results.keys())[-2]
+            else:
+                analysis_name = self.current_analysis
+        
+        if analysis_name not in self.segmentation_results:
+            return result_df
+        
+        # Get the segmentation result
+        result = self.segmentation_results[analysis_name]
+        
+        # Add segmentation summary information
+        result_df[f'segmentation_{analysis_name}_has_data'] = True
+        result_df[f'segmentation_{analysis_name}_algorithm'] = result.get('algorithm', 'unknown') if isinstance(result, dict) else 'unknown'
+        
+        # Add metadata if requested
+        if include_metadata:
+            result_df['segmentation_analysis_name'] = analysis_name
+            result_df['segmentation_total_analyses'] = len(self.segmentation_results)
+            result_df['segmentation_available_analyses'] = ', '.join(self.segmentation_results.keys())
+            result_df['segmentation_current_analysis'] = self.current_analysis or 'none'
+            
+            # Add algorithm-specific metadata
+            if isinstance(result, dict):
+                if result.get('algorithm') == 'kmeans':
+                    result_df['segmentation_n_clusters'] = result.get('n_clusters', 'unknown')
+                    result_df['segmentation_inertia'] = result.get('inertia', 'unknown')
+                elif result.get('algorithm') == 'dbscan':
+                    result_df['segmentation_eps'] = result.get('eps', 'unknown')
+                    result_df['segmentation_min_samples'] = result.get('min_samples', 'unknown')
+                    result_df['segmentation_n_clusters'] = result.get('n_clusters', 'unknown')
+                elif result.get('algorithm') == 'hierarchical':
+                    result_df['segmentation_n_clusters'] = result.get('n_clusters', 'unknown')
+                    result_df['segmentation_linkage'] = result.get('linkage', 'unknown')
+        
+        return result_df
+    
+    def _has_results(self) -> bool:
+        """
+        Check if the pipeline has any segmentation results.
+        
+        Returns:
+        --------
+        bool
+            True if the pipeline has segmentation results, False otherwise
+        """
+        return len(self.segmentation_results) > 0
+    
     def get_segmentation_columns(self):
         """
         Get the column names that were created by the segmentation analysis

@@ -25,103 +25,95 @@ class OperationsPipe(BasePipe):
         if hasattr(source_pipe, 'current_operation'):
             self.current_operation = source_pipe.current_operation
     
-    def to_df(self, operation_name: Optional[str] = None, include_metadata: bool = False, include_original: bool = False):
+    def merge_to_df(self, base_df: pd.DataFrame, operation_name: Optional[str] = None, include_metadata: bool = False, **kwargs) -> pd.DataFrame:
         """
-        Convert the operations results to a DataFrame
+        Merge operations results into the base dataframe as new columns.
         
         Parameters:
         -----------
+        base_df : pd.DataFrame
+            The base dataframe to merge results into
         operation_name : str, optional
-            Name of the specific operation to convert. If None, returns the current operation
+            Name of the specific operation to merge. If None, uses the current operation
         include_metadata : bool, default=False
             Whether to include metadata columns in the output DataFrame
-        include_original : bool, default=False
-            Whether to include original data columns in the output DataFrame
+        **kwargs : dict
+            Additional arguments (unused for this pipeline)
             
         Returns:
         --------
         pd.DataFrame
-            DataFrame representation of the operations results
-            
-        Raises:
-        -------
-        ValueError
-            If no operations have been performed or operation not found
-            
-        Examples:
-        --------
-        >>> # Basic percent change operation
-        >>> pipe = (OperationsPipe.from_dataframe(df)
-        ...         | PercentChange('condition', 'control'))
-        >>> results_df = pipe.to_df()
-        >>> print(results_df.head())
-        
-        >>> # Specific operation with metadata
-        >>> results_df = pipe.to_df('pct_change_condition_vs_control', include_metadata=True)
-        >>> print(results_df.columns)
-        
-        >>> # Current operation
-        >>> current_df = pipe.to_df()  # Uses current_operation
-        >>> print(current_df.head())
+            Base dataframe with operations results merged as new columns
         """
+        result_df = base_df.copy()
+        
+        # Add pipeline identification
+        result_df['pipeline_type'] = 'operations'
+        result_df['pipeline_has_results'] = len(self.operations) > 0
+        
         if not self.operations:
-            raise ValueError("No operations have been performed. Run some analysis first.")
+            return result_df
         
         # Determine which operation to use
         if operation_name is None:
             if self.current_operation is None:
                 # Use the last operation
-                if not self.operations:
-                    raise ValueError("No operations available to convert to DataFrame.")
                 operation_name = list(self.operations.keys())[-1]
             else:
                 operation_name = self.current_operation
         
         if operation_name not in self.operations:
-            raise ValueError(f"Operation '{operation_name}' not found. Available operations: {list(self.operations.keys())}")
+            # If operation not found, just return base with pipeline info
+            return result_df
         
         # Get the operation result
-        result_df = self.operations[operation_name].copy()
+        operation_df = self.operations[operation_name].copy()
         
-        # Ensure we always return a DataFrame, even if empty
-        if result_df is None:
-            result_df = pd.DataFrame()
-        
-        # If include_original is True and we have original data, merge it
-        if include_original and self.data is not None:
-            # This is a bit tricky since operations typically create new DataFrames
-            # We'll add a note about this in the metadata
-            if include_metadata:
-                result_df['metadata_note'] = 'Original data available separately via pipe.data'
+        if operation_df is not None and not operation_df.empty:
+            # Add operation results as new columns with prefix
+            for col in operation_df.columns:
+                result_df[f'ops_{operation_name}_{col}'] = operation_df[col].values if len(operation_df) == len(result_df) else None
         
         # Add metadata if requested
-        if include_metadata and not result_df.empty:
-            # Add operation name
-            result_df['operation_name'] = operation_name
+        if include_metadata:
+            result_df['operations_operation_name'] = operation_name
+            result_df['operations_total_operations'] = len(self.operations)
+            result_df['operations_available_operations'] = ', '.join(self.operations.keys())
             
             # Add operation type based on the name
             if 'pct_change' in operation_name:
-                result_df['operation_type'] = 'percent_change'
+                result_df['operations_operation_type'] = 'percent_change'
             elif 'abs_change' in operation_name:
-                result_df['operation_type'] = 'absolute_change'
+                result_df['operations_operation_type'] = 'absolute_change'
             elif 'mh_' in operation_name:
-                result_df['operation_type'] = 'mantel_haenszel'
+                result_df['operations_operation_type'] = 'mantel_haenszel'
             elif 'cuped' in operation_name:
-                result_df['operation_type'] = 'cuped'
+                result_df['operations_operation_type'] = 'cuped'
             elif 'prepost' in operation_name:
-                result_df['operation_type'] = 'prepost_change'
+                result_df['operations_operation_type'] = 'prepost_change'
             elif 'power_analysis' in operation_name:
-                result_df['operation_type'] = 'power_analysis'
+                result_df['operations_operation_type'] = 'power_analysis'
             elif 'stratified_summary' in operation_name:
-                result_df['operation_type'] = 'stratified_summary'
+                result_df['operations_operation_type'] = 'stratified_summary'
             elif 'bootstrap_ci' in operation_name:
-                result_df['operation_type'] = 'bootstrap_ci'
+                result_df['operations_operation_type'] = 'bootstrap_ci'
             elif 'adjusted_' in operation_name:
-                result_df['operation_type'] = 'multi_comparison_adjustment'
+                result_df['operations_operation_type'] = 'multi_comparison_adjustment'
             else:
-                result_df['operation_type'] = 'unknown'
+                result_df['operations_operation_type'] = 'unknown'
         
         return result_df
+    
+    def _has_results(self) -> bool:
+        """
+        Check if the pipeline has any operations results.
+        
+        Returns:
+        --------
+        bool
+            True if the pipeline has operations results, False otherwise
+        """
+        return len(self.operations) > 0
     
     def get_operations_list(self):
         """

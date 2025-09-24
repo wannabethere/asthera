@@ -451,7 +451,9 @@ def get_settings() -> Settings:
         Settings: Application settings
     """
     logger.debug("Creating new Settings instance")
-    return Settings()
+    settings = Settings()
+    set_os_environ(settings)
+    return settings
 
 def load_environment_variables(env_file=None):
     """

@@ -1,4 +1,40 @@
-[
+{
+  "pipe_name": "TrendPipe",
+  "function_dependencies": {
+    "aggregate_by_time": {
+      "depends_on": [],
+      "required_for": ["calculate_growth_rates", "calculate_moving_average", "decompose_trend", "forecast_metric", "calculate_statistical_trend", "compare_periods"]
+    },
+    "calculate_growth_rates": {
+      "depends_on": ["aggregate_by_time"],
+      "required_for": ["get_top_metrics (when metric_type='growth')"]
+    },
+    "calculate_moving_average": {
+      "depends_on": ["aggregate_by_time"],
+      "required_for": []
+    },
+    "decompose_trend": {
+      "depends_on": ["aggregate_by_time"],
+      "required_for": []
+    },
+    "forecast_metric": {
+      "depends_on": ["aggregate_by_time"],
+      "required_for": []
+    },
+    "calculate_statistical_trend": {
+      "depends_on": ["aggregate_by_time"],
+      "required_for": ["get_top_metrics (when metric_type='trend')"]
+    },
+    "compare_periods": {
+      "depends_on": ["aggregate_by_time"],
+      "required_for": ["get_top_metrics (when metric_type='absolute_change')"]
+    },
+    "get_top_metrics": {
+      "depends_on": ["calculate_growth_rates OR calculate_statistical_trend OR compare_periods"],
+      "required_for": []
+    }
+  },
+  "usage_examples": [
     {
       "query": "Aggregate daily sales data into weekly totals for the past quarter",
       "function": "aggregate_by_time",
@@ -745,4 +781,5 @@
         ]
       }
     }
-]
+  ]
+}

@@ -74,6 +74,64 @@ class RFPipe(BasePipe):
         if hasattr(source_pipe, 'pending_categorical_features'):
             self.pending_categorical_features = source_pipe.pending_categorical_features.copy()
     
+    def _has_results(self) -> bool:
+        """Check if the pipeline has any results to merge"""
+        return (len(self.models) > 0 or 
+                len(self.predictions) > 0 or 
+                len(self.metrics) > 0 or 
+                len(self.new_predictions) > 0)
+    
+    def merge_to_df(self, base_df: pd.DataFrame, analysis_name: Optional[str] = None, include_metadata: bool = False, **kwargs) -> pd.DataFrame:
+        """
+        Merge Random Forest classification results into the base dataframe as new columns
+        
+        Parameters:
+        -----------
+        base_df : pd.DataFrame
+            The base dataframe to merge results into
+        analysis_name : str, optional
+            Specific analysis to merge (if None, merges all)
+        include_metadata : bool, default=False
+            Whether to include metadata columns
+        **kwargs : dict
+            Additional arguments
+            
+        Returns:
+        --------
+        pd.DataFrame
+            Base dataframe with Random Forest classification results merged as new columns
+        """
+        if not self._has_results():
+            return base_df
+        
+        result_df = base_df.copy()
+        
+        # Merge predictions
+        for pred_name, pred_data in self.predictions.items():
+            if analysis_name is None or pred_name == analysis_name:
+                if hasattr(pred_data, 'values') and len(pred_data) == len(result_df):
+                    result_df[f"prediction_{pred_name}"] = pred_data.values
+                elif include_metadata:
+                    result_df[f"prediction_{pred_name}"] = pred_data
+        
+        # Merge new predictions
+        for new_pred_name, new_pred_data in self.new_predictions.items():
+            if analysis_name is None or new_pred_name == analysis_name:
+                if hasattr(new_pred_data, 'values') and len(new_pred_data) == len(result_df):
+                    result_df[f"new_prediction_{new_pred_name}"] = new_pred_data.values
+                elif include_metadata:
+                    result_df[f"new_prediction_{new_pred_name}"] = new_pred_data
+        
+        # Merge metrics
+        for metric_name, metric_data in self.metrics.items():
+            if analysis_name is None or metric_name == analysis_name:
+                if isinstance(metric_data, dict):
+                    for key, value in metric_data.items():
+                        if include_metadata:
+                            result_df[f"metric_{metric_name}_{key}"] = value
+        
+        return result_df
+    
     def to_df(self, **kwargs) -> pd.DataFrame:
         """
         Convert the Random Forest classification analysis results to a DataFrame.

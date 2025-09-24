@@ -106,10 +106,13 @@ class BasePipe(ABC):
         pipe.data = df.copy()
         return pipe
     
-    @abstractmethod
     def to_df(self, **kwargs) -> pd.DataFrame:
         """
-        Convert the analysis results to a DataFrame.
+        Convert the analysis results to a DataFrame by merging state into original data.
+        
+        This method provides a unified interface that merges pipeline state into
+        new columns of the original dataframe, allowing each pipeline to run
+        independently and produce a single combined result.
         
         Parameters:
         -----------
@@ -119,12 +122,58 @@ class BasePipe(ABC):
         Returns:
         --------
         pd.DataFrame
-            DataFrame representation of the analysis results
+            Original dataframe with pipeline state merged as new columns
             
         Raises:
         -------
         ValueError
-            If no analysis has been performed
+            If no analysis has been performed or no data is available
+        """
+        if self.data is None:
+            raise ValueError("No data found. Data must be provided when creating the pipeline.")
+        
+        if not self._has_results():
+            raise ValueError("No analysis has been performed. Run some analysis first.")
+        
+        # Start with a copy of the original data
+        result_df = self.data.copy()
+        
+        # Merge the pipeline state into new columns
+        result_df = self.merge_to_df(result_df, **kwargs)
+        
+        return result_df
+    
+    @abstractmethod
+    def merge_to_df(self, base_df: pd.DataFrame, **kwargs) -> pd.DataFrame:
+        """
+        Merge pipeline state into the base dataframe as new columns.
+        
+        This method should be implemented by each subclass to handle their
+        specific state and merge it into the base dataframe.
+        
+        Parameters:
+        -----------
+        base_df : pd.DataFrame
+            The base dataframe to merge state into
+        **kwargs : dict
+            Additional arguments specific to each pipe type
+            
+        Returns:
+        --------
+        pd.DataFrame
+            Base dataframe with pipeline state merged as new columns
+        """
+        pass
+    
+    @abstractmethod
+    def _has_results(self) -> bool:
+        """
+        Check if the pipeline has any results to merge.
+        
+        Returns:
+        --------
+        bool
+            True if the pipeline has results, False otherwise
         """
         pass
     

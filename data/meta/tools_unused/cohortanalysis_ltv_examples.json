@@ -1,0 +1,150 @@
+[
+  {
+    "function": "calculate_lifetime_value",
+    "category": "cohort_analysis",
+    "description": "Calculate 12-month cumulative lifetime value by acquisition month",
+    "prerequisites": ["CohortPipe.from_dataframe()", "form_time_cohorts()"],
+    "example": {
+      "code": "import pandas as pd\nimport numpy as np\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, form_time_cohorts, calculate_lifetime_value\n\n# Step 1: Create sample data with revenue transactions\nltv_data = []\nfor user_id in range(1, 201):\n    signup_date = pd.date_range('2023-01-01', periods=1, freq='D')[0] + pd.Timedelta(days=user_id % 30)\n    # Simulate monthly revenue for 12 months\n    for month in range(12):\n        transaction_date = signup_date + pd.Timedelta(days=month * 30)\n        revenue = 50 + (user_id % 10) * 10 + (month * 5)  # Varying revenue\n        ltv_data.append({\n            'user_id': user_id,\n            'signup_date': signup_date,\n            'transaction_date': transaction_date,\n            'revenue': revenue\n        })\n\nsample_data = pd.DataFrame(ltv_data)\n\n# Step 2: Initialize pipeline and form cohorts\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\ncohort_pipe = cohort_pipe | form_time_cohorts(\n    date_column='signup_date',\n    cohort_column='signup_month',\n    time_period='M',\n    format_cohorts=True\n)\n\n# Step 3: Calculate lifetime value\ncohort_pipe = cohort_pipe | calculate_lifetime_value(\n    cohort_column='signup_month',\n    date_column='transaction_date',\n    user_id_column='user_id',\n    value_column='revenue',\n    time_period='M',\n    max_periods=12,\n    cumulative=True\n)\n\n# Step 4: View results\nltv_df = cohort_pipe.to_df()\nprint(ltv_df.head())\n\n# Step 5: Get summary\nsummary = cohort_pipe.get_summary()\nprint(f\"Analysis type: {summary['analysis_type']}\")"
+    },
+    "parameters": {
+      "cohort_column": "Column containing cohort information",
+      "date_column": "Column containing transaction/activity dates",
+      "user_id_column": "Column containing user identifiers",
+      "value_column": "Column containing the value (revenue, etc.)",
+      "time_period": "Time period for LTV calculation ('D', 'W', 'M', 'Q', 'Y')",
+      "max_periods": "Maximum number of periods to calculate LTV for (default: 12)",
+      "cumulative": "Whether to show cumulative LTV over time (default: True)",
+      "datetime_format": "Format string for parsing dates if not already datetime"
+    }
+  },
+  {
+    "function": "calculate_lifetime_value",
+    "category": "cohort_analysis",
+    "description": "Calculate weekly average order value trends",
+    "prerequisites": ["CohortPipe.from_dataframe()", "form_time_cohorts()"],
+    "example": {
+      "code": "import pandas as pd\nimport numpy as np\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, form_time_cohorts, calculate_lifetime_value\n\n# Step 1: Create sample data with revenue transactions\nltv_data = []\nfor user_id in range(1, 201):\n    signup_date = pd.date_range('2023-01-01', periods=1, freq='D')[0] + pd.Timedelta(days=user_id % 30)\n    # Simulate monthly revenue for 12 months\n    for month in range(12):\n        transaction_date = signup_date + pd.Timedelta(days=month * 30)\n        revenue = 50 + (user_id % 10) * 10 + (month * 5)  # Varying revenue\n        ltv_data.append({\n            'user_id': user_id,\n            'signup_date': signup_date,\n            'transaction_date': transaction_date,\n            'revenue': revenue\n        })\n\nsample_data = pd.DataFrame(ltv_data)\n\n# Step 2: Initialize pipeline and form cohorts\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\ncohort_pipe = cohort_pipe | form_time_cohorts(\n    date_column='signup_date',\n    cohort_column='signup_week',\n    time_period='W',\n    format_cohorts=True\n)\n\n# Step 3: Calculate weekly LTV\ncohort_pipe = cohort_pipe | calculate_lifetime_value(\n    cohort_column='signup_week',\n    date_column='transaction_date',\n    user_id_column='user_id',\n    value_column='revenue',\n    time_period='W',\n    max_periods=52,\n    cumulative=False\n)\n\n# Step 4: View results\nltv_df = cohort_pipe.to_df()\nprint(ltv_df.head())"
+    },
+    "parameters": {
+      "cohort_column": "Column containing cohort information",
+      "date_column": "Column containing transaction/activity dates",
+      "user_id_column": "Column containing user identifiers",
+      "value_column": "Column containing the value (revenue, etc.)",
+      "time_period": "Time period for LTV calculation ('D', 'W', 'M', 'Q', 'Y')",
+      "max_periods": "Maximum number of periods to calculate LTV for (default: 12)",
+      "cumulative": "Whether to show cumulative LTV over time (default: True)",
+      "datetime_format": "Format string for parsing dates if not already datetime"
+    }
+  },
+  {
+    "function": "calculate_lifetime_value",
+    "category": "cohort_analysis",
+    "description": "Calculate non-cumulative LTV to see period-by-period value",
+    "prerequisites": ["CohortPipe.from_dataframe()", "form_time_cohorts()"],
+    "example": {
+      "code": "import pandas as pd\nimport numpy as np\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, form_time_cohorts, calculate_lifetime_value\n\n# Step 1: Create sample data with revenue transactions\nltv_data = []\nfor user_id in range(1, 201):\n    signup_date = pd.date_range('2023-01-01', periods=1, freq='D')[0] + pd.Timedelta(days=user_id % 30)\n    # Simulate monthly revenue for 12 months\n    for month in range(12):\n        transaction_date = signup_date + pd.Timedelta(days=month * 30)\n        revenue = 50 + (user_id % 10) * 10 + (month * 5)  # Varying revenue\n        ltv_data.append({\n            'user_id': user_id,\n            'signup_date': signup_date,\n            'transaction_date': transaction_date,\n            'revenue': revenue\n        })\n\nsample_data = pd.DataFrame(ltv_data)\n\n# Step 2: Initialize pipeline and form cohorts\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\ncohort_pipe = cohort_pipe | form_time_cohorts(\n    date_column='signup_date',\n    cohort_column='signup_month',\n    time_period='M',\n    format_cohorts=True\n)\n\n# Step 3: Calculate non-cumulative LTV\ncohort_pipe = cohort_pipe | calculate_lifetime_value(\n    cohort_column='signup_month',\n    date_column='transaction_date',\n    user_id_column='user_id',\n    value_column='revenue',\n    time_period='M',\n    max_periods=12,\n    cumulative=False\n)\n\n# Step 4: View results\nltv_df = cohort_pipe.to_df()\nprint(ltv_df.head())"
+    },
+    "parameters": {
+      "cohort_column": "Column containing cohort information",
+      "date_column": "Column containing transaction/activity dates",
+      "user_id_column": "Column containing user identifiers",
+      "value_column": "Column containing the value (revenue, etc.)",
+      "time_period": "Time period for LTV calculation ('D', 'W', 'M', 'Q', 'Y')",
+      "max_periods": "Maximum number of periods to calculate LTV for (default: 12)",
+      "cumulative": "Whether to show cumulative LTV over time (default: True)",
+      "datetime_format": "Format string for parsing dates if not already datetime"
+    }
+  },
+  {
+    "function": "CohortPipe.to_df",
+    "category": "data_export",
+    "description": "Export retention analysis results to DataFrame",
+    "prerequisites": ["Any cohort analysis function"],
+    "example": {
+      "code": "# After running calculate_retention\nretention_df = cohort_pipe.to_df()\nprint(retention_df.head())\nprint(f\"Retention data shape: {retention_df.shape}\")"
+    },
+    "parameters": {
+      "analysis_name": "Name of the specific analysis to convert (optional)",
+      "include_metadata": "Whether to include metadata columns (default: False)"
+    }
+  },
+  {
+    "function": "CohortPipe.to_df",
+    "category": "data_export",
+    "description": "Export with additional metadata columns",
+    "prerequisites": ["Any cohort analysis function"],
+    "example": {
+      "code": "# Export with metadata\nretention_df_with_metadata = cohort_pipe.to_df(include_metadata=True)\nprint(retention_df_with_metadata.columns)\nprint(retention_df_with_metadata.head())"
+    },
+    "parameters": {
+      "analysis_name": "Name of the specific analysis to convert (optional)",
+      "include_metadata": "Whether to include metadata columns (default: False)"
+    }
+  },
+  {
+    "function": "CohortPipe.to_df",
+    "category": "data_export",
+    "description": "Export specific analysis results",
+    "prerequisites": ["Any cohort analysis function"],
+    "example": {
+      "code": "# Export specific analysis\nconversion_df = cohort_pipe.to_df(analysis_name='behavioral_cohorts_conversion')\nprint(conversion_df.head())"
+    },
+    "parameters": {
+      "analysis_name": "Name of the specific analysis to convert (optional)",
+      "include_metadata": "Whether to include metadata columns (default: False)"
+    }
+  },
+  {
+    "function": "CohortPipe.merge_to_df",
+    "category": "data_export",
+    "description": "Merge retention results back to original data",
+    "prerequisites": ["Any cohort analysis function"],
+    "example": {
+      "code": "# After running calculate_retention\noriginal_data = sample_data.copy()\nenriched_data = cohort_pipe.merge_to_df(original_data)\nprint(enriched_data.columns)\nprint(enriched_data.head())"
+    },
+    "parameters": {
+      "base_df": "The base dataframe to merge results into",
+      "analysis_name": "Name of the specific analysis to merge (optional)",
+      "include_metadata": "Whether to include metadata columns (default: False)"
+    }
+  },
+  {
+    "function": "CohortPipe.merge_to_df",
+    "category": "data_export",
+    "description": "Merge with metadata for comprehensive analysis",
+    "prerequisites": ["Any cohort analysis function"],
+    "example": {
+      "code": "enriched_data = cohort_pipe.merge_to_df(\n    original_data, \n    include_metadata=True\n)\nprint(enriched_data.columns)\nprint(enriched_data[['user_id', 'signup_date', 'pipeline_type', 'pipeline_has_results']].head())"
+    },
+    "parameters": {
+      "base_df": "The base dataframe to merge results into",
+      "analysis_name": "Name of the specific analysis to merge (optional)",
+      "include_metadata": "Whether to include metadata columns (default: False)"
+    }
+  },
+  {
+    "function": "CohortPipe.get_summary",
+    "category": "analysis_summary",
+    "description": "Get basic summary of analysis results",
+    "prerequisites": ["Any cohort analysis function"],
+    "example": {
+      "code": "# After running any cohort analysis\nsummary = cohort_pipe.get_summary()\nprint(f\"Analysis name: {summary['analysis_name']}\")\nprint(f\"Analysis type: {summary['analysis_type']}\")\nprint(f\"Total analyses: {summary['total_analyses']}\")\nprint(f\"Available analyses: {summary['available_analyses']}\")\nprint(f\"Total cohorts: {summary['total_cohorts']}\")"
+    },
+    "parameters": {
+      "analysis_name": "Name of the specific analysis (optional)"
+    }
+  },
+  {
+    "function": "CohortPipe.get_summary",
+    "category": "analysis_summary",
+    "description": "Get summary for specific analysis",
+    "prerequisites": ["Any cohort analysis function"],
+    "example": {
+      "code": "summary = cohort_pipe.get_summary(analysis_name='time_cohorts_retention')\nprint(f\"Specific analysis summary: {summary}\")"
+    },
+    "parameters": {
+      "analysis_name": "Name of the specific analysis (optional)"
+    }
+  }
+]

@@ -1,0 +1,127 @@
+[
+  {
+    "function": "get_funnel_summary",
+    "category": "funnel_analysis",
+    "description": "Get overall conversion metrics for the sign-up to premium upgrade funnel",
+    "prerequisites": ["Any funnel analysis function"],
+    "example": {
+      "code": "# After running any funnel analysis function\nsummary = get_funnel_summary()(cohort_pipe)\nprint(f\"Overall conversion rate: {summary['overall_conversion_rate']:.2f}%\")\nprint(f\"Total users analyzed: {summary['total_users']}\")\nprint(f\"Funnel completion rate: {summary.get('funnel_completion_rate', 'N/A')}\")"
+    },
+    "parameters": {
+      "analysis_name": "Name of the specific funnel analysis (optional)"
+    }
+  },
+  {
+    "function": "get_funnel_summary",
+    "category": "funnel_analysis",
+    "description": "Show summary statistics for new user onboarding funnel",
+    "prerequisites": ["Any funnel analysis function"],
+    "example": {
+      "code": "# After running any funnel analysis function\nsummary = get_funnel_summary()(cohort_pipe)\nprint(f\"Onboarding completion rate: {summary['overall_conversion_rate']:.2f}%\")\nprint(f\"Average time to complete: {summary.get('avg_completion_time', 'N/A')} minutes\")\nprint(f\"Drop-off at each step: {summary.get('step_dropoff_rates', 'N/A')}\")"
+    },
+    "parameters": {
+      "analysis_name": "Name of the specific funnel analysis (optional)"
+    }
+  },
+  {
+    "function": "get_funnel_summary",
+    "category": "funnel_analysis",
+    "description": "Provide an overview of the checkout process conversion metrics",
+    "prerequisites": ["Any funnel analysis function"],
+    "example": {
+      "code": "# After running any funnel analysis function\nsummary = get_funnel_summary()(cohort_pipe)\nprint(f\"Checkout completion rate: {summary['overall_conversion_rate']:.2f}%\")\nprint(f\"Total revenue from completed checkouts: ${summary.get('total_revenue', 0):,.2f}\")\nprint(f\"Average checkout time: {summary.get('avg_checkout_time', 'N/A')} minutes\")"
+    },
+    "parameters": {
+      "analysis_name": "Name of the specific funnel analysis (optional)"
+    }
+  },
+  {
+    "function": "get_funnel_summary",
+    "category": "funnel_analysis",
+    "description": "Summarize the conversion rates for the sign-up funnel",
+    "prerequisites": ["Any funnel analysis function"],
+    "example": {
+      "code": "# After running any funnel analysis function\nsummary = get_funnel_summary()(cohort_pipe)\nprint(f\"Sign-up completion rate: {summary['overall_conversion_rate']:.2f}%\")\nprint(f\"Drop-off at email verification: {summary.get('dropoff_at_email_verification', 'N/A')}%\")\nprint(f\"Most common drop-off point: {summary.get('biggest_dropoff_step', 'N/A')}\")"
+    },
+    "parameters": {
+      "analysis_name": "Name of the specific funnel analysis (optional)"
+    }
+  },
+  {
+    "function": "get_funnel_summary",
+    "category": "funnel_analysis",
+    "description": "Get a high-level view of feature adoption funnel performance",
+    "prerequisites": ["Any funnel analysis function"],
+    "example": {
+      "code": "# After running any funnel analysis function\nsummary = get_funnel_summary()(cohort_pipe)\nprint(f\"Feature adoption rate: {summary['overall_conversion_rate']:.2f}%\")\nprint(f\"Most common drop-off point: {summary.get('biggest_dropoff_step', 'N/A')}\")\nprint(f\"Time to adoption: {summary.get('avg_time_to_adoption', 'N/A')} days\")"
+    },
+    "parameters": {
+      "analysis_name": "Name of the specific funnel analysis (optional)"
+    }
+  },
+  {
+    "function": "compare_segments",
+    "category": "funnel_analysis",
+    "description": "Compare conversion rates between mobile and desktop users",
+    "prerequisites": ["analyze_funnel_by_segment()"],
+    "example": {
+      "code": "# After running analyze_funnel_by_segment\ncomparison = compare_segments(\n    metric_column='conversion_rate',\n    baseline_segment='desktop'\n)(cohort_pipe)\nprint(\"Mobile vs Desktop conversion comparison:\")\nprint(comparison)\nprint(f\"Mobile conversion rate: {comparison.get('mobile', {}).get('conversion_rate', 'N/A')}%\")\nprint(f\"Desktop conversion rate: {comparison.get('desktop', {}).get('conversion_rate', 'N/A')}%\")"
+    },
+    "parameters": {
+      "metric_column": "Column containing the metric to compare",
+      "baseline_segment": "Segment to use as baseline for comparison (optional)"
+    }
+  },
+  {
+    "function": "compare_segments",
+    "category": "funnel_analysis",
+    "description": "Analyze how checkout completion rates differ across browser types",
+    "prerequisites": ["analyze_funnel_by_segment()"],
+    "example": {
+      "code": "# After running analyze_funnel_by_segment\ncomparison = compare_segments(\n    metric_column='checkout_completion_rate',\n    baseline_segment='chrome'\n)(cohort_pipe)\nprint(\"Browser comparison for checkout completion:\")\nprint(comparison)\nprint(f\"Chrome completion rate: {comparison.get('chrome', {}).get('checkout_completion_rate', 'N/A')}%\")\nprint(f\"Firefox completion rate: {comparison.get('firefox', {}).get('checkout_completion_rate', 'N/A')}%\")"
+    },
+    "parameters": {
+      "metric_column": "Column containing the metric to compare",
+      "baseline_segment": "Segment to use as baseline for comparison (optional)"
+    }
+  },
+  {
+    "function": "compare_segments",
+    "category": "funnel_analysis",
+    "description": "Compare sign-up success rates across different marketing channels",
+    "prerequisites": ["analyze_funnel_by_segment()"],
+    "example": {
+      "code": "# After running analyze_funnel_by_segment\ncomparison = compare_segments(\n    metric_column='signup_success_rate'\n)(cohort_pipe)\nprint(\"Marketing channel comparison for sign-up success:\")\nprint(comparison)\nprint(f\"Organic signup rate: {comparison.get('organic', {}).get('signup_success_rate', 'N/A')}%\")\nprint(f\"Paid search signup rate: {comparison.get('paid_search', {}).get('signup_success_rate', 'N/A')}%\")"
+    },
+    "parameters": {
+      "metric_column": "Column containing the metric to compare",
+      "baseline_segment": "Segment to use as baseline for comparison (optional)"
+    }
+  },
+  {
+    "function": "compare_segments",
+    "category": "funnel_analysis",
+    "description": "Find differences in subscription renewal rates between pricing tiers",
+    "prerequisites": ["analyze_funnel_by_segment()"],
+    "example": {
+      "code": "# After running analyze_funnel_by_segment\ncomparison = compare_segments(\n    metric_column='renewal_rate',\n    baseline_segment='basic_tier'\n)(cohort_pipe)\nprint(\"Pricing tier comparison for renewal rates:\")\nprint(comparison)\nprint(f\"Basic tier renewal rate: {comparison.get('basic_tier', {}).get('renewal_rate', 'N/A')}%\")\nprint(f\"Premium tier renewal rate: {comparison.get('premium_tier', {}).get('renewal_rate', 'N/A')}%\")"
+    },
+    "parameters": {
+      "metric_column": "Column containing the metric to compare",
+      "baseline_segment": "Segment to use as baseline for comparison (optional)"
+    }
+  },
+  {
+    "function": "compare_segments",
+    "category": "funnel_analysis",
+    "description": "Measure how abandonment rates vary between new and returning users",
+    "prerequisites": ["analyze_funnel_by_segment()"],
+    "example": {
+      "code": "# After running analyze_funnel_by_segment\ncomparison = compare_segments(\n    metric_column='abandonment_rate',\n    baseline_segment='returning_users'\n)(cohort_pipe)\nprint(\"New vs Returning users abandonment comparison:\")\nprint(comparison)\nprint(f\"New users abandonment rate: {comparison.get('new_users', {}).get('abandonment_rate', 'N/A')}%\")\nprint(f\"Returning users abandonment rate: {comparison.get('returning_users', {}).get('abandonment_rate', 'N/A')}%\")"
+    },
+    "parameters": {
+      "metric_column": "Column containing the metric to compare",
+      "baseline_segment": "Segment to use as baseline for comparison (optional)"
+    }
+  }
+]

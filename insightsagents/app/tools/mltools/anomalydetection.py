@@ -77,6 +77,59 @@ class AnomalyPipe(BasePipe):
         if hasattr(source_pipe, 'current_analysis'):
             self.current_analysis = source_pipe.current_analysis
     
+    def _has_results(self) -> bool:
+        """Check if the pipeline has any results to merge"""
+        return len(self.anomaly_results) > 0 or len(self.forecasts) > 0
+    
+    def merge_to_df(self, base_df: pd.DataFrame, analysis_name: Optional[str] = None, include_metadata: bool = False, **kwargs) -> pd.DataFrame:
+        """
+        Merge anomaly detection results into the base dataframe as new columns
+        
+        Parameters:
+        -----------
+        base_df : pd.DataFrame
+            The base dataframe to merge results into
+        analysis_name : str, optional
+            Specific analysis to merge (if None, merges all)
+        include_metadata : bool, default=False
+            Whether to include metadata columns
+        **kwargs : dict
+            Additional arguments
+            
+        Returns:
+        --------
+        pd.DataFrame
+            Base dataframe with anomaly detection results merged as new columns
+        """
+        if not self._has_results():
+            return base_df
+        
+        result_df = base_df.copy()
+        
+        # Merge anomaly results
+        for anomaly_name, anomaly_data in self.anomaly_results.items():
+            if analysis_name is None or anomaly_name == analysis_name:
+                if isinstance(anomaly_data, dict):
+                    for key, value in anomaly_data.items():
+                        if hasattr(value, 'values') and len(value) == len(result_df):
+                            # If it's a pandas Series/DataFrame with matching length
+                            result_df[f"anomaly_{anomaly_name}_{key}"] = value.values
+                        elif include_metadata:
+                            # If it's metadata
+                            result_df[f"anomaly_{anomaly_name}_{key}"] = value
+        
+        # Merge forecasts
+        for forecast_name, forecast_data in self.forecasts.items():
+            if analysis_name is None or forecast_name == analysis_name:
+                if isinstance(forecast_data, dict):
+                    for key, value in forecast_data.items():
+                        if hasattr(value, 'values') and len(value) == len(result_df):
+                            result_df[f"forecast_{forecast_name}_{key}"] = value.values
+                        elif include_metadata:
+                            result_df[f"forecast_{forecast_name}_{key}"] = value
+        
+        return result_df
+    
     def to_df(self, analysis_name: Optional[str] = None, include_metadata: bool = False, include_original: bool = True):
         """
         Convert the last analysis output to a DataFrame

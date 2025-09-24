@@ -1,0 +1,394 @@
+{
+    "metadata": {
+        "updated_at": "2024-01-16T12:00:00Z",
+        "llm_generated": true,
+        "total_functions": 8,
+        "categories": ["trend_analysis", "time_series", "forecasting"],
+        "complexity_levels": ["simple", "intermediate", "advanced"],
+        "pipe_name": "TrendPipe",
+        "module": "trend_analysis",
+        "description": "Functions for trend analysis, time series forecasting, and temporal pattern detection",
+        "function_list": [
+            "aggregate_by_time", "calculate_growth_rates", "calculate_moving_average",
+            "decompose_trend", "forecast_metric", "calculate_statistical_trend",
+            "compare_periods", "get_top_metrics"
+        ]
+    },
+    "functions": {
+        "aggregate_by_time": {
+            "category": "trend_analysis",
+            "subcategory": "time_aggregation",
+            "pipe_name": "TrendPipe",
+            "description": "Aggregate data by time periods (daily, weekly, monthly, quarterly, yearly)",
+            "complexity": "intermediate",
+            "use_cases": [
+                "time series aggregation",
+                "temporal data grouping",
+                "periodic analysis",
+                "time-based summarization"
+            ],
+            "data_requirements": [
+                "Time series data with date column",
+                "Numerical metric columns",
+                "Valid date/time format"
+            ],
+            "tags": ["aggregation", "time_periods", "grouping", "summarization"],
+            "keywords": ["aggregation", "time_periods", "grouping", "summarization", "temporal"],
+            "output_description": "Function that aggregates data by time periods",
+            "confidence_score": 0.95,
+            "examples": [
+                "aggregate_by_time('date', ['sales', 'revenue'], time_period='D')",
+                "aggregate_by_time('timestamp', ['visits'], time_period='W', aggregation='sum')"
+            ],
+            "usage_patterns": [
+                "aggregate_by_time(date_column, metric_columns)",
+                "aggregate_by_time(date_column, metric_columns, time_period='M')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": [],
+            "related_functions": ["calculate_growth_rates", "calculate_moving_average", "compare_periods"],
+            "required_params": [
+                {"name": "date_column", "type": "str", "description": "Column containing the date to aggregate by"},
+                {"name": "metric_columns", "type": "List[str]", "description": "Columns containing metrics to analyze"}
+            ],
+            "optional_params": [
+                {"name": "time_period", "type": "str", "description": "Time period for aggregation ('D' for daily, 'W' for weekly, 'M' for monthly, 'Q' for quarterly, 'Y' for yearly) (default: 'D')"},
+                {"name": "aggregation", "type": "str or Dict[str, str]", "description": "Aggregation method (mean, sum, count, min, max) or dict mapping columns to methods (default: 'mean')"},
+                {"name": "fill_missing", "type": "bool", "description": "Whether to fill in missing time periods with NaN (default: True)"},
+                {"name": "include_current_period", "type": "bool", "description": "Whether to include the current (potentially incomplete) time period (default: False)"},
+                {"name": "time_name", "type": "str", "description": "Name to use for the time column in the result (default: 'time_period')"},
+                {"name": "datetime_format", "type": "str", "description": "Format string for parsing dates if they are not already datetime objects (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that aggregates data by time periods"
+            },
+            "instructions": "This function must be called first in the pipeline to create time-aggregated data. All other trend analysis functions depend on this aggregation step. The date_column must contain valid datetime data, and metric_columns should contain numerical values to aggregate."
+        },
+        "calculate_growth_rates": {
+            "category": "trend_analysis",
+            "subcategory": "growth_analysis",
+            "pipe_name": "TrendPipe",
+            "description": "Calculate growth rates for aggregated metrics",
+            "complexity": "intermediate",
+            "use_cases": [
+                "growth analysis",
+                "performance tracking",
+                "trend measurement",
+                "year-over-year analysis"
+            ],
+            "data_requirements": [
+                "Aggregated time series data",
+                "Numerical metrics",
+                "Ordered time periods"
+            ],
+            "tags": ["growth_rates", "performance", "trends", "year_over_year"],
+            "keywords": ["growth_rates", "performance", "trends", "year_over_year", "percentage"],
+            "output_description": "Function that calculates growth rates",
+            "confidence_score": 0.90,
+            "examples": [
+                "calculate_growth_rates()",
+                "calculate_growth_rates(window=4, annualize=True, method='cagr')"
+            ],
+            "usage_patterns": [
+                "calculate_growth_rates()",
+                "calculate_growth_rates(window=12, method='log')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": ["aggregate_by_time"],
+            "related_functions": ["calculate_moving_average", "compare_periods", "get_top_metrics"],
+            "required_params": [],
+            "optional_params": [
+                {"name": "data", "type": "pd.DataFrame", "description": "DataFrame to calculate growth rates for (for direct usage) (optional)"},
+                {"name": "columns", "type": "List[str]", "description": "List of column names to calculate growth rates for (for direct usage) (optional)"},
+                {"name": "time_period", "type": "str", "description": "Time period for annualization ('D', 'W', 'M', 'Q', 'Y') (for direct usage) (optional)"},
+                {"name": "window", "type": "int", "description": "Window size for growth rate calculation (if None, compare to previous period) (optional)"},
+                {"name": "annualize", "type": "bool", "description": "Whether to annualize growth rates (useful for comparing different time periods) (default: False)"},
+                {"name": "method", "type": "str", "description": "Method for calculating growth ('percentage', 'log', or 'cagr') (default: 'percentage')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates growth rates"
+            },
+            "instructions": "This function requires aggregate_by_time() to be called first. It calculates growth rates for all metrics in the aggregated data. The window parameter determines how many periods to compare (1 = period-over-period, 4 = quarter-over-quarter for monthly data). Use annualize=True when comparing different time periods."
+        },
+        "calculate_moving_average": {
+            "category": "trend_analysis",
+            "subcategory": "moving_average_analysis",
+            "pipe_name": "TrendPipe",
+            "description": "Calculate moving averages for aggregated metrics",
+            "complexity": "intermediate",
+            "use_cases": [
+                "trend smoothing",
+                "noise reduction",
+                "pattern identification",
+                "signal processing"
+            ],
+            "data_requirements": [
+                "Aggregated time series data",
+                "Numerical metrics",
+                "Ordered time periods"
+            ],
+            "tags": ["moving_average", "smoothing", "trends", "signal_processing"],
+            "keywords": ["moving_average", "smoothing", "trends", "signal_processing", "noise"],
+            "output_description": "Function that calculates moving averages",
+            "confidence_score": 0.90,
+            "examples": [
+                "calculate_moving_average(window=7)",
+                "calculate_moving_average(window=30, method='exponential', center=True)"
+            ],
+            "usage_patterns": [
+                "calculate_moving_average(window=7)",
+                "calculate_moving_average(window=7, method='weighted')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": ["aggregate_by_time"],
+            "related_functions": ["calculate_growth_rates", "decompose_trend"],
+            "required_params": [],
+            "optional_params": [
+                {"name": "data", "type": "pd.DataFrame", "description": "DataFrame to calculate moving averages for (for direct usage) (optional)"},
+                {"name": "columns", "type": "List[str]", "description": "List of column names to calculate moving averages for (for direct usage) (optional)"},
+                {"name": "window", "type": "int", "description": "Window size for moving average (default: 7)"},
+                {"name": "method", "type": "str", "description": "Method for calculating moving average ('simple', 'weighted', or 'exponential') (default: 'simple')"},
+                {"name": "center", "type": "bool", "description": "Whether to center the window (for simple and weighted) (default: False)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving averages"
+            },
+            "instructions": "This function requires aggregate_by_time() to be called first. It calculates moving averages for all metrics in the aggregated data. Simple MA gives equal weight to all values, weighted MA gives more weight to recent values, and exponential MA uses exponential weighting. Use center=True for symmetric windows."
+        },
+        "decompose_trend": {
+            "category": "trend_analysis",
+            "subcategory": "trend_decomposition",
+            "pipe_name": "TrendPipe",
+            "description": "Decompose time series into trend, seasonal, and residual components",
+            "complexity": "advanced",
+            "use_cases": [
+                "trend decomposition",
+                "seasonal analysis",
+                "component separation",
+                "time series modeling"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical metric column",
+                "Sufficient data for decomposition"
+            ],
+            "tags": ["decomposition", "trend", "seasonal", "components"],
+            "keywords": ["decomposition", "trend", "seasonal", "components", "residual"],
+            "output_description": "Function that decomposes time series",
+            "confidence_score": 0.85,
+            "examples": [
+                "decompose_trend('sales', model='additive')",
+                "decompose_trend('revenue', model='multiplicative', period=12)"
+            ],
+            "usage_patterns": [
+                "decompose_trend(metric_column)",
+                "decompose_trend(metric_column, model='additive', period=12)"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy", "statsmodels"],
+            "depends_on_functions": ["aggregate_by_time"],
+            "related_functions": ["calculate_moving_average", "forecast_metric", "calculate_statistical_trend"],
+            "required_params": [],
+            "optional_params": [
+                {"name": "data", "type": "pd.DataFrame", "description": "DataFrame to decompose (for direct usage) (optional)"},
+                {"name": "metric_column", "type": "str", "description": "Column to decompose (required for pipeline usage, optional for direct usage)"},
+                {"name": "time_period", "type": "str", "description": "Time period for extrapolation ('D', 'W', 'M', 'Q', 'Y') (for direct usage) (optional)"},
+                {"name": "model", "type": "str", "description": "Type of seasonal component ('additive' or 'multiplicative') (default: 'additive')"},
+                {"name": "period", "type": "int", "description": "Number of periods in a seasonal cycle (if None, will be estimated) (optional)"},
+                {"name": "extrapolate_trend", "type": "int", "description": "Number of periods to extrapolate the trend into the future (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that decomposes time series"
+            },
+            "instructions": "This function requires aggregate_by_time() to be called first. It decomposes a single metric into trend, seasonal, and residual components. Use additive model when seasonal variations are constant, multiplicative when they scale with the trend. The period parameter should match your data's seasonality (e.g., 12 for monthly data with yearly seasonality)."
+        },
+        "forecast_metric": {
+            "category": "trend_analysis",
+            "subcategory": "forecasting",
+            "pipe_name": "TrendPipe",
+            "description": "Forecast future values of a metric",
+            "complexity": "advanced",
+            "use_cases": [
+                "time series forecasting",
+                "future prediction",
+                "planning and budgeting",
+                "trend projection"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical metric column",
+                "Sufficient historical data for forecasting"
+            ],
+            "tags": ["forecasting", "prediction", "future", "projection"],
+            "keywords": ["forecasting", "prediction", "future", "projection", "holt_winters"],
+            "output_description": "Function that forecasts future values",
+            "confidence_score": 0.80,
+            "examples": [
+                "forecast_metric('sales', fperiods=12)",
+                "forecast_metric('revenue', fperiods=24, fmethod='linear', confidence_interval=0.9)"
+            ],
+            "usage_patterns": [
+                "forecast_metric(metric_column, fperiods=12)",
+                "forecast_metric(metric_column, fperiods=12, fmethod='holt_winters')"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy", "statsmodels"],
+            "depends_on_functions": ["aggregate_by_time"],
+            "related_functions": ["decompose_trend", "calculate_statistical_trend", "calculate_moving_average"],
+            "required_params": [],
+            "optional_params": [
+                {"name": "data", "type": "pd.DataFrame", "description": "DataFrame to forecast from (for direct usage) (optional)"},
+                {"name": "metric_column", "type": "str", "description": "Column to forecast (required for pipeline usage, optional for direct usage)"},
+                {"name": "time_period", "type": "str", "description": "Time period for date generation ('D', 'W', 'M', 'Q', 'Y') (for direct usage) (optional)"},
+                {"name": "fperiods", "type": "int", "description": "Number of periods to forecast (default: 12)"},
+                {"name": "fmethod", "type": "str", "description": "Forecasting method ('holt_winters', 'linear', 'exponential') (default: 'holt_winters')"},
+                {"name": "seasonal_periods", "type": "int", "description": "Number of periods in a seasonal cycle (if None, will be estimated) (optional)"},
+                {"name": "confidence_interval", "type": "float", "description": "Confidence level for prediction intervals (default: 0.95)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that forecasts future values"
+            },
+            "instructions": "This function requires aggregate_by_time() to be called first. It forecasts future values for a single metric. Holt-Winters is best for data with trend and seasonality, linear for simple trends, and exponential for growth patterns. The confidence_interval determines the width of prediction bands."
+        },
+        "calculate_statistical_trend": {
+            "category": "trend_analysis",
+            "subcategory": "statistical_trend_analysis",
+            "pipe_name": "TrendPipe",
+            "description": "Calculate statistical significance of trends",
+            "complexity": "advanced",
+            "use_cases": [
+                "statistical trend testing",
+                "significance analysis",
+                "trend validation",
+                "hypothesis testing"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical metric column",
+                "Sufficient data for statistical testing"
+            ],
+            "tags": ["statistical_trend", "significance", "testing", "validation"],
+            "keywords": ["statistical_trend", "significance", "testing", "validation", "mann_kendall"],
+            "output_description": "Function that tests for statistical trends",
+            "confidence_score": 0.85,
+            "examples": [
+                "calculate_statistical_trend('sales', test_method='mann_kendall')",
+                "calculate_statistical_trend('revenue', test_method='t_test', alpha=0.01)"
+            ],
+            "usage_patterns": [
+                "calculate_statistical_trend(metric_column)",
+                "calculate_statistical_trend(metric_column, test_method='spearman')"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy", "statsmodels"],
+            "depends_on_functions": ["aggregate_by_time"],
+            "related_functions": ["decompose_trend", "forecast_metric", "compare_periods"],
+            "required_params": [],
+            "optional_params": [
+                {"name": "data", "type": "pd.DataFrame", "description": "DataFrame to test for trends (for direct usage) (optional)"},
+                {"name": "metric_column", "type": "str", "description": "Column to test for trend (required for pipeline usage, optional for direct usage)"},
+                {"name": "test_method", "type": "str", "description": "Statistical test method ('mann_kendall', 't_test', 'spearman') (default: 'mann_kendall')"},
+                {"name": "alpha", "type": "float", "description": "Significance level (default: 0.05)"},
+                {"name": "window", "type": "int", "description": "Window size for rolling trend analysis (if None, test the entire series) (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that tests for statistical trends"
+            },
+            "instructions": "This function requires aggregate_by_time() to be called first. It tests for statistically significant trends in a single metric. Mann-Kendall is robust to outliers, t-test assumes normality, and Spearman tests for monotonic trends. Use window parameter for rolling trend analysis. Lower alpha values require stronger evidence for significance."
+        },
+        "compare_periods": {
+            "category": "trend_analysis",
+            "subcategory": "period_comparison",
+            "pipe_name": "TrendPipe",
+            "description": "Compare metrics between different time periods (e.g., year-over-year, month-over-month)",
+            "complexity": "intermediate",
+            "use_cases": [
+                "period comparison",
+                "year-over-year analysis",
+                "performance comparison",
+                "temporal benchmarking"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical metric column",
+                "Sufficient data for period comparison"
+            ],
+            "tags": ["period_comparison", "year_over_year", "benchmarking", "performance"],
+            "keywords": ["period_comparison", "year_over_year", "benchmarking", "performance", "comparison"],
+            "output_description": "Function that compares metrics between periods",
+            "confidence_score": 0.90,
+            "examples": [
+                "compare_periods('sales', comparison_type='year_over_year')",
+                "compare_periods('revenue', comparison_type='month_over_month', n_periods=2)"
+            ],
+            "usage_patterns": [
+                "compare_periods(metric_column)",
+                "compare_periods(metric_column, comparison_type='year_over_year')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": ["aggregate_by_time"],
+            "related_functions": ["calculate_growth_rates", "get_top_metrics"],
+            "required_params": [],
+            "optional_params": [
+                {"name": "data", "type": "pd.DataFrame", "description": "DataFrame to compare periods for (for direct usage) (optional)"},
+                {"name": "metric_column", "type": "str", "description": "Column to compare (required for pipeline usage, optional for direct usage)"},
+                {"name": "time_period", "type": "str", "description": "Time period for date calculations ('D', 'W', 'M', 'Q', 'Y') (for direct usage) (optional)"},
+                {"name": "comparison_type", "type": "str", "description": "Type of comparison ('year_over_year', 'month_over_month', 'week_over_week', 'period_over_period') (default: 'year_over_year')"},
+                {"name": "n_periods", "type": "int", "description": "Number of periods to go back for comparison (default: 1)"},
+                {"name": "aggregation", "type": "str", "description": "Method to aggregate values within periods ('mean', 'sum', 'median', 'min', 'max') (default: 'mean')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that compares metrics between periods"
+            },
+            "instructions": "This function requires aggregate_by_time() to be called first. It compares a single metric across different time periods. Year-over-year compares same periods in different years, month-over-month compares consecutive months, etc. The n_periods parameter determines how many periods back to compare."
+        },
+        "get_top_metrics": {
+            "category": "trend_analysis",
+            "subcategory": "metric_ranking",
+            "pipe_name": "TrendPipe",
+            "description": "Get top metrics based on growth, trend, or other criteria",
+            "complexity": "intermediate",
+            "use_cases": [
+                "metric ranking",
+                "performance identification",
+                "top performers analysis",
+                "metric prioritization"
+            ],
+            "data_requirements": [
+                "Time series data with multiple metrics",
+                "Calculated growth/trend data",
+                "Sufficient data for ranking"
+            ],
+            "tags": ["ranking", "top_metrics", "performance", "prioritization"],
+            "keywords": ["ranking", "top_metrics", "performance", "prioritization", "best"],
+            "output_description": "Function that gets top metrics",
+            "confidence_score": 0.90,
+            "examples": [
+                "get_top_metrics(n=10, metric_type='growth')",
+                "get_top_metrics(n=5, metric_type='trend', ascending=True)"
+            ],
+            "usage_patterns": [
+                "get_top_metrics(n=5)",
+                "get_top_metrics(n=5, metric_type='growth', ascending=False)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": ["calculate_growth_rates", "calculate_statistical_trend", "compare_periods"],
+            "related_functions": ["compare_periods", "calculate_growth_rates", "calculate_statistical_trend"],
+            "required_params": [],
+            "optional_params": [
+                {"name": "n", "type": "int", "description": "Number of top metrics to return (default: 5)"},
+                {"name": "metric_type", "type": "str", "description": "Type of metric to rank by ('growth', 'trend', 'volatility', 'absolute_change') (default: 'growth')"},
+                {"name": "ascending", "type": "bool", "description": "Whether to sort in ascending order (False = highest values first) (default: False)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that gets top metrics"
+            },
+            "instructions": "This function requires other analysis functions to be called first depending on the metric_type. For 'growth', call calculate_growth_rates() first. For 'trend', call calculate_statistical_trend() first. For 'volatility' and 'absolute_change', call compare_periods() first. It ranks metrics based on the specified criteria and returns the top N performers."
+        }
+    }
+}

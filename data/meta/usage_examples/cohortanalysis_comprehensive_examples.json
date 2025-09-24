@@ -1,0 +1,456 @@
+[
+  {
+    "pipe_name": "CohortPipe",
+    "category": "cohort_analysis",
+    "function": "form_time_cohorts",
+    "description": "Form cohorts based on time periods (daily, weekly, monthly, quarterly, yearly)",
+    "prerequisites": ["CohortPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Monthly cohorts with default settings",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_time_cohorts(\n    date_column='signup_date',\n    time_period='month'\n)",
+        "inputs": {
+          "date_column": "signup_date",
+          "time_period": "month"
+        }
+      },
+      {
+        "name": "Weekly cohorts with custom column name",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_time_cohorts(\n    date_column='registration_date',\n    cohort_column='registration_week',\n    time_period='week'\n)",
+        "inputs": {
+          "date_column": "registration_date",
+          "cohort_column": "registration_week",
+          "time_period": "week"
+        }
+      },
+      {
+        "name": "Daily cohorts with formatting",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_time_cohorts(\n    date_column='purchase_date',\n    time_period='day',\n    format_cohorts=True\n)",
+        "inputs": {
+          "date_column": "purchase_date",
+          "time_period": "day",
+          "format_cohorts": true
+        }
+      },
+      {
+        "name": "Quarterly cohorts with datetime format",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_time_cohorts(\n    date_column='join_date',\n    time_period='quarter',\n    format_cohorts=True,\n    datetime_format='%Y-%m-%d %H:%M:%S'\n)",
+        "inputs": {
+          "date_column": "join_date",
+          "time_period": "quarter",
+          "format_cohorts": true,
+          "datetime_format": "%Y-%m-%d %H:%M:%S"
+        }
+      },
+      {
+        "name": "Yearly cohorts without formatting",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_time_cohorts(\n    date_column='first_activity_date',\n    time_period='year',\n    format_cohorts=False\n)",
+        "inputs": {
+          "date_column": "first_activity_date",
+          "time_period": "year",
+          "format_cohorts": false
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "CohortPipe",
+    "category": "cohort_analysis",
+    "function": "form_behavioral_cohorts",
+    "description": "Form cohorts based on user behavior using conditions or custom functions",
+    "prerequisites": ["CohortPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Subscription plan cohorts with custom mapping",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_behavioral_cohorts(\n    behavior_column='subscription_plan',\n    cohort_column='plan_cohort',\n    custom_cohorts={\n        'Premium': ['premium', 'enterprise'],\n        'Basic': ['basic', 'starter'],\n        'Free': ['free_trial']\n    }\n)",
+        "inputs": {
+          "behavior_column": "subscription_plan",
+          "cohort_column": "plan_cohort",
+          "custom_cohorts": {
+            "Premium": ["premium", "enterprise"],
+            "Basic": ["basic", "starter"],
+            "Free": ["free_trial"]
+          }
+        }
+      },
+      {
+        "name": "Device type cohorts with conditions",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_behavioral_cohorts(\n    behavior_column='device_type',\n    conditions={\n        'Mobile': \"device_type in ['ios', 'android']\",\n        'Desktop': \"device_type in ['mac', 'windows', 'linux']\",\n        'Tablet': \"device_type == 'tablet'\"\n    }\n)",
+        "inputs": {
+          "behavior_column": "device_type",
+          "conditions": {
+            "Mobile": "device_type in ['ios', 'android']",
+            "Desktop": "device_type in ['mac', 'windows', 'linux']",
+            "Tablet": "device_type == 'tablet'"
+          }
+        }
+      },
+      {
+        "name": "Purchase frequency cohorts with numeric conditions",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_behavioral_cohorts(\n    behavior_column='purchases_count',\n    cohort_column='purchase_frequency_segment',\n    conditions={\n        'High Value': 'purchases_count > 10',\n        'Medium Value': 'purchases_count >= 3 and purchases_count <= 10',\n        'Low Value': 'purchases_count < 3'\n    }\n)",
+        "inputs": {
+          "behavior_column": "purchases_count",
+          "cohort_column": "purchase_frequency_segment",
+          "conditions": {
+            "High Value": "purchases_count > 10",
+            "Medium Value": "purchases_count >= 3 and purchases_count <= 10",
+            "Low Value": "purchases_count < 3"
+          }
+        }
+      },
+      {
+        "name": "Age-based demographic cohorts",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_behavioral_cohorts(\n    behavior_column='age',\n    cohort_column='age_group',\n    conditions={\n        '18-24': 'age >= 18 and age <= 24',\n        '25-34': 'age >= 25 and age <= 34',\n        '35-44': 'age >= 35 and age <= 44',\n        '45-54': 'age >= 45 and age <= 54',\n        '55+': 'age >= 55'\n    }\n)",
+        "inputs": {
+          "behavior_column": "age",
+          "cohort_column": "age_group",
+          "conditions": {
+            "18-24": "age >= 18 and age <= 24",
+            "25-34": "age >= 25 and age <= 34",
+            "35-44": "age >= 35 and age <= 44",
+            "45-54": "age >= 45 and age <= 54",
+            "55+": "age >= 55"
+          }
+        }
+      },
+      {
+        "name": "Engagement level cohorts",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_behavioral_cohorts(\n    behavior_column='monthly_active_days',\n    cohort_column='engagement_level',\n    conditions={\n        'High Engagement': 'monthly_active_days > 20',\n        'Medium Engagement': 'monthly_active_days >= 5 and monthly_active_days <= 20',\n        'Low Engagement': 'monthly_active_days < 5'\n    }\n)",
+        "inputs": {
+          "behavior_column": "monthly_active_days",
+          "cohort_column": "engagement_level",
+          "conditions": {
+            "High Engagement": "monthly_active_days > 20",
+            "Medium Engagement": "monthly_active_days >= 5 and monthly_active_days <= 20",
+            "Low Engagement": "monthly_active_days < 5"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "CohortPipe",
+    "category": "cohort_analysis",
+    "function": "form_acquisition_cohorts",
+    "description": "Form cohorts based on acquisition time and source",
+    "prerequisites": ["CohortPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Monthly acquisition cohorts with source",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_acquisition_cohorts(\n    acquisition_date_column='signup_date',\n    acquisition_source_column='acquisition_channel',\n    time_period='month'\n)",
+        "inputs": {
+          "acquisition_date_column": "signup_date",
+          "acquisition_source_column": "acquisition_channel",
+          "time_period": "month"
+        }
+      },
+      {
+        "name": "Weekly cohorts without source combination",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_acquisition_cohorts(\n    acquisition_date_column='registration_date',\n    acquisition_source_column='marketing_source',\n    cohort_column='acquisition_week',\n    time_period='week',\n    combine_source=False\n)",
+        "inputs": {
+          "acquisition_date_column": "registration_date",
+          "acquisition_source_column": "marketing_source",
+          "cohort_column": "acquisition_week",
+          "time_period": "week",
+          "combine_source": false
+        }
+      },
+      {
+        "name": "Quarterly cohorts with custom formatting",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_acquisition_cohorts(\n    acquisition_date_column='first_purchase_date',\n    acquisition_source_column='traffic_source',\n    time_period='quarter',\n    format_cohorts=True,\n    datetime_format='%Y-%m-%d'\n)",
+        "inputs": {
+          "acquisition_date_column": "first_purchase_date",
+          "acquisition_source_column": "traffic_source",
+          "time_period": "quarter",
+          "format_cohorts": true,
+          "datetime_format": "%Y-%m-%d"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "CohortPipe",
+    "category": "cohort_analysis",
+    "function": "calculate_retention",
+    "description": "Calculate retention metrics for cohorts",
+    "prerequisites": ["CohortPipe.from_dataframe(data)", "form_time_cohorts() or form_behavioral_cohorts()"],
+    "variations": [
+      {
+        "name": "Classic monthly retention for 6 months",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_time_cohorts('signup_date', 'cohort', 'month')\ncohort_pipe = cohort_pipe | calculate_retention(\n    cohort_column='cohort',\n    date_column='activity_date',\n    user_id_column='user_id',\n    time_period='month',\n    max_periods=6,\n    retention_type='classic'\n)",
+        "inputs": {
+          "cohort_column": "cohort",
+          "date_column": "activity_date",
+          "user_id_column": "user_id",
+          "time_period": "month",
+          "max_periods": 6,
+          "retention_type": "classic"
+        }
+      },
+      {
+        "name": "Rolling weekly retention for 8 weeks",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_time_cohorts('signup_date', 'signup_week', 'week')\ncohort_pipe = cohort_pipe | calculate_retention(\n    cohort_column='signup_week',\n    date_column='login_date',\n    user_id_column='app_user_id',\n    time_period='week',\n    max_periods=8,\n    retention_type='rolling'\n)",
+        "inputs": {
+          "cohort_column": "signup_week",
+          "date_column": "login_date",
+          "user_id_column": "app_user_id",
+          "time_period": "week",
+          "max_periods": 8,
+          "retention_type": "rolling"
+        }
+      },
+      {
+        "name": "Daily retention with datetime format",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_time_cohorts('registration_date', 'cohort', 'day')\ncohort_pipe = cohort_pipe | calculate_retention(\n    cohort_column='cohort',\n    date_column='session_date',\n    user_id_column='device_id',\n    time_period='day',\n    max_periods=30,\n    retention_type='classic',\n    datetime_format='%Y-%m-%d %H:%M:%S'\n)",
+        "inputs": {
+          "cohort_column": "cohort",
+          "date_column": "session_date",
+          "user_id_column": "device_id",
+          "time_period": "day",
+          "max_periods": 30,
+          "retention_type": "classic",
+          "datetime_format": "%Y-%m-%d %H:%M:%S"
+        }
+      },
+      {
+        "name": "Unbounded retention for behavioral cohorts",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_behavioral_cohorts('subscription_plan', 'plan_cohort')\ncohort_pipe = cohort_pipe | calculate_retention(\n    cohort_column='plan_cohort',\n    date_column='renewal_date',\n    user_id_column='subscriber_id',\n    time_period='quarter',\n    max_periods=4,\n    retention_type='unbounded'\n)",
+        "inputs": {
+          "cohort_column": "plan_cohort",
+          "date_column": "renewal_date",
+          "user_id_column": "subscriber_id",
+          "time_period": "quarter",
+          "max_periods": 4,
+          "retention_type": "unbounded"
+        }
+      },
+      {
+        "name": "Yearly retention for 3 years",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_time_cohorts('join_date', 'cohort', 'year')\ncohort_pipe = cohort_pipe | calculate_retention(\n    cohort_column='cohort',\n    date_column='account_activity_date',\n    user_id_column='customer_id',\n    time_period='year',\n    max_periods=3,\n    retention_type='classic'\n)",
+        "inputs": {
+          "cohort_column": "cohort",
+          "date_column": "account_activity_date",
+          "user_id_column": "customer_id",
+          "time_period": "year",
+          "max_periods": 3,
+          "retention_type": "classic"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "CohortPipe",
+    "category": "cohort_analysis",
+    "function": "calculate_conversion",
+    "description": "Calculate conversion funnel metrics for cohorts",
+    "prerequisites": ["CohortPipe.from_dataframe(data)", "form_time_cohorts() or form_behavioral_cohorts()"],
+    "variations": [
+      {
+        "name": "Basic conversion funnel with rates",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_behavioral_cohorts('pricing_tier', 'cohort')\ncohort_pipe = cohort_pipe | calculate_conversion(\n    cohort_column='cohort',\n    event_column='user_action',\n    user_id_column='user_id',\n    funnel_steps=['trial_started', 'feature_used', 'paywall_viewed', 'subscription_purchased'],\n    include_rates=True\n)",
+        "inputs": {
+          "cohort_column": "cohort",
+          "event_column": "user_action",
+          "user_id_column": "user_id",
+          "funnel_steps": ["trial_started", "feature_used", "paywall_viewed", "subscription_purchased"],
+          "include_rates": true
+        }
+      },
+      {
+        "name": "Conversion funnel with custom step names",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_behavioral_cohorts('user_segment', 'cohort')\ncohort_pipe = cohort_pipe | calculate_conversion(\n    cohort_column='cohort',\n    event_column='onboarding_step',\n    user_id_column='user_id',\n    funnel_steps=['account_created', 'profile_completed', 'tutorial_viewed', 'first_task_completed'],\n    step_names=['Account', 'Profile', 'Tutorial', 'First Task'],\n    include_rates=True\n)",
+        "inputs": {
+          "cohort_column": "cohort",
+          "event_column": "onboarding_step",
+          "user_id_column": "user_id",
+          "funnel_steps": ["account_created", "profile_completed", "tutorial_viewed", "first_task_completed"],
+          "step_names": ["Account", "Profile", "Tutorial", "First Task"],
+          "include_rates": true
+        }
+      },
+      {
+        "name": "Cumulative conversion funnel",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_behavioral_cohorts('customer_type', 'cohort')\ncohort_pipe = cohort_pipe | calculate_conversion(\n    cohort_column='cohort',\n    event_column='shopping_action',\n    user_id_column='visitor_id',\n    funnel_steps=['product_page_view', 'add_to_cart', 'begin_checkout', 'shipping_details', 'payment_details', 'order_confirm'],\n    cumulative=True\n)",
+        "inputs": {
+          "cohort_column": "cohort",
+          "event_column": "shopping_action",
+          "user_id_column": "visitor_id",
+          "funnel_steps": ["product_page_view", "add_to_cart", "begin_checkout", "shipping_details", "payment_details", "order_confirm"],
+          "cumulative": true
+        }
+      },
+      {
+        "name": "Non-cumulative step-to-step conversion",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_behavioral_cohorts('role_type', 'cohort')\ncohort_pipe = cohort_pipe | calculate_conversion(\n    cohort_column='cohort',\n    event_column='feature_event',\n    user_id_column='user_id',\n    funnel_steps=['feature_discovered', 'feature_clicked', 'feature_configured', 'feature_used_multiple_times'],\n    step_names=['Discovery', 'First Click', 'Configuration', 'Adoption'],\n    include_rates=True,\n    cumulative=False\n)",
+        "inputs": {
+          "cohort_column": "cohort",
+          "event_column": "feature_event",
+          "user_id_column": "user_id",
+          "funnel_steps": ["feature_discovered", "feature_clicked", "feature_configured", "feature_used_multiple_times"],
+          "step_names": ["Discovery", "First Click", "Configuration", "Adoption"],
+          "include_rates": true,
+          "cumulative": false
+        }
+      },
+      {
+        "name": "Simple conversion without rates",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_time_cohorts('signup_date', 'cohort', 'month')\ncohort_pipe = cohort_pipe | calculate_conversion(\n    cohort_column='cohort',\n    event_column='event_type',\n    user_id_column='email_id',\n    funnel_steps=['email_signup', 'site_visit', 'product_view', 'purchase']\n)",
+        "inputs": {
+          "cohort_column": "cohort",
+          "event_column": "event_type",
+          "user_id_column": "email_id",
+          "funnel_steps": ["email_signup", "site_visit", "product_view", "purchase"]
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "CohortPipe",
+    "category": "cohort_analysis",
+    "function": "calculate_lifetime_value",
+    "description": "Calculate lifetime value metrics for cohorts",
+    "prerequisites": ["CohortPipe.from_dataframe(data)", "form_time_cohorts() or form_behavioral_cohorts()"],
+    "variations": [
+      {
+        "name": "Cumulative monthly LTV for 6 months",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_behavioral_cohorts('region', 'cohort')\ncohort_pipe = cohort_pipe | calculate_lifetime_value(\n    cohort_column='cohort',\n    date_column='transaction_date',\n    user_id_column='customer_id',\n    value_column='revenue',\n    time_period='month',\n    max_periods=6,\n    cumulative=True\n)",
+        "inputs": {
+          "cohort_column": "cohort",
+          "date_column": "transaction_date",
+          "user_id_column": "customer_id",
+          "value_column": "revenue",
+          "time_period": "month",
+          "max_periods": 6,
+          "cumulative": true
+        }
+      },
+      {
+        "name": "Non-cumulative weekly LTV for 52 weeks",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_behavioral_cohorts('subscription_plan', 'cohort')\ncohort_pipe = cohort_pipe | calculate_lifetime_value(\n    cohort_column='cohort',\n    date_column='week_date',\n    user_id_column='subscriber_id',\n    value_column='subscription_revenue',\n    time_period='week',\n    max_periods=52,\n    cumulative=False\n)",
+        "inputs": {
+          "cohort_column": "cohort",
+          "date_column": "week_date",
+          "user_id_column": "subscriber_id",
+          "value_column": "subscription_revenue",
+          "time_period": "week",
+          "max_periods": 52,
+          "cumulative": false
+        }
+      },
+      {
+        "name": "Daily LTV with datetime format",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_behavioral_cohorts('customer_type', 'cohort')\ncohort_pipe = cohort_pipe | calculate_lifetime_value(\n    cohort_column='cohort',\n    date_column='order_date',\n    user_id_column='customer_id',\n    value_column='order_value',\n    time_period='day',\n    max_periods=90,\n    cumulative=False,\n    datetime_format='%Y-%m-%d'\n)",
+        "inputs": {
+          "cohort_column": "cohort",
+          "date_column": "order_date",
+          "user_id_column": "customer_id",
+          "value_column": "order_value",
+          "time_period": "day",
+          "max_periods": 90,
+          "cumulative": false,
+          "datetime_format": "%Y-%m-%d"
+        }
+      },
+      {
+        "name": "Quarterly LTV for 4 quarters",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_time_cohorts('acquisition_date', 'cohort', 'quarter')\ncohort_pipe = cohort_pipe | calculate_lifetime_value(\n    cohort_column='cohort',\n    date_column='purchase_date',\n    user_id_column='user_id',\n    value_column='purchase_amount',\n    time_period='quarter',\n    max_periods=4,\n    cumulative=True\n)",
+        "inputs": {
+          "cohort_column": "cohort",
+          "date_column": "purchase_date",
+          "user_id_column": "user_id",
+          "value_column": "purchase_amount",
+          "time_period": "quarter",
+          "max_periods": 4,
+          "cumulative": true
+        }
+      },
+      {
+        "name": "Yearly LTV for 3 years",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_behavioral_cohorts('industry', 'cohort')\ncohort_pipe = cohort_pipe | calculate_lifetime_value(\n    cohort_column='cohort',\n    date_column='transaction_date',\n    user_id_column='account_id',\n    value_column='contract_value',\n    time_period='year',\n    max_periods=3,\n    cumulative=False\n)",
+        "inputs": {
+          "cohort_column": "cohort",
+          "date_column": "transaction_date",
+          "user_id_column": "account_id",
+          "value_column": "contract_value",
+          "time_period": "year",
+          "max_periods": 3,
+          "cumulative": false
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "CohortPipe",
+    "category": "cohort_analysis",
+    "function": "to_df",
+    "description": "Convert cohort analysis results to DataFrame",
+    "prerequisites": ["Any cohort analysis function (calculate_retention, calculate_conversion, calculate_lifetime_value)"],
+    "variations": [
+      {
+        "name": "Convert last analysis to DataFrame",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_time_cohorts('signup_date', 'cohort', 'month')\ncohort_pipe = cohort_pipe | calculate_retention('cohort', 'activity_date', 'user_id', 'month', 6)\nresult_df = cohort_pipe.to_df()",
+        "inputs": {}
+      },
+      {
+        "name": "Convert specific analysis to DataFrame",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_behavioral_cohorts('subscription_plan', 'cohort')\ncohort_pipe = cohort_pipe | calculate_conversion('cohort', 'event', 'user_id', ['step1', 'step2'])\nresult_df = cohort_pipe.to_df(analysis_name='behavioral_cohorts_conversion')",
+        "inputs": {
+          "analysis_name": "behavioral_cohorts_conversion"
+        }
+      },
+      {
+        "name": "Convert with metadata",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_time_cohorts('signup_date', 'cohort', 'month')\ncohort_pipe = cohort_pipe | calculate_lifetime_value('cohort', 'date', 'user_id', 'value', 'month', 12)\nresult_df = cohort_pipe.to_df(include_metadata=True)",
+        "inputs": {
+          "include_metadata": true
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "CohortPipe",
+    "category": "cohort_analysis",
+    "function": "merge_to_df",
+    "description": "Merge cohort analysis results into base dataframe",
+    "prerequisites": ["Any cohort analysis function"],
+    "variations": [
+      {
+        "name": "Merge last analysis results",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_time_cohorts('signup_date', 'cohort', 'month')\ncohort_pipe = cohort_pipe | calculate_retention('cohort', 'activity_date', 'user_id', 'month', 6)\nmerged_df = cohort_pipe.merge_to_df(original_data)",
+        "inputs": {
+          "base_df": "original_data"
+        }
+      },
+      {
+        "name": "Merge specific analysis with metadata",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_behavioral_cohorts('subscription_plan', 'cohort')\ncohort_pipe = cohort_pipe | calculate_conversion('cohort', 'event', 'user_id', ['step1', 'step2'])\nmerged_df = cohort_pipe.merge_to_df(original_data, analysis_name='behavioral_cohorts_conversion', include_metadata=True)",
+        "inputs": {
+          "base_df": "original_data",
+          "analysis_name": "behavioral_cohorts_conversion",
+          "include_metadata": true
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "CohortPipe",
+    "category": "cohort_analysis",
+    "function": "get_summary",
+    "description": "Get summary of cohort analysis results",
+    "prerequisites": ["Any cohort analysis function"],
+    "variations": [
+      {
+        "name": "Get summary of last analysis",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_time_cohorts('signup_date', 'cohort', 'month')\ncohort_pipe = cohort_pipe | calculate_retention('cohort', 'activity_date', 'user_id', 'month', 6)\nsummary = cohort_pipe.get_summary()",
+        "inputs": {}
+      },
+      {
+        "name": "Get summary of specific analysis",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | form_behavioral_cohorts('subscription_plan', 'cohort')\ncohort_pipe = cohort_pipe | calculate_conversion('cohort', 'event', 'user_id', ['step1', 'step2'])\nsummary = cohort_pipe.get_summary(analysis_name='behavioral_cohorts_conversion')",
+        "inputs": {
+          "analysis_name": "behavioral_cohorts_conversion"
+        }
+      }
+    ]
+  }
+]

@@ -1,0 +1,492 @@
+{
+    "metadata": {
+        "updated_at": "2024-01-16T12:00:00Z",
+        "llm_generated": true,
+        "total_functions": 10,
+        "categories": ["anomaly_detection"],
+        "complexity_levels": ["simple", "intermediate", "advanced"],
+        "pipe_name": "AnomalyPipe",
+        "module": "anomalydetection",
+        "description": "Functions for detecting anomalies and outliers in data using various statistical and machine learning methods",
+        "function_list": [
+            "detect_statistical_outliers",
+            "detect_contextual_anomalies",
+            "detect_collective_anomalies",
+            "calculate_seasonal_residuals",
+            "detect_anomalies_from_residuals",
+            "get_anomaly_summary",
+            "get_top_anomalies",
+            "detect_change_points",
+            "forecast_and_detect_anomalies",
+            "batch_detect_anomalies"
+        ]
+    },
+    "functions": {
+        "detect_statistical_outliers": {
+            "category": "anomaly_detection",
+            "subcategory": "statistical_outliers",
+            "pipe_name": "AnomalyPipe",
+            "description": "Detect outliers using statistical methods like z-score, modified z-score, IQR, or percentile-based approaches",
+            "complexity": "intermediate",
+            "use_cases": [
+                "outlier detection in numerical data",
+                "quality control and data validation",
+                "statistical anomaly detection",
+                "data cleaning and preprocessing"
+            ],
+            "data_requirements": [
+                "Numerical data for outlier detection",
+                "Time series data (optional)",
+                "Grouped data (optional)"
+            ],
+            "tags": ["anomaly", "outlier", "statistical", "zscore", "iqr"],
+            "keywords": ["outlier", "anomaly", "statistical", "zscore", "iqr", "percentile"],
+            "confidence_score": 0.95,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to analyze for outliers"}
+            ],
+            "optional_params": [
+                {"name": "method", "type": "str", "description": "Method to use: 'zscore', 'modified_zscore', 'iqr', or 'percentile' (default: 'zscore')"},
+                {"name": "threshold", "type": "float", "description": "Threshold for determining outliers: For zscore/modified_zscore: number of standard deviations; For iqr: multiplier of IQR (values outside Q1-threshold*IQR and Q3+threshold*IQR); For percentile: values below/above percentile thresholds (default: 3.0)"},
+                {"name": "window", "type": "int", "description": "Window size for rolling outlier detection (if None, use entire series)"},
+                {"name": "time_column", "type": "str", "description": "Time column to sort by before calculations (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data, optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that detects outliers in an AnomalyPipe using statistical methods"
+            },
+            "examples": [
+                "detect_statistical_outliers('value', method='zscore', threshold=3.0)",
+                "detect_statistical_outliers(['sales', 'revenue'], method='iqr', threshold=1.5)",
+                "detect_statistical_outliers('price', window=30, time_column='date')"
+            ],
+            "usage_patterns": [
+                "detect_statistical_outliers(columns, method='zscore', threshold=3.0)",
+                "detect_statistical_outliers(columns, method='iqr', threshold=1.5, window=30)"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy"],
+            "related_functions": ["detect_contextual_anomalies", "detect_collective_anomalies"]
+        },
+        "detect_contextual_anomalies": {
+            "category": "anomaly_detection",
+            "subcategory": "contextual_anomalies",
+            "pipe_name": "AnomalyPipe",
+            "description": "Detect contextual anomalies by comparing actual values with expected values using time series models",
+            "complexity": "advanced",
+            "use_cases": [
+                "time series anomaly detection",
+                "contextual outlier identification",
+                "seasonal anomaly detection",
+                "trend-based anomaly detection"
+            ],
+            "data_requirements": [
+                "Time series data with timestamp column",
+                "Numerical data for analysis",
+                "Grouped time series data (optional)"
+            ],
+            "tags": ["anomaly", "contextual", "time_series", "residual", "prediction"],
+            "keywords": ["contextual", "anomaly", "time_series", "residual", "prediction", "seasonal"],
+            "confidence_score": 0.92,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to analyze for anomalies"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information"}
+            ],
+            "optional_params": [
+                {"name": "method", "type": "str", "description": "Method to use: 'residual', 'prediction_interval', 'changepoint' (default: 'residual')"},
+                {"name": "model_type", "type": "str", "description": "Model to generate expected values: 'ewm', 'sarimax', 'decomposition' (default: 'ewm')"},
+                {"name": "threshold", "type": "float", "description": "Threshold for determining anomalies (std deviations for residuals, prediction intervals) (default: 3.0)"},
+                {"name": "window", "type": "int", "description": "Window size for rolling model fitting (default: 30)"},
+                {"name": "seasonal_period", "type": "int", "description": "Number of periods in a seasonal cycle (if None, will be estimated)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data, optional)"},
+                {"name": "datetime_format", "type": "str", "description": "Format string for parsing dates if they are not already datetime objects (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that detects contextual anomalies in an AnomalyPipe"
+            },
+            "examples": [
+                "detect_contextual_anomalies('value', 'timestamp', method='residual', model_type='ewm')",
+                "detect_contextual_anomalies(['sales', 'revenue'], 'date', method='prediction_interval', window=60)",
+                "detect_contextual_anomalies('price', 'timestamp', seasonal_period=12, group_columns=['region'])"
+            ],
+            "usage_patterns": [
+                "detect_contextual_anomalies(columns, time_column, method='residual', model_type='ewm')",
+                "detect_contextual_anomalies(columns, time_column, method='prediction_interval', window=30)"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy", "statsmodels"],
+            "related_functions": ["detect_statistical_outliers", "calculate_seasonal_residuals"]
+        },
+        "detect_collective_anomalies": {
+            "category": "anomaly_detection",
+            "subcategory": "collective_anomalies",
+            "pipe_name": "AnomalyPipe",
+            "description": "Detect collective anomalies using machine learning methods on multiple features",
+            "complexity": "advanced",
+            "use_cases": [
+                "multivariate anomaly detection",
+                "collective behavior analysis",
+                "complex pattern anomaly detection",
+                "machine learning-based outlier detection"
+            ],
+            "data_requirements": [
+                "Multiple numerical columns for multivariate analysis",
+                "Time series data with timestamp column",
+                "Sufficient data points for ML model training"
+            ],
+            "tags": ["anomaly", "collective", "multivariate", "machine_learning", "isolation_forest"],
+            "keywords": ["collective", "anomaly", "multivariate", "isolation_forest", "lof", "machine_learning"],
+            "confidence_score": 0.88,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to analyze for anomalies (multiple columns for multivariate analysis)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information"}
+            ],
+            "optional_params": [
+                {"name": "method", "type": "str", "description": "Method to use: 'isolation_forest', 'lof' (default: 'isolation_forest')"},
+                {"name": "window", "type": "int", "description": "Window size for rolling analysis (default: 30)"},
+                {"name": "contamination", "type": "float", "description": "Expected proportion of anomalies in the data (default: 0.05)"},
+                {"name": "n_estimators", "type": "int", "description": "Number of estimators (for tree-based methods, default: 100)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data, optional)"},
+                {"name": "datetime_format", "type": "str", "description": "Format string for parsing dates if they are not already datetime objects (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that detects collective anomalies in an AnomalyPipe"
+            },
+            "examples": [
+                "detect_collective_anomalies(['sales', 'revenue', 'profit'], 'date', method='isolation_forest')",
+                "detect_collective_anomalies(['price', 'volume', 'volatility'], 'timestamp', contamination=0.1)",
+                "detect_collective_anomalies(['x', 'y', 'z'], 'time', method='lof', window=60)"
+            ],
+            "usage_patterns": [
+                "detect_collective_anomalies(columns, time_column, method='isolation_forest', contamination=0.05)",
+                "detect_collective_anomalies(columns, time_column, method='lof', window=30)"
+            ],
+            "dependencies": ["pandas", "numpy", "scikit-learn"],
+            "related_functions": ["detect_statistical_outliers", "detect_contextual_anomalies"]
+        },
+        "calculate_seasonal_residuals": {
+            "category": "anomaly_detection",
+            "subcategory": "seasonal_analysis",
+            "pipe_name": "AnomalyPipe",
+            "description": "Calculate residuals after removing seasonal patterns using time series decomposition",
+            "complexity": "intermediate",
+            "use_cases": [
+                "seasonal pattern removal",
+                "time series decomposition",
+                "seasonal anomaly detection preparation",
+                "trend analysis"
+            ],
+            "data_requirements": [
+                "Time series data with timestamp column",
+                "Numerical data with seasonal patterns",
+                "Sufficient data points for seasonal decomposition"
+            ],
+            "tags": ["seasonal", "decomposition", "residuals", "time_series", "trend"],
+            "keywords": ["seasonal", "decomposition", "residuals", "time_series", "trend", "seasonal_period"],
+            "confidence_score": 0.90,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to analyze"},
+                {"name": "mtime_column", "type": "str", "description": "Column containing the time/date information"}
+            ],
+            "optional_params": [
+                {"name": "mseasonal_period", "type": "int", "description": "Number of periods in a seasonal cycle (if None, will be estimated)"},
+                {"name": "mmethod", "type": "str", "description": "Decomposition method: 'multiplicative' or 'additive' (default: 'multiplicative')"},
+                {"name": "mgroup_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data, optional)"},
+                {"name": "mdatetime_format", "type": "str", "description": "Format string for parsing dates if they are not already datetime objects (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates seasonal residuals in an AnomalyPipe"
+            },
+            "examples": [
+                "calculate_seasonal_residuals('sales', 'date', mseasonal_period=12)",
+                "calculate_seasonal_residuals(['revenue', 'profit'], 'timestamp', mmethod='additive')",
+                "calculate_seasonal_residuals('value', 'date', mgroup_columns=['region'])"
+            ],
+            "usage_patterns": [
+                "calculate_seasonal_residuals(columns, time_column, mseasonal_period=12)",
+                "calculate_seasonal_residuals(columns, time_column, mmethod='multiplicative')"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy", "statsmodels"],
+            "related_functions": ["detect_anomalies_from_residuals", "detect_contextual_anomalies"]
+        },
+        "detect_anomalies_from_residuals": {
+            "category": "anomaly_detection",
+            "subcategory": "residual_analysis",
+            "pipe_name": "AnomalyPipe",
+            "description": "Detect anomalies from pre-calculated residuals using statistical methods",
+            "complexity": "intermediate",
+            "use_cases": [
+                "residual-based anomaly detection",
+                "post-decomposition anomaly detection",
+                "seasonal residual analysis",
+                "trend residual analysis"
+            ],
+            "data_requirements": [
+                "Pre-calculated residual columns",
+                "Numerical residual data",
+                "Sufficient data points for statistical analysis"
+            ],
+            "tags": ["residual", "anomaly", "statistical", "post_processing"],
+            "keywords": ["residual", "anomaly", "statistical", "post_processing", "decomposition"],
+            "confidence_score": 0.85,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Base column(s) names (will look for {column}{suffix})"}
+            ],
+            "optional_params": [
+                {"name": "method", "type": "str", "description": "Method to use: 'zscore', 'modified_zscore', 'iqr', or 'percentile' (default: 'zscore')"},
+                {"name": "threshold", "type": "float", "description": "Threshold for determining anomalies (default: 3.0)"},
+                {"name": "suffix", "type": "str", "description": "Suffix of columns containing residuals (default: '_residual')"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output anomaly flag columns (default: '_anomaly')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that detects anomalies from residuals in an AnomalyPipe"
+            },
+            "examples": [
+                "detect_anomalies_from_residuals('value', method='zscore', threshold=3.0)",
+                "detect_anomalies_from_residuals(['sales', 'revenue'], method='iqr', suffix='_residual')",
+                "detect_anomalies_from_residuals('price', threshold=2.5, output_suffix='_outlier')"
+            ],
+            "usage_patterns": [
+                "detect_anomalies_from_residuals(columns, method='zscore', threshold=3.0)",
+                "detect_anomalies_from_residuals(columns, method='iqr', suffix='_residual')"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy"],
+            "related_functions": ["calculate_seasonal_residuals", "detect_statistical_outliers"]
+        },
+        "get_anomaly_summary": {
+            "category": "anomaly_detection",
+            "subcategory": "summary_analysis",
+            "pipe_name": "AnomalyPipe",
+            "description": "Get summary statistics and information about detected anomalies",
+            "complexity": "simple",
+            "use_cases": [
+                "anomaly detection results summary",
+                "anomaly statistics and reporting",
+                "data quality assessment",
+                "anomaly detection validation"
+            ],
+            "data_requirements": [
+                "Anomaly detection results",
+                "Anomaly flag columns",
+                "Original data for comparison"
+            ],
+            "tags": ["summary", "statistics", "reporting", "validation"],
+            "keywords": ["summary", "statistics", "reporting", "validation", "anomaly_count"],
+            "confidence_score": 0.80,
+            "llm_generated": true,
+            "required_params": [],
+            "optional_params": [
+                {"name": "analysis_name", "type": "str", "description": "Name of the analysis to get summary for (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that gets anomaly summary from an AnomalyPipe"
+            },
+            "examples": [
+                "get_anomaly_summary()",
+                "get_anomaly_summary(analysis_name='outlier_detection')"
+            ],
+            "usage_patterns": [
+                "get_anomaly_summary()",
+                "get_anomaly_summary(analysis_name='analysis_name')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["detect_statistical_outliers", "detect_contextual_anomalies", "detect_collective_anomalies"]
+        },
+        "get_top_anomalies": {
+            "category": "anomaly_detection",
+            "subcategory": "ranking_analysis",
+            "pipe_name": "AnomalyPipe",
+            "description": "Get the top N anomalies ranked by anomaly score or severity",
+            "complexity": "simple",
+            "use_cases": [
+                "top anomaly identification",
+                "anomaly ranking and prioritization",
+                "severe anomaly detection",
+                "anomaly investigation prioritization"
+            ],
+            "data_requirements": [
+                "Anomaly detection results with scores",
+                "Anomaly flag columns",
+                "Time series data (optional)"
+            ],
+            "tags": ["ranking", "top_anomalies", "prioritization", "scores"],
+            "keywords": ["ranking", "top", "anomalies", "prioritization", "scores", "severity"],
+            "confidence_score": 0.82,
+            "llm_generated": true,
+            "required_params": [],
+            "optional_params": [
+                {"name": "n", "type": "int", "description": "Number of top anomalies to return (default: 10)"},
+                {"name": "time_column", "type": "str", "description": "Time column to include in results (optional)"},
+                {"name": "analysis_name", "type": "str", "description": "Name of the analysis to get top anomalies for (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that gets top anomalies from an AnomalyPipe"
+            },
+            "examples": [
+                "get_top_anomalies(n=5)",
+                "get_top_anomalies(n=20, time_column='timestamp')",
+                "get_top_anomalies(analysis_name='outlier_detection')"
+            ],
+            "usage_patterns": [
+                "get_top_anomalies(n=10)",
+                "get_top_anomalies(n=10, time_column='timestamp')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["get_anomaly_summary", "detect_statistical_outliers", "detect_contextual_anomalies"]
+        },
+        "detect_change_points": {
+            "category": "anomaly_detection",
+            "subcategory": "change_point_detection",
+            "pipe_name": "AnomalyPipe",
+            "description": "Detect change points in time series data using various statistical methods",
+            "complexity": "advanced",
+            "use_cases": [
+                "change point detection in time series",
+                "regime change identification",
+                "structural break detection",
+                "trend change analysis"
+            ],
+            "data_requirements": [
+                "Time series data with timestamp column",
+                "Numerical data for change point analysis",
+                "Sufficient data points for change point detection"
+            ],
+            "tags": ["change_point", "time_series", "regime_change", "structural_break"],
+            "keywords": ["change_point", "time_series", "regime_change", "structural_break", "binary_segmentation"],
+            "confidence_score": 0.87,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to analyze for change points"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information"}
+            ],
+            "optional_params": [
+                {"name": "min_size", "type": "int", "description": "Minimum size of segments (default: 20)"},
+                {"name": "method", "type": "str", "description": "Method to use: 'binary_segmentation', 'pelt', 'window' (default: 'binary_segmentation')"},
+                {"name": "penalty", "type": "str", "description": "Penalty function: 'bic', 'aic', 'mbic' (default: 'bic')"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data, optional)"},
+                {"name": "datetime_format", "type": "str", "description": "Format string for parsing dates if they are not already datetime objects (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that detects change points in an AnomalyPipe"
+            },
+            "examples": [
+                "detect_change_points('value', 'timestamp', method='binary_segmentation')",
+                "detect_change_points(['sales', 'revenue'], 'date', min_size=30)",
+                "detect_change_points('price', 'timestamp', penalty='aic', group_columns=['region'])"
+            ],
+            "usage_patterns": [
+                "detect_change_points(columns, time_column, method='binary_segmentation')",
+                "detect_change_points(columns, time_column, min_size=20, penalty='bic')"
+            ],
+            "dependencies": ["pandas", "numpy", "ruptures"],
+            "related_functions": ["detect_contextual_anomalies", "detect_statistical_outliers"]
+        },
+        "forecast_and_detect_anomalies": {
+            "category": "anomaly_detection",
+            "subcategory": "forecast_based_anomalies",
+            "pipe_name": "AnomalyPipe",
+            "description": "Forecast time series and detect anomalies based on forecast errors using various forecasting models",
+            "complexity": "advanced",
+            "use_cases": [
+                "forecast-based anomaly detection",
+                "time series forecasting with anomaly detection",
+                "predictive anomaly detection",
+                "forecast error analysis"
+            ],
+            "data_requirements": [
+                "Time series data with timestamp column",
+                "Numerical data for forecasting",
+                "Sufficient historical data for model training",
+                "Grouped time series data (optional)"
+            ],
+            "tags": ["forecast", "anomaly", "time_series", "arima", "exponential_smoothing"],
+            "keywords": ["forecast", "anomaly", "time_series", "arima", "exponential_smoothing", "sarimax", "prediction"],
+            "confidence_score": 0.89,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to forecast and analyze"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information"}
+            ],
+            "optional_params": [
+                {"name": "forecast_periods", "type": "int", "description": "Number of periods to forecast ahead (default: 5)"},
+                {"name": "model", "type": "str", "description": "Forecasting model: 'arima', 'exponential_smoothing', 'sarimax' (default: 'arima')"},
+                {"name": "threshold", "type": "float", "description": "Threshold for anomaly detection (number of std deviations, default: 2.0)"},
+                {"name": "seasonal_period", "type": "int", "description": "Number of periods in a seasonal cycle (if None, will be estimated)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data, optional)"},
+                {"name": "datetime_format", "type": "str", "description": "Format string for parsing dates if they are not already datetime objects (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that forecasts and detects anomalies in an AnomalyPipe"
+            },
+            "examples": [
+                "forecast_and_detect_anomalies('value', 'timestamp', model='arima', forecast_periods=10)",
+                "forecast_and_detect_anomalies(['sales', 'revenue'], 'date', model='exponential_smoothing', threshold=2.5)",
+                "forecast_and_detect_anomalies('price', 'timestamp', model='sarimax', seasonal_period=12)"
+            ],
+            "usage_patterns": [
+                "forecast_and_detect_anomalies(columns, time_column, model='arima', forecast_periods=5)",
+                "forecast_and_detect_anomalies(columns, time_column, model='exponential_smoothing', threshold=2.0)"
+            ],
+            "dependencies": ["pandas", "numpy", "statsmodels", "scipy"],
+            "related_functions": ["detect_contextual_anomalies", "detect_statistical_outliers"]
+        },
+        "batch_detect_anomalies": {
+            "category": "anomaly_detection",
+            "subcategory": "ensemble_anomalies",
+            "pipe_name": "AnomalyPipe",
+            "description": "Apply multiple anomaly detection methods and combine results using ensemble techniques",
+            "complexity": "advanced",
+            "use_cases": [
+                "ensemble anomaly detection",
+                "multi-method anomaly detection",
+                "robust anomaly detection",
+                "comprehensive anomaly analysis"
+            ],
+            "data_requirements": [
+                "Multiple numerical columns for analysis",
+                "Sufficient data for multiple methods",
+                "Time series data (for some methods)",
+                "Grouped data (optional)"
+            ],
+            "tags": ["ensemble", "batch", "multi_method", "robust", "comprehensive"],
+            "keywords": ["ensemble", "batch", "multi_method", "robust", "comprehensive", "combination"],
+            "confidence_score": 0.91,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to analyze for anomalies"},
+                {"name": "methods", "type": "List[Dict[str, Any]]", "description": "List of method configurations, each with: 'name': Method name (e.g., 'statistical_outliers', 'contextual_anomalies'), 'params': Parameters for the method"}
+            ],
+            "optional_params": [
+                {"name": "ensemble_method", "type": "str", "description": "How to combine results: 'any' (union), 'all' (intersection), 'majority', 'weighted' (default: 'any')"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output anomaly flag columns (default: '_ensemble_anomaly')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that applies multiple anomaly detection methods in an AnomalyPipe"
+            },
+            "examples": [
+                "batch_detect_anomalies('value', [{'name': 'statistical_outliers', 'params': {'method': 'zscore'}}, {'name': 'contextual_anomalies', 'params': {'time_column': 'date'}}])",
+                "batch_detect_anomalies(['sales', 'revenue'], [{'name': 'isolation_forest', 'params': {}}, {'name': 'lof', 'params': {}}], ensemble_method='majority')",
+                "batch_detect_anomalies('price', [{'name': 'statistical_outliers', 'params': {'method': 'iqr'}}], output_suffix='_batch_anomaly')"
+            ],
+            "usage_patterns": [
+                "batch_detect_anomalies(columns, methods, ensemble_method='any')",
+                "batch_detect_anomalies(columns, methods, ensemble_method='majority', output_suffix='_ensemble')"
+            ],
+            "dependencies": ["pandas", "numpy", "scikit-learn", "statsmodels"],
+            "related_functions": ["detect_statistical_outliers", "detect_contextual_anomalies", "detect_collective_anomalies"]
+        }
+    }
+}

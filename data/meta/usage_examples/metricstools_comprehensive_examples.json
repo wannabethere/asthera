@@ -1,0 +1,338 @@
+[
+  {
+    "pipe_name": "MetricsPipe",
+    "category": "metricstools",
+    "function": "Count",
+    "description": "Count occurrences of values in specified columns",
+    "prerequisites": ["MetricsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Count transactions per store",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Count(variable='transaction_id', output_name='transaction_count') | Execute()",
+        "inputs": {"variable": "transaction_id", "output_name": "transaction_count"}
+      },
+      {
+        "name": "Count daily active users",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Count(variable='user_id', output_name='daily_active_users') | Execute()",
+        "inputs": {"variable": "user_id", "output_name": "daily_active_users"}
+      },
+      {
+        "name": "Count unique visitors per page",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Count(variable='visitor_id', output_name='unique_visitors') | Execute()",
+        "inputs": {"variable": "visitor_id", "output_name": "unique_visitors"}
+      }
+    ]
+  },
+  {
+    "pipe_name": "MetricsPipe",
+    "category": "metricstools",
+    "function": "Sum",
+    "description": "Calculate sum of values in specified columns",
+    "prerequisites": ["MetricsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Sum total revenue by product category",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Sum(variable='order_amount', output_name='total_revenue') | Execute()",
+        "inputs": {"variable": "order_amount", "output_name": "total_revenue"}
+      },
+      {
+        "name": "Sum transaction values by customer segment",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Sum(variable='transaction_value', output_name='total_value') | Execute()",
+        "inputs": {"variable": "transaction_value", "output_name": "total_value"}
+      },
+      {
+        "name": "Sum page views across campaigns",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Sum(variable='page_views', output_name='total_page_views') | Execute()",
+        "inputs": {"variable": "page_views", "output_name": "total_page_views"}
+      }
+    ]
+  },
+  {
+    "pipe_name": "MetricsPipe",
+    "category": "metricstools",
+    "function": "Max",
+    "description": "Find maximum values in specified columns",
+    "prerequisites": ["MetricsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Find highest transaction value by region",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Max(variable='transaction_value', output_name='max_transaction') | Execute()",
+        "inputs": {"variable": "transaction_value", "output_name": "max_transaction"}
+      },
+      {
+        "name": "Find maximum order size by product category",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Max(variable='order_quantity', output_name='max_order_size') | Execute()",
+        "inputs": {"variable": "order_quantity", "output_name": "max_order_size"}
+      },
+      {
+        "name": "Find peak daily active users by app version",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Max(variable='active_users', output_name='peak_users') | Execute()",
+        "inputs": {"variable": "active_users", "output_name": "peak_users"}
+      }
+    ]
+  },
+  {
+    "pipe_name": "MetricsPipe",
+    "category": "metricstools",
+    "function": "Min",
+    "description": "Find minimum values in specified columns",
+    "prerequisites": ["MetricsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Find lowest price point by product category",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Min(variable='price', output_name='min_price') | Execute()",
+        "inputs": {"variable": "price", "output_name": "min_price"}
+      },
+      {
+        "name": "Find minimum order value by customer segment",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Min(variable='order_value', output_name='min_order_value') | Execute()",
+        "inputs": {"variable": "order_value", "output_name": "min_order_value"}
+      },
+      {
+        "name": "Find shortest session duration by device type",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Min(variable='session_duration', output_name='min_duration') | Execute()",
+        "inputs": {"variable": "session_duration", "output_name": "min_duration"}
+      }
+    ]
+  },
+  {
+    "pipe_name": "MetricsPipe",
+    "category": "metricstools",
+    "function": "Ratio",
+    "description": "Calculate ratios between two columns",
+    "prerequisites": ["MetricsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Calculate conversion rate",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Ratio(numerator='purchases', denominator='website_visits', output_name='conversion_rate') | Execute()",
+        "inputs": {"numerator": "purchases", "denominator": "website_visits", "output_name": "conversion_rate"}
+      },
+      {
+        "name": "Calculate click-through rate",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Ratio(numerator='clicks', denominator='emails_sent', output_name='ctr') | Execute()",
+        "inputs": {"numerator": "clicks", "denominator": "emails_sent", "output_name": "ctr"}
+      },
+      {
+        "name": "Calculate revenue per user",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Ratio(numerator='revenue', denominator='users_count', output_name='arpu') | Execute()",
+        "inputs": {"numerator": "revenue", "denominator": "users_count", "output_name": "arpu"}
+      }
+    ]
+  },
+  {
+    "pipe_name": "MetricsPipe",
+    "category": "metricstools",
+    "function": "Mean",
+    "description": "Calculate mean/average values",
+    "prerequisites": ["MetricsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Calculate average customer rating by product",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Mean(variable='rating', output_name='avg_rating') | Execute()",
+        "inputs": {"variable": "rating", "output_name": "avg_rating"}
+      },
+      {
+        "name": "Calculate mean session duration by user segment",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Mean(variable='session_duration', output_name='mean_duration') | Execute()",
+        "inputs": {"variable": "session_duration", "output_name": "mean_duration"}
+      },
+      {
+        "name": "Calculate average order value by marketing channel",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Mean(variable='order_value', output_name='avg_order_value') | Execute()",
+        "inputs": {"variable": "order_value", "output_name": "avg_order_value"}
+      }
+    ]
+  },
+  {
+    "pipe_name": "MetricsPipe",
+    "category": "metricstools",
+    "function": "Median",
+    "description": "Calculate median values",
+    "prerequisites": ["MetricsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Calculate median transaction value by customer segment",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Median(variable='transaction_value', output_name='median_transaction') | Execute()",
+        "inputs": {"variable": "transaction_value", "output_name": "median_transaction"}
+      },
+      {
+        "name": "Calculate median session duration for mobile users",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Median(variable='session_duration', output_name='median_duration') | Execute()",
+        "inputs": {"variable": "session_duration", "output_name": "median_duration"}
+      },
+      {
+        "name": "Calculate median time to first purchase by acquisition channel",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Median(variable='days_to_purchase', output_name='median_time_to_purchase') | Execute()",
+        "inputs": {"variable": "days_to_purchase", "output_name": "median_time_to_purchase"}
+      }
+    ]
+  },
+  {
+    "pipe_name": "MetricsPipe",
+    "category": "metricstools",
+    "function": "Variance",
+    "description": "Calculate variance of values",
+    "prerequisites": ["MetricsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Calculate variance in daily order volumes",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Variance(variable='daily_orders', unbiased=True, output_name='order_volume_variance') | Execute()",
+        "inputs": {"variable": "daily_orders", "unbiased": true, "output_name": "order_volume_variance"}
+      },
+      {
+        "name": "Calculate variance in customer spending across segments",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Variance(variable='customer_spend', unbiased=True, output_name='spend_variance') | Execute()",
+        "inputs": {"variable": "customer_spend", "unbiased": true, "output_name": "spend_variance"}
+      },
+      {
+        "name": "Calculate variance in page load times by device type",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Variance(variable='load_time_ms', unbiased=False, output_name='load_time_variance') | Execute()",
+        "inputs": {"variable": "load_time_ms", "unbiased": false, "output_name": "load_time_variance"}
+      }
+    ]
+  },
+  {
+    "pipe_name": "MetricsPipe",
+    "category": "metricstools",
+    "function": "StandardDeviation",
+    "description": "Calculate standard deviation of values",
+    "prerequisites": ["MetricsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Calculate standard deviation of session duration by user type",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | StandardDeviation(variable='session_duration', unbiased=True, output_name='session_duration_std') | Execute()",
+        "inputs": {"variable": "session_duration", "unbiased": true, "output_name": "session_duration_std"}
+      },
+      {
+        "name": "Calculate standard deviation of order values for each product category",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | StandardDeviation(variable='order_value', unbiased=True, output_name='order_value_std') | Execute()",
+        "inputs": {"variable": "order_value", "unbiased": true, "output_name": "order_value_std"}
+      },
+      {
+        "name": "Calculate standard deviation of daily page views over the past month",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | StandardDeviation(variable='daily_page_views', output_name='page_view_std') | Execute()",
+        "inputs": {"variable": "daily_page_views", "output_name": "page_view_std"}
+      }
+    ]
+  },
+  {
+    "pipe_name": "MetricsPipe",
+    "category": "metricstools",
+    "function": "Correlation",
+    "description": "Calculate correlation between two variables",
+    "prerequisites": ["MetricsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Find correlation between ad spend and sales volume",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Correlation(variable1='ad_spend', variable2='sales_volume', output_name='ad_sales_correlation') | Execute()",
+        "inputs": {"variable1": "ad_spend", "variable2": "sales_volume", "output_name": "ad_sales_correlation"}
+      },
+      {
+        "name": "Calculate correlation between email open rates and conversion rates",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Correlation(variable1='open_rate', variable2='conversion_rate', output_name='open_conversion_correlation') | Execute()",
+        "inputs": {"variable1": "open_rate", "variable2": "conversion_rate", "output_name": "open_conversion_correlation"}
+      },
+      {
+        "name": "Measure relationship between page load time and bounce rate",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Correlation(variable1='load_time_ms', variable2='bounce_rate', output_name='load_bounce_correlation') | Execute()",
+        "inputs": {"variable1": "load_time_ms", "variable2": "bounce_rate", "output_name": "load_bounce_correlation"}
+      }
+    ]
+  },
+  {
+    "pipe_name": "MetricsPipe",
+    "category": "metricstools",
+    "function": "PivotTable",
+    "description": "Create pivot tables for cross-tabulation analysis",
+    "prerequisites": ["MetricsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Create pivot table of revenue by product and region",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | PivotTable(index='product_name', columns='region', values='revenue', aggfunc='sum', fill_value=0) | Execute()",
+        "inputs": {"index": "product_name", "columns": "region", "values": "revenue", "aggfunc": "sum", "fill_value": 0}
+      },
+      {
+        "name": "Build pivot table of conversion rates by device type and marketing channel",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | PivotTable(index='device_type', columns='marketing_channel', values='conversion_rate', aggfunc='mean', fill_value=0, output_name='conversion_pivot') | Execute()",
+        "inputs": {"index": "device_type", "columns": "marketing_channel", "values": "conversion_rate", "aggfunc": "mean", "fill_value": 0, "output_name": "conversion_pivot"}
+      },
+      {
+        "name": "Create pivot table showing average order value by customer segment and month",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | PivotTable(index='customer_segment', columns='month', values='order_value', aggfunc='mean', output_name='aov_pivot') | Execute()",
+        "inputs": {"index": "customer_segment", "columns": "month", "values": "order_value", "aggfunc": "mean", "output_name": "aov_pivot"}
+      }
+    ]
+  },
+  {
+    "pipe_name": "MetricsPipe",
+    "category": "metricstools",
+    "function": "GroupBy",
+    "description": "Group data and apply aggregation functions",
+    "prerequisites": ["MetricsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Group sales data by month and calculate total and average order value",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | GroupBy(by='month', agg_dict={'order_value': ['sum', 'mean'], 'orders': 'count'}, output_name='monthly_sales_metrics') | Execute()",
+        "inputs": {"by": "month", "agg_dict": {"order_value": ["sum", "mean"], "orders": "count"}, "output_name": "monthly_sales_metrics"}
+      },
+      {
+        "name": "Group user data by country and calculate average session duration and conversion rate",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | GroupBy(by='country', agg_dict={'session_duration': 'mean', 'converted': 'mean'}, output_name='country_performance') | Execute()",
+        "inputs": {"by": "country", "agg_dict": {"session_duration": "mean", "converted": "mean"}, "output_name": "country_performance"}
+      },
+      {
+        "name": "Group transactions by customer segment and find maximum, minimum, and average value",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | GroupBy(by='customer_segment', agg_dict={'transaction_value': ['max', 'min', 'mean'], 'transaction_id': 'count'}, output_name='segment_transaction_stats') | Execute()",
+        "inputs": {"by": "customer_segment", "agg_dict": {"transaction_value": ["max", "min", "mean"], "transaction_id": "count"}, "output_name": "segment_transaction_stats"}
+      }
+    ]
+  },
+  {
+    "pipe_name": "MetricsPipe",
+    "category": "metricstools",
+    "function": "Filter",
+    "description": "Filter data based on conditions",
+    "prerequisites": ["MetricsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Filter transactions above $100",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Filter(condition=lambda df: df['transaction_amount'] > 100, output_name='high_value_transactions') | Execute()",
+        "inputs": {"condition": "transaction_amount > 100", "output_name": "high_value_transactions"}
+      },
+      {
+        "name": "Filter user sessions where bounce rate is less than 20%",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Filter(condition=lambda df: df['bounce_rate'] < 0.2, output_name='engaged_sessions') | Execute()",
+        "inputs": {"condition": "bounce_rate < 0.2", "output_name": "engaged_sessions"}
+      },
+      {
+        "name": "Filter to only include products with more than 50 reviews",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Filter(condition=lambda df: df['review_count'] > 50, output_name='well_reviewed_products') | Execute()",
+        "inputs": {"condition": "review_count > 50", "output_name": "well_reviewed_products"}
+      }
+    ]
+  },
+  {
+    "pipe_name": "MetricsPipe",
+    "category": "metricstools",
+    "function": "Execute",
+    "description": "Execute the metrics pipeline and return results",
+    "prerequisites": ["Any metrics function"],
+    "variations": [
+      {
+        "name": "Execute analysis and return all metrics",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Count(variable='user_id') | Sum(variable='revenue') | Execute()",
+        "inputs": {}
+      },
+      {
+        "name": "Run the metrics pipeline and show all results",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Mean(variable='order_value') | Max(variable='session_duration') | Execute()",
+        "inputs": {}
+      },
+      {
+        "name": "Calculate all defined metrics and return the results",
+        "example": "pipeline = MetricsPipe.from_dataframe(data)\nresult = pipeline | Count(variable='transactions') | Sum(variable='revenue') | Mean(variable='order_value') | Execute()",
+        "inputs": {}
+      }
+    ]
+  }
+]

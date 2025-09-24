@@ -1,0 +1,615 @@
+{
+    "metadata": {
+        "updated_at": "2024-01-16T12:00:00Z",
+        "llm_generated": true,
+        "total_functions": 14,
+        "categories": ["operations", "statistical_analysis", "experimentation"],
+        "complexity_levels": ["simple", "intermediate", "advanced"],
+        "pipe_name": "OperationsPipe",
+        "module": "operations_tools",
+        "description": "Functions for statistical operations, A/B testing, experimental analysis, and data manipulation",
+        "function_list": [
+            "PercentChange", "AbsoluteChange", "MH", "CUPED", "PrePostChange",
+            "SelectColumns", "FilterConditions", "PowerAnalysis", "StratifiedSummary",
+            "BootstrapCI", "MultiComparisonAdjustment", "ExecuteOperations",
+            "ShowOperation", "ShowComparison"
+        ]
+    },
+    "functions": {
+        "PercentChange": {
+            "category": "operations",
+            "subcategory": "change_metrics",
+            "pipe_name": "OperationsPipe",
+            "description": "Calculate percentage change between condition and baseline",
+            "complexity": "simple",
+            "use_cases": [
+                "A/B testing analysis",
+                "performance comparison",
+                "relative change measurement",
+                "experimental results"
+            ],
+            "data_requirements": [
+                "Condition column with categorical values",
+                "Baseline column with numerical values",
+                "Metric column for comparison"
+            ],
+            "tags": ["percent_change", "A/B_testing", "comparison", "experimental"],
+            "keywords": ["percent_change", "A/B_testing", "comparison", "experimental", "percentage"],
+            "output_description": "Function that calculates percentage change in an OperationsPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "PercentChange('treatment', 'control', 'conversion_rate')",
+                "PercentChange('variant', 'baseline', 'revenue', 'revenue_pct_change')"
+            ],
+            "usage_patterns": [
+                "PercentChange(condition_column, baseline, metric_column)",
+                "PercentChange(condition_column, baseline, metric_column, output_name)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["AbsoluteChange", "PrePostChange", "BootstrapCI"],
+            "required_params": [
+                {"name": "condition_column", "type": "str", "description": "Column name containing condition groups"},
+                {"name": "baseline", "type": "str", "description": "Baseline condition name"},
+                {"name": "metric_column", "type": "str", "description": "Column name for the metric to compare"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output column (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates percentage change in an OperationsPipe"
+            }
+        },
+        "AbsoluteChange": {
+            "category": "operations",
+            "subcategory": "change_metrics",
+            "pipe_name": "OperationsPipe",
+            "description": "Calculate absolute change between condition and baseline",
+            "complexity": "simple",
+            "use_cases": [
+                "A/B testing analysis",
+                "absolute difference measurement",
+                "experimental results",
+                "performance comparison"
+            ],
+            "data_requirements": [
+                "Condition column with categorical values",
+                "Baseline column with numerical values",
+                "Metric column for comparison"
+            ],
+            "tags": ["absolute_change", "A/B_testing", "difference", "experimental"],
+            "keywords": ["absolute_change", "A/B_testing", "difference", "experimental", "absolute"],
+            "output_description": "Function that calculates absolute change in an OperationsPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "AbsoluteChange('treatment', 'control', 'conversion_rate')",
+                "AbsoluteChange('variant', 'baseline', 'revenue', 'revenue_abs_change')"
+            ],
+            "usage_patterns": [
+                "AbsoluteChange(condition_column, baseline, metric_column)",
+                "AbsoluteChange(condition_column, baseline, metric_column, output_name)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["PercentChange", "PrePostChange", "BootstrapCI"],
+            "required_params": [
+                {"name": "condition_column", "type": "str", "description": "Column name containing condition groups"},
+                {"name": "baseline", "type": "str", "description": "Baseline condition name"},
+                {"name": "metric_column", "type": "str", "description": "Column name for the metric to compare"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output column (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates absolute change in an OperationsPipe"
+            }
+        },
+        "MH": {
+            "category": "operations",
+            "subcategory": "statistical_analysis",
+            "pipe_name": "OperationsPipe",
+            "description": "Calculate Mantel-Haenszel test for stratified analysis",
+            "complexity": "advanced",
+            "use_cases": [
+                "stratified A/B testing",
+                "confounding variable control",
+                "statistical significance testing",
+                "experimental analysis"
+            ],
+            "data_requirements": [
+                "Condition column with categorical values",
+                "Baseline column with numerical values",
+                "Stratification columns",
+                "Sufficient data for statistical testing"
+            ],
+            "tags": ["mantel_haenszel", "stratified", "statistical", "A/B_testing"],
+            "keywords": ["mantel_haenszel", "stratified", "statistical", "A/B_testing", "confounding"],
+            "output_description": "Function that performs Mantel-Haenszel test in an OperationsPipe",
+            "confidence_score": 0.85,
+            "examples": [
+                "MH('treatment', 'control', 'age_group')",
+                "MH('variant', 'baseline', ['region', 'device_type'])"
+            ],
+            "usage_patterns": [
+                "MH(condition_column, baseline, stratified_by)",
+                "MH(condition_column, baseline, stratified_by, output_name)"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy"],
+            "related_functions": ["StratifiedSummary", "BootstrapCI", "MultiComparisonAdjustment"],
+            "required_params": [
+                {"name": "condition_column", "type": "str", "description": "Column name containing condition groups"},
+                {"name": "baseline", "type": "str", "description": "Baseline condition name"},
+                {"name": "stratified_by", "type": "Union[str, List[str]]", "description": "Column(s) to stratify by"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output column (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that performs Mantel-Haenszel test in an OperationsPipe"
+            }
+        },
+        "CUPED": {
+            "category": "operations",
+            "subcategory": "advanced_analysis",
+            "pipe_name": "OperationsPipe",
+            "description": "Calculate Controlled-experiment Using Pre-Experiment Data (CUPED) analysis",
+            "complexity": "advanced",
+            "use_cases": [
+                "variance reduction in experiments",
+                "pre-experiment data utilization",
+                "statistical power improvement",
+                "advanced A/B testing"
+            ],
+            "data_requirements": [
+                "Condition column with categorical values",
+                "Baseline column with numerical values",
+                "Covariate columns",
+                "Pre-experiment data"
+            ],
+            "tags": ["cuped", "variance_reduction", "pre_experiment", "advanced"],
+            "keywords": ["cuped", "variance_reduction", "pre_experiment", "advanced", "covariates"],
+            "output_description": "Function that performs CUPED analysis in an OperationsPipe",
+            "confidence_score": 0.80,
+            "examples": [
+                "CUPED('treatment', 'control', 'pre_conversion')",
+                "CUPED('variant', 'baseline', ['pre_revenue', 'pre_engagement'])"
+            ],
+            "usage_patterns": [
+                "CUPED(condition_column, baseline, covariates)",
+                "CUPED(condition_column, baseline, covariates, output_name)"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy"],
+            "related_functions": ["PrePostChange", "BootstrapCI", "PowerAnalysis"],
+            "required_params": [
+                {"name": "condition_column", "type": "str", "description": "Column name containing condition groups"},
+                {"name": "baseline", "type": "str", "description": "Baseline condition name"},
+                {"name": "covariates", "type": "Union[str, List[str]]", "description": "Covariate column(s) for CUPED analysis"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output column (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that performs CUPED analysis in an OperationsPipe"
+            }
+        },
+        "PrePostChange": {
+            "category": "operations",
+            "subcategory": "change_analysis",
+            "pipe_name": "OperationsPipe",
+            "description": "Calculate pre-post change analysis with covariates",
+            "complexity": "intermediate",
+            "use_cases": [
+                "pre-post analysis",
+                "change measurement",
+                "covariate adjustment",
+                "experimental analysis"
+            ],
+            "data_requirements": [
+                "Condition column with categorical values",
+                "Baseline column with numerical values",
+                "Covariate columns",
+                "Pre and post measurement data"
+            ],
+            "tags": ["pre_post", "change_analysis", "covariates", "experimental"],
+            "keywords": ["pre_post", "change_analysis", "covariates", "experimental", "before_after"],
+            "output_description": "Function that performs pre-post change analysis in an OperationsPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "PrePostChange('treatment', 'control', 'pre_metric')",
+                "PrePostChange('variant', 'baseline', ['pre_revenue', 'pre_engagement'])"
+            ],
+            "usage_patterns": [
+                "PrePostChange(condition_column, baseline, covariates)",
+                "PrePostChange(condition_column, baseline, covariates, output_name)"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy"],
+            "related_functions": ["CUPED", "PercentChange", "AbsoluteChange"],
+            "required_params": [
+                {"name": "condition_column", "type": "str", "description": "Column name containing condition groups"},
+                {"name": "baseline", "type": "str", "description": "Baseline condition name"},
+                {"name": "covariates", "type": "Union[str, List[str]]", "description": "Covariate column(s) for analysis"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output column (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that performs pre-post change analysis in an OperationsPipe"
+            }
+        },
+        "SelectColumns": {
+            "category": "operations",
+            "subcategory": "data_manipulation",
+            "pipe_name": "OperationsPipe",
+            "description": "Select specific columns from the dataset",
+            "complexity": "simple",
+            "use_cases": [
+                "column selection",
+                "data filtering",
+                "dataset preparation",
+                "data preprocessing"
+            ],
+            "data_requirements": [
+                "DataFrame with multiple columns",
+                "Column names to select"
+            ],
+            "tags": ["select_columns", "data_manipulation", "filtering", "preprocessing"],
+            "keywords": ["select_columns", "data_manipulation", "filtering", "preprocessing", "columns"],
+            "output_description": "Function that selects columns in an OperationsPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "SelectColumns(['user_id', 'treatment', 'conversion'])",
+                "SelectColumns(['id', 'variant', 'revenue'], 'selected_data')"
+            ],
+            "usage_patterns": [
+                "SelectColumns(columns)",
+                "SelectColumns(columns, output_name)"
+            ],
+            "dependencies": ["pandas"],
+            "related_functions": ["FilterConditions", "ExecuteOperations"],
+            "required_params": [
+                {"name": "columns", "type": "List[str]", "description": "List of column names to select"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output dataset (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that selects columns in an OperationsPipe"
+            }
+        },
+        "FilterConditions": {
+            "category": "operations",
+            "subcategory": "data_manipulation",
+            "pipe_name": "OperationsPipe",
+            "description": "Filter data based on specified conditions",
+            "complexity": "intermediate",
+            "use_cases": [
+                "data filtering",
+                "subset selection",
+                "conditional analysis",
+                "data preprocessing"
+            ],
+            "data_requirements": [
+                "DataFrame with data to filter",
+                "Condition expressions for filtering"
+            ],
+            "tags": ["filter_conditions", "data_manipulation", "filtering", "conditions"],
+            "keywords": ["filter_conditions", "data_manipulation", "filtering", "conditions", "subset"],
+            "output_description": "Function that filters data based on conditions in an OperationsPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "FilterConditions(['age > 18', 'conversion == 1'])",
+                "FilterConditions(['revenue > 1000', 'region == \"US\"'], 'high_value_users')"
+            ],
+            "usage_patterns": [
+                "FilterConditions(conditions)",
+                "FilterConditions(conditions, output_name)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["SelectColumns", "ExecuteOperations"],
+            "required_params": [
+                {"name": "conditions", "type": "List[str]", "description": "List of condition expressions for filtering"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output dataset (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that filters data based on conditions in an OperationsPipe"
+            }
+        },
+        "PowerAnalysis": {
+            "category": "operations",
+            "subcategory": "statistical_analysis",
+            "pipe_name": "OperationsPipe",
+            "description": "Perform statistical power analysis for experiments",
+            "complexity": "advanced",
+            "use_cases": [
+                "experiment design",
+                "sample size calculation",
+                "statistical power assessment",
+                "experimental planning"
+            ],
+            "data_requirements": [
+                "Condition column with categorical values",
+                "Baseline column with numerical values",
+                "Metric column for analysis",
+                "Sufficient data for power calculation"
+            ],
+            "tags": ["power_analysis", "statistical", "experiment_design", "sample_size"],
+            "keywords": ["power_analysis", "statistical", "experiment_design", "sample_size", "power"],
+            "output_description": "Function that performs power analysis in an OperationsPipe",
+            "confidence_score": 0.85,
+            "examples": [
+                "PowerAnalysis('treatment', 'control', 'conversion_rate')",
+                "PowerAnalysis('variant', 'baseline', 'revenue', alpha=0.05, power=0.8)"
+            ],
+            "usage_patterns": [
+                "PowerAnalysis(condition_column, baseline, metric_column)",
+                "PowerAnalysis(condition_column, baseline, metric_column, alpha=0.05)"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy"],
+            "related_functions": ["BootstrapCI", "MH", "CUPED"],
+            "required_params": [
+                {"name": "condition_column", "type": "str", "description": "Column name containing condition groups"},
+                {"name": "baseline", "type": "str", "description": "Baseline condition name"},
+                {"name": "metric_column", "type": "str", "description": "Column name for the metric to analyze"}
+            ],
+            "optional_params": [
+                {"name": "alpha", "type": "float", "description": "Significance level (default: 0.05)"},
+                {"name": "power", "type": "float", "description": "Desired statistical power (default: 0.8)"},
+                {"name": "effect_size", "type": "float", "description": "Expected effect size (optional)"},
+                {"name": "output_name", "type": "str", "description": "Name for the output column (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that performs power analysis in an OperationsPipe"
+            }
+        },
+        "StratifiedSummary": {
+            "category": "operations",
+            "subcategory": "summary_analysis",
+            "pipe_name": "OperationsPipe",
+            "description": "Generate stratified summary statistics",
+            "complexity": "intermediate",
+            "use_cases": [
+                "stratified analysis",
+                "summary statistics",
+                "group comparisons",
+                "experimental reporting"
+            ],
+            "data_requirements": [
+                "Condition column with categorical values",
+                "Stratification columns",
+                "Numerical columns for summary"
+            ],
+            "tags": ["stratified_summary", "summary", "stratified", "statistics"],
+            "keywords": ["stratified_summary", "summary", "stratified", "statistics", "groups"],
+            "output_description": "Function that generates stratified summary statistics in an OperationsPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "StratifiedSummary('treatment', 'age_group')",
+                "StratifiedSummary('variant', ['region', 'device_type'])"
+            ],
+            "usage_patterns": [
+                "StratifiedSummary(condition_column, stratified_by)",
+                "StratifiedSummary(condition_column, stratified_by, output_name)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["MH", "BootstrapCI", "MultiComparisonAdjustment"],
+            "required_params": [
+                {"name": "condition_column", "type": "str", "description": "Column name containing condition groups"},
+                {"name": "stratified_by", "type": "Union[str, List[str]]", "description": "Column(s) to stratify by"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output column (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that generates stratified summary statistics in an OperationsPipe"
+            }
+        },
+        "BootstrapCI": {
+            "category": "operations",
+            "subcategory": "statistical_analysis",
+            "pipe_name": "OperationsPipe",
+            "description": "Calculate bootstrap confidence intervals",
+            "complexity": "advanced",
+            "use_cases": [
+                "confidence interval estimation",
+                "bootstrap analysis",
+                "statistical inference",
+                "experimental analysis"
+            ],
+            "data_requirements": [
+                "Condition column with categorical values",
+                "Baseline column with numerical values",
+                "Metric column for analysis",
+                "Sufficient data for bootstrap sampling"
+            ],
+            "tags": ["bootstrap", "confidence_intervals", "statistical", "inference"],
+            "keywords": ["bootstrap", "confidence_intervals", "statistical", "inference", "sampling"],
+            "output_description": "Function that calculates bootstrap confidence intervals in an OperationsPipe",
+            "confidence_score": 0.85,
+            "examples": [
+                "BootstrapCI('treatment', 'control', 'conversion_rate')",
+                "BootstrapCI('variant', 'baseline', 'revenue', n_bootstrap=1000)"
+            ],
+            "usage_patterns": [
+                "BootstrapCI(condition_column, baseline, metric_column)",
+                "BootstrapCI(condition_column, baseline, metric_column, n_bootstrap=1000)"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy"],
+            "related_functions": ["PowerAnalysis", "MH", "CUPED"],
+            "required_params": [
+                {"name": "condition_column", "type": "str", "description": "Column name containing condition groups"},
+                {"name": "baseline", "type": "str", "description": "Baseline condition name"},
+                {"name": "metric_column", "type": "str", "description": "Column name for the metric to analyze"}
+            ],
+            "optional_params": [
+                {"name": "n_bootstrap", "type": "int", "description": "Number of bootstrap samples (default: 1000)"},
+                {"name": "confidence_level", "type": "float", "description": "Confidence level for intervals (default: 0.95)"},
+                {"name": "output_name", "type": "str", "description": "Name for the output column (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates bootstrap confidence intervals in an OperationsPipe"
+            }
+        },
+        "MultiComparisonAdjustment": {
+            "category": "operations",
+            "subcategory": "statistical_analysis",
+            "pipe_name": "OperationsPipe",
+            "description": "Apply multiple comparison adjustments to p-values",
+            "complexity": "advanced",
+            "use_cases": [
+                "multiple testing correction",
+                "p-value adjustment",
+                "statistical significance correction",
+                "experimental analysis"
+            ],
+            "data_requirements": [
+                "P-value column",
+                "Sufficient data for adjustment calculation"
+            ],
+            "tags": ["multi_comparison", "p_value_adjustment", "statistical", "correction"],
+            "keywords": ["multi_comparison", "p_value_adjustment", "statistical", "correction", "bonferroni"],
+            "output_description": "Function that applies multiple comparison adjustments in an OperationsPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "MultiComparisonAdjustment('p_value')",
+                "MultiComparisonAdjustment('p_value', method='fdr_bh')"
+            ],
+            "usage_patterns": [
+                "MultiComparisonAdjustment(p_value_column)",
+                "MultiComparisonAdjustment(p_value_column, method='bonferroni')"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy"],
+            "related_functions": ["BootstrapCI", "PowerAnalysis", "MH"],
+            "required_params": [
+                {"name": "p_value_column", "type": "str", "description": "Column name containing p-values to adjust"}
+            ],
+            "optional_params": [
+                {"name": "method", "type": "str", "description": "Adjustment method: 'bonferroni', 'fdr_bh', 'holm', 'fdr_by' (default: 'bonferroni')"},
+                {"name": "output_name", "type": "str", "description": "Name for the output column (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that applies multiple comparison adjustments in an OperationsPipe"
+            }
+        },
+        "ExecuteOperations": {
+            "category": "operations",
+            "subcategory": "execution",
+            "pipe_name": "OperationsPipe",
+            "description": "Execute all operations in the pipeline",
+            "complexity": "simple",
+            "use_cases": [
+                "pipeline execution",
+                "results generation",
+                "operation completion",
+                "data processing"
+            ],
+            "data_requirements": [
+                "Previously defined operations in pipeline"
+            ],
+            "tags": ["execute", "pipeline", "execution", "results"],
+            "keywords": ["execute", "pipeline", "execution", "results", "operations"],
+            "output_description": "Function that executes all operations in an OperationsPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "ExecuteOperations()"
+            ],
+            "usage_patterns": [
+                "ExecuteOperations()"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["ShowOperation", "ShowComparison"],
+            "required_params": [],
+            "optional_params": [],
+            "outputs": {
+                "type": "Dict",
+                "description": "Dictionary containing results of all operations"
+            }
+        },
+        "ShowOperation": {
+            "category": "operations",
+            "subcategory": "display",
+            "pipe_name": "OperationsPipe",
+            "description": "Display results of a specific operation",
+            "complexity": "simple",
+            "use_cases": [
+                "operation results display",
+                "analysis review",
+                "results inspection",
+                "debugging"
+            ],
+            "data_requirements": [
+                "Previously executed operations"
+            ],
+            "tags": ["display", "operation", "results", "inspection"],
+            "keywords": ["display", "operation", "results", "inspection", "show"],
+            "output_description": "Function that displays operation results in an OperationsPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "ShowOperation()",
+                "ShowOperation('percent_change_analysis')"
+            ],
+            "usage_patterns": [
+                "ShowOperation()",
+                "ShowOperation(operation_name)"
+            ],
+            "dependencies": ["pandas"],
+            "related_functions": ["ExecuteOperations", "ShowComparison"],
+            "required_params": [],
+            "optional_params": [
+                {"name": "operation_name", "type": "str", "description": "Name of the operation to display (optional)"}
+            ],
+            "outputs": {
+                "type": "Any",
+                "description": "Results of the specified operation"
+            }
+        },
+        "ShowComparison": {
+            "category": "operations",
+            "subcategory": "display",
+            "pipe_name": "OperationsPipe",
+            "description": "Display comparison results",
+            "complexity": "simple",
+            "use_cases": [
+                "comparison results display",
+                "A/B test results review",
+                "experimental results inspection",
+                "analysis summary"
+            ],
+            "data_requirements": [
+                "Previously executed comparison operations"
+            ],
+            "tags": ["display", "comparison", "results", "A/B_testing"],
+            "keywords": ["display", "comparison", "results", "A/B_testing", "show"],
+            "output_description": "Function that displays comparison results in an OperationsPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "ShowComparison()",
+                "ShowComparison('treatment_vs_control')"
+            ],
+            "usage_patterns": [
+                "ShowComparison()",
+                "ShowComparison(comparison_name)"
+            ],
+            "dependencies": ["pandas"],
+            "related_functions": ["ExecuteOperations", "ShowOperation"],
+            "required_params": [],
+            "optional_params": [
+                {"name": "comparison_name", "type": "str", "description": "Name of the comparison to display (optional)"}
+            ],
+            "outputs": {
+                "type": "Any",
+                "description": "Results of the specified comparison"
+            }
+        }
+    }
+}

@@ -61,6 +61,40 @@ class SelectPipe(BasePipe):
         if hasattr(source_pipe, 'sql_context'):
             self.sql_context = source_pipe.sql_context.copy()
     
+    def _has_results(self) -> bool:
+        """Check if the pipeline has any results to merge"""
+        return len(self.selected_columns) > 0
+    
+    def merge_to_df(self, base_df: pd.DataFrame, **kwargs) -> pd.DataFrame:
+        """
+        Merge selection results into the base dataframe
+        
+        For SelectPipe, this means applying the column selection to the base dataframe
+        
+        Parameters:
+        -----------
+        base_df : pd.DataFrame
+            The base dataframe to merge results into
+        **kwargs : dict
+            Additional arguments
+            
+        Returns:
+        --------
+        pd.DataFrame
+            Base dataframe with selection applied
+        """
+        if not self._has_results():
+            return base_df
+        
+        # Apply column selection to the base dataframe
+        if self.selected_columns:
+            # Filter to only selected columns that exist in the dataframe
+            available_columns = [col for col in self.selected_columns if col in base_df.columns]
+            if available_columns:
+                return base_df[available_columns]
+        
+        return base_df
+    
     @classmethod
     def from_engine(cls, engine: Engine, table_name: str, **kwargs):
         """

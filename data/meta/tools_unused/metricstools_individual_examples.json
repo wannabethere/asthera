@@ -1,0 +1,161 @@
+[
+  {
+    "function": "Count",
+    "category": "metricstools",
+    "description": "Count total number of transactions per store",
+    "prerequisites": ["MetricsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.metricstools import MetricsPipe, Count, Execute\n\n# Step 1: Create sample transaction data\nsample_data = pd.DataFrame({\n    'transaction_id': range(1, 1001),\n    'store_id': ['Store_A', 'Store_B', 'Store_C'] * 333 + ['Store_A'],\n    'amount': [50, 75, 100, 25, 150] * 200,\n    'date': pd.date_range('2023-01-01', periods=1000, freq='H')\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = MetricsPipe.from_dataframe(sample_data)\n\n# Step 3: Count transactions\nresult = pipeline | Count(variable='transaction_id', output_name='transaction_count')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Total transactions: {metrics['transaction_count']}\")\nprint(f\"Available metrics: {list(metrics.keys())}\")"
+    },
+    "parameters": {
+      "variable": "Column name to count",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "Count",
+    "category": "metricstools",
+    "description": "Count the number of active users by day",
+    "prerequisites": ["MetricsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.metricstools import MetricsPipe, Count, Execute\n\n# Step 1: Create sample user activity data\nsample_data = pd.DataFrame({\n    'user_id': range(1, 501),\n    'activity_date': pd.date_range('2023-01-01', periods=500, freq='D'),\n    'session_duration': [30, 45, 60, 25, 90] * 100,\n    'page_views': [5, 8, 12, 3, 15] * 100\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = MetricsPipe.from_dataframe(sample_data)\n\n# Step 3: Count active users\nresult = pipeline | Count(variable='user_id', output_name='daily_active_users')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Daily active users: {metrics['daily_active_users']}\")\nprint(f\"Data shape: {sample_data.shape}\")"
+    },
+    "parameters": {
+      "variable": "Column name to count",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "Count",
+    "category": "metricstools",
+    "description": "Find the number of unique visitors per page",
+    "prerequisites": ["MetricsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.metricstools import MetricsPipe, Count, Execute\n\n# Step 1: Create sample visitor data\nsample_data = pd.DataFrame({\n    'visitor_id': range(1, 1001),\n    'page_url': ['/home', '/products', '/about', '/contact'] * 250,\n    'visit_time': pd.date_range('2023-01-01', periods=1000, freq='H'),\n    'bounce_rate': [0.1, 0.2, 0.15, 0.3] * 250\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = MetricsPipe.from_dataframe(sample_data)\n\n# Step 3: Count unique visitors\nresult = pipeline | Count(variable='visitor_id', output_name='unique_visitors')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Unique visitors: {metrics['unique_visitors']}\")\nprint(f\"Pages visited: {sample_data['page_url'].nunique()}\")"
+    },
+    "parameters": {
+      "variable": "Column name to count",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "Sum",
+    "category": "metricstools",
+    "description": "Calculate total revenue by product category",
+    "prerequisites": ["MetricsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.metricstools import MetricsPipe, Sum, Execute\n\n# Step 1: Create sample revenue data\nsample_data = pd.DataFrame({\n    'order_id': range(1, 501),\n    'order_amount': [25.99, 49.99, 99.99, 15.50, 199.99] * 100,\n    'product_category': ['Electronics', 'Clothing', 'Books', 'Home', 'Sports'] * 100,\n    'customer_id': range(1, 501)\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = MetricsPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate total revenue\nresult = pipeline | Sum(variable='order_amount', output_name='total_revenue')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Total revenue: ${metrics['total_revenue']:,.2f}\")\nprint(f\"Average order value: ${metrics['total_revenue'] / len(sample_data):.2f}\")"
+    },
+    "parameters": {
+      "variable": "Column name to sum",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "Sum",
+    "category": "metricstools",
+    "description": "Find the sum of all transaction values by customer segment",
+    "prerequisites": ["MetricsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.metricstools import MetricsPipe, Sum, Execute\n\n# Step 1: Create sample transaction data\nsample_data = pd.DataFrame({\n    'transaction_id': range(1, 301),\n    'transaction_value': [100, 250, 500, 75, 1000] * 60,\n    'customer_segment': ['Premium', 'Standard', 'Basic'] * 100,\n    'customer_id': range(1, 301)\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = MetricsPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate total transaction value\nresult = pipeline | Sum(variable='transaction_value', output_name='total_value')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Total transaction value: ${metrics['total_value']:,.2f}\")\nprint(f\"Number of transactions: {len(sample_data)}\")"
+    },
+    "parameters": {
+      "variable": "Column name to sum",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "Max",
+    "category": "metricstools",
+    "description": "Find the highest transaction value in each region",
+    "prerequisites": ["MetricsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.metricstools import MetricsPipe, Max, Execute\n\n# Step 1: Create sample regional transaction data\nsample_data = pd.DataFrame({\n    'transaction_id': range(1, 201),\n    'transaction_value': [50, 100, 200, 75, 500, 150, 300, 25] * 25,\n    'region': ['North', 'South', 'East', 'West'] * 50,\n    'customer_id': range(1, 201)\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = MetricsPipe.from_dataframe(sample_data)\n\n# Step 3: Find maximum transaction value\nresult = pipeline | Max(variable='transaction_value', output_name='max_transaction')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Maximum transaction value: ${metrics['max_transaction']:,.2f}\")\nprint(f\"Data points analyzed: {len(sample_data)}\")"
+    },
+    "parameters": {
+      "variable": "Column name to find maximum of",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "Max",
+    "category": "metricstools",
+    "description": "Identify the maximum order size by product category",
+    "prerequisites": ["MetricsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.metricstools import MetricsPipe, Max, Execute\n\n# Step 1: Create sample order data\nsample_data = pd.DataFrame({\n    'order_id': range(1, 151),\n    'order_quantity': [1, 5, 10, 2, 25, 3, 15, 8] * 18 + [1, 2, 3],\n    'product_category': ['Electronics', 'Clothing', 'Books', 'Home', 'Sports'] * 30,\n    'unit_price': [29.99, 19.99, 9.99, 49.99, 39.99] * 30\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = MetricsPipe.from_dataframe(sample_data)\n\n# Step 3: Find maximum order size\nresult = pipeline | Max(variable='order_quantity', output_name='max_order_size')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Maximum order size: {metrics['max_order_size']} units\")\nprint(f\"Total orders: {len(sample_data)}\")"
+    },
+    "parameters": {
+      "variable": "Column name to find maximum of",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "Min",
+    "category": "metricstools",
+    "description": "Find the lowest price point for each product category",
+    "prerequisites": ["MetricsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.metricstools import MetricsPipe, Min, Execute\n\n# Step 1: Create sample product price data\nsample_data = pd.DataFrame({\n    'product_id': range(1, 101),\n    'price': [9.99, 19.99, 29.99, 39.99, 49.99] * 20,\n    'product_category': ['Electronics', 'Clothing', 'Books', 'Home', 'Sports'] * 20,\n    'supplier': ['Supplier_A', 'Supplier_B', 'Supplier_C'] * 33 + ['Supplier_A']\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = MetricsPipe.from_dataframe(sample_data)\n\n# Step 3: Find minimum price\nresult = pipeline | Min(variable='price', output_name='min_price')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Minimum price: ${metrics['min_price']:.2f}\")\nprint(f\"Products analyzed: {len(sample_data)}\")"
+    },
+    "parameters": {
+      "variable": "Column name to find minimum of",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "Min",
+    "category": "metricstools",
+    "description": "Identify minimum order value by customer segment",
+    "prerequisites": ["MetricsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.metricstools import MetricsPipe, Min, Execute\n\n# Step 1: Create sample order value data\nsample_data = pd.DataFrame({\n    'order_id': range(1, 201),\n    'order_value': [25.99, 49.99, 99.99, 15.50, 199.99, 75.00, 125.00, 35.99] * 25,\n    'customer_segment': ['Premium', 'Standard', 'Basic'] * 66 + ['Premium', 'Standard'],\n    'customer_id': range(1, 201)\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = MetricsPipe.from_dataframe(sample_data)\n\n# Step 3: Find minimum order value\nresult = pipeline | Min(variable='order_value', output_name='min_order_value')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Minimum order value: ${metrics['min_order_value']:.2f}\")\nprint(f\"Orders analyzed: {len(sample_data)}\")"
+    },
+    "parameters": {
+      "variable": "Column name to find minimum of",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "Ratio",
+    "category": "metricstools",
+    "description": "Calculate conversion rate as ratio of purchases to website visits",
+    "prerequisites": ["MetricsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.metricstools import MetricsPipe, Ratio, Execute\n\n# Step 1: Create sample conversion data\nsample_data = pd.DataFrame({\n    'date': pd.date_range('2023-01-01', periods=30, freq='D'),\n    'purchases': [10, 15, 8, 20, 12, 18, 25, 14, 16, 22] * 3,\n    'website_visits': [100, 150, 80, 200, 120, 180, 250, 140, 160, 220] * 3,\n    'campaign': ['Email', 'Social', 'Search'] * 10\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = MetricsPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate conversion rate\nresult = pipeline | Ratio(numerator='purchases', denominator='website_visits', output_name='conversion_rate')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Conversion rate: {metrics['conversion_rate']:.2%}\")\nprint(f\"Total purchases: {sample_data['purchases'].sum()}\")\nprint(f\"Total visits: {sample_data['website_visits'].sum()}\")"
+    },
+    "parameters": {
+      "numerator": "Column name for the numerator",
+      "denominator": "Column name for the denominator",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "Ratio",
+    "category": "metricstools",
+    "description": "Compute the click-through rate for each email campaign",
+    "prerequisites": ["MetricsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.metricstools import MetricsPipe, Ratio, Execute\n\n# Step 1: Create sample email campaign data\nsample_data = pd.DataFrame({\n    'campaign_id': range(1, 21),\n    'clicks': [50, 75, 30, 100, 60, 80, 45, 90, 55, 70] * 2,\n    'emails_sent': [1000, 1500, 600, 2000, 1200, 1600, 900, 1800, 1100, 1400] * 2,\n    'campaign_type': ['Newsletter', 'Promotional', 'Transactional'] * 6 + ['Newsletter', 'Promotional']\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = MetricsPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate click-through rate\nresult = pipeline | Ratio(numerator='clicks', denominator='emails_sent', output_name='ctr')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Click-through rate: {metrics['ctr']:.2%}\")\nprint(f\"Total clicks: {sample_data['clicks'].sum()}\")\nprint(f\"Total emails sent: {sample_data['emails_sent'].sum()}\")"
+    },
+    "parameters": {
+      "numerator": "Column name for the numerator",
+      "denominator": "Column name for the denominator",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "Ratio",
+    "category": "metricstools",
+    "description": "Find the revenue per user by subscription tier",
+    "prerequisites": ["MetricsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.metricstools import MetricsPipe, Ratio, Execute\n\n# Step 1: Create sample subscription data\nsample_data = pd.DataFrame({\n    'subscription_tier': ['Basic', 'Premium', 'Enterprise'] * 10,\n    'revenue': [1000, 5000, 15000] * 10,\n    'users_count': [100, 50, 10] * 10,\n    'month': ['Jan', 'Feb', 'Mar'] * 10\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = MetricsPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate revenue per user\nresult = pipeline | Ratio(numerator='revenue', denominator='users_count', output_name='arpu')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Average revenue per user: ${metrics['arpu']:.2f}\")\nprint(f\"Total revenue: ${sample_data['revenue'].sum():,}\")\nprint(f\"Total users: {sample_data['users_count'].sum()}\")"
+    },
+    "parameters": {
+      "numerator": "Column name for the numerator",
+      "denominator": "Column name for the denominator",
+      "output_name": "Name for the output metric (optional)"
+    }
+  }
+]

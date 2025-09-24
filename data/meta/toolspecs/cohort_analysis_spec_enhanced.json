@@ -1,0 +1,308 @@
+{
+    "metadata": {
+        "updated_at": "2024-01-16T12:00:00Z",
+        "llm_generated": true,
+        "total_functions": 6,
+        "categories": ["cohort_analysis"],
+        "complexity_levels": ["intermediate", "advanced"],
+        "pipe_name": "CohortPipe",
+        "module": "cohortanalysistools",
+        "description": "Functions for cohort analysis, customer retention, conversion analysis, and lifetime value calculations",
+        "function_list": [
+            "form_time_cohorts",
+            "form_behavioral_cohorts", 
+            "form_acquisition_cohorts",
+            "calculate_retention",
+            "calculate_conversion",
+            "calculate_lifetime_value"
+        ]
+    },
+    "functions": {
+        "form_time_cohorts": {
+            "category": "cohort_analysis",
+            "subcategory": "cohort_formation",
+            "pipe_name": "CohortPipe",
+            "description": "Form cohorts based on time periods (daily, weekly, monthly, quarterly, yearly)",
+            "complexity": "intermediate",
+            "use_cases": [
+                "customer cohort formation",
+                "time-based user segmentation",
+                "cohort analysis setup",
+                "retention analysis preparation"
+            ],
+            "data_requirements": [
+                "Date column for cohort formation",
+                "User or customer data",
+                "Timestamp data in proper format"
+            ],
+            "tags": ["cohort", "time_based", "segmentation", "formation"],
+            "keywords": ["cohort", "time", "formation", "segmentation", "period"],
+            "confidence_score": 0.93,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "date_column", "type": "str", "description": "Column containing the date to use for cohort formation"}
+            ],
+            "optional_params": [
+                {"name": "cohort_column", "type": "str", "description": "Name of the column to store cohort information (default: 'cohort')"},
+                {"name": "time_period", "type": "str", "description": "Time period for cohort grouping ('D' for daily, 'W' for weekly, 'M' for monthly, 'Q' for quarterly, 'Y' for yearly) (default: 'M')"},
+                {"name": "format_cohorts", "type": "bool", "description": "Whether to format cohorts as strings (e.g., 'Jan 2023' instead of timestamp) (default: True)"},
+                {"name": "datetime_format", "type": "str", "description": "Format string for parsing dates if they are not already datetime objects (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that forms time-based cohorts from a CohortPipe"
+            },
+            "examples": [
+                "form_time_cohorts('signup_date', time_period='M')",
+                "form_time_cohorts('created_at', cohort_column='monthly_cohort', time_period='M')",
+                "form_time_cohorts('date', time_period='W', format_cohorts=True)"
+            ],
+            "usage_patterns": [
+                "form_time_cohorts(date_column, time_period='M')",
+                "form_time_cohorts(date_column, cohort_column='cohort', time_period='M')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["calculate_retention", "calculate_lifetime_value"]
+        },
+        "form_behavioral_cohorts": {
+            "category": "cohort_analysis",
+            "subcategory": "behavioral_segmentation",
+            "pipe_name": "CohortPipe",
+            "description": "Form cohorts based on behavioral patterns and custom conditions",
+            "complexity": "advanced",
+            "use_cases": [
+                "behavioral cohort segmentation",
+                "custom cohort formation",
+                "user behavior analysis",
+                "segmented cohort analysis"
+            ],
+            "data_requirements": [
+                "Behavioral data columns",
+                "User or customer data",
+                "Custom condition definitions"
+            ],
+            "tags": ["cohort", "behavioral", "segmentation", "custom"],
+            "keywords": ["cohort", "behavioral", "segmentation", "custom", "conditions"],
+            "confidence_score": 0.88,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "behavior_column", "type": "str", "description": "Column containing the behavior to use for cohort formation"}
+            ],
+            "optional_params": [
+                {"name": "cohort_column", "type": "str", "description": "Name of the column to store cohort information (default: 'cohort')"},
+                {"name": "conditions", "type": "Dict[str, Any]", "description": "Dictionary mapping cohort names to conditions (e.g., {'high_value': ('>',100)}) (optional)"},
+                {"name": "custom_cohorts", "type": "Dict[str, Callable]", "description": "Dictionary mapping cohort names to functions that take a dataframe and return a boolean mask (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that forms behavioral cohorts from a CohortPipe"
+            },
+            "examples": [
+                "form_behavioral_cohorts('purchase_amount', conditions={'high_value': ('>', 1000), 'low_value': ('<=', 100)})",
+                "form_behavioral_cohorts('activity_score', cohort_column='behavioral_cohort')",
+                "form_behavioral_cohorts('engagement_level', custom_cohorts={'engaged': lambda df: df['engagement_level'] > 0.7})"
+            ],
+            "usage_patterns": [
+                "form_behavioral_cohorts(behavior_column, conditions={'cohort_name': ('operator', value)})",
+                "form_behavioral_cohorts(behavior_column, custom_cohorts={'cohort_name': function})"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["form_time_cohorts", "calculate_conversion"]
+        },
+        "form_acquisition_cohorts": {
+            "category": "cohort_analysis",
+            "subcategory": "acquisition_analysis",
+            "pipe_name": "CohortPipe",
+            "description": "Form cohorts based on acquisition date and source for acquisition analysis",
+            "complexity": "intermediate",
+            "use_cases": [
+                "acquisition cohort analysis",
+                "marketing channel analysis",
+                "customer acquisition tracking",
+                "source-based cohort formation"
+            ],
+            "data_requirements": [
+                "Acquisition date column",
+                "Acquisition source column",
+                "User or customer data"
+            ],
+            "tags": ["cohort", "acquisition", "marketing", "source"],
+            "keywords": ["cohort", "acquisition", "marketing", "source", "channel"],
+            "confidence_score": 0.90,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "acquisition_date_column", "type": "str", "description": "Column containing the acquisition date"},
+                {"name": "acquisition_source_column", "type": "str", "description": "Column containing the acquisition source"}
+            ],
+            "optional_params": [
+                {"name": "cohort_column", "type": "str", "description": "Name of the column to store cohort information (default: 'cohort')"},
+                {"name": "time_period", "type": "str", "description": "Time period for cohort grouping ('D' for daily, 'W' for weekly, 'M' for monthly, 'Q' for quarterly, 'Y' for yearly) (default: 'M')"},
+                {"name": "combine_source", "type": "bool", "description": "Whether to combine source with time period in cohort name (default: True)"},
+                {"name": "format_cohorts", "type": "bool", "description": "Whether to format cohorts as strings (default: True)"},
+                {"name": "datetime_format", "type": "str", "description": "Format string for parsing dates if they are not already datetime objects (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that forms acquisition cohorts from a CohortPipe"
+            },
+            "examples": [
+                "form_acquisition_cohorts('signup_date', 'source', time_period='M')",
+                "form_acquisition_cohorts('created_at', 'channel', combine_source=True)",
+                "form_acquisition_cohorts('date', 'marketing_source', time_period='Q')"
+            ],
+            "usage_patterns": [
+                "form_acquisition_cohorts(acquisition_date_column, acquisition_source_column, time_period='M')",
+                "form_acquisition_cohorts(acquisition_date_column, acquisition_source_column, combine_source=True)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["form_time_cohorts", "calculate_retention"]
+        },
+        "calculate_retention": {
+            "category": "cohort_analysis",
+            "subcategory": "retention_analysis",
+            "pipe_name": "CohortPipe",
+            "description": "Calculate customer retention rates for cohorts over time",
+            "complexity": "advanced",
+            "use_cases": [
+                "customer retention analysis",
+                "cohort retention tracking",
+                "retention rate calculation",
+                "customer lifecycle analysis"
+            ],
+            "data_requirements": [
+                "Cohort data with cohort column",
+                "Date column for time analysis",
+                "User ID column for tracking individuals"
+            ],
+            "tags": ["retention", "cohort", "analysis", "rates"],
+            "keywords": ["retention", "cohort", "analysis", "rates", "customer_lifecycle"],
+            "confidence_score": 0.92,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "cohort_column", "type": "str", "description": "Column containing cohort information"},
+                {"name": "date_column", "type": "str", "description": "Column containing the date information"},
+                {"name": "user_id_column", "type": "str", "description": "Column containing unique user identifiers"}
+            ],
+            "optional_params": [
+                {"name": "time_period", "type": "str", "description": "Time period for analysis ('D' for daily, 'W' for weekly, 'M' for monthly, 'Q' for quarterly, 'Y' for yearly) (default: 'M')"},
+                {"name": "max_periods", "type": "int", "description": "Maximum number of periods to analyze (default: 12)"},
+                {"name": "retention_type", "type": "str", "description": "Type of retention calculation: 'classic', 'rolling', 'cumulative' (default: 'classic')"},
+                {"name": "datetime_format", "type": "str", "description": "Format string for parsing dates if they are not already datetime objects (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates retention rates from a CohortPipe"
+            },
+            "examples": [
+                "calculate_retention('cohort', 'date', 'user_id', time_period='M', max_periods=12)",
+                "calculate_retention('monthly_cohort', 'created_at', 'customer_id', retention_type='rolling')",
+                "calculate_retention('cohort', 'timestamp', 'user_id', time_period='W', max_periods=24)"
+            ],
+            "usage_patterns": [
+                "calculate_retention(cohort_column, date_column, user_id_column, time_period='M')",
+                "calculate_retention(cohort_column, date_column, user_id_column, max_periods=12)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["form_time_cohorts", "calculate_lifetime_value"]
+        },
+        "calculate_conversion": {
+            "category": "cohort_analysis",
+            "subcategory": "conversion_analysis",
+            "pipe_name": "CohortPipe",
+            "description": "Calculate conversion rates through funnel steps for cohorts",
+            "complexity": "advanced",
+            "use_cases": [
+                "funnel conversion analysis",
+                "cohort conversion tracking",
+                "user journey analysis",
+                "conversion rate optimization"
+            ],
+            "data_requirements": [
+                "Cohort data with cohort column",
+                "Event data with event column",
+                "User ID column for tracking individuals",
+                "Funnel step definitions"
+            ],
+            "tags": ["conversion", "funnel", "cohort", "analysis"],
+            "keywords": ["conversion", "funnel", "cohort", "analysis", "rates", "steps"],
+            "confidence_score": 0.89,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "cohort_column", "type": "str", "description": "Column containing cohort information"},
+                {"name": "event_column", "type": "str", "description": "Column containing event information"},
+                {"name": "user_id_column", "type": "str", "description": "Column containing unique user identifiers"},
+                {"name": "funnel_steps", "type": "List[str]", "description": "List of funnel steps in order"}
+            ],
+            "optional_params": [
+                {"name": "step_names", "type": "List[str]", "description": "Custom names for funnel steps (optional)"},
+                {"name": "include_rates", "type": "bool", "description": "Whether to include conversion rates (default: True)"},
+                {"name": "cumulative", "type": "bool", "description": "Whether to calculate cumulative conversion rates (default: True)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates conversion rates from a CohortPipe"
+            },
+            "examples": [
+                "calculate_conversion('cohort', 'event', 'user_id', ['signup', 'trial', 'paid'])",
+                "calculate_conversion('monthly_cohort', 'action', 'customer_id', ['view', 'add_to_cart', 'purchase'], step_names=['View', 'Cart', 'Buy'])",
+                "calculate_conversion('cohort', 'step', 'user_id', ['landing', 'signup', 'activation', 'retention'])"
+            ],
+            "usage_patterns": [
+                "calculate_conversion(cohort_column, event_column, user_id_column, funnel_steps)",
+                "calculate_conversion(cohort_column, event_column, user_id_column, funnel_steps, step_names=['Step1', 'Step2'])"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["form_behavioral_cohorts", "calculate_retention"]
+        },
+        "calculate_lifetime_value": {
+            "category": "cohort_analysis",
+            "subcategory": "lifetime_value",
+            "pipe_name": "CohortPipe",
+            "description": "Calculate customer lifetime value (LTV) for cohorts over time",
+            "complexity": "advanced",
+            "use_cases": [
+                "customer lifetime value analysis",
+                "cohort LTV tracking",
+                "customer value segmentation",
+                "revenue analysis by cohort"
+            ],
+            "data_requirements": [
+                "Cohort data with cohort column",
+                "Date column for time analysis",
+                "User ID column for tracking individuals",
+                "Value column for LTV calculation"
+            ],
+            "tags": ["lifetime_value", "ltv", "cohort", "revenue"],
+            "keywords": ["lifetime_value", "ltv", "cohort", "revenue", "customer_value"],
+            "confidence_score": 0.91,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "cohort_column", "type": "str", "description": "Column containing cohort information"},
+                {"name": "date_column", "type": "str", "description": "Column containing the date information"},
+                {"name": "user_id_column", "type": "str", "description": "Column containing unique user identifiers"},
+                {"name": "value_column", "type": "str", "description": "Column containing the value to calculate LTV from"}
+            ],
+            "optional_params": [
+                {"name": "time_period", "type": "str", "description": "Time period for analysis ('D' for daily, 'W' for weekly, 'M' for monthly, 'Q' for quarterly, 'Y' for yearly) (default: 'M')"},
+                {"name": "max_periods", "type": "int", "description": "Maximum number of periods to analyze (default: 12)"},
+                {"name": "cumulative", "type": "bool", "description": "Whether to calculate cumulative LTV (default: True)"},
+                {"name": "datetime_format", "type": "str", "description": "Format string for parsing dates if they are not already datetime objects (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates lifetime value from a CohortPipe"
+            },
+            "examples": [
+                "calculate_lifetime_value('cohort', 'date', 'user_id', 'revenue', time_period='M')",
+                "calculate_lifetime_value('monthly_cohort', 'created_at', 'customer_id', 'purchase_amount', max_periods=24)",
+                "calculate_lifetime_value('cohort', 'timestamp', 'user_id', 'value', cumulative=True)"
+            ],
+            "usage_patterns": [
+                "calculate_lifetime_value(cohort_column, date_column, user_id_column, value_column, time_period='M')",
+                "calculate_lifetime_value(cohort_column, date_column, user_id_column, value_column, max_periods=12)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["calculate_retention", "form_time_cohorts"]
+        }
+    }
+}

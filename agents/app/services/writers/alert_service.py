@@ -261,6 +261,7 @@ class AlertResponseCompatibility(BaseModel):
     updated_at: Optional[datetime] = None
     service_created: Optional[bool] = None
     service_metadata: Optional[Dict[str, Any]] = None
+    notification_groups: Optional[List[Dict[str, Any]]] = None
 
 
 class Configs(BaseModel):
@@ -767,6 +768,89 @@ class AlertServiceCompatibility:
             metadata=alert_response.metadata
         )
     
+    def _parse_notification_groups_from_alert_request(self, alert_request: str) -> List[Dict[str, Any]]:
+        """Parse alert request text to extract multiple notification groups
+        
+        Args:
+            alert_request: The alert request text containing notification instructions
+            
+        Returns:
+            List of notification group dictionaries
+        """
+        notification_groups = []
+        
+        # Split the alert request into lines and process each notification instruction
+        lines = alert_request.strip().split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            if not line or not any(keyword in line.lower() for keyword in ['notify', 'alert', 'send']):
+                continue
+                
+            # Extract notification type and target
+            notification_group = {
+                "type": "email",  # default
+                "targets": [],
+                "condition": "",
+                "message": ""
+            }
+            
+            # Check for Slack notifications
+            if 'slack' in line.lower():
+                notification_group["type"] = "slack"
+                # Extract team name if available
+                if 'learn team' in line.lower():
+                    notification_group["targets"] = ["learn_team"]
+                elif 'talent team' in line.lower():
+                    notification_group["targets"] = ["talent_team"]
+                else:
+                    notification_group["targets"] = ["default_slack_channel"]
+            
+            # Check for Teams notifications
+            elif 'teams' in line.lower():
+                notification_group["type"] = "teams"
+                if 'learn team' in line.lower():
+                    notification_group["targets"] = ["learn_team"]
+                elif 'talent team' in line.lower():
+                    notification_group["targets"] = ["talent_team"]
+                else:
+                    notification_group["targets"] = ["default_teams_channel"]
+            
+            # Check for email notifications (CSOD Learn Team should be email)
+            elif 'csod learn team' in line.lower() or 'csod' in line.lower():
+                notification_group["type"] = "email"
+                notification_group["targets"] = ["csod_learn_team@company.com"]
+            elif any(keyword in line.lower() for keyword in ['email', '@', 'team']):
+                notification_group["type"] = "email"
+                # Extract email addresses or team names
+                if 'learn team' in line.lower():
+                    notification_group["targets"] = ["learn_team@company.com"]
+                elif 'talent team' in line.lower():
+                    notification_group["targets"] = ["talent_team@company.com"]
+                else:
+                    notification_group["targets"] = ["default@company.com"]
+            
+            # Extract condition from the line
+            if 'greater than' in line.lower() or '>' in line:
+                if '40%' in line:
+                    notification_group["condition"] = "percentage > 40%"
+                elif '20%' in line:
+                    notification_group["condition"] = "percentage <= 20%"
+            elif 'drops to' in line.lower() or 'drops' in line.lower():
+                if '20%' in line:
+                    notification_group["condition"] = "percentage <= 20%"
+            elif 'exceed' in line.lower():
+                if '90 days' in line:
+                    notification_group["condition"] = "completion_days > 90"
+            
+            # Set default message
+            notification_group["message"] = f"Alert condition met: {notification_group['condition']}"
+            
+            if notification_group["targets"]:
+                notification_groups.append(notification_group)
+        
+        return notification_groups
+
     def convert_service_response_to_compatibility(
         self, 
         service_response: AlertResponse
@@ -965,11 +1049,16 @@ class AlertServiceCompatibility:
             # Extract service-managed fields
             project_id = orchestration_metadata.get("project_id")
             session_id = metadata.get("session_id")
+            
+            # Extract notification groups from metadata
+            notification_groups = metadata.get("notification_groups", [])
+            
             service_metadata = {
                 "pipeline_name": metadata.get("pipeline_name"),
                 "pipeline_version": metadata.get("pipeline_version"),
                 "execution_timestamp": metadata.get("execution_timestamp"),
-                "orchestration_metadata": orchestration_metadata
+                "orchestration_metadata": orchestration_metadata,
+                "notification_groups": notification_groups
             }
             
         else:
@@ -998,10 +1087,15 @@ class AlertServiceCompatibility:
             schedule_settings = result.get("schedule_settings")
             priority = result.get("priority", AlertPriority.MEDIUM)
             tags = result.get("tags", [])
+            
+            # Extract notification groups from metadata
+            notification_groups = metadata.get("notification_groups", [])
+            
             service_metadata = {
                 "pipeline_name": metadata.get("pipeline_name"),
                 "pipeline_version": metadata.get("pipeline_version"),
-                "execution_timestamp": metadata.get("execution_timestamp")
+                "execution_timestamp": metadata.get("execution_timestamp"),
+                "notification_groups": notification_groups
             }
         
         # Create a basic condition if none exist
@@ -1018,6 +1112,13 @@ class AlertServiceCompatibility:
                 created_at=datetime.now()
             )]
         
+        # Create a descriptive notification group name based on the parsed groups
+        if notification_groups:
+            group_types = [group.get("type", "unknown") for group in notification_groups]
+            notification_group_name = f"multi_channel_{'_'.join(set(group_types))}"
+        else:
+            notification_group_name = notification_group
+            
         return AlertResponseCompatibility(
             type="finished",
             question="Generated from alert service",
@@ -1025,7 +1126,7 @@ class AlertServiceCompatibility:
             summary=summary,
             reasoning=reasoning,
             conditions=conditions,
-            notificationgroup=notification_group,
+            notificationgroup=notification_group_name,
             # Service-managed fields
             project_id=project_id,
             session_id=session_id,
@@ -1040,7 +1141,8 @@ class AlertServiceCompatibility:
             created_at=datetime.now(),
             updated_at=datetime.now(),
             service_created=service_response.success,
-            service_metadata=service_metadata
+            service_metadata=service_metadata,
+            notification_groups=notification_groups
         )
     
     async def process_alert_create(
@@ -1057,6 +1159,11 @@ class AlertServiceCompatibility:
         project_id = project_id or alert_create.project_id or self.default_project_id
         
         try:
+            # Parse the alert request to extract multiple notification groups
+            # The alert_request should contain the natural language instructions
+            alert_request_text = alert_create.input
+            notification_groups = self._parse_notification_groups_from_alert_request(alert_request_text)
+            
             # Extract SQL query and natural language query from the input
             # For now, we'll use the input as both SQL and natural language query
             # In a real implementation, you might want to parse this more intelligently
@@ -1079,6 +1186,12 @@ class AlertServiceCompatibility:
             
             # Process through the alert service using the orchestrator pipeline
             service_response = await self.alert_service.process_request(alert_request_obj)
+            
+            # Add notification groups to the service metadata
+            if hasattr(service_response, 'metadata'):
+                service_response.metadata['notification_groups'] = notification_groups
+            else:
+                service_response.metadata = {'notification_groups': notification_groups}
             
             # Convert the service response to compatibility format
             return self.convert_service_response_to_compatibility(service_response)

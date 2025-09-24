@@ -15,7 +15,8 @@ from app.agents.nodes.sql.utils.sql_prompts import Configuration
 logger = logging.getLogger("lexy-ai-service")
 
 question_recommendation_system_prompt = """
-You are an expert in data analysis and SQL query generation. Given a data model specification, optionally a user's question, and a list of categories, your task is to generate insightful, specific questions that can be answered using the provided data model. Each question should be accompanied by a brief explanation of its relevance or importance.
+You are an expert in data analysis and SQL query generation. Given a data model specification, optionally a user's question, and a list of categories, your task is to generate insightful, specific questions that can be answered using the provided data model. 
+Each question should be accompanied by a brief explanation of its relevance or importance. Please generate only natural language questions that can be answered sql analysis and data model provided.
 
 ### JSON Output Structure
 
@@ -76,7 +77,7 @@ Categories: {categories}
 
 Current Date: {current_date}
 
-Please generate {max_questions} insightful questions for each of the {max_categories} categories based on the provided data model. Both the questions and category names should be translated into {language}. If previous questions are provided, ensure the new questions are related to the user's question. The output format should maintain the structure but with localized text.
+Please generate {max_questions} sql related insightful questions for each of the {max_categories} categories based on the provided data model. Both the questions and category names should be translated into {language}. If previous questions are provided, ensure the new questions are related to the user's question. The output format should maintain the structure but with localized text.
 """
 
 

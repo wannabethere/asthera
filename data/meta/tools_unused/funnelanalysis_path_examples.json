@@ -1,0 +1,87 @@
+[
+  {
+    "function": "analyze_user_paths",
+    "category": "funnel_analysis",
+    "description": "Identify common user navigation paths through the checkout process",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, analyze_user_paths\n\n# Step 1: Create sample user navigation data\nnavigation_events = []\nfor visitor_id in range(1, 201):\n    # Simulate user navigation through checkout\n    pages = ['product_page', 'cart_page', 'shipping_page', 'payment_page', 'confirmation_page']\n    for i, page in enumerate(pages):\n        if visitor_id % (5-i+1) == 0:  # Some users drop off at each step\n            navigation_events.append({\n                'visitor_id': visitor_id,\n                'page_name': page,\n                'visit_timestamp': pd.date_range('2023-01-01', periods=1, freq='D')[0] + pd.Timedelta(minutes=i*10)\n            })\n\nsample_data = pd.DataFrame(navigation_events)\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Analyze user paths\ncohort_pipe = cohort_pipe | analyze_user_paths(\n    event_column='page_name',\n    user_id_column='visitor_id',\n    timestamp_column='visit_timestamp',\n    funnel_steps=['product_page', 'cart_page', 'shipping_page', 'payment_page', 'confirmation_page'],\n    max_path_length=10,\n    min_path_frequency=0.01\n)\n\n# Step 4: View results\npath_df = cohort_pipe.to_df()\nprint(f\"User path analysis completed for {len(path_df)} unique paths\")"
+    },
+    "parameters": {
+      "event_column": "Column containing event names/types",
+      "user_id_column": "Column containing user identifiers",
+      "timestamp_column": "Column containing timestamps for path ordering",
+      "funnel_steps": "List of event names representing steps in the funnel, in order",
+      "max_path_length": "Maximum length of paths to analyze (optional)",
+      "min_path_frequency": "Minimum frequency threshold for paths to include (optional)"
+    }
+  },
+  {
+    "function": "analyze_user_paths",
+    "category": "funnel_analysis",
+    "description": "Discover most common user journeys through the app onboarding process",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, analyze_user_paths\n\n# Step 1: Create sample app onboarding data\nonboarding_events = []\nfor user_id in range(1, 301):\n    # Simulate app onboarding journey\n    screens = ['welcome_screen', 'login_screen', 'feature_tour', 'profile_setup', 'home_screen']\n    for i, screen in enumerate(screens):\n        if user_id % (5-i+1) == 0:  # Some users drop off at each step\n            onboarding_events.append({\n                'user_id': user_id,\n                'screen_name': screen,\n                'event_time': pd.date_range('2023-01-01', periods=1, freq='D')[0] + pd.Timedelta(minutes=i*5)\n            })\n\nsample_data = pd.DataFrame(onboarding_events)\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Analyze user paths\ncohort_pipe = cohort_pipe | analyze_user_paths(\n    event_column='screen_name',\n    user_id_column='user_id',\n    timestamp_column='event_time',\n    funnel_steps=['welcome_screen', 'login_screen', 'feature_tour', 'profile_setup', 'home_screen'],\n    max_path_length=15,\n    min_path_frequency=0.05\n)\n\n# Step 4: View results\npath_df = cohort_pipe.to_df()\nprint(f\"App onboarding path analysis completed for {len(path_df)} unique paths\")"
+    },
+    "parameters": {
+      "event_column": "Column containing event names/types",
+      "user_id_column": "Column containing user identifiers",
+      "timestamp_column": "Column containing timestamps for path ordering",
+      "funnel_steps": "List of event names representing steps in the funnel, in order",
+      "max_path_length": "Maximum length of paths to analyze (optional)",
+      "min_path_frequency": "Minimum frequency threshold for paths to include (optional)"
+    }
+  },
+  {
+    "function": "analyze_user_paths",
+    "category": "funnel_analysis",
+    "description": "Map most frequent user paths between signup and first purchase",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, analyze_user_paths\n\n# Step 1: Create sample signup to purchase data\npurchase_events = []\nfor user_id in range(1, 251):\n    # Simulate user journey from signup to purchase\n    events = ['signup_completed', 'first_purchase']\n    for i, event in enumerate(events):\n        if user_id % (2-i+1) == 0:  # Some users drop off at each step\n            purchase_events.append({\n                'user_id': user_id,\n                'event_name': event,\n                'timestamp': pd.date_range('2023-01-01', periods=1, freq='D')[0] + pd.Timedelta(days=i*7)\n            })\n\nsample_data = pd.DataFrame(purchase_events)\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Analyze user paths\ncohort_pipe = cohort_pipe | analyze_user_paths(\n    event_column='event_name',\n    user_id_column='user_id',\n    timestamp_column='timestamp',\n    funnel_steps=['signup_completed', 'first_purchase'],\n    max_path_length=20,\n    min_path_frequency=0.02\n)\n\n# Step 4: View results\npath_df = cohort_pipe.to_df()\nprint(f\"Signup to purchase path analysis completed for {len(path_df)} unique paths\")"
+    },
+    "parameters": {
+      "event_column": "Column containing event names/types",
+      "user_id_column": "Column containing user identifiers",
+      "timestamp_column": "Column containing timestamps for path ordering",
+      "funnel_steps": "List of event names representing steps in the funnel, in order",
+      "max_path_length": "Maximum length of paths to analyze (optional)",
+      "min_path_frequency": "Minimum frequency threshold for paths to include (optional)"
+    }
+  },
+  {
+    "function": "analyze_user_paths",
+    "category": "funnel_analysis",
+    "description": "Analyze how users navigate from product discovery to checkout completion",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, analyze_user_paths\n\n# Step 1: Create sample product discovery to checkout data\ndiscovery_events = []\nfor session_id in range(1, 201):\n    # Simulate product discovery to checkout journey\n    actions = ['search_performed', 'checkout_completed']\n    for i, action in enumerate(actions):\n        if session_id % (2-i+1) == 0:  # Some users drop off at each step\n            discovery_events.append({\n                'session_id': session_id,\n                'user_action': action,\n                'action_timestamp': pd.date_range('2023-01-01', periods=1, freq='D')[0] + pd.Timedelta(hours=i*2)\n            })\n\nsample_data = pd.DataFrame(discovery_events)\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Analyze user paths\ncohort_pipe = cohort_pipe | analyze_user_paths(\n    event_column='user_action',\n    user_id_column='session_id',\n    timestamp_column='action_timestamp',\n    funnel_steps=['search_performed', 'checkout_completed'],\n    max_path_length=12,\n    min_path_frequency=0.03\n)\n\n# Step 4: View results\npath_df = cohort_pipe.to_df()\nprint(f\"Product discovery to checkout path analysis completed for {len(path_df)} unique paths\")"
+    },
+    "parameters": {
+      "event_column": "Column containing event names/types",
+      "user_id_column": "Column containing user identifiers",
+      "timestamp_column": "Column containing timestamps for path ordering",
+      "funnel_steps": "List of event names representing steps in the funnel, in order",
+      "max_path_length": "Maximum length of paths to analyze (optional)",
+      "min_path_frequency": "Minimum frequency threshold for paths to include (optional)"
+    }
+  },
+  {
+    "function": "analyze_user_paths",
+    "category": "funnel_analysis",
+    "description": "Identify paths that new users take to become premium subscribers",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, analyze_user_paths\n\n# Step 1: Create sample new user to premium data\npremium_events = []\nfor user_id in range(1, 201):\n    # Simulate new user to premium subscription journey\n    events = ['new_user_signup', 'premium_subscription_purchase']\n    for i, event in enumerate(events):\n        if user_id % (2-i+1) == 0:  # Some users drop off at each step\n            premium_events.append({\n                'user_id': user_id,\n                'event_type': event,\n                'event_timestamp': pd.date_range('2023-01-01', periods=1, freq='D')[0] + pd.Timedelta(days=i*14)\n            })\n\nsample_data = pd.DataFrame(premium_events)\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Analyze user paths\ncohort_pipe = cohort_pipe | analyze_user_paths(\n    event_column='event_type',\n    user_id_column='user_id',\n    timestamp_column='event_timestamp',\n    funnel_steps=['new_user_signup', 'premium_subscription_purchase'],\n    max_path_length=25,\n    min_path_frequency=0.01\n)\n\n# Step 4: View results\npath_df = cohort_pipe.to_df()\nprint(f\"New user to premium path analysis completed for {len(path_df)} unique paths\")"
+    },
+    "parameters": {
+      "event_column": "Column containing event names/types",
+      "user_id_column": "Column containing user identifiers",
+      "timestamp_column": "Column containing timestamps for path ordering",
+      "funnel_steps": "List of event names representing steps in the funnel, in order",
+      "max_path_length": "Maximum length of paths to analyze (optional)",
+      "min_path_frequency": "Minimum frequency threshold for paths to include (optional)"
+    }
+  }
+]

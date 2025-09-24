@@ -1,0 +1,106 @@
+[
+  {
+    "function": "detect_change_points",
+    "category": "anomaly_detection",
+    "description": "Detect change points using binary segmentation",
+    "prerequisites": ["AnomalyPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nimport numpy as np\nfrom insightsagents.app.tools.mltools.anomalydetection import AnomalyPipe, detect_change_points\n\n# Step 1: Create data with structural breaks\nnp.random.seed(42)\ndates = pd.date_range('2023-01-01', periods=500, freq='D')\n# Create data with different regimes\nregime1 = np.random.normal(100, 10, 200)  # First regime\nregime2 = np.random.normal(150, 15, 200)  # Second regime (higher mean)\nregime3 = np.random.normal(80, 8, 100)    # Third regime (lower mean)\n\nvalues = np.concatenate([regime1, regime2, regime3])\n\nsample_data = pd.DataFrame({\n    'value': values,\n    'timestamp': dates\n})\n\n# Step 2: Initialize pipeline\nanomaly_pipe = AnomalyPipe.from_dataframe(sample_data)\n\n# Step 3: Detect change points\nanomaly_pipe = anomaly_pipe | detect_change_points(\n    columns='value',\n    time_column='timestamp',\n    min_size=30,\n    method='binary_segmentation',\n    penalty='bic'\n)\n\n# Step 4: View results\nresult_df = anomaly_pipe.to_df()\nprint(f\"Change points detected: {result_df['value_changepoint'].sum()}\")\nchangepoints = result_df[result_df['value_changepoint'] == True]\nprint(\"Change point details:\")\nprint(changepoints[['timestamp', 'value', 'value_changepoint_score']].head())\n\n# Step 5: Get summary\nsummary = anomaly_pipe.get_anomaly_summary()\nprint(f\"Detection method: {summary['detection_method']}\")"
+    },
+    "parameters": {
+      "columns": "Column(s) to analyze for change points (string or list)",
+      "time_column": "Time column for time series analysis",
+      "min_size": "Minimum size of segments (default: 20)",
+      "method": "Detection method: 'binary_segmentation', 'window' (default: 'binary_segmentation')",
+      "penalty": "Penalty function: 'bic', 'aic' (default: 'bic')",
+      "group_columns": "Columns to group by for separate analysis (optional)",
+      "datetime_format": "Format string for parsing dates (optional)"
+    }
+  },
+  {
+    "function": "detect_change_points",
+    "category": "anomaly_detection",
+    "description": "Detect change points using window-based method",
+    "prerequisites": ["AnomalyPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nimport numpy as np\nfrom insightsagents.app.tools.mltools.anomalydetection import AnomalyPipe, detect_change_points\n\n# Step 1: Create data with structural breaks\nnp.random.seed(42)\ndates = pd.date_range('2023-01-01', periods=500, freq='D')\n# Create data with different regimes\nregime1 = np.random.normal(100, 10, 200)  # First regime\nregime2 = np.random.normal(150, 15, 200)  # Second regime (higher mean)\nregime3 = np.random.normal(80, 8, 100)    # Third regime (lower mean)\n\nvalues = np.concatenate([regime1, regime2, regime3])\n\nsample_data = pd.DataFrame({\n    'value': values,\n    'timestamp': dates\n})\n\n# Step 2: Initialize pipeline\nanomaly_pipe = AnomalyPipe.from_dataframe(sample_data)\n\n# Step 3: Detect change points using window method\nanomaly_pipe = anomaly_pipe | detect_change_points(\n    columns='value',\n    time_column='timestamp',\n    min_size=20,\n    method='window',\n    penalty='aic'\n)\n\n# Step 4: View results\nresult_df = anomaly_pipe.to_df()\nprint(f\"Window method change points: {result_df['value_changepoint'].sum()}\")"
+    },
+    "parameters": {
+      "columns": "Column(s) to analyze for change points (string or list)",
+      "time_column": "Time column for time series analysis",
+      "min_size": "Minimum size of segments (default: 20)",
+      "method": "Detection method: 'binary_segmentation', 'window' (default: 'binary_segmentation')",
+      "penalty": "Penalty function: 'bic', 'aic' (default: 'bic')",
+      "group_columns": "Columns to group by for separate analysis (optional)",
+      "datetime_format": "Format string for parsing dates (optional)"
+    }
+  },
+  {
+    "function": "forecast_and_detect_anomalies",
+    "category": "anomaly_detection",
+    "description": "Use ARIMA model for forecasting and anomaly detection",
+    "prerequisites": ["AnomalyPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nimport numpy as np\nfrom insightsagents.app.tools.mltools.anomalydetection import AnomalyPipe, forecast_and_detect_anomalies\n\n# Step 1: Create time series data with trend and seasonality\nnp.random.seed(42)\ndates = pd.date_range('2023-01-01', periods=365, freq='D')\n# Create trend\ntrend = np.linspace(100, 120, 365)\n# Create seasonal pattern\nseasonal = 10 * np.sin(2 * np.pi * np.arange(365) / 365.25)\n# Add noise\nnoise = np.random.normal(0, 3, 365)\n# Add some anomalies\nanomalies = np.zeros(365)\nanomalies[100] = 20\nanomalies[200] = -15\nanomalies[300] = 25\n\nvalues = trend + seasonal + noise + anomalies\n\nsample_data = pd.DataFrame({\n    'energy_consumption': values,\n    'timestamp': dates\n})\n\n# Step 2: Initialize pipeline\nanomaly_pipe = AnomalyPipe.from_dataframe(sample_data)\n\n# Step 3: Forecast and detect anomalies\nanomaly_pipe = anomaly_pipe | forecast_and_detect_anomalies(\n    columns='energy_consumption',\n    time_column='timestamp',\n    forecast_periods=30,\n    model='arima',\n    threshold=2.5\n)\n\n# Step 4: View results\nresult_df = anomaly_pipe.to_df()\nprint(f\"Forecast anomalies detected: {result_df['energy_consumption_anomaly'].sum()}\")\nprint(\"Forecast results:\")\nforecast_cols = [col for col in result_df.columns if 'forecast' in col.lower()]\nprint(result_df[['timestamp', 'energy_consumption'] + forecast_cols].tail(10))\n\n# Step 5: Get summary\nsummary = anomaly_pipe.get_summary()\nprint(f\"Analysis type: {summary.get('analysis_type', 'forecast_anomaly_detection')}\")"
+    },
+    "parameters": {
+      "columns": "Column(s) to forecast and analyze (string or list)",
+      "time_column": "Time column for time series analysis",
+      "forecast_periods": "Number of periods to forecast (default: 5)",
+      "model": "Forecasting model: 'arima', 'exponential_smoothing' (default: 'arima')",
+      "threshold": "Threshold for anomaly detection (default: 2.0)",
+      "seasonal_period": "Seasonal period for seasonal models (optional)",
+      "group_columns": "Columns to group by for separate analysis (optional)",
+      "datetime_format": "Format string for parsing dates (optional)"
+    }
+  },
+  {
+    "function": "forecast_and_detect_anomalies",
+    "category": "anomaly_detection",
+    "description": "Use exponential smoothing for forecasting and anomaly detection",
+    "prerequisites": ["AnomalyPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nimport numpy as np\nfrom insightsagents.app.tools.mltools.anomalydetection import AnomalyPipe, forecast_and_detect_anomalies\n\n# Step 1: Create time series data with trend and seasonality\nnp.random.seed(42)\ndates = pd.date_range('2023-01-01', periods=365, freq='D')\n# Create trend\ntrend = np.linspace(100, 120, 365)\n# Create seasonal pattern\nseasonal = 10 * np.sin(2 * np.pi * np.arange(365) / 365.25)\n# Add noise\nnoise = np.random.normal(0, 3, 365)\n# Add some anomalies\nanomalies = np.zeros(365)\nanomalies[100] = 20\nanomalies[200] = -15\nanomalies[300] = 25\n\nvalues = trend + seasonal + noise + anomalies\n\nsample_data = pd.DataFrame({\n    'energy_consumption': values,\n    'timestamp': dates\n})\n\n# Step 2: Initialize pipeline\nanomaly_pipe = AnomalyPipe.from_dataframe(sample_data)\n\n# Step 3: Forecast and detect anomalies using exponential smoothing\nanomaly_pipe = anomaly_pipe | forecast_and_detect_anomalies(\n    columns='energy_consumption',\n    time_column='timestamp',\n    forecast_periods=30,\n    model='exponential_smoothing',\n    seasonal_period=365,\n    threshold=2.0\n)\n\n# Step 4: View results\nresult_df = anomaly_pipe.to_df()\nprint(f\"Exponential smoothing anomalies: {result_df['energy_consumption_anomaly'].sum()}\")"
+    },
+    "parameters": {
+      "columns": "Column(s) to forecast and analyze (string or list)",
+      "time_column": "Time column for time series analysis",
+      "forecast_periods": "Number of periods to forecast (default: 5)",
+      "model": "Forecasting model: 'arima', 'exponential_smoothing' (default: 'arima')",
+      "threshold": "Threshold for anomaly detection (default: 2.0)",
+      "seasonal_period": "Seasonal period for seasonal models (optional)",
+      "group_columns": "Columns to group by for separate analysis (optional)",
+      "datetime_format": "Format string for parsing dates (optional)"
+    }
+  },
+  {
+    "function": "batch_detect_anomalies",
+    "category": "anomaly_detection",
+    "description": "Combine statistical and contextual anomaly detection methods",
+    "prerequisites": ["AnomalyPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nimport numpy as np\nfrom insightsagents.app.tools.mltools.anomalydetection import AnomalyPipe, batch_detect_anomalies\n\n# Step 1: Create complex time series data\nnp.random.seed(42)\ndates = pd.date_range('2023-01-01', periods=500, freq='H')\n# Create trend with multiple regimes\ntrend = np.concatenate([\n    np.linspace(100, 110, 200),\n    np.linspace(110, 90, 150),\n    np.linspace(90, 120, 150)\n])\n# Add seasonal pattern\nseasonal = 5 * np.sin(2 * np.pi * np.arange(500) / 24)  # Daily seasonality\n# Add noise\nnoise = np.random.normal(0, 3, 500)\n# Add various types of anomalies\nanomalies = np.zeros(500)\nanomalies[50] = 25   # Statistical outlier\nanomalies[150] = -20  # Statistical outlier\nanomalies[250] = 30   # Contextual anomaly\nanomalies[350] = -25  # Contextual anomaly\nanomalies[450] = 35   # Collective anomaly\n\nvalues = trend + seasonal + noise + anomalies\n\nsample_data = pd.DataFrame({\n    'sensor_reading': values,\n    'timestamp': dates\n})\n\n# Step 2: Initialize pipeline\nanomaly_pipe = AnomalyPipe.from_dataframe(sample_data)\n\n# Step 3: Apply batch anomaly detection\nanomaly_pipe = anomaly_pipe | batch_detect_anomalies(\n    columns='sensor_reading',\n    methods=[\n        {\n            'name': 'statistical_outliers',\n            'params': {\n                'columns': 'sensor_reading',\n                'method': 'zscore',\n                'threshold': 3.0\n            }\n        },\n        {\n            'name': 'contextual_anomalies',\n            'params': {\n                'columns': 'sensor_reading',\n                'time_column': 'timestamp',\n                'method': 'residual',\n                'model_type': 'ewm',\n                'threshold': 2.5,\n                'window': 50\n            }\n        }\n    ],\n    ensemble_method='majority',\n    output_suffix='_ensemble_anomaly'\n)\n\n# Step 4: View results\nresult_df = anomaly_pipe.to_df()\nprint(f\"Ensemble anomalies detected: {result_df['sensor_reading_ensemble_anomaly'].sum()}\")\nprint(\"Individual method results:\")\nprint(f\"Statistical outliers: {result_df['sensor_reading_anomaly'].sum()}\")\nprint(f\"Contextual anomalies: {result_df['sensor_reading_contextual_anomaly'].sum()}\")\n\n# Step 5: Get summary\nsummary = anomaly_pipe.get_anomaly_summary()\nprint(f\"Ensemble method: {summary.get('ensemble_method', 'majority')}\")"
+    },
+    "parameters": {
+      "columns": "Column(s) to analyze for anomalies (string or list)",
+      "methods": "List of dictionaries containing method names and parameters",
+      "ensemble_method": "Ensemble method: 'any', 'majority', 'weighted' (default: 'any')",
+      "output_suffix": "Suffix for ensemble output columns (default: '_ensemble_anomaly')"
+    }
+  },
+  {
+    "function": "batch_detect_anomalies",
+    "category": "anomaly_detection",
+    "description": "Use weighted ensemble for combining detection methods",
+    "prerequisites": ["AnomalyPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nimport numpy as np\nfrom insightsagents.app.tools.mltools.anomalydetection import AnomalyPipe, batch_detect_anomalies\n\n# Step 1: Create complex time series data\nnp.random.seed(42)\ndates = pd.date_range('2023-01-01', periods=500, freq='H')\n# Create trend with multiple regimes\ntrend = np.concatenate([\n    np.linspace(100, 110, 200),\n    np.linspace(110, 90, 150),\n    np.linspace(90, 120, 150)\n])\n# Add seasonal pattern\nseasonal = 5 * np.sin(2 * np.pi * np.arange(500) / 24)  # Daily seasonality\n# Add noise\nnoise = np.random.normal(0, 3, 500)\n# Add various types of anomalies\nanomalies = np.zeros(500)\nanomalies[50] = 25   # Statistical outlier\nanomalies[150] = -20  # Statistical outlier\nanomalies[250] = 30   # Contextual anomaly\nanomalies[350] = -25  # Contextual anomaly\nanomalies[450] = 35   # Collective anomaly\n\nvalues = trend + seasonal + noise + anomalies\n\nsample_data = pd.DataFrame({\n    'sensor_reading': values,\n    'timestamp': dates\n})\n\n# Step 2: Initialize pipeline\nanomaly_pipe = AnomalyPipe.from_dataframe(sample_data)\n\n# Step 3: Apply weighted ensemble anomaly detection\nanomaly_pipe = anomaly_pipe | batch_detect_anomalies(\n    columns='sensor_reading',\n    methods=[\n        {\n            'name': 'statistical_outliers',\n            'params': {\n                'columns': 'sensor_reading',\n                'method': 'iqr',\n                'threshold': 2.0\n            }\n        },\n        {\n            'name': 'collective_anomalies',\n            'params': {\n                'columns': 'sensor_reading',\n                'time_column': 'timestamp',\n                'method': 'isolation_forest',\n                'window': 100,\n                'contamination': 0.05\n            }\n        }\n    ],\n    ensemble_method='weighted'\n)\n\n# Step 4: View results\nresult_df = anomaly_pipe.to_df()\nprint(f\"Weighted ensemble anomalies: {result_df['sensor_reading_ensemble_anomaly'].sum()}\")"
+    },
+    "parameters": {
+      "columns": "Column(s) to analyze for anomalies (string or list)",
+      "methods": "List of dictionaries containing method names and parameters",
+      "ensemble_method": "Ensemble method: 'any', 'majority', 'weighted' (default: 'any')",
+      "output_suffix": "Suffix for ensemble output columns (default: '_ensemble_anomaly')"
+    }
+  }
+]

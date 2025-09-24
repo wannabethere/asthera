@@ -34,7 +34,7 @@ def get_chromadb_client():
     """Get ChromaDB client based on configuration settings."""
     if settings.CHROMA_USE_LOCAL:
         # Use local persistent client
-        return chromadb.PersistentClient(path=settings.CHROMA_PERSIST_DIRECTORY)
+        return chromadb.PersistentClient(path=settings.CHROMA_PERSIST_DIRECTORY+"/enhanced_comprehensive_registry")
     else:
         # Use HTTP client (default)
         return chromadb.HttpClient(
@@ -48,11 +48,12 @@ def get_doc_store_provider():
     client = get_chromadb_client()
     
     # Create document stores for SQL-related collections
+    # Use enhanced collection names that match the test file
     stores = {
-        "usage_examples": DocumentChromaStore(persistent_client=client,collection_name="usage_examples_collection"),
-        "function_spec": DocumentChromaStore(persistent_client=client,collection_name="tools_spec_collection"),
-        "insights_store": DocumentChromaStore(persistent_client=client,collection_name="tools_insights_collection"), 
-        "examples_store": DocumentChromaStore(persistent_client=client,collection_name="tools_examples_collection"),
+        "usage_examples": DocumentChromaStore(persistent_client=client,collection_name="comprehensive_ml_functions_demo_usage_examples"),
+        "function_spec": DocumentChromaStore(persistent_client=client,collection_name="comprehensive_ml_functions_demo_toolspecs"),
+        "insights_store": DocumentChromaStore(persistent_client=client,collection_name="comprehensive_ml_functions_demo_instructions"), 
+        "examples_store": DocumentChromaStore(persistent_client=client,collection_name="comprehensive_ml_functions_demo_code_examples"),
         "db_schema": DocumentChromaStore(
             persistent_client=client,
             collection_name="db_schema"

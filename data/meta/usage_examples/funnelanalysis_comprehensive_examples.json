@@ -1,0 +1,351 @@
+[
+  {
+    "pipe_name": "CohortPipe",
+    "category": "funnel_analysis",
+    "function": "analyze_funnel",
+    "description": "Analyze conversion funnels to track user journey through defined steps",
+    "prerequisites": ["CohortPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Basic e-commerce checkout funnel",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel(\n    event_column='event_name',\n    user_id_column='user_id',\n    funnel_steps=['home_page_view', 'product_view', 'add_to_cart', 'checkout_started', 'purchase_completed'],\n    step_names=['Homepage', 'Product Page', 'Cart', 'Checkout', 'Purchase']\n)",
+        "inputs": {
+          "event_column": "event_name",
+          "user_id_column": "user_id",
+          "funnel_steps": ["home_page_view", "product_view", "add_to_cart", "checkout_started", "purchase_completed"],
+          "step_names": ["Homepage", "Product Page", "Cart", "Checkout", "Purchase"]
+        }
+      },
+      {
+        "name": "Checkout process with time limit",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel(\n    event_column='page_name',\n    user_id_column='session_id',\n    funnel_steps=['cart_page', 'shipping_details', 'payment_info', 'review_order', 'confirmation'],\n    step_names=['Cart', 'Shipping', 'Payment', 'Review', 'Confirmation'],\n    max_step_time=1800\n)",
+        "inputs": {
+          "event_column": "page_name",
+          "user_id_column": "session_id",
+          "funnel_steps": ["cart_page", "shipping_details", "payment_info", "review_order", "confirmation"],
+          "step_names": ["Cart", "Shipping", "Payment", "Review", "Confirmation"],
+          "max_step_time": 1800
+        }
+      },
+      {
+        "name": "Mobile app signup funnel",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel(\n    event_column='event_type',\n    user_id_column='device_id',\n    funnel_steps=['app_open', 'signup_begin', 'email_entered', 'password_created', 'profile_completed'],\n    max_step_time=3600\n)",
+        "inputs": {
+          "event_column": "event_type",
+          "user_id_column": "device_id",
+          "funnel_steps": ["app_open", "signup_begin", "email_entered", "password_created", "profile_completed"],
+          "max_step_time": 3600
+        }
+      },
+      {
+        "name": "User onboarding flow",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel(\n    event_column='onboarding_event',\n    user_id_column='user_id',\n    funnel_steps=['registration', 'email_verification', 'tutorial_viewed', 'first_login', 'first_action'],\n    step_names=['Register', 'Verify Email', 'Tutorial', 'Login', 'First Action']\n)",
+        "inputs": {
+          "event_column": "onboarding_event",
+          "user_id_column": "user_id",
+          "funnel_steps": ["registration", "email_verification", "tutorial_viewed", "first_login", "first_action"],
+          "step_names": ["Register", "Verify Email", "Tutorial", "Login", "First Action"]
+        }
+      },
+      {
+        "name": "Feature purchase funnel",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel(\n    event_column='payment_event',\n    user_id_column='customer_id',\n    funnel_steps=['feature_info_view', 'price_check', 'add_payment_method', 'confirm_purchase', 'receipt_view'],\n    step_names=['Info', 'Price Check', 'Payment Method', 'Confirmation', 'Receipt'],\n    max_step_time=1800\n)",
+        "inputs": {
+          "event_column": "payment_event",
+          "user_id_column": "customer_id",
+          "funnel_steps": ["feature_info_view", "price_check", "add_payment_method", "confirm_purchase", "receipt_view"],
+          "step_names": ["Info", "Price Check", "Payment Method", "Confirmation", "Receipt"],
+          "max_step_time": 1800
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "CohortPipe",
+    "category": "funnel_analysis",
+    "function": "analyze_funnel_by_time",
+    "description": "Analyze funnel performance over time periods to track trends",
+    "prerequisites": ["CohortPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Weekly checkout funnel trends",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel_by_time(\n    event_column='event_name',\n    user_id_column='user_id',\n    date_column='event_timestamp',\n    funnel_steps=['product_view', 'add_to_cart', 'checkout_started', 'purchase_completed'],\n    step_names=['View', 'Cart', 'Checkout', 'Purchase'],\n    time_period='week',\n    max_periods=4\n)",
+        "inputs": {
+          "event_column": "event_name",
+          "user_id_column": "user_id",
+          "date_column": "event_timestamp",
+          "funnel_steps": ["product_view", "add_to_cart", "checkout_started", "purchase_completed"],
+          "step_names": ["View", "Cart", "Checkout", "Purchase"],
+          "time_period": "week",
+          "max_periods": 4
+        }
+      },
+      {
+        "name": "Daily signup conversion trends",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel_by_time(\n    event_column='signup_event',\n    user_id_column='visitor_id',\n    date_column='event_date',\n    funnel_steps=['landing_page_view', 'signup_form_view', 'email_entered', 'account_created', 'profile_completed'],\n    time_period='day',\n    max_periods=14\n)",
+        "inputs": {
+          "event_column": "signup_event",
+          "user_id_column": "visitor_id",
+          "date_column": "event_date",
+          "funnel_steps": ["landing_page_view", "signup_form_view", "email_entered", "account_created", "profile_completed"],
+          "time_period": "day",
+          "max_periods": 14
+        }
+      },
+      {
+        "name": "Monthly subscription funnel analysis",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel_by_time(\n    event_column='subscription_event',\n    user_id_column='user_id',\n    date_column='event_timestamp',\n    funnel_steps=['plan_viewed', 'trial_started', 'credit_card_added', 'trial_converted', 'renewal_occurred'],\n    time_period='month',\n    max_periods=3\n)",
+        "inputs": {
+          "event_column": "subscription_event",
+          "user_id_column": "user_id",
+          "date_column": "event_timestamp",
+          "funnel_steps": ["plan_viewed", "trial_started", "credit_card_added", "trial_converted", "renewal_occurred"],
+          "time_period": "month",
+          "max_periods": 3
+        }
+      },
+      {
+        "name": "Feature adoption with datetime format",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel_by_time(\n    event_column='feature_event',\n    user_id_column='user_id',\n    date_column='event_date',\n    funnel_steps=['feature_announcement_seen', 'feature_page_viewed', 'feature_tried', 'feature_repeatedly_used'],\n    step_names=['Awareness', 'Interest', 'Trial', 'Adoption'],\n    time_period='week',\n    max_periods=12,\n    datetime_format='%Y-%m-%d'\n)",
+        "inputs": {
+          "event_column": "feature_event",
+          "user_id_column": "user_id",
+          "date_column": "event_date",
+          "funnel_steps": ["feature_announcement_seen", "feature_page_viewed", "feature_tried", "feature_repeatedly_used"],
+          "step_names": ["Awareness", "Interest", "Trial", "Adoption"],
+          "time_period": "week",
+          "max_periods": 12,
+          "datetime_format": "%Y-%m-%d"
+        }
+      },
+      {
+        "name": "Yearly e-commerce funnel trends",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel_by_time(\n    event_column='shopping_event',\n    user_id_column='customer_id',\n    date_column='event_timestamp',\n    funnel_steps=['search', 'product_view', 'add_to_cart', 'checkout', 'purchase'],\n    time_period='year',\n    max_periods=3\n)",
+        "inputs": {
+          "event_column": "shopping_event",
+          "user_id_column": "customer_id",
+          "date_column": "event_timestamp",
+          "funnel_steps": ["search", "product_view", "add_to_cart", "checkout", "purchase"],
+          "time_period": "year",
+          "max_periods": 3
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "CohortPipe",
+    "category": "funnel_analysis",
+    "function": "analyze_funnel_by_segment",
+    "description": "Analyze funnel performance across different user segments",
+    "prerequisites": ["CohortPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Onboarding completion by user type",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel_by_segment(\n    event_column='event_name',\n    user_id_column='user_id',\n    segment_column='user_type',\n    funnel_steps=['signup', 'profile_completion', 'first_connection', 'first_message_sent'],\n    step_names=['Sign Up', 'Profile', 'Connection', 'Messaging'],\n    min_users=100\n)",
+        "inputs": {
+          "event_column": "event_name",
+          "user_id_column": "user_id",
+          "segment_column": "user_type",
+          "funnel_steps": ["signup", "profile_completion", "first_connection", "first_message_sent"],
+          "step_names": ["Sign Up", "Profile", "Connection", "Messaging"],
+          "min_users": 100
+        }
+      },
+      {
+        "name": "Purchase funnel by age group",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel_by_segment(\n    event_column='purchase_event',\n    user_id_column='customer_id',\n    segment_column='age_group',\n    funnel_steps=['product_view', 'add_to_cart', 'checkout_begin', 'payment_info', 'order_complete'],\n    min_users=50\n)",
+        "inputs": {
+          "event_column": "purchase_event",
+          "user_id_column": "customer_id",
+          "segment_column": "age_group",
+          "funnel_steps": ["product_view", "add_to_cart", "checkout_begin", "payment_info", "order_complete"],
+          "min_users": 50
+        }
+      },
+      {
+        "name": "Subscription conversion by account type",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel_by_segment(\n    event_column='subscription_event',\n    user_id_column='user_id',\n    segment_column='account_type',\n    funnel_steps=['pricing_page_view', 'trial_signup', 'feature_usage', 'payment_info_added', 'paid_conversion'],\n    step_names=['Pricing', 'Trial', 'Usage', 'Payment', 'Conversion']\n)",
+        "inputs": {
+          "event_column": "subscription_event",
+          "user_id_column": "user_id",
+          "segment_column": "account_type",
+          "funnel_steps": ["pricing_page_view", "trial_signup", "feature_usage", "payment_info_added", "paid_conversion"],
+          "step_names": ["Pricing", "Trial", "Usage", "Payment", "Conversion"]
+        }
+      },
+      {
+        "name": "Checkout funnel by device type",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel_by_segment(\n    event_column='checkout_step',\n    user_id_column='visitor_id',\n    segment_column='device_type',\n    funnel_steps=['cart_view', 'checkout_click', 'shipping_info', 'payment_info', 'review_order', 'complete_purchase'],\n    min_users=25\n)",
+        "inputs": {
+          "event_column": "checkout_step",
+          "user_id_column": "visitor_id",
+          "segment_column": "device_type",
+          "funnel_steps": ["cart_view", "checkout_click", "shipping_info", "payment_info", "review_order", "complete_purchase"],
+          "min_users": 25
+        }
+      },
+      {
+        "name": "Marketing channel conversion analysis",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel_by_segment(\n    event_column='user_event',\n    user_id_column='visitor_id',\n    segment_column='marketing_channel',\n    funnel_steps=['landing_page_view', 'signup_started', 'form_completed', 'email_verified', 'first_login'],\n    min_users=75\n)",
+        "inputs": {
+          "event_column": "user_event",
+          "user_id_column": "visitor_id",
+          "segment_column": "marketing_channel",
+          "funnel_steps": ["landing_page_view", "signup_started", "form_completed", "email_verified", "first_login"],
+          "min_users": 75
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "CohortPipe",
+    "category": "funnel_analysis",
+    "function": "analyze_user_paths",
+    "description": "Analyze user navigation paths through the funnel to identify common journeys",
+    "prerequisites": ["CohortPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Checkout process user paths",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_user_paths(\n    event_column='page_name',\n    user_id_column='visitor_id',\n    timestamp_column='visit_timestamp',\n    funnel_steps=['product_page', 'cart_page', 'shipping_page', 'payment_page', 'confirmation_page'],\n    max_path_length=10,\n    min_path_frequency=0.01\n)",
+        "inputs": {
+          "event_column": "page_name",
+          "user_id_column": "visitor_id",
+          "timestamp_column": "visit_timestamp",
+          "funnel_steps": ["product_page", "cart_page", "shipping_page", "payment_page", "confirmation_page"],
+          "max_path_length": 10,
+          "min_path_frequency": 0.01
+        }
+      },
+      {
+        "name": "App onboarding user journeys",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_user_paths(\n    event_column='screen_name',\n    user_id_column='user_id',\n    timestamp_column='event_time',\n    funnel_steps=['welcome_screen', 'login_screen', 'feature_tour', 'profile_setup', 'home_screen'],\n    max_path_length=15,\n    min_path_frequency=0.05\n)",
+        "inputs": {
+          "event_column": "screen_name",
+          "user_id_column": "user_id",
+          "timestamp_column": "event_time",
+          "funnel_steps": ["welcome_screen", "login_screen", "feature_tour", "profile_setup", "home_screen"],
+          "max_path_length": 15,
+          "min_path_frequency": 0.05
+        }
+      },
+      {
+        "name": "Signup to purchase journey",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_user_paths(\n    event_column='event_name',\n    user_id_column='user_id',\n    timestamp_column='timestamp',\n    funnel_steps=['signup_completed', 'first_purchase'],\n    max_path_length=20,\n    min_path_frequency=0.02\n)",
+        "inputs": {
+          "event_column": "event_name",
+          "user_id_column": "user_id",
+          "timestamp_column": "timestamp",
+          "funnel_steps": ["signup_completed", "first_purchase"],
+          "max_path_length": 20,
+          "min_path_frequency": 0.02
+        }
+      },
+      {
+        "name": "Product discovery to checkout",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_user_paths(\n    event_column='user_action',\n    user_id_column='session_id',\n    timestamp_column='action_timestamp',\n    funnel_steps=['search_performed', 'checkout_completed'],\n    max_path_length=12,\n    min_path_frequency=0.03\n)",
+        "inputs": {
+          "event_column": "user_action",
+          "user_id_column": "session_id",
+          "timestamp_column": "action_timestamp",
+          "funnel_steps": ["search_performed", "checkout_completed"],
+          "max_path_length": 12,
+          "min_path_frequency": 0.03
+        }
+      },
+      {
+        "name": "New user to premium subscription",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_user_paths(\n    event_column='event_type',\n    user_id_column='user_id',\n    timestamp_column='event_timestamp',\n    funnel_steps=['new_user_signup', 'premium_subscription_purchase'],\n    max_path_length=25,\n    min_path_frequency=0.01\n)",
+        "inputs": {
+          "event_column": "event_type",
+          "user_id_column": "user_id",
+          "timestamp_column": "event_timestamp",
+          "funnel_steps": ["new_user_signup", "premium_subscription_purchase"],
+          "max_path_length": 25,
+          "min_path_frequency": 0.01
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "CohortPipe",
+    "category": "funnel_analysis",
+    "function": "get_funnel_summary",
+    "description": "Get summary statistics for funnel analysis results",
+    "prerequisites": ["Any funnel analysis function"],
+    "variations": [
+      {
+        "name": "Get overall funnel summary",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel('event_name', 'user_id', ['step1', 'step2', 'step3'])\nsummary = get_funnel_summary()(cohort_pipe)",
+        "inputs": {}
+      },
+      {
+        "name": "Get conversion rate summary",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel('event_name', 'user_id', ['signup', 'trial', 'purchase'])\nsummary = get_funnel_summary()(cohort_pipe)\nprint(f\"Overall conversion rate: {summary['overall_conversion_rate']:.2f}%\")",
+        "inputs": {}
+      },
+      {
+        "name": "Get completion time summary",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel('event_name', 'user_id', ['step1', 'step2', 'step3'])\nsummary = get_funnel_summary()(cohort_pipe)\nprint(f\"Average time to complete: {summary['avg_completion_time']} minutes\")",
+        "inputs": {}
+      },
+      {
+        "name": "Get revenue summary",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel('event_name', 'user_id', ['view', 'cart', 'purchase'])\nsummary = get_funnel_summary()(cohort_pipe)\nprint(f\"Total revenue from completed funnels: ${summary['total_revenue']:,.2f}\")",
+        "inputs": {}
+      },
+      {
+        "name": "Get drop-off analysis",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel('event_name', 'user_id', ['signup', 'verify', 'complete'])\nsummary = get_funnel_summary()(cohort_pipe)\nprint(f\"Drop-off at email verification: {summary['dropoff_at_email_verification']:.2f}%\")",
+        "inputs": {}
+      }
+    ]
+  },
+  {
+    "pipe_name": "CohortPipe",
+    "category": "funnel_analysis",
+    "function": "compare_segments",
+    "description": "Compare funnel performance between different user segments",
+    "prerequisites": ["analyze_funnel_by_segment()"],
+    "variations": [
+      {
+        "name": "Compare mobile vs desktop conversion",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel_by_segment('event_name', 'user_id', 'device_type', ['step1', 'step2'])\ncomparison = compare_segments(\n    metric_column='conversion_rate',\n    baseline_segment='desktop'\n)(cohort_pipe)",
+        "inputs": {
+          "metric_column": "conversion_rate",
+          "baseline_segment": "desktop"
+        }
+      },
+      {
+        "name": "Compare browser performance",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel_by_segment('event_name', 'user_id', 'browser', ['step1', 'step2'])\ncomparison = compare_segments(\n    metric_column='checkout_completion_rate',\n    baseline_segment='chrome'\n)(cohort_pipe)",
+        "inputs": {
+          "metric_column": "checkout_completion_rate",
+          "baseline_segment": "chrome"
+        }
+      },
+      {
+        "name": "Compare marketing channels",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel_by_segment('event_name', 'user_id', 'marketing_channel', ['step1', 'step2'])\ncomparison = compare_segments(\n    metric_column='signup_success_rate'\n)(cohort_pipe)",
+        "inputs": {
+          "metric_column": "signup_success_rate"
+        }
+      },
+      {
+        "name": "Compare pricing tiers",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel_by_segment('event_name', 'user_id', 'pricing_tier', ['step1', 'step2'])\ncomparison = compare_segments(\n    metric_column='renewal_rate',\n    baseline_segment='basic_tier'\n)(cohort_pipe)",
+        "inputs": {
+          "metric_column": "renewal_rate",
+          "baseline_segment": "basic_tier"
+        }
+      },
+      {
+        "name": "Compare user types",
+        "example": "cohort_pipe = CohortPipe.from_dataframe(data)\ncohort_pipe = cohort_pipe | analyze_funnel_by_segment('event_name', 'user_id', 'user_type', ['step1', 'step2'])\ncomparison = compare_segments(\n    metric_column='abandonment_rate',\n    baseline_segment='returning_users'\n)(cohort_pipe)",
+        "inputs": {
+          "metric_column": "abandonment_rate",
+          "baseline_segment": "returning_users"
+        }
+      }
+    ]
+  }
+]

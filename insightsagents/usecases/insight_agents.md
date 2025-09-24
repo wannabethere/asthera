@@ -138,3 +138,8 @@ Deploy Insights Agents in your organization to:
 ---
 
 *Insights Agents: Where advanced AI meets enterprise analytics requirements, delivering the reliability and speed your business demands.*
+
+
+User Asks a question --> Data Selection and columns for Data frame --> Pipeline generation --> Outputs -- Pipeline Python file is ready --> TODO (Execution of pipeline --> Generate Summaries --> Generate Visuals --> Create a versioned pipeline)
+
+Pipeline generation -- Inputs to Pipeline generation Data frame, description of columns, tools and business goal --> Outputs some more improvements

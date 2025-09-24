@@ -7,6 +7,7 @@ from uuid import uuid4
 from langchain.schema import Document as LangchainDocument
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
+from langchain_community.vectorstores.utils import filter_complex_metadata
 from langchain_openai import OpenAIEmbeddings
 from langchain_chroma import Chroma
 from langchain_core.documents import Document as LangchainDocument
@@ -195,6 +196,45 @@ class DocumentVectorstore:
         """
         self.store.delete(ids)
 
+    def delete_by_project_id(self, project_id: str) -> Dict[str, int]:
+        """Delete all documents for a specific project ID.
+        
+        Args:
+            project_id: The project ID to delete documents for
+            
+        Returns:
+            Dictionary containing the number of documents deleted
+        """
+        try:
+            logger.info(f"Deleting documents for project ID: {project_id}")
+            
+            # Get all documents with the specified project_id to count them
+            results = self.collection.get(where={"project_id": project_id})
+            document_count = len(results['ids']) if results['ids'] else 0
+            
+            if document_count == 0:
+                logger.info(f"No documents found for project ID: {project_id}")
+                return {"documents_deleted": 0}
+            
+            # Delete documents with the specified project_id
+            self.collection.delete(where={"project_id": project_id})
+            
+            # Also delete from TF-IDF collection if enabled
+            if self.tf_idf and self.tfidf_collection:
+                try:
+                    self.tfidf_collection.delete(where={"project_id": project_id})
+                    logger.info(f"Deleted {document_count} documents from TF-IDF collection for project ID: {project_id}")
+                except Exception as e:
+                    logger.warning(f"Error deleting from TF-IDF collection: {str(e)}")
+            
+            logger.info(f"Successfully deleted {document_count} documents for project ID: {project_id}")
+            return {"documents_deleted": document_count}
+            
+        except Exception as e:
+            error_msg = f"Error deleting documents for project ID {project_id}: {str(e)}"
+            logger.error(error_msg)
+            return {"documents_deleted": 0, "error": str(e)}
+
         
     def semantic_search_with_bm25(self, query: str, k: int = 5) -> List[Dict]:
         """Perform semantic search using both vector similarity and BM25 ranking.
@@ -278,7 +318,52 @@ class DocumentChromaStore:
         self.tfidf_collection_name = f"{self.collection_name}_tfidf"
         # Ensure the storage directory exists
         self.initialize()
+
+    def _check_embedding_dimension_compatibility(self) -> bool:
+        """
+        Check if the existing collection has compatible embedding dimensions.
         
+        Returns:
+            True if compatible, False if incompatible
+        """
+        try:
+            # Check if collection has any documents
+            count = self.collection.count()
+            if count == 0:
+                logger.info(f"Collection '{self.collection_name}' is empty, compatible")
+                return True
+            
+            # Try to get a sample document to check embedding dimensions
+            try:
+                # Get a sample document
+                results = self.collection.get(limit=1)
+                if results and 'embeddings' in results and results['embeddings']:
+                    existing_dim = len(results['embeddings'][0])
+                    
+                    # Get current embedding dimension by creating a test embedding
+                    test_embedding = self.embeddings_model.embed_query("test")
+                    current_dim = len(test_embedding)
+                    
+                    logger.info(f"Collection '{self.collection_name}' embedding dimensions: existing={existing_dim}, current={current_dim}")
+                    
+                    if existing_dim != current_dim:
+                        logger.warning(f"Embedding dimension mismatch in collection '{self.collection_name}': {existing_dim} vs {current_dim}")
+                        return False
+                    else:
+                        logger.info(f"Embedding dimensions compatible for collection '{self.collection_name}'")
+                        return True
+                else:
+                    logger.info(f"Collection '{self.collection_name}' has no embeddings, compatible")
+                    return True
+                    
+            except Exception as e:
+                logger.warning(f"Could not check embedding dimensions for collection '{self.collection_name}': {e}")
+                # If we can't check, assume incompatible to be safe
+                return False
+                
+        except Exception as e:
+            logger.warning(f"Could not access collection '{self.collection_name}': {e}")
+            return False
 
     def initialize(self):
         """Initialize or load the Chroma vectorstore."""
@@ -296,41 +381,114 @@ class DocumentChromaStore:
                 logger.info(f"Using ChromaDB client type: {client_type}")
                 
                 # Try to list existing collections to test connection
-                existing_collections = self.persistent_client.list_collections()
-                logger.info(f"Successfully connected to ChromaDB. Found {len(existing_collections)} existing collections")
+                try:
+                    existing_collections = self.persistent_client.list_collections()
+                    logger.info(f"Successfully connected to ChromaDB. Found {len(existing_collections)} existing collections")
+                except Exception as list_error:
+                    # If list_collections fails with '_type' error, log warning but continue
+                    if "'_type'" in str(list_error):
+                        logger.warning(f"ChromaDB list_collections failed with '_type' error: {list_error}")
+                        logger.warning("This might be a version compatibility issue, but continuing with collection creation...")
+                    else:
+                        logger.warning(f"ChromaDB list_collections failed: {list_error}, but continuing...")
             except Exception as e:
                 logger.error(f"Failed to connect to ChromaDB: {e}")
+                # Check if it's a specific '_type' error
+                if "'_type'" in str(e):
+                    logger.error("ChromaDB '_type' error detected. This might be a version compatibility issue.")
+                    logger.error("Try updating ChromaDB or check client configuration.")
                 raise
             
             # Get or create the collection
             logger.info(f"Creating collection '{self.collection_name}' without metadata")
+            print(f"DEBUG: Creating collection with name: '{self.collection_name}'")
             
+            # Try to get existing collection first
             try:
-                # Try with minimal metadata first
-                self.collection = self.persistent_client.get_or_create_collection(
-                    name=self.collection_name,
-                    metadata={"description": f"Collection for {self.collection_name}"}
-                )
-            except Exception as e:
-                logger.warning(f"Failed to create collection with metadata, trying without: {e}")
-                # Try without any metadata
-                self.collection = self.persistent_client.get_or_create_collection(
-                    name=self.collection_name
-                )
+                self.collection = self.persistent_client.get_collection(name=self.collection_name)
+                logger.info(f"Found existing collection '{self.collection_name}'")
+                print(f"DEBUG: Found existing collection with name: '{self.collection.name}'")
+                
+                # Check embedding dimension compatibility
+                if not self._check_embedding_dimension_compatibility():
+                    logger.warning(f"Embedding dimension mismatch detected for collection '{self.collection_name}', recreating...")
+                    try:
+                        self.persistent_client.delete_collection(self.collection_name)
+                        logger.info(f"Deleted collection '{self.collection_name}' due to dimension mismatch")
+                        # Recreate the collection
+                        self.collection = self.persistent_client.create_collection(
+                            name=self.collection_name,
+                            metadata={"description": f"Collection for {self.collection_name}"}
+                        )
+                        logger.info(f"Recreated collection '{self.collection_name}' with compatible dimensions")
+                    except Exception as recreate_error:
+                        logger.error(f"Failed to recreate collection '{self.collection_name}': {recreate_error}")
+                        raise
+                        
+            except Exception as get_error:
+                logger.info(f"Collection '{self.collection_name}' does not exist, creating new one")
+                print(f"DEBUG: Collection '{self.collection_name}' does not exist, creating new one")
+                
+                try:
+                    # Try to create collection with explicit name
+                    self.collection = self.persistent_client.create_collection(
+                        name=self.collection_name,
+                        metadata={"description": f"Collection for {self.collection_name}"}
+                    )
+                    logger.info(f"Successfully created collection '{self.collection_name}' with metadata")
+                    print(f"DEBUG: Collection created successfully with name: '{self.collection.name}'")
+                except Exception as create_error:
+                    logger.warning(f"Failed to create collection with metadata: {create_error}")
+                    print(f"DEBUG: Failed to create collection with metadata: {create_error}")
+                    
+                    try:
+                        # Try without metadata
+                        self.collection = self.persistent_client.create_collection(
+                            name=self.collection_name
+                        )
+                        logger.info(f"Successfully created collection '{self.collection_name}' without metadata")
+                        print(f"DEBUG: Collection created successfully without metadata with name: '{self.collection.name}'")
+                    except Exception as create_error2:
+                        logger.error(f"Failed to create collection: {create_error2}")
+                        print(f"DEBUG: Failed to create collection: {create_error2}")
+                        raise
             if self.tf_idf:
                 try:
-                    self.tfidf_collection = self.persistent_client.get_or_create_collection(
-                        name=self.tfidf_collection_name,
-                        metadata={
-                            "hnsw:space": "cosine", 
-                            "description": f"TF-IDF collection for {self.collection_name}"
-                        }
-                    )
+                    # Check if TF-IDF collection already exists
+                    if self.tfidf_collection_name in existing_collections:
+                        logger.info(f"TF-IDF collection {self.tfidf_collection_name} already exists, getting it")
+                        self.tfidf_collection = self.persistent_client.get_collection(name=self.tfidf_collection_name)
+                    else:
+                        logger.info(f"Creating new TF-IDF collection with name: {self.tfidf_collection_name}")
+                        self.tfidf_collection = self.persistent_client.create_collection(
+                            name=self.tfidf_collection_name,
+                            metadata={"description": f"TF-IDF collection for {self.collection_name}"}
+                        )
+                    
+                    # Verify TF-IDF collection name matches expected name
+                    if self.tfidf_collection.name != self.tfidf_collection_name:
+                        logger.error(f"TF-IDF collection name mismatch: expected {self.tfidf_collection_name}, got {self.tfidf_collection.name}")
+                        raise ValueError(f"TF-IDF collection name mismatch: expected {self.tfidf_collection_name}, got {self.tfidf_collection.name}")
+                    
+                    logger.info(f"TF-IDF collection accessed successfully with name: {self.tfidf_collection.name}")
                 except Exception as e:
                     logger.warning(f"Failed to create TF-IDF collection with metadata, trying without: {e}")
-                    self.tfidf_collection = self.persistent_client.get_or_create_collection(
-                        name=self.tfidf_collection_name
-                    )
+                    try:
+                        # Try without any metadata
+                        logger.info(f"Creating TF-IDF collection without metadata with name: {self.tfidf_collection_name}")
+                        self.tfidf_collection = self.persistent_client.create_collection(
+                            name=self.tfidf_collection_name
+                        )
+                        
+                        # Verify TF-IDF collection name matches expected name
+                        if self.tfidf_collection.name != self.tfidf_collection_name:
+                            logger.error(f"TF-IDF collection name mismatch: expected {self.tfidf_collection_name}, got {self.tfidf_collection.name}")
+                            raise ValueError(f"TF-IDF collection name mismatch: expected {self.tfidf_collection_name}, got {self.tfidf_collection.name}")
+                        
+                        logger.info(f"TF-IDF collection created successfully with name: {self.tfidf_collection.name}")
+                    except Exception as e2:
+                        logger.error(f"Failed to create TF-IDF collection: {e2}")
+                        raise
             # Initialize the Langchain Chroma wrapper
             self.vectorstore = Chroma(
                 client=self.persistent_client,
@@ -344,7 +502,30 @@ class DocumentChromaStore:
                     embedding_function=self.embeddings_model,
                 )
             
+            # Verify collection name matches expected name
+            if self.collection.name != self.collection_name:
+                # Check if the collection name is a UUID (indicating ChromaDB bug)
+                import re
+                uuid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                if re.match(uuid_pattern, self.collection.name, re.IGNORECASE):
+                    logger.error(f"ChromaDB generated UUID instead of collection name: '{self.collection.name}' for expected name: '{self.collection_name}'")
+                    logger.error("This appears to be a ChromaDB version compatibility issue. Please update ChromaDB or use a different version.")
+                    # Try to delete the incorrectly named collection and recreate
+                    try:
+                        self.persistent_client.delete_collection(self.collection.name)
+                        logger.info(f"Deleted incorrectly named collection: {self.collection.name}")
+                        # Recreate with correct name
+                        self.collection = self.persistent_client.create_collection(name=self.collection_name)
+                        logger.info(f"Recreated collection with correct name: {self.collection_name}")
+                    except Exception as recreate_error:
+                        logger.error(f"Failed to recreate collection with correct name: {recreate_error}")
+                        raise ValueError(f"ChromaDB generated UUID collection name instead of '{self.collection_name}'. This is a ChromaDB version compatibility issue.")
+                else:
+                    logger.error(f"Collection name mismatch: expected '{self.collection_name}', got '{self.collection.name}'")
+                    raise ValueError(f"Collection name mismatch: expected '{self.collection_name}', got '{self.collection.name}'")
+            
             logger.info(f"Successfully initialized Chroma store with collection {self.collection_name}")
+            print(f"DEBUG: Final collection name verification - Expected: '{self.collection_name}', Actual: '{self.collection.name}'")
             
         except Exception as e:
             logger.error(f"Failed to initialize Chroma store: {str(e)}")
@@ -405,29 +586,63 @@ class DocumentChromaStore:
                     ids.append(document_id)
         
         if documents:
+            # Filter complex metadata from documents before adding to ChromaDB
+            try:
+                filtered_documents = filter_complex_metadata(documents)
+                logger.info(f"Filtered complex metadata from {len(documents)} documents")
+            except Exception as e:
+                logger.warning(f"Error filtering complex metadata: {e}. Using original documents.")
+                filtered_documents = documents
+            
             # Compute embeddings for all documents
-            embeddings = self.compute_document_embeddings(documents)
+            embeddings = self.compute_document_embeddings(filtered_documents)
             
             if embeddings:
-                # Add documents with pre-computed embeddings
-                self.vectorstore.add_documents(
-                    documents=documents,
-                    ids=ids,
-                    embeddings=embeddings
-                )
+                try:
+                    # Add documents directly to ChromaDB with pre-computed embeddings
+                    texts = [doc.page_content for doc in filtered_documents]
+                    metadatas = [doc.metadata for doc in filtered_documents]
+                    self.collection.add(
+                        embeddings=embeddings,
+                        documents=texts,
+                        metadatas=metadatas,
+                        ids=ids
+                    )
+                    logger.info(f"Added {len(filtered_documents)} documents directly to ChromaDB with embeddings")
+                except Exception as e:
+                    logger.error(f"Failed to add documents directly to ChromaDB: {e}")
+                    # Fallback to Langchain wrapper
+                    self.vectorstore.add_documents(
+                        documents=filtered_documents,
+                        ids=ids,
+                        embeddings=embeddings
+                    )
+                    logger.info(f"Added {len(filtered_documents)} documents via Langchain wrapper with embeddings")
                 
                 # Add TF-IDF vectors if enabled
                 if self.tf_idf:
-                    self.add_tfidf_vectors(documents=documents, ids=ids)
+                    self.add_tfidf_vectors(documents=filtered_documents, ids=ids)
                 
-                logger.info(f"Added {len(documents)} documents with embeddings to the vectorstore.")
-                print("documents added to the vectorstore", len(documents))
+                print("documents added to the vectorstore", len(filtered_documents))
             else:
-                # Fallback to regular document addition if embedding computation fails
-                self.vectorstore.add_documents(documents=documents, ids=ids)
+                try:
+                    # Add documents directly to ChromaDB without pre-computed embeddings
+                    texts = [doc.page_content for doc in filtered_documents]
+                    metadatas = [doc.metadata for doc in filtered_documents]
+                    self.collection.add(
+                        documents=texts,
+                        metadatas=metadatas,
+                        ids=ids
+                    )
+                    logger.info(f"Added {len(filtered_documents)} documents directly to ChromaDB without embeddings")
+                except Exception as e:
+                    logger.error(f"Failed to add documents directly to ChromaDB: {e}")
+                    # Fallback to Langchain wrapper
+                    self.vectorstore.add_documents(documents=filtered_documents, ids=ids)
+                    logger.info(f"Added {len(filtered_documents)} documents via Langchain wrapper without embeddings")
+                
                 if self.tf_idf:
-                    self.add_tfidf_vectors(documents=documents, ids=ids)
-                logger.info(f"Added {len(documents)} documents to the vectorstore (without pre-computed embeddings).")
+                    self.add_tfidf_vectors(documents=filtered_documents, ids=ids)
         else:
             logger.warning("No valid documents were found to add to the vectorstore.")
 
@@ -443,11 +658,27 @@ class DocumentChromaStore:
             # Generate TF-IDF vectors
             tfidf_matrix = self.vectorizer.fit_transform(texts)
             metadata_list = [doc.metadata for doc in documents]
-            ids = [str(uuid.uuid4()) for _ in range(len(texts))]
+            tfidf_ids = [str(uuid.uuid4()) for _ in range(len(texts))]
+            
+            # Filter complex metadata for TF-IDF collection as well
+            try:
+                filtered_metadata_list = []
+                for metadata in metadata_list:
+                    # Create a temporary document to filter metadata
+                    temp_doc = LangchainDocument(page_content="", metadata=metadata)
+                    filtered_docs = filter_complex_metadata([temp_doc])
+                    if filtered_docs:
+                        filtered_metadata_list.append(filtered_docs[0].metadata)
+                    else:
+                        filtered_metadata_list.append(metadata)
+            except Exception as e:
+                logger.warning(f"Error filtering complex metadata for TF-IDF: {e}. Using original metadata.")
+                filtered_metadata_list = metadata_list
+            
             self.tfidf_collection.add(
                 embeddings=tfidf_matrix.toarray(),
-                ids=ids,
-                metadatas=metadata_list
+                ids=tfidf_ids,
+                metadatas=filtered_metadata_list
             )
             logger.info(f"Added {len(texts)} TF-IDF vectors to collection {self.tfidf_collection_name}")
         else:
@@ -518,57 +749,6 @@ class DocumentChromaStore:
         except Exception as e:
             logger.error(f"Error during semantic search: {str(e)}")
             return []
-
-    def semantic_searches(self, query_texts: List[str], n_results: int = 5, where: Dict = None) -> Dict[str, Any]:
-        """Perform semantic search for multiple query texts.
-
-        Args:
-            query_texts: List of query strings
-            n_results: Number of results to return per query (default: 5)
-            where: Optional metadata filter dictionary
-
-        Returns:
-            Dictionary containing documents, distances and metadatas for the search results
-        """
-        if not self.vectorstore:
-            logger.warning("Chroma store not initialized. Please initialize first.")
-            return {
-                "documents": [],
-                "distances": [],
-                "metadatas": []
-            }
-
-        try:
-            # Perform similarity search for each query
-            results = self.vectorstore.similarity_search_with_relevance_scores(
-                query_texts[0] if len(query_texts) == 1 else query_texts,
-                k=n_results,
-                filter=where
-            )
-            
-            # Format results
-            documents = []
-            distances = []
-            metadatas = []
-
-            for doc, score in results:
-                documents.append(doc.page_content)
-                distances.append(float(score))
-                metadatas.append(doc.metadata)
-
-            return {
-                "documents": [documents],
-                "distances": [distances],
-                "metadatas": [metadatas]
-            }
-
-        except Exception as e:
-            logger.error(f"Error during multi-query semantic search: {str(e)}")
-            return {
-                "documents": [],
-                "distances": [],
-                "metadatas": []
-            }
 
     def semantic_search_with_bm25(self, query: str, k: int = 5, where: Dict = None, query_embedding: List[float] = None) -> List[Dict]:
         """Perform semantic search using both vector similarity and BM25 ranking.

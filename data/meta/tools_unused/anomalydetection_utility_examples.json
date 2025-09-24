@@ -1,0 +1,96 @@
+[
+  {
+    "function": "get_anomaly_summary",
+    "category": "analysis_summary",
+    "description": "Get basic summary of anomaly detection results",
+    "prerequisites": ["Any anomaly detection function"],
+    "example": {
+      "code": "# After running any anomaly detection function\nsummary = anomaly_pipe.get_anomaly_summary()\nprint(f\"Total anomalies: {summary['total_anomalies']}\")\nprint(f\"Anomaly percentage: {summary['total_anomaly_percentage']:.2f}%\")\nprint(f\"Detection method: {summary['detection_method']}\")\nprint(f\"Analysis name: {summary['analysis_name']}\")"
+    },
+    "parameters": {
+      "analysis_name": "Name of the specific analysis (optional)"
+    }
+  },
+  {
+    "function": "get_anomaly_summary",
+    "category": "analysis_summary",
+    "description": "Get summary for specific analysis",
+    "prerequisites": ["Any anomaly detection function"],
+    "example": {
+      "code": "summary = anomaly_pipe.get_anomaly_summary(analysis_name='statistical_outliers_zscore')\nprint(f\"Specific analysis summary: {summary}\")"
+    },
+    "parameters": {
+      "analysis_name": "Name of the specific analysis (optional)"
+    }
+  },
+  {
+    "function": "get_top_anomalies",
+    "category": "analysis_summary",
+    "description": "Get top 10 most severe anomalies",
+    "prerequisites": ["Any anomaly detection function"],
+    "example": {
+      "code": "# After running any anomaly detection function\ntop_anomalies = anomaly_pipe.get_top_anomalies(n=10, time_column='timestamp')\nprint(\"Top 10 Anomalies:\")\nprint(top_anomalies[['timestamp', 'value', 'anomaly_score']].head())\n\n# Get top anomalies for specific analysis\ntop_contextual = anomaly_pipe.get_top_anomalies(\n    n=5, \n    analysis_name='contextual_anomalies_residual_ewm'\n)\nprint(\"Top 5 Contextual Anomalies:\")\nprint(top_contextual.head())"
+    },
+    "parameters": {
+      "n": "Number of top anomalies to return (default: 10)",
+      "time_column": "Time column for sorting (optional)",
+      "analysis_name": "Specific analysis to get anomalies from (optional)"
+    }
+  },
+  {
+    "function": "AnomalyPipe.to_df",
+    "category": "data_export",
+    "description": "Export anomaly detection results to DataFrame",
+    "prerequisites": ["Any anomaly detection function"],
+    "example": {
+      "code": "# After running any anomaly detection function\nresult_df = anomaly_pipe.to_df()\nprint(f\"Result shape: {result_df.shape}\")\nprint(f\"Anomaly columns: {[col for col in result_df.columns if 'anomaly' in col]}\")\nprint(result_df.head())"
+    },
+    "parameters": {
+      "analysis_name": "Name of the specific analysis to convert (optional)",
+      "include_metadata": "Whether to include metadata columns (default: False)",
+      "include_original": "Whether to include original data columns (default: True)"
+    }
+  },
+  {
+    "function": "AnomalyPipe.to_df",
+    "category": "data_export",
+    "description": "Export with additional metadata",
+    "prerequisites": ["Any anomaly detection function"],
+    "example": {
+      "code": "result_df = anomaly_pipe.to_df(include_metadata=True)\nprint(f\"Columns with metadata: {result_df.columns.tolist()}\")"
+    },
+    "parameters": {
+      "analysis_name": "Name of the specific analysis to convert (optional)",
+      "include_metadata": "Whether to include metadata columns (default: False)",
+      "include_original": "Whether to include original data columns (default: True)"
+    }
+  },
+  {
+    "function": "AnomalyPipe.to_df",
+    "category": "data_export",
+    "description": "Export specific analysis results",
+    "prerequisites": ["Any anomaly detection function"],
+    "example": {
+      "code": "result_df = anomaly_pipe.to_df(analysis_name='statistical_outliers_zscore')\nprint(f\"Specific analysis results: {result_df.shape}\")"
+    },
+    "parameters": {
+      "analysis_name": "Name of the specific analysis to convert (optional)",
+      "include_metadata": "Whether to include metadata columns (default: False)",
+      "include_original": "Whether to include original data columns (default: True)"
+    }
+  },
+  {
+    "function": "AnomalyPipe.merge_to_df",
+    "category": "data_export",
+    "description": "Merge anomaly results back to original data",
+    "prerequisites": ["Any anomaly detection function"],
+    "example": {
+      "code": "# After running any anomaly detection function\noriginal_data = sample_data.copy()\nenriched_data = anomaly_pipe.merge_to_df(original_data)\nprint(f\"Enriched data shape: {enriched_data.shape}\")\nprint(f\"New columns: {[col for col in enriched_data.columns if col not in original_data.columns]}\")\nprint(enriched_data.head())"
+    },
+    "parameters": {
+      "base_df": "The base dataframe to merge results into",
+      "analysis_name": "Name of the specific analysis to merge (optional)",
+      "include_metadata": "Whether to include metadata columns (default: False)"
+    }
+  }
+]

@@ -143,7 +143,7 @@
       "function": "moving_correlation",
       "category": "moving_averages",
       "inputs": {
-        "column_pairs": [("price", "volume")],
+        "column_pairs": [["price", "volume"]],
         "window": 20,
         "output_suffix": "_corr"
       },
@@ -470,7 +470,7 @@
       "function": "moving_correlation",
       "category": "moving_averages",
       "inputs": {
-        "column_pairs": [("stock_a", "stock_b"), ("stock_a", "stock_c"), ("stock_b", "stock_c")],
+        "column_pairs": [["stock_a", "stock_b"], ["stock_a", "stock_c"], ["stock_b", "stock_c"]],
         "window": 60,
         "output_suffix": "_corr"
       },

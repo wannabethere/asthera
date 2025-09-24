@@ -545,10 +545,10 @@ async def api_add_table(
         )
         table_count = table_count.scalar()
         
-        if table_count >= 4:
+        if table_count >= 10:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Domain can have maximum 4 tables"
+                detail="Domain can have maximum 10 tables"
             )
         
         # Check for duplicate table name in the domain

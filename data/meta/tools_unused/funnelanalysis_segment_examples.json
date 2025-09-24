@@ -1,0 +1,87 @@
+[
+  {
+    "function": "analyze_funnel_by_segment",
+    "category": "funnel_analysis",
+    "description": "Compare onboarding completion rates across different user segments",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, analyze_funnel_by_segment\n\n# Step 1: Create sample segmented onboarding data\nonboarding_events = []\nuser_types = ['new_user', 'returning_user', 'premium_user']\nfor user_id in range(1, 301):\n    user_type = user_types[user_id % 3]\n    # Simulate onboarding process by user type\n    events = ['signup', 'profile_completion', 'first_connection', 'first_message_sent']\n    for i, event in enumerate(events):\n        if user_id % (4-i+1) == 0:  # Some users drop off at each step\n            onboarding_events.append({\n                'user_id': user_id,\n                'user_type': user_type,\n                'event_name': event,\n                'timestamp': pd.date_range('2023-01-01', periods=1, freq='D')[0] + pd.Timedelta(hours=i)\n            })\n\nsample_data = pd.DataFrame(onboarding_events)\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Analyze funnel by segment\ncohort_pipe = cohort_pipe | analyze_funnel_by_segment(\n    event_column='event_name',\n    user_id_column='user_id',\n    segment_column='user_type',\n    funnel_steps=['signup', 'profile_completion', 'first_connection', 'first_message_sent'],\n    step_names=['Sign Up', 'Profile', 'Connection', 'Messaging'],\n    min_users=100\n)\n\n# Step 4: View results\nfunnel_df = cohort_pipe.to_df()\nprint(f\"Segmented onboarding funnel analysis completed for {len(funnel_df)} segments\")"
+    },
+    "parameters": {
+      "event_column": "Column containing event names/types",
+      "user_id_column": "Column containing user identifiers",
+      "segment_column": "Column containing segment information for comparison",
+      "funnel_steps": "List of event names representing steps in the funnel, in order",
+      "step_names": "Friendly names for the funnel steps (optional)",
+      "min_users": "Minimum number of users required per segment (optional)"
+    }
+  },
+  {
+    "function": "analyze_funnel_by_segment",
+    "category": "funnel_analysis",
+    "description": "Analyze purchase funnel performance by customer age group",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, analyze_funnel_by_segment\n\n# Step 1: Create sample age-grouped purchase data\npurchase_events = []\nage_groups = ['18-24', '25-34', '35-44', '45-54', '55+']\nfor customer_id in range(1, 401):\n    age_group = age_groups[customer_id % 5]\n    # Simulate purchase process by age group\n    events = ['product_view', 'add_to_cart', 'checkout_begin', 'payment_info', 'order_complete']\n    for i, event in enumerate(events):\n        if customer_id % (5-i+1) == 0:  # Some users drop off at each step\n            purchase_events.append({\n                'customer_id': customer_id,\n                'age_group': age_group,\n                'purchase_event': event,\n                'timestamp': pd.date_range('2023-01-01', periods=1, freq='D')[0] + pd.Timedelta(hours=i)\n            })\n\nsample_data = pd.DataFrame(purchase_events)\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Analyze funnel by age group\ncohort_pipe = cohort_pipe | analyze_funnel_by_segment(\n    event_column='purchase_event',\n    user_id_column='customer_id',\n    segment_column='age_group',\n    funnel_steps=['product_view', 'add_to_cart', 'checkout_begin', 'payment_info', 'order_complete'],\n    min_users=50\n)\n\n# Step 4: View results\nfunnel_df = cohort_pipe.to_df()\nprint(f\"Age-grouped purchase funnel analysis completed for {len(funnel_df)} age groups\")"
+    },
+    "parameters": {
+      "event_column": "Column containing event names/types",
+      "user_id_column": "Column containing user identifiers",
+      "segment_column": "Column containing segment information for comparison",
+      "funnel_steps": "List of event names representing steps in the funnel, in order",
+      "step_names": "Friendly names for the funnel steps (optional)",
+      "min_users": "Minimum number of users required per segment (optional)"
+    }
+  },
+  {
+    "function": "analyze_funnel_by_segment",
+    "category": "funnel_analysis",
+    "description": "Compare subscription conversion rates between enterprise and individual users",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, analyze_funnel_by_segment\n\n# Step 1: Create sample subscription data by account type\nsubscription_events = []\naccount_types = ['enterprise', 'individual']\nfor user_id in range(1, 201):\n    account_type = account_types[user_id % 2]\n    # Simulate subscription process by account type\n    events = ['pricing_page_view', 'trial_signup', 'feature_usage', 'payment_info_added', 'paid_conversion']\n    for i, event in enumerate(events):\n        if user_id % (5-i+1) == 0:  # Some users drop off at each step\n            subscription_events.append({\n                'user_id': user_id,\n                'account_type': account_type,\n                'subscription_event': event,\n                'timestamp': pd.date_range('2023-01-01', periods=1, freq='D')[0] + pd.Timedelta(hours=i)\n            })\n\nsample_data = pd.DataFrame(subscription_events)\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Analyze funnel by account type\ncohort_pipe = cohort_pipe | analyze_funnel_by_segment(\n    event_column='subscription_event',\n    user_id_column='user_id',\n    segment_column='account_type',\n    funnel_steps=['pricing_page_view', 'trial_signup', 'feature_usage', 'payment_info_added', 'paid_conversion'],\n    step_names=['Pricing', 'Trial', 'Usage', 'Payment', 'Conversion']\n)\n\n# Step 4: View results\nfunnel_df = cohort_pipe.to_df()\nprint(f\"Account type subscription funnel analysis completed for {len(funnel_df)} account types\")"
+    },
+    "parameters": {
+      "event_column": "Column containing event names/types",
+      "user_id_column": "Column containing user identifiers",
+      "segment_column": "Column containing segment information for comparison",
+      "funnel_steps": "List of event names representing steps in the funnel, in order",
+      "step_names": "Friendly names for the funnel steps (optional)",
+      "min_users": "Minimum number of users required per segment (optional)"
+    }
+  },
+  {
+    "function": "analyze_funnel_by_segment",
+    "category": "funnel_analysis",
+    "description": "Analyze checkout funnel drop-off points by device type",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, analyze_funnel_by_segment\n\n# Step 1: Create sample device-type checkout data\ncheckout_events = []\ndevice_types = ['mobile', 'tablet', 'desktop']\nfor visitor_id in range(1, 301):\n    device_type = device_types[visitor_id % 3]\n    # Simulate checkout process by device type\n    events = ['cart_view', 'checkout_click', 'shipping_info', 'payment_info', 'review_order', 'complete_purchase']\n    for i, event in enumerate(events):\n        if visitor_id % (6-i+1) == 0:  # Some users drop off at each step\n            checkout_events.append({\n                'visitor_id': visitor_id,\n                'device_type': device_type,\n                'checkout_step': event,\n                'timestamp': pd.date_range('2023-01-01', periods=1, freq='D')[0] + pd.Timedelta(minutes=i*5)\n            })\n\nsample_data = pd.DataFrame(checkout_events)\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Analyze funnel by device type\ncohort_pipe = cohort_pipe | analyze_funnel_by_segment(\n    event_column='checkout_step',\n    user_id_column='visitor_id',\n    segment_column='device_type',\n    funnel_steps=['cart_view', 'checkout_click', 'shipping_info', 'payment_info', 'review_order', 'complete_purchase'],\n    min_users=25\n)\n\n# Step 4: View results\nfunnel_df = cohort_pipe.to_df()\nprint(f\"Device type checkout funnel analysis completed for {len(funnel_df)} device types\")"
+    },
+    "parameters": {
+      "event_column": "Column containing event names/types",
+      "user_id_column": "Column containing user identifiers",
+      "segment_column": "Column containing segment information for comparison",
+      "funnel_steps": "List of event names representing steps in the funnel, in order",
+      "step_names": "Friendly names for the funnel steps (optional)",
+      "min_users": "Minimum number of users required per segment (optional)"
+    }
+  },
+  {
+    "function": "analyze_funnel_by_segment",
+    "category": "funnel_analysis",
+    "description": "Measure conversion funnel performance by marketing channel with minimum 75 users per segment",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, analyze_funnel_by_segment\n\n# Step 1: Create sample marketing channel data\nmarketing_events = []\nchannels = ['organic', 'paid_search', 'social_media', 'email', 'referral']\nfor visitor_id in range(1, 501):\n    channel = channels[visitor_id % 5]\n    # Simulate conversion funnel by marketing channel\n    events = ['landing_page_view', 'signup_started', 'form_completed', 'email_verified', 'first_login']\n    for i, event in enumerate(events):\n        if visitor_id % (5-i+1) == 0:  # Some users drop off at each step\n            marketing_events.append({\n                'visitor_id': visitor_id,\n                'marketing_channel': channel,\n                'user_event': event,\n                'timestamp': pd.date_range('2023-01-01', periods=1, freq='D')[0] + pd.Timedelta(hours=i)\n            })\n\nsample_data = pd.DataFrame(marketing_events)\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Analyze funnel by marketing channel\ncohort_pipe = cohort_pipe | analyze_funnel_by_segment(\n    event_column='user_event',\n    user_id_column='visitor_id',\n    segment_column='marketing_channel',\n    funnel_steps=['landing_page_view', 'signup_started', 'form_completed', 'email_verified', 'first_login'],\n    min_users=75\n)\n\n# Step 4: View results\nfunnel_df = cohort_pipe.to_df()\nprint(f\"Marketing channel funnel analysis completed for {len(funnel_df)} channels\")"
+    },
+    "parameters": {
+      "event_column": "Column containing event names/types",
+      "user_id_column": "Column containing user identifiers",
+      "segment_column": "Column containing segment information for comparison",
+      "funnel_steps": "List of event names representing steps in the funnel, in order",
+      "step_names": "Friendly names for the funnel steps (optional)",
+      "min_users": "Minimum number of users required per segment (optional)"
+    }
+  }
+]

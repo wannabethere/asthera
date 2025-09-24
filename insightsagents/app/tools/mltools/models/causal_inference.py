@@ -75,6 +75,90 @@ class CausalPipe(BasePipe):
         if hasattr(source_pipe, 'instrumental_variables'):
             self.instrumental_variables = source_pipe.instrumental_variables.copy()
     
+    def _has_results(self) -> bool:
+        """Check if the pipeline has any results to merge"""
+        return (len(self.treatment_effects) > 0 or 
+                len(self.matched_data) > 0 or 
+                len(self.balance_tests) > 0 or 
+                len(self.ab_test_results) > 0 or 
+                len(self.power_analysis) > 0 or 
+                len(self.sensitivity_analysis) > 0)
+    
+    def merge_to_df(self, base_df: pd.DataFrame, analysis_name: Optional[str] = None, include_metadata: bool = False, **kwargs) -> pd.DataFrame:
+        """
+        Merge causal inference results into the base dataframe as new columns
+        
+        Parameters:
+        -----------
+        base_df : pd.DataFrame
+            The base dataframe to merge results into
+        analysis_name : str, optional
+            Specific analysis to merge (if None, merges all)
+        include_metadata : bool, default=False
+            Whether to include metadata columns
+        **kwargs : dict
+            Additional arguments
+            
+        Returns:
+        --------
+        pd.DataFrame
+            Base dataframe with causal inference results merged as new columns
+        """
+        if not self._has_results():
+            return base_df
+        
+        result_df = base_df.copy()
+        
+        # Merge treatment effects
+        for effect_name, effect_data in self.treatment_effects.items():
+            if analysis_name is None or effect_name == analysis_name:
+                if isinstance(effect_data, dict):
+                    for key, value in effect_data.items():
+                        if include_metadata:
+                            result_df[f"effect_{effect_name}_{key}"] = value
+        
+        # Merge matched data
+        for match_name, match_data in self.matched_data.items():
+            if analysis_name is None or match_name == analysis_name:
+                if isinstance(match_data, pd.DataFrame):
+                    for col in match_data.columns:
+                        if col not in result_df.columns:
+                            result_df[f"matched_{match_name}_{col}"] = None
+        
+        # Merge balance tests
+        for balance_name, balance_data in self.balance_tests.items():
+            if analysis_name is None or balance_name == analysis_name:
+                if isinstance(balance_data, dict):
+                    for key, value in balance_data.items():
+                        if include_metadata:
+                            result_df[f"balance_{balance_name}_{key}"] = value
+        
+        # Merge A/B test results
+        for ab_name, ab_data in self.ab_test_results.items():
+            if analysis_name is None or ab_name == analysis_name:
+                if isinstance(ab_data, dict):
+                    for key, value in ab_data.items():
+                        if include_metadata:
+                            result_df[f"ab_{ab_name}_{key}"] = value
+        
+        # Merge power analysis
+        for power_name, power_data in self.power_analysis.items():
+            if analysis_name is None or power_name == analysis_name:
+                if isinstance(power_data, dict):
+                    for key, value in power_data.items():
+                        if include_metadata:
+                            result_df[f"power_{power_name}_{key}"] = value
+        
+        # Merge sensitivity analysis
+        for sens_name, sens_data in self.sensitivity_analysis.items():
+            if analysis_name is None or sens_name == analysis_name:
+                if isinstance(sens_data, dict):
+                    for key, value in sens_data.items():
+                        if include_metadata:
+                            result_df[f"sensitivity_{sens_name}_{key}"] = value
+        
+        return result_df
+    
     def get_summary(self, **kwargs) -> Dict[str, Any]:
         """
         Get a summary of the causal inference analysis results.

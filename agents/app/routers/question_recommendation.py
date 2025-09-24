@@ -29,14 +29,14 @@ async def recommend_questions(
     
     request = QuestionRecommendation.Request(
         event_id=event_id,
-        mdl="",
+        mdl=mdl,
         user_question=user_question,
         project_id=project_id,
         configuration=configuration,
         previous_questions=previous_questions,
-        max_questions=10,
-        max_categories=3,
-        regenerate=True
+        max_questions=max_questions,
+        max_categories=max_categories,
+        regenerate=regenerate
     )
 
      

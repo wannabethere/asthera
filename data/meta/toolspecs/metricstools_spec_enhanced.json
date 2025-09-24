@@ -1,0 +1,1011 @@
+{
+    "metadata": {
+        "updated_at": "2024-01-16T12:00:00Z",
+        "llm_generated": true,
+        "total_functions": 23,
+        "categories": ["metrics"],
+        "complexity_levels": ["simple", "intermediate", "advanced"],
+        "pipe_name": "MetricsPipe",
+        "module": "metrics_tools",
+        "description": "Functions for calculating various metrics and statistics including basic metrics, correlations, aggregations, and advanced statistical measures",
+        "function_list": [
+            "Count", "Sum", "Max", "Min", "Ratio", "Dot", "Nth", "Variance", 
+            "StandardDeviation", "CV", "Correlation", "Cov", "Mean", "Median", 
+            "Percentile", "PivotTable", "GroupBy", "Filter", "CumulativeSum", 
+            "RollingMetric", "Execute", "ShowPivot", "ShowDataFrame"
+        ]
+    },
+    "functions": {
+        "Count": {
+            "category": "metrics",
+            "subcategory": "basic_metrics",
+            "pipe_name": "MetricsPipe",
+            "description": "Count the number of non-null values in a column",
+            "complexity": "simple",
+            "use_cases": [
+                "record counting",
+                "data validation",
+                "basic statistics",
+                "data quality assessment"
+            ],
+            "data_requirements": [
+                "Any data type",
+                "Column with values to count"
+            ],
+            "tags": ["count", "basic", "statistics", "validation"],
+            "keywords": ["count", "basic", "statistics", "validation", "records"],
+            "confidence_score": 0.95,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "variable", "type": "str", "description": "Column name to count"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output metric, defaults to 'count_{variable}' (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates count from a MetricsPipe"
+            },
+            "examples": [
+                "Count('user_id')",
+                "Count('sales', output_name='total_sales_count')"
+            ],
+            "usage_patterns": [
+                "Count(variable)",
+                "Count(variable, output_name='custom_name')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": [],
+            "related_functions": ["Sum", "Mean", "Max", "Min"]
+        },
+        "Sum": {
+            "category": "metrics",
+            "subcategory": "basic_metrics",
+            "pipe_name": "MetricsPipe",
+            "description": "Calculate the sum of a numerical column",
+            "complexity": "simple",
+            "use_cases": [
+                "total calculation",
+                "aggregation",
+                "basic statistics",
+                "revenue calculation"
+            ],
+            "data_requirements": [
+                "Numerical data",
+                "Column with numeric values"
+            ],
+            "tags": ["sum", "basic", "statistics", "aggregation"],
+            "keywords": ["sum", "total", "aggregation", "statistics", "numerical"],
+            "confidence_score": 0.95,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "variable", "type": "str", "description": "Column name to sum"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output metric, defaults to 'sum_{variable}' (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates sum from a MetricsPipe"
+            },
+            "examples": [
+                "Sum('revenue')",
+                "Sum('sales', output_name='total_sales')"
+            ],
+            "usage_patterns": [
+                "Sum(variable)",
+                "Sum(variable, output_name='custom_name')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": [],
+            "related_functions": ["Count", "Mean", "Max", "Min"]
+        },
+        "Mean": {
+            "category": "metrics",
+            "subcategory": "basic_metrics",
+            "pipe_name": "MetricsPipe",
+            "description": "Calculate the arithmetic mean of a numerical column",
+            "complexity": "simple",
+            "use_cases": [
+                "average calculation",
+                "central tendency analysis",
+                "basic statistics",
+                "data summarization"
+            ],
+            "data_requirements": [
+                "Numerical data",
+                "Column with numeric values"
+            ],
+            "tags": ["mean", "average", "statistics", "central_tendency"],
+            "keywords": ["mean", "average", "statistics", "central_tendency", "arithmetic"],
+            "confidence_score": 0.95,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "variable", "type": "str", "description": "Column name to calculate mean for"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output metric, defaults to 'mean_{variable}' (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates mean from a MetricsPipe"
+            },
+            "examples": [
+                "Mean('sales')",
+                "Mean('revenue', output_name='avg_revenue')"
+            ],
+            "usage_patterns": [
+                "Mean(variable)",
+                "Mean(variable, output_name='custom_name')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": [],
+            "related_functions": ["Count", "Sum", "Median", "StandardDeviation"]
+        },
+        "Max": {
+            "category": "metrics",
+            "subcategory": "basic_metrics",
+            "pipe_name": "MetricsPipe",
+            "description": "Find the maximum value in a numerical column",
+            "complexity": "simple",
+            "use_cases": [
+                "maximum value identification",
+                "range analysis",
+                "basic statistics",
+                "data validation"
+            ],
+            "data_requirements": [
+                "Numerical data",
+                "Column with numeric values"
+            ],
+            "tags": ["max", "maximum", "statistics", "range"],
+            "keywords": ["max", "maximum", "statistics", "range", "peak"],
+            "confidence_score": 0.95,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "variable", "type": "str", "description": "Column name to find maximum"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output metric, defaults to 'max_{variable}' (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates maximum from a MetricsPipe"
+            },
+            "examples": [
+                "Max('price')",
+                "Max('sales', output_name='peak_sales')"
+            ],
+            "usage_patterns": [
+                "Max(variable)",
+                "Max(variable, output_name='custom_name')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": [],
+            "related_functions": ["Min", "Mean", "Range", "Percentile"]
+        },
+        "Min": {
+            "category": "metrics",
+            "subcategory": "basic_metrics",
+            "pipe_name": "MetricsPipe",
+            "description": "Find the minimum value in a numerical column",
+            "complexity": "simple",
+            "use_cases": [
+                "minimum value identification",
+                "range analysis",
+                "basic statistics",
+                "data validation"
+            ],
+            "data_requirements": [
+                "Numerical data",
+                "Column with numeric values"
+            ],
+            "tags": ["min", "minimum", "statistics", "range"],
+            "keywords": ["min", "minimum", "statistics", "range", "lowest"],
+            "confidence_score": 0.95,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "variable", "type": "str", "description": "Column name to find minimum"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output metric, defaults to 'min_{variable}' (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates minimum from a MetricsPipe"
+            },
+            "examples": [
+                "Min('price')",
+                "Min('sales', output_name='lowest_sales')"
+            ],
+            "usage_patterns": [
+                "Min(variable)",
+                "Min(variable, output_name='custom_name')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": [],
+            "related_functions": ["Max", "Mean", "Range", "Percentile"]
+        },
+        "StandardDeviation": {
+            "category": "metrics",
+            "subcategory": "advanced_metrics",
+            "pipe_name": "MetricsPipe",
+            "description": "Calculate the standard deviation of a numerical column",
+            "complexity": "intermediate",
+            "use_cases": [
+                "variability measurement",
+                "data dispersion analysis",
+                "statistical analysis",
+                "data quality assessment"
+            ],
+            "data_requirements": [
+                "Numerical data",
+                "Column with numeric values",
+                "Sufficient data points for statistical calculation"
+            ],
+            "tags": ["standard_deviation", "variability", "statistics", "dispersion"],
+            "keywords": ["standard_deviation", "variability", "statistics", "dispersion", "spread"],
+            "confidence_score": 0.92,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "variable", "type": "str", "description": "Column name to calculate standard deviation for"}
+            ],
+            "optional_params": [
+                {"name": "unbiased", "type": "bool", "description": "Whether to use unbiased estimator (default: True)"},
+                {"name": "output_name", "type": "str", "description": "Name for the output metric, defaults to 'std_{variable}' (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates standard deviation from a MetricsPipe"
+            },
+            "examples": [
+                "StandardDeviation('sales')",
+                "StandardDeviation('revenue', unbiased=True, output_name='revenue_std')"
+            ],
+            "usage_patterns": [
+                "StandardDeviation(variable)",
+                "StandardDeviation(variable, unbiased=True)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": [],
+            "related_functions": ["Variance", "Mean", "CV", "Correlation"]
+        },
+        "Correlation": {
+            "category": "metrics",
+            "subcategory": "relationship_metrics",
+            "pipe_name": "MetricsPipe",
+            "description": "Calculate correlation between two numerical columns",
+            "complexity": "intermediate",
+            "use_cases": [
+                "relationship analysis",
+                "correlation measurement",
+                "statistical analysis",
+                "feature relationship assessment"
+            ],
+            "data_requirements": [
+                "Two numerical columns",
+                "Sufficient data points for correlation calculation",
+                "Paired observations"
+            ],
+            "tags": ["correlation", "relationship", "statistics", "association"],
+            "keywords": ["correlation", "relationship", "statistics", "association", "linear"],
+            "confidence_score": 0.90,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "variable1", "type": "str", "description": "First column name for correlation"},
+                {"name": "variable2", "type": "str", "description": "Second column name for correlation"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output metric, defaults to 'corr_{variable1}_{variable2}' (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates correlation from a MetricsPipe"
+            },
+            "examples": [
+                "Correlation('sales', 'revenue')",
+                "Correlation('price', 'demand', output_name='price_demand_corr')"
+            ],
+            "usage_patterns": [
+                "Correlation(variable1, variable2)",
+                "Correlation(variable1, variable2, output_name='custom_name')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": [],
+            "related_functions": ["Cov", "StandardDeviation", "Variance"]
+        },
+        "PivotTable": {
+            "category": "metrics",
+            "subcategory": "aggregation_metrics",
+            "pipe_name": "MetricsPipe",
+            "description": "Create pivot tables for data aggregation and analysis",
+            "complexity": "advanced",
+            "use_cases": [
+                "data aggregation",
+                "cross-tabulation analysis",
+                "summary table creation",
+                "multi-dimensional analysis"
+            ],
+            "data_requirements": [
+                "Categorical columns for grouping",
+                "Numerical columns for aggregation",
+                "Structured data for pivot operations"
+            ],
+            "tags": ["pivot", "aggregation", "cross_tabulation", "summary"],
+            "keywords": ["pivot", "aggregation", "cross_tabulation", "summary", "groupby"],
+            "confidence_score": 0.88,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "index", "type": "str or List[str]", "description": "Column(s) to use as index for pivot table"}
+            ],
+            "optional_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to use as columns for pivot table (optional)"},
+                {"name": "values", "type": "str or List[str]", "description": "Column(s) to aggregate (optional)"},
+                {"name": "aggfunc", "type": "str", "description": "Aggregation function to use (default: 'mean')"},
+                {"name": "fill_value", "type": "Any", "description": "Value to use for missing values (optional)"},
+                {"name": "output_name", "type": "str", "description": "Name for the output pivot table (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that creates pivot table from a MetricsPipe"
+            },
+            "examples": [
+                "PivotTable('category', values='sales', aggfunc='sum')",
+                "PivotTable(['region', 'category'], columns='quarter', values='revenue')"
+            ],
+            "usage_patterns": [
+                "PivotTable(index, values='column', aggfunc='sum')",
+                "PivotTable(index, columns='column', values='value')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": [],
+            "related_functions": ["GroupBy", "Count", "Sum", "Mean"]
+        },
+        "GroupBy": {
+            "category": "metrics",
+            "subcategory": "aggregation_metrics",
+            "pipe_name": "MetricsPipe",
+            "description": "Perform group-by operations with multiple aggregation functions",
+            "complexity": "advanced",
+            "use_cases": [
+                "grouped aggregation",
+                "segmented analysis",
+                "multi-level aggregation",
+                "categorical analysis"
+            ],
+            "data_requirements": [
+                "Categorical columns for grouping",
+                "Numerical columns for aggregation",
+                "Structured data for group operations"
+            ],
+            "tags": ["groupby", "aggregation", "grouping", "segmentation"],
+            "keywords": ["groupby", "aggregation", "grouping", "segmentation", "categorical"],
+            "confidence_score": 0.85,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "by", "type": "str or List[str]", "description": "Column(s) to group by"},
+                {"name": "agg_dict", "type": "Dict[str, Union[str, List[str]]]", "description": "Dictionary mapping columns to aggregation functions"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output grouped data (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that performs group-by operations from a MetricsPipe"
+            },
+            "examples": [
+                "GroupBy('category', {'sales': 'sum', 'revenue': 'mean'})",
+                "GroupBy(['region', 'category'], {'sales': ['sum', 'mean'], 'revenue': 'max'})"
+            ],
+            "usage_patterns": [
+                "GroupBy(by, agg_dict)",
+                "GroupBy(by, {'column': 'function'})"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": [],
+            "required_for": ["ShowDataFrame"],
+            "related_functions": ["PivotTable", "Count", "Sum", "Mean"],
+            "instructions": "This function MODIFIES the pipeline data by replacing it with grouped results. Subsequent functions will operate on the grouped data, not the original data. Use ShowDataFrame() to see the modified data structure."
+        },
+        "Ratio": {
+            "category": "metrics",
+            "subcategory": "derived_metrics",
+            "pipe_name": "MetricsPipe",
+            "description": "Calculate the ratio of sums of two columns",
+            "complexity": "intermediate",
+            "use_cases": [
+                "ratio calculation",
+                "proportion analysis",
+                "efficiency metrics",
+                "comparative analysis"
+            ],
+            "data_requirements": [
+                "Two numerical columns",
+                "Non-zero denominator values"
+            ],
+            "tags": ["ratio", "proportion", "derived", "comparison"],
+            "keywords": ["ratio", "proportion", "derived", "comparison", "efficiency"],
+            "confidence_score": 0.90,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "numerator", "type": "str", "description": "Column name for numerator"},
+                {"name": "denominator", "type": "str", "description": "Column name for denominator"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output metric, defaults to 'ratio_{numerator}_{denominator}' (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates ratio from a MetricsPipe"
+            },
+            "examples": [
+                "Ratio('revenue', 'costs')",
+                "Ratio('conversions', 'visitors', output_name='conversion_rate')"
+            ],
+            "usage_patterns": [
+                "Ratio(numerator, denominator)",
+                "Ratio(numerator, denominator, output_name='custom_name')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": [],
+            "related_functions": ["Sum", "Mean", "Correlation"]
+        },
+        "Dot": {
+            "category": "metrics",
+            "subcategory": "derived_metrics",
+            "pipe_name": "MetricsPipe",
+            "description": "Calculate the dot product between two columns",
+            "complexity": "intermediate",
+            "use_cases": [
+                "vector operations",
+                "similarity calculation",
+                "linear algebra operations",
+                "correlation analysis"
+            ],
+            "data_requirements": [
+                "Two numerical columns of equal length",
+                "Vector-like data structures"
+            ],
+            "tags": ["dot_product", "vector", "linear_algebra", "similarity"],
+            "keywords": ["dot_product", "vector", "linear_algebra", "similarity", "correlation"],
+            "confidence_score": 0.88,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "variable1", "type": "str", "description": "First column name"},
+                {"name": "variable2", "type": "str", "description": "Second column name"}
+            ],
+            "optional_params": [
+                {"name": "normalize", "type": "bool", "description": "Whether to normalize the dot product using the lengths (default: False)"},
+                {"name": "output_name", "type": "str", "description": "Name for the output metric, defaults to 'dot_{variable1}_{variable2}' (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates dot product from a MetricsPipe"
+            },
+            "examples": [
+                "Dot('feature1', 'feature2')",
+                "Dot('user_preferences', 'item_features', normalize=True)"
+            ],
+            "usage_patterns": [
+                "Dot(variable1, variable2)",
+                "Dot(variable1, variable2, normalize=True)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": [],
+            "related_functions": ["Correlation", "Cov", "Sum"]
+        },
+        "Nth": {
+            "category": "metrics",
+            "subcategory": "positional_metrics",
+            "pipe_name": "MetricsPipe",
+            "description": "Get the nth value of a column after sorting by another column",
+            "complexity": "intermediate",
+            "use_cases": [
+                "ranking analysis",
+                "percentile calculation",
+                "positional statistics",
+                "order-based metrics"
+            ],
+            "data_requirements": [
+                "Two columns (value and sort columns)",
+                "Sufficient data for sorting"
+            ],
+            "tags": ["nth", "ranking", "positional", "order"],
+            "keywords": ["nth", "ranking", "positional", "order", "percentile"],
+            "confidence_score": 0.85,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "variable", "type": "str", "description": "Column to get the value from"},
+                {"name": "n", "type": "int", "description": "Index of the value to retrieve (0-based)"},
+                {"name": "sort_by", "type": "str", "description": "Column to sort by"}
+            ],
+            "optional_params": [
+                {"name": "ascending", "type": "bool", "description": "Whether to sort in ascending order (default: True)"},
+                {"name": "dropna", "type": "bool", "description": "Whether to drop NaN values before finding the nth value (default: False)"},
+                {"name": "output_name", "type": "str", "description": "Name for the output metric, defaults to 'nth_{n}_{variable}_by_{sort_by}' (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that retrieves the nth value from a MetricsPipe"
+            },
+            "examples": [
+                "Nth('sales', 0, 'date')",
+                "Nth('price', 4, 'volume', ascending=False)"
+            ],
+            "usage_patterns": [
+                "Nth(variable, n, sort_by)",
+                "Nth(variable, n, sort_by, ascending=False)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": [],
+            "related_functions": ["Percentile", "Max", "Min"]
+        },
+        "Variance": {
+            "category": "metrics",
+            "subcategory": "statistical_metrics",
+            "pipe_name": "MetricsPipe",
+            "description": "Calculate the variance of a numerical column",
+            "complexity": "intermediate",
+            "use_cases": [
+                "variability measurement",
+                "data dispersion analysis",
+                "statistical analysis",
+                "data quality assessment"
+            ],
+            "data_requirements": [
+                "Numerical data",
+                "Column with numeric values",
+                "Sufficient data points for statistical calculation"
+            ],
+            "tags": ["variance", "variability", "statistics", "dispersion"],
+            "keywords": ["variance", "variability", "statistics", "dispersion", "spread"],
+            "confidence_score": 0.92,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "variable", "type": "str", "description": "Column to calculate variance for"}
+            ],
+            "optional_params": [
+                {"name": "unbiased", "type": "bool", "description": "Whether to use the unbiased (sample) estimator (default: True)"},
+                {"name": "output_name", "type": "str", "description": "Name for the output metric, defaults to 'var_{variable}' (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates variance from a MetricsPipe"
+            },
+            "examples": [
+                "Variance('sales')",
+                "Variance('revenue', unbiased=True, output_name='revenue_var')"
+            ],
+            "usage_patterns": [
+                "Variance(variable)",
+                "Variance(variable, unbiased=True)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": [],
+            "related_functions": ["StandardDeviation", "Mean", "CV"]
+        },
+        "CV": {
+            "category": "metrics",
+            "subcategory": "statistical_metrics",
+            "pipe_name": "MetricsPipe",
+            "description": "Calculate the coefficient of variation of a numerical column",
+            "complexity": "intermediate",
+            "use_cases": [
+                "relative variability measurement",
+                "normalized dispersion analysis",
+                "statistical analysis",
+                "data quality assessment"
+            ],
+            "data_requirements": [
+                "Numerical data",
+                "Column with numeric values",
+                "Non-zero mean values"
+            ],
+            "tags": ["coefficient_variation", "relative_variability", "statistics", "normalized"],
+            "keywords": ["coefficient_variation", "relative_variability", "statistics", "normalized", "cv"],
+            "confidence_score": 0.90,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "variable", "type": "str", "description": "Column to calculate coefficient of variation for"}
+            ],
+            "optional_params": [
+                {"name": "unbiased", "type": "bool", "description": "Whether to use the unbiased standard deviation (default: True)"},
+                {"name": "output_name", "type": "str", "description": "Name for the output metric, defaults to 'cv_{variable}' (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates coefficient of variation from a MetricsPipe"
+            },
+            "examples": [
+                "CV('sales')",
+                "CV('revenue', unbiased=True, output_name='revenue_cv')"
+            ],
+            "usage_patterns": [
+                "CV(variable)",
+                "CV(variable, unbiased=True)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": [],
+            "related_functions": ["StandardDeviation", "Mean", "Variance"]
+        },
+        "Cov": {
+            "category": "metrics",
+            "subcategory": "relationship_metrics",
+            "pipe_name": "MetricsPipe",
+            "description": "Calculate the covariance between two numerical columns",
+            "complexity": "intermediate",
+            "use_cases": [
+                "covariance measurement",
+                "relationship analysis",
+                "statistical analysis",
+                "feature relationship assessment"
+            ],
+            "data_requirements": [
+                "Two numerical columns",
+                "Sufficient data points for covariance calculation",
+                "Paired observations"
+            ],
+            "tags": ["covariance", "relationship", "statistics", "association"],
+            "keywords": ["covariance", "relationship", "statistics", "association", "linear"],
+            "confidence_score": 0.90,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "variable1", "type": "str", "description": "First column name for covariance"},
+                {"name": "variable2", "type": "str", "description": "Second column name for covariance"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output metric, defaults to 'cov_{variable1}_{variable2}' (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates covariance from a MetricsPipe"
+            },
+            "examples": [
+                "Cov('sales', 'revenue')",
+                "Cov('price', 'demand', output_name='price_demand_cov')"
+            ],
+            "usage_patterns": [
+                "Cov(variable1, variable2)",
+                "Cov(variable1, variable2, output_name='custom_name')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": [],
+            "related_functions": ["Correlation", "StandardDeviation", "Variance"]
+        },
+        "Median": {
+            "category": "metrics",
+            "subcategory": "basic_metrics",
+            "pipe_name": "MetricsPipe",
+            "description": "Calculate the median of a numerical column",
+            "complexity": "simple",
+            "use_cases": [
+                "central tendency analysis",
+                "robust statistics",
+                "outlier-resistant metrics",
+                "data summarization"
+            ],
+            "data_requirements": [
+                "Numerical data",
+                "Column with numeric values"
+            ],
+            "tags": ["median", "central_tendency", "robust", "statistics"],
+            "keywords": ["median", "central_tendency", "robust", "statistics", "middle"],
+            "confidence_score": 0.95,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "variable", "type": "str", "description": "Column name to calculate median for"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output metric, defaults to 'median_{variable}' (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates median from a MetricsPipe"
+            },
+            "examples": [
+                "Median('sales')",
+                "Median('revenue', output_name='median_revenue')"
+            ],
+            "usage_patterns": [
+                "Median(variable)",
+                "Median(variable, output_name='custom_name')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": [],
+            "related_functions": ["Mean", "Percentile", "Max", "Min"]
+        },
+        "Percentile": {
+            "category": "metrics",
+            "subcategory": "statistical_metrics",
+            "pipe_name": "MetricsPipe",
+            "description": "Calculate the specified percentile of a numerical column",
+            "complexity": "intermediate",
+            "use_cases": [
+                "percentile analysis",
+                "distribution analysis",
+                "statistical analysis",
+                "data summarization"
+            ],
+            "data_requirements": [
+                "Numerical data",
+                "Column with numeric values",
+                "Sufficient data points for percentile calculation"
+            ],
+            "tags": ["percentile", "distribution", "statistics", "quantile"],
+            "keywords": ["percentile", "distribution", "statistics", "quantile", "ranking"],
+            "confidence_score": 0.90,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "variable", "type": "str", "description": "Column name to calculate percentile for"},
+                {"name": "q", "type": "float", "description": "Percentile to calculate (0-100)"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output metric, defaults to 'pct{q}_{variable}' (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates percentile from a MetricsPipe"
+            },
+            "examples": [
+                "Percentile('sales', 90)",
+                "Percentile('revenue', 75, output_name='revenue_p75')"
+            ],
+            "usage_patterns": [
+                "Percentile(variable, q)",
+                "Percentile(variable, q, output_name='custom_name')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": [],
+            "related_functions": ["Median", "Max", "Min", "Nth"]
+        },
+        "Filter": {
+            "category": "metrics",
+            "subcategory": "data_filtering",
+            "pipe_name": "MetricsPipe",
+            "description": "Filter the dataframe based on a condition",
+            "complexity": "intermediate",
+            "use_cases": [
+                "data filtering",
+                "subset selection",
+                "conditional analysis",
+                "data preprocessing"
+            ],
+            "data_requirements": [
+                "DataFrame with data to filter",
+                "Condition function for filtering"
+            ],
+            "tags": ["filter", "subset", "condition", "preprocessing"],
+            "keywords": ["filter", "subset", "condition", "preprocessing", "selection"],
+            "confidence_score": 0.85,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "condition", "type": "Callable", "description": "Function that takes a dataframe and returns a boolean mask"}
+            ],
+            "optional_params": [
+                {"name": "output_name", "type": "str", "description": "Name for the output filtered data (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that filters data from a MetricsPipe"
+            },
+            "examples": [
+                "Filter(lambda df: df['sales'] > 1000)",
+                "Filter(lambda df: df['category'] == 'electronics', output_name='electronics_data')"
+            ],
+            "usage_patterns": [
+                "Filter(condition)",
+                "Filter(condition, output_name='custom_name')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": [],
+            "required_for": ["ShowDataFrame"],
+            "related_functions": ["SelectColumns", "GroupBy"],
+            "instructions": "This function MODIFIES the pipeline data by replacing it with filtered results. Subsequent functions will operate on the filtered data, not the original data. Use ShowDataFrame() to see the modified data structure."
+        },
+        "CumulativeSum": {
+            "category": "metrics",
+            "subcategory": "time_series_metrics",
+            "pipe_name": "MetricsPipe",
+            "description": "Calculate the cumulative sum of a column",
+            "complexity": "intermediate",
+            "use_cases": [
+                "cumulative calculations",
+                "running totals",
+                "time series analysis",
+                "progressive metrics"
+            ],
+            "data_requirements": [
+                "Numerical data",
+                "Column with numeric values",
+                "Ordered data (typically time series)"
+            ],
+            "tags": ["cumulative", "running_total", "time_series", "progressive"],
+            "keywords": ["cumulative", "running_total", "time_series", "progressive", "sum"],
+            "confidence_score": 0.90,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "variable", "type": "str", "description": "Column to calculate cumulative sum for"}
+            ],
+            "optional_params": [
+                {"name": "output_column", "type": "str", "description": "Name for the output column, defaults to 'cum_sum_{variable}' (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates cumulative sum from a MetricsPipe"
+            },
+            "examples": [
+                "CumulativeSum('sales')",
+                "CumulativeSum('revenue', output_column='cumulative_revenue')"
+            ],
+            "usage_patterns": [
+                "CumulativeSum(variable)",
+                "CumulativeSum(variable, output_column='custom_name')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": [],
+            "required_for": ["ShowDataFrame"],
+            "related_functions": ["Sum", "RollingMetric"],
+            "instructions": "This function MODIFIES the pipeline data by adding a new cumulative sum column. Subsequent functions will operate on the data with the new column. Use ShowDataFrame() to see the modified data structure."
+        },
+        "RollingMetric": {
+            "category": "metrics",
+            "subcategory": "time_series_metrics",
+            "pipe_name": "MetricsPipe",
+            "description": "Calculate a rolling metric on a column",
+            "complexity": "advanced",
+            "use_cases": [
+                "rolling calculations",
+                "time series analysis",
+                "moving averages",
+                "window-based metrics"
+            ],
+            "data_requirements": [
+                "Numerical data",
+                "Column with numeric values",
+                "Ordered data (typically time series)"
+            ],
+            "tags": ["rolling", "window", "time_series", "moving"],
+            "keywords": ["rolling", "window", "time_series", "moving", "average"],
+            "confidence_score": 0.88,
+            "llm_generated": true,
+            "required_params": [
+                {"name": "variable", "type": "str", "description": "Column to calculate rolling metric for"},
+                {"name": "window", "type": "int", "description": "Size of the rolling window"}
+            ],
+            "optional_params": [
+                {"name": "function", "type": "str", "description": "Function to apply to the rolling window ('mean', 'sum', 'std', etc.) (default: 'mean')"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations required (optional)"},
+                {"name": "center", "type": "bool", "description": "Whether to set the labels at the center of the window (default: False)"},
+                {"name": "output_column", "type": "str", "description": "Name for the output column (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates rolling metric from a MetricsPipe"
+            },
+            "examples": [
+                "RollingMetric('sales', 7, 'mean')",
+                "RollingMetric('revenue', 30, 'sum', output_column='monthly_revenue')"
+            ],
+            "usage_patterns": [
+                "RollingMetric(variable, window, function)",
+                "RollingMetric(variable, window, function, output_column='custom_name')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "depends_on_functions": [],
+            "required_for": ["ShowDataFrame"],
+            "related_functions": ["CumulativeSum", "Mean", "Sum"],
+            "instructions": "This function MODIFIES the pipeline data by adding a new rolling metric column. Subsequent functions will operate on the data with the new column. Use ShowDataFrame() to see the modified data structure."
+        },
+        "Execute": {
+            "category": "metrics",
+            "subcategory": "execution",
+            "pipe_name": "MetricsPipe",
+            "description": "Execute the pipeline and return all calculated metrics",
+            "complexity": "simple",
+            "use_cases": [
+                "pipeline execution",
+                "results retrieval",
+                "metrics collection",
+                "data export"
+            ],
+            "data_requirements": [
+                "Previously calculated metrics in pipeline"
+            ],
+            "tags": ["execute", "pipeline", "results", "export"],
+            "keywords": ["execute", "pipeline", "results", "export", "metrics"],
+            "confidence_score": 0.95,
+            "llm_generated": true,
+            "required_params": [],
+            "optional_params": [],
+            "outputs": {
+                "type": "Dict",
+                "description": "Dictionary of all calculated metrics"
+            },
+            "examples": [
+                "Execute()"
+            ],
+            "usage_patterns": [
+                "Execute()"
+            ],
+            "dependencies": [],
+            "depends_on_functions": [],
+            "related_functions": ["ShowPivot", "ShowDataFrame"]
+        },
+        "ShowPivot": {
+            "category": "metrics",
+            "subcategory": "display",
+            "pipe_name": "MetricsPipe",
+            "description": "Show a specific pivot table or the last created one",
+            "complexity": "simple",
+            "use_cases": [
+                "pivot table display",
+                "results visualization",
+                "data inspection",
+                "analysis review"
+            ],
+            "data_requirements": [
+                "Previously created pivot tables in pipeline"
+            ],
+            "tags": ["display", "pivot", "visualization", "inspection"],
+            "keywords": ["display", "pivot", "visualization", "inspection", "show"],
+            "confidence_score": 0.95,
+            "llm_generated": true,
+            "required_params": [],
+            "optional_params": [
+                {"name": "pivot_name", "type": "str", "description": "Name of the pivot table to show (optional)"}
+            ],
+            "outputs": {
+                "type": "pd.DataFrame",
+                "description": "Pivot table from the MetricsPipe"
+            },
+            "examples": [
+                "ShowPivot()",
+                "ShowPivot('sales_by_category')"
+            ],
+            "usage_patterns": [
+                "ShowPivot()",
+                "ShowPivot(pivot_name)"
+            ],
+            "dependencies": ["pandas"],
+            "depends_on_functions": ["PivotTable", "GroupBy", "Filter", "CumulativeSum", "RollingMetric"],
+            "related_functions": ["PivotTable", "Execute", "ShowDataFrame"],
+            "instructions": "This function displays pivot tables created by other functions. It can show any pivot table created by PivotTable, GroupBy, Filter, CumulativeSum, or RollingMetric functions."
+        },
+        "ShowDataFrame": {
+            "category": "metrics",
+            "subcategory": "display",
+            "pipe_name": "MetricsPipe",
+            "description": "Show the current dataframe",
+            "complexity": "simple",
+            "use_cases": [
+                "dataframe display",
+                "data inspection",
+                "results visualization",
+                "analysis review"
+            ],
+            "data_requirements": [
+                "DataFrame in pipeline"
+            ],
+            "tags": ["display", "dataframe", "visualization", "inspection"],
+            "keywords": ["display", "dataframe", "visualization", "inspection", "show"],
+            "confidence_score": 0.95,
+            "llm_generated": true,
+            "required_params": [],
+            "optional_params": [],
+            "outputs": {
+                "type": "pd.DataFrame",
+                "description": "Current dataframe from the MetricsPipe"
+            },
+            "examples": [
+                "ShowDataFrame()"
+            ],
+            "usage_patterns": [
+                "ShowDataFrame()"
+            ],
+            "dependencies": ["pandas"],
+            "depends_on_functions": ["GroupBy", "Filter", "CumulativeSum", "RollingMetric"],
+            "related_functions": ["Execute", "ShowPivot"],
+            "instructions": "This function displays the current dataframe state. It will show the original data unless modified by GroupBy, Filter, CumulativeSum, or RollingMetric functions, which change the pipeline data."
+        }
+    }
+}

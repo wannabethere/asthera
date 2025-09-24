@@ -351,6 +351,7 @@ class AnalysisIntentPlanner:
         function_collection:DocumentChromaStore=None,
         example_collection:DocumentChromaStore=None,
         insights_collection:DocumentChromaStore=None,
+        retrieval_helper=None,
         max_functions_to_retrieve: int = 10
     ):
         """
@@ -361,6 +362,7 @@ class AnalysisIntentPlanner:
             function_collection: ChromaDB collection for function definitions
             example_collection: ChromaDB collection for function examples
             insights_collection: ChromaDB collection for function insights
+            retrieval_helper: RetrievalHelper instance for accessing function definitions, examples, and insights
             max_functions_to_retrieve: Maximum number of functions to retrieve
         """
         self.llm = llm
@@ -368,7 +370,7 @@ class AnalysisIntentPlanner:
         self.example_collection = example_collection
         self.insights_collection = insights_collection
         self.max_functions_to_retrieve = max_functions_to_retrieve
-        self.retrieval_helper = RetrievalHelper()
+        self.retrieval_helper = retrieval_helper or RetrievalHelper()
         
         # Initialize FunctionRetrieval for getting top functions
         self.function_retrieval = FunctionRetrieval(
@@ -473,6 +475,12 @@ class AnalysisIntentPlanner:
                 project_id=project_id
             )
             logger.info(f"Step 3 result: {step3_result}")
+            logger.info(f"Step 3 pipeline reasoning plan length: {len(step3_result.get('pipeline_reasoning_plan', []))}")
+            if step3_result.get('pipeline_reasoning_plan'):
+                for i, step in enumerate(step3_result['pipeline_reasoning_plan'][:3]):
+                    logger.info(f"  Step {i+1}: {step.get('step_title', 'Unknown')} - {step.get('function_name', 'No function')}")
+            else:
+                logger.warning("Step 3 pipeline reasoning plan is empty!")
             # Create final result combining all three steps
             result = AnalysisIntentResult(
                 intent_type=step1_result.get("intent_type", "unclear_intent"),
@@ -488,7 +496,7 @@ class AnalysisIntentPlanner:
                 missing_columns=step1_result.get("missing_columns", []),
                 available_alternatives=step1_result.get("available_alternatives", []),
                 data_suggestions=step1_result.get("data_suggestions"),
-                reasoning_plan=step3_result.get("pipeline_reasoning_plan", []),  # Not returned in final result
+                reasoning_plan=step3_result.get("pipeline_reasoning_plan", step1_result.get("reasoning_plan", [])),  # Use Step 3 pipeline plan, fallback to Step 1
             )
             
             return result
@@ -1528,24 +1536,9 @@ Consider the reasoning plan steps and selected functions to determine the most a
             Dictionary with rephrased question, intent classification, and reasoning plan
         """
         try:
-            # Load all available functions for comprehensive planning
-            function_library = self.function_retrieval._load_function_library()
-            all_functions = []
-            
-            # Extract all functions from the library
-            for pipe_name, pipe_info in function_library.items():
-                if 'functions' in pipe_info:
-                    for func_name, func_info in pipe_info['functions'].items():
-                        all_functions.append({
-                            'function_name': func_name,
-                            'pipe_name': pipe_name,
-                            'description': func_info.get('description', ''),
-                            'usage_description': func_info.get('usage_description', ''),
-                            'category': func_info.get('category', ''),
-                            'type_of_operation': func_info.get('type_of_operation', '')
-                        })
-            
-            logger.info(f"Loaded {len(all_functions)} total functions for Step 1 analysis")
+            # Step 1: Simple reasoning plan generation without complex function retrieval
+            # We'll let Step 2 handle the actual function lookup
+            logger.info("Step 1: Generating simple reasoning plan without function retrieval")
             
             # Retrieve historical context and instructions if project_id is provided
             historical_context = ""
@@ -1668,14 +1661,46 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
 """
             )
             
-            # Format all functions for the prompt
+            # Format all functions for the prompt with enhanced parameter details
             functions_text = ""
             for i, func in enumerate(all_functions[:50], 1):  # Limit to first 50 for prompt size
                 functions_text += f"{i}. {func['function_name']} ({func['pipe_name']})\n"
                 functions_text += f"   Description: {func['description']}\n"
                 functions_text += f"   Usage: {func['usage_description']}\n"
                 functions_text += f"   Category: {func['category']}\n"
-                functions_text += f"   Type: {func['type_of_operation']}\n\n"
+                functions_text += f"   Type: {func['type_of_operation']}\n"
+                
+                # Add parameter details if available
+                required_params = func.get('required_params', [])
+                optional_params = func.get('optional_params', [])
+                outputs = func.get('outputs', {})
+                
+                if required_params:
+                    functions_text += f"   Required Parameters:\n"
+                    for param in required_params:
+                        if isinstance(param, dict):
+                            param_name = param.get('name', 'unknown')
+                            param_type = param.get('type', 'unknown')
+                            param_desc = param.get('description', 'No description')
+                            functions_text += f"     - {param_name} ({param_type}): {param_desc}\n"
+                        else:
+                            functions_text += f"     - {param}\n"
+                
+                if optional_params:
+                    functions_text += f"   Optional Parameters:\n"
+                    for param in optional_params:
+                        if isinstance(param, dict):
+                            param_name = param.get('name', 'unknown')
+                            param_type = param.get('type', 'unknown')
+                            param_desc = param.get('description', 'No description')
+                            functions_text += f"     - {param_name} ({param_type}): {param_desc}\n"
+                        else:
+                            functions_text += f"     - {param}\n"
+                
+                if outputs:
+                    functions_text += f"   Outputs: {outputs}\n"
+                
+                functions_text += "\n"
             
             # Format intent types for the prompt
             intent_types_text = ""
@@ -2140,8 +2165,8 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
         
         # Base functions by intent type
         intent_functions = {
-            "metrics_calculation": ["Mean", "Sum", "Count", "GroupBy", "PivotTable"],
-            "time_series_analysis": ["moving_average", "variance_analysis", "aggregate_by_time", "rolling_statistics"],
+            "metrics_calculation": ["Mean", "Sum", "Count", "Variance", "GroupBy", "PivotTable"],
+            "time_series_analysis": ["moving_average", "variance_analysis", "aggregate_by_time", "rolling_window"],
             "trend_analysis": ["calculate_growth_rates", "calculate_moving_average", "forecast_metric", "trend_detection"],
             "segmentation_analysis": ["run_kmeans", "run_dbscan", "run_rule_based", "hierarchical_clustering"],
             "cohort_analysis": ["calculate_retention", "form_time_cohorts", "calculate_conversion", "cohort_analysis"],
@@ -2155,7 +2180,7 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
         if intent_type in intent_functions:
             fallback_functions.extend(intent_functions[intent_type])
         else:
-            fallback_functions.extend(["Mean", "Sum", "Count", "GroupBy", "PivotTable"])
+            fallback_functions.extend(["Mean", "Sum", "Count", "Variance", "GroupBy", "PivotTable"])
         
         # Enhance with reasoning plan insights
         if reasoning_plan:
@@ -2295,6 +2320,9 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
                                     "category": function_def.get("category", "unknown_category"),
                                     "type_of_operation": function_def.get("type_of_operation", "unknown_operation")
                                 })
+                                # Ensure pipe_name is set correctly
+                                if "pipe_name" not in function_detail or function_detail["pipe_name"] == "unknown_pipeline":
+                                    function_detail["pipe_name"] = function_def.get("category", "unknown_pipeline")
                             
                             all_functions.append(function_detail)
                             
@@ -2313,9 +2341,9 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
                 top_function_names = []
                 for func in top_functions:
                     function_name = func["function_name"]
-                    category = func.get("category", "unknown_category")
-                    pipe_name = func.get("pipe_name", "unknown_pipeline")
-                    formatted_function = f"{function_name}: {category} ({pipe_name})"
+                    category = func.get("type_of_operation", "unknown_category")
+                    pipeline_type = func.get("pipe_name", "unknown_pipeline")  # Use pipe_name as pipeline type
+                    formatted_function = f"{function_name}: {category} ({pipeline_type})"
                     top_function_names.append(formatted_function)
                 
                 logger.info(f"Step 2 completed successfully:")
@@ -2470,6 +2498,11 @@ Focus on the MOST SPECIFIC analysis type that precisely matches the question req
             logger.info(f"Step 3 input - Function details: {len(function_details)}")
             logger.info(f"Step 3 input - Specific matches: {specific_function_matches}")
             
+            # If no specific matches, create them from function_details
+            if not specific_function_matches and function_details:
+                specific_function_matches = [func.get('function_name', '') for func in function_details[:5] if func.get('function_name')]
+                logger.info(f"Created specific matches from function details: {specific_function_matches}")
+            
             if not function_details:
                 logger.warning("No function details available for Step 3")
                 return {
@@ -2492,7 +2525,8 @@ The data is already prepared and ready to be used for analysis. We should skip a
 - The data is already prepared and ready to be used for analysis. We should skip any data selection steps as well.
 - **ABSOLUTELY NO VISUALIZATION STEPS**: This system is for backend data pipeline execution only. Do not include any visualization, plotting, charting, display, or show functions in the reasoning plan.
 - Focus only on data processing, analysis, and transformation functions that can be executed in backend pipelines.
-- If you see any visualization-related keywords in your reasoning, replace them with appropriate data processing steps.
+- **CRITICAL**: Use ONLY the exact function names from the specific_function_matches list. Do NOT create generic names like "MovingVariance", "OperationsPipe", "GroupBy", "Trend", "TimeSeries", "MovingSum".
+- **CRITICAL**: If specific_function_matches is empty, use function names from the function_details list exactly as they appear.
 ### USER QUESTION ###
 {question}
 
@@ -2517,14 +2551,29 @@ The following functions are EXACT matches for the user's question and should be 
 **Description:** {dataframe_description}
 **Summary:** {dataframe_summary}
 
-### SELECTION STRATEGY ###
-1. Please always create step 1 of plan as the data selection step so we can get the most relevant columns from the dataframe.
-2. Add as many columns to the plan that will be needed for selection.
+### DATA PREPARATION STRATEGY ###
+1. Focus on data processing and analysis steps, not data selection.
+2. The data is already prepared and ready for analysis.
 
 ### STEP 3 TASK ###
 Create a detailed pipeline reasoning plan that:
 
-1. **PRIORITIZE SPECIFIC MATCHES**: Use the specific function matches listed above as the PRIMARY functions for your pipeline steps
+**CRITICAL FUNCTION NAME REQUIREMENT**: 
+- You MUST use ONLY the exact function names from the specific_function_matches list above.
+- If specific_function_matches is empty, use function names from the function_details list exactly as they appear.
+- Do NOT create generic names like "MovingVariance", "OperationsPipe", "GroupBy", "Trend", "TimeSeries", "MovingSum".
+- Do NOT use pipeline names like "MetricsPipe", "TimeSeriesPipe", "MovingAggrPipe" as function names.
+- These incorrect names will cause the pipeline to fail.
+
+**EXAMPLES OF CORRECT FUNCTION NAMES**: "moving_sum", "moving_variance", "Sum", "Variance", "variance_analysis", "calculate_statistical_trend"
+**EXAMPLES OF INCORRECT FUNCTION NAMES**: "TimeSeries", "MovingSum", "MovingVariance", "OperationsPipe", "GroupBy", "Trend", "MetricsPipe", "TimeSeriesPipe"
+
+**CRITICAL METADATA REQUIREMENTS**:
+- **pipeline_type**: MUST use the exact pipe_name from function details (e.g., "MovingAggrPipe", "TimeSeriesPipe")
+- **function_category**: MUST use the exact type_of_operation from function details (e.g., "basic_moving_metrics", "time_series_analysis")
+- **NEVER use**: "unknown_operation", "unknown_pipeline", or generic categories
+
+1. **PRIORITIZE SPECIFIC MATCHES**: Use the specific function matches listed above as the PRIMARY functions for your pipeline steps - USE THE EXACT FUNCTION NAMES (e.g., "moving_sum", "moving_variance", "Sum", "Variance")
 2. **ANALYZE FUNCTION DEFINITIONS**: Examine each function's required parameters, optional parameters, and outputs
 3. **CREATE NATURAL LANGUAGE STEPS**: Convert function definitions into natural language reasoning steps
 4. **PROCESS INPUTS PROPERLY**: Define how to process and prepare inputs for each function
@@ -2542,12 +2591,11 @@ Create a detailed pipeline reasoning plan that:
 - Do NOT create separate pipelines for functions that should be embedded as parameters
 - Use function names from the group aggregation functions: mean, sum_values, count_values, max_value, min_value, std_dev, variance, median, unique_count, mode, weighted_average, geometric_mean, harmonic_mean, interquartile_range, mad, percent_change, absolute_change, etc.
 
-**CRITICAL PARAMETER MAPPING RULES**:
+**PARAMETER MAPPING GUIDELINES**:
 - **Configuration parameters** (window, annualize, method, etc.) should be set to appropriate values, NOT mapped to columns
 - **Data parameters** (variable, group_column, time_column, etc.) should be mapped to actual column names
-- For calculate_growth_rates: window should be an integer (e.g., 30 for 30-day window), annualize should be boolean (True/False), method should be string ('percentage', 'log', 'cagr')
-- For GroupBy: by should be column names, agg_dict should map columns to aggregation functions
-- For aggregate_by_time: date_column should be date column, metric_columns should be numeric columns
+- Use the function definitions to understand parameter requirements
+- Map parameters based on the specific function's needs and available data
 
 ### PIPELINE REASONING REQUIREMENTS ###
 Each pipeline reasoning step should contain:
@@ -2567,11 +2615,10 @@ Each pipeline reasoning step should contain:
 ### ENHANCED METADATA REQUIREMENTS ###
 Each step should also include enhanced metadata for better pipeline generation:
 
-- **column_mapping**: Dictionary mapping DATA parameters (not configuration parameters) to actual available columns
+- **column_mapping**: Dictionary mapping data parameters to actual available columns
   - Example: {{"variable": "Transactional value", "by": "Region, Project", "date_column": "Date"}}
-  - **DO NOT MAP**: window, annualize, method, min_periods, center, output_suffix, suffix, periods, lag, lead, shift, fill_value, limit, dropna, how, axis, level, ascending, inplace, ignore_index, sort, na_position, key, keep, duplicates, verify_integrity, sort_index, sort_values, reset_index, drop, append, agg_dict, time_period, aggregation, fill_missing, include_current_period, time_name, datetime_format
-  - **ONLY MAP**: variable, columns, by, date_column, time_column, metric_columns, value_column, target_column, feature_column, label_column, category_column, region_column, project_column, department_column, cost_center_column
-  - **CORRECT EXAMPLE**: For calculate_growth_rates, column_mapping should be {{"time_column": "Date"}} and parameter_mapping should be {{"window": 30, "annualize": True, "method": "percentage"}}
+  - Map data parameters (not configuration parameters) to available columns
+  - Use function definitions to understand which parameters need column mapping
 - **output_columns**: List of columns that will be created by this step
   - Example: ["sum_Transactional value", "count_Transactional value", "mean_Transactional value"]
 - **input_columns**: List of columns required as input for this step
@@ -2582,19 +2629,26 @@ Each step should also include enhanced metadata for better pipeline generation:
   - Example: "Uses aggregated data from step 1 as input"
 - **embedded_function_columns**: If embedded_function_parameter is true, specify columns needed by embedded function
   - Example: {{"embedded_input_columns": ["Transactional value"], "embedded_output_columns": ["variance_Transactional value"]}}
-- **pipeline_type**: The pipeline type this step will use
-  - Example: "MetricsPipe", "TimeSeriesPipe", "CohortPipe"
-- **function_category**: The category/type of operation this function performs
-  - Example: "basic_metrics", "time_aggregation", "clustering"
+- **pipeline_type**: The pipeline type this step will use (use the pipe_name from function details)
+  - Example: "MovingAggrPipe", "TimeSeriesPipe", "CohortPipe"
+- **function_category**: The category/type of operation this function performs (use the type_of_operation from function details)
+  - Example: "basic_moving_metrics", "time_series_analysis", "clustering"
 - **parameter_constraints**: Any constraints or validation rules for parameters
   - Example: {{"window": "must be positive integer", "threshold": "must be between 0 and 1"}}
 - **error_handling**: How to handle potential errors or edge cases
   - Example: "Handle missing values in group columns", "Validate time column format"
 
 **FUNCTION SELECTION PRIORITY**:
-1. **FIRST CHOICE**: Use functions from the specific_function_matches list
+1. **FIRST CHOICE**: Use functions from the specific_function_matches list - USE THE EXACT FUNCTION NAMES (e.g., "variance_analysis", "moving_variance", "Variance")
 2. **SECOND CHOICE**: Use other functions from the function_details that best match the step requirements
 3. **LAST RESORT**: Use "None" only if no suitable function exists for data preparation or data processing steps
+
+**CRITICAL FUNCTION NAME RULES**:
+- ALWAYS use the EXACT function names from specific_function_matches (e.g., "moving_sum", "moving_variance", "Sum", "Variance")
+- NEVER use generic names like "MovingVariance", "OperationsPipe", "GroupBy", "Trend", "TimeSeries", "MovingSum"
+- NEVER use pipeline names like "MetricsPipe", "TimeSeriesPipe", "MovingAggrPipe" as function names
+- The function_name field MUST contain the actual function name from the retrieved functions
+- If specific_function_matches is empty, use function names from the function_details list
 
 **EMBEDDED FUNCTION PARAMETER GUIDELINES**:
 - **USE EMBEDDED PARAMETERS FOR**: moving_apply_by_group, GroupBy, and similar functions that accept function parameters
@@ -2615,14 +2669,16 @@ Each step should also include enhanced metadata for better pipeline generation:
 ### OUTPUT FORMAT ###
 Provide your response as a JSON object with only the pipeline_reasoning_plan:
 
+**CRITICAL**: Use ONLY the exact function names from specific_function_matches or function_details (e.g., "moving_sum", "moving_variance", "Sum", "Variance") - NOT generic names like "MovingVariance", "OperationsPipe", "TimeSeries", "MovingSum", "MetricsPipe", "TimeSeriesPipe"
+
 {{
     "pipeline_reasoning_plan": [
         {{
             "step_number": 1,
             "step_title": "Data Preparation and Validation",
             "step_description": "Natural language description of what this step does",
-            "function_name": "function_name",
-            "pipeline_name": "pipeline_name",
+            "function_name": "moving_variance",  // CORRECT: Use exact function name from specific_function_matches
+            "pipeline_name": "pipe_name",
             "input_processing": "How to process inputs for this function",
             "parameter_mapping": "How to map data to function parameters",
             "expected_output": "What this step produces",
@@ -2637,8 +2693,8 @@ Provide your response as a JSON object with only the pipeline_reasoning_plan:
             "step_dependencies": [],
             "data_flow": "Initial data input",
             "embedded_function_columns": null,
-            "pipeline_type": "MetricsPipe",
-            "function_category": "basic_metrics",
+            "pipeline_type": "MovingAggrPipe",
+            "function_category": "basic_moving_metrics",
             "parameter_constraints": {{"param1": "constraint description"}},
             "error_handling": "How to handle errors"
         }},
@@ -2646,8 +2702,8 @@ Provide your response as a JSON object with only the pipeline_reasoning_plan:
             "step_number": 2,
             "step_title": "Moving Apply with Embedded Variance",
             "step_description": "Apply moving variance calculation by group with embedded Variance function",
-            "function_name": "moving_apply_by_group",
-            "pipeline_name": "MovingAveragePipe",
+            "function_name": "moving_variance",  // CORRECT: Use exact function name from specific_function_matches
+            "pipeline_name": "MovingAggrPipe",
             "input_processing": "Prepare time series data with group columns",
             "parameter_mapping": "Map columns to function parameters, embed Variance as function parameter",
             "expected_output": "Rolling variance values by group over time",
@@ -2676,28 +2732,37 @@ Provide your response as a JSON object with only the pipeline_reasoning_plan:
                 "embedded_input_columns": ["Transactional value"],
                 "embedded_output_columns": ["variance_Transactional value"]
             }},
-            "pipeline_type": "TimeSeriesPipe",
-            "function_category": "time_aggregation",
+            "pipeline_type": "MovingAggrPipe",
+            "function_category": "basic_moving_metrics",
             "parameter_constraints": {{
                 "window": "must be positive integer",
-                "min_periods": "must be positive integer <= {{window}}"
+                "min_periods": "must be <= window"
             }},
-            "error_handling": "Handle missing values in group columns, validate time column format"
+            "error_handling": "Handle missing values in time series data"
         }}
     ]
 }}
 
-Focus on creating clear, actionable reasoning steps that the next agent can use to generate actual pipeline code. Each step should be specific enough to guide code generation but general enough to be flexible.
+**IMPORTANT**: 
+- Use specific function matches when available (e.g., "variance_analysis", "moving_variance")
+- Map data parameters to actual column names from available columns OR previous step outputs with detailed reasoning
+- Set configuration parameters to appropriate values with clear justification
+- Include required/optional status for each parameter
+- Provide reasoning for parameter choices
+- Always verify that selected column names exist in available columns OR previous step outputs
+- Track output columns from each step for use in subsequent steps
+- Consider using previous step outputs as input for subsequent steps when appropriate
+- Follow the column identification rules above
 
-**REMEMBER**: The specific function matches are the most relevant functions for this analysis. Use them as the primary functions in your pipeline reasoning plan.
-
-**SPECIFIC EXAMPLE - Variance + moving_apply_by_group**:
-When the user asks for "variance with moving apply by group", the reasoning plan should specify:
-- Step 1: Use moving_apply_by_group as the primary function
-- embedded_function_parameter: true
-- embedded_function_details: Specify variance as the embedded function from group aggregation functions
-- This tells the code generation agent to create: function=variance
-- NOT separate pipelines for Variance and moving_apply_by_group
+**VALIDATION CHECK**: Before submitting your response, verify that:
+1. All function_name fields contain actual function names (not pipeline names)
+2. All pipeline_name fields contain pipeline types from the pipe_name field
+3. Use the "pipe_name" field value for pipeline_name, not the "category" field
+4. Data parameters map to actual column names from available columns
+5. Configuration parameters have appropriate values
+6. All selected column names exist in available columns
+7. Each step specifies its output_columns for use in subsequent steps
+8. ALL MANDATORY FIELDS are present in every step
 """
             )
             
@@ -2705,7 +2770,7 @@ When the user asks for "variance with moving apply by group", the reasoning plan
             function_details_text = ""
             for i, func in enumerate(function_details, 1):
                 function_details_text += f"Function {i}: {func.get('function_name', 'Unknown')}\n"
-                function_details_text += f"  Pipe: {func.get('pipe_name', 'Unknown')}\n"
+                function_details_text += f"  Pipe: {func.get('category', 'Unknown')}\n"
                 function_details_text += f"  Description: {func.get('description', 'No description')}\n"
                 function_details_text += f"  Usage: {func.get('usage_description', 'No usage info')}\n"
                 
@@ -2802,30 +2867,7 @@ When the user asks for "variance with moving apply by group", the reasoning plan
                     step3_result = orjson.loads(response_content.strip())
                     logger.info("Step 3 LLM response parsed successfully")
                     
-                    # Post-process: Filter out any visualization steps that might have slipped through
-                    if "pipeline_reasoning_plan" in step3_result and step3_result["pipeline_reasoning_plan"]:
-                        filtered_pipeline_plan = []
-                        for step in step3_result["pipeline_reasoning_plan"]:
-                            step_title = step.get("step_title", "").lower()
-                            step_desc = step.get("step_description", "").lower()
-                            
-                            # Check for visualization keywords
-                            visualization_keywords = [
-                                "visualize", "visualization", "plot", "plotting", "chart", "charting", 
-                                "graph", "graphing", "show", "display", "create visual", "create plot",
-                                "create chart", "create graph", "draw", "render", "present"
-                            ]
-                            
-                            has_visualization = any(keyword in step_title or keyword in step_desc 
-                                                  for keyword in visualization_keywords)
-                            
-                            if not has_visualization:
-                                filtered_pipeline_plan.append(step)
-                            else:
-                                logger.warning(f"Filtered out visualization step from pipeline: {step.get('step_title', 'Unknown')}")
-                        
-                        step3_result["pipeline_reasoning_plan"] = filtered_pipeline_plan
-                        logger.info(f"Filtered pipeline reasoning plan: {len(filtered_pipeline_plan)} steps after removing visualization steps")
+                    
                     
                 except Exception as parse_error:
                     logger.warning(f"Failed to parse Step 3 JSON response: {parse_error}")
@@ -2968,26 +3010,153 @@ When the user asks for "variance with moving apply by group", the reasoning plan
         dataframe_description: str
     ) -> Dict[str, Any]:
         """
-        Enhance a step with basic metadata - column mapping will be handled by LLM-based function input detection
+        Enhance a step with comprehensive metadata including function category and column mapping
         """
         enhanced_step = step.copy()
         
-        # Let the self-correcting RAG pipeline handle column mapping through LLM-based detection
-        # This avoids hardcoded column mapping logic and uses the more sophisticated approach
-        
-        # Add basic metadata that doesn't require hardcoded column mapping
+        # Add basic metadata
         enhanced_step['available_columns'] = available_columns
         enhanced_step['dataframe_description'] = dataframe_description
         enhanced_step['function_name'] = function_detail.get('function_name', '')
-        enhanced_step['pipeline_type'] = function_detail.get('category', 'Unknown')
+        enhanced_step['pipeline_type'] = function_detail.get('pipe_name', 'Unknown')
         enhanced_step['function_category'] = function_detail.get('type_of_operation', 'unknown')
         
-        # Initialize empty column mapping - will be filled by LLM-based detection
-        enhanced_step['column_mapping'] = {}
-        enhanced_step['input_columns'] = []
-        enhanced_step['output_columns'] = []
+        # Generate column mapping based on function parameters and available columns
+        column_mapping = {}
+        input_columns = []
+        output_columns = []
+        
+        # Get function parameters
+        required_params = function_detail.get('required_params', [])
+        optional_params = function_detail.get('optional_params', [])
+        all_params = required_params + optional_params
+        
+        # Map data parameters to available columns
+        for param in all_params:
+            param_name = param.get('name', '') if isinstance(param, dict) else str(param)
+            
+            # Skip configuration parameters
+            config_params = ['window', 'annualize', 'method', 'min_periods', 'center', 'output_suffix', 
+                           'suffix', 'periods', 'lag', 'lead', 'shift', 'fill_value', 'limit', 'dropna', 
+                           'how', 'axis', 'level', 'ascending', 'inplace', 'ignore_index', 'sort', 
+                           'na_position', 'key', 'keep', 'duplicates', 'verify_integrity', 'sort_index', 
+                           'sort_values', 'reset_index', 'drop', 'append', 'agg_dict', 'time_period', 
+                           'aggregation', 'fill_missing', 'include_current_period', 'time_name', 'datetime_format']
+            
+            if param_name in config_params:
+                continue
+                
+            # Map data parameters to available columns
+            if param_name in ['variable', 'columns', 'by', 'date_column', 'time_column', 'metric_columns', 
+                            'value_column', 'target_column', 'feature_column', 'label_column', 'category_column', 
+                            'region_column', 'project_column', 'department_column', 'cost_center_column']:
+                
+                # Find best matching column
+                best_match = self._find_best_column_match(param_name, available_columns)
+                if best_match:
+                    column_mapping[param_name] = best_match
+                    input_columns.append(best_match)
+        
+        # Generate output columns based on function name and input columns
+        function_name = function_detail.get('function_name', '')
+        if function_name == 'Sum' and 'Transactional value' in input_columns:
+            output_columns.append('sum_Transactional value')
+        elif function_name == 'moving_variance' and 'sum_Transactional value' in input_columns:
+            output_columns.append('rolling_variance_sum_Transactional value')
+        elif function_name == 'calculate_statistical_trend' and 'rolling_variance_sum_Transactional value' in input_columns:
+            output_columns.append('trend_rolling_variance_sum_Transactional value')
+        
+        enhanced_step['column_mapping'] = column_mapping
+        enhanced_step['input_columns'] = input_columns
+        enhanced_step['output_columns'] = output_columns
         
         return enhanced_step
+    
+    def _find_best_column_match(self, param_name: str, available_columns: List[str]) -> str:
+        """
+        Find the best matching column for a parameter
+        """
+        param_lower = param_name.lower()
+        
+        # Direct matches
+        for col in available_columns:
+            if col.lower() == param_lower:
+                return col
+        
+        # Partial matches
+        for col in available_columns:
+            col_lower = col.lower()
+            if (param_lower in col_lower or col_lower in param_lower or
+                any(keyword in col_lower for keyword in param_lower.split('_'))):
+                return col
+        
+        # Special cases
+        if param_name in ['variable', 'columns', 'value_column']:
+            # Look for value-related columns
+            value_cols = [col for col in available_columns if any(v in col.lower() for v in ['value', 'amount', 'price', 'cost', 'revenue'])]
+            if value_cols:
+                return value_cols[0]
+        
+        if param_name in ['by', 'group_column']:
+            # Look for grouping columns
+            group_cols = [col for col in available_columns if any(g in col.lower() for g in ['project', 'department', 'region', 'category'])]
+            if group_cols:
+                return group_cols[0]
+        
+        if param_name in ['date_column', 'time_column']:
+            # Look for date columns
+            date_cols = [col for col in available_columns if any(d in col.lower() for d in ['date', 'time', 'created', 'updated'])]
+            if date_cols:
+                return date_cols[0]
+        
+        return available_columns[0] if available_columns else ''
+    
+    def _parse_text_function_definition(self, text: str) -> Dict[str, Any]:
+        """
+        Parse a text-format function definition into a dictionary
+        """
+        func_def = {}
+        lines = text.strip().split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            if ':' in line:
+                key, value = line.split(':', 1)
+                key = key.strip().lower().replace(' ', '_')
+                value = value.strip()
+                
+                # Map common keys
+                if key == 'function':
+                    func_def['function_name'] = value
+                elif key == 'pipe':
+                    func_def['pipe_name'] = value
+                elif key == 'category':
+                    func_def['category'] = value
+                elif key == 'subcategory':
+                    func_def['subcategory'] = value
+                elif key == 'complexity':
+                    func_def['complexity'] = value
+                elif key == 'description':
+                    func_def['description'] = value
+                elif key == 'usage':
+                    func_def['usage_description'] = value
+                elif key == 'module':
+                    func_def['module'] = value
+                else:
+                    func_def[key] = value
+        
+        # Set default values for missing fields
+        func_def.setdefault('function_name', '')
+        func_def.setdefault('pipe_name', 'Unknown')
+        func_def.setdefault('category', 'unknown_category')
+        func_def.setdefault('type_of_operation', 'unknown_operation')
+        func_def.setdefault('description', '')
+        func_def.setdefault('usage_description', '')
+        func_def.setdefault('required_params', [])
+        func_def.setdefault('optional_params', [])
+        func_def.setdefault('outputs', {})
+        
+        return func_def
     
     # Column mapping is now handled by LLM-based function input detection in the self-correcting RAG pipeline
     # This removes hardcoded column mapping logic and uses the more sophisticated approach
@@ -3003,12 +3172,15 @@ When the user asks for "variance with moving apply by group", the reasoning plan
         enhanced_step = step.copy()
         
         # Get pipeline type from function detail
-        pipeline_type = function_detail.get('category', 'Unknown')
+        pipeline_type = function_detail.get('pipe_name', 'Unknown')
         enhanced_step['pipeline_type'] = pipeline_type
         
         # Get function category from type of operation
         function_category = function_detail.get('type_of_operation', 'unknown')
         enhanced_step['function_category'] = function_category
+        
+        # Ensure pipeline_name is also set correctly
+        enhanced_step['pipeline_name'] = pipeline_type
         
         return enhanced_step
     

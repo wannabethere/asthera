@@ -1,0 +1,128 @@
+[
+  {
+    "function": "form_time_cohorts",
+    "category": "cohort_formation",
+    "description": "Create monthly cohorts from signup dates",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, form_time_cohorts\n\n# Step 1: Create sample data\nsample_data = pd.DataFrame({\n    'user_id': range(1, 101),\n    'signup_date': pd.date_range('2023-01-01', periods=100, freq='D'),\n    'activity_date': pd.date_range('2023-01-01', periods=100, freq='D')\n})\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Form monthly cohorts\ncohort_pipe = cohort_pipe | form_time_cohorts(\n    date_column='signup_date',\n    cohort_column='signup_month',\n    time_period='M',\n    format_cohorts=True,\n    datetime_format='%Y-%m-%d'\n)\n\n# Step 4: View results\nprint(cohort_pipe.data[['user_id', 'signup_date', 'signup_month']].head())"
+    },
+    "parameters": {
+      "date_column": "Column containing dates for cohort formation",
+      "cohort_column": "Name of the column to store cohort information (default: 'cohort')",
+      "time_period": "Time period: 'D' (daily), 'W' (weekly), 'M' (monthly), 'Q' (quarterly), 'Y' (yearly)",
+      "format_cohorts": "Whether to format cohorts as readable strings (default: True)",
+      "datetime_format": "Format string for parsing dates if not already datetime"
+    }
+  },
+  {
+    "function": "form_time_cohorts",
+    "category": "cohort_formation", 
+    "description": "Create weekly cohorts for detailed analysis",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, form_time_cohorts\n\n# Step 1: Create sample data\nsample_data = pd.DataFrame({\n    'user_id': range(1, 101),\n    'signup_date': pd.date_range('2023-01-01', periods=100, freq='D'),\n    'activity_date': pd.date_range('2023-01-01', periods=100, freq='D')\n})\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Form weekly cohorts\ncohort_pipe = cohort_pipe | form_time_cohorts(\n    date_column='signup_date',\n    cohort_column='signup_week',\n    time_period='W',\n    format_cohorts=True\n)\n\n# Step 4: View results\nprint(cohort_pipe.data[['user_id', 'signup_date', 'signup_week']].head())"
+    },
+    "parameters": {
+      "date_column": "Column containing dates for cohort formation",
+      "cohort_column": "Name of the column to store cohort information (default: 'cohort')",
+      "time_period": "Time period: 'D' (daily), 'W' (weekly), 'M' (monthly), 'Q' (quarterly), 'Y' (yearly)",
+      "format_cohorts": "Whether to format cohorts as readable strings (default: True)",
+      "datetime_format": "Format string for parsing dates if not already datetime"
+    }
+  },
+  {
+    "function": "form_time_cohorts",
+    "category": "cohort_formation",
+    "description": "Create quarterly cohorts for long-term analysis", 
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, form_time_cohorts\n\n# Step 1: Create sample data\nsample_data = pd.DataFrame({\n    'user_id': range(1, 101),\n    'signup_date': pd.date_range('2023-01-01', periods=100, freq='D'),\n    'activity_date': pd.date_range('2023-01-01', periods=100, freq='D')\n})\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Form quarterly cohorts\ncohort_pipe = cohort_pipe | form_time_cohorts(\n    date_column='signup_date',\n    cohort_column='signup_quarter',\n    time_period='Q',\n    format_cohorts=True\n)\n\n# Step 4: View results\nprint(cohort_pipe.data[['user_id', 'signup_date', 'signup_quarter']].head())"
+    },
+    "parameters": {
+      "date_column": "Column containing dates for cohort formation",
+      "cohort_column": "Name of the column to store cohort information (default: 'cohort')",
+      "time_period": "Time period: 'D' (daily), 'W' (weekly), 'M' (monthly), 'Q' (quarterly), 'Y' (yearly)",
+      "format_cohorts": "Whether to format cohorts as readable strings (default: True)",
+      "datetime_format": "Format string for parsing dates if not already datetime"
+    }
+  },
+  {
+    "function": "form_behavioral_cohorts",
+    "category": "cohort_formation",
+    "description": "Group users by subscription plan",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, form_behavioral_cohorts\n\n# Step 1: Create sample data with subscription plans\nsample_data = pd.DataFrame({\n    'user_id': range(1, 101),\n    'subscription_plan': ['free', 'basic', 'premium', 'enterprise'] * 25,\n    'signup_date': pd.date_range('2023-01-01', periods=100, freq='D')\n})\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Form behavioral cohorts\ncohort_pipe = cohort_pipe | form_behavioral_cohorts(\n    behavior_column='subscription_plan',\n    cohort_column='plan_cohort',\n    custom_cohorts={\n        'Premium': ['premium', 'enterprise'],\n        'Basic': ['basic'],\n        'Free': ['free']\n    }\n)\n\n# Step 4: View results\nprint(cohort_pipe.data[['user_id', 'subscription_plan', 'plan_cohort']].head())"
+    },
+    "parameters": {
+      "behavior_column": "Column containing behavior data for cohort formation",
+      "cohort_column": "Name of the column to store cohort information (default: 'cohort')",
+      "custom_cohorts": "Dictionary mapping cohort names to custom functions"
+    }
+  },
+  {
+    "function": "form_behavioral_cohorts",
+    "category": "cohort_formation",
+    "description": "Create age-based customer segments",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, form_behavioral_cohorts\n\n# Step 1: Create sample data with ages\nsample_data = pd.DataFrame({\n    'user_id': range(1, 101),\n    'age': [20, 25, 30, 35, 40, 45, 50, 55, 60, 65] * 10,\n    'signup_date': pd.date_range('2023-01-01', periods=100, freq='D')\n})\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Form age-based cohorts\ncohort_pipe = cohort_pipe | form_behavioral_cohorts(\n    behavior_column='age',\n    cohort_column='age_group',\n    conditions={\n        '18-24': ('between', 18, 24),\n        '25-34': ('between', 25, 34),\n        '35-44': ('between', 35, 44),\n        '45-54': ('between', 45, 54),\n        '55+': ('>', 54)\n    }\n)\n\n# Step 4: View results\nprint(cohort_pipe.data[['user_id', 'age', 'age_group']].head())"
+    },
+    "parameters": {
+      "behavior_column": "Column containing behavior data for cohort formation",
+      "cohort_column": "Name of the column to store cohort information (default: 'cohort')",
+      "conditions": "Dictionary mapping cohort names to conditions"
+    }
+  },
+  {
+    "function": "form_behavioral_cohorts",
+    "category": "cohort_formation",
+    "description": "Segment customers by purchase frequency",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, form_behavioral_cohorts\n\n# Step 1: Create sample data with purchase counts\nsample_data = pd.DataFrame({\n    'user_id': range(1, 101),\n    'purchases_count': [1, 2, 5, 10, 15, 20, 25, 30, 35, 40] * 10,\n    'signup_date': pd.date_range('2023-01-01', periods=100, freq='D')\n})\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Form purchase frequency cohorts\ncohort_pipe = cohort_pipe | form_behavioral_cohorts(\n    behavior_column='purchases_count',\n    cohort_column='purchase_frequency_segment',\n    conditions={\n        'High Value': ('>', 10),\n        'Medium Value': ('between', 3, 10),\n        'Low Value': ('<', 3)\n    }\n)\n\n# Step 4: View results\nprint(cohort_pipe.data[['user_id', 'purchases_count', 'purchase_frequency_segment']].head())"
+    },
+    "parameters": {
+      "behavior_column": "Column containing behavior data for cohort formation",
+      "cohort_column": "Name of the column to store cohort information (default: 'cohort')",
+      "conditions": "Dictionary mapping cohort names to conditions"
+    }
+  },
+  {
+    "function": "form_acquisition_cohorts",
+    "category": "cohort_formation",
+    "description": "Create cohorts combining acquisition source and time period",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, form_acquisition_cohorts\n\n# Step 1: Create sample data with acquisition sources\nsample_data = pd.DataFrame({\n    'user_id': range(1, 101),\n    'acquisition_date': pd.date_range('2023-01-01', periods=100, freq='D'),\n    'acquisition_source': ['organic', 'paid', 'referral', 'social'] * 25,\n    'activity_date': pd.date_range('2023-01-01', periods=100, freq='D')\n})\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Form acquisition cohorts\ncohort_pipe = cohort_pipe | form_acquisition_cohorts(\n    acquisition_date_column='acquisition_date',\n    acquisition_source_column='acquisition_source',\n    cohort_column='acquisition_cohort',\n    time_period='M',\n    combine_source=True,\n    format_cohorts=True\n)\n\n# Step 4: View results\nprint(cohort_pipe.data[['user_id', 'acquisition_date', 'acquisition_source', 'acquisition_cohort']].head())"
+    },
+    "parameters": {
+      "acquisition_date_column": "Column containing acquisition dates",
+      "acquisition_source_column": "Column containing acquisition sources",
+      "cohort_column": "Name of the column to store cohort information (default: 'cohort')",
+      "time_period": "Time period for grouping ('D', 'W', 'M', 'Q', 'Y')",
+      "combine_source": "Whether to combine time period with acquisition source (default: True)",
+      "format_cohorts": "Whether to format cohorts as readable strings (default: True)",
+      "datetime_format": "Format string for parsing dates if not already datetime"
+    }
+  },
+  {
+    "function": "form_acquisition_cohorts",
+    "category": "cohort_formation",
+    "description": "Create time-based cohorts without combining with source",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, form_acquisition_cohorts\n\n# Step 1: Create sample data with acquisition sources\nsample_data = pd.DataFrame({\n    'user_id': range(1, 101),\n    'acquisition_date': pd.date_range('2023-01-01', periods=100, freq='D'),\n    'acquisition_source': ['organic', 'paid', 'referral', 'social'] * 25,\n    'activity_date': pd.date_range('2023-01-01', periods=100, freq='D')\n})\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Form time-only cohorts\ncohort_pipe = cohort_pipe | form_acquisition_cohorts(\n    acquisition_date_column='acquisition_date',\n    acquisition_source_column='acquisition_source',\n    cohort_column='acquisition_month',\n    time_period='M',\n    combine_source=False,\n    format_cohorts=True\n)\n\n# Step 4: View results\nprint(cohort_pipe.data[['user_id', 'acquisition_date', 'acquisition_month']].head())"
+    },
+    "parameters": {
+      "acquisition_date_column": "Column containing acquisition dates",
+      "acquisition_source_column": "Column containing acquisition sources",
+      "cohort_column": "Name of the column to store cohort information (default: 'cohort')",
+      "time_period": "Time period for grouping ('D', 'W', 'M', 'Q', 'Y')",
+      "combine_source": "Whether to combine time period with acquisition source (default: True)",
+      "format_cohorts": "Whether to format cohorts as readable strings (default: True)",
+      "datetime_format": "Format string for parsing dates if not already datetime"
+    }
+  }
+]

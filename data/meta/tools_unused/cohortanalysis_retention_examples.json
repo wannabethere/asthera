@@ -1,0 +1,92 @@
+[
+  {
+    "function": "calculate_retention",
+    "category": "cohort_analysis",
+    "description": "Calculate 6-month retention rates for monthly cohorts",
+    "prerequisites": ["CohortPipe.from_dataframe()", "form_time_cohorts()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, form_time_cohorts, calculate_retention\n\n# Step 1: Create sample data with user activities\nsample_data = pd.DataFrame({\n    'user_id': range(1, 201),\n    'signup_date': pd.date_range('2023-01-01', periods=200, freq='D'),\n    'activity_date': pd.date_range('2023-01-01', periods=200, freq='D')\n})\n\n# Step 2: Initialize pipeline and form cohorts\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\ncohort_pipe = cohort_pipe | form_time_cohorts(\n    date_column='signup_date',\n    cohort_column='signup_month',\n    time_period='M',\n    format_cohorts=True\n)\n\n# Step 3: Calculate retention\ncohort_pipe = cohort_pipe | calculate_retention(\n    cohort_column='signup_month',\n    date_column='activity_date',\n    user_id_column='user_id',\n    time_period='M',\n    max_periods=6,\n    retention_type='classic'\n)\n\n# Step 4: View results\nretention_df = cohort_pipe.to_df()\nprint(retention_df.head())\n\n# Step 5: Get summary\nsummary = cohort_pipe.get_summary()\nprint(f\"Analysis type: {summary['analysis_type']}\")\nprint(f\"Total cohorts: {summary['total_cohorts']}\")"
+    },
+    "parameters": {
+      "cohort_column": "Column containing cohort information",
+      "date_column": "Column containing activity dates",
+      "user_id_column": "Column containing user identifiers",
+      "time_period": "Time period for retention calculation ('D', 'W', 'M', 'Q', 'Y')",
+      "max_periods": "Maximum number of periods to calculate retention for (default: 12)",
+      "retention_type": "Type of retention: 'classic', 'rolling', or 'unbounded' (default: 'classic')",
+      "datetime_format": "Format string for parsing dates if not already datetime"
+    }
+  },
+  {
+    "function": "calculate_retention",
+    "category": "cohort_analysis",
+    "description": "Calculate rolling retention (users who return in this period or later)",
+    "prerequisites": ["CohortPipe.from_dataframe()", "form_time_cohorts()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, form_time_cohorts, calculate_retention\n\n# Step 1: Create sample data with user activities\nsample_data = pd.DataFrame({\n    'user_id': range(1, 201),\n    'signup_date': pd.date_range('2023-01-01', periods=200, freq='D'),\n    'activity_date': pd.date_range('2023-01-01', periods=200, freq='D')\n})\n\n# Step 2: Initialize pipeline and form cohorts\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\ncohort_pipe = cohort_pipe | form_time_cohorts(\n    date_column='signup_date',\n    cohort_column='signup_month',\n    time_period='M',\n    format_cohorts=True\n)\n\n# Step 3: Calculate rolling retention\ncohort_pipe = cohort_pipe | calculate_retention(\n    cohort_column='signup_month',\n    date_column='activity_date',\n    user_id_column='user_id',\n    time_period='M',\n    max_periods=6,\n    retention_type='rolling'\n)\n\n# Step 4: View results\nretention_df = cohort_pipe.to_df()\nprint(retention_df.head())"
+    },
+    "parameters": {
+      "cohort_column": "Column containing cohort information",
+      "date_column": "Column containing activity dates",
+      "user_id_column": "Column containing user identifiers",
+      "time_period": "Time period for retention calculation ('D', 'W', 'M', 'Q', 'Y')",
+      "max_periods": "Maximum number of periods to calculate retention for (default: 12)",
+      "retention_type": "Type of retention: 'classic', 'rolling', or 'unbounded' (default: 'classic')",
+      "datetime_format": "Format string for parsing dates if not already datetime"
+    }
+  },
+  {
+    "function": "calculate_retention",
+    "category": "cohort_analysis",
+    "description": "Calculate weekly retention for detailed analysis",
+    "prerequisites": ["CohortPipe.from_dataframe()", "form_time_cohorts()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, form_time_cohorts, calculate_retention\n\n# Step 1: Create sample data with user activities\nsample_data = pd.DataFrame({\n    'user_id': range(1, 201),\n    'signup_date': pd.date_range('2023-01-01', periods=200, freq='D'),\n    'activity_date': pd.date_range('2023-01-01', periods=200, freq='D')\n})\n\n# Step 2: Initialize pipeline and form cohorts\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\ncohort_pipe = cohort_pipe | form_time_cohorts(\n    date_column='signup_date',\n    cohort_column='signup_week',\n    time_period='W',\n    format_cohorts=True\n)\n\n# Step 3: Calculate weekly retention\ncohort_pipe = cohort_pipe | calculate_retention(\n    cohort_column='signup_week',\n    date_column='activity_date',\n    user_id_column='user_id',\n    time_period='W',\n    max_periods=8,\n    retention_type='classic'\n)\n\n# Step 4: View results\nretention_df = cohort_pipe.to_df()\nprint(retention_df.head())"
+    },
+    "parameters": {
+      "cohort_column": "Column containing cohort information",
+      "date_column": "Column containing activity dates",
+      "user_id_column": "Column containing user identifiers",
+      "time_period": "Time period for retention calculation ('D', 'W', 'M', 'Q', 'Y')",
+      "max_periods": "Maximum number of periods to calculate retention for (default: 12)",
+      "retention_type": "Type of retention: 'classic', 'rolling', or 'unbounded' (default: 'classic')",
+      "datetime_format": "Format string for parsing dates if not already datetime"
+    }
+  },
+  {
+    "function": "calculate_conversion",
+    "category": "cohort_analysis",
+    "description": "Track conversion from trial to paid subscription by cohort",
+    "prerequisites": ["CohortPipe.from_dataframe()", "form_behavioral_cohorts()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, form_behavioral_cohorts, calculate_conversion\n\n# Step 1: Create sample data with funnel events\nfunnel_events = []\nfor user_id in range(1, 201):\n    cohort = 'Q1_2023' if user_id <= 100 else 'Q2_2023'\n    # Simulate funnel progression\n    events = ['trial_started', 'feature_used', 'paywall_viewed', 'subscription_purchased']\n    for i, event in enumerate(events):\n        if user_id % (4-i+1) == 0:  # Some users drop off at each step\n            funnel_events.append({\n                'user_id': user_id,\n                'cohort': cohort,\n                'event_type': event,\n                'event_date': pd.date_range('2023-01-01', periods=1, freq='D')[0] + pd.Timedelta(days=i)\n            })\n\nsample_data = pd.DataFrame(funnel_events)\n\n# Step 2: Initialize pipeline and form cohorts\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\ncohort_pipe = cohort_pipe | form_behavioral_cohorts(\n    behavior_column='cohort',\n    cohort_column='cohort_group',\n    custom_cohorts={'Q1_2023': lambda df: df['cohort'] == 'Q1_2023',\n                   'Q2_2023': lambda df: df['cohort'] == 'Q2_2023'}\n)\n\n# Step 3: Calculate conversion funnel\ncohort_pipe = cohort_pipe | calculate_conversion(\n    cohort_column='cohort_group',\n    event_column='event_type',\n    user_id_column='user_id',\n    funnel_steps=['trial_started', 'feature_used', 'paywall_viewed', 'subscription_purchased'],\n    step_names=['Trial', 'Feature Usage', 'Paywall', 'Purchase'],\n    include_rates=True,\n    cumulative=True\n)\n\n# Step 4: View results\nconversion_df = cohort_pipe.to_df()\nprint(conversion_df)\n\n# Step 5: Get summary\nsummary = cohort_pipe.get_summary()\nprint(f\"Analysis type: {summary['analysis_type']}\")"
+    },
+    "parameters": {
+      "cohort_column": "Column containing cohort information",
+      "event_column": "Column containing event names/types",
+      "user_id_column": "Column containing user identifiers",
+      "funnel_steps": "List of event names representing steps in the funnel, in order",
+      "step_names": "Friendly names for the funnel steps (optional)",
+      "include_rates": "Whether to include conversion rates between steps (default: True)",
+      "cumulative": "Whether to show cumulative conversion from first step (default: True)"
+    }
+  },
+  {
+    "function": "calculate_conversion",
+    "category": "cohort_analysis",
+    "description": "Track e-commerce conversion funnel by acquisition source",
+    "prerequisites": ["CohortPipe.from_dataframe()", "form_behavioral_cohorts()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, form_behavioral_cohorts, calculate_conversion\n\n# Step 1: Create sample data with e-commerce events\necommerce_events = []\nfor user_id in range(1, 301):\n    source = ['organic', 'paid', 'referral'][user_id % 3]\n    cohort = f'{source}_Q1_2023'\n    # Simulate e-commerce funnel\n    events = ['email_signup', 'site_visit', 'product_view', 'add_to_cart', 'checkout', 'purchase']\n    for i, event in enumerate(events):\n        if user_id % (6-i+1) == 0:  # Some users drop off at each step\n            ecommerce_events.append({\n                'user_id': user_id,\n                'cohort': cohort,\n                'event_type': event,\n                'event_date': pd.date_range('2023-01-01', periods=1, freq='D')[0] + pd.Timedelta(days=i)\n            })\n\nsample_data = pd.DataFrame(ecommerce_events)\n\n# Step 2: Initialize pipeline and form cohorts\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\ncohort_pipe = cohort_pipe | form_behavioral_cohorts(\n    behavior_column='cohort',\n    cohort_column='acquisition_cohort',\n    custom_cohorts={\n        'organic_Q1_2023': lambda df: df['cohort'] == 'organic_Q1_2023',\n        'paid_Q1_2023': lambda df: df['cohort'] == 'paid_Q1_2023',\n        'referral_Q1_2023': lambda df: df['cohort'] == 'referral_Q1_2023'\n    }\n)\n\n# Step 3: Calculate conversion funnel\ncohort_pipe = cohort_pipe | calculate_conversion(\n    cohort_column='acquisition_cohort',\n    event_column='event_type',\n    user_id_column='user_id',\n    funnel_steps=['email_signup', 'site_visit', 'product_view', 'add_to_cart', 'checkout', 'purchase'],\n    include_rates=True,\n    cumulative=False\n)\n\n# Step 4: View results\nconversion_df = cohort_pipe.to_df()\nprint(conversion_df)"
+    },
+    "parameters": {
+      "cohort_column": "Column containing cohort information",
+      "event_column": "Column containing event names/types",
+      "user_id_column": "Column containing user identifiers",
+      "funnel_steps": "List of event names representing steps in the funnel, in order",
+      "step_names": "Friendly names for the funnel steps (optional)",
+      "include_rates": "Whether to include conversion rates between steps (default: True)",
+      "cumulative": "Whether to show cumulative conversion from first step (default: True)"
+    }
+  }
+]

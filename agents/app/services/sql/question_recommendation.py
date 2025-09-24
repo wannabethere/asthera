@@ -191,7 +191,81 @@ class QuestionRecommendation:
             "reasoning": ""
         }
         
-        # Split content into lines and process
+        try:
+            # Try to parse as JSON first (expected format)
+            import json
+            # Extract JSON from content if it's wrapped in markdown code blocks
+            if "```json" in content:
+                json_start = content.find("```json") + 7
+                json_end = content.find("```", json_start)
+                if json_end != -1:
+                    json_content = content[json_start:json_end].strip()
+                else:
+                    json_content = content[json_start:].strip()
+            elif "```" in content:
+                # Handle case where JSON is in generic code block
+                json_start = content.find("```") + 3
+                json_end = content.find("```", json_start)
+                if json_end != -1:
+                    json_content = content[json_start:json_end].strip()
+                else:
+                    json_content = content[json_start:].strip()
+            else:
+                # Try to find JSON object in the content
+                json_start = content.find('{')
+                json_end = content.rfind('}') + 1
+                if json_start != -1 and json_end > json_start:
+                    json_content = content[json_start:json_end]
+                else:
+                    json_content = content
+            
+            # Parse the JSON
+            parsed_data = json.loads(json_content)
+            
+            if "questions" in parsed_data and isinstance(parsed_data["questions"], list):
+                # Process questions from JSON format
+                for question_item in parsed_data["questions"]:
+                    if isinstance(question_item, dict) and "question" in question_item and "category" in question_item:
+                        category = question_item["category"]
+                        question_text = question_item["question"]
+                        
+                        if category not in result_dict["questions"]:
+                            result_dict["questions"][category] = []
+                            result_dict["categories"].append(category)
+                        
+                        result_dict["questions"][category].append({"question": question_text})
+                
+                # Extract reasoning from any text outside the JSON
+                reasoning_text = content
+                if "```json" in content:
+                    # Remove the JSON code block from reasoning
+                    json_block_start = content.find("```json")
+                    json_block_end = content.find("```", json_block_start + 7) + 3
+                    if json_block_end > 2:
+                        reasoning_text = content[:json_block_start] + content[json_block_end:]
+                elif "```" in content:
+                    json_block_start = content.find("```")
+                    json_block_end = content.find("```", json_block_start + 3) + 3
+                    if json_block_end > 2:
+                        reasoning_text = content[:json_block_start] + content[json_block_end:]
+                elif json_start != -1 and json_end > json_start:
+                    reasoning_text = content[:json_start] + content[json_end:]
+                
+                result_dict["reasoning"] = reasoning_text.strip()
+                
+            else:
+                # Fallback to markdown parsing if JSON parsing fails
+                self._parse_markdown_format(content, result_dict)
+                
+        except (json.JSONDecodeError, KeyError, ValueError) as e:
+            logger.warning(f"Failed to parse JSON response, falling back to markdown parsing: {str(e)}")
+            # Fallback to markdown parsing
+            self._parse_markdown_format(content, result_dict)
+        
+        return result_dict
+    
+    def _parse_markdown_format(self, content: str, result_dict: dict) -> None:
+        """Fallback method to parse markdown format"""
         lines = content.split('\n')
         current_category = None
         reasoning = []
@@ -216,7 +290,6 @@ class QuestionRecommendation:
                 reasoning.append(line)
         
         result_dict["reasoning"] = "\n".join(reasoning).strip()
-        return result_dict
     
     async def recommend(self, request: Request) -> Response:
         """Generate question recommendations based on the user's question and context"""

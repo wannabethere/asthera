@@ -175,6 +175,81 @@ class CohortPipe(BasePipe):
         else:
             raise ValueError(f"Unknown analysis type: {analysis_type}")
     
+    def merge_to_df(self, base_df: pd.DataFrame, analysis_name: Optional[str] = None, include_metadata: bool = False, **kwargs) -> pd.DataFrame:
+        """
+        Merge cohort analysis results into the base dataframe as new columns.
+        
+        Parameters:
+        -----------
+        base_df : pd.DataFrame
+            The base dataframe to merge results into
+        analysis_name : str, optional
+            Name of the specific analysis to merge. If None, uses the current_analysis
+        include_metadata : bool, default=False
+            Whether to include metadata columns in the output DataFrame
+        **kwargs : dict
+            Additional arguments (unused for this pipeline)
+            
+        Returns:
+        --------
+        pd.DataFrame
+            Base dataframe with cohort analysis results merged as new columns
+        """
+        result_df = base_df.copy()
+        
+        # Add pipeline identification
+        result_df['pipeline_type'] = 'cohort_analysis'
+        result_df['pipeline_has_results'] = len(self.cohort_results) > 0
+        
+        if not self.cohort_results:
+            return result_df
+        
+        # Determine which analysis to use
+        if analysis_name is None:
+            if self.current_analysis is None:
+                # Use the last analysis in cohort_results
+                analysis_name = list(self.cohort_results.keys())[-1]
+            else:
+                # Find the analysis that matches current_analysis
+                matching_analyses = [name for name in self.cohort_results.keys() 
+                                   if name.startswith(self.current_analysis)]
+                if matching_analyses:
+                    analysis_name = matching_analyses[0]
+                else:
+                    analysis_name = list(self.cohort_results.keys())[-1]
+        
+        if analysis_name not in self.cohort_results:
+            return result_df
+        
+        # Get the analysis result
+        analysis_result = self.cohort_results[analysis_name]
+        analysis_type = analysis_result['type']
+        
+        # Add analysis summary information
+        result_df[f'cohort_analysis_{analysis_name}_has_data'] = True
+        result_df[f'cohort_analysis_{analysis_name}_type'] = analysis_type
+        
+        # Add metadata if requested
+        if include_metadata:
+            result_df['cohort_analysis_name'] = analysis_name
+            result_df['cohort_analysis_type'] = 'cohort_analysis'
+            result_df['cohort_total_analyses'] = len(self.cohort_results)
+            result_df['cohort_available_analyses'] = ', '.join(self.cohort_results.keys())
+            result_df['cohort_current_analysis'] = self.current_analysis or 'none'
+        
+        return result_df
+    
+    def _has_results(self) -> bool:
+        """
+        Check if the pipeline has any cohort analysis results.
+        
+        Returns:
+        --------
+        bool
+            True if the pipeline has cohort analysis results, False otherwise
+        """
+        return len(self.cohort_results) > 0
+    
     def _retention_to_df(self, result: Dict, include_metadata: bool = False) -> pd.DataFrame:
         """Convert retention analysis results to DataFrame"""
         retention_matrix = result['retention_matrix']

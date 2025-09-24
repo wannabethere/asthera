@@ -1,0 +1,363 @@
+{
+    "metadata": {
+        "updated_at": "2024-01-16T12:00:00Z",
+        "llm_generated": true,
+        "total_functions": 8,
+        "categories": ["time_series", "temporal_analysis", "statistical_analysis"],
+        "complexity_levels": ["simple", "intermediate", "advanced"],
+        "pipe_name": "TimeSeriesPipe",
+        "module": "timeseries_analysis",
+        "description": "Functions for time series analysis, temporal operations, and statistical time-based calculations",
+        "function_list": [
+            "lead", "lag", "variance_analysis", "distribution_analysis", "cumulative_distribution",
+            "rolling_window", "get_distribution_summary", "custom_calculation"
+        ]
+    },
+    "functions": {
+        "lead": {
+            "category": "time_series",
+            "subcategory": "time_shift_operations",
+            "pipe_name": "TimeSeriesPipe",
+            "description": "Create lead (future) values for specified columns",
+            "complexity": "simple",
+            "use_cases": [
+                "future value analysis",
+                "forecasting preparation",
+                "temporal feature engineering",
+                "time series modeling"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical columns",
+                "Ordered data (typically by time)"
+            ],
+            "tags": ["lead", "future_values", "temporal", "forecasting"],
+            "keywords": ["lead", "future_values", "temporal", "forecasting", "shift"],
+            "output_description": "Function that creates lead values in a TimeSeriesPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "lead('price', periods=1)",
+                "lead(['sales', 'revenue'], periods=3, time_column='date')"
+            ],
+            "usage_patterns": [
+                "lead(columns, periods=1)",
+                "lead(columns, periods=1, time_column='timestamp')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["lag", "rolling_window", "variance_analysis"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to create lead values for"}
+            ],
+            "optional_params": [
+                {"name": "periods", "type": "int", "description": "Number of periods to lead (default: 1)"},
+                {"name": "time_column", "type": "str", "description": "Time column to sort by before calculating lead values (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculating lead values (for panel data) (optional)"},
+                {"name": "suffix", "type": "str", "description": "Suffix to add to the names of lead columns (default: '_lead')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that creates lead values in a TimeSeriesPipe"
+            }
+        },
+        "lag": {
+            "category": "time_series",
+            "subcategory": "time_shift_operations",
+            "pipe_name": "TimeSeriesPipe",
+            "description": "Create lag (past) values for specified columns",
+            "complexity": "simple",
+            "use_cases": [
+                "historical value analysis",
+                "autoregressive modeling",
+                "temporal feature engineering",
+                "time series analysis"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical columns",
+                "Ordered data (typically by time)"
+            ],
+            "tags": ["lag", "historical_values", "temporal", "autoregressive"],
+            "keywords": ["lag", "historical_values", "temporal", "autoregressive", "shift"],
+            "output_description": "Function that creates lag values in a TimeSeriesPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "lag('price', periods=1)",
+                "lag(['sales', 'revenue'], periods=5, time_column='date')"
+            ],
+            "usage_patterns": [
+                "lag(columns, periods=1)",
+                "lag(columns, periods=1, time_column='timestamp')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["lead", "rolling_window", "variance_analysis"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to create lag values for"}
+            ],
+            "optional_params": [
+                {"name": "periods", "type": "int", "description": "Number of periods to lag (default: 1)"},
+                {"name": "time_column", "type": "str", "description": "Time column to sort by before calculating lag values (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculating lag values (for panel data) (optional)"},
+                {"name": "suffix", "type": "str", "description": "Suffix to add to the names of lag columns (default: '_lag')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that creates lag values in a TimeSeriesPipe"
+            }
+        },
+        "variance_analysis": {
+            "category": "time_series",
+            "subcategory": "statistical_analysis",
+            "pipe_name": "TimeSeriesPipe",
+            "description": "Calculate variance and standard deviation for time series data",
+            "complexity": "intermediate",
+            "use_cases": [
+                "volatility analysis",
+                "risk assessment",
+                "time series variability",
+                "statistical analysis"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical columns",
+                "Sufficient data for statistical calculation"
+            ],
+            "tags": ["variance", "volatility", "statistical", "risk"],
+            "keywords": ["variance", "volatility", "statistical", "risk", "standard_deviation"],
+            "output_description": "Function that calculates variance in a TimeSeriesPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "variance_analysis('returns', method='rolling', window=20)",
+                "variance_analysis(['price', 'volume'], method='ewm', window=10)"
+            ],
+            "usage_patterns": [
+                "variance_analysis(columns, method='rolling')",
+                "variance_analysis(columns, method='rolling', window=20)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["rolling_window", "distribution_analysis", "cumulative_distribution"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to analyze"}
+            ],
+            "optional_params": [
+                {"name": "method", "type": "str", "description": "Method to use: 'rolling', 'expanding', or 'ewm' (exponentially weighted moving) (default: 'rolling')"},
+                {"name": "window", "type": "int", "description": "Window size for rolling calculations (used for 'rolling' and 'ewm' methods) (default: 5)"},
+                {"name": "time_column", "type": "str", "description": "Time column to sort by before calculations (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "suffix", "type": "str", "description": "Suffix to add to column names (defaults to '_var' and '_std') (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates variance in a TimeSeriesPipe"
+            }
+        },
+        "distribution_analysis": {
+            "category": "time_series",
+            "subcategory": "distribution_analysis",
+            "pipe_name": "TimeSeriesPipe",
+            "description": "Calculate distribution statistics and histograms for time series data",
+            "complexity": "intermediate",
+            "use_cases": [
+                "distribution analysis",
+                "statistical modeling",
+                "data exploration",
+                "histogram analysis"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical columns",
+                "Sufficient data for distribution analysis"
+            ],
+            "tags": ["distribution", "histogram", "statistical", "exploration"],
+            "keywords": ["distribution", "histogram", "statistical", "exploration", "bins"],
+            "output_description": "Function that analyzes distributions in a TimeSeriesPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "distribution_analysis('returns', bins=20)",
+                "distribution_analysis(['price', 'volume'], bins=15, normalize=True)"
+            ],
+            "usage_patterns": [
+                "distribution_analysis(columns, bins=10)",
+                "distribution_analysis(columns, bins=10, normalize=True)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["variance_analysis", "cumulative_distribution", "get_distribution_summary"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to analyze"}
+            ],
+            "optional_params": [
+                {"name": "bins", "type": "int", "description": "Number of bins for histogram calculation (default: 10)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before analysis (for panel data) (optional)"},
+                {"name": "normalize", "type": "bool", "description": "Whether to normalize histogram counts (return proportions) (default: False)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that analyzes distributions in a TimeSeriesPipe"
+            }
+        },
+        "cumulative_distribution": {
+            "category": "time_series",
+            "subcategory": "distribution_analysis",
+            "pipe_name": "TimeSeriesPipe",
+            "description": "Calculate cumulative distribution (empirical CDF) for specified columns",
+            "complexity": "intermediate",
+            "use_cases": [
+                "cumulative analysis",
+                "probability analysis",
+                "statistical modeling",
+                "distribution comparison"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical columns",
+                "Sufficient data for CDF calculation"
+            ],
+            "tags": ["cumulative", "cdf", "probability", "statistical"],
+            "keywords": ["cumulative", "cdf", "probability", "statistical", "empirical"],
+            "output_description": "Function that calculates cumulative distributions in a TimeSeriesPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "cumulative_distribution('returns')",
+                "cumulative_distribution(['price', 'volume'], time_column='date')"
+            ],
+            "usage_patterns": [
+                "cumulative_distribution(columns)",
+                "cumulative_distribution(columns, time_column='timestamp')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["distribution_analysis", "variance_analysis", "get_distribution_summary"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to analyze"}
+            ],
+            "optional_params": [
+                {"name": "time_column", "type": "str", "description": "Time column to sort by before calculations (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "suffix", "type": "str", "description": "Suffix to add to column names (default: '_cdf')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates cumulative distributions in a TimeSeriesPipe"
+            }
+        },
+        "rolling_window": {
+            "category": "time_series",
+            "subcategory": "rolling_window_operations",
+            "pipe_name": "TimeSeriesPipe",
+            "description": "Apply rolling window operations to time series data",
+            "complexity": "intermediate",
+            "use_cases": [
+                "rolling calculations",
+                "smoothing operations",
+                "time series analysis",
+                "trend analysis"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical columns",
+                "Ordered data (typically by time)"
+            ],
+            "tags": ["rolling", "window", "smoothing", "trend"],
+            "keywords": ["rolling", "window", "smoothing", "trend", "aggregation"],
+            "output_description": "Function that applies rolling window operations in a TimeSeriesPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "rolling_window('price', window=7, aggregation='mean')",
+                "rolling_window(['sales', 'revenue'], window=30, unit='daily')"
+            ],
+            "usage_patterns": [
+                "rolling_window(columns, window=5)",
+                "rolling_window(columns, window=5, aggregation='mean')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["variance_analysis", "lead", "lag"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to analyze"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for rolling calculations (default: 5)"},
+                {"name": "unit", "type": "str", "description": "Time unit for window: 'daily', 'weekly', 'monthly', or 'yearly' (default: 'daily')"},
+                {"name": "aggregation", "type": "str", "description": "Aggregation type: 'mean', 'sum', 'std', or 'count' (default: 'mean')"},
+                {"name": "time_column", "type": "str", "description": "Time column to sort by before calculations (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "suffix", "type": "str", "description": "Suffix to add to column names (defaults to '_rolling_{aggregation}') (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that applies rolling window operations in a TimeSeriesPipe"
+            }
+        },
+        "get_distribution_summary": {
+            "category": "time_series",
+            "subcategory": "analysis_summary",
+            "pipe_name": "TimeSeriesPipe",
+            "description": "Return a formatted summary of distribution analysis results",
+            "complexity": "simple",
+            "use_cases": [
+                "analysis summary",
+                "reporting",
+                "results overview",
+                "distribution insights"
+            ],
+            "data_requirements": [
+                "Previously executed distribution analysis"
+            ],
+            "tags": ["summary", "reporting", "overview", "insights"],
+            "keywords": ["summary", "reporting", "overview", "insights", "distribution"],
+            "output_description": "Function that returns distribution summaries from a TimeSeriesPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "get_distribution_summary()"
+            ],
+            "usage_patterns": [
+                "get_distribution_summary()"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["distribution_analysis", "cumulative_distribution", "variance_analysis"],
+            "required_params": [],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that returns distribution summaries from a TimeSeriesPipe"
+            }
+        },
+        "custom_calculation": {
+            "category": "time_series",
+            "subcategory": "custom_analysis",
+            "pipe_name": "TimeSeriesPipe",
+            "description": "Apply a custom calculation function to the data",
+            "complexity": "advanced",
+            "use_cases": [
+                "custom transformations",
+                "advanced calculations",
+                "domain-specific logic",
+                "extended analysis"
+            ],
+            "data_requirements": [
+                "DataFrame with data to transform",
+                "Custom function for transformation",
+                "Compatible data types for function"
+            ],
+            "tags": ["custom", "transformation", "advanced", "domain_specific"],
+            "keywords": ["custom", "transformation", "advanced", "domain_specific", "function"],
+            "output_description": "Function that applies the custom calculation in a TimeSeriesPipe",
+            "confidence_score": 0.80,
+            "examples": [
+                "custom_calculation(lambda df: df.assign(momentum=df['price'].pct_change()))",
+                "custom_calculation(my_time_series_function)"
+            ],
+            "usage_patterns": [
+                "custom_calculation(func)",
+                "custom_calculation(lambda df: df.some_transformation())"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["rolling_window", "variance_analysis", "distribution_analysis"],
+            "required_params": [
+                {"name": "func", "type": "Callable", "description": "A function that takes a DataFrame and returns a DataFrame"}
+            ],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that applies the custom calculation in a TimeSeriesPipe"
+            }
+        }
+    }
+}

@@ -6,7 +6,7 @@ from datetime import datetime
 
 from langchain.prompts import PromptTemplate
 from langfuse.decorators import observe
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 from app.agents.retrieval.retrieval_helper import RetrievalHelper
 
@@ -24,6 +24,128 @@ class FunctionMatch(BaseModel):
     rephrased_question: str = ""
     function_definition: Optional[Dict[str, Any]] = None
     instructions: Optional[List[Dict[str, Any]]] = None
+    examples: Optional[List[Dict[str, Any]]] = None
+    examples_store: Optional[List[Dict[str, Any]]] = None
+    historical_rules: Optional[List[Dict[str, Any]]] = None
+    
+    class Config:
+        """Pydantic configuration for flexible validation"""
+        extra = "allow"  # Allow extra fields
+        validate_assignment = True  # Validate on assignment
+        arbitrary_types_allowed = True  # Allow arbitrary types
+    
+    @validator('examples_store', pre=True)
+    def convert_examples_store(cls, v):
+        """Convert examples_store to proper format"""
+        if v is None:
+            return []
+        if isinstance(v, str):
+            try:
+                import json
+                # Try to parse as JSON
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+                else:
+                    return [parsed] if parsed else []
+            except (json.JSONDecodeError, TypeError):
+                # If parsing fails, return as single item list
+                return [{"content": v, "type": "string"}]
+        if isinstance(v, list):
+            # Ensure all items are dictionaries
+            result = []
+            for item in v:
+                if isinstance(item, dict):
+                    result.append(item)
+                elif isinstance(item, str):
+                    try:
+                        import json
+                        parsed = json.loads(item)
+                        if isinstance(parsed, dict):
+                            result.append(parsed)
+                        else:
+                            result.append({"content": item, "type": "string"})
+                    except (json.JSONDecodeError, TypeError):
+                        result.append({"content": item, "type": "string"})
+                else:
+                    result.append({"content": str(item), "type": "unknown"})
+            return result
+        return []
+    
+    @validator('examples', pre=True)
+    def convert_examples(cls, v):
+        """Convert examples to proper format"""
+        if v is None:
+            return []
+        if isinstance(v, str):
+            try:
+                import json
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+                else:
+                    return [parsed] if parsed else []
+            except (json.JSONDecodeError, TypeError):
+                return [{"content": v, "type": "string"}]
+        if isinstance(v, list):
+            result = []
+            for item in v:
+                if isinstance(item, dict):
+                    result.append(item)
+                else:
+                    result.append({"content": str(item), "type": "string"})
+            return result
+        return []
+    
+    @validator('instructions', pre=True)
+    def convert_instructions(cls, v):
+        """Convert instructions to proper format"""
+        if v is None:
+            return []
+        if isinstance(v, str):
+            try:
+                import json
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+                else:
+                    return [parsed] if parsed else []
+            except (json.JSONDecodeError, TypeError):
+                return [{"instruction": v, "type": "string"}]
+        if isinstance(v, list):
+            result = []
+            for item in v:
+                if isinstance(item, dict):
+                    result.append(item)
+                else:
+                    result.append({"instruction": str(item), "type": "string"})
+            return result
+        return []
+    
+    @validator('historical_rules', pre=True)
+    def convert_historical_rules(cls, v):
+        """Convert historical_rules to proper format"""
+        if v is None:
+            return []
+        if isinstance(v, str):
+            try:
+                import json
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+                else:
+                    return [parsed] if parsed else []
+            except (json.JSONDecodeError, TypeError):
+                return [{"content": v, "type": "string"}]
+        if isinstance(v, list):
+            result = []
+            for item in v:
+                if isinstance(item, dict):
+                    result.append(item)
+                else:
+                    result.append({"content": str(item), "type": "string"})
+            return result
+        return []
 
 
 class FunctionRetrievalResult(BaseModel):
@@ -114,6 +236,7 @@ Consider:
 - Would this function work well with the available columns?
 - Is this function part of a pipeline that would be useful for the overall analysis?
 - Do any relevant instructions provide guidance on which functions to prefer or avoid?
+- Use the provided examples, instructions, and historical rules to make better decisions about function selection and parameter configuration
 
 Current Time: {current_time}
 """
@@ -365,7 +488,8 @@ class FunctionRetrieval:
             # Post-process into structured result
             result = self._post_process_llm_response(llm_response, total_functions)
             
-            # Retrieve function definitions for each top function using their rephrased questions
+            # Retrieve function definitions and enrich with context for each top function
+            enriched_functions = []
             for function_match in result.top_functions:
                 function_definition = None
                 
@@ -397,10 +521,20 @@ class FunctionRetrieval:
                         function_definition=function_definition,
                         instructions=function_match.instructions
                     )
-                    # Replace the original function match
-                    result.top_functions[result.top_functions.index(function_match)] = updated_function_match
                 else:
+                    updated_function_match = function_match
                     logger.warning(f"No function definition found for {function_match.function_name}")
+                
+                # Enrich the function with examples, instructions, and examples store
+                enriched_function = await self._enrich_function_with_context(
+                    function_match=updated_function_match,
+                    question=question,
+                    project_id=project_id
+                )
+                enriched_functions.append(enriched_function)
+            
+            # Update result with enriched functions
+            result.top_functions = enriched_functions
             
             return result
             
@@ -527,6 +661,242 @@ class FunctionRetrieval:
             return {"error": "RetrievalHelper not available", "instructions": []}
         
         return await self.retrieval_helper.get_instructions(query, project_id)
+    
+    async def _enrich_function_with_context(
+        self,
+        function_match: FunctionMatch,
+        question: str,
+        project_id: Optional[str] = None
+    ) -> FunctionMatch:
+        """
+        Enrich function match with examples, instructions, and examples store
+        
+        Args:
+            function_match: FunctionMatch object to enrich
+            question: Original user question
+            project_id: Optional project ID for instructions
+            
+        Returns:
+            Enriched FunctionMatch object
+        """
+        if not self.retrieval_helper:
+            return function_match
+        
+        function_name = function_match.function_name
+        if not function_name:
+            return function_match
+        
+        try:
+            # Retrieve examples, instructions, and examples store in parallel
+            examples_task = self.retrieval_helper.get_function_examples(
+                function_name=function_name,
+                similarity_threshold=0.6,
+                top_k=5
+            )
+            
+            insights_task = self.retrieval_helper.get_function_insights(
+                function_name=function_name,
+                similarity_threshold=0.6,
+                top_k=3
+            )
+            
+            instructions_task = None
+            if project_id:
+                instructions_task = self.retrieval_helper.get_instructions(
+                    query=question,
+                    project_id=project_id,
+                    similarity_threshold=0.7,
+                    top_k=5
+                )
+            
+            # Wait for all tasks to complete
+            examples_result = await examples_task
+            insights_result = await insights_task
+            instructions_result = await instructions_task if instructions_task else {"instructions": []}
+            
+            # Extract examples
+            examples = []
+            if examples_result and not examples_result.get("error"):
+                examples = examples_result.get("examples", [])
+            
+            # Extract insights (used as examples store for historical patterns)
+            examples_store = []
+            if insights_result and not insights_result.get("error"):
+                examples_store = insights_result.get("insights", [])
+            
+            # Extract instructions
+            instructions = []
+            if instructions_result and not instructions_result.get("error"):
+                instructions = instructions_result.get("instructions", [])
+            
+            # Get historical rules from examples store
+            historical_rules = await self._get_historical_rules(function_name, question)
+            
+            # Create new FunctionMatch with enriched data
+            enriched_function_match = FunctionMatch(
+                function_name=function_match.function_name,
+                pipe_name=function_match.pipe_name,
+                description=function_match.description,
+                usage_description=function_match.usage_description,
+                relevance_score=function_match.relevance_score,
+                reasoning=function_match.reasoning,
+                rephrased_question=function_match.rephrased_question,
+                function_definition=function_match.function_definition,
+                instructions=instructions,
+                examples=examples,
+                examples_store=examples_store,
+                historical_rules=historical_rules
+            )
+            
+            logger.info(f"Enriched {function_name} with {len(examples)} examples, {len(instructions)} instructions, {len(examples_store)} insights, {len(historical_rules)} historical rules")
+            
+            return enriched_function_match
+            
+        except Exception as e:
+            logger.error(f"Error enriching function {function_name}: {e}")
+            # Return original function match if enrichment fails
+            return function_match
+    
+    async def _get_historical_rules(
+        self,
+        function_name: str,
+        question: str
+    ) -> List[Dict[str, Any]]:
+        """
+        Get historical rules and patterns for the function
+        
+        Args:
+            function_name: Name of the function
+            question: User question for context
+            
+        Returns:
+            List of historical rules and patterns
+        """
+        if not self.retrieval_helper:
+            return []
+        
+        try:
+            # Get examples store for historical patterns
+            examples_store_result = await self.retrieval_helper.get_function_examples(
+                function_name=function_name,
+                similarity_threshold=0.5,
+                top_k=10
+            )
+            
+            historical_rules = []
+            if examples_store_result and not examples_store_result.get("error"):
+                examples = examples_store_result.get("examples", [])
+                
+                # Filter for historical patterns and rules
+                for example in examples:
+                    if isinstance(example, dict):
+                        # Look for rule-like patterns in the example
+                        if any(keyword in str(example).lower() for keyword in ["rule", "pattern", "best_practice", "guideline", "convention"]):
+                            historical_rules.append({
+                                "type": "historical_pattern",
+                                "content": example,
+                                "source": "examples_store"
+                            })
+            
+            # Add hardcoded rules based on function type
+            hardcoded_rules = self._get_hardcoded_rules(function_name)
+            historical_rules.extend(hardcoded_rules)
+            
+            return historical_rules
+            
+        except Exception as e:
+            logger.error(f"Error getting historical rules for {function_name}: {e}")
+            return []
+    
+    def _get_hardcoded_rules(self, function_name: str) -> List[Dict[str, Any]]:
+        """
+        Get hardcoded rules based on function type and name
+        
+        Args:
+            function_name: Name of the function
+            
+        Returns:
+            List of hardcoded rules
+        """
+        rules = []
+        function_lower = function_name.lower()
+        
+        # Time series analysis rules
+        if any(keyword in function_lower for keyword in ["variance", "rolling", "moving", "time_series"]):
+            rules.extend([
+                {
+                    "type": "hardcoded_rule",
+                    "content": "For time series analysis, always ensure data is sorted by time column before applying rolling functions",
+                    "source": "hardcoded"
+                },
+                {
+                    "type": "hardcoded_rule", 
+                    "content": "Use appropriate window sizes based on data frequency - daily data: 7-30 days, hourly data: 24-168 hours",
+                    "source": "hardcoded"
+                }
+            ])
+        
+        # Cohort analysis rules
+        if any(keyword in function_lower for keyword in ["cohort", "retention", "churn"]):
+            rules.extend([
+                {
+                    "type": "hardcoded_rule",
+                    "content": "For cohort analysis, ensure user_id and date columns are properly formatted and contain no null values",
+                    "source": "hardcoded"
+                },
+                {
+                    "type": "hardcoded_rule",
+                    "content": "Use consistent time periods (monthly, weekly) for cohort calculations to ensure comparability",
+                    "source": "hardcoded"
+                }
+            ])
+        
+        # Risk analysis rules
+        if any(keyword in function_lower for keyword in ["var", "risk", "monte_carlo", "stress_test"]):
+            rules.extend([
+                {
+                    "type": "hardcoded_rule",
+                    "content": "For risk analysis, use appropriate confidence levels (95% for VaR, 99% for stress testing)",
+                    "source": "hardcoded"
+                },
+                {
+                    "type": "hardcoded_rule",
+                    "content": "Ensure sufficient historical data (minimum 1 year) for reliable risk calculations",
+                    "source": "hardcoded"
+                }
+            ])
+        
+        # Segmentation rules
+        if any(keyword in function_lower for keyword in ["cluster", "segment", "dbscan", "kmeans"]):
+            rules.extend([
+                {
+                    "type": "hardcoded_rule",
+                    "content": "For clustering, normalize numerical features before applying clustering algorithms",
+                    "source": "hardcoded"
+                },
+                {
+                    "type": "hardcoded_rule",
+                    "content": "Use appropriate distance metrics - Euclidean for continuous variables, Jaccard for categorical",
+                    "source": "hardcoded"
+                }
+            ])
+        
+        # Funnel analysis rules
+        if any(keyword in function_lower for keyword in ["funnel", "conversion", "step"]):
+            rules.extend([
+                {
+                    "type": "hardcoded_rule",
+                    "content": "For funnel analysis, ensure event sequences are properly ordered by timestamp",
+                    "source": "hardcoded"
+                },
+                {
+                    "type": "hardcoded_rule",
+                    "content": "Handle duplicate events by keeping only the first occurrence in each funnel step",
+                    "source": "hardcoded"
+                }
+            ])
+        
+        return rules
 
 
 # Example usage

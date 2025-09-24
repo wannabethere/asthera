@@ -1,0 +1,499 @@
+{
+    "metadata": {
+        "updated_at": "2024-01-16T12:00:00Z",
+        "llm_generated": true,
+        "total_functions": 11,
+        "categories": ["risk_analysis", "statistical_analysis", "portfolio_analysis"],
+        "complexity_levels": ["intermediate", "advanced"],
+        "pipe_name": "RiskPipe",
+        "module": "riskanalysis_tools",
+        "description": "Functions for risk analysis, portfolio management, statistical modeling, and financial risk assessment",
+        "function_list": [
+            "fit_distribution", "calculate_var", "calculate_cvar", "calculate_portfolio_risk",
+            "monte_carlo_simulation", "stress_test", "rolling_risk_metrics", "correlation_analysis",
+            "risk_attribution", "compare_distributions", "get_risk_summary"
+        ]
+    },
+    "functions": {
+        "fit_distribution": {
+            "category": "risk_analysis",
+            "subcategory": "distribution_analysis",
+            "pipe_name": "RiskPipe",
+            "description": "Fit a probability distribution to data using maximum likelihood estimation",
+            "complexity": "intermediate",
+            "use_cases": [
+                "statistical modeling",
+                "risk assessment",
+                "data distribution analysis",
+                "financial modeling"
+            ],
+            "data_requirements": [
+                "Numerical data",
+                "Columns with sufficient data points for distribution fitting",
+                "Clean data without excessive outliers"
+            ],
+            "tags": ["distribution", "statistical", "modeling", "risk"],
+            "keywords": ["distribution", "statistical", "modeling", "risk", "fitting"],
+            "output_description": "Function that fits distributions in a RiskPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "fit_distribution('returns')",
+                "fit_distribution(['price', 'volume'], distribution='student_t')"
+            ],
+            "usage_patterns": [
+                "fit_distribution(columns)",
+                "fit_distribution(columns, distribution='normal', method='mle')"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy"],
+            "related_functions": ["compare_distributions", "monte_carlo_simulation", "calculate_var"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to fit distributions for"}
+            ],
+            "optional_params": [
+                {"name": "distribution", "type": "str", "description": "Distribution to fit: 'normal', 'student_t', 'skewed_normal', 'gev' (default: 'normal')"},
+                {"name": "method", "type": "str", "description": "Estimation method: 'mle' (maximum likelihood), 'moments' (default: 'mle')"},
+                {"name": "confidence_level", "type": "float", "description": "Confidence level for parameter confidence intervals (default: 0.95)"},
+                {"name": "output_name", "type": "str", "description": "Name for the output results (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that fits distributions in a RiskPipe"
+            }
+        },
+        "calculate_var": {
+            "category": "risk_analysis",
+            "subcategory": "risk_metrics",
+            "pipe_name": "RiskPipe",
+            "description": "Calculate Value at Risk (VaR) for specified columns",
+            "complexity": "intermediate",
+            "use_cases": [
+                "risk measurement",
+                "portfolio risk assessment",
+                "regulatory compliance",
+                "financial risk management"
+            ],
+            "data_requirements": [
+                "Numerical data (returns or prices)",
+                "Sufficient historical data for calculation",
+                "Clean data without missing values"
+            ],
+            "tags": ["var", "value_at_risk", "risk_metrics", "portfolio"],
+            "keywords": ["var", "value_at_risk", "risk_metrics", "portfolio", "quantile"],
+            "output_description": "Function that calculates VaR in a RiskPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "calculate_var('returns', confidence_level=0.05)",
+                "calculate_var(['portfolio_returns'], method='monte_carlo')"
+            ],
+            "usage_patterns": [
+                "calculate_var(columns, confidence_level=0.05)",
+                "calculate_var(columns, method='historical', window=252)"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy"],
+            "related_functions": ["calculate_cvar", "calculate_portfolio_risk", "rolling_risk_metrics"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate VaR for"}
+            ],
+            "optional_params": [
+                {"name": "confidence_level", "type": "float", "description": "Confidence level (e.g., 0.05 for 5% VaR) (default: 0.05)"},
+                {"name": "method", "type": "str", "description": "Method: 'historical', 'parametric', 'monte_carlo' (default: 'historical')"},
+                {"name": "window", "type": "int", "description": "Rolling window size for historical method (optional)"},
+                {"name": "distribution", "type": "str", "description": "Distribution to use for parametric method (optional)"},
+                {"name": "output_name", "type": "str", "description": "Name for the output results (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates VaR in a RiskPipe"
+            }
+        },
+        "calculate_cvar": {
+            "category": "risk_analysis",
+            "subcategory": "risk_metrics",
+            "pipe_name": "RiskPipe",
+            "description": "Calculate Conditional Value at Risk (CVaR/Expected Shortfall)",
+            "complexity": "intermediate",
+            "use_cases": [
+                "tail risk assessment",
+                "extreme loss analysis",
+                "portfolio risk management",
+                "regulatory risk measurement"
+            ],
+            "data_requirements": [
+                "Numerical data (returns or prices)",
+                "Sufficient historical data for calculation",
+                "Clean data without missing values"
+            ],
+            "tags": ["cvar", "expected_shortfall", "tail_risk", "extreme_loss"],
+            "keywords": ["cvar", "expected_shortfall", "tail_risk", "extreme_loss", "conditional"],
+            "output_description": "Function that calculates CVaR in a RiskPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "calculate_cvar('returns', confidence_level=0.05)",
+                "calculate_cvar(['portfolio_returns'], method='parametric')"
+            ],
+            "usage_patterns": [
+                "calculate_cvar(columns, confidence_level=0.05)",
+                "calculate_cvar(columns, method='historical')"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy"],
+            "related_functions": ["calculate_var", "calculate_portfolio_risk", "rolling_risk_metrics"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate CVaR for"}
+            ],
+            "optional_params": [
+                {"name": "confidence_level", "type": "float", "description": "Confidence level (e.g., 0.05 for 5% CVaR) (default: 0.05)"},
+                {"name": "method", "type": "str", "description": "Method: 'historical', 'parametric' (default: 'historical')"},
+                {"name": "output_name", "type": "str", "description": "Name for the output results (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates CVaR in a RiskPipe"
+            }
+        },
+        "calculate_portfolio_risk": {
+            "category": "risk_analysis",
+            "subcategory": "portfolio_analysis",
+            "pipe_name": "RiskPipe",
+            "description": "Calculate portfolio-level risk metrics",
+            "complexity": "advanced",
+            "use_cases": [
+                "portfolio risk assessment",
+                "diversification analysis",
+                "risk budgeting",
+                "portfolio optimization"
+            ],
+            "data_requirements": [
+                "Multiple numerical columns representing portfolio components",
+                "Portfolio weights (optional)",
+                "Sufficient historical data for correlation estimation"
+            ],
+            "tags": ["portfolio_risk", "diversification", "correlation", "optimization"],
+            "keywords": ["portfolio_risk", "diversification", "correlation", "optimization", "weights"],
+            "output_description": "Function that calculates portfolio risk in a RiskPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "calculate_portfolio_risk(['stock1', 'stock2', 'bond1'])",
+                "calculate_portfolio_risk(['asset1', 'asset2'], weights=[0.6, 0.4])"
+            ],
+            "usage_patterns": [
+                "calculate_portfolio_risk(columns)",
+                "calculate_portfolio_risk(columns, weights=[0.5, 0.3, 0.2])"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy"],
+            "related_functions": ["correlation_analysis", "risk_attribution", "monte_carlo_simulation"],
+            "required_params": [
+                {"name": "columns", "type": "List[str]", "description": "Columns representing portfolio components"}
+            ],
+            "optional_params": [
+                {"name": "weights", "type": "List[float]", "description": "Portfolio weights (if None, assumes equal weights) (optional)"},
+                {"name": "confidence_level", "type": "float", "description": "Confidence level for risk metrics (default: 0.05)"},
+                {"name": "method", "type": "str", "description": "Method: 'parametric', 'monte_carlo' (default: 'parametric')"},
+                {"name": "output_name", "type": "str", "description": "Name for the output results (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates portfolio risk in a RiskPipe"
+            }
+        },
+        "monte_carlo_simulation": {
+            "category": "risk_analysis",
+            "subcategory": "simulation_analysis",
+            "pipe_name": "RiskPipe",
+            "description": "Perform Monte Carlo simulation for risk assessment",
+            "complexity": "advanced",
+            "use_cases": [
+                "risk scenario analysis",
+                "portfolio stress testing",
+                "option pricing",
+                "complex risk modeling"
+            ],
+            "data_requirements": [
+                "Numerical data for simulation",
+                "Historical data for parameter estimation",
+                "Sufficient data for statistical modeling"
+            ],
+            "tags": ["monte_carlo", "simulation", "scenario_analysis", "modeling"],
+            "keywords": ["monte_carlo", "simulation", "scenario_analysis", "modeling", "random"],
+            "output_description": "Function that runs Monte Carlo simulation in a RiskPipe",
+            "confidence_score": 0.85,
+            "examples": [
+                "monte_carlo_simulation('returns', n_simulations=10000)",
+                "monte_carlo_simulation(['price', 'volatility'], horizon=30)"
+            ],
+            "usage_patterns": [
+                "monte_carlo_simulation(columns, n_simulations=10000)",
+                "monte_carlo_simulation(columns, method='bootstrap', horizon=1)"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy"],
+            "related_functions": ["fit_distribution", "stress_test", "calculate_portfolio_risk"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to simulate"}
+            ],
+            "optional_params": [
+                {"name": "n_simulations", "type": "int", "description": "Number of simulation paths (default: 10000)"},
+                {"name": "horizon", "type": "int", "description": "Time horizon for simulation (default: 1)"},
+                {"name": "method", "type": "str", "description": "Simulation method: 'bootstrap', 'parametric' (default: 'bootstrap')"},
+                {"name": "distribution", "type": "str", "description": "Distribution for parametric method (optional)"},
+                {"name": "output_name", "type": "str", "description": "Name for the output results (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that runs Monte Carlo simulation in a RiskPipe"
+            }
+        },
+        "stress_test": {
+            "category": "risk_analysis",
+            "subcategory": "stress_testing",
+            "pipe_name": "RiskPipe",
+            "description": "Perform stress testing with specified scenarios",
+            "complexity": "advanced",
+            "use_cases": [
+                "scenario analysis",
+                "regulatory stress testing",
+                "extreme event modeling",
+                "risk scenario planning"
+            ],
+            "data_requirements": [
+                "Numerical data for stress testing",
+                "Historical data for baseline parameters",
+                "Scenario definitions"
+            ],
+            "tags": ["stress_testing", "scenario_analysis", "extreme_events", "regulatory"],
+            "keywords": ["stress_testing", "scenario_analysis", "extreme_events", "regulatory", "scenarios"],
+            "output_description": "Function that performs stress testing in a RiskPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "stress_test('returns', {'recession': {'returns': -0.1, 'volatility': 0.25}})",
+                "stress_test(['portfolio'], scenarios={'crisis': {'correlation': 0.9}})"
+            ],
+            "usage_patterns": [
+                "stress_test(columns, scenarios)",
+                "stress_test(columns, scenarios, base_case={'returns': 0.05})"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy"],
+            "related_functions": ["monte_carlo_simulation", "calculate_portfolio_risk", "rolling_risk_metrics"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to stress test"},
+                {"name": "scenarios", "type": "Dict[str, Dict[str, float]]", "description": "Stress scenarios (e.g., {'recession': {'returns': -0.1, 'volatility': 0.25}})"}
+            ],
+            "optional_params": [
+                {"name": "base_case", "type": "Dict[str, float]", "description": "Base case parameters (if None, uses historical data) (optional)"},
+                {"name": "output_name", "type": "str", "description": "Name for the output results (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that performs stress testing in a RiskPipe"
+            }
+        },
+        "rolling_risk_metrics": {
+            "category": "risk_analysis",
+            "subcategory": "time_series_analysis",
+            "pipe_name": "RiskPipe",
+            "description": "Calculate rolling risk metrics over time",
+            "complexity": "intermediate",
+            "use_cases": [
+                "time-varying risk analysis",
+                "risk trend monitoring",
+                "dynamic risk assessment",
+                "risk evolution tracking"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical columns for risk calculation",
+                "Sufficient data for rolling windows"
+            ],
+            "tags": ["rolling_risk", "time_series", "dynamic_risk", "monitoring"],
+            "keywords": ["rolling_risk", "time_series", "dynamic_risk", "monitoring", "volatility"],
+            "output_description": "Function that calculates rolling risk metrics in a RiskPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "rolling_risk_metrics('returns', window=252)",
+                "rolling_risk_metrics(['portfolio'], metrics=['volatility', 'var', 'cvar'])"
+            ],
+            "usage_patterns": [
+                "rolling_risk_metrics(columns, window=252)",
+                "rolling_risk_metrics(columns, metrics=['volatility', 'var'])"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy"],
+            "related_functions": ["calculate_var", "calculate_cvar", "correlation_analysis"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate rolling metrics for"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Rolling window size (default: 252)"},
+                {"name": "metrics", "type": "List[str]", "description": "Metrics to calculate: 'volatility', 'var', 'cvar', 'skewness', 'kurtosis' (default: ['volatility', 'var', 'cvar'])"},
+                {"name": "confidence_level", "type": "float", "description": "Confidence level for VaR/CVaR calculations (default: 0.05)"},
+                {"name": "output_name", "type": "str", "description": "Name for the output results (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates rolling risk metrics in a RiskPipe"
+            }
+        },
+        "correlation_analysis": {
+            "category": "risk_analysis",
+            "subcategory": "correlation_analysis",
+            "pipe_name": "RiskPipe",
+            "description": "Perform correlation analysis for risk assessment",
+            "complexity": "intermediate",
+            "use_cases": [
+                "diversification analysis",
+                "correlation monitoring",
+                "risk factor analysis",
+                "portfolio construction"
+            ],
+            "data_requirements": [
+                "Multiple numerical columns",
+                "Sufficient data for correlation calculation",
+                "Clean data without excessive missing values"
+            ],
+            "tags": ["correlation", "diversification", "risk_factors", "relationships"],
+            "keywords": ["correlation", "diversification", "risk_factors", "relationships", "covariance"],
+            "output_description": "Function that performs correlation analysis in a RiskPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "correlation_analysis(['stock1', 'stock2', 'bond1'])",
+                "correlation_analysis(['returns'], method='spearman', rolling_window=30)"
+            ],
+            "usage_patterns": [
+                "correlation_analysis(columns)",
+                "correlation_analysis(columns, method='pearson', rolling_window=20)"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy"],
+            "related_functions": ["calculate_portfolio_risk", "risk_attribution", "rolling_risk_metrics"],
+            "required_params": [
+                {"name": "columns", "type": "List[str]", "description": "Columns to analyze correlations for"}
+            ],
+            "optional_params": [
+                {"name": "method", "type": "str", "description": "Correlation method: 'pearson', 'spearman', 'kendall' (default: 'pearson')"},
+                {"name": "rolling_window", "type": "int", "description": "Window size for rolling correlations (optional)"},
+                {"name": "output_name", "type": "str", "description": "Name for the output results (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that performs correlation analysis in a RiskPipe"
+            }
+        },
+        "risk_attribution": {
+            "category": "risk_analysis",
+            "subcategory": "portfolio_analysis",
+            "pipe_name": "RiskPipe",
+            "description": "Perform risk attribution analysis",
+            "complexity": "advanced",
+            "use_cases": [
+                "portfolio risk decomposition",
+                "risk factor analysis",
+                "portfolio performance attribution",
+                "risk budgeting"
+            ],
+            "data_requirements": [
+                "Portfolio component data",
+                "Portfolio weights",
+                "Sufficient historical data for analysis"
+            ],
+            "tags": ["risk_attribution", "portfolio_decomposition", "risk_factors", "attribution"],
+            "keywords": ["risk_attribution", "portfolio_decomposition", "risk_factors", "attribution", "decomposition"],
+            "output_description": "Function that performs risk attribution in a RiskPipe",
+            "confidence_score": 0.85,
+            "examples": [
+                "risk_attribution(['stock1', 'stock2'], [0.6, 0.4])",
+                "risk_attribution(['asset1', 'asset2', 'asset3'], [0.5, 0.3, 0.2])"
+            ],
+            "usage_patterns": [
+                "risk_attribution(columns, weights)",
+                "risk_attribution(columns, weights, confidence_level=0.05)"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy"],
+            "related_functions": ["calculate_portfolio_risk", "correlation_analysis", "monte_carlo_simulation"],
+            "required_params": [
+                {"name": "columns", "type": "List[str]", "description": "Portfolio components"},
+                {"name": "weights", "type": "List[float]", "description": "Portfolio weights"}
+            ],
+            "optional_params": [
+                {"name": "confidence_level", "type": "float", "description": "Confidence level for risk calculations (default: 0.05)"},
+                {"name": "output_name", "type": "str", "description": "Name for the output results (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that performs risk attribution in a RiskPipe"
+            }
+        },
+        "compare_distributions": {
+            "category": "risk_analysis",
+            "subcategory": "distribution_analysis",
+            "pipe_name": "RiskPipe",
+            "description": "Compare multiple distribution fits and select the best one",
+            "complexity": "intermediate",
+            "use_cases": [
+                "distribution selection",
+                "model comparison",
+                "statistical model validation",
+                "best fit analysis"
+            ],
+            "data_requirements": [
+                "Numerical data for distribution fitting",
+                "Sufficient data for statistical testing",
+                "Clean data without excessive outliers"
+            ],
+            "tags": ["distribution_comparison", "model_selection", "statistical_testing", "goodness_of_fit"],
+            "keywords": ["distribution_comparison", "model_selection", "statistical_testing", "goodness_of_fit", "AIC"],
+            "output_description": "Function that compares distributions in a RiskPipe",
+            "confidence_score": 0.85,
+            "examples": [
+                "compare_distributions('returns')",
+                "compare_distributions('price', distributions=['normal', 'student_t', 'gev'])"
+            ],
+            "usage_patterns": [
+                "compare_distributions(column)",
+                "compare_distributions(column, distributions=['normal', 'student_t'])"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy"],
+            "related_functions": ["fit_distribution", "monte_carlo_simulation", "calculate_var"],
+            "required_params": [
+                {"name": "column", "type": "str", "description": "Column to fit distributions for"}
+            ],
+            "optional_params": [
+                {"name": "distributions", "type": "List[str]", "description": "Distributions to compare (default: ['normal', 'student_t', 'skewed_normal'])"},
+                {"name": "output_name", "type": "str", "description": "Name for the output results (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that compares distributions in a RiskPipe"
+            }
+        },
+        "get_risk_summary": {
+            "category": "risk_analysis",
+            "subcategory": "summary_reporting",
+            "pipe_name": "RiskPipe",
+            "description": "Get a summary of all risk analysis results",
+            "complexity": "simple",
+            "use_cases": [
+                "risk reporting",
+                "analysis summary",
+                "dashboard creation",
+                "executive reporting"
+            ],
+            "data_requirements": [
+                "Previously executed risk analysis results"
+            ],
+            "tags": ["summary", "reporting", "dashboard", "executive"],
+            "keywords": ["summary", "reporting", "dashboard", "executive", "overview"],
+            "output_description": "Function that returns risk summary from a RiskPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "get_risk_summary()"
+            ],
+            "usage_patterns": [
+                "get_risk_summary()"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["calculate_var", "calculate_cvar", "calculate_portfolio_risk"],
+            "required_params": [],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that returns risk summary from a RiskPipe"
+            }
+        }
+    }
+}

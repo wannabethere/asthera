@@ -25,125 +25,70 @@ class MetricsPipe(BasePipe):
         if hasattr(source_pipe, 'current_metric'):
             self.current_metric = source_pipe.current_metric
     
-    def to_df(self, include_metadata: bool = False, include_pivot_tables: bool = True):
+    def merge_to_df(self, base_df: pd.DataFrame, include_metadata: bool = False, include_pivot_tables: bool = True, **kwargs) -> pd.DataFrame:
         """
-        Convert the metrics and pivot tables to a DataFrame
+        Merge metrics results into the base dataframe as new columns.
         
         Parameters:
         -----------
+        base_df : pd.DataFrame
+            The base dataframe to merge results into
         include_metadata : bool, default=False
             Whether to include metadata columns in the output DataFrame
         include_pivot_tables : bool, default=True
-            Whether to include pivot tables in the output
+            Whether to include pivot table information in the output DataFrame
+        **kwargs : dict
+            Additional arguments (unused for this pipeline)
             
         Returns:
         --------
         pd.DataFrame
-            DataFrame representation of the metrics and pivot tables
-            
-        Raises:
-        -------
-        ValueError
-            If no metrics or pivot tables have been calculated
-            
-        Examples:
-        --------
-        >>> # Basic metrics
-        >>> pipe = (MetricsPipe.from_dataframe(df)
-        ...         | Sum('revenue')
-        ...         | Mean('sales'))
-        >>> metrics_df = pipe.to_df()
-        >>> print(metrics_df)
-        
-        >>> # With pivot tables
-        >>> pipe = (MetricsPipe.from_dataframe(df)
-        ...         | PivotTable('category', 'region', 'sales'))
-        >>> results_df = pipe.to_df(include_pivot_tables=True)
-        >>> print(results_df)
-        
-        >>> # With metadata
-        >>> results_df = pipe.to_df(include_metadata=True)
-        >>> print(results_df.columns)
+            Base dataframe with metrics results merged as new columns
         """
-        if not self.metrics and not self.pivot_tables:
-            raise ValueError("No metrics or pivot tables have been calculated. Run some analysis first.")
+        result_df = base_df.copy()
         
-        # Create a list to store all data
-        all_data = []
+        # Add pipeline identification
+        result_df['pipeline_type'] = 'metrics'
+        result_df['pipeline_has_results'] = len(self.metrics) > 0 or len(self.pivot_tables) > 0
         
-        # Add metrics as individual rows
+        # Add metrics as new columns
         for metric_name, metric_value in self.metrics.items():
-            row = {
-                'name': metric_name,
-                'type': 'metric',
-                'value': metric_value
-            }
+            result_df[f'metrics_{metric_name}'] = metric_value
             
             if include_metadata:
-                row['metadata'] = f"Calculated metric: {metric_name}"
-            
-            all_data.append(row)
+                result_df[f'metrics_{metric_name}_type'] = 'metric'
+                result_df[f'metrics_{metric_name}_metadata'] = f"Calculated metric: {metric_name}"
         
-        # Add pivot tables if requested
-        if include_pivot_tables:
-            for pivot_name, pivot_table in self.pivot_tables.items():
-                # Convert pivot table to long format for easier handling
-                pivot_long = pivot_table.reset_index().melt(
-                    id_vars=pivot_table.index.names if pivot_table.index.names != [None] else [],
-                    var_name='column',
-                    value_name='value'
-                )
-                
-                # Add metadata columns
-                pivot_long['name'] = pivot_name
-                pivot_long['type'] = 'pivot_table'
+        # Add pivot table information
+        if include_pivot_tables and self.pivot_tables:
+            for i, (pivot_name, pivot_table) in enumerate(self.pivot_tables.items()):
+                # Add summary information about the pivot table
+                result_df[f'metrics_pivot_{pivot_name}_shape'] = f"{pivot_table.shape[0]}x{pivot_table.shape[1]}"
+                result_df[f'metrics_pivot_{pivot_name}_has_data'] = not pivot_table.empty
                 
                 if include_metadata:
-                    pivot_long['metadata'] = f"Pivot table: {pivot_name} (shape: {pivot_table.shape})"
-                
-                all_data.append(pivot_long)
+                    result_df[f'metrics_pivot_{pivot_name}_index_cols'] = ', '.join(pivot_table.index.names) if pivot_table.index.names != [None] else 'none'
+                    result_df[f'metrics_pivot_{pivot_name}_value_cols'] = ', '.join(pivot_table.columns.astype(str))
         
-        # Create the output DataFrame
-        if all_data:
-            # Separate metrics (dictionaries) from pivot tables (DataFrames)
-            metrics_data = []
-            pivot_dfs = []
-            
-            for item in all_data:
-                if isinstance(item, dict):
-                    # This is a metric (dictionary)
-                    metrics_data.append(item)
-                elif isinstance(item, pd.DataFrame):
-                    # This is a pivot table (DataFrame)
-                    pivot_dfs.append(item)
-            
-            # If we have pivot tables, we need to handle the different structures
-            if include_pivot_tables and pivot_dfs:
-                # Create metrics DataFrame if we have metrics
-                metrics_df = pd.DataFrame(metrics_data) if metrics_data else pd.DataFrame()
-                
-                if metrics_df.empty and pivot_dfs:
-                    # Only pivot tables - return the actual pivot table data, not the melted version
-                    if len(self.pivot_tables) == 1:
-                        # If there's only one pivot table, return it directly
-                        return list(self.pivot_tables.values())[0]
-                    else:
-                        # If there are multiple pivot tables, return the first one
-                        return list(self.pivot_tables.values())[0]
-                elif not metrics_df.empty and pivot_dfs:
-                    # Both metrics and pivot tables
-                    # We'll return the metrics DataFrame and store pivot tables separately
-                    result_df = metrics_df.copy()
-                    result_df['pivot_tables'] = [pivot_dfs if i == 0 else None for i in range(len(metrics_df))]
-                    return result_df
-                else:
-                    # Only metrics
-                    return metrics_df
-            else:
-                # Only metrics
-                return pd.DataFrame(metrics_data)
-        else:
-            return pd.DataFrame()
+        # Add summary metadata
+        if include_metadata:
+            result_df['metrics_total_metrics'] = len(self.metrics)
+            result_df['metrics_total_pivot_tables'] = len(self.pivot_tables)
+            result_df['metrics_available_metrics'] = ', '.join(self.metrics.keys()) if self.metrics else 'none'
+            result_df['metrics_available_pivot_tables'] = ', '.join(self.pivot_tables.keys()) if self.pivot_tables else 'none'
+        
+        return result_df
+    
+    def _has_results(self) -> bool:
+        """
+        Check if the pipeline has any metrics results.
+        
+        Returns:
+        --------
+        bool
+            True if the pipeline has metrics results, False otherwise
+        """
+        return len(self.metrics) > 0 or len(self.pivot_tables) > 0
     
     def get_metrics_df(self, include_metadata: bool = False):
         """

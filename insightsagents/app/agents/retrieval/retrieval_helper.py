@@ -90,6 +90,9 @@ class RetrievalHelper:
         )
 
         self.cache = InMemoryCache()
+        
+        # Enhanced function service will be initialized lazily to avoid circular imports
+        self.enhanced_function_service = None
 
     async def get_database_schemas(
         self, 
@@ -557,12 +560,12 @@ class RetrievalHelper:
                 return result
             
             # Query the function store
-            query_result = function_store.semantic_searches(
-                query_texts=[function_name],
-                n_results=top_k
+            query_result = function_store.semantic_search(
+                query=function_name,
+                k=top_k
             )
             
-            if not query_result or "documents" not in query_result or len(query_result["documents"][0]) == 0:
+            if not query_result or len(query_result) == 0:
                 logger.warning(f"No function definition found in retrieval helper for: {function_name}")
                 result = {
                     "error": f"No function definition found for: {function_name}",
@@ -571,15 +574,27 @@ class RetrievalHelper:
                 return result
             
             # Parse the document content
-            document = query_result["documents"][0][0]  # First query, first result
-            score = query_result["distances"][0][0] if "distances" in query_result else 0.0
+            document = query_result[0]  # First result
+            score = document.get("score", 0.0)
+            
+            # Extract content from the document result
+            content = document.get("content", "")
+            metadata = document.get("metadata", {})
             
             # Convert from JSON string if needed
-            if isinstance(document, str) and document.startswith('"') and document.endswith('"'):
-                document = json.loads(document)
+            if isinstance(content, str) and content.startswith('"') and content.endswith('"'):
+                content = json.loads(content)
                 
-            if isinstance(document, str) and (document.startswith('{') or document.startswith('{"')):
-                document = json.loads(document)
+            if isinstance(content, str) and (content.startswith('{') or content.startswith('{"')):
+                content = json.loads(content)
+            
+            # Handle text format function definitions
+            if isinstance(content, str) and not content.startswith('{'):
+                # This is likely a text format function definition
+                content = self._parse_text_function_definition(content)
+            
+            # Use content as the document
+            document = content
             
             result = {
                 "function_definition": document,
@@ -639,12 +654,12 @@ class RetrievalHelper:
                 return result
             
             # Query the examples store
-            query_result = examples_store.semantic_searches(
-                query_texts=[function_name],
-                n_results=top_k
+            query_result = examples_store.semantic_search(
+                query=function_name,
+                k=top_k
             )
             
-            if not query_result or "documents" not in query_result or len(query_result["documents"][0]) == 0:
+            if not query_result or len(query_result) == 0:
                 logger.warning(f"No function examples found for: {function_name}")
                 result = {
                     "error": f"No function examples found for: {function_name}",
@@ -656,17 +671,18 @@ class RetrievalHelper:
             examples = []
             scores = []
             
-            for i, document in enumerate(query_result["documents"][0]):
-                score = query_result["distances"][0][i] if "distances" in query_result else 0.0
+            for document in query_result:
+                score = document.get("score", 0.0)
+                content = document.get("content", "")
                 
                 # Convert from JSON string if needed
-                if isinstance(document, str) and document.startswith('"') and document.endswith('"'):
-                    document = json.loads(document)
+                if isinstance(content, str) and content.startswith('"') and content.endswith('"'):
+                    content = json.loads(content)
                     
-                if isinstance(document, str) and (document.startswith('{') or document.startswith('{"')):
-                    document = json.loads(document)
+                if isinstance(content, str) and (content.startswith('{') or content.startswith('{"')):
+                    content = json.loads(content)
                 
-                examples.append(document)
+                examples.append(content)
                 scores.append(score)
             
             result = {
@@ -730,12 +746,12 @@ class RetrievalHelper:
                 return result
             
             # Query the insights store
-            query_result = insights_store.semantic_searches(
-                query_texts=[function_name],
-                n_results=top_k
+            query_result = insights_store.semantic_search(
+                query=function_name,
+                k=top_k
             )
             
-            if not query_result or "documents" not in query_result or len(query_result["documents"][0]) == 0:
+            if not query_result or len(query_result) == 0:
                 logger.warning(f"No function insights found for: {function_name}")
                 result = {
                     "error": f"No function insights found for: {function_name}",
@@ -747,17 +763,18 @@ class RetrievalHelper:
             insights = []
             scores = []
             
-            for i, document in enumerate(query_result["documents"][0]):
-                score = query_result["distances"][0][i] if "distances" in query_result else 0.0
+            for document in query_result:
+                score = document.get("score", 0.0)
+                content = document.get("content", "")
                 
                 # Convert from JSON string if needed
-                if isinstance(document, str) and document.startswith('"') and document.endswith('"'):
-                    document = json.loads(document)
+                if isinstance(content, str) and content.startswith('"') and content.endswith('"'):
+                    content = json.loads(content)
                     
-                if isinstance(document, str) and (document.startswith('{') or document.startswith('{"')):
-                    document = json.loads(document)
+                if isinstance(content, str) and (content.startswith('{') or content.startswith('{"')):
+                    content = json.loads(content)
                 
-                insights.append(document)
+                insights.append(content)
                 scores.append(score)
             
             result = {
@@ -821,12 +838,12 @@ class RetrievalHelper:
                 return result
             
             # Query the function store
-            query_result = function_store.semantic_searches(
-                query_texts=[query],
-                n_results=top_k
+            query_result = function_store.semantic_search(
+                query=query,
+                k=top_k
             )
             
-            if not query_result or "documents" not in query_result or len(query_result["documents"][0]) == 0:
+            if not query_result or len(query_result) == 0:
                 logger.warning(f"No function definition found for query: {query}")
                 result = {
                     "error": f"No function definition found for query: {query}",
@@ -835,23 +852,70 @@ class RetrievalHelper:
                 return result
             
             # Parse the document content
-            document = query_result["documents"][0][0]  # First query, first result
-            score = query_result["distances"][0][0] if "distances" in query_result else 0.0
-            
-            # Convert from JSON string if needed
-            if isinstance(document, str) and document.startswith('"') and document.endswith('"'):
-                document = json.loads(document)
+            if top_k == 1:
+                # Single result - return as before
+                document = query_result[0]  # First result
+                score = document.get("score", 0.0)
                 
-            if isinstance(document, str) and (document.startswith('{') or document.startswith('{"')):
-                document = json.loads(document)
-            
-            result = {
-                "function_definition": document,
-                "score": score,
-                "query": query,
-                "similarity_threshold": similarity_threshold,
-                "top_k": top_k
-            }
+                # Extract content from the document result
+                content = document.get("content", "")
+                metadata = document.get("metadata", {})
+                
+                # Convert from JSON string if needed
+                if isinstance(content, str) and content.startswith('"') and content.endswith('"'):
+                    content = json.loads(content)
+                    
+                if isinstance(content, str) and (content.startswith('{') or content.startswith('{"')):
+                    content = json.loads(content)
+                
+                # Handle text format function definitions
+                if isinstance(content, str) and not content.startswith('{'):
+                    # This is likely a text format function definition
+                    content = self._parse_text_function_definition(content)
+                
+                # Use content as the document
+                document = content
+                
+                result = {
+                    "function_definition": document,
+                    "score": score,
+                    "query": query,
+                    "similarity_threshold": similarity_threshold,
+                    "top_k": top_k
+                }
+            else:
+                # Multiple results - return as list
+                function_definitions = []
+                for doc in query_result:
+                    score = doc.get("score", 0.0)
+                    content = doc.get("content", "")
+                    metadata = doc.get("metadata", {})
+                    
+                    # Convert from JSON string if needed
+                    if isinstance(content, str) and content.startswith('"') and content.endswith('"'):
+                        content = json.loads(content)
+                        
+                    if isinstance(content, str) and (content.startswith('{') or content.startswith('{"')):
+                        content = json.loads(content)
+                    
+                    # Handle text format function definitions
+                    if isinstance(content, str) and not content.startswith('{'):
+                        # This is likely a text format function definition
+                        content = self._parse_text_function_definition(content)
+                    
+                    # Add relevance score to the function definition
+                    if isinstance(content, dict):
+                        content["relevance_score"] = score
+                    
+                    function_definitions.append(content)
+                
+                result = {
+                    "function_definitions": function_definitions,
+                    "total_found": len(function_definitions),
+                    "query": query,
+                    "similarity_threshold": similarity_threshold,
+                    "top_k": top_k
+                }
             await self.cache.set(cache_key, result, ttl=300)
             return result
             
@@ -864,6 +928,53 @@ class RetrievalHelper:
             }
             await self.cache.set(cache_key, result, ttl=300)
             return result
+
+    def _parse_text_function_definition(self, text: str) -> Dict[str, Any]:
+        """
+        Parse a text-format function definition into a dictionary
+        """
+        func_def = {}
+        lines = text.strip().split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            if ':' in line:
+                key, value = line.split(':', 1)
+                key = key.strip().lower().replace(' ', '_')
+                value = value.strip()
+                
+                # Map common keys
+                if key == 'function':
+                    func_def['function_name'] = value
+                elif key == 'pipe':
+                    func_def['pipe_name'] = value
+                elif key == 'category':
+                    func_def['category'] = value
+                elif key == 'subcategory':
+                    func_def['subcategory'] = value
+                elif key == 'complexity':
+                    func_def['complexity'] = value
+                elif key == 'description':
+                    func_def['description'] = value
+                elif key == 'usage':
+                    func_def['usage_description'] = value
+                elif key == 'module':
+                    func_def['module'] = value
+                else:
+                    func_def[key] = value
+        
+        # Set default values for missing fields
+        func_def.setdefault('function_name', '')
+        func_def.setdefault('pipe_name', 'Unknown')
+        func_def.setdefault('category', 'unknown_category')
+        func_def.setdefault('type_of_operation', 'unknown_operation')
+        func_def.setdefault('description', '')
+        func_def.setdefault('usage_description', '')
+        func_def.setdefault('required_params', [])
+        func_def.setdefault('optional_params', [])
+        func_def.setdefault('outputs', {})
+        
+        return func_def
 
     async def get_table_names_and_schema_contexts(
         self,
@@ -935,6 +1046,87 @@ class RetrievalHelper:
                 "has_calculated_field": False,
                 "has_metric": False,
                 "error": str(e)
+            }
+    
+    async def get_enhanced_function_retrieval(
+        self,
+        reasoning_plan: List[Dict[str, Any]],
+        question: str,
+        rephrased_question: str,
+        dataframe_description: str,
+        dataframe_summary: str,
+        available_columns: List[str],
+        project_id: Optional[str] = None,
+        llm=None,
+        comprehensive_registry=None,
+        example_collection=None,
+        function_collection=None,
+        insights_collection=None
+    ) -> Dict[str, Any]:
+        """Get enhanced function retrieval with AI-powered matching using comprehensive definitions.
+        
+        Args:
+            reasoning_plan: The reasoning plan from Step 1
+            question: Original user question
+            rephrased_question: Rephrased question from Step 1
+            dataframe_description: Description of the dataframe
+            dataframe_summary: Summary of the dataframe
+            available_columns: List of available columns
+            project_id: Optional project ID
+            llm: LangChain LLM instance for enhanced retrieval
+            comprehensive_registry: Enhanced comprehensive registry for function search
+            example_collection: Examples collection for input extraction
+            function_collection: Function collection for input extraction
+            insights_collection: Insights collection for input extraction
+            
+        Returns:
+            Dictionary containing enhanced function retrieval results
+        """
+        try:
+            # Initialize enhanced function service lazily to avoid circular imports
+            if self.enhanced_function_service is None:
+                from app.tools.mltools.registry.enhanced_function_retrieval_service import create_enhanced_function_retrieval_service
+                self.enhanced_function_service = create_enhanced_function_retrieval_service(
+                    llm=llm,
+                    retrieval_helper=self,
+                    comprehensive_registry=comprehensive_registry,
+                    example_collection=example_collection,
+                    function_collection=function_collection,
+                    insights_collection=insights_collection
+                )
+            
+            result = await self.enhanced_function_service.retrieve_and_match_functions(
+                reasoning_plan=reasoning_plan,
+                question=question,
+                rephrased_question=rephrased_question,
+                dataframe_description=dataframe_description,
+                dataframe_summary=dataframe_summary,
+                available_columns=available_columns,
+                project_id=project_id
+            )
+            
+            # Convert Pydantic model to dict
+            return {
+                "step_matches": result.step_matches,
+                "total_functions_retrieved": result.total_functions_retrieved,
+                "total_steps_covered": result.total_steps_covered,
+                "average_relevance_score": result.average_relevance_score,
+                "confidence_score": result.confidence_score,
+                "reasoning": result.reasoning,
+                "fallback_used": result.fallback_used
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in enhanced function retrieval: {str(e)}")
+            return {
+                "error": str(e),
+                "step_matches": {},
+                "total_functions_retrieved": 0,
+                "total_steps_covered": 0,
+                "average_relevance_score": 0.0,
+                "confidence_score": 0.0,
+                "reasoning": f"Error: {str(e)}",
+                "fallback_used": True
             }
 
 async def main():

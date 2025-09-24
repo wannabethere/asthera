@@ -1,0 +1,673 @@
+[
+  {
+    "pipe_name": "AnomalyPipe",
+    "category": "anomaly_detection",
+    "function": "detect_statistical_outliers",
+    "description": "Detect statistical outliers using various methods (zscore, iqr, modified_zscore)",
+    "prerequisites": ["AnomalyPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Z-score outlier detection for single column",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_statistical_outliers(\n    columns='temperature',\n    method='zscore',\n    threshold=3.0\n)",
+        "inputs": {
+          "columns": "temperature",
+          "method": "zscore",
+          "threshold": 3.0
+        }
+      },
+      {
+        "name": "IQR outlier detection for multiple columns",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_statistical_outliers(\n    columns=['pressure', 'humidity', 'temperature'],\n    method='iqr',\n    threshold=1.5\n)",
+        "inputs": {
+          "columns": ["pressure", "humidity", "temperature"],
+          "method": "iqr",
+          "threshold": 1.5
+        }
+      },
+      {
+        "name": "Modified Z-score with rolling window",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_statistical_outliers(\n    columns='sensor_reading',\n    method='modified_zscore',\n    threshold=3.5,\n    window=50,\n    time_column='timestamp'\n)",
+        "inputs": {
+          "columns": "sensor_reading",
+          "method": "modified_zscore",
+          "threshold": 3.5,
+          "window": 50,
+          "time_column": "timestamp"
+        }
+      },
+      {
+        "name": "Grouped outlier detection by device",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_statistical_outliers(\n    columns='sensor_value',\n    method='modified_zscore',\n    threshold=3.0,\n    group_columns=['device_id', 'sensor_type'],\n    time_column='reading_time'\n)",
+        "inputs": {
+          "columns": "sensor_value",
+          "method": "modified_zscore",
+          "threshold": 3.0,
+          "group_columns": ["device_id", "sensor_type"],
+          "time_column": "reading_time"
+        }
+      },
+      {
+        "name": "Network traffic anomaly detection",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_statistical_outliers(\n    columns=['bytes_in', 'bytes_out', 'packet_count'],\n    method='iqr',\n    threshold=2.0,\n    window=100,\n    time_column='timestamp'\n)",
+        "inputs": {
+          "columns": ["bytes_in", "bytes_out", "packet_count"],
+          "method": "iqr",
+          "threshold": 2.0,
+          "window": 100,
+          "time_column": "timestamp"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "AnomalyPipe",
+    "category": "anomaly_detection",
+    "function": "detect_contextual_anomalies",
+    "description": "Detect contextual anomalies considering time series patterns and seasonality",
+    "prerequisites": ["AnomalyPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Residual-based anomaly detection with EWM",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_contextual_anomalies(\n    columns='page_views',\n    time_column='hour',\n    method='residual',\n    model_type='ewm',\n    threshold=2.5,\n    window=24\n)",
+        "inputs": {
+          "columns": "page_views",
+          "time_column": "hour",
+          "method": "residual",
+          "model_type": "ewm",
+          "threshold": 2.5,
+          "window": 24
+        }
+      },
+      {
+        "name": "SARIMAX seasonal anomaly detection",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_contextual_anomalies(\n    columns='daily_revenue',\n    time_column='date',\n    method='prediction_interval',\n    model_type='sarimax',\n    threshold=2.0,\n    window=60,\n    seasonal_period=7\n)",
+        "inputs": {
+          "columns": "daily_revenue",
+          "time_column": "date",
+          "method": "prediction_interval",
+          "model_type": "sarimax",
+          "threshold": 2.0,
+          "window": 60,
+          "seasonal_period": 7
+        }
+      },
+      {
+        "name": "Change point detection in system metrics",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_contextual_anomalies(\n    columns='cpu_utilization',\n    time_column='timestamp',\n    method='changepoint',\n    model_type='ewm',\n    threshold=3.0,\n    window=100\n)",
+        "inputs": {
+          "columns": "cpu_utilization",
+          "time_column": "timestamp",
+          "method": "changepoint",
+          "model_type": "ewm",
+          "threshold": 3.0,
+          "window": 100
+        }
+      },
+      {
+        "name": "Grouped seasonal anomaly detection by region",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_contextual_anomalies(\n    columns='quarterly_revenue',\n    time_column='quarter',\n    method='residual',\n    model_type='sarimax',\n    seasonal_period=4,\n    group_columns=['region'],\n    threshold=2.0\n)",
+        "inputs": {
+          "columns": "quarterly_revenue",
+          "time_column": "quarter",
+          "method": "residual",
+          "model_type": "sarimax",
+          "seasonal_period": 4,
+          "group_columns": ["region"],
+          "threshold": 2.0
+        }
+      },
+      {
+        "name": "High-frequency trading anomaly detection",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_contextual_anomalies(\n    columns='trade_volume',\n    time_column='trade_timestamp',\n    method='prediction_interval',\n    model_type='ewm',\n    window=1000,\n    threshold=3.0,\n    datetime_format='%Y-%m-%d %H:%M:%S.%f'\n)",
+        "inputs": {
+          "columns": "trade_volume",
+          "time_column": "trade_timestamp",
+          "method": "prediction_interval",
+          "model_type": "ewm",
+          "window": 1000,
+          "threshold": 3.0,
+          "datetime_format": "%Y-%m-%d %H:%M:%S.%f"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "AnomalyPipe",
+    "category": "anomaly_detection",
+    "function": "detect_collective_anomalies",
+    "description": "Detect multivariate anomalies using machine learning methods",
+    "prerequisites": ["AnomalyPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Isolation Forest for server metrics",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_collective_anomalies(\n    columns=['cpu_usage', 'memory_usage', 'disk_io', 'network_traffic'],\n    time_column='timestamp',\n    method='isolation_forest',\n    window=200,\n    contamination=0.05,\n    n_estimators=100\n)",
+        "inputs": {
+          "columns": ["cpu_usage", "memory_usage", "disk_io", "network_traffic"],
+          "time_column": "timestamp",
+          "method": "isolation_forest",
+          "window": 200,
+          "contamination": 0.05,
+          "n_estimators": 100
+        }
+      },
+      {
+        "name": "Local Outlier Factor for sensor data",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_collective_anomalies(\n    columns=['temperature', 'pressure', 'vibration', 'current'],\n    time_column='timestamp',\n    method='lof',\n    window=150,\n    contamination=0.03\n)",
+        "inputs": {
+          "columns": ["temperature", "pressure", "vibration", "current"],
+          "time_column": "timestamp",
+          "method": "lof",
+          "window": 150,
+          "contamination": 0.03
+        }
+      },
+      {
+        "name": "Equipment failure detection with grouping",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_collective_anomalies(\n    columns=['vibration_x', 'vibration_y', 'vibration_z', 'temperature'],\n    time_column='timestamp',\n    method='isolation_forest',\n    contamination=0.02,\n    window=300,\n    group_columns=['equipment_id']\n)",
+        "inputs": {
+          "columns": ["vibration_x", "vibration_y", "vibration_z", "temperature"],
+          "time_column": "timestamp",
+          "method": "isolation_forest",
+          "contamination": 0.02,
+          "window": 300,
+          "group_columns": ["equipment_id"]
+        }
+      },
+      {
+        "name": "One-Class SVM for financial data",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_collective_anomalies(\n    columns=['price', 'volume', 'volatility', 'rsi'],\n    time_column='timestamp',\n    method='one_class_svm',\n    window=100,\n    contamination=0.01\n)",
+        "inputs": {
+          "columns": ["price", "volume", "volatility", "rsi"],
+          "time_column": "timestamp",
+          "method": "one_class_svm",
+          "window": 100,
+          "contamination": 0.01
+        }
+      },
+      {
+        "name": "DBSCAN clustering for user behavior",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_collective_anomalies(\n    columns=['session_duration', 'page_views', 'clicks', 'bounce_rate'],\n    time_column='timestamp',\n    method='dbscan',\n    window=50,\n    contamination=0.1\n)",
+        "inputs": {
+          "columns": ["session_duration", "page_views", "clicks", "bounce_rate"],
+          "time_column": "timestamp",
+          "method": "dbscan",
+          "window": 50,
+          "contamination": 0.1
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "AnomalyPipe",
+    "category": "anomaly_detection",
+    "function": "calculate_seasonal_residuals",
+    "description": "Calculate seasonal residuals by decomposing time series into trend, seasonal, and residual components",
+    "prerequisites": ["AnomalyPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Monthly sales seasonal decomposition",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | calculate_seasonal_residuals(\n    columns='monthly_sales',\n    mtime_column='month',\n    mseasonal_period=12,\n    mmethod='multiplicative'\n)",
+        "inputs": {
+          "columns": "monthly_sales",
+          "mtime_column": "month",
+          "mseasonal_period": 12,
+          "mmethod": "multiplicative"
+        }
+      },
+      {
+        "name": "Daily traffic decomposition with weekly seasonality",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | calculate_seasonal_residuals(\n    columns='daily_visitors',\n    mtime_column='date',\n    mseasonal_period=7,\n    mmethod='additive'\n)",
+        "inputs": {
+          "columns": "daily_visitors",
+          "mtime_column": "date",
+          "mseasonal_period": 7,
+          "mmethod": "additive"
+        }
+      },
+      {
+        "name": "Quarterly revenue decomposition",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | calculate_seasonal_residuals(\n    columns='quarterly_revenue',\n    mtime_column='quarter',\n    mseasonal_period=4,\n    mmethod='multiplicative'\n)",
+        "inputs": {
+          "columns": "quarterly_revenue",
+          "mtime_column": "quarter",
+          "mseasonal_period": 4,
+          "mmethod": "multiplicative"
+        }
+      },
+      {
+        "name": "Hourly energy consumption with daily seasonality",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | calculate_seasonal_residuals(\n    columns='energy_consumption',\n    mtime_column='hour',\n    mseasonal_period=24,\n    mmethod='additive'\n)",
+        "inputs": {
+          "columns": "energy_consumption",
+          "mtime_column": "hour",
+          "mseasonal_period": 24,
+          "mmethod": "additive"
+        }
+      },
+      {
+        "name": "Grouped seasonal decomposition by region",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | calculate_seasonal_residuals(\n    columns='sales',\n    mtime_column='date',\n    mseasonal_period=12,\n    mmethod='multiplicative',\n    mgroup_columns=['region']\n)",
+        "inputs": {
+          "columns": "sales",
+          "mtime_column": "date",
+          "mseasonal_period": 12,
+          "mmethod": "multiplicative",
+          "mgroup_columns": ["region"]
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "AnomalyPipe",
+    "category": "anomaly_detection",
+    "function": "detect_anomalies_from_residuals",
+    "description": "Detect anomalies in residual data after seasonal decomposition",
+    "prerequisites": ["AnomalyPipe.from_dataframe(data)", "calculate_seasonal_residuals()"],
+    "variations": [
+      {
+        "name": "Detect anomalies in revenue residuals",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | calculate_seasonal_residuals('revenue', 'date', 12, 'multiplicative')\nanomaly_pipe = anomaly_pipe | detect_anomalies_from_residuals(\n    columns='revenue',\n    method='modified_zscore',\n    threshold=3.0,\n    suffix='_residual',\n    output_suffix='_anomaly'\n)",
+        "inputs": {
+          "columns": "revenue",
+          "method": "modified_zscore",
+          "threshold": 3.0,
+          "suffix": "_residual",
+          "output_suffix": "_anomaly"
+        }
+      },
+      {
+        "name": "Detect anomalies in stock price residuals",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | calculate_seasonal_residuals('stock_price', 'date', 252, 'additive')\nanomaly_pipe = anomaly_pipe | detect_anomalies_from_residuals(\n    columns='stock_price',\n    method='iqr',\n    threshold=2.0,\n    suffix='_residual'\n)",
+        "inputs": {
+          "columns": "stock_price",
+          "method": "iqr",
+          "threshold": 2.0,
+          "suffix": "_residual"
+        }
+      },
+      {
+        "name": "Detect anomalies in website traffic residuals",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | calculate_seasonal_residuals('daily_visitors', 'date', 7, 'additive')\nanomaly_pipe = anomaly_pipe | detect_anomalies_from_residuals(\n    columns='daily_visitors',\n    method='zscore',\n    threshold=2.5,\n    suffix='_residual',\n    output_suffix='_traffic_anomaly'\n)",
+        "inputs": {
+          "columns": "daily_visitors",
+          "method": "zscore",
+          "threshold": 2.5,
+          "suffix": "_residual",
+          "output_suffix": "_traffic_anomaly"
+        }
+      },
+      {
+        "name": "Detect anomalies in multiple residual columns",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | calculate_seasonal_residuals(['sales', 'profit'], 'date', 12, 'multiplicative')\nanomaly_pipe = anomaly_pipe | detect_anomalies_from_residuals(\n    columns=['sales', 'profit'],\n    method='modified_zscore',\n    threshold=3.0,\n    suffix='_residual'\n)",
+        "inputs": {
+          "columns": ["sales", "profit"],
+          "method": "modified_zscore",
+          "threshold": 3.0,
+          "suffix": "_residual"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "AnomalyPipe",
+    "category": "anomaly_detection",
+    "function": "detect_change_points",
+    "description": "Detect structural breaks and change points in time series data",
+    "prerequisites": ["AnomalyPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Binary segmentation for financial returns",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_change_points(\n    columns='stock_returns',\n    time_column='trading_date',\n    min_size=30,\n    method='binary_segmentation',\n    penalty='bic'\n)",
+        "inputs": {
+          "columns": "stock_returns",
+          "time_column": "trading_date",
+          "min_size": 30,
+          "method": "binary_segmentation",
+          "penalty": "bic"
+        }
+      },
+      {
+        "name": "Window-based change point detection",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_change_points(\n    columns='daily_active_users',\n    time_column='date',\n    min_size=14,\n    method='window',\n    penalty='aic'\n)",
+        "inputs": {
+          "columns": "daily_active_users",
+          "time_column": "date",
+          "min_size": 14,
+          "method": "window",
+          "penalty": "aic"
+        }
+      },
+      {
+        "name": "Pelt algorithm for system performance",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_change_points(\n    columns='response_time',\n    time_column='timestamp',\n    min_size=20,\n    method='pelt',\n    penalty='bic'\n)",
+        "inputs": {
+          "columns": "response_time",
+          "time_column": "timestamp",
+          "min_size": 20,
+          "method": "pelt",
+          "penalty": "bic"
+        }
+      },
+      {
+        "name": "Grouped change point detection by region",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_change_points(\n    columns='sales',\n    time_column='date',\n    min_size=25,\n    method='binary_segmentation',\n    penalty='aic',\n    group_columns=['region']\n)",
+        "inputs": {
+          "columns": "sales",
+          "time_column": "date",
+          "min_size": 25,
+          "method": "binary_segmentation",
+          "penalty": "aic",
+          "group_columns": ["region"]
+        }
+      },
+      {
+        "name": "Change point detection with datetime format",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_change_points(\n    columns='temperature',\n    time_column='datetime',\n    min_size=50,\n    method='window',\n    penalty='bic',\n    datetime_format='%Y-%m-%d %H:%M:%S'\n)",
+        "inputs": {
+          "columns": "temperature",
+          "time_column": "datetime",
+          "min_size": 50,
+          "method": "window",
+          "penalty": "bic",
+          "datetime_format": "%Y-%m-%d %H:%M:%S"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "AnomalyPipe",
+    "category": "anomaly_detection",
+    "function": "forecast_and_detect_anomalies",
+    "description": "Generate forecasts and detect anomalies based on prediction intervals",
+    "prerequisites": ["AnomalyPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "ARIMA forecasting with anomaly detection",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | forecast_and_detect_anomalies(\n    columns='energy_consumption',\n    time_column='timestamp',\n    forecast_periods=30,\n    model='arima',\n    threshold=2.5\n)",
+        "inputs": {
+          "columns": "energy_consumption",
+          "time_column": "timestamp",
+          "forecast_periods": 30,
+          "model": "arima",
+          "threshold": 2.5
+        }
+      },
+      {
+        "name": "Exponential smoothing with seasonal forecasting",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | forecast_and_detect_anomalies(\n    columns='weekly_sales',\n    time_column='week',\n    forecast_periods=12,\n    model='exponential_smoothing',\n    seasonal_period=52,\n    threshold=2.0\n)",
+        "inputs": {
+          "columns": "weekly_sales",
+          "time_column": "week",
+          "forecast_periods": 12,
+          "model": "exponential_smoothing",
+          "seasonal_period": 52,
+          "threshold": 2.0
+        }
+      },
+      {
+        "name": "Prophet forecasting for business metrics",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | forecast_and_detect_anomalies(\n    columns='daily_revenue',\n    time_column='date',\n    forecast_periods=90,\n    model='prophet',\n    threshold=2.0\n)",
+        "inputs": {
+          "columns": "daily_revenue",
+          "time_column": "date",
+          "forecast_periods": 90,
+          "model": "prophet",
+          "threshold": 2.0
+        }
+      },
+      {
+        "name": "LSTM neural network forecasting",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | forecast_and_detect_anomalies(\n    columns='stock_price',\n    time_column='date',\n    forecast_periods=20,\n    model='lstm',\n    threshold=2.5\n)",
+        "inputs": {
+          "columns": "stock_price",
+          "time_column": "date",
+          "forecast_periods": 20,
+          "model": "lstm",
+          "threshold": 2.5
+        }
+      },
+      {
+        "name": "Grouped forecasting by category",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | forecast_and_detect_anomalies(\n    columns='demand',\n    time_column='date',\n    forecast_periods=30,\n    model='arima',\n    threshold=2.0,\n    group_columns=['product_category']\n)",
+        "inputs": {
+          "columns": "demand",
+          "time_column": "date",
+          "forecast_periods": 30,
+          "model": "arima",
+          "threshold": 2.0,
+          "group_columns": ["product_category"]
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "AnomalyPipe",
+    "category": "anomaly_detection",
+    "function": "batch_detect_anomalies",
+    "description": "Apply multiple anomaly detection methods and combine results using ensemble methods",
+    "prerequisites": ["AnomalyPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Majority voting ensemble",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | batch_detect_anomalies(\n    columns='sensor_data',\n    methods=[\n        {'name': 'statistical_outliers', 'params': {'columns': 'sensor_data', 'method': 'zscore', 'threshold': 3.0}},\n        {'name': 'contextual_anomalies', 'params': {'columns': 'sensor_data', 'time_column': 'timestamp', 'method': 'residual'}}\n    ],\n    ensemble_method='majority',\n    output_suffix='_ensemble_anomaly'\n)",
+        "inputs": {
+          "columns": "sensor_data",
+          "methods": [
+            {"name": "statistical_outliers", "params": {"columns": "sensor_data", "method": "zscore", "threshold": 3.0}},
+            {"name": "contextual_anomalies", "params": {"columns": "sensor_data", "time_column": "timestamp", "method": "residual"}}
+          ],
+          "ensemble_method": "majority",
+          "output_suffix": "_ensemble_anomaly"
+        }
+      },
+      {
+        "name": "Weighted ensemble with multiple methods",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | batch_detect_anomalies(\n    columns=['temperature', 'pressure'],\n    methods=[\n        {'name': 'statistical_outliers', 'params': {'columns': ['temperature', 'pressure'], 'method': 'iqr'}},\n        {'name': 'collective_anomalies', 'params': {'columns': ['temperature', 'pressure'], 'time_column': 'timestamp', 'method': 'isolation_forest'}},\n        {'name': 'contextual_anomalies', 'params': {'columns': ['temperature', 'pressure'], 'time_column': 'timestamp', 'method': 'prediction_interval'}}\n    ],\n    ensemble_method='weighted'\n)",
+        "inputs": {
+          "columns": ["temperature", "pressure"],
+          "methods": [
+            {"name": "statistical_outliers", "params": {"columns": ["temperature", "pressure"], "method": "iqr"}},
+            {"name": "collective_anomalies", "params": {"columns": ["temperature", "pressure"], "time_column": "timestamp", "method": "isolation_forest"}},
+            {"name": "contextual_anomalies", "params": {"columns": ["temperature", "pressure"], "time_column": "timestamp", "method": "prediction_interval"}}
+          ],
+          "ensemble_method": "weighted"
+        }
+      },
+      {
+        "name": "Any consensus ensemble",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | batch_detect_anomalies(\n    columns='network_traffic',\n    methods=[\n        {'name': 'statistical_outliers', 'params': {'columns': 'network_traffic', 'method': 'modified_zscore', 'threshold': 2.5}},\n        {'name': 'collective_anomalies', 'params': {'columns': 'network_traffic', 'time_column': 'timestamp', 'method': 'lof'}}\n    ],\n    ensemble_method='any'\n)",
+        "inputs": {
+          "columns": "network_traffic",
+          "methods": [
+            {"name": "statistical_outliers", "params": {"columns": "network_traffic", "method": "modified_zscore", "threshold": 2.5}},
+            {"name": "collective_anomalies", "params": {"columns": "network_traffic", "time_column": "timestamp", "method": "lof"}}
+          ],
+          "ensemble_method": "any"
+        }
+      },
+      {
+        "name": "All consensus ensemble",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | batch_detect_anomalies(\n    columns='financial_metrics',\n    methods=[\n        {'name': 'statistical_outliers', 'params': {'columns': 'financial_metrics', 'method': 'zscore', 'threshold': 3.0}},\n        {'name': 'contextual_anomalies', 'params': {'columns': 'financial_metrics', 'time_column': 'date', 'method': 'residual'}},\n        {'name': 'collective_anomalies', 'params': {'columns': 'financial_metrics', 'time_column': 'date', 'method': 'isolation_forest'}}\n    ],\n    ensemble_method='all'\n)",
+        "inputs": {
+          "columns": "financial_metrics",
+          "methods": [
+            {"name": "statistical_outliers", "params": {"columns": "financial_metrics", "method": "zscore", "threshold": 3.0}},
+            {"name": "contextual_anomalies", "params": {"columns": "financial_metrics", "time_column": "date", "method": "residual"}},
+            {"name": "collective_anomalies", "params": {"columns": "financial_metrics", "time_column": "date", "method": "isolation_forest"}}
+          ],
+          "ensemble_method": "all"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "AnomalyPipe",
+    "category": "anomaly_detection",
+    "function": "get_anomaly_summary",
+    "description": "Get summary statistics of detected anomalies",
+    "prerequisites": ["Any anomaly detection function"],
+    "variations": [
+      {
+        "name": "Get summary of last analysis",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_statistical_outliers('temperature', 'zscore', 3.0)\nsummary = get_anomaly_summary()(anomaly_pipe)",
+        "inputs": {}
+      },
+      {
+        "name": "Get summary of specific analysis",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_contextual_anomalies('sales', 'date', 'residual', 'sarimax')\nsummary = get_anomaly_summary(analysis_name='contextual_anomalies_residual_sarimax')(anomaly_pipe)",
+        "inputs": {
+          "analysis_name": "contextual_anomalies_residual_sarimax"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "AnomalyPipe",
+    "category": "anomaly_detection",
+    "function": "get_top_anomalies",
+    "description": "Get the most severe anomalies by score",
+    "prerequisites": ["Any anomaly detection function"],
+    "variations": [
+      {
+        "name": "Get top 10 anomalies",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_statistical_outliers('temperature', 'zscore', 3.0)\ntop_anomalies = get_top_anomalies(n=10, time_column='timestamp')(anomaly_pipe)",
+        "inputs": {
+          "n": 10,
+          "time_column": "timestamp"
+        }
+      },
+      {
+        "name": "Get top 5 anomalies from specific analysis",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | batch_detect_anomalies('sensor_data', [{'name': 'statistical_outliers', 'params': {'columns': 'sensor_data', 'method': 'zscore'}}])\ntop_anomalies = get_top_anomalies(n=5, analysis_name='ensemble_anomalies_majority')(anomaly_pipe)",
+        "inputs": {
+          "n": 5,
+          "analysis_name": "ensemble_anomalies_majority"
+        }
+      },
+      {
+        "name": "Get top 20 anomalies without time column",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_collective_anomalies(['cpu', 'memory'], 'timestamp', 'isolation_forest')\ntop_anomalies = get_top_anomalies(n=20)(anomaly_pipe)",
+        "inputs": {
+          "n": 20
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "AnomalyPipe",
+    "category": "anomaly_detection",
+    "function": "to_df",
+    "description": "Convert anomaly detection results to DataFrame",
+    "prerequisites": ["Any anomaly detection function"],
+    "variations": [
+      {
+        "name": "Convert last analysis to DataFrame",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_statistical_outliers('temperature', 'zscore', 3.0)\nresult_df = anomaly_pipe.to_df()",
+        "inputs": {}
+      },
+      {
+        "name": "Convert specific analysis with metadata",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_contextual_anomalies('sales', 'date', 'residual', 'sarimax')\nresult_df = anomaly_pipe.to_df(analysis_name='contextual_anomalies_residual_sarimax', include_metadata=True)",
+        "inputs": {
+          "analysis_name": "contextual_anomalies_residual_sarimax",
+          "include_metadata": true
+        }
+      },
+      {
+        "name": "Convert without original data",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_collective_anomalies(['cpu', 'memory'], 'timestamp', 'isolation_forest')\nresult_df = anomaly_pipe.to_df(include_original=False)",
+        "inputs": {
+          "include_original": false
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "AnomalyPipe",
+    "category": "anomaly_detection",
+    "function": "merge_to_df",
+    "description": "Merge anomaly detection results into base dataframe",
+    "prerequisites": ["Any anomaly detection function"],
+    "variations": [
+      {
+        "name": "Merge last analysis results",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_statistical_outliers('temperature', 'zscore', 3.0)\nmerged_df = anomaly_pipe.merge_to_df(original_data)",
+        "inputs": {
+          "base_df": "original_data"
+        }
+      },
+      {
+        "name": "Merge specific analysis with metadata",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_contextual_anomalies('sales', 'date', 'residual', 'sarimax')\nmerged_df = anomaly_pipe.merge_to_df(original_data, analysis_name='contextual_anomalies_residual_sarimax', include_metadata=True)",
+        "inputs": {
+          "base_df": "original_data",
+          "analysis_name": "contextual_anomalies_residual_sarimax",
+          "include_metadata": true
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "AnomalyPipe",
+    "category": "anomaly_detection",
+    "function": "get_anomaly_columns",
+    "description": "Get list of anomaly detection columns",
+    "prerequisites": ["Any anomaly detection function"],
+    "variations": [
+      {
+        "name": "Get columns from last analysis",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_statistical_outliers('temperature', 'zscore', 3.0)\nanomaly_columns = anomaly_pipe.get_anomaly_columns()",
+        "inputs": {}
+      },
+      {
+        "name": "Get columns from specific analysis",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_contextual_anomalies('sales', 'date', 'residual', 'sarimax')\nanomaly_columns = anomaly_pipe.get_anomaly_columns(analysis_name='contextual_anomalies_residual_sarimax')",
+        "inputs": {
+          "analysis_name": "contextual_anomalies_residual_sarimax"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "AnomalyPipe",
+    "category": "anomaly_detection",
+    "function": "get_anomaly_summary_df",
+    "description": "Get anomaly summary as DataFrame",
+    "prerequisites": ["Any anomaly detection function"],
+    "variations": [
+      {
+        "name": "Get summary DataFrame from last analysis",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_statistical_outliers('temperature', 'zscore', 3.0)\nsummary_df = anomaly_pipe.get_anomaly_summary_df()",
+        "inputs": {}
+      },
+      {
+        "name": "Get summary DataFrame from specific analysis",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_contextual_anomalies('sales', 'date', 'residual', 'sarimax')\nsummary_df = anomaly_pipe.get_anomaly_summary_df(analysis_name='contextual_anomalies_residual_sarimax')",
+        "inputs": {
+          "analysis_name": "contextual_anomalies_residual_sarimax"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "AnomalyPipe",
+    "category": "anomaly_detection",
+    "function": "get_summary",
+    "description": "Get overall summary of anomaly detection pipeline",
+    "prerequisites": ["Any anomaly detection function"],
+    "variations": [
+      {
+        "name": "Get overall pipeline summary",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_statistical_outliers('temperature', 'zscore', 3.0)\nsummary = anomaly_pipe.get_summary()",
+        "inputs": {}
+      },
+      {
+        "name": "Get summary for specific analysis",
+        "example": "anomaly_pipe = AnomalyPipe.from_dataframe(data)\nanomaly_pipe = anomaly_pipe | detect_contextual_anomalies('sales', 'date', 'residual', 'sarimax')\nsummary = anomaly_pipe.get_summary(analysis_name='contextual_anomalies_residual_sarimax')",
+        "inputs": {
+          "analysis_name": "contextual_anomalies_residual_sarimax"
+        }
+      }
+    ]
+  }
+]

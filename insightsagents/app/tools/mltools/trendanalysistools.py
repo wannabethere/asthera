@@ -92,6 +92,95 @@ class TrendPipe(BasePipe):
         if hasattr(source_pipe, 'current_analysis'):
             self.current_analysis = source_pipe.current_analysis
     
+    def _has_results(self) -> bool:
+        """Check if the pipeline has any results to merge"""
+        return (len(self.time_aggregations) > 0 or 
+                len(self.trend_results) > 0 or 
+                len(self.trend_decompositions) > 0 or 
+                len(self.forecasts) > 0)
+    
+    def merge_to_df(self, base_df: pd.DataFrame, analysis_name: Optional[str] = None, include_metadata: bool = False, **kwargs) -> pd.DataFrame:
+        """
+        Merge trend analysis results into the base dataframe as new columns
+        
+        Parameters:
+        -----------
+        base_df : pd.DataFrame
+            The base dataframe to merge results into
+        analysis_name : str, optional
+            Specific analysis to merge (if None, merges all)
+        include_metadata : bool, default=False
+            Whether to include metadata columns
+        **kwargs : dict
+            Additional arguments
+            
+        Returns:
+        --------
+        pd.DataFrame
+            Base dataframe with trend analysis results merged as new columns
+        """
+        if not self._has_results():
+            return base_df
+        
+        result_df = base_df.copy()
+        
+        # Merge time aggregations
+        for agg_name, agg_data in self.time_aggregations.items():
+            if analysis_name is None or agg_name == analysis_name:
+                if 'data' in agg_data and isinstance(agg_data['data'], pd.DataFrame):
+                    # Merge time aggregation data
+                    for col in agg_data['data'].columns:
+                        if col not in result_df.columns:
+                            result_df[col] = None
+                    
+                    # Align and merge based on time column if available
+                    if 'time_period' in agg_data['data'].columns and 'time_period' in result_df.columns:
+                        result_df = result_df.merge(
+                            agg_data['data'], 
+                            on='time_period', 
+                            how='left', 
+                            suffixes=('', f'_{agg_name}')
+                        )
+                    else:
+                        # Simple concatenation if no time alignment possible
+                        for col in agg_data['data'].columns:
+                            if col not in result_df.columns:
+                                result_df[f"{col}_{agg_name}"] = None
+        
+        # Merge trend results
+        for trend_name, trend_data in self.trend_results.items():
+            if analysis_name is None or trend_name == analysis_name:
+                if 'data' in trend_data and isinstance(trend_data['data'], pd.DataFrame):
+                    for col in trend_data['data'].columns:
+                        if col not in result_df.columns:
+                            result_df[col] = None
+                    
+                    # Try to align by index or time column
+                    if len(trend_data['data']) == len(result_df):
+                        for col in trend_data['data'].columns:
+                            result_df[f"{col}_{trend_name}"] = trend_data['data'][col].values
+        
+        # Merge trend decompositions
+        for decomp_name, decomp_data in self.trend_decompositions.items():
+            if analysis_name is None or decomp_name == analysis_name:
+                if isinstance(decomp_data, dict):
+                    for component, series in decomp_data.items():
+                        if hasattr(series, 'values') and len(series) == len(result_df):
+                            result_df[f"{component}_{decomp_name}"] = series.values
+        
+        # Merge forecasts
+        for forecast_name, forecast_data in self.forecasts.items():
+            if analysis_name is None or forecast_name == analysis_name:
+                if isinstance(forecast_data, pd.DataFrame):
+                    for col in forecast_data.columns:
+                        result_df[f"{col}_{forecast_name}"] = None
+                    
+                    # Forecasts are typically for future periods, so we might not align directly
+                    # Store forecast data as metadata or in separate columns
+                    if include_metadata:
+                        result_df[f"forecast_{forecast_name}_data"] = str(forecast_data.to_dict())
+        
+        return result_df
     
     def to_df(self, analysis_name: Optional[str] = None, include_metadata: bool = False, include_original: bool = True):
         """
@@ -1017,15 +1106,28 @@ def aggregate_by_time(
 
 
 def calculate_growth_rates(
+    data: Optional[Union[pd.DataFrame, Any]] = None,
+    columns: Optional[List[str]] = None,
+    time_period: Optional[str] = None,
     window: Optional[int] = None,
     annualize: bool = False,
     method: str = 'percentage'
 ):
     """
-    Calculate growth rates for aggregated metrics
+    Calculate growth rates for metrics
+    
+    This function can be used in two ways:
+    1. As a pipeline operation after aggregate_by_time()
+    2. Directly with a DataFrame and specified columns
     
     Parameters:
     -----------
+    data : pd.DataFrame, optional
+        DataFrame to calculate growth rates for (for direct usage)
+    columns : List[str], optional
+        List of column names to calculate growth rates for (for direct usage)
+    time_period : str, optional
+        Time period for annualization ('D', 'W', 'M', 'Q', 'Y') (for direct usage)
     window : int, optional
         Window size for growth rate calculation (if None, compare to previous period)
     annualize : bool, default=False
@@ -1035,38 +1137,60 @@ def calculate_growth_rates(
         
     Returns:
     --------
-    Callable
-        Function that calculates growth rates
+    Union[Callable, pd.DataFrame]
+        - If used as pipeline operation: Callable function
+        - If used directly: DataFrame with growth rate columns
+        
+    Usage:
+    ------
+    Pipeline usage (after aggregate_by_time):
+    
+    pipe = (TrendPipe(data)
+            | aggregate_by_time(
+                date_column='date',
+                metric_columns=['revenue', 'users'],
+                time_period='M'
+            )
+            | calculate_growth_rates(window=1, method='percentage')
+    )
+    
+    Direct usage:
+    
+    growth_df = calculate_growth_rates(
+        data=my_dataframe,
+        columns=['revenue', 'users'],
+        time_period='M',
+        window=1,
+        method='percentage'
+    )
+    
+    Raises:
+    -------
+    ValueError
+        If no time aggregation is found in the pipeline (call aggregate_by_time first)
+        If data is provided but columns is not specified
     """
-    def _calculate_growth_rates(pipe):
-        if pipe.current_analysis is None or pipe.current_analysis not in pipe.time_aggregations:
-            raise ValueError("No time aggregation found. Call aggregate_by_time() first.")
-        
-        new_pipe = pipe.copy()
-        agg_data = new_pipe.time_aggregations[new_pipe.current_analysis]
-        
-        df = agg_data['data'].copy()  # Ensure we work with a copy
-        print(df.head(3).to_string())
-        time_period = agg_data['time_period']
-        
+    def _calculate_growth_rates_core(df, time_period_param=None):
+        """Core growth rate calculation logic"""
         # Create a new dataframe for growth rates
         growth_df = pd.DataFrame(index=df.index)
         
         # Calculate periods per year for annualization
-        if annualize:
-            if time_period == 'D':
+        periods_per_year = 1
+        if annualize and time_period_param:
+            if time_period_param == 'D':
                 periods_per_year = 365.25
-            elif time_period == 'W':
+            elif time_period_param == 'W':
                 periods_per_year = 52.143
-            elif time_period == 'M':
+            elif time_period_param == 'M':
                 periods_per_year = 12
-            elif time_period == 'Q':
+            elif time_period_param == 'Q':
                 periods_per_year = 4
-            elif time_period == 'Y':
+            elif time_period_param == 'Y':
                 periods_per_year = 1
             else:
                 periods_per_year = 1
-                warnings.warn(f"Unknown time period '{time_period}'. Using 1 period per year for annualization.")
+                warnings.warn(f"Unknown time period '{time_period_param}'. Using 1 period per year for annualization.")
         
         # Calculate growth rates for each column
         for col in df.columns:
@@ -1105,6 +1229,35 @@ def calculate_growth_rates(
             
             growth_df[f"{col}_growth"] = growth
         
+        return growth_df
+    
+    # Direct usage: data and columns provided
+    if data is not None:
+        if columns is None:
+            raise ValueError("If data is provided, columns must also be specified")
+        
+        if not isinstance(data, pd.DataFrame):
+            raise ValueError("data must be a pandas DataFrame")
+        
+        # Filter to only the specified columns
+        df = data[columns].copy()
+        growth_df = _calculate_growth_rates_core(df, time_period)
+        return growth_df
+    
+    # Pipeline usage: return callable function
+    def _calculate_growth_rates(pipe):
+        if pipe.current_analysis is None or pipe.current_analysis not in pipe.time_aggregations:
+            raise ValueError("No time aggregation found. Call aggregate_by_time() first.")
+        
+        new_pipe = pipe.copy()
+        agg_data = new_pipe.time_aggregations[new_pipe.current_analysis]
+        
+        df = agg_data['data'].copy()  # Ensure we work with a copy
+        print(df.head(3).to_string())
+        time_period_param = agg_data['time_period']
+        
+        growth_df = _calculate_growth_rates_core(df, time_period_param)
+        
         # Store the result
         analysis_name = f"{new_pipe.current_analysis}_growth"
         new_pipe.trend_results[analysis_name] = {
@@ -1121,15 +1274,25 @@ def calculate_growth_rates(
 
 
 def calculate_moving_average(
+    data: Optional[Union[pd.DataFrame, Any]] = None,
+    columns: Optional[List[str]] = None,
     window: int = 7,
     method: str = 'simple',
     center: bool = False
 ):
     """
-    Calculate moving averages for aggregated metrics
+    Calculate moving averages for metrics
+    
+    This function can be used in two ways:
+    1. As a pipeline operation after aggregate_by_time()
+    2. Directly with a DataFrame and specified columns
     
     Parameters:
     -----------
+    data : pd.DataFrame, optional
+        DataFrame to calculate moving averages for (for direct usage)
+    columns : List[str], optional
+        List of column names to calculate moving averages for (for direct usage)
     window : int, default=7
         Window size for moving average
     method : str, default='simple'
@@ -1139,17 +1302,40 @@ def calculate_moving_average(
         
     Returns:
     --------
-    Callable
-        Function that calculates moving averages
+    Union[Callable, pd.DataFrame]
+        - If used as pipeline operation: Callable function
+        - If used directly: DataFrame with moving average columns
+        
+    Usage:
+    ------
+    Pipeline usage (after aggregate_by_time):
+    
+    pipe = (TrendPipe(data)
+            | aggregate_by_time(
+                date_column='date',
+                metric_columns=['revenue', 'users'],
+                time_period='M'
+            )
+            | calculate_moving_average(window=3, method='simple')
+    )
+    
+    Direct usage:
+    
+    ma_df = calculate_moving_average(
+        data=my_dataframe,
+        columns=['revenue', 'users'],
+        window=3,
+        method='simple'
+    )
+    
+    Raises:
+    -------
+    ValueError
+        If no time aggregation is found in the pipeline (call aggregate_by_time first)
+        If data is provided but columns is not specified
     """
-    def _calculate_moving_average(pipe):
-        if pipe.current_analysis is None or pipe.current_analysis not in pipe.time_aggregations:
-            raise ValueError("No time aggregation found. Call aggregate_by_time() first.")
-        
-        new_pipe = pipe.copy()
-        agg_data = new_pipe.time_aggregations[new_pipe.current_analysis]
-        df = agg_data['data'].copy()  # Ensure we work with a copy
-        
+    def _calculate_moving_average_core(df):
+        """Core moving average calculation logic"""
         # Create a new dataframe for moving averages
         ma_df = pd.DataFrame(index=df.index)
         
@@ -1170,6 +1356,32 @@ def calculate_moving_average(
             else:
                 raise ValueError(f"Unknown moving average method: {method}")
         
+        return ma_df
+    
+    # Direct usage: data and columns provided
+    if data is not None:
+        if columns is None:
+            raise ValueError("If data is provided, columns must also be specified")
+        
+        if not isinstance(data, pd.DataFrame):
+            raise ValueError("data must be a pandas DataFrame")
+        
+        # Filter to only the specified columns
+        df = data[columns].copy()
+        ma_df = _calculate_moving_average_core(df)
+        return ma_df
+    
+    # Pipeline usage: return callable function
+    def _calculate_moving_average(pipe):
+        if pipe.current_analysis is None or pipe.current_analysis not in pipe.time_aggregations:
+            raise ValueError("No time aggregation found. Call aggregate_by_time() first.")
+        
+        new_pipe = pipe.copy()
+        agg_data = new_pipe.time_aggregations[new_pipe.current_analysis]
+        df = agg_data['data'].copy()  # Ensure we work with a copy
+        
+        ma_df = _calculate_moving_average_core(df)
+        
         # Store the result
         analysis_name = f"{new_pipe.current_analysis}_ma"
         new_pipe.trend_results[analysis_name] = {
@@ -1186,7 +1398,9 @@ def calculate_moving_average(
 
 
 def decompose_trend(
-    metric_column: str,
+    data: Optional[Union[pd.DataFrame, Any]] = None,
+    metric_column: Optional[str] = None,
+    time_period: Optional[str] = None,
     model: str = 'additive',
     period: Optional[int] = None,
     extrapolate_trend: Optional[int] = None
@@ -1194,10 +1408,18 @@ def decompose_trend(
     """
     Decompose time series into trend, seasonal, and residual components
     
+    This function can be used in two ways:
+    1. As a pipeline operation after aggregate_by_time()
+    2. Directly with a DataFrame and specified column
+    
     Parameters:
     -----------
-    metric_column : str
-        Column to decompose
+    data : pd.DataFrame, optional
+        DataFrame to decompose (for direct usage)
+    metric_column : str, optional
+        Column to decompose (for direct usage)
+    time_period : str, optional
+        Time period for extrapolation ('D', 'W', 'M', 'Q', 'Y') (for direct usage)
     model : str, default='additive'
         Type of seasonal component ('additive' or 'multiplicative')
     period : int, optional
@@ -1207,38 +1429,55 @@ def decompose_trend(
         
     Returns:
     --------
-    Callable
-        Function that decomposes time series
+    Union[Callable, Dict]
+        - If used as pipeline operation: Callable function
+        - If used directly: Dictionary with decomposition results
+        
+    Usage:
+    ------
+    Pipeline usage (after aggregate_by_time):
+    
+    pipe = (TrendPipe(data)
+            | aggregate_by_time(
+                date_column='date',
+                metric_columns=['revenue'],
+                time_period='M'
+            )
+            | decompose_trend(metric_column='revenue', model='additive')
+    )
+    
+    Direct usage:
+    
+    result = decompose_trend(
+        data=my_dataframe,
+        metric_column='revenue',
+        time_period='M',
+        model='additive'
+    )
+    
+    Raises:
+    -------
+    ValueError
+        If no time aggregation is found in the pipeline (call aggregate_by_time first)
+        If data is provided but metric_column is not specified
     """
-    def _decompose_trend(pipe):
-        if pipe.current_analysis is None or pipe.current_analysis not in pipe.time_aggregations:
-            raise ValueError("No time aggregation found. Call aggregate_by_time() first.")
-        
-        new_pipe = pipe.copy()
-        agg_data = new_pipe.time_aggregations[new_pipe.current_analysis]
-        df = agg_data['data'].copy()  # Ensure we work with a copy
-        time_period = agg_data['time_period']
-        
-        # Check if the metric column exists
-        if metric_column not in df.columns:
-            raise ValueError(f"Metric column '{metric_column}' not found in aggregated data")
-        
+    def _decompose_trend_core(series, time_period_param, metric_col):
+        """Core decomposition logic"""
         # Fill any missing values for decomposition
-        series = df[metric_column].copy()
         if series.isnull().any():
             series = series.interpolate(method='linear')
         
         # Determine period if not provided
-        decomp_period = period  # Use local variable to avoid UnboundLocalError
+        decomp_period = period
         if decomp_period is None:
             # Estimate based on time period
-            if time_period == 'D':
+            if time_period_param == 'D':
                 est_period = 7  # Weekly
-            elif time_period == 'W':
+            elif time_period_param == 'W':
                 est_period = 52  # Yearly
-            elif time_period == 'M':
+            elif time_period_param == 'M':
                 est_period = 12  # Yearly
-            elif time_period == 'Q':
+            elif time_period_param == 'Q':
                 est_period = 4  # Yearly
             else:
                 est_period = 1  # No seasonality
@@ -1259,11 +1498,9 @@ def decompose_trend(
                 slope, intercept, _, _, _ = stats.linregress(x[mask], series[mask])
                 trend = pd.Series(intercept + slope * x, index=series.index)
                 
-                # Store the result
-                analysis_name = f"{new_pipe.current_analysis}_{metric_column}_decomp"
-                new_pipe.trend_decompositions[analysis_name] = {
+                result = {
                     'type': 'linear',
-                    'metric': metric_column,
+                    'metric': metric_col,
                     'trend': trend,
                     'seasonal': pd.Series(0, index=series.index),
                     'residual': series - trend,
@@ -1276,15 +1513,15 @@ def decompose_trend(
                 if extrapolate_trend is not None and extrapolate_trend > 0:
                     # Create future dates
                     last_date = series.index[-1]
-                    if time_period == 'D':
+                    if time_period_param == 'D':
                         future_dates = pd.date_range(start=last_date + timedelta(days=1), periods=extrapolate_trend, freq='D')
-                    elif time_period == 'W':
+                    elif time_period_param == 'W':
                         future_dates = pd.date_range(start=last_date + timedelta(days=7), periods=extrapolate_trend, freq='W')
-                    elif time_period == 'M':
+                    elif time_period_param == 'M':
                         future_dates = pd.date_range(start=last_date + timedelta(days=31), periods=extrapolate_trend, freq='M')
-                    elif time_period == 'Q':
+                    elif time_period_param == 'Q':
                         future_dates = pd.date_range(start=last_date + timedelta(days=92), periods=extrapolate_trend, freq='Q')
-                    elif time_period == 'Y':
+                    elif time_period_param == 'Y':
                         future_dates = pd.date_range(start=last_date + timedelta(days=366), periods=extrapolate_trend, freq='Y')
                     
                     # Calculate future trend values
@@ -1298,10 +1535,9 @@ def decompose_trend(
                         'seasonal': np.zeros(len(future_dates)),
                     }, index=future_dates)
                     
-                    # Store the forecast
-                    new_pipe.forecasts[analysis_name] = forecast_df
+                    result['forecast'] = forecast_df
                 
-                return new_pipe
+                return result
         
         # Perform seasonal decomposition
         try:
@@ -1312,11 +1548,9 @@ def decompose_trend(
                 extrapolate_trend='freq'
             )
             
-            # Store the result
-            analysis_name = f"{new_pipe.current_analysis}_{metric_column}_decomp"
-            new_pipe.trend_decompositions[analysis_name] = {
+            result = {
                 'type': 'seasonal',
-                'metric': metric_column,
+                'metric': metric_col,
                 'trend': decomposition.trend,
                 'seasonal': decomposition.seasonal,
                 'residual': decomposition.resid,
@@ -1342,15 +1576,15 @@ def decompose_trend(
                 
                 # Create future dates
                 last_date = series.index[-1]
-                if time_period == 'D':
+                if time_period_param == 'D':
                     future_dates = pd.date_range(start=last_date + timedelta(days=1), periods=extrapolate_trend, freq='D')
-                elif time_period == 'W':
+                elif time_period_param == 'W':
                     future_dates = pd.date_range(start=last_date + timedelta(days=7), periods=extrapolate_trend, freq='W')
-                elif time_period == 'M':
+                elif time_period_param == 'M':
                     future_dates = pd.date_range(start=last_date + timedelta(days=31), periods=extrapolate_trend, freq='M')
-                elif time_period == 'Q':
+                elif time_period_param == 'Q':
                     future_dates = pd.date_range(start=last_date + timedelta(days=92), periods=extrapolate_trend, freq='Q')
-                elif time_period == 'Y':
+                elif time_period_param == 'Y':
                     future_dates = pd.date_range(start=last_date + timedelta(days=366), periods=extrapolate_trend, freq='Y')
                 
                 # Calculate future trend values
@@ -1379,8 +1613,9 @@ def decompose_trend(
                     'seasonal': future_seasonal,
                 }, index=future_dates)
                 
-                # Store the forecast
-                new_pipe.forecasts[analysis_name] = forecast_df
+                result['forecast'] = forecast_df
+            
+            return result
             
         except Exception as e:
             warnings.warn(f"Error in seasonal decomposition: {str(e)}. Using simple trend estimation instead.")
@@ -1391,11 +1626,9 @@ def decompose_trend(
             slope, intercept, _, _, _ = stats.linregress(x[mask], series[mask])
             trend = pd.Series(intercept + slope * x, index=series.index)
             
-            # Store the result
-            analysis_name = f"{new_pipe.current_analysis}_{metric_column}_decomp"
-            new_pipe.trend_decompositions[analysis_name] = {
+            result = {
                 'type': 'linear',
-                'metric': metric_column,
+                'metric': metric_col,
                 'trend': trend,
                 'seasonal': pd.Series(0, index=series.index),
                 'residual': series - trend,
@@ -1408,15 +1641,15 @@ def decompose_trend(
             if extrapolate_trend is not None and extrapolate_trend > 0:
                 # Create future dates
                 last_date = series.index[-1]
-                if time_period == 'D':
+                if time_period_param == 'D':
                     future_dates = pd.date_range(start=last_date + timedelta(days=1), periods=extrapolate_trend, freq='D')
-                elif time_period == 'W':
+                elif time_period_param == 'W':
                     future_dates = pd.date_range(start=last_date + timedelta(days=7), periods=extrapolate_trend, freq='W')
-                elif time_period == 'M':
+                elif time_period_param == 'M':
                     future_dates = pd.date_range(start=last_date + timedelta(days=31), periods=extrapolate_trend, freq='M')
-                elif time_period == 'Q':
+                elif time_period_param == 'Q':
                     future_dates = pd.date_range(start=last_date + timedelta(days=92), periods=extrapolate_trend, freq='Q')
-                elif time_period == 'Y':
+                elif time_period_param == 'Y':
                     future_dates = pd.date_range(start=last_date + timedelta(days=366), periods=extrapolate_trend, freq='Y')
                 
                 # Calculate future trend values
@@ -1430,8 +1663,49 @@ def decompose_trend(
                     'seasonal': np.zeros(len(future_dates)),
                 }, index=future_dates)
                 
-                # Store the forecast
-                new_pipe.forecasts[analysis_name] = forecast_df
+                result['forecast'] = forecast_df
+            
+            return result
+    
+    # Direct usage: data and metric_column provided
+    if data is not None:
+        if metric_column is None:
+            raise ValueError("If data is provided, metric_column must also be specified")
+        
+        if not isinstance(data, pd.DataFrame):
+            raise ValueError("data must be a pandas DataFrame")
+        
+        if metric_column not in data.columns:
+            raise ValueError(f"Metric column '{metric_column}' not found in data")
+        
+        series = data[metric_column].copy()
+        result = _decompose_trend_core(series, time_period, metric_column)
+        return result
+    
+    # Pipeline usage: return callable function
+    def _decompose_trend(pipe):
+        if pipe.current_analysis is None or pipe.current_analysis not in pipe.time_aggregations:
+            raise ValueError("No time aggregation found. Call aggregate_by_time() first.")
+        
+        new_pipe = pipe.copy()
+        agg_data = new_pipe.time_aggregations[new_pipe.current_analysis]
+        df = agg_data['data'].copy()  # Ensure we work with a copy
+        time_period_param = agg_data['time_period']
+        
+        # Check if the metric column exists
+        if metric_column not in df.columns:
+            raise ValueError(f"Metric column '{metric_column}' not found in aggregated data")
+        
+        series = df[metric_column].copy()
+        result = _decompose_trend_core(series, time_period_param, metric_column)
+        
+        # Store the result
+        analysis_name = f"{new_pipe.current_analysis}_{metric_column}_decomp"
+        new_pipe.trend_decompositions[analysis_name] = result
+        
+        # Store forecast if present
+        if 'forecast' in result:
+            new_pipe.forecasts[analysis_name] = result['forecast']
         
         return new_pipe
     
@@ -1439,7 +1713,9 @@ def decompose_trend(
 
 
 def forecast_metric(
-    metric_column: str,
+    data: Optional[Union[pd.DataFrame, Any]] = None,
+    metric_column: Optional[str] = None,
+    time_period: Optional[str] = None,
     fperiods: int = 12,
     fmethod: str = 'holt_winters',
     seasonal_periods: Optional[int] = None,
@@ -1448,13 +1724,21 @@ def forecast_metric(
     """
     Forecast future values of a metric
     
+    This function can be used in two ways:
+    1. As a pipeline operation after aggregate_by_time()
+    2. Directly with a DataFrame and specified column
+    
     Parameters:
     -----------
-    metric_column : str
-        Column to forecast
-    periods : int, default=12
+    data : pd.DataFrame, optional
+        DataFrame to forecast from (for direct usage)
+    metric_column : str, optional
+        Column to forecast (for direct usage)
+    time_period : str, optional
+        Time period for date generation ('D', 'W', 'M', 'Q', 'Y') (for direct usage)
+    fperiods : int, default=12
         Number of periods to forecast
-    method : str, default='holt_winters'
+    fmethod : str, default='holt_winters'
         Forecasting method ('holt_winters', 'linear', 'exponential')
     seasonal_periods : int, optional
         Number of periods in a seasonal cycle (if None, will be estimated)
@@ -1463,40 +1747,58 @@ def forecast_metric(
         
     Returns:
     --------
-    Callable
-        Function that forecasts future values
-    """
-    def _forecast_metric(pipe):
-        if pipe.current_analysis is None or pipe.current_analysis not in pipe.time_aggregations:
-            raise ValueError("No time aggregation found. Call aggregate_by_time() first.")
+    Union[Callable, Dict]
+        - If used as pipeline operation: Callable function
+        - If used directly: Dictionary with forecast results
         
+    Usage:
+    ------
+    Pipeline usage (after aggregate_by_time):
+    
+    pipe = (TrendPipe(data)
+            | aggregate_by_time(
+                date_column='date',
+                metric_columns=['revenue'],
+                time_period='M'
+            )
+            | forecast_metric(metric_column='revenue', fperiods=6)
+    )
+    
+    Direct usage:
+    
+    result = forecast_metric(
+        data=my_dataframe,
+        metric_column='revenue',
+        time_period='M',
+        fperiods=6
+    )
+    
+    Raises:
+    -------
+    ValueError
+        If no time aggregation is found in the pipeline (call aggregate_by_time first)
+        If data is provided but metric_column is not specified
+    """
+    def _forecast_metric_core(series, time_period_param, metric_col):
+        """Core forecasting logic"""
         periods = fperiods
         method = fmethod
-        new_pipe = pipe.copy()
-        agg_data = new_pipe.time_aggregations[new_pipe.current_analysis]
-        df = agg_data['data'].copy()  # Ensure we work with a copy
-        time_period = agg_data['time_period']
-        
-        # Check if the metric column exists
-        if metric_column not in df.columns:
-            raise ValueError(f"Metric column '{metric_column}' not found in aggregated data")
         
         # Fill any missing values for forecasting
-        series = df[metric_column].copy()
         if series.isnull().any():
             series = series.interpolate(method='linear')
         
         # Determine seasonal periods if not provided
-        forecast_seasonal_period = seasonal_periods  # Use local variable to avoid UnboundLocalError
+        forecast_seasonal_period = seasonal_periods
         if forecast_seasonal_period is None and method == 'holt_winters':
             # Estimate based on time period
-            if time_period == 'D':
+            if time_period_param == 'D':
                 forecast_seasonal_period = 7  # Weekly
-            elif time_period == 'W':
+            elif time_period_param == 'W':
                 forecast_seasonal_period = 52  # Yearly
-            elif time_period == 'M':
+            elif time_period_param == 'M':
                 forecast_seasonal_period = 12  # Yearly
-            elif time_period == 'Q':
+            elif time_period_param == 'Q':
                 forecast_seasonal_period = 4  # Yearly
             else:
                 forecast_seasonal_period = 1  # No seasonality
@@ -1536,7 +1838,7 @@ def forecast_metric(
                 pred_intervals = fit_model.get_prediction(pd.date_range(
                     start=series.index[-1] + pd.Timedelta(days=1),
                     periods=periods,
-                    freq=time_period
+                    freq=time_period_param
                 ))
                 
                 if hasattr(pred_intervals, 'conf_int'):
@@ -1654,15 +1956,15 @@ def forecast_metric(
         
         # Create future dates
         last_date = series.index[-1]
-        if time_period == 'D':
+        if time_period_param == 'D':
             future_dates = pd.date_range(start=last_date + pd.Timedelta(days=1), periods=periods, freq='D')
-        elif time_period == 'W':
+        elif time_period_param == 'W':
             future_dates = pd.date_range(start=last_date + pd.Timedelta(days=7), periods=periods, freq='W')
-        elif time_period == 'M':
+        elif time_period_param == 'M':
             future_dates = pd.date_range(start=last_date + pd.Timedelta(days=31), periods=periods, freq='MS')
-        elif time_period == 'Q':
+        elif time_period_param == 'Q':
             future_dates = pd.date_range(start=last_date + pd.Timedelta(days=92), periods=periods, freq='QS')
-        elif time_period == 'Y':
+        elif time_period_param == 'Y':
             future_dates = pd.date_range(start=last_date + pd.Timedelta(days=366), periods=periods, freq='YS')
         else:
             # Default to daily if unknown
@@ -1675,22 +1977,57 @@ def forecast_metric(
             'upper': upper
         }, index=future_dates)
         
-        # Store the result
-        analysis_name = f"{new_pipe.current_analysis}_{metric_column}_forecast"
-        new_pipe.forecasts[analysis_name] = {
+        return {
             'type': 'forecast',
             'method': method,
-            'metric': metric_column,
+            'metric': metric_col,
             'data': forecast_df,
             'confidence_interval': confidence_interval
         }
+    
+    # Direct usage: data and metric_column provided
+    if data is not None:
+        if metric_column is None:
+            raise ValueError("If data is provided, metric_column must also be specified")
+        
+        if not isinstance(data, pd.DataFrame):
+            raise ValueError("data must be a pandas DataFrame")
+        
+        if metric_column not in data.columns:
+            raise ValueError(f"Metric column '{metric_column}' not found in data")
+        
+        series = data[metric_column].copy()
+        result = _forecast_metric_core(series, time_period, metric_column)
+        return result
+    
+    # Pipeline usage: return callable function
+    def _forecast_metric(pipe):
+        if pipe.current_analysis is None or pipe.current_analysis not in pipe.time_aggregations:
+            raise ValueError("No time aggregation found. Call aggregate_by_time() first.")
+        
+        new_pipe = pipe.copy()
+        agg_data = new_pipe.time_aggregations[new_pipe.current_analysis]
+        df = agg_data['data'].copy()  # Ensure we work with a copy
+        time_period_param = agg_data['time_period']
+        
+        # Check if the metric column exists
+        if metric_column not in df.columns:
+            raise ValueError(f"Metric column '{metric_column}' not found in aggregated data")
+        
+        series = df[metric_column].copy()
+        result = _forecast_metric_core(series, time_period_param, metric_column)
+        
+        # Store the result
+        analysis_name = f"{new_pipe.current_analysis}_{metric_column}_forecast"
+        new_pipe.forecasts[analysis_name] = result
         
         return new_pipe
     
     return _forecast_metric
 
 def calculate_statistical_trend(
-    metric_column: str,
+    data: Optional[Union[pd.DataFrame, Any]] = None,
+    metric_column: Optional[str] = None,
     test_method: str = 'mann_kendall',
     alpha: float = 0.05,
     window: Optional[int] = None
@@ -1698,10 +2035,16 @@ def calculate_statistical_trend(
     """
     Calculate statistical significance of trends
     
+    This function can be used in two ways:
+    1. As a pipeline operation after aggregate_by_time()
+    2. Directly with a DataFrame and specified column
+    
     Parameters:
     -----------
-    metric_column : str
-        Column to test for trend
+    data : pd.DataFrame, optional
+        DataFrame to test for trends (for direct usage)
+    metric_column : str, optional
+        Column to test for trend (for direct usage)
     test_method : str, default='mann_kendall'
         Statistical test method ('mann_kendall', 't_test', 'spearman')
     alpha : float, default=0.05
@@ -1711,23 +2054,40 @@ def calculate_statistical_trend(
         
     Returns:
     --------
-    Callable
-        Function that tests for statistical trends
+    Union[Callable, Dict]
+        - If used as pipeline operation: Callable function
+        - If used directly: Dictionary with trend test results
+        
+    Usage:
+    ------
+    Pipeline usage (after aggregate_by_time):
+    
+    pipe = (TrendPipe(data)
+            | aggregate_by_time(
+                date_column='date',
+                metric_columns=['revenue'],
+                time_period='M'
+            )
+            | calculate_statistical_trend(metric_column='revenue')
+    )
+    
+    Direct usage:
+    
+    result = calculate_statistical_trend(
+        data=my_dataframe,
+        metric_column='revenue',
+        test_method='mann_kendall'
+    )
+    
+    Raises:
+    -------
+    ValueError
+        If no time aggregation is found in the pipeline (call aggregate_by_time first)
+        If data is provided but metric_column is not specified
     """
-    def _calculate_statistical_trend(pipe):
-        if pipe.current_analysis is None or pipe.current_analysis not in pipe.time_aggregations:
-            raise ValueError("No time aggregation found. Call aggregate_by_time() first.")
-        
-        new_pipe = pipe.copy()
-        agg_data = new_pipe.time_aggregations[new_pipe.current_analysis]
-        df = agg_data['data'].copy()  # Ensure we work with a copy
-        
-        # Check if the metric column exists
-        if metric_column not in df.columns:
-            raise ValueError(f"Metric column '{metric_column}' not found in aggregated data")
-        
+    def _calculate_statistical_trend_core(series, metric_col):
+        """Core statistical trend calculation logic"""
         # Fill any missing values for trend testing
-        series = df[metric_column].copy()
         if series.isnull().any():
             series = series.interpolate(method='linear')
         
@@ -1735,12 +2095,10 @@ def calculate_statistical_trend(
             # Test the entire series
             result = _test_trend(series, test_method, alpha)
             
-            # Store the result
-            analysis_name = f"{new_pipe.current_analysis}_{metric_column}_trend"
-            new_pipe.trend_results[analysis_name] = {
+            return {
                 'type': 'statistical_trend',
                 'method': test_method,
-                'metric': metric_column,
+                'metric': metric_col,
                 'trend': result['trend'],
                 'p_value': result['p_value'],
                 'significant': result['significant'],
@@ -1766,16 +2124,52 @@ def calculate_statistical_trend(
             # Create rolling trend dataframe
             rolling_df = pd.DataFrame(rolling_results)
             
-            # Store the result
-            analysis_name = f"{new_pipe.current_analysis}_{metric_column}_rolling_trend"
-            new_pipe.trend_results[analysis_name] = {
+            return {
                 'type': 'rolling_trend',
                 'method': test_method,
-                'metric': metric_column,
+                'metric': metric_col,
                 'window': window,
                 'data': rolling_df,
                 'alpha': alpha
             }
+    
+    # Direct usage: data and metric_column provided
+    if data is not None:
+        if metric_column is None:
+            raise ValueError("If data is provided, metric_column must also be specified")
+        
+        if not isinstance(data, pd.DataFrame):
+            raise ValueError("data must be a pandas DataFrame")
+        
+        if metric_column not in data.columns:
+            raise ValueError(f"Metric column '{metric_column}' not found in data")
+        
+        series = data[metric_column].copy()
+        result = _calculate_statistical_trend_core(series, metric_column)
+        return result
+    
+    # Pipeline usage: return callable function
+    def _calculate_statistical_trend(pipe):
+        if pipe.current_analysis is None or pipe.current_analysis not in pipe.time_aggregations:
+            raise ValueError("No time aggregation found. Call aggregate_by_time() first.")
+        
+        new_pipe = pipe.copy()
+        agg_data = new_pipe.time_aggregations[new_pipe.current_analysis]
+        df = agg_data['data'].copy()  # Ensure we work with a copy
+        
+        # Check if the metric column exists
+        if metric_column not in df.columns:
+            raise ValueError(f"Metric column '{metric_column}' not found in aggregated data")
+        
+        series = df[metric_column].copy()
+        result = _calculate_statistical_trend_core(series, metric_column)
+        
+        # Store the result
+        analysis_name = f"{new_pipe.current_analysis}_{metric_column}_trend"
+        if result['type'] == 'rolling_trend':
+            analysis_name = f"{new_pipe.current_analysis}_{metric_column}_rolling_trend"
+        
+        new_pipe.trend_results[analysis_name] = result
         
         return new_pipe
     
@@ -1829,7 +2223,9 @@ def _test_trend(series, method, alpha):
 
 
 def compare_periods(
-    metric_column: str,
+    data: Optional[Union[pd.DataFrame, Any]] = None,
+    metric_column: Optional[str] = None,
+    time_period: Optional[str] = None,
     comparison_type: str = 'year_over_year',
     n_periods: int = 1,
     aggregation: str = 'mean'
@@ -1837,10 +2233,18 @@ def compare_periods(
     """
     Compare metrics between different time periods (e.g., year-over-year, month-over-month)
     
+    This function can be used in two ways:
+    1. As a pipeline operation after aggregate_by_time()
+    2. Directly with a DataFrame and specified column
+    
     Parameters:
     -----------
-    metric_column : str
-        Column to compare
+    data : pd.DataFrame, optional
+        DataFrame to compare periods for (for direct usage)
+    metric_column : str, optional
+        Column to compare (for direct usage)
+    time_period : str, optional
+        Time period for date calculations ('D', 'W', 'M', 'Q', 'Y') (for direct usage)
     comparison_type : str, default='year_over_year'
         Type of comparison ('year_over_year', 'month_over_month', 'week_over_week', 'period_over_period')
     n_periods : int, default=1
@@ -1850,22 +2254,40 @@ def compare_periods(
         
     Returns:
     --------
-    Callable
-        Function that compares metrics between periods
+    Union[Callable, Dict]
+        - If used as pipeline operation: Callable function
+        - If used directly: Dictionary with comparison results
+        
+    Usage:
+    ------
+    Pipeline usage (after aggregate_by_time):
+    
+    pipe = (TrendPipe(data)
+            | aggregate_by_time(
+                date_column='date',
+                metric_columns=['revenue'],
+                time_period='M'
+            )
+            | compare_periods(metric_column='revenue', comparison_type='year_over_year')
+    )
+    
+    Direct usage:
+    
+    result = compare_periods(
+        data=my_dataframe,
+        metric_column='revenue',
+        time_period='M',
+        comparison_type='year_over_year'
+    )
+    
+    Raises:
+    -------
+    ValueError
+        If no time aggregation is found in the pipeline (call aggregate_by_time first)
+        If data is provided but metric_column is not specified
     """
-    def _compare_periods(pipe):
-        if pipe.current_analysis is None or pipe.current_analysis not in pipe.time_aggregations:
-            raise ValueError("No time aggregation found. Call aggregate_by_time() first.")
-        
-        new_pipe = pipe.copy()
-        agg_data = new_pipe.time_aggregations[new_pipe.current_analysis]
-        df = agg_data['data'].copy()  # Ensure we work with a copy
-        time_period = agg_data['time_period']
-        
-        # Check if the metric column exists
-        if metric_column not in df.columns:
-            raise ValueError(f"Metric column '{metric_column}' not found in aggregated data")
-        
+    def _compare_periods_core(df, time_period_param, metric_col):
+        """Core period comparison logic"""
         # Get time index
         time_index = df.index
         
@@ -1873,33 +2295,33 @@ def compare_periods(
         period_offset = None
         
         if comparison_type == 'year_over_year':
-            if time_period in ['D', 'W', 'M', 'Q']:
+            if time_period_param in ['D', 'W', 'M', 'Q']:
                 period_offset = pd.DateOffset(years=n_periods)
             else:
                 period_offset = pd.DateOffset(years=n_periods)
         
         elif comparison_type == 'month_over_month':
-            if time_period in ['D', 'W']:
+            if time_period_param in ['D', 'W']:
                 period_offset = pd.DateOffset(months=n_periods)
             else:
                 period_offset = pd.DateOffset(months=n_periods)
         
         elif comparison_type == 'week_over_week':
-            if time_period == 'D':
+            if time_period_param == 'D':
                 period_offset = pd.DateOffset(weeks=n_periods)
             else:
                 period_offset = pd.DateOffset(weeks=n_periods)
         
         elif comparison_type == 'period_over_period':
-            if time_period == 'D':
+            if time_period_param == 'D':
                 period_offset = pd.DateOffset(days=n_periods)
-            elif time_period == 'W':
+            elif time_period_param == 'W':
                 period_offset = pd.DateOffset(weeks=n_periods)
-            elif time_period == 'M':
+            elif time_period_param == 'M':
                 period_offset = pd.DateOffset(months=n_periods)
-            elif time_period == 'Q':
+            elif time_period_param == 'Q':
                 period_offset = pd.DateOffset(months=3*n_periods)
-            elif time_period == 'Y':
+            elif time_period_param == 'Y':
                 period_offset = pd.DateOffset(years=n_periods)
             else:
                 period_offset = pd.DateOffset(days=n_periods)
@@ -1909,7 +2331,7 @@ def compare_periods(
         
         # Create comparison dataframe
         comparison_df = pd.DataFrame(index=time_index)
-        comparison_df['current'] = df[metric_column]
+        comparison_df['current'] = df[metric_col]
         
         # Get previous period values (shifted by offset)
         previous_index = time_index - period_offset
@@ -1918,7 +2340,7 @@ def compare_periods(
         for t in time_index:
             prev_t = t - period_offset
             if prev_t in df.index:
-                previous_values.append(df.loc[prev_t, metric_column])
+                previous_values.append(df.loc[prev_t, metric_col])
             else:
                 previous_values.append(np.nan)
         
@@ -1928,15 +2350,48 @@ def compare_periods(
         comparison_df['abs_diff'] = comparison_df['current'] - comparison_df['previous']
         comparison_df['rel_diff'] = (comparison_df['current'] / comparison_df['previous'] - 1) * 100
         
-        # Store the result
-        analysis_name = f"{new_pipe.current_analysis}_{metric_column}_comparison"
-        new_pipe.trend_results[analysis_name] = {
+        return {
             'type': 'period_comparison',
-            'metric': metric_column,
+            'metric': metric_col,
             'comparison_type': comparison_type,
             'n_periods': n_periods,
             'data': comparison_df
         }
+    
+    # Direct usage: data and metric_column provided
+    if data is not None:
+        if metric_column is None:
+            raise ValueError("If data is provided, metric_column must also be specified")
+        
+        if not isinstance(data, pd.DataFrame):
+            raise ValueError("data must be a pandas DataFrame")
+        
+        if metric_column not in data.columns:
+            raise ValueError(f"Metric column '{metric_column}' not found in data")
+        
+        df = data[[metric_column]].copy()
+        result = _compare_periods_core(df, time_period, metric_column)
+        return result
+    
+    # Pipeline usage: return callable function
+    def _compare_periods(pipe):
+        if pipe.current_analysis is None or pipe.current_analysis not in pipe.time_aggregations:
+            raise ValueError("No time aggregation found. Call aggregate_by_time() first.")
+        
+        new_pipe = pipe.copy()
+        agg_data = new_pipe.time_aggregations[new_pipe.current_analysis]
+        df = agg_data['data'].copy()  # Ensure we work with a copy
+        time_period_param = agg_data['time_period']
+        
+        # Check if the metric column exists
+        if metric_column not in df.columns:
+            raise ValueError(f"Metric column '{metric_column}' not found in aggregated data")
+        
+        result = _compare_periods_core(df, time_period_param, metric_column)
+        
+        # Store the result
+        analysis_name = f"{new_pipe.current_analysis}_{metric_column}_comparison"
+        new_pipe.trend_results[analysis_name] = result
         
         return new_pipe
     

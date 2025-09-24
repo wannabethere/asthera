@@ -1,0 +1,97 @@
+[
+  {
+    "function": "analyze_funnel_by_time",
+    "category": "funnel_analysis",
+    "description": "Compare checkout funnel performance week-over-week for the past month",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, analyze_funnel_by_time\n\n# Step 1: Create sample time-based funnel data\ncheckout_events = []\nfor week in range(4):  # 4 weeks\n    for user_id in range(1, 101):\n        # Simulate weekly checkout funnel\n        events = ['product_view', 'add_to_cart', 'checkout_started', 'purchase_completed']\n        for i, event in enumerate(events):\n            if user_id % (4-i+1) == 0:  # Some users drop off at each step\n                checkout_events.append({\n                    'user_id': user_id,\n                    'event_name': event,\n                    'event_timestamp': pd.date_range('2023-01-01', periods=1, freq='W')[0] + pd.Timedelta(weeks=week) + pd.Timedelta(hours=i)\n                })\n\nsample_data = pd.DataFrame(checkout_events)\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Analyze funnel by time\ncohort_pipe = cohort_pipe | analyze_funnel_by_time(\n    event_column='event_name',\n    user_id_column='user_id',\n    date_column='event_timestamp',\n    funnel_steps=['product_view', 'add_to_cart', 'checkout_started', 'purchase_completed'],\n    step_names=['View', 'Cart', 'Checkout', 'Purchase'],\n    time_period='week',\n    max_periods=4\n)\n\n# Step 4: View results\nfunnel_df = cohort_pipe.to_df()\nprint(f\"Weekly funnel analysis completed for {len(funnel_df)} time periods\")"
+    },
+    "parameters": {
+      "event_column": "Column containing event names/types",
+      "user_id_column": "Column containing user identifiers",
+      "date_column": "Column containing timestamps for time-based analysis",
+      "funnel_steps": "List of event names representing steps in the funnel, in order",
+      "step_names": "Friendly names for the funnel steps (optional)",
+      "time_period": "Time period for grouping: 'day', 'week', 'month', 'quarter', 'year'",
+      "max_periods": "Maximum number of periods to analyze (optional)",
+      "datetime_format": "Format string for parsing dates (optional)"
+    }
+  },
+  {
+    "function": "analyze_funnel_by_time",
+    "category": "funnel_analysis",
+    "description": "Track daily changes in sign-up conversion rates over the last 14 days",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, analyze_funnel_by_time\n\n# Step 1: Create sample daily signup data\nsignup_events = []\nfor day in range(14):  # 14 days\n    for visitor_id in range(1, 51):\n        # Simulate daily signup funnel\n        events = ['landing_page_view', 'signup_form_view', 'email_entered', 'account_created', 'profile_completed']\n        for i, event in enumerate(events):\n            if visitor_id % (5-i+1) == 0:  # Some users drop off at each step\n                signup_events.append({\n                    'visitor_id': visitor_id,\n                    'signup_event': event,\n                    'event_date': pd.date_range('2023-01-01', periods=1, freq='D')[0] + pd.Timedelta(days=day) + pd.Timedelta(hours=i)\n                })\n\nsample_data = pd.DataFrame(signup_events)\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Analyze daily signup funnel\ncohort_pipe = cohort_pipe | analyze_funnel_by_time(\n    event_column='signup_event',\n    user_id_column='visitor_id',\n    date_column='event_date',\n    funnel_steps=['landing_page_view', 'signup_form_view', 'email_entered', 'account_created', 'profile_completed'],\n    time_period='day',\n    max_periods=14\n)\n\n# Step 4: View results\nfunnel_df = cohort_pipe.to_df()\nprint(f\"Daily signup funnel analysis completed for {len(funnel_df)} days\")"
+    },
+    "parameters": {
+      "event_column": "Column containing event names/types",
+      "user_id_column": "Column containing user identifiers",
+      "date_column": "Column containing timestamps for time-based analysis",
+      "funnel_steps": "List of event names representing steps in the funnel, in order",
+      "step_names": "Friendly names for the funnel steps (optional)",
+      "time_period": "Time period for grouping: 'day', 'week', 'month', 'quarter', 'year'",
+      "max_periods": "Maximum number of periods to analyze (optional)",
+      "datetime_format": "Format string for parsing dates (optional)"
+    }
+  },
+  {
+    "function": "analyze_funnel_by_time",
+    "category": "funnel_analysis",
+    "description": "Analyze monthly subscription funnel performance over the past quarter",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, analyze_funnel_by_time\n\n# Step 1: Create sample monthly subscription data\nsubscription_events = []\nfor month in range(3):  # 3 months (quarter)\n    for user_id in range(1, 201):\n        # Simulate monthly subscription funnel\n        events = ['plan_viewed', 'trial_started', 'credit_card_added', 'trial_converted', 'renewal_occurred']\n        for i, event in enumerate(events):\n            if user_id % (5-i+1) == 0:  # Some users drop off at each step\n                subscription_events.append({\n                    'user_id': user_id,\n                    'subscription_event': event,\n                    'event_timestamp': pd.date_range('2023-01-01', periods=1, freq='M')[0] + pd.Timedelta(days=month*30) + pd.Timedelta(hours=i)\n                })\n\nsample_data = pd.DataFrame(subscription_events)\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Analyze monthly subscription funnel\ncohort_pipe = cohort_pipe | analyze_funnel_by_time(\n    event_column='subscription_event',\n    user_id_column='user_id',\n    date_column='event_timestamp',\n    funnel_steps=['plan_viewed', 'trial_started', 'credit_card_added', 'trial_converted', 'renewal_occurred'],\n    time_period='month',\n    max_periods=3\n)\n\n# Step 4: View results\nfunnel_df = cohort_pipe.to_df()\nprint(f\"Monthly subscription funnel analysis completed for {len(funnel_df)} months\")"
+    },
+    "parameters": {
+      "event_column": "Column containing event names/types",
+      "user_id_column": "Column containing user identifiers",
+      "date_column": "Column containing timestamps for time-based analysis",
+      "funnel_steps": "List of event names representing steps in the funnel, in order",
+      "step_names": "Friendly names for the funnel steps (optional)",
+      "time_period": "Time period for grouping: 'day', 'week', 'month', 'quarter', 'year'",
+      "max_periods": "Maximum number of periods to analyze (optional)",
+      "datetime_format": "Format string for parsing dates (optional)"
+    }
+  },
+  {
+    "function": "analyze_funnel_by_time",
+    "category": "funnel_analysis",
+    "description": "Track feature adoption funnel performance across 6 two-week periods",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, analyze_funnel_by_time\n\n# Step 1: Create sample feature adoption data\nfeature_events = []\nfor period in range(6):  # 6 two-week periods\n    for user_id in range(1, 151):\n        # Simulate feature adoption funnel\n        events = ['feature_announcement_seen', 'feature_page_viewed', 'feature_tried', 'feature_repeatedly_used']\n        for i, event in enumerate(events):\n            if user_id % (4-i+1) == 0:  # Some users drop off at each step\n                feature_events.append({\n                    'user_id': user_id,\n                    'feature_event': event,\n                    'event_date': pd.date_range('2023-01-01', periods=1, freq='2W')[0] + pd.Timedelta(weeks=period*2) + pd.Timedelta(hours=i)\n                })\n\nsample_data = pd.DataFrame(feature_events)\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Analyze feature adoption funnel\ncohort_pipe = cohort_pipe | analyze_funnel_by_time(\n    event_column='feature_event',\n    user_id_column='user_id',\n    date_column='event_date',\n    funnel_steps=['feature_announcement_seen', 'feature_page_viewed', 'feature_tried', 'feature_repeatedly_used'],\n    step_names=['Awareness', 'Interest', 'Trial', 'Adoption'],\n    time_period='week',\n    max_periods=12,\n    datetime_format='%Y-%m-%d'\n)\n\n# Step 4: View results\nfunnel_df = cohort_pipe.to_df()\nprint(f\"Feature adoption funnel analysis completed for {len(funnel_df)} periods\")"
+    },
+    "parameters": {
+      "event_column": "Column containing event names/types",
+      "user_id_column": "Column containing user identifiers",
+      "date_column": "Column containing timestamps for time-based analysis",
+      "funnel_steps": "List of event names representing steps in the funnel, in order",
+      "step_names": "Friendly names for the funnel steps (optional)",
+      "time_period": "Time period for grouping: 'day', 'week', 'month', 'quarter', 'year'",
+      "max_periods": "Maximum number of periods to analyze (optional)",
+      "datetime_format": "Format string for parsing dates (optional)"
+    }
+  },
+  {
+    "function": "analyze_funnel_by_time",
+    "category": "funnel_analysis",
+    "description": "Measure yearly changes in the e-commerce purchase funnel",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, analyze_funnel_by_time\n\n# Step 1: Create sample yearly e-commerce data\necommerce_events = []\nfor year in range(3):  # 3 years\n    for customer_id in range(1, 301):\n        # Simulate yearly e-commerce funnel\n        events = ['search', 'product_view', 'add_to_cart', 'checkout', 'purchase']\n        for i, event in enumerate(events):\n            if customer_id % (5-i+1) == 0:  # Some users drop off at each step\n                ecommerce_events.append({\n                    'customer_id': customer_id,\n                    'shopping_event': event,\n                    'event_timestamp': pd.date_range('2021-01-01', periods=1, freq='Y')[0] + pd.Timedelta(days=year*365) + pd.Timedelta(hours=i)\n                })\n\nsample_data = pd.DataFrame(ecommerce_events)\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Analyze yearly e-commerce funnel\ncohort_pipe = cohort_pipe | analyze_funnel_by_time(\n    event_column='shopping_event',\n    user_id_column='customer_id',\n    date_column='event_timestamp',\n    funnel_steps=['search', 'product_view', 'add_to_cart', 'checkout', 'purchase'],\n    time_period='year',\n    max_periods=3\n)\n\n# Step 4: View results\nfunnel_df = cohort_pipe.to_df()\nprint(f\"Yearly e-commerce funnel analysis completed for {len(funnel_df)} years\")"
+    },
+    "parameters": {
+      "event_column": "Column containing event names/types",
+      "user_id_column": "Column containing user identifiers",
+      "date_column": "Column containing timestamps for time-based analysis",
+      "funnel_steps": "List of event names representing steps in the funnel, in order",
+      "step_names": "Friendly names for the funnel steps (optional)",
+      "time_period": "Time period for grouping: 'day', 'week', 'month', 'quarter', 'year'",
+      "max_periods": "Maximum number of periods to analyze (optional)",
+      "datetime_format": "Format string for parsing dates (optional)"
+    }
+  }
+]

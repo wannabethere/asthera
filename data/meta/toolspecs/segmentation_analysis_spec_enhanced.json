@@ -1,0 +1,390 @@
+{
+    "metadata": {
+        "updated_at": "2024-01-16T12:00:00Z",
+        "llm_generated": true,
+        "total_functions": 9,
+        "categories": ["segmentation", "clustering", "customer_analysis"],
+        "complexity_levels": ["simple", "intermediate", "advanced"],
+        "pipe_name": "SegmentationPipe",
+        "module": "segmentation_analysis",
+        "description": "Functions for customer segmentation, clustering analysis, and behavioral grouping",
+        "function_list": [
+            "get_features", "run_kmeans", "run_dbscan", "run_hierarchical",
+            "run_rule_based", "generate_summary", "get_segment_data", "compare_algorithms",
+            "custom_calculation"
+        ]
+    },
+    "functions": {
+        "get_features": {
+            "category": "segmentation",
+            "subcategory": "feature_preparation",
+            "pipe_name": "SegmentationPipe",
+            "description": "Extract features from dataframe for segmentation",
+            "complexity": "simple",
+            "use_cases": [
+                "feature engineering",
+                "data preprocessing",
+                "segmentation preparation",
+                "clustering setup"
+            ],
+            "data_requirements": [
+                "DataFrame with numerical columns",
+                "Clean data for feature extraction",
+                "Sufficient data points for analysis"
+            ],
+            "tags": ["feature_extraction", "preprocessing", "data_preparation", "clustering"],
+            "keywords": ["feature_extraction", "preprocessing", "data_preparation", "clustering", "scaling"],
+            "output_description": "Function that extracts features from a SegmentationPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "get_features()",
+                "get_features(columns=['age', 'income', 'spending'], scale_features=True)"
+            ],
+            "usage_patterns": [
+                "get_features()",
+                "get_features(columns=['col1', 'col2'], handle_missing=True)"
+            ],
+            "dependencies": ["pandas", "numpy", "sklearn"],
+            "related_functions": ["run_kmeans", "run_dbscan", "run_hierarchical"],
+            "required_params": [],
+            "optional_params": [
+                {"name": "columns", "type": "List[str]", "description": "List of column names to use as features. If None, all numeric columns will be used (optional)"},
+                {"name": "id_column", "type": "str", "description": "Column containing IDs to exclude from features (optional)"},
+                {"name": "handle_missing", "type": "bool", "description": "Whether to handle missing values (default: True)"},
+                {"name": "scale_features", "type": "bool", "description": "Whether to scale features (default: True)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that extracts features from a SegmentationPipe"
+            }
+        },
+        "run_kmeans": {
+            "category": "segmentation",
+            "subcategory": "clustering_algorithm",
+            "pipe_name": "SegmentationPipe",
+            "description": "Run KMeans clustering for segmentation",
+            "complexity": "intermediate",
+            "use_cases": [
+                "customer segmentation",
+                "market segmentation",
+                "behavioral clustering",
+                "data grouping"
+            ],
+            "data_requirements": [
+                "Preprocessed features",
+                "Numerical data suitable for clustering",
+                "Sufficient data points for meaningful clusters"
+            ],
+            "tags": ["kmeans", "clustering", "segmentation", "unsupervised"],
+            "keywords": ["kmeans", "clustering", "segmentation", "unsupervised", "centroids"],
+            "output_description": "Function that performs KMeans segmentation in a SegmentationPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "run_kmeans(n_clusters=5)",
+                "run_kmeans(find_optimal=True, max_clusters=10)"
+            ],
+            "usage_patterns": [
+                "run_kmeans(n_clusters=5)",
+                "run_kmeans(find_optimal=True, random_state=42)"
+            ],
+            "dependencies": ["pandas", "numpy", "sklearn"],
+            "related_functions": ["get_features", "compare_algorithms", "generate_summary"],
+            "required_params": [],
+            "optional_params": [
+                {"name": "n_clusters", "type": "int", "description": "Number of clusters (default: 5)"},
+                {"name": "max_clusters", "type": "int", "description": "Maximum number of clusters to try if find_optimal=True (default: 10)"},
+                {"name": "find_optimal", "type": "bool", "description": "Whether to find the optimal number of clusters using silhouette score (default: False)"},
+                {"name": "random_state", "type": "int", "description": "Random state for reproducibility (default: 42)"},
+                {"name": "segment_name", "type": "str", "description": "Name to use for this segmentation (default: 'kmeans')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that performs KMeans segmentation in a SegmentationPipe"
+            }
+        },
+        "run_dbscan": {
+            "category": "segmentation",
+            "subcategory": "clustering_algorithm",
+            "pipe_name": "SegmentationPipe",
+            "description": "Run DBSCAN clustering for segmentation",
+            "complexity": "intermediate",
+            "use_cases": [
+                "density-based clustering",
+                "outlier detection",
+                "irregular cluster shapes",
+                "noise identification"
+            ],
+            "data_requirements": [
+                "Preprocessed features",
+                "Numerical data suitable for clustering",
+                "Sufficient data points for density estimation"
+            ],
+            "tags": ["dbscan", "density_clustering", "outlier_detection", "noise"],
+            "keywords": ["dbscan", "density_clustering", "outlier_detection", "noise", "eps"],
+            "output_description": "Function that performs DBSCAN segmentation in a SegmentationPipe",
+            "confidence_score": 0.85,
+            "examples": [
+                "run_dbscan(eps=0.5, min_samples=5)",
+                "run_dbscan(eps=0.3, min_samples=10)"
+            ],
+            "usage_patterns": [
+                "run_dbscan(eps=0.5, min_samples=5)",
+                "run_dbscan(eps=0.5, min_samples=5, segment_name='dbscan_segments')"
+            ],
+            "dependencies": ["pandas", "numpy", "sklearn"],
+            "related_functions": ["get_features", "compare_algorithms", "generate_summary"],
+            "required_params": [],
+            "optional_params": [
+                {"name": "eps", "type": "float", "description": "The maximum distance between two samples for one to be considered as neighbors (default: 0.5)"},
+                {"name": "min_samples", "type": "int", "description": "The number of samples in a neighborhood for a point to be considered a core point (default: 5)"},
+                {"name": "segment_name", "type": "str", "description": "Name to use for this segmentation (default: 'dbscan')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that performs DBSCAN segmentation in a SegmentationPipe"
+            }
+        },
+        "run_hierarchical": {
+            "category": "segmentation",
+            "subcategory": "clustering_algorithm",
+            "pipe_name": "SegmentationPipe",
+            "description": "Run Hierarchical (Agglomerative) clustering for segmentation",
+            "complexity": "intermediate",
+            "use_cases": [
+                "hierarchical clustering",
+                "dendrogram analysis",
+                "cluster hierarchy exploration",
+                "agglomerative segmentation"
+            ],
+            "data_requirements": [
+                "Preprocessed features",
+                "Numerical data suitable for clustering",
+                "Sufficient data points for hierarchical analysis"
+            ],
+            "tags": ["hierarchical", "agglomerative", "dendrogram", "linkage"],
+            "keywords": ["hierarchical", "agglomerative", "dendrogram", "linkage", "ward"],
+            "output_description": "Function that performs hierarchical segmentation in a SegmentationPipe",
+            "confidence_score": 0.85,
+            "examples": [
+                "run_hierarchical(n_clusters=5)",
+                "run_hierarchical(n_clusters=8, linkage='complete')"
+            ],
+            "usage_patterns": [
+                "run_hierarchical(n_clusters=5)",
+                "run_hierarchical(n_clusters=5, linkage='ward')"
+            ],
+            "dependencies": ["pandas", "numpy", "sklearn"],
+            "related_functions": ["get_features", "compare_algorithms", "generate_summary"],
+            "required_params": [],
+            "optional_params": [
+                {"name": "n_clusters", "type": "int", "description": "Number of clusters (default: 5)"},
+                {"name": "linkage", "type": "str", "description": "Linkage method ('ward', 'complete', 'average', 'single') (default: 'ward')"},
+                {"name": "segment_name", "type": "str", "description": "Name to use for this segmentation (default: 'hierarchical')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that performs hierarchical segmentation in a SegmentationPipe"
+            }
+        },
+        "run_rule_based": {
+            "category": "segmentation",
+            "subcategory": "rule_based_segmentation",
+            "pipe_name": "SegmentationPipe",
+            "description": "Run rule-based segmentation",
+            "complexity": "simple",
+            "use_cases": [
+                "business rule segmentation",
+                "expert-defined segments",
+                "conditional grouping",
+                "custom segmentation logic"
+            ],
+            "data_requirements": [
+                "DataFrame with columns for rule conditions",
+                "Clear business rules definition",
+                "Data that matches rule conditions"
+            ],
+            "tags": ["rule_based", "business_rules", "conditional", "expert_defined"],
+            "keywords": ["rule_based", "business_rules", "conditional", "expert_defined", "criteria"],
+            "output_description": "Function that performs rule-based segmentation in a SegmentationPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "run_rule_based({'high_value': {'spending': ('>', 100), 'frequency': ('>', 10)}})",
+                "run_rule_based({'premium': {'age': ('>', 30), 'income': ('>', 50000)}})"
+            ],
+            "usage_patterns": [
+                "run_rule_based(rules)",
+                "run_rule_based(rules, segment_name='custom_segments')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["get_features", "generate_summary", "get_segment_data"],
+            "required_params": [
+                {"name": "rules", "type": "Dict[str, Dict]", "description": "Dictionary with segment names as keys and rule conditions as values. Example: {'high_value': {'spending': ('>', 100), 'frequency': ('>', 10)}, 'medium_value': {'spending': ('between', 50, 100)}}"}
+            ],
+            "optional_params": [
+                {"name": "segment_name", "type": "str", "description": "Name to use for this segmentation (default: 'rule_based')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that performs rule-based segmentation in a SegmentationPipe"
+            }
+        },
+        "generate_summary": {
+            "category": "segmentation",
+            "subcategory": "analysis_summary",
+            "pipe_name": "SegmentationPipe",
+            "description": "Generate summary statistics for segments",
+            "complexity": "simple",
+            "use_cases": [
+                "segment analysis",
+                "summary reporting",
+                "segment comparison",
+                "insights generation"
+            ],
+            "data_requirements": [
+                "Previously created segments",
+                "Data with segment assignments",
+                "Features for summary calculation"
+            ],
+            "tags": ["summary", "analysis", "reporting", "insights"],
+            "keywords": ["summary", "analysis", "reporting", "insights", "statistics"],
+            "output_description": "Function that generates summary statistics in a SegmentationPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "generate_summary()",
+                "generate_summary(algorithm='kmeans')"
+            ],
+            "usage_patterns": [
+                "generate_summary()",
+                "generate_summary(algorithm='specific_algorithm')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["run_kmeans", "run_dbscan", "run_hierarchical"],
+            "required_params": [],
+            "optional_params": [
+                {"name": "algorithm", "type": "str", "description": "Name of the segmentation algorithm to summarize. If None, uses the current analysis (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that generates summary statistics in a SegmentationPipe"
+            }
+        },
+        "get_segment_data": {
+            "category": "segmentation",
+            "subcategory": "data_extraction",
+            "pipe_name": "SegmentationPipe",
+            "description": "Get data for a specific segment",
+            "complexity": "simple",
+            "use_cases": [
+                "segment data extraction",
+                "segment-specific analysis",
+                "data filtering by segment",
+                "segment exploration"
+            ],
+            "data_requirements": [
+                "Previously created segments",
+                "Data with segment assignments",
+                "Valid segment ID"
+            ],
+            "tags": ["data_extraction", "segment_filtering", "data_access", "exploration"],
+            "keywords": ["data_extraction", "segment_filtering", "data_access", "exploration", "filter"],
+            "output_description": "Function that extracts segment data from a SegmentationPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "get_segment_data(segment_id=0)",
+                "get_segment_data(segment_id='high_value', algorithm='rule_based')"
+            ],
+            "usage_patterns": [
+                "get_segment_data(segment_id)",
+                "get_segment_data(segment_id, algorithm='specific_algorithm')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["generate_summary", "run_kmeans", "run_rule_based"],
+            "required_params": [
+                {"name": "segment_id", "type": "Any", "description": "ID of the segment to extract"}
+            ],
+            "optional_params": [
+                {"name": "algorithm", "type": "str", "description": "Name of the segmentation algorithm to use. If None, uses the current analysis (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that extracts segment data from a SegmentationPipe"
+            }
+        },
+        "compare_algorithms": {
+            "category": "segmentation",
+            "subcategory": "algorithm_comparison",
+            "pipe_name": "SegmentationPipe",
+            "description": "Compare all segmentation algorithms",
+            "complexity": "intermediate",
+            "use_cases": [
+                "algorithm evaluation",
+                "performance comparison",
+                "model selection",
+                "segmentation validation"
+            ],
+            "data_requirements": [
+                "Multiple segmentation results",
+                "Preprocessed features",
+                "Sufficient data for comparison metrics"
+            ],
+            "tags": ["algorithm_comparison", "evaluation", "model_selection", "validation"],
+            "keywords": ["algorithm_comparison", "evaluation", "model_selection", "validation", "metrics"],
+            "output_description": "Function that compares segmentation algorithms in a SegmentationPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "compare_algorithms()"
+            ],
+            "usage_patterns": [
+                "compare_algorithms()"
+            ],
+            "dependencies": ["pandas", "numpy", "sklearn"],
+            "related_functions": ["run_kmeans", "run_dbscan", "run_hierarchical", "generate_summary"],
+            "required_params": [],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that compares segmentation algorithms in a SegmentationPipe"
+            }
+        },
+        "custom_calculation": {
+            "category": "segmentation",
+            "subcategory": "custom_analysis",
+            "pipe_name": "SegmentationPipe",
+            "description": "Apply a custom calculation or transformation to the dataframe",
+            "complexity": "advanced",
+            "use_cases": [
+                "custom transformations",
+                "advanced calculations",
+                "domain-specific logic",
+                "extended analysis"
+            ],
+            "data_requirements": [
+                "DataFrame with data to transform",
+                "Custom function for transformation",
+                "Compatible data types for function"
+            ],
+            "tags": ["custom", "transformation", "advanced", "domain_specific"],
+            "keywords": ["custom", "transformation", "advanced", "domain_specific", "function"],
+            "output_description": "Function that applies the custom calculation in a SegmentationPipe",
+            "confidence_score": 0.80,
+            "examples": [
+                "custom_calculation(lambda df: df.assign(custom_score=df['col1'] * df['col2']))",
+                "custom_calculation(my_custom_function)"
+            ],
+            "usage_patterns": [
+                "custom_calculation(func)",
+                "custom_calculation(lambda df: df.some_transformation())"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["get_features", "generate_summary", "get_segment_data"],
+            "required_params": [
+                {"name": "func", "type": "Callable", "description": "A function that takes a DataFrame and returns a DataFrame"}
+            ],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that applies the custom calculation in a SegmentationPipe"
+            }
+        }
+    }
+}

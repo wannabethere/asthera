@@ -1,0 +1,130 @@
+[
+  {
+    "function": "detect_statistical_outliers",
+    "category": "anomaly_detection",
+    "description": "Detect outliers using z-score method",
+    "prerequisites": ["AnomalyPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nimport numpy as np\nfrom insightsagents.app.tools.mltools.anomalydetection import AnomalyPipe, detect_statistical_outliers\n\n# Step 1: Create sample data with outliers\nnp.random.seed(42)\nnormal_data = np.random.normal(100, 15, 1000)\noutliers = np.random.normal(200, 10, 20)\nsample_data = pd.DataFrame({\n    'value': np.concatenate([normal_data, outliers]),\n    'timestamp': pd.date_range('2023-01-01', periods=1020, freq='H')\n})\n\n# Step 2: Initialize pipeline\nanomaly_pipe = AnomalyPipe.from_dataframe(sample_data)\n\n# Step 3: Detect statistical outliers\nanomaly_pipe = anomaly_pipe | detect_statistical_outliers(\n    columns='value',\n    method='zscore',\n    threshold=3.0\n)\n\n# Step 4: View results\nresult_df = anomaly_pipe.to_df()\nprint(f\"Detected {result_df['value_anomaly'].sum()} outliers\")\nprint(result_df[result_df['value_anomaly'] == True].head())\n\n# Step 5: Get summary\nsummary = anomaly_pipe.get_anomaly_summary()\nprint(f\"Total anomalies: {summary['total_anomalies']}\")\nprint(f\"Anomaly percentage: {summary['total_anomaly_percentage']:.2f}%\")"
+    },
+    "parameters": {
+      "columns": "Column(s) to analyze for outliers (string or list)",
+      "method": "Detection method: 'zscore', 'iqr', 'modified_zscore' (default: 'zscore')",
+      "threshold": "Threshold for outlier detection (default: 3.0)",
+      "window": "Rolling window size for time series data (optional)",
+      "time_column": "Time column for rolling window analysis (optional)",
+      "group_columns": "Columns to group by for separate analysis (optional)"
+    }
+  },
+  {
+    "function": "detect_statistical_outliers",
+    "category": "anomaly_detection",
+    "description": "Detect outliers using IQR method",
+    "prerequisites": ["AnomalyPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nimport numpy as np\nfrom insightsagents.app.tools.mltools.anomalydetection import AnomalyPipe, detect_statistical_outliers\n\n# Step 1: Create sample data with outliers\nnp.random.seed(42)\nnormal_data = np.random.normal(100, 15, 1000)\noutliers = np.random.normal(200, 10, 20)\nsample_data = pd.DataFrame({\n    'value': np.concatenate([normal_data, outliers]),\n    'timestamp': pd.date_range('2023-01-01', periods=1020, freq='H')\n})\n\n# Step 2: Initialize pipeline\nanomaly_pipe = AnomalyPipe.from_dataframe(sample_data)\n\n# Step 3: Detect outliers using IQR\nanomaly_pipe = anomaly_pipe | detect_statistical_outliers(\n    columns='value',\n    method='iqr',\n    threshold=1.5\n)\n\n# Step 4: View results\nresult_df = anomaly_pipe.to_df()\nprint(f\"IQR method detected {result_df['value_anomaly'].sum()} outliers\")"
+    },
+    "parameters": {
+      "columns": "Column(s) to analyze for outliers (string or list)",
+      "method": "Detection method: 'zscore', 'iqr', 'modified_zscore' (default: 'zscore')",
+      "threshold": "Threshold for outlier detection (default: 3.0)",
+      "window": "Rolling window size for time series data (optional)",
+      "time_column": "Time column for rolling window analysis (optional)",
+      "group_columns": "Columns to group by for separate analysis (optional)"
+    }
+  },
+  {
+    "function": "detect_statistical_outliers",
+    "category": "anomaly_detection",
+    "description": "Detect outliers using rolling window approach",
+    "prerequisites": ["AnomalyPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nimport numpy as np\nfrom insightsagents.app.tools.mltools.anomalydetection import AnomalyPipe, detect_statistical_outliers\n\n# Step 1: Create sample data with outliers\nnp.random.seed(42)\nnormal_data = np.random.normal(100, 15, 1000)\noutliers = np.random.normal(200, 10, 20)\nsample_data = pd.DataFrame({\n    'value': np.concatenate([normal_data, outliers]),\n    'timestamp': pd.date_range('2023-01-01', periods=1020, freq='H')\n})\n\n# Step 2: Initialize pipeline\nanomaly_pipe = AnomalyPipe.from_dataframe(sample_data)\n\n# Step 3: Detect outliers using rolling window\nanomaly_pipe = anomaly_pipe | detect_statistical_outliers(\n    columns='value',\n    method='modified_zscore',\n    threshold=3.5,\n    window=50,\n    time_column='timestamp'\n)\n\n# Step 4: View results\nresult_df = anomaly_pipe.to_df()\nprint(f\"Rolling window detected {result_df['value_anomaly'].sum()} outliers\")"
+    },
+    "parameters": {
+      "columns": "Column(s) to analyze for outliers (string or list)",
+      "method": "Detection method: 'zscore', 'iqr', 'modified_zscore' (default: 'zscore')",
+      "threshold": "Threshold for outlier detection (default: 3.0)",
+      "window": "Rolling window size for time series data (optional)",
+      "time_column": "Time column for rolling window analysis (optional)",
+      "group_columns": "Columns to group by for separate analysis (optional)"
+    }
+  },
+  {
+    "function": "detect_statistical_outliers",
+    "category": "anomaly_detection",
+    "description": "Detect outliers across multiple columns",
+    "prerequisites": ["AnomalyPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nimport numpy as np\nfrom insightsagents.app.tools.mltools.anomalydetection import AnomalyPipe, detect_statistical_outliers\n\n# Step 1: Create multi-dimensional data\nmulti_data = pd.DataFrame({\n    'temperature': np.concatenate([np.random.normal(20, 5, 1000), np.random.normal(50, 2, 20)]),\n    'pressure': np.concatenate([np.random.normal(1013, 10, 1000), np.random.normal(1100, 5, 20)]),\n    'humidity': np.concatenate([np.random.normal(60, 15, 1000), np.random.normal(95, 2, 20)]),\n    'timestamp': pd.date_range('2023-01-01', periods=1020, freq='H')\n})\n\n# Step 2: Initialize pipeline\nanomaly_pipe = AnomalyPipe.from_dataframe(multi_data)\n\n# Step 3: Detect outliers across multiple columns\nanomaly_pipe = anomaly_pipe | detect_statistical_outliers(\n    columns=['temperature', 'pressure', 'humidity'],\n    method='zscore',\n    threshold=3.0\n)\n\n# Step 4: View results\nresult_df = anomaly_pipe.to_df()\nprint(f\"Multi-column detection results:\")\nprint(result_df[['temperature_anomaly', 'pressure_anomaly', 'humidity_anomaly']].sum())"
+    },
+    "parameters": {
+      "columns": "Column(s) to analyze for outliers (string or list)",
+      "method": "Detection method: 'zscore', 'iqr', 'modified_zscore' (default: 'zscore')",
+      "threshold": "Threshold for outlier detection (default: 3.0)",
+      "window": "Rolling window size for time series data (optional)",
+      "time_column": "Time column for rolling window analysis (optional)",
+      "group_columns": "Columns to group by for separate analysis (optional)"
+    }
+  },
+  {
+    "function": "detect_contextual_anomalies",
+    "category": "anomaly_detection",
+    "description": "Detect anomalies using residual analysis with EWM model",
+    "prerequisites": ["AnomalyPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nimport numpy as np\nfrom insightsagents.app.tools.mltools.anomalydetection import AnomalyPipe, detect_contextual_anomalies\n\n# Step 1: Create time series data with seasonal patterns\nnp.random.seed(42)\ndates = pd.date_range('2023-01-01', periods=365, freq='D')\n# Create seasonal pattern\nseasonal_pattern = 10 * np.sin(2 * np.pi * np.arange(365) / 365.25)\n# Add trend\ntrend = np.linspace(100, 120, 365)\n# Add noise\nnoise = np.random.normal(0, 5, 365)\n# Add some anomalies\nanomalies = np.zeros(365)\nanomalies[50] = 30  # Add anomaly at day 50\nanomalies[150] = -25  # Add anomaly at day 150\nanomalies[300] = 40  # Add anomaly at day 300\n\nvalues = trend + seasonal_pattern + noise + anomalies\n\nsample_data = pd.DataFrame({\n    'value': values,\n    'timestamp': dates\n})\n\n# Step 2: Initialize pipeline\nanomaly_pipe = AnomalyPipe.from_dataframe(sample_data)\n\n# Step 3: Detect contextual anomalies\nanomaly_pipe = anomaly_pipe | detect_contextual_anomalies(\n    columns='value',\n    time_column='timestamp',\n    method='residual',\n    model_type='ewm',\n    threshold=2.5,\n    window=30\n)\n\n# Step 4: View results\nresult_df = anomaly_pipe.to_df()\nprint(f\"Contextual anomalies detected: {result_df['value_anomaly'].sum()}\")\nprint(result_df[result_df['value_anomaly'] == True][['timestamp', 'value', 'value_anomaly_score']].head())\n\n# Step 5: Get summary\nsummary = anomaly_pipe.get_anomaly_summary()\nprint(f\"Analysis method: {summary['detection_method']}\")\nprint(f\"Total anomalies: {summary['total_anomalies']}\")"
+    },
+    "parameters": {
+      "columns": "Column(s) to analyze for anomalies (string or list)",
+      "time_column": "Time column for time series analysis",
+      "method": "Detection method: 'residual', 'prediction_interval', 'changepoint' (default: 'residual')",
+      "model_type": "Model type: 'ewm', 'sarimax', 'arima' (default: 'ewm')",
+      "threshold": "Threshold for anomaly detection (default: 3.0)",
+      "window": "Window size for model fitting (default: 30)",
+      "seasonal_period": "Seasonal period for seasonal models (optional)",
+      "group_columns": "Columns to group by for separate analysis (optional)",
+      "datetime_format": "Format string for parsing dates (optional)"
+    }
+  },
+  {
+    "function": "detect_contextual_anomalies",
+    "category": "anomaly_detection",
+    "description": "Detect anomalies using SARIMAX with seasonal decomposition",
+    "prerequisites": ["AnomalyPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nimport numpy as np\nfrom insightsagents.app.tools.mltools.anomalydetection import AnomalyPipe, detect_contextual_anomalies\n\n# Step 1: Create time series data with seasonal patterns\nnp.random.seed(42)\ndates = pd.date_range('2023-01-01', periods=365, freq='D')\n# Create seasonal pattern\nseasonal_pattern = 10 * np.sin(2 * np.pi * np.arange(365) / 365.25)\n# Add trend\ntrend = np.linspace(100, 120, 365)\n# Add noise\nnoise = np.random.normal(0, 5, 365)\n# Add some anomalies\nanomalies = np.zeros(365)\nanomalies[50] = 30  # Add anomaly at day 50\nanomalies[150] = -25  # Add anomaly at day 150\nanomalies[300] = 40  # Add anomaly at day 300\n\nvalues = trend + seasonal_pattern + noise + anomalies\n\nsample_data = pd.DataFrame({\n    'value': values,\n    'timestamp': dates\n})\n\n# Step 2: Initialize pipeline\nanomaly_pipe = AnomalyPipe.from_dataframe(sample_data)\n\n# Step 3: Detect contextual anomalies using SARIMAX\nanomaly_pipe = anomaly_pipe | detect_contextual_anomalies(\n    columns='value',\n    time_column='timestamp',\n    method='prediction_interval',\n    model_type='sarimax',\n    threshold=2.0,\n    window=60,\n    seasonal_period=365\n)\n\n# Step 4: View results\nresult_df = anomaly_pipe.to_df()\nprint(f\"SARIMAX seasonal anomalies: {result_df['value_anomaly'].sum()}\")"
+    },
+    "parameters": {
+      "columns": "Column(s) to analyze for anomalies (string or list)",
+      "time_column": "Time column for time series analysis",
+      "method": "Detection method: 'residual', 'prediction_interval', 'changepoint' (default: 'residual')",
+      "model_type": "Model type: 'ewm', 'sarimax', 'arima' (default: 'ewm')",
+      "threshold": "Threshold for anomaly detection (default: 3.0)",
+      "window": "Window size for model fitting (default: 30)",
+      "seasonal_period": "Seasonal period for seasonal models (optional)",
+      "group_columns": "Columns to group by for separate analysis (optional)",
+      "datetime_format": "Format string for parsing dates (optional)"
+    }
+  },
+  {
+    "function": "detect_contextual_anomalies",
+    "category": "anomaly_detection",
+    "description": "Detect change points in time series data",
+    "prerequisites": ["AnomalyPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nimport numpy as np\nfrom insightsagents.app.tools.mltools.anomalydetection import AnomalyPipe, detect_contextual_anomalies\n\n# Step 1: Create time series data with seasonal patterns\nnp.random.seed(42)\ndates = pd.date_range('2023-01-01', periods=365, freq='D')\n# Create seasonal pattern\nseasonal_pattern = 10 * np.sin(2 * np.pi * np.arange(365) / 365.25)\n# Add trend\ntrend = np.linspace(100, 120, 365)\n# Add noise\nnoise = np.random.normal(0, 5, 365)\n# Add some anomalies\nanomalies = np.zeros(365)\nanomalies[50] = 30  # Add anomaly at day 50\nanomalies[150] = -25  # Add anomaly at day 150\nanomalies[300] = 40  # Add anomaly at day 300\n\nvalues = trend + seasonal_pattern + noise + anomalies\n\nsample_data = pd.DataFrame({\n    'value': values,\n    'timestamp': dates\n})\n\n# Step 2: Initialize pipeline\nanomaly_pipe = AnomalyPipe.from_dataframe(sample_data)\n\n# Step 3: Detect change points\nanomaly_pipe = anomaly_pipe | detect_contextual_anomalies(\n    columns='value',\n    time_column='timestamp',\n    method='changepoint',\n    model_type='ewm',\n    threshold=3.0,\n    window=100\n)\n\n# Step 4: View results\nresult_df = anomaly_pipe.to_df()\nprint(f\"Change points detected: {result_df['value_anomaly'].sum()}\")"
+    },
+    "parameters": {
+      "columns": "Column(s) to analyze for anomalies (string or list)",
+      "time_column": "Time column for time series analysis",
+      "method": "Detection method: 'residual', 'prediction_interval', 'changepoint' (default: 'residual')",
+      "model_type": "Model type: 'ewm', 'sarimax', 'arima' (default: 'ewm')",
+      "threshold": "Threshold for anomaly detection (default: 3.0)",
+      "window": "Window size for model fitting (default: 30)",
+      "seasonal_period": "Seasonal period for seasonal models (optional)",
+      "group_columns": "Columns to group by for separate analysis (optional)",
+      "datetime_format": "Format string for parsing dates (optional)"
+    }
+  }
+]

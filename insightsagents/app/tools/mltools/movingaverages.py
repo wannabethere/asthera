@@ -69,80 +69,49 @@ class MovingAggrPipe(BasePipe):
         if hasattr(source_pipe, 'current_metric'):
             self.current_metric = source_pipe.current_metric
     
-    def to_df(self, include_metadata: bool = False, include_original: bool = True):
+    def merge_to_df(self, base_df: pd.DataFrame, include_metadata: bool = False, **kwargs) -> pd.DataFrame:
         """
-        Convert the moving aggregation results to a DataFrame
+        Merge moving aggregation results into the base dataframe as new columns.
         
         Parameters:
         -----------
+        base_df : pd.DataFrame
+            The base dataframe to merge results into
         include_metadata : bool, default=False
             Whether to include metadata columns in the output DataFrame
-        include_original : bool, default=True
-            Whether to include original data columns in the output DataFrame
+        **kwargs : dict
+            Additional arguments (unused for this pipeline)
             
         Returns:
         --------
         pd.DataFrame
-            DataFrame representation of the moving aggregation results
-            
-        Raises:
-        -------
-        ValueError
-            If no moving aggregation has been performed
-            
-        Examples:
-        --------
-        >>> # Basic moving average
-        >>> pipe = (MovingAggrPipe.from_dataframe(df)
-        ...         | moving_average('value', 7, 'simple'))
-        >>> results_df = pipe.to_df()
-        >>> print(results_df.head())
-        
-        >>> # Multiple moving aggregations with metadata
-        >>> pipe = (MovingAggrPipe.from_dataframe(df)
-        ...         | moving_average('value', 7, 'simple')
-        ...         | moving_variance('value', 14))
-        >>> results_df = pipe.to_df(include_metadata=True)
-        >>> print(results_df.columns)
-        
-        >>> # Only moving aggregation columns (no original data)
-        >>> moving_df = pipe.to_df(include_original=False)
-        >>> print(moving_df.columns)
+            Base dataframe with moving aggregation results merged as new columns
         """
-        if self.data is None:
-            raise ValueError("No data found. Data must be provided when creating the pipeline.")
+        result_df = base_df.copy()
         
-        if not self.moving_metrics:
-            raise ValueError("No moving aggregation has been performed. Run some analysis first.")
-        
-        # Get the result DataFrame (contains original data + moving aggregation results)
-        result_df = self.data.copy()
-        
-        # Filter columns based on parameters
-        columns_to_include = []
-        
-        if include_original:
-            # Include original columns (those that don't have moving aggregation suffixes)
-            original_cols = [col for col in result_df.columns 
-                           if not any(suffix in col for suffix in ['_ma', '_var', '_std', '_sum', '_q', '_corr', '_zscore', '_grouped', '_ratio', '_peak', '_trough', '_reg', '_min', '_max', '_count', '_agg', '_rank', '_twa', '_cum', '_exp'])]
-            columns_to_include.extend(original_cols)
-        
-        # Include moving aggregation columns
-        moving_cols = [col for col in result_df.columns 
-                      if any(suffix in col for suffix in ['_ma', '_var', '_std', '_sum', '_q', '_corr', '_zscore', '_grouped', '_ratio', '_peak', '_trough', '_reg', '_min', '_max', '_count', '_agg', '_rank', '_twa', '_cum', '_exp'])]
-        columns_to_include.extend(moving_cols)
-        
-        # Create the output DataFrame
-        output_df = result_df[columns_to_include].copy()
+        # Add pipeline identification
+        result_df['pipeline_type'] = 'moving_aggregation'
+        result_df['pipeline_has_results'] = len(self.moving_metrics) > 0
         
         # Add metadata if requested
-        if include_metadata:
+        if include_metadata and self.moving_metrics:
             for metric_name, metric_info in self.moving_metrics.items():
                 for key, value in metric_info.items():
                     if key != 'type':  # Don't duplicate the type column
-                        output_df[f'metadata_{metric_name}_{key}'] = str(value)
+                        result_df[f'moving_metadata_{metric_name}_{key}'] = str(value)
         
-        return output_df
+        return result_df
+    
+    def _has_results(self) -> bool:
+        """
+        Check if the pipeline has any moving aggregation results.
+        
+        Returns:
+        --------
+        bool
+            True if the pipeline has moving aggregation results, False otherwise
+        """
+        return len(self.moving_metrics) > 0
     
     def get_moving_columns(self):
         """

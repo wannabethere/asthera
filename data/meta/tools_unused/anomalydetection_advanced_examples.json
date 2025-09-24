@@ -1,0 +1,106 @@
+[
+  {
+    "function": "detect_collective_anomalies",
+    "category": "anomaly_detection",
+    "description": "Detect collective anomalies using Isolation Forest",
+    "prerequisites": ["AnomalyPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nimport numpy as np\nfrom insightsagents.app.tools.mltools.anomalydetection import AnomalyPipe, detect_collective_anomalies\n\n# Step 1: Create multi-dimensional data with collective anomalies\nnp.random.seed(42)\n# Normal data\nnormal_data = np.random.multivariate_normal([0, 0, 0], [[1, 0.5, 0.2], [0.5, 1, 0.3], [0.2, 0.3, 1]], 1000)\n# Anomalous data (different distribution)\nanomalous_data = np.random.multivariate_normal([3, 3, 3], [[0.5, 0, 0], [0, 0.5, 0], [0, 0, 0.5]], 50)\n\nall_data = np.vstack([normal_data, anomalous_data])\n\nsample_data = pd.DataFrame({\n    'feature1': all_data[:, 0],\n    'feature2': all_data[:, 1],\n    'feature3': all_data[:, 2],\n    'timestamp': pd.date_range('2023-01-01', periods=1050, freq='H')\n})\n\n# Step 2: Initialize pipeline\nanomaly_pipe = AnomalyPipe.from_dataframe(sample_data)\n\n# Step 3: Detect collective anomalies\nanomaly_pipe = anomaly_pipe | detect_collective_anomalies(\n    columns=['feature1', 'feature2', 'feature3'],\n    time_column='timestamp',\n    method='isolation_forest',\n    window=200,\n    contamination=0.05,\n    n_estimators=100\n)\n\n# Step 4: View results\nresult_df = anomaly_pipe.to_df()\nprint(f\"Collective anomalies detected: {result_df['collective_anomaly'].sum()}\")\nprint(result_df[result_df['collective_anomaly'] == True].head())\n\n# Step 5: Get summary\nsummary = anomaly_pipe.get_anomaly_summary()\nprint(f\"Detection method: {summary['detection_method']}\")\nprint(f\"Total anomalies: {summary['total_anomalies']}\")"
+    },
+    "parameters": {
+      "columns": "Column(s) to analyze for collective anomalies (string or list)",
+      "time_column": "Time column for time series analysis",
+      "method": "Detection method: 'isolation_forest', 'lof' (default: 'isolation_forest')",
+      "window": "Window size for analysis (default: 30)",
+      "contamination": "Expected proportion of anomalies (default: 0.05)",
+      "n_estimators": "Number of estimators for Isolation Forest (default: 100)",
+      "group_columns": "Columns to group by for separate analysis (optional)",
+      "datetime_format": "Format string for parsing dates (optional)"
+    }
+  },
+  {
+    "function": "detect_collective_anomalies",
+    "category": "anomaly_detection",
+    "description": "Detect collective anomalies using Local Outlier Factor",
+    "prerequisites": ["AnomalyPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nimport numpy as np\nfrom insightsagents.app.tools.mltools.anomalydetection import AnomalyPipe, detect_collective_anomalies\n\n# Step 1: Create multi-dimensional data with collective anomalies\nnp.random.seed(42)\n# Normal data\nnormal_data = np.random.multivariate_normal([0, 0, 0], [[1, 0.5, 0.2], [0.5, 1, 0.3], [0.2, 0.3, 1]], 1000)\n# Anomalous data (different distribution)\nanomalous_data = np.random.multivariate_normal([3, 3, 3], [[0.5, 0, 0], [0, 0.5, 0], [0, 0, 0.5]], 50)\n\nall_data = np.vstack([normal_data, anomalous_data])\n\nsample_data = pd.DataFrame({\n    'feature1': all_data[:, 0],\n    'feature2': all_data[:, 1],\n    'feature3': all_data[:, 2],\n    'timestamp': pd.date_range('2023-01-01', periods=1050, freq='H')\n})\n\n# Step 2: Initialize pipeline\nanomaly_pipe = AnomalyPipe.from_dataframe(sample_data)\n\n# Step 3: Detect collective anomalies using LOF\nanomaly_pipe = anomaly_pipe | detect_collective_anomalies(\n    columns=['feature1', 'feature2', 'feature3'],\n    time_column='timestamp',\n    method='lof',\n    window=150,\n    contamination=0.03\n)\n\n# Step 4: View results\nresult_df = anomaly_pipe.to_df()\nprint(f\"LOF anomalies detected: {result_df['collective_anomaly'].sum()}\")"
+    },
+    "parameters": {
+      "columns": "Column(s) to analyze for collective anomalies (string or list)",
+      "time_column": "Time column for time series analysis",
+      "method": "Detection method: 'isolation_forest', 'lof' (default: 'isolation_forest')",
+      "window": "Window size for analysis (default: 30)",
+      "contamination": "Expected proportion of anomalies (default: 0.05)",
+      "n_estimators": "Number of estimators for Isolation Forest (default: 100)",
+      "group_columns": "Columns to group by for separate analysis (optional)",
+      "datetime_format": "Format string for parsing dates (optional)"
+    }
+  },
+  {
+    "function": "calculate_seasonal_residuals",
+    "category": "anomaly_detection",
+    "description": "Decompose time series using multiplicative method",
+    "prerequisites": ["AnomalyPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nimport numpy as np\nfrom insightsagents.app.tools.mltools.anomalydetection import AnomalyPipe, calculate_seasonal_residuals\n\n# Step 1: Create seasonal time series data\nnp.random.seed(42)\ndates = pd.date_range('2023-01-01', periods=365, freq='D')\n# Create trend\ntrend = np.linspace(100, 120, 365)\n# Create seasonal pattern\nseasonal = 10 * np.sin(2 * np.pi * np.arange(365) / 365.25)\n# Add noise\nnoise = np.random.normal(0, 2, 365)\n# Combine components\nvalues = trend + seasonal + noise\n\nsample_data = pd.DataFrame({\n    'value': values,\n    'timestamp': dates\n})\n\n# Step 2: Initialize pipeline\nanomaly_pipe = AnomalyPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate seasonal residuals\nanomaly_pipe = anomaly_pipe | calculate_seasonal_residuals(\n    columns='value',\n    mtime_column='timestamp',\n    mseasonal_period=365,\n    mmethod='additive'\n)\n\n# Step 4: View results\nresult_df = anomaly_pipe.to_df()\nprint(\"Decomposition results:\")\nprint(result_df[['value', 'value_trend', 'value_seasonal', 'value_residual']].head())\n\n# Step 5: Get summary\nsummary = anomaly_pipe.get_summary()\nprint(f\"Analysis type: {summary.get('analysis_type', 'seasonal_decomposition')}\")"
+    },
+    "parameters": {
+      "columns": "Column(s) to decompose (string or list)",
+      "mtime_column": "Time column for decomposition",
+      "mseasonal_period": "Seasonal period for decomposition (optional)",
+      "mmethod": "Decomposition method: 'additive' or 'multiplicative' (default: 'multiplicative')",
+      "mgroup_columns": "Columns to group by for separate analysis (optional)",
+      "mdatetime_format": "Format string for parsing dates (optional)"
+    }
+  },
+  {
+    "function": "calculate_seasonal_residuals",
+    "category": "anomaly_detection",
+    "description": "Decompose monthly data with 12-month seasonality",
+    "prerequisites": ["AnomalyPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nimport numpy as np\nfrom insightsagents.app.tools.mltools.anomalydetection import AnomalyPipe, calculate_seasonal_residuals\n\n# Step 1: Create monthly data\nmonthly_dates = pd.date_range('2020-01-01', periods=60, freq='M')\nmonthly_trend = np.linspace(1000, 1200, 60)\nmonthly_seasonal = 100 * np.sin(2 * np.pi * np.arange(60) / 12)\nmonthly_noise = np.random.normal(0, 20, 60)\nmonthly_values = monthly_trend + monthly_seasonal + monthly_noise\n\nmonthly_data = pd.DataFrame({\n    'monthly_sales': monthly_values,\n    'month': monthly_dates\n})\n\n# Step 2: Initialize pipeline\nanomaly_pipe = AnomalyPipe.from_dataframe(monthly_data)\n\n# Step 3: Calculate seasonal residuals for monthly data\nanomaly_pipe = anomaly_pipe | calculate_seasonal_residuals(\n    columns='monthly_sales',\n    mtime_column='month',\n    mseasonal_period=12,\n    mmethod='multiplicative'\n)\n\n# Step 4: View results\nresult_df = anomaly_pipe.to_df()\nprint(\"Monthly decomposition:\")\nprint(result_df[['monthly_sales', 'monthly_sales_trend', 'monthly_sales_seasonal', 'monthly_sales_residual']].head())"
+    },
+    "parameters": {
+      "columns": "Column(s) to decompose (string or list)",
+      "mtime_column": "Time column for decomposition",
+      "mseasonal_period": "Seasonal period for decomposition (optional)",
+      "mmethod": "Decomposition method: 'additive' or 'multiplicative' (default: 'multiplicative')",
+      "mgroup_columns": "Columns to group by for separate analysis (optional)",
+      "mdatetime_format": "Format string for parsing dates (optional)"
+    }
+  },
+  {
+    "function": "detect_anomalies_from_residuals",
+    "category": "anomaly_detection",
+    "description": "Detect anomalies in residuals after seasonal decomposition",
+    "prerequisites": ["AnomalyPipe.from_dataframe()", "calculate_seasonal_residuals()"],
+    "example": {
+      "code": "import pandas as pd\nimport numpy as np\nfrom insightsagents.app.tools.mltools.anomalydetection import AnomalyPipe, calculate_seasonal_residuals, detect_anomalies_from_residuals\n\n# Step 1: Create seasonal data with anomalies\nnp.random.seed(42)\ndates = pd.date_range('2023-01-01', periods=365, freq='D')\ntrend = np.linspace(100, 120, 365)\nseasonal = 10 * np.sin(2 * np.pi * np.arange(365) / 365.25)\nnoise = np.random.normal(0, 2, 365)\n# Add anomalies to residuals\nanomalies = np.zeros(365)\nanomalies[100] = 15  # Large positive anomaly\nanomalies[200] = -12  # Large negative anomaly\nanomalies[300] = 18   # Another positive anomaly\n\nvalues = trend + seasonal + noise + anomalies\n\nsample_data = pd.DataFrame({\n    'revenue': values,\n    'timestamp': dates\n})\n\n# Step 2: Initialize pipeline and decompose\nanomaly_pipe = AnomalyPipe.from_dataframe(sample_data)\nanomaly_pipe = anomaly_pipe | calculate_seasonal_residuals(\n    columns='revenue',\n    mtime_column='timestamp',\n    mseasonal_period=365,\n    mmethod='additive'\n)\n\n# Step 3: Detect anomalies in residuals\nanomaly_pipe = anomaly_pipe | detect_anomalies_from_residuals(\n    columns='revenue',\n    method='modified_zscore',\n    threshold=3.0,\n    suffix='_residual',\n    output_suffix='_anomaly'\n)\n\n# Step 4: View results\nresult_df = anomaly_pipe.to_df()\nprint(f\"Residual anomalies detected: {result_df['revenue_anomaly'].sum()}\")\nprint(\"Anomaly details:\")\nanomalies_df = result_df[result_df['revenue_anomaly'] == True]\nprint(anomalies_df[['timestamp', 'revenue', 'revenue_residual', 'revenue_anomaly_score']].head())\n\n# Step 5: Get summary\nsummary = anomaly_pipe.get_anomaly_summary()\nprint(f\"Total residual anomalies: {summary['total_anomalies']}\")"
+    },
+    "parameters": {
+      "columns": "Column(s) to analyze for residual anomalies (string or list)",
+      "method": "Detection method: 'zscore', 'iqr', 'modified_zscore' (default: 'zscore')",
+      "threshold": "Threshold for anomaly detection (default: 3.0)",
+      "suffix": "Suffix used for residual columns (default: '_residual')",
+      "output_suffix": "Suffix for output anomaly columns (default: '_anomaly')"
+    }
+  },
+  {
+    "function": "detect_anomalies_from_residuals",
+    "category": "anomaly_detection",
+    "description": "Use IQR method for residual anomaly detection",
+    "prerequisites": ["AnomalyPipe.from_dataframe()", "calculate_seasonal_residuals()"],
+    "example": {
+      "code": "import pandas as pd\nimport numpy as np\nfrom insightsagents.app.tools.mltools.anomalydetection import AnomalyPipe, calculate_seasonal_residuals, detect_anomalies_from_residuals\n\n# Step 1: Create seasonal data with anomalies\nnp.random.seed(42)\ndates = pd.date_range('2023-01-01', periods=365, freq='D')\ntrend = np.linspace(100, 120, 365)\nseasonal = 10 * np.sin(2 * np.pi * np.arange(365) / 365.25)\nnoise = np.random.normal(0, 2, 365)\n# Add anomalies to residuals\nanomalies = np.zeros(365)\nanomalies[100] = 15  # Large positive anomaly\nanomalies[200] = -12  # Large negative anomaly\nanomalies[300] = 18   # Another positive anomaly\n\nvalues = trend + seasonal + noise + anomalies\n\nsample_data = pd.DataFrame({\n    'revenue': values,\n    'timestamp': dates\n})\n\n# Step 2: Initialize pipeline and decompose\nanomaly_pipe = AnomalyPipe.from_dataframe(sample_data)\nanomaly_pipe = anomaly_pipe | calculate_seasonal_residuals(\n    columns='revenue',\n    mtime_column='timestamp',\n    mseasonal_period=365,\n    mmethod='additive'\n)\n\n# Step 3: Detect anomalies in residuals using IQR\nanomaly_pipe = anomaly_pipe | detect_anomalies_from_residuals(\n    columns='revenue',\n    method='iqr',\n    threshold=2.0,\n    suffix='_residual',\n    output_suffix='_anomaly'\n)\n\n# Step 4: View results\nresult_df = anomaly_pipe.to_df()\nprint(f\"IQR residual anomalies: {result_df['revenue_anomaly'].sum()}\")"
+    },
+    "parameters": {
+      "columns": "Column(s) to analyze for residual anomalies (string or list)",
+      "method": "Detection method: 'zscore', 'iqr', 'modified_zscore' (default: 'zscore')",
+      "threshold": "Threshold for anomaly detection (default: 3.0)",
+      "suffix": "Suffix used for residual columns (default: '_residual')",
+      "output_suffix": "Suffix for output anomaly columns (default: '_anomaly')"
+    }
+  }
+]

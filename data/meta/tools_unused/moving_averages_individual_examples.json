@@ -1,0 +1,174 @@
+[
+  {
+    "function": "moving_average",
+    "category": "moving_averages",
+    "description": "Calculate 7-day moving average for daily sales data",
+    "prerequisites": ["MovingAggrPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.moving_averages import MovingAggrPipe, moving_average, Execute\n\n# Step 1: Create sample daily sales data\nsample_data = pd.DataFrame({\n    'date': pd.date_range('2023-01-01', periods=30, freq='D'),\n    'sales': [100, 120, 90, 110, 130, 95, 105, 125, 115, 140, 85, 100, 120, 110, 135, 90, 105, 125, 115, 130, 95, 110, 120, 105, 140, 90, 115, 125, 110, 135],\n    'product_category': ['Electronics'] * 30\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = MovingAggrPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate 7-day moving average\nresult = pipeline | moving_average(variable='sales', window=7, output_name='sales_ma_7d')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"7-day moving average: {metrics['sales_ma_7d']:.2f}\")\nprint(f\"Data points: {len(sample_data)}\")\nprint(f\"Window size: 7\")"
+    },
+    "parameters": {
+      "variable": "Column name to calculate moving average for",
+      "window": "Number of periods for the moving average",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "moving_average",
+    "category": "moving_averages",
+    "description": "Compute 30-day moving average for stock prices",
+    "prerequisites": ["MovingAggrPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.moving_averages import MovingAggrPipe, moving_average, Execute\n\n# Step 1: Create sample stock price data\nsample_data = pd.DataFrame({\n    'date': pd.date_range('2023-01-01', periods=90, freq='D'),\n    'price': [100 + i * 0.5 + (i % 7 - 3) * 2 for i in range(90)],\n    'volume': [1000, 1200, 800, 1500, 900, 1100, 1300, 700, 1600, 1000] * 9,\n    'symbol': ['AAPL'] * 90\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = MovingAggrPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate 30-day moving average\nresult = pipeline | moving_average(variable='price', window=30, output_name='price_ma_30d')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"30-day moving average price: ${metrics['price_ma_30d']:.2f}\")\nprint(f\"Current price: ${sample_data['price'].iloc[-1]:.2f}\")\nprint(f\"Data points: {len(sample_data)}\")"
+    },
+    "parameters": {
+      "variable": "Column name to calculate moving average for",
+      "window": "Number of periods for the moving average",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "moving_variance",
+    "category": "moving_averages",
+    "description": "Calculate rolling variance for temperature measurements",
+    "prerequisites": ["MovingAggrPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.moving_averages import MovingAggrPipe, moving_variance, Execute\n\n# Step 1: Create sample temperature data\nsample_data = pd.DataFrame({\n    'timestamp': pd.date_range('2023-01-01', periods=50, freq='H'),\n    'temperature': [20 + i * 0.1 + (i % 5 - 2) * 2 for i in range(50)],\n    'humidity': [60 + i * 0.2 + (i % 3 - 1) * 5 for i in range(50)],\n    'location': ['Sensor_A'] * 50\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = MovingAggrPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate 12-hour moving variance\nresult = pipeline | moving_variance(variable='temperature', window=12, output_name='temp_var_12h')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"12-hour moving variance: {metrics['temp_var_12h']:.2f}\")\nprint(f\"Temperature range: {sample_data['temperature'].min():.1f}°C to {sample_data['temperature'].max():.1f}°C\")\nprint(f\"Data points: {len(sample_data)}\")"
+    },
+    "parameters": {
+      "variable": "Column name to calculate moving variance for",
+      "window": "Number of periods for the moving variance",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "moving_variance",
+    "category": "moving_averages",
+    "description": "Find rolling variance in website traffic patterns",
+    "prerequisites": ["MovingAggrPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.moving_averages import MovingAggrPipe, moving_variance, Execute\n\n# Step 1: Create sample website traffic data\nsample_data = pd.DataFrame({\n    'date': pd.date_range('2023-01-01', periods=60, freq='D'),\n    'daily_visitors': [1000 + i * 10 + (i % 7 - 3) * 200 for i in range(60)],\n    'page_views': [5000 + i * 50 + (i % 5 - 2) * 500 for i in range(60)],\n    'bounce_rate': [0.3 + (i % 4 - 1.5) * 0.05 for i in range(60)]\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = MovingAggrPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate 14-day moving variance\nresult = pipeline | moving_variance(variable='daily_visitors', window=14, output_name='visitors_var_14d')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"14-day moving variance: {metrics['visitors_var_14d']:.2f}\")\nprint(f\"Average daily visitors: {sample_data['daily_visitors'].mean():.0f}\")\nprint(f\"Data points: {len(sample_data)}\")"
+    },
+    "parameters": {
+      "variable": "Column name to calculate moving variance for",
+      "window": "Number of periods for the moving variance",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "moving_sum",
+    "category": "moving_averages",
+    "description": "Calculate rolling sum of weekly sales",
+    "prerequisites": ["MovingAggrPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.moving_averages import MovingAggrPipe, moving_sum, Execute\n\n# Step 1: Create sample weekly sales data\nsample_data = pd.DataFrame({\n    'week': pd.date_range('2023-01-01', periods=20, freq='W'),\n    'sales': [5000, 5500, 4800, 6200, 5800, 5100, 6700, 5900, 5400, 6100, 5600, 6300, 5800, 6500, 6000, 5200, 6800, 6100, 5500, 6400],\n    'region': ['North', 'South', 'East', 'West'] * 5,\n    'product_line': ['Electronics', 'Clothing', 'Books', 'Home'] * 5\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = MovingAggrPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate 4-week moving sum\nresult = pipeline | moving_sum(variable='sales', window=4, output_name='sales_sum_4w')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"4-week moving sum: ${metrics['sales_sum_4w']:,.2f}\")\nprint(f\"Total sales: ${sample_data['sales'].sum():,.2f}\")\nprint(f\"Weeks analyzed: {len(sample_data)}\")"
+    },
+    "parameters": {
+      "variable": "Column name to calculate moving sum for",
+      "window": "Number of periods for the moving sum",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "moving_sum",
+    "category": "moving_averages",
+    "description": "Compute rolling sum of monthly expenses",
+    "prerequisites": ["MovingAggrPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.moving_averages import MovingAggrPipe, moving_sum, Execute\n\n# Step 1: Create sample monthly expense data\nsample_data = pd.DataFrame({\n    'month': pd.date_range('2023-01-01', periods=12, freq='M'),\n    'expenses': [5000, 5200, 4800, 5500, 5100, 5800, 5400, 5600, 5300, 5700, 5200, 5900],\n    'category': ['Operations', 'Marketing', 'R&D', 'Admin'] * 3,\n    'department': ['Sales', 'Engineering', 'Marketing'] * 4\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = MovingAggrPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate 3-month moving sum\nresult = pipeline | moving_sum(variable='expenses', window=3, output_name='expenses_sum_3m')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"3-month moving sum: ${metrics['expenses_sum_3m']:,.2f}\")\nprint(f\"Total annual expenses: ${sample_data['expenses'].sum():,.2f}\")\nprint(f\"Months analyzed: {len(sample_data)}\")"
+    },
+    "parameters": {
+      "variable": "Column name to calculate moving sum for",
+      "window": "Number of periods for the moving sum",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "moving_quantile",
+    "category": "moving_averages",
+    "description": "Find rolling 90th percentile of response times",
+    "prerequisites": ["MovingAggrPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.moving_averages import MovingAggrPipe, moving_quantile, Execute\n\n# Step 1: Create sample response time data\nsample_data = pd.DataFrame({\n    'timestamp': pd.date_range('2023-01-01', periods=100, freq='H'),\n    'response_time': [100 + i * 2 + (i % 10 - 5) * 20 for i in range(100)],\n    'request_type': ['API', 'Web', 'Mobile'] * 33 + ['API'],\n    'server_id': ['Server_1', 'Server_2', 'Server_3'] * 33 + ['Server_1']\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = MovingAggrPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate 24-hour moving 90th percentile\nresult = pipeline | moving_quantile(variable='response_time', window=24, quantile=0.9, output_name='response_p90_24h')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"24-hour moving 90th percentile: {metrics['response_p90_24h']:.2f}ms\")\nprint(f\"Average response time: {sample_data['response_time'].mean():.2f}ms\")\nprint(f\"Data points: {len(sample_data)}\")"
+    },
+    "parameters": {
+      "variable": "Column name to calculate moving quantile for",
+      "window": "Number of periods for the moving quantile",
+      "quantile": "Quantile value (0-1)",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "moving_quantile",
+    "category": "moving_averages",
+    "description": "Calculate rolling median of daily active users",
+    "prerequisites": ["MovingAggrPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.moving_averages import MovingAggrPipe, moving_quantile, Execute\n\n# Step 1: Create sample daily active users data\nsample_data = pd.DataFrame({\n    'date': pd.date_range('2023-01-01', periods=45, freq='D'),\n    'dau': [1000 + i * 20 + (i % 7 - 3) * 100 for i in range(45)],\n    'platform': ['Web', 'Mobile', 'Desktop'] * 15,\n    'region': ['US', 'EU', 'APAC'] * 15\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = MovingAggrPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate 7-day moving median\nresult = pipeline | moving_quantile(variable='dau', window=7, quantile=0.5, output_name='dau_median_7d')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"7-day moving median DAU: {metrics['dau_median_7d']:.0f}\")\nprint(f\"Current DAU: {sample_data['dau'].iloc[-1]}\")\nprint(f\"Data points: {len(sample_data)}\")"
+    },
+    "parameters": {
+      "variable": "Column name to calculate moving quantile for",
+      "window": "Number of periods for the moving quantile",
+      "quantile": "Quantile value (0-1)",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "moving_correlation",
+    "category": "moving_averages",
+    "description": "Calculate rolling correlation between price and volume",
+    "prerequisites": ["MovingAggrPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.moving_averages import MovingAggrPipe, moving_correlation, Execute\n\n# Step 1: Create sample price and volume data\nsample_data = pd.DataFrame({\n    'date': pd.date_range('2023-01-01', periods=50, freq='D'),\n    'price': [100 + i * 0.5 + (i % 5 - 2) * 2 for i in range(50)],\n    'volume': [1000 + i * 20 + (i % 3 - 1) * 200 for i in range(50)],\n    'symbol': ['AAPL'] * 50\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = MovingAggrPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate 20-day moving correlation\nresult = pipeline | moving_correlation(variable1='price', variable2='volume', window=20, output_name='price_volume_corr_20d')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"20-day moving correlation: {metrics['price_volume_corr_20d']:.3f}\")\nprint(f\"Price range: ${sample_data['price'].min():.2f} - ${sample_data['price'].max():.2f}\")\nprint(f\"Volume range: {sample_data['volume'].min():,} - {sample_data['volume'].max():,}\")"
+    },
+    "parameters": {
+      "variable1": "First column name for correlation",
+      "variable2": "Second column name for correlation",
+      "window": "Number of periods for the moving correlation",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "moving_correlation",
+    "category": "moving_averages",
+    "description": "Find rolling correlation between temperature and humidity",
+    "prerequisites": ["MovingAggrPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.moving_averages import MovingAggrPipe, moving_correlation, Execute\n\n# Step 1: Create sample weather data\nsample_data = pd.DataFrame({\n    'timestamp': pd.date_range('2023-01-01', periods=72, freq='H'),\n    'temperature': [20 + i * 0.2 + (i % 8 - 4) * 3 for i in range(72)],\n    'humidity': [60 + i * 0.1 + (i % 6 - 3) * 5 for i in range(72)],\n    'location': ['Weather_Station_A'] * 72\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = MovingAggrPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate 12-hour moving correlation\nresult = pipeline | moving_correlation(variable1='temperature', variable2='humidity', window=12, output_name='temp_humidity_corr_12h')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"12-hour moving correlation: {metrics['temp_humidity_corr_12h']:.3f}\")\nprint(f\"Temperature range: {sample_data['temperature'].min():.1f}°C - {sample_data['temperature'].max():.1f}°C\")\nprint(f\"Humidity range: {sample_data['humidity'].min():.1f}% - {sample_data['humidity'].max():.1f}%\")"
+    },
+    "parameters": {
+      "variable1": "First column name for correlation",
+      "variable2": "Second column name for correlation",
+      "window": "Number of periods for the moving correlation",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "moving_zscore",
+    "category": "moving_averages",
+    "description": "Calculate rolling z-score for anomaly detection in sales data",
+    "prerequisites": ["MovingAggrPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.moving_averages import MovingAggrPipe, moving_zscore, Execute\n\n# Step 1: Create sample sales data with some anomalies\nsample_data = pd.DataFrame({\n    'date': pd.date_range('2023-01-01', periods=60, freq='D'),\n    'sales': [1000 + i * 10 + (i % 7 - 3) * 50 for i in range(60)],\n    'product_category': ['Electronics'] * 60\n})\n\n# Add some anomalies\nsample_data.loc[20, 'sales'] = 2000  # Anomaly 1\nsample_data.loc[35, 'sales'] = 500   # Anomaly 2\nsample_data.loc[50, 'sales'] = 2500  # Anomaly 3\n\n# Step 2: Create pipeline from dataframe\npipeline = MovingAggrPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate 14-day moving z-score\nresult = pipeline | moving_zscore(variable='sales', window=14, output_name='sales_zscore_14d')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"14-day moving z-score: {metrics['sales_zscore_14d']:.3f}\")\nprint(f\"Current sales: {sample_data['sales'].iloc[-1]}\")\nprint(f\"Mean sales: {sample_data['sales'].mean():.2f}\")\nprint(f\"Std sales: {sample_data['sales'].std():.2f}\")"
+    },
+    "parameters": {
+      "variable": "Column name to calculate moving z-score for",
+      "window": "Number of periods for the moving z-score",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "moving_zscore",
+    "category": "moving_averages",
+    "description": "Compute rolling z-score for website traffic monitoring",
+    "prerequisites": ["MovingAggrPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.moving_averages import MovingAggrPipe, moving_zscore, Execute\n\n# Step 1: Create sample website traffic data\nsample_data = pd.DataFrame({\n    'hour': pd.date_range('2023-01-01', periods=168, freq='H'),\n    'visitors': [100 + i * 2 + (i % 24 - 12) * 20 for i in range(168)],\n    'page_views': [500 + i * 10 + (i % 24 - 12) * 100 for i in range(168)],\n    'bounce_rate': [0.3 + (i % 24 - 12) * 0.01 for i in range(168)]\n})\n\n# Add some traffic spikes\nsample_data.loc[50, 'visitors'] = 500  # Traffic spike\nsample_data.loc[100, 'visitors'] = 50  # Traffic drop\n\n# Step 2: Create pipeline from dataframe\npipeline = MovingAggrPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate 24-hour moving z-score\nresult = pipeline | moving_zscore(variable='visitors', window=24, output_name='visitors_zscore_24h')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"24-hour moving z-score: {metrics['visitors_zscore_24h']:.3f}\")\nprint(f\"Current visitors: {sample_data['visitors'].iloc[-1]}\")\nprint(f\"Mean visitors: {sample_data['visitors'].mean():.2f}\")\nprint(f\"Std visitors: {sample_data['visitors'].std():.2f}\")"
+    },
+    "parameters": {
+      "variable": "Column name to calculate moving z-score for",
+      "window": "Number of periods for the moving z-score",
+      "output_name": "Name for the output metric (optional)"
+    }
+  }
+]

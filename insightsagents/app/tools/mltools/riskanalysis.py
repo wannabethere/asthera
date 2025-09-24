@@ -79,6 +79,72 @@ class RiskPipe(BasePipe):
         if hasattr(source_pipe, 'current_metric'):
             self.current_metric = source_pipe.current_metric
     
+    def _has_results(self) -> bool:
+        """Check if the pipeline has any results to merge"""
+        return (len(self.risk_metrics) > 0 or 
+                len(self.distributions) > 0 or 
+                len(self.simulations) > 0 or 
+                len(self.stress_tests) > 0)
+    
+    def merge_to_df(self, base_df: pd.DataFrame, analysis_name: Optional[str] = None, include_metadata: bool = False, **kwargs) -> pd.DataFrame:
+        """
+        Merge risk analysis results into the base dataframe as new columns
+        
+        Parameters:
+        -----------
+        base_df : pd.DataFrame
+            The base dataframe to merge results into
+        analysis_name : str, optional
+            Specific analysis to merge (if None, merges all)
+        include_metadata : bool, default=False
+            Whether to include metadata columns
+        **kwargs : dict
+            Additional arguments
+            
+        Returns:
+        --------
+        pd.DataFrame
+            Base dataframe with risk analysis results merged as new columns
+        """
+        if not self._has_results():
+            return base_df
+        
+        result_df = base_df.copy()
+        
+        # Merge risk metrics
+        for metric_name, metric_data in self.risk_metrics.items():
+            if analysis_name is None or metric_name == analysis_name:
+                if isinstance(metric_data, dict):
+                    for key, value in metric_data.items():
+                        if include_metadata:
+                            result_df[f"risk_{metric_name}_{key}"] = value
+        
+        # Merge distributions
+        for dist_name, dist_data in self.distributions.items():
+            if analysis_name is None or dist_name == analysis_name:
+                if isinstance(dist_data, dict):
+                    for key, value in dist_data.items():
+                        if include_metadata:
+                            result_df[f"dist_{dist_name}_{key}"] = value
+        
+        # Merge simulations
+        for sim_name, sim_data in self.simulations.items():
+            if analysis_name is None or sim_name == analysis_name:
+                if isinstance(sim_data, dict):
+                    for key, value in sim_data.items():
+                        if include_metadata:
+                            result_df[f"sim_{sim_name}_{key}"] = value
+        
+        # Merge stress tests
+        for stress_name, stress_data in self.stress_tests.items():
+            if analysis_name is None or stress_name == analysis_name:
+                if isinstance(stress_data, dict):
+                    for key, value in stress_data.items():
+                        if include_metadata:
+                            result_df[f"stress_{stress_name}_{key}"] = value
+        
+        return result_df
+    
     def to_df(self, analysis_name: Optional[str] = None, include_metadata: bool = False, include_original: bool = False):
         """
         Convert the risk analysis results to a DataFrame

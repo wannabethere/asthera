@@ -1,0 +1,593 @@
+[
+  {
+    "pipe_name": "OperationsPipe",
+    "category": "operations_tools",
+    "function": "PercentChange",
+    "description": "Calculate percentage change between experiment groups or conditions",
+    "prerequisites": ["OperationsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Basic conversion rate lift calculation",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | PercentChange(\n    condition_column='experiment_group',\n    baseline='control',\n    output_name='conversion_lift'\n)",
+        "inputs": {
+          "condition_column": "experiment_group",
+          "baseline": "control",
+          "output_name": "conversion_lift"
+        }
+      },
+      {
+        "name": "CTR improvement with custom baseline",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | PercentChange(\n    condition_column='variant',\n    baseline='variant_a',\n    output_name='ctr_improvement'\n)",
+        "inputs": {
+          "condition_column": "variant",
+          "baseline": "variant_a",
+          "output_name": "ctr_improvement"
+        }
+      },
+      {
+        "name": "Revenue lift with multiple metrics",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | PercentChange(\n    condition_column='pricing_strategy',\n    baseline='strategy_a',\n    output_name='revenue_lift'\n)",
+        "inputs": {
+          "condition_column": "pricing_strategy",
+          "baseline": "strategy_a",
+          "output_name": "revenue_lift"
+        }
+      },
+      {
+        "name": "Engagement improvement with UI version",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | PercentChange(\n    condition_column='ui_version',\n    baseline='old_version',\n    output_name='engagement_improvement'\n)",
+        "inputs": {
+          "condition_column": "ui_version",
+          "baseline": "old_version",
+          "output_name": "engagement_improvement"
+        }
+      },
+      {
+        "name": "Retention change by user cohort",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | PercentChange(\n    condition_column='user_cohort',\n    baseline='cohort_2023_q1',\n    output_name='retention_change'\n)",
+        "inputs": {
+          "condition_column": "user_cohort",
+          "baseline": "cohort_2023_q1",
+          "output_name": "retention_change"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "OperationsPipe",
+    "category": "operations_tools",
+    "function": "AbsoluteChange",
+    "description": "Calculate absolute difference between experiment groups or conditions",
+    "prerequisites": ["OperationsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Satisfaction score difference",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | AbsoluteChange(\n    condition_column='version',\n    baseline='before_update',\n    output_name='satisfaction_change'\n)",
+        "inputs": {
+          "condition_column": "version",
+          "baseline": "before_update",
+          "output_name": "satisfaction_change"
+        }
+      },
+      {
+        "name": "Conversion rate increase",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | AbsoluteChange(\n    condition_column='landing_page_variant',\n    baseline='original',\n    output_name='conv_rate_increase'\n)",
+        "inputs": {
+          "condition_column": "landing_page_variant",
+          "baseline": "original",
+          "output_name": "conv_rate_increase"
+        }
+      },
+      {
+        "name": "Session duration difference by device",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | AbsoluteChange(\n    condition_column='device_type',\n    baseline='desktop',\n    output_name='session_duration_diff'\n)",
+        "inputs": {
+          "condition_column": "device_type",
+          "baseline": "desktop",
+          "output_name": "session_duration_diff"
+        }
+      },
+      {
+        "name": "Add-to-cart rate difference",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | AbsoluteChange(\n    condition_column='page_version',\n    baseline='old_page',\n    output_name='atc_diff'\n)",
+        "inputs": {
+          "condition_column": "page_version",
+          "baseline": "old_page",
+          "output_name": "atc_diff"
+        }
+      },
+      {
+        "name": "Engagement score delta",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | AbsoluteChange(\n    condition_column='release_stage',\n    baseline='pre_release',\n    output_name='engagement_delta'\n)",
+        "inputs": {
+          "condition_column": "release_stage",
+          "baseline": "pre_release",
+          "output_name": "engagement_delta"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "OperationsPipe",
+    "category": "operations_tools",
+    "function": "MH",
+    "description": "Mantel-Haenszel estimator for stratified comparisons",
+    "prerequisites": ["OperationsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "CTR comparison stratified by device",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | MH(\n    condition_column='variant',\n    baseline='control',\n    stratified_by='device_type',\n    output_name='stratified_ctr_comparison'\n)",
+        "inputs": {
+          "condition_column": "variant",
+          "baseline": "control",
+          "stratified_by": "device_type",
+          "output_name": "stratified_ctr_comparison"
+        }
+      },
+      {
+        "name": "Conversion rates by age group",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | MH(\n    condition_column='experiment_group',\n    baseline='control',\n    stratified_by='age_group',\n    output_name='mh_conversion_estimate'\n)",
+        "inputs": {
+          "condition_column": "experiment_group",
+          "baseline": "control",
+          "stratified_by": "age_group",
+          "output_name": "mh_conversion_estimate"
+        }
+      },
+      {
+        "name": "Purchase rates by gender",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | MH(\n    condition_column='group',\n    baseline='group_a',\n    stratified_by='gender',\n    output_name='mh_purchase_rate_analysis'\n)",
+        "inputs": {
+          "condition_column": "group",
+          "baseline": "group_a",
+          "stratified_by": "gender",
+          "output_name": "mh_purchase_rate_analysis"
+        }
+      },
+      {
+        "name": "Retention rates by country and subscription",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | MH(\n    condition_column='product_variant',\n    baseline='variant_a',\n    stratified_by=['country', 'subscription_tier'],\n    output_name='stratified_retention_comparison'\n)",
+        "inputs": {
+          "condition_column": "product_variant",
+          "baseline": "variant_a",
+          "stratified_by": ["country", "subscription_tier"],
+          "output_name": "stratified_retention_comparison"
+        }
+      },
+      {
+        "name": "Bounce rates by traffic source",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | MH(\n    condition_column='website_version',\n    baseline='current',\n    stratified_by='traffic_source',\n    output_name='stratified_bounce_comparison'\n)",
+        "inputs": {
+          "condition_column": "website_version",
+          "baseline": "current",
+          "stratified_by": "traffic_source",
+          "output_name": "stratified_bounce_comparison"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "OperationsPipe",
+    "category": "operations_tools",
+    "function": "CUPED",
+    "description": "Controlled-experiment Using Pre-Experiment Data for variance reduction",
+    "prerequisites": ["OperationsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Conversion metrics with pre-test data",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | CUPED(\n    condition_column='test_group',\n    baseline='control',\n    covariates=['pre_test_conversion_rate', 'user_tenure'],\n    stratified_by='country',\n    output_name='adjusted_conversion_impact'\n)",
+        "inputs": {
+          "condition_column": "test_group",
+          "baseline": "control",
+          "covariates": ["pre_test_conversion_rate", "user_tenure"],
+          "stratified_by": "country",
+          "output_name": "adjusted_conversion_impact"
+        }
+      },
+      {
+        "name": "Revenue metrics with historical data",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | CUPED(\n    condition_column='experiment_group',\n    baseline='control',\n    covariates=['historical_revenue', 'purchase_frequency'],\n    output_name='variance_reduced_revenue'\n)",
+        "inputs": {
+          "condition_column": "experiment_group",
+          "baseline": "control",
+          "covariates": ["historical_revenue", "purchase_frequency"],
+          "output_name": "variance_reduced_revenue"
+        }
+      },
+      {
+        "name": "Engagement metrics with account data",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | CUPED(\n    condition_column='test_variant',\n    baseline='control',\n    covariates=['pre_test_engagement', 'account_age', 'session_frequency'],\n    output_name='adjusted_engagement_comparison'\n)",
+        "inputs": {
+          "condition_column": "test_variant",
+          "baseline": "control",
+          "covariates": ["pre_test_engagement", "account_age", "session_frequency"],
+          "output_name": "adjusted_engagement_comparison"
+        }
+      },
+      {
+        "name": "CTR analysis with historical data",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | CUPED(\n    condition_column='email_variant',\n    baseline='standard_template',\n    covariates=['historical_ctr', 'email_engagement_score'],\n    stratified_by='user_segment',\n    output_name='adjusted_ctr_analysis'\n)",
+        "inputs": {
+          "condition_column": "email_variant",
+          "baseline": "standard_template",
+          "covariates": ["historical_ctr", "email_engagement_score"],
+          "stratified_by": "user_segment",
+          "output_name": "adjusted_ctr_analysis"
+        }
+      },
+      {
+        "name": "Upgrade rates with account tenure",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | CUPED(\n    condition_column='feature_flag',\n    baseline='off',\n    covariates=['account_age', 'feature_usage_count', 'previous_upgrade_attempts'],\n    output_name='adjusted_upgrade_analysis'\n)",
+        "inputs": {
+          "condition_column": "feature_flag",
+          "baseline": "off",
+          "covariates": ["account_age", "feature_usage_count", "previous_upgrade_attempts"],
+          "output_name": "adjusted_upgrade_analysis"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "OperationsPipe",
+    "category": "operations_tools",
+    "function": "PrePostChange",
+    "description": "Pre/post analysis with covariate adjustment",
+    "prerequisites": ["OperationsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Purchase rates with pre-test data",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | PrePostChange(\n    condition_column='test_variant',\n    baseline='control',\n    covariates=['pre_test_purchase_rate', 'user_activity_score'],\n    output_name='adjusted_purchase_lift'\n)",
+        "inputs": {
+          "condition_column": "test_variant",
+          "baseline": "control",
+          "covariates": ["pre_test_purchase_rate", "user_activity_score"],
+          "output_name": "adjusted_purchase_lift"
+        }
+      },
+      {
+        "name": "Conversion rates with seasonal adjustment",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | PrePostChange(\n    condition_column='landing_page_version',\n    baseline='original',\n    covariates=['historical_conversion_rate', 'seasonal_index'],\n    stratified_by='traffic_source',\n    output_name='seasonally_adjusted_impact'\n)",
+        "inputs": {
+          "condition_column": "landing_page_version",
+          "baseline": "original",
+          "covariates": ["historical_conversion_rate", "seasonal_index"],
+          "stratified_by": "traffic_source",
+          "output_name": "seasonally_adjusted_impact"
+        }
+      },
+      {
+        "name": "Site redesign impact analysis",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | PrePostChange(\n    condition_column='site_version',\n    baseline='old_design',\n    covariates=['pre_launch_engagement', 'user_activity_level', 'tenure_days'],\n    output_name='adjusted_redesign_impact'\n)",
+        "inputs": {
+          "condition_column": "site_version",
+          "baseline": "old_design",
+          "covariates": ["pre_launch_engagement", "user_activity_level", "tenure_days"],
+          "output_name": "adjusted_redesign_impact"
+        }
+      },
+      {
+        "name": "AOV change with historical patterns",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | PrePostChange(\n    condition_column='price_display_variant',\n    baseline='control',\n    covariates=['historical_aov', 'purchase_frequency', 'customer_tier'],\n    output_name='adjusted_aov_change'\n)",
+        "inputs": {
+          "condition_column": "price_display_variant",
+          "baseline": "control",
+          "covariates": ["historical_aov", "purchase_frequency", "customer_tier"],
+          "output_name": "adjusted_aov_change"
+        }
+      },
+      {
+        "name": "Retention improvement with cohort effects",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | PrePostChange(\n    condition_column='onboarding_experience',\n    baseline='standard',\n    covariates=['pre_change_retention', 'acquisition_source', 'first_month_activity'],\n    stratified_by='user_segment',\n    output_name='adjusted_retention_impact'\n)",
+        "inputs": {
+          "condition_column": "onboarding_experience",
+          "baseline": "standard",
+          "covariates": ["pre_change_retention", "acquisition_source", "first_month_activity"],
+          "stratified_by": "user_segment",
+          "output_name": "adjusted_retention_impact"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "OperationsPipe",
+    "category": "operations_tools",
+    "function": "FilterConditions",
+    "description": "Filter analysis to specific experiment conditions",
+    "prerequisites": ["OperationsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "High-traffic variants only",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | FilterConditions(\n    conditions=['control', 'variant_a', 'variant_b'],\n    output_name='main_variants_only'\n)",
+        "inputs": {
+          "conditions": ["control", "variant_a", "variant_b"],
+          "output_name": "main_variants_only"
+        }
+      },
+      {
+        "name": "Control vs champion comparison",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | FilterConditions(\n    conditions=['control', 'champion'],\n    output_name='final_comparison'\n)",
+        "inputs": {
+          "conditions": ["control", "champion"],
+          "output_name": "final_comparison"
+        }
+      },
+      {
+        "name": "Mobile app variants only",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | FilterConditions(\n    conditions=['mobile_control', 'mobile_variant_1', 'mobile_variant_2'],\n    output_name='mobile_variants_analysis'\n)",
+        "inputs": {
+          "conditions": ["mobile_control", "mobile_variant_1", "mobile_variant_2"],
+          "output_name": "mobile_variants_analysis"
+        }
+      },
+      {
+        "name": "Exclude low-traffic variants",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | FilterConditions(\n    conditions=['control', 'variant_a', 'variant_c'],\n    output_name='high_traffic_variants'\n)",
+        "inputs": {
+          "conditions": ["control", "variant_a", "variant_c"],
+          "output_name": "high_traffic_variants"
+        }
+      },
+      {
+        "name": "Best variant vs control",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | FilterConditions(\n    conditions=['control', 'variant_b'],\n    output_name='best_variant_comparison'\n)",
+        "inputs": {
+          "conditions": ["control", "variant_b"],
+          "output_name": "best_variant_comparison"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "OperationsPipe",
+    "category": "operations_tools",
+    "function": "PowerAnalysis",
+    "description": "Calculate statistical power and sample size requirements",
+    "prerequisites": ["OperationsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Sample size for 5% conversion lift",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | PowerAnalysis(\n    condition_column='experiment_group',\n    baseline='control',\n    metric_column='conversion_rate',\n    alpha=0.05,\n    power=0.8,\n    output_name='sample_size_requirements'\n)",
+        "inputs": {
+          "condition_column": "experiment_group",
+          "baseline": "control",
+          "metric_column": "conversion_rate",
+          "alpha": 0.05,
+          "power": 0.8,
+          "output_name": "sample_size_requirements"
+        }
+      },
+      {
+        "name": "CTR experiment sample size",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | PowerAnalysis(\n    condition_column='variant',\n    baseline='control',\n    metric_column='ctr',\n    alpha=0.05,\n    power=0.9,\n    output_name='ctr_experiment_size'\n)",
+        "inputs": {
+          "condition_column": "variant",
+          "baseline": "control",
+          "metric_column": "ctr",
+          "alpha": 0.05,
+          "power": 0.9,
+          "output_name": "ctr_experiment_size"
+        }
+      },
+      {
+        "name": "AOV test power analysis",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | PowerAnalysis(\n    condition_column='price_test_group',\n    baseline='control',\n    metric_column='average_order_value',\n    alpha=0.01,\n    power=0.85,\n    output_name='aov_test_power'\n)",
+        "inputs": {
+          "condition_column": "price_test_group",
+          "baseline": "control",
+          "metric_column": "average_order_value",
+          "alpha": 0.01,
+          "power": 0.85,
+          "output_name": "aov_test_power"
+        }
+      },
+      {
+        "name": "Minimum detectable effect",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | PowerAnalysis(\n    condition_column='test_group',\n    baseline='control',\n    metric_column='retention_rate',\n    alpha=0.05,\n    power=0.9,\n    output_name='min_detectable_effect'\n)",
+        "inputs": {
+          "condition_column": "test_group",
+          "baseline": "control",
+          "metric_column": "retention_rate",
+          "alpha": 0.05,
+          "power": 0.9,
+          "output_name": "min_detectable_effect"
+        }
+      },
+      {
+        "name": "Revenue test power calculation",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | PowerAnalysis(\n    condition_column='experiment_group',\n    baseline='control',\n    metric_column='revenue_per_user',\n    alpha=0.05,\n    output_name='revenue_test_power'\n)",
+        "inputs": {
+          "condition_column": "experiment_group",
+          "baseline": "control",
+          "metric_column": "revenue_per_user",
+          "alpha": 0.05,
+          "output_name": "revenue_test_power"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "OperationsPipe",
+    "category": "operations_tools",
+    "function": "StratifiedSummary",
+    "description": "Generate summary statistics stratified by segments",
+    "prerequisites": ["OperationsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Experiment metrics by user segment and device",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | StratifiedSummary(\n    condition_column='test_group',\n    stratified_by=['user_segment', 'device_type'],\n    metrics=['conversion_rate', 'average_order_value', 'engagement_score'],\n    output_name='stratified_experiment_summary'\n)",
+        "inputs": {
+          "condition_column": "test_group",
+          "stratified_by": ["user_segment", "device_type"],
+          "metrics": ["conversion_rate", "average_order_value", "engagement_score"],
+          "output_name": "stratified_experiment_summary"
+        }
+      },
+      {
+        "name": "A/B test results by acquisition source",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | StratifiedSummary(\n    condition_column='variant',\n    stratified_by=['acquisition_source', 'tenure_bucket'],\n    metrics=['conversion', 'revenue', 'retention'],\n    output_name='test_results_by_segment'\n)",
+        "inputs": {
+          "condition_column": "variant",
+          "stratified_by": ["acquisition_source", "tenure_bucket"],
+          "metrics": ["conversion", "revenue", "retention"],
+          "output_name": "test_results_by_segment"
+        }
+      },
+      {
+        "name": "Retention test by subscription plan",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | StratifiedSummary(\n    condition_column='test_variant',\n    stratified_by=['subscription_plan', 'country'],\n    metrics=['day7_retention', 'day30_retention', 'upgrade_rate'],\n    output_name='retention_test_segments'\n)",
+        "inputs": {
+          "condition_column": "test_variant",
+          "stratified_by": ["subscription_plan", "country"],
+          "metrics": ["day7_retention", "day30_retention", "upgrade_rate"],
+          "output_name": "retention_test_segments"
+        }
+      },
+      {
+        "name": "Pricing test by customer segment",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | StratifiedSummary(\n    condition_column='price_test_group',\n    stratified_by=['customer_segment', 'usage_tier'],\n    metrics=['conversion_rate', 'cart_value', 'units_per_order'],\n    output_name='pricing_test_segments'\n)",
+        "inputs": {
+          "condition_column": "price_test_group",
+          "stratified_by": ["customer_segment", "usage_tier"],
+          "metrics": ["conversion_rate", "cart_value", "units_per_order"],
+          "output_name": "pricing_test_segments"
+        }
+      },
+      {
+        "name": "Performance metrics by traffic source",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | StratifiedSummary(\n    condition_column='experiment_variant',\n    stratified_by='traffic_source',\n    metrics=['bounce_rate', 'session_duration', 'pages_per_session', 'conversion_rate'],\n    output_name='traffic_source_performance'\n)",
+        "inputs": {
+          "condition_column": "experiment_variant",
+          "stratified_by": "traffic_source",
+          "metrics": ["bounce_rate", "session_duration", "pages_per_session", "conversion_rate"],
+          "output_name": "traffic_source_performance"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "OperationsPipe",
+    "category": "operations_tools",
+    "function": "BootstrapCI",
+    "description": "Calculate confidence intervals using bootstrap method",
+    "prerequisites": ["OperationsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Revenue impact confidence intervals",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | BootstrapCI(\n    condition_column='variant',\n    baseline='control',\n    metric_column='revenue_per_user',\n    confidence=0.95,\n    n_bootstraps=1000,\n    stratified_by='user_tier',\n    output_name='revenue_impact_confidence'\n)",
+        "inputs": {
+          "condition_column": "variant",
+          "baseline": "control",
+          "metric_column": "revenue_per_user",
+          "confidence": 0.95,
+          "n_bootstraps": 1000,
+          "stratified_by": "user_tier",
+          "output_name": "revenue_impact_confidence"
+        }
+      },
+      {
+        "name": "Conversion lift confidence intervals",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | BootstrapCI(\n    condition_column='experiment_group',\n    baseline='control',\n    metric_column='conversion_rate',\n    confidence=0.9,\n    n_bootstraps=2000,\n    output_name='conversion_lift_ci'\n)",
+        "inputs": {
+          "condition_column": "experiment_group",
+          "baseline": "control",
+          "metric_column": "conversion_rate",
+          "confidence": 0.9,
+          "n_bootstraps": 2000,
+          "output_name": "conversion_lift_ci"
+        }
+      },
+      {
+        "name": "Retention impact with high confidence",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | BootstrapCI(\n    condition_column='feature_flag',\n    baseline='off',\n    metric_column='retention_rate',\n    confidence=0.99,\n    n_bootstraps=5000,\n    stratified_by='user_segment',\n    output_name='retention_impact_ci'\n)",
+        "inputs": {
+          "condition_column": "feature_flag",
+          "baseline": "off",
+          "metric_column": "retention_rate",
+          "confidence": 0.99,
+          "n_bootstraps": 5000,
+          "stratified_by": "user_segment",
+          "output_name": "retention_impact_ci"
+        }
+      },
+      {
+        "name": "Session duration confidence bounds",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | BootstrapCI(\n    condition_column='ui_version',\n    baseline='original',\n    metric_column='avg_session_duration',\n    confidence=0.8,\n    n_bootstraps=1000,\n    output_name='session_duration_ci'\n)",
+        "inputs": {
+          "condition_column": "ui_version",
+          "baseline": "original",
+          "metric_column": "avg_session_duration",
+          "confidence": 0.8,
+          "n_bootstraps": 1000,
+          "output_name": "session_duration_ci"
+        }
+      },
+      {
+        "name": "Algorithm revenue impact by segment",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | BootstrapCI(\n    condition_column='recommendation_algorithm',\n    baseline='algorithm_a',\n    metric_column='revenue_per_session',\n    confidence=0.95,\n    n_bootstraps=3000,\n    stratified_by='customer_segment',\n    output_name='algorithm_revenue_impact_ci'\n)",
+        "inputs": {
+          "condition_column": "recommendation_algorithm",
+          "baseline": "algorithm_a",
+          "metric_column": "revenue_per_session",
+          "confidence": 0.95,
+          "n_bootstraps": 3000,
+          "stratified_by": "customer_segment",
+          "output_name": "algorithm_revenue_impact_ci"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "OperationsPipe",
+    "category": "operations_tools",
+    "function": "MultiComparisonAdjustment",
+    "description": "Adjust p-values for multiple comparisons",
+    "prerequisites": ["OperationsPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Bonferroni correction",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | MultiComparisonAdjustment(\n    p_value_column='raw_p_value',\n    method='bonferroni',\n    output_name='adjusted_p_values'\n)",
+        "inputs": {
+          "p_value_column": "raw_p_value",
+          "method": "bonferroni",
+          "output_name": "adjusted_p_values"
+        }
+      },
+      {
+        "name": "Benjamini-Hochberg FDR correction",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | MultiComparisonAdjustment(\n    p_value_column='p_value',\n    method='fdr_bh',\n    output_name='fdr_adjusted_pvalues'\n)",
+        "inputs": {
+          "p_value_column": "p_value",
+          "method": "fdr_bh",
+          "output_name": "fdr_adjusted_pvalues"
+        }
+      },
+      {
+        "name": "Holm-Bonferroni method",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | MultiComparisonAdjustment(\n    p_value_column='original_pvalue',\n    method='holm',\n    output_name='holm_adjusted_pvalues'\n)",
+        "inputs": {
+          "p_value_column": "original_pvalue",
+          "method": "holm",
+          "output_name": "holm_adjusted_pvalues"
+        }
+      },
+      {
+        "name": "Feature impact analysis correction",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | MultiComparisonAdjustment(\n    p_value_column='feature_pvalue',\n    method='bonferroni',\n    output_name='corrected_feature_pvalues'\n)",
+        "inputs": {
+          "p_value_column": "feature_pvalue",
+          "method": "bonferroni",
+          "output_name": "corrected_feature_pvalues"
+        }
+      },
+      {
+        "name": "Segment analysis FDR correction",
+        "example": "ops_pipe = OperationsPipe.from_dataframe(data)\nops_pipe = ops_pipe | MultiComparisonAdjustment(\n    p_value_column='segment_pvalue',\n    method='fdr_bh',\n    output_name='fdr_segment_pvalues'\n)",
+        "inputs": {
+          "p_value_column": "segment_pvalue",
+          "method": "fdr_bh",
+          "output_name": "fdr_segment_pvalues"
+        }
+      }
+    ]
+  }
+]

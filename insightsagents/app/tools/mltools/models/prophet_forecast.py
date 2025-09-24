@@ -52,6 +52,69 @@ class ProphetPipe(BasePipe):
         if hasattr(source_pipe, 'original_data'):
             self.original_data = source_pipe.original_data.copy() if source_pipe.original_data is not None else None
     
+    def _has_results(self) -> bool:
+        """Check if the pipeline has any results to merge"""
+        return (len(self.models) > 0 or 
+                len(self.forecasts) > 0 or 
+                len(self.metrics) > 0 or 
+                len(self.cross_validation_results) > 0)
+    
+    def merge_to_df(self, base_df: pd.DataFrame, analysis_name: Optional[str] = None, include_metadata: bool = False, **kwargs) -> pd.DataFrame:
+        """
+        Merge Prophet forecasting results into the base dataframe as new columns
+        
+        Parameters:
+        -----------
+        base_df : pd.DataFrame
+            The base dataframe to merge results into
+        analysis_name : str, optional
+            Specific analysis to merge (if None, merges all)
+        include_metadata : bool, default=False
+            Whether to include metadata columns
+        **kwargs : dict
+            Additional arguments
+            
+        Returns:
+        --------
+        pd.DataFrame
+            Base dataframe with Prophet forecasting results merged as new columns
+        """
+        if not self._has_results():
+            return base_df
+        
+        result_df = base_df.copy()
+        
+        # Merge forecasts
+        for forecast_name, forecast_data in self.forecasts.items():
+            if analysis_name is None or forecast_name == analysis_name:
+                if isinstance(forecast_data, pd.DataFrame):
+                    for col in forecast_data.columns:
+                        if col not in result_df.columns:
+                            result_df[f"forecast_{forecast_name}_{col}"] = None
+                    
+                    # Try to align forecasts with base data by index if possible
+                    if len(forecast_data) == len(result_df):
+                        for col in forecast_data.columns:
+                            result_df[f"forecast_{forecast_name}_{col}"] = forecast_data[col].values
+        
+        # Merge metrics
+        for metric_name, metric_data in self.metrics.items():
+            if analysis_name is None or metric_name == analysis_name:
+                if isinstance(metric_data, dict):
+                    for key, value in metric_data.items():
+                        if include_metadata:
+                            result_df[f"metric_{metric_name}_{key}"] = value
+        
+        # Merge cross-validation results
+        for cv_name, cv_data in self.cross_validation_results.items():
+            if analysis_name is None or cv_name == analysis_name:
+                if isinstance(cv_data, dict):
+                    for key, value in cv_data.items():
+                        if include_metadata:
+                            result_df[f"cv_{cv_name}_{key}"] = value
+        
+        return result_df
+    
     def get_summary(self, **kwargs) -> Dict[str, Any]:
         """
         Get a summary of the Prophet forecasting analysis results.

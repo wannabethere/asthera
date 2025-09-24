@@ -36,6 +36,10 @@ class FunctionMatch(BaseModel):
     reasoning: str
     category: str = "unknown"
     function_definition: Optional[Dict[str, Any]] = None
+    examples: Optional[List[Dict[str, Any]]] = None
+    instructions: Optional[List[Dict[str, Any]]] = None
+    examples_store: Optional[List[Dict[str, Any]]] = None
+    historical_rules: Optional[List[Dict[str, Any]]] = None
 
 
 class StepFunctionMatch(BaseModel):
@@ -117,19 +121,29 @@ class EnhancedFunctionRetrieval:
                 logger.warning("No relevant functions found in ChromaDB")
                 return self._create_empty_result("No relevant functions found")
             
-            # Step 2: Match functions to steps using LLM
+            # Step 2: Enrich functions with context (examples, instructions, etc.)
+            enriched_functions = []
+            for func in relevant_functions:
+                enriched_func = await self._enrich_function_with_context(
+                    function_data=func,
+                    question=question,
+                    project_id=project_id
+                )
+                enriched_functions.append(enriched_func)
+            
+            # Step 3: Match functions to steps using LLM
             step_function_matches = await self._match_functions_to_steps_with_llm(
                 reasoning_plan=reasoning_plan,
-                relevant_functions=relevant_functions,
+                relevant_functions=enriched_functions,
                 question=question,
                 dataframe_description=dataframe_description,
                 available_columns=available_columns
             )
             
-            # Step 3: Calculate metrics and create result
+            # Step 4: Calculate metrics and create result
             result = self._create_result_from_matches(
                 step_function_matches=step_function_matches,
-                total_functions=len(relevant_functions),
+                total_functions=len(enriched_functions),
                 reasoning_plan=reasoning_plan,
                 fallback_used=False
             )
@@ -195,7 +209,7 @@ class EnhancedFunctionRetrieval:
             logger.info(f"Fetching functions from ChromaDB with comprehensive query")
             
             # Fetch multiple relevant functions from ChromaDB
-            relevant_functions = []
+            all_functions = []
             
             # Try different search strategies to get comprehensive results
             search_queries = [
@@ -205,31 +219,67 @@ class EnhancedFunctionRetrieval:
                 question
             ]
             
-            for query in search_queries:
+            # Also add individual step queries for more targeted results
+            for step in reasoning_plan:
+                step_query = f"{step.get('step_title', '')} {step.get('step_description', '')}"
+                if step_query.strip():
+                    search_queries.append(step_query)
+            
+            # Add column-specific queries
+            if available_columns:
+                column_query = f"functions for columns: {', '.join(available_columns[:5])}"  # Limit to first 5 columns
+                search_queries.append(column_query)
+            
+            logger.info(f"Using {len(search_queries)} different search queries for comprehensive retrieval")
+            
+            for i, query in enumerate(search_queries):
                 try:
                     # Use the retrieval helper to get function definitions
                     function_result = await self.retrieval_helper.get_function_definition_by_query(
                         query=query,
-                        similarity_threshold=0.6,  # Lower threshold to get more candidates
-                        top_k=10
+                        similarity_threshold=0.5,  # Lower threshold to get more candidates
+                        top_k=15  # Increased from 10 to get more results
                     )
                     
-                    if function_result and function_result.get("function_definition"):
-                        relevant_functions.append(function_result["function_definition"])
-                        logger.info(f"Found function: {function_result['function_definition'].get('function_name', 'unknown')}")
+                    if function_result:
+                        # Handle both single function and multiple functions
+                        if function_result.get("function_definitions"):
+                            # Multiple functions returned
+                            for func in function_result["function_definitions"]:
+                                if func:
+                                    all_functions.append(func)
+                                    logger.info(f"Query {i+1}: Found function: {func.get('function_name', 'unknown')} (score: {func.get('relevance_score', 0.0):.2f})")
+                        elif function_result.get("function_definition"):
+                            # Single function returned
+                            all_functions.append(function_result["function_definition"])
+                            logger.info(f"Query {i+1}: Found function: {function_result['function_definition'].get('function_name', 'unknown')}")
+                        elif isinstance(function_result, list):
+                            # Legacy format - list of functions
+                            for func in function_result:
+                                if func and func.get("function_definition"):
+                                    all_functions.append(func["function_definition"])
+                                    logger.info(f"Query {i+1}: Found function: {func['function_definition'].get('function_name', 'unknown')}")
                     
                 except Exception as e:
-                    logger.warning(f"Failed to fetch functions with query '{query[:50]}...': {e}")
+                    logger.warning(f"Failed to fetch functions with query {i+1} '{query[:50]}...': {e}")
                     continue
             
-            # Remove duplicates based on function name
+            # Remove duplicates based on function name and keep the best version
             unique_functions = {}
-            for func in relevant_functions:
+            for func in all_functions:
                 func_name = func.get("function_name", "")
-                if func_name and func_name not in unique_functions:
-                    unique_functions[func_name] = func
+                if func_name:
+                    # Keep the function with the highest relevance score if we have duplicates
+                    if func_name not in unique_functions:
+                        unique_functions[func_name] = func
+                    else:
+                        # Compare relevance scores if available
+                        current_score = func.get("relevance_score", 0.0)
+                        existing_score = unique_functions[func_name].get("relevance_score", 0.0)
+                        if current_score > existing_score:
+                            unique_functions[func_name] = func
             
-            logger.info(f"Retrieved {len(unique_functions)} unique functions from ChromaDB")
+            logger.info(f"Retrieved {len(unique_functions)} unique functions from ChromaDB using {len(search_queries)} queries")
             return list(unique_functions.values())
             
         except Exception as e:
@@ -258,7 +308,7 @@ class EnhancedFunctionRetrieval:
             Dictionary mapping step numbers to matched functions
         """
         try:
-            # Format functions for LLM prompt
+            # Format functions for LLM prompt with enriched context
             function_descriptions = []
             for func in relevant_functions:
                 desc = f"""
@@ -268,6 +318,32 @@ class EnhancedFunctionRetrieval:
                 Usage: {func.get('usage_description', 'No usage info')}
                 Category: {func.get('category', 'unknown')}
                 """
+                
+                # Add examples if available
+                examples = func.get('examples', [])
+                if examples:
+                    desc += f"\nExamples ({len(examples)} available):\n"
+                    for i, example in enumerate(examples[:3], 1):  # Show top 3 examples
+                        desc += f"  {i}. {str(example)[:200]}...\n"
+                
+                # Add instructions if available
+                instructions = func.get('instructions', [])
+                if instructions:
+                    desc += f"\nInstructions ({len(instructions)} available):\n"
+                    for i, instruction in enumerate(instructions[:2], 1):  # Show top 2 instructions
+                        desc += f"  {i}. {instruction.get('instruction', str(instruction))[:150]}...\n"
+                
+                # Add historical rules if available
+                historical_rules = func.get('historical_rules', [])
+                if historical_rules:
+                    desc += f"\nHistorical Rules ({len(historical_rules)} available):\n"
+                    for i, rule in enumerate(historical_rules[:2], 1):  # Show top 2 rules
+                        content = rule.get('content', str(rule))
+                        if isinstance(content, str):
+                            desc += f"  {i}. {content[:150]}...\n"
+                        else:
+                            desc += f"  {i}. {str(content)[:150]}...\n"
+                
                 function_descriptions.append(desc)
             
             # Format reasoning plan for LLM prompt
@@ -292,14 +368,17 @@ class EnhancedFunctionRetrieval:
             AVAILABLE FUNCTIONS:
             {chr(10).join(function_descriptions)}
             
-            TASK: For each step in the analysis plan, identify which functions are most relevant and appropriate.
+            TASK: For each step in the analysis plan, identify ALL relevant and appropriate functions.
             
             INSTRUCTIONS:
-            1. Analyze each step's requirements and data needs
-            2. Match functions that can fulfill those requirements
-            3. Score each function's relevance (0.0 to 1.0) for each step
-            4. Provide reasoning for each match
-            5. Return results as JSON
+            1. Analyze each step's requirements and data needs comprehensively
+            2. Match MULTIPLE functions that can fulfill those requirements (aim for 3-5 functions per step)
+            3. Include both primary functions and alternative/backup functions
+            4. Score each function's relevance (0.0 to 1.0) for each step
+            5. Provide detailed reasoning for each match
+            6. Consider different approaches: aggregation, time series, statistical analysis, etc.
+            7. Include functions that could work together or provide different perspectives
+            8. Return results as JSON
             
             OUTPUT FORMAT:
             CRITICAL: You must return ONLY a valid JSON object without any markdown formatting, code blocks, or extra text.
@@ -373,12 +452,18 @@ class EnhancedFunctionRetrieval:
                 for step_key, functions in step_matches.items():
                     try:
                         step_num = int(step_key)
-                        if step_num > 0:
+                        if step_num > 0 and isinstance(functions, list) and len(functions) > 0:
                             validated_matches[step_num] = functions
                     except ValueError:
                         continue
                 
-                logger.info(f"LLM matched functions to {len(validated_matches)} steps")
+                # Check if we have enough functions - if not, use fallback
+                total_functions = sum(len(funcs) for funcs in validated_matches.values())
+                if total_functions < 2:  # Require at least 2 functions total
+                    logger.warning(f"LLM returned only {total_functions} functions, using fallback matching")
+                    return self._fallback_function_step_matching(reasoning_plan, relevant_functions)
+                
+                logger.info(f"LLM matched {total_functions} functions to {len(validated_matches)} steps")
                 return validated_matches
                 
             except json.JSONDecodeError as e:
@@ -432,10 +517,29 @@ class EnhancedFunctionRetrieval:
                     if keyword in func_name or keyword in func_desc or keyword in func_usage:
                         relevance_score += 0.2
                 
+                # Additional scoring based on function category and pipeline type
+                func_category = func.get("category", "").lower()
+                func_pipe = func.get("pipe_name", "").lower()
+                
+                # Boost score for time series related functions
+                if any(ts_word in step_title or ts_word in step_desc for ts_word in ["time", "date", "rolling", "moving", "trend", "variance"]):
+                    if any(ts_word in func_name or ts_word in func_desc for ts_word in ["time", "date", "rolling", "moving", "trend", "variance"]):
+                        relevance_score += 0.3
+                
+                # Boost score for aggregation functions
+                if any(agg_word in step_title or agg_word in step_desc for agg_word in ["aggregate", "group", "sum", "mean", "count"]):
+                    if any(agg_word in func_name or agg_word in func_desc for agg_word in ["aggregate", "group", "sum", "mean", "count"]):
+                        relevance_score += 0.2
+                
+                # Boost score for analysis functions
+                if any(analysis_word in step_title or analysis_word in step_desc for analysis_word in ["analysis", "analyze", "calculate", "compute"]):
+                    if any(analysis_word in func_name or analysis_word in func_desc for analysis_word in ["analysis", "analyze", "calculate", "compute"]):
+                        relevance_score += 0.2
+                
                 # Normalize score
                 relevance_score = min(1.0, relevance_score)
                 
-                if relevance_score > 0.3:  # Only include if reasonably relevant
+                if relevance_score > 0.2:  # Lowered threshold to include more functions
                     matched_functions.append({
                         "function_name": func.get("function_name", ""),
                         "pipe_name": func.get("pipe_name", ""),
@@ -444,11 +548,21 @@ class EnhancedFunctionRetrieval:
                         "description": func.get("description", ""),
                         "usage_description": func.get("usage_description", ""),
                         "category": func.get("category", ""),
-                        "function_definition": func
+                        "function_definition": func,
+                        "examples": func.get("examples", []),
+                        "instructions": func.get("instructions", []),
+                        "examples_store": func.get("examples_store", []),
+                        "historical_rules": func.get("historical_rules", [])
                     })
             
+            # Sort by relevance score and take top functions
+            matched_functions.sort(key=lambda x: x.get("relevance_score", 0.0), reverse=True)
+            
             if matched_functions:
-                step_matches[step_num] = matched_functions
+                # Take top 5 functions or all if less than 5
+                top_functions = matched_functions[:5]
+                step_matches[step_num] = top_functions
+                logger.info(f"Step {step_num}: Matched {len(top_functions)} functions (top relevance: {top_functions[0].get('relevance_score', 0.0):.2f})")
         
         logger.info(f"Fallback matching assigned functions to {len(step_matches)} steps")
         return step_matches
@@ -559,3 +673,236 @@ class EnhancedFunctionRetrieval:
             reasoning=reasoning,
             fallback_used=fallback_used
         )
+    
+    async def _enrich_function_with_context(
+        self,
+        function_data: Dict[str, Any],
+        question: str,
+        project_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Enrich function data with examples, instructions, and examples store
+        
+        Args:
+            function_data: Function data dictionary
+            question: Original user question
+            project_id: Optional project ID for instructions
+            
+        Returns:
+            Enriched function data
+        """
+        if not self.retrieval_helper:
+            return function_data
+        
+        function_name = function_data.get("function_name", "")
+        if not function_name:
+            return function_data
+        
+        try:
+            # Retrieve examples, instructions, and examples store in parallel
+            examples_task = self.retrieval_helper.get_function_examples(
+                function_name=function_name,
+                similarity_threshold=0.6,
+                top_k=5
+            )
+            
+            insights_task = self.retrieval_helper.get_function_insights(
+                function_name=function_name,
+                similarity_threshold=0.6,
+                top_k=3
+            )
+            
+            instructions_task = None
+            if project_id:
+                instructions_task = self.retrieval_helper.get_instructions(
+                    query=question,
+                    project_id=project_id,
+                    similarity_threshold=0.7,
+                    top_k=5
+                )
+            
+            # Wait for all tasks to complete
+            examples_result = await examples_task
+            insights_result = await insights_task
+            instructions_result = await instructions_task if instructions_task else {"instructions": []}
+            
+            # Extract examples
+            examples = []
+            if examples_result and not examples_result.get("error"):
+                examples = examples_result.get("examples", [])
+            
+            # Extract insights (used as examples store for historical patterns)
+            examples_store = []
+            if insights_result and not insights_result.get("error"):
+                examples_store = insights_result.get("insights", [])
+            
+            # Extract instructions
+            instructions = []
+            if instructions_result and not instructions_result.get("error"):
+                instructions = instructions_result.get("instructions", [])
+            
+            # Get historical rules from examples store
+            historical_rules = await self._get_historical_rules(function_name, question)
+            
+            # Update function data
+            function_data.update({
+                "examples": examples,
+                "instructions": instructions,
+                "examples_store": examples_store,
+                "historical_rules": historical_rules
+            })
+            
+            logger.info(f"Enriched {function_name} with {len(examples)} examples, {len(instructions)} instructions, {len(examples_store)} insights, {len(historical_rules)} historical rules")
+            
+        except Exception as e:
+            logger.error(f"Error enriching function {function_name}: {e}")
+            # Return original data if enrichment fails
+            function_data.update({
+                "examples": [],
+                "instructions": [],
+                "examples_store": [],
+                "historical_rules": []
+            })
+        
+        return function_data
+    
+    async def _get_historical_rules(
+        self,
+        function_name: str,
+        question: str
+    ) -> List[Dict[str, Any]]:
+        """
+        Get historical rules and patterns for the function
+        
+        Args:
+            function_name: Name of the function
+            question: User question for context
+            
+        Returns:
+            List of historical rules and patterns
+        """
+        if not self.retrieval_helper:
+            return []
+        
+        try:
+            # Get examples store for historical patterns
+            examples_store_result = await self.retrieval_helper.get_function_examples(
+                function_name=function_name,
+                similarity_threshold=0.5,
+                top_k=10
+            )
+            
+            historical_rules = []
+            if examples_store_result and not examples_store_result.get("error"):
+                examples = examples_store_result.get("examples", [])
+                
+                # Filter for historical patterns and rules
+                for example in examples:
+                    if isinstance(example, dict):
+                        # Look for rule-like patterns in the example
+                        if any(keyword in str(example).lower() for keyword in ["rule", "pattern", "best_practice", "guideline", "convention"]):
+                            historical_rules.append({
+                                "type": "historical_pattern",
+                                "content": example,
+                                "source": "examples_store"
+                            })
+            
+            # Add hardcoded rules based on function type
+            hardcoded_rules = self._get_hardcoded_rules(function_name)
+            historical_rules.extend(hardcoded_rules)
+            
+            return historical_rules
+            
+        except Exception as e:
+            logger.error(f"Error getting historical rules for {function_name}: {e}")
+            return []
+    
+    def _get_hardcoded_rules(self, function_name: str) -> List[Dict[str, Any]]:
+        """
+        Get hardcoded rules based on function type and name
+        
+        Args:
+            function_name: Name of the function
+            
+        Returns:
+            List of hardcoded rules
+        """
+        rules = []
+        function_lower = function_name.lower()
+        
+        # Time series analysis rules
+        if any(keyword in function_lower for keyword in ["variance", "rolling", "moving", "time_series"]):
+            rules.extend([
+                {
+                    "type": "hardcoded_rule",
+                    "content": "For time series analysis, always ensure data is sorted by time column before applying rolling functions",
+                    "source": "hardcoded"
+                },
+                {
+                    "type": "hardcoded_rule", 
+                    "content": "Use appropriate window sizes based on data frequency - daily data: 7-30 days, hourly data: 24-168 hours",
+                    "source": "hardcoded"
+                }
+            ])
+        
+        # Cohort analysis rules
+        if any(keyword in function_lower for keyword in ["cohort", "retention", "churn"]):
+            rules.extend([
+                {
+                    "type": "hardcoded_rule",
+                    "content": "For cohort analysis, ensure user_id and date columns are properly formatted and contain no null values",
+                    "source": "hardcoded"
+                },
+                {
+                    "type": "hardcoded_rule",
+                    "content": "Use consistent time periods (monthly, weekly) for cohort calculations to ensure comparability",
+                    "source": "hardcoded"
+                }
+            ])
+        
+        # Risk analysis rules
+        if any(keyword in function_lower for keyword in ["var", "risk", "monte_carlo", "stress_test"]):
+            rules.extend([
+                {
+                    "type": "hardcoded_rule",
+                    "content": "For risk analysis, use appropriate confidence levels (95% for VaR, 99% for stress testing)",
+                    "source": "hardcoded"
+                },
+                {
+                    "type": "hardcoded_rule",
+                    "content": "Ensure sufficient historical data (minimum 1 year) for reliable risk calculations",
+                    "source": "hardcoded"
+                }
+            ])
+        
+        # Segmentation rules
+        if any(keyword in function_lower for keyword in ["cluster", "segment", "dbscan", "kmeans"]):
+            rules.extend([
+                {
+                    "type": "hardcoded_rule",
+                    "content": "For clustering, normalize numerical features before applying clustering algorithms",
+                    "source": "hardcoded"
+                },
+                {
+                    "type": "hardcoded_rule",
+                    "content": "Use appropriate distance metrics - Euclidean for continuous variables, Jaccard for categorical",
+                    "source": "hardcoded"
+                }
+            ])
+        
+        # Funnel analysis rules
+        if any(keyword in function_lower for keyword in ["funnel", "conversion", "step"]):
+            rules.extend([
+                {
+                    "type": "hardcoded_rule",
+                    "content": "For funnel analysis, ensure event sequences are properly ordered by timestamp",
+                    "source": "hardcoded"
+                },
+                {
+                    "type": "hardcoded_rule",
+                    "content": "Handle duplicate events by keeping only the first occurrence in each funnel step",
+                    "source": "hardcoded"
+                }
+            ])
+        
+        return rules

@@ -24,6 +24,49 @@ class TimeSeriesPipe(BasePipe):
         if hasattr(source_pipe, 'test_results'):
             self.test_results = source_pipe.test_results.copy()
     
+    def _has_results(self) -> bool:
+        """Check if the pipeline has any results to merge"""
+        return len(self.distribution_results) > 0 or len(self.test_results) > 0
+    
+    def merge_to_df(self, base_df: pd.DataFrame, include_metadata: bool = False, **kwargs) -> pd.DataFrame:
+        """
+        Merge time series analysis results into the base dataframe as new columns
+        
+        Parameters:
+        -----------
+        base_df : pd.DataFrame
+            The base dataframe to merge results into
+        include_metadata : bool, default=False
+            Whether to include metadata columns
+        **kwargs : dict
+            Additional arguments
+            
+        Returns:
+        --------
+        pd.DataFrame
+            Base dataframe with time series analysis results merged as new columns
+        """
+        if not self._has_results():
+            return base_df
+        
+        result_df = base_df.copy()
+        
+        # Merge distribution results
+        for dist_name, dist_data in self.distribution_results.items():
+            if isinstance(dist_data, dict):
+                for component, series in dist_data.items():
+                    if hasattr(series, 'values') and len(series) == len(result_df):
+                        result_df[f"{component}_{dist_name}"] = series.values
+        
+        # Merge test results
+        for test_name, test_data in self.test_results.items():
+            if isinstance(test_data, dict):
+                for metric, value in test_data.items():
+                    if include_metadata:
+                        result_df[f"test_{test_name}_{metric}"] = value
+        
+        return result_df
+    
     def to_df(self, include_metadata: bool = False, include_original: bool = True):
         """
         Convert the time series analysis results to a DataFrame

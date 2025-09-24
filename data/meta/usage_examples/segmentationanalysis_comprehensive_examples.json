@@ -1,0 +1,360 @@
+[
+  {
+    "pipe_name": "SegmentationPipe",
+    "category": "segmentation_analysis",
+    "function": "run_kmeans",
+    "description": "Perform K-means clustering to group data into specified number of clusters",
+    "prerequisites": ["SegmentationPipe.from_dataframe(data)", "get_features(columns=['feature1', 'feature2'])"],
+    "variations": [
+      {
+        "name": "Basic K-means with 5 clusters",
+        "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nseg_pipe = seg_pipe | get_features(columns=['recency', 'frequency', 'monetary'])\nseg_pipe = seg_pipe | run_kmeans(\n    n_clusters=5,\n    algorithm_name='customer_value_segments',\n    random_state=42\n)",
+        "inputs": {
+          "n_clusters": 5,
+          "algorithm_name": "customer_value_segments",
+          "random_state": 42
+        }
+      },
+      {
+        "name": "K-means with optimal cluster number detection",
+        "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nseg_pipe = seg_pipe | get_features(columns=['website_visits', 'session_duration', 'page_views'])\nseg_pipe = seg_pipe | run_kmeans(\n    find_optimal=True,\n    max_clusters=10,\n    algorithm_name='engagement_segments',\n    random_state=42\n)",
+        "inputs": {
+          "find_optimal": true,
+          "max_clusters": 10,
+          "algorithm_name": "engagement_segments",
+          "random_state": 42
+        }
+      },
+      {
+        "name": "K-means with custom initialization",
+        "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nseg_pipe = seg_pipe | get_features(columns=['sales_velocity', 'profit_margin'])\nseg_pipe = seg_pipe | run_kmeans(\n    n_clusters=4,\n    algorithm_name='product_performance_segments',\n    init='k-means++',\n    n_init=10,\n    random_state=99\n)",
+        "inputs": {
+          "n_clusters": 4,
+          "algorithm_name": "product_performance_segments",
+          "init": "k-means++",
+          "n_init": 10,
+          "random_state": 99
+        }
+      },
+      {
+        "name": "K-means with different distance metrics",
+        "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nseg_pipe = seg_pipe | get_features(columns=['browsing_pages', 'time_on_site', 'bounce_rate'])\nseg_pipe = seg_pipe | run_kmeans(\n    n_clusters=6,\n    algorithm_name='visitor_behavior_segments',\n    metric='manhattan',\n    random_state=555\n)",
+        "inputs": {
+          "n_clusters": 6,
+          "algorithm_name": "visitor_behavior_segments",
+          "metric": "manhattan",
+          "random_state": 555
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "SegmentationPipe",
+    "category": "segmentation_analysis",
+    "function": "run_dbscan",
+    "description": "Perform DBSCAN clustering to identify dense regions and outliers",
+    "prerequisites": ["SegmentationPipe.from_dataframe(data)", "get_features(columns=['feature1', 'feature2'])"],
+    "variations": [
+      {
+        "name": "Basic DBSCAN for outlier detection",
+        "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nseg_pipe = seg_pipe | get_features(columns=['navigation_path', 'click_pattern', 'session_duration'])\nseg_pipe = seg_pipe | run_dbscan(\n    eps=0.5,\n    min_samples=10,\n    algorithm_name='navigation_pattern_clusters'\n)",
+        "inputs": {
+          "eps": 0.5,
+          "min_samples": 10,
+          "algorithm_name": "navigation_pattern_clusters"
+        }
+      },
+      {
+        "name": "DBSCAN for transaction anomaly detection",
+        "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nseg_pipe = seg_pipe | get_features(columns=['transaction_amount', 'transaction_frequency', 'location'])\nseg_pipe = seg_pipe | run_dbscan(\n    eps=0.7,\n    min_samples=5,\n    algorithm_name='transaction_anomaly_detection'\n)",
+        "inputs": {
+          "eps": 0.7,
+          "min_samples": 5,
+          "algorithm_name": "transaction_anomaly_detection"
+        }
+      },
+      {
+        "name": "DBSCAN with different distance metrics",
+        "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nseg_pipe = seg_pipe | get_features(columns=['ticket_category', 'resolution_time', 'priority_level'])\nseg_pipe = seg_pipe | run_dbscan(\n    eps=0.3,\n    min_samples=15,\n    algorithm_name='support_ticket_patterns',\n    metric='cosine'\n)",
+        "inputs": {
+          "eps": 0.3,
+          "min_samples": 15,
+          "algorithm_name": "support_ticket_patterns",
+          "metric": "cosine"
+        }
+      },
+      {
+        "name": "DBSCAN for review similarity clustering",
+        "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nseg_pipe = seg_pipe | get_features(columns=['review_sentiment', 'rating', 'review_length'])\nseg_pipe = seg_pipe | run_dbscan(\n    eps=0.4,\n    min_samples=8,\n    algorithm_name='review_similarity_clusters'\n)",
+        "inputs": {
+          "eps": 0.4,
+          "min_samples": 8,
+          "algorithm_name": "review_similarity_clusters"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "SegmentationPipe",
+    "category": "segmentation_analysis",
+    "function": "run_hdbscan",
+    "description": "Perform HDBSCAN clustering for hierarchical density-based clustering",
+    "prerequisites": ["SegmentationPipe.from_dataframe(data)", "get_features(columns=['feature1', 'feature2'])"],
+    "variations": [
+      {
+        "name": "Basic HDBSCAN for product affinity clustering",
+        "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nseg_pipe = seg_pipe | get_features(columns=['co_purchase_frequency', 'category_similarity', 'price_range'])\nseg_pipe = seg_pipe | run_hdbscan(\n    min_cluster_size=5,\n    min_samples=3,\n    algorithm_name='product_affinity_clusters'\n)",
+        "inputs": {
+          "min_cluster_size": 5,
+          "min_samples": 3,
+          "algorithm_name": "product_affinity_clusters"
+        }
+      },
+      {
+        "name": "HDBSCAN for customer lifetime value patterns",
+        "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nseg_pipe = seg_pipe | get_features(columns=['ltv', 'purchase_frequency', 'tenure'])\nseg_pipe = seg_pipe | run_hdbscan(\n    min_cluster_size=10,\n    min_samples=5,\n    algorithm_name='ltv_pattern_clusters'\n)",
+        "inputs": {
+          "min_cluster_size": 10,
+          "min_samples": 5,
+          "algorithm_name": "ltv_pattern_clusters"
+        }
+      },
+      {
+        "name": "HDBSCAN with custom cluster selection",
+        "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nseg_pipe = seg_pipe | get_features(columns=['session_duration', 'page_views', 'interaction_rate'])\nseg_pipe = seg_pipe | run_hdbscan(\n    min_cluster_size=15,\n    min_samples=7,\n    algorithm_name='adaptive_behavior_clusters',\n    cluster_selection_epsilon=0.1\n)",
+        "inputs": {
+          "min_cluster_size": 15,
+          "min_samples": 7,
+          "algorithm_name": "adaptive_behavior_clusters",
+          "cluster_selection_epsilon": 0.1
+        }
+      },
+      {
+        "name": "HDBSCAN for support interaction clustering",
+        "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nseg_pipe = seg_pipe | get_features(columns=['interaction_type', 'resolution_time', 'customer_satisfaction'])\nseg_pipe = seg_pipe | run_hdbscan(\n    min_cluster_size=8,\n    min_samples=4,\n    algorithm_name='support_interaction_clusters'\n)",
+        "inputs": {
+          "min_cluster_size": 8,
+          "min_samples": 4,
+          "algorithm_name": "support_interaction_clusters"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "SegmentationPipe",
+    "category": "segmentation_analysis",
+    "function": "run_agglomerative",
+    "description": "Perform hierarchical agglomerative clustering",
+    "prerequisites": ["SegmentationPipe.from_dataframe(data)", "get_features(columns=['feature1', 'feature2'])"],
+    "variations": [
+      {
+        "name": "Agglomerative clustering with complete linkage",
+        "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nseg_pipe = seg_pipe | get_features(columns=['purchase_history', 'demographics', 'engagement_metrics'])\nseg_pipe = seg_pipe | run_agglomerative(\n    n_clusters=4,\n    linkage='complete',\n    algorithm_name='customer_hierarchical_segments'\n)",
+        "inputs": {
+          "n_clusters": 4,
+          "linkage": "complete",
+          "algorithm_name": "customer_hierarchical_segments"
+        }
+      },
+      {
+        "name": "Agglomerative clustering with Ward linkage",
+        "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nseg_pipe = seg_pipe | get_features(columns=['product_features', 'category_attributes', 'performance_metrics'])\nseg_pipe = seg_pipe | run_agglomerative(\n    n_clusters=6,\n    linkage='ward',\n    algorithm_name='product_hierarchy'\n)",
+        "inputs": {
+          "n_clusters": 6,
+          "linkage": "ward",
+          "algorithm_name": "product_hierarchy"
+        }
+      },
+      {
+        "name": "Agglomerative clustering with average linkage",
+        "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nseg_pipe = seg_pipe | get_features(columns=['feedback_text_features', 'sentiment_scores', 'category_labels'])\nseg_pipe = seg_pipe | run_agglomerative(\n    n_clusters=5,\n    linkage='average',\n    algorithm_name='feedback_themes'\n)",
+        "inputs": {
+          "n_clusters": 5,
+          "linkage": "average",
+          "algorithm_name": "feedback_themes"
+        }
+      },
+      {
+        "name": "Agglomerative clustering with single linkage",
+        "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nseg_pipe = seg_pipe | get_features(columns=['channel_performance', 'audience_metrics', 'cost_efficiency'])\nseg_pipe = seg_pipe | run_agglomerative(\n    n_clusters=3,\n    linkage='single',\n    algorithm_name='channel_hierarchy'\n)",
+        "inputs": {
+          "n_clusters": 3,
+          "linkage": "single",
+          "algorithm_name": "channel_hierarchy"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "SegmentationPipe",
+    "category": "segmentation_analysis",
+    "function": "run_rule_based",
+    "description": "Create segments based on predefined business rules",
+    "prerequisites": ["SegmentationPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Basic rule-based segmentation for engagement",
+        "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nrules = {\n    'High Value Active': \"subscription_tier == 'premium' and activity_score > 8\",\n    'High Value At Risk': \"subscription_tier == 'premium' and activity_score < 3\",\n    'Growth Potential': \"subscription_tier == 'basic' and activity_score > 8\",\n    'Dormant': \"activity_score < 2\"\n}\nseg_pipe = seg_pipe | run_rule_based(\n    rules=rules,\n    default_segment='Other',\n    algorithm_name='engagement_segments'\n)",
+        "inputs": {
+          "rules": {
+            "High Value Active": "subscription_tier == 'premium' and activity_score > 8",
+            "High Value At Risk": "subscription_tier == 'premium' and activity_score < 3",
+            "Growth Potential": "subscription_tier == 'basic' and activity_score > 8",
+            "Dormant": "activity_score < 2"
+          },
+          "default_segment": "Other",
+          "algorithm_name": "engagement_segments"
+        }
+      },
+      {
+        "name": "RFM rule-based segmentation",
+        "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nrules = {\n    'Champions': \"recency_score >= 4 and frequency_score >= 4 and monetary_score >= 4\",\n    'Loyal Customers': \"recency_score >= 3 and frequency_score >= 3 and monetary_score >= 3\",\n    'At Risk': \"recency_score <= 2 and frequency_score >= 3 and monetary_score >= 3\",\n    'New Customers': \"recency_score >= 4 and frequency_score <= 2\",\n    'Hibernating': \"recency_score <= 2 and frequency_score <= 2\"\n}\nseg_pipe = seg_pipe | run_rule_based(\n    rules=rules,\n    default_segment='Others',\n    algorithm_name='rfm_segments'\n)",
+        "inputs": {
+          "rules": {
+            "Champions": "recency_score >= 4 and frequency_score >= 4 and monetary_score >= 4",
+            "Loyal Customers": "recency_score >= 3 and frequency_score >= 3 and monetary_score >= 3",
+            "At Risk": "recency_score <= 2 and frequency_score >= 3 and monetary_score >= 3",
+            "New Customers": "recency_score >= 4 and frequency_score <= 2",
+            "Hibernating": "recency_score <= 2 and frequency_score <= 2"
+          },
+          "default_segment": "Others",
+          "algorithm_name": "rfm_segments"
+        }
+      },
+      {
+        "name": "Product performance rule-based segmentation",
+        "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nrules = {\n    'High Performers': \"turnover_ratio > 5 and profit_margin > 0.3\",\n    'Cash Cows': \"turnover_ratio <= 5 and turnover_ratio > 2 and profit_margin > 0.3\",\n    'Stars': \"turnover_ratio > 5 and profit_margin <= 0.3 and profit_margin > 0.15\",\n    'Dogs': \"turnover_ratio <= 2 and profit_margin <= 0.15\"\n}\nseg_pipe = seg_pipe | run_rule_based(\n    rules=rules,\n    default_segment='Average Performers',\n    algorithm_name='product_performance_segments'\n)",
+        "inputs": {
+          "rules": {
+            "High Performers": "turnover_ratio > 5 and profit_margin > 0.3",
+            "Cash Cows": "turnover_ratio <= 5 and turnover_ratio > 2 and profit_margin > 0.3",
+            "Stars": "turnover_ratio > 5 and profit_margin <= 0.3 and profit_margin > 0.15",
+            "Dogs": "turnover_ratio <= 2 and profit_margin <= 0.15"
+          },
+          "default_segment": "Average Performers",
+          "algorithm_name": "product_performance_segments"
+        }
+      },
+      {
+        "name": "Customer health score rule-based segmentation",
+        "example": "seg_pipe = SegmentationPipe.from_dataframe(data)\nrules = {\n    'Healthy': \"usage_frequency > 20 and support_tickets < 2\",\n    'At Risk': \"usage_frequency < 10 or (usage_frequency < 20 and support_tickets > 3)\",\n    'Needs Attention': \"usage_frequency >= 10 and usage_frequency <= 20 and support_tickets >= 2 and support_tickets <= 3\"\n}\nseg_pipe = seg_pipe | run_rule_based(\n    rules=rules,\n    default_segment='Neutral',\n    algorithm_name='customer_health_segments'\n)",
+        "inputs": {
+          "rules": {
+            "Healthy": "usage_frequency > 20 and support_tickets < 2",
+            "At Risk": "usage_frequency < 10 or (usage_frequency < 20 and support_tickets > 3)",
+            "Needs Attention": "usage_frequency >= 10 and usage_frequency <= 20 and support_tickets >= 2 and support_tickets <= 3"
+          },
+          "default_segment": "Neutral",
+          "algorithm_name": "customer_health_segments"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "SegmentationPipe",
+    "category": "segmentation_analysis",
+    "function": "generate_summary",
+    "description": "Generate detailed summary statistics for segmentation results",
+    "prerequisites": ["SegmentationPipe with completed segmentation"],
+    "variations": [
+      {
+        "name": "Generate summary for customer value segments",
+        "example": "summary = generate_summary(algorithm='customer_value_segments')(seg_pipe)\nprint(f\"Segment profiles: {summary['segment_profiles']}\")\nprint(f\"Segment sizes: {summary['segment_sizes']}\")",
+        "inputs": {
+          "algorithm": "customer_value_segments"
+        }
+      },
+      {
+        "name": "Generate summary for RFM segments",
+        "example": "summary = generate_summary(algorithm='rfm_segments')(seg_pipe)\nprint(f\"RFM segment breakdown: {summary['segment_sizes']}\")\nprint(f\"Segment characteristics: {summary['segment_profiles']}\")",
+        "inputs": {
+          "algorithm": "rfm_segments"
+        }
+      },
+      {
+        "name": "Generate summary for product performance segments",
+        "example": "summary = generate_summary(algorithm='product_performance_segments')(seg_pipe)\nprint(f\"Product segment characteristics: {summary['segment_profiles']}\")\nprint(f\"Segment distribution: {summary['segment_percentages']}\")",
+        "inputs": {
+          "algorithm": "product_performance_segments"
+        }
+      },
+      {
+        "name": "Generate summary for visitor behavior segments",
+        "example": "summary = generate_summary(algorithm='visitor_behavior_segments')(seg_pipe)\nprint(f\"Visitor behavior profiles: {summary['segment_profiles']}\")\nprint(f\"Segment sizes: {summary['segment_sizes']}\")",
+        "inputs": {
+          "algorithm": "visitor_behavior_segments"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "SegmentationPipe",
+    "category": "segmentation_analysis",
+    "function": "get_segment_data",
+    "description": "Retrieve data for specific segments",
+    "prerequisites": ["SegmentationPipe with completed segmentation"],
+    "variations": [
+      {
+        "name": "Get high value active users",
+        "example": "high_value_users = get_segment_data('high_value_active', 'engagement_segments')(seg_pipe)\nprint(f\"Found {len(high_value_users)} high value active users\")\nprint(high_value_users.head())",
+        "inputs": {
+          "segment_id": "high_value_active",
+          "algorithm": "engagement_segments"
+        }
+      },
+      {
+        "name": "Get champions from RFM segments",
+        "example": "champions_data = get_segment_data('Champions', 'rfm_segments')(seg_pipe)\nprint(f\"Champions segment size: {len(champions_data)}\")\nchampions_data.to_csv('champions_export.csv', index=False)",
+        "inputs": {
+          "segment_id": "Champions",
+          "algorithm": "rfm_segments"
+        }
+      },
+      {
+        "name": "Get high performers from product segments",
+        "example": "high_performers = get_segment_data('High Performers', 'product_performance_segments')(seg_pipe)\nprint(f\"High performers: {len(high_performers)} products\")\nprint(high_performers[['product_name', 'turnover_ratio', 'profit_margin']].head())",
+        "inputs": {
+          "segment_id": "High Performers",
+          "algorithm": "product_performance_segments"
+        }
+      },
+      {
+        "name": "Get at risk customers",
+        "example": "at_risk_customers = get_segment_data('At Risk', 'customer_health_segments')(seg_pipe)\nprint(f\"At risk customers: {len(at_risk_customers)}\")\nprint(at_risk_customers[['customer_id', 'usage_frequency', 'support_tickets']].head())",
+        "inputs": {
+          "segment_id": "At Risk",
+          "algorithm": "customer_health_segments"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "SegmentationPipe",
+    "category": "segmentation_analysis",
+    "function": "compare_algorithms",
+    "description": "Compare effectiveness of different segmentation algorithms",
+    "prerequisites": ["SegmentationPipe with multiple completed segmentations"],
+    "variations": [
+      {
+        "name": "Compare KMeans vs rule-based approaches",
+        "example": "comparison = compare_algorithms()(seg_pipe)\nprint(f\"Algorithm comparison: {comparison}\")\nprint(f\"Best algorithm: {comparison['best_algorithm']}\")",
+        "inputs": {}
+      },
+      {
+        "name": "Evaluate most actionable customer groups",
+        "example": "evaluation = compare_algorithms()(seg_pipe)\nprint(f\"Algorithm evaluation: {evaluation}\")\nprint(f\"Most actionable: {evaluation['most_actionable']}\")",
+        "inputs": {}
+      },
+      {
+        "name": "Analyze clustering differences",
+        "example": "analysis = compare_algorithms()(seg_pipe)\nprint(f\"Clustering differences: {analysis}\")\nprint(f\"Algorithm performance: {analysis['performance_metrics']}\")",
+        "inputs": {}
+      },
+      {
+        "name": "Compare segment stability",
+        "example": "stability_comparison = compare_algorithms()(seg_pipe)\nprint(f\"Segment stability: {stability_comparison}\")\nprint(f\"Most stable: {stability_comparison['most_stable']}\")",
+        "inputs": {}
+      }
+    ]
+  }
+]

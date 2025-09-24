@@ -1,0 +1,82 @@
+[
+  {
+    "function": "analyze_funnel",
+    "category": "funnel_analysis",
+    "description": "Track user journey from homepage view through purchase completion",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, analyze_funnel\n\n# Step 1: Create sample funnel data\nfunnel_events = []\nfor user_id in range(1, 201):\n    # Simulate user journey through funnel\n    events = ['home_page_view', 'product_view', 'add_to_cart', 'checkout_started', 'purchase_completed']\n    for i, event in enumerate(events):\n        if user_id % (5-i+1) == 0:  # Some users drop off at each step\n            funnel_events.append({\n                'user_id': user_id,\n                'event_name': event,\n                'timestamp': pd.date_range('2023-01-01', periods=1, freq='D')[0] + pd.Timedelta(hours=i)\n            })\n\nsample_data = pd.DataFrame(funnel_events)\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Analyze funnel\ncohort_pipe = cohort_pipe | analyze_funnel(\n    event_column='event_name',\n    user_id_column='user_id',\n    funnel_steps=['home_page_view', 'product_view', 'add_to_cart', 'checkout_started', 'purchase_completed'],\n    step_names=['Homepage', 'Product Page', 'Cart', 'Checkout', 'Purchase'],\n    max_step_time=86400\n)\n\n# Step 4: View results\nfunnel_df = cohort_pipe.to_df()\nprint(f\"Funnel analysis completed for {len(funnel_df)} users\")\nprint(f\"Conversion rates: {funnel_df['conversion_rate'].iloc[0] if 'conversion_rate' in funnel_df.columns else 'N/A'}\")"
+    },
+    "parameters": {
+      "event_column": "Column containing event names/types",
+      "user_id_column": "Column containing user identifiers",
+      "funnel_steps": "List of event names representing steps in the funnel, in order",
+      "step_names": "Friendly names for the funnel steps (optional)",
+      "max_step_time": "Maximum time allowed between steps in seconds (optional)"
+    }
+  },
+  {
+    "function": "analyze_funnel",
+    "category": "funnel_analysis",
+    "description": "Analyze drop-off rates in the checkout process",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, analyze_funnel\n\n# Step 1: Create sample checkout funnel data\ncheckout_events = []\nfor session_id in range(1, 301):\n    # Simulate checkout process\n    events = ['cart_page', 'shipping_details', 'payment_info', 'review_order', 'confirmation']\n    for i, event in enumerate(events):\n        if session_id % (5-i+1) == 0:  # Some users drop off at each step\n            checkout_events.append({\n                'session_id': session_id,\n                'page_name': event,\n                'timestamp': pd.date_range('2023-01-01', periods=1, freq='D')[0] + pd.Timedelta(minutes=i*5)\n            })\n\nsample_data = pd.DataFrame(checkout_events)\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Analyze checkout funnel\ncohort_pipe = cohort_pipe | analyze_funnel(\n    event_column='page_name',\n    user_id_column='session_id',\n    funnel_steps=['cart_page', 'shipping_details', 'payment_info', 'review_order', 'confirmation'],\n    step_names=['Cart', 'Shipping', 'Payment', 'Review', 'Confirmation']\n)\n\n# Step 4: View results\nfunnel_df = cohort_pipe.to_df()\nprint(f\"Checkout funnel analysis completed for {len(funnel_df)} sessions\")"
+    },
+    "parameters": {
+      "event_column": "Column containing event names/types",
+      "user_id_column": "Column containing user identifiers",
+      "funnel_steps": "List of event names representing steps in the funnel, in order",
+      "step_names": "Friendly names for the funnel steps (optional)",
+      "max_step_time": "Maximum time allowed between steps in seconds (optional)"
+    }
+  },
+  {
+    "function": "analyze_funnel",
+    "category": "funnel_analysis",
+    "description": "Measure conversion rate through signup funnel for mobile users",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, analyze_funnel\n\n# Step 1: Create sample mobile signup data\nmobile_signup_events = []\nfor device_id in range(1, 401):\n    # Simulate mobile signup process\n    events = ['app_open', 'signup_begin', 'email_entered', 'password_created', 'profile_completed']\n    for i, event in enumerate(events):\n        if device_id % (5-i+1) == 0:  # Some users drop off at each step\n            mobile_signup_events.append({\n                'device_id': device_id,\n                'event_type': event,\n                'timestamp': pd.date_range('2023-01-01', periods=1, freq='D')[0] + pd.Timedelta(minutes=i*2)\n            })\n\nsample_data = pd.DataFrame(mobile_signup_events)\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Analyze mobile signup funnel\ncohort_pipe = cohort_pipe | analyze_funnel(\n    event_column='event_type',\n    user_id_column='device_id',\n    funnel_steps=['app_open', 'signup_begin', 'email_entered', 'password_created', 'profile_completed'],\n    max_step_time=3600\n)\n\n# Step 4: View results\nfunnel_df = cohort_pipe.to_df()\nprint(f\"Mobile signup funnel analysis completed for {len(funnel_df)} devices\")"
+    },
+    "parameters": {
+      "event_column": "Column containing event names/types",
+      "user_id_column": "Column containing user identifiers",
+      "funnel_steps": "List of event names representing steps in the funnel, in order",
+      "step_names": "Friendly names for the funnel steps (optional)",
+      "max_step_time": "Maximum time allowed between steps in seconds (optional)"
+    }
+  },
+  {
+    "function": "analyze_funnel",
+    "category": "funnel_analysis",
+    "description": "Examine the user onboarding flow from registration to first action",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, analyze_funnel\n\n# Step 1: Create sample onboarding data\nonboarding_events = []\nfor user_id in range(1, 251):\n    # Simulate onboarding process\n    events = ['registration', 'email_verification', 'tutorial_viewed', 'first_login', 'first_action']\n    for i, event in enumerate(events):\n        if user_id % (5-i+1) == 0:  # Some users drop off at each step\n            onboarding_events.append({\n                'user_id': user_id,\n                'onboarding_event': event,\n                'timestamp': pd.date_range('2023-01-01', periods=1, freq='D')[0] + pd.Timedelta(hours=i)\n            })\n\nsample_data = pd.DataFrame(onboarding_events)\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Analyze onboarding funnel\ncohort_pipe = cohort_pipe | analyze_funnel(\n    event_column='onboarding_event',\n    user_id_column='user_id',\n    funnel_steps=['registration', 'email_verification', 'tutorial_viewed', 'first_login', 'first_action'],\n    step_names=['Register', 'Verify Email', 'Tutorial', 'Login', 'First Action']\n)\n\n# Step 4: View results\nfunnel_df = cohort_pipe.to_df()\nprint(f\"Onboarding funnel analysis completed for {len(funnel_df)} users\")"
+    },
+    "parameters": {
+      "event_column": "Column containing event names/types",
+      "user_id_column": "Column containing user identifiers",
+      "funnel_steps": "List of event names representing steps in the funnel, in order",
+      "step_names": "Friendly names for the funnel steps (optional)",
+      "max_step_time": "Maximum time allowed between steps in seconds (optional)"
+    }
+  },
+  {
+    "function": "analyze_funnel",
+    "category": "funnel_analysis",
+    "description": "Analyze user flow through the payment process for new feature purchases",
+    "prerequisites": ["CohortPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.cohortanalysistools import CohortPipe, analyze_funnel\n\n# Step 1: Create sample payment funnel data\npayment_events = []\nfor customer_id in range(1, 201):\n    # Simulate payment process for new features\n    events = ['feature_info_view', 'price_check', 'add_payment_method', 'confirm_purchase', 'receipt_view']\n    for i, event in enumerate(events):\n        if customer_id % (5-i+1) == 0:  # Some users drop off at each step\n            payment_events.append({\n                'customer_id': customer_id,\n                'payment_event': event,\n                'timestamp': pd.date_range('2023-01-01', periods=1, freq='D')[0] + pd.Timedelta(minutes=i*3)\n            })\n\nsample_data = pd.DataFrame(payment_events)\n\n# Step 2: Initialize pipeline\ncohort_pipe = CohortPipe.from_dataframe(sample_data)\n\n# Step 3: Analyze payment funnel\ncohort_pipe = cohort_pipe | analyze_funnel(\n    event_column='payment_event',\n    user_id_column='customer_id',\n    funnel_steps=['feature_info_view', 'price_check', 'add_payment_method', 'confirm_purchase', 'receipt_view'],\n    step_names=['Info', 'Price Check', 'Payment Method', 'Confirmation', 'Receipt'],\n    max_step_time=1800\n)\n\n# Step 4: View results\nfunnel_df = cohort_pipe.to_df()\nprint(f\"Payment funnel analysis completed for {len(funnel_df)} customers\")"
+    },
+    "parameters": {
+      "event_column": "Column containing event names/types",
+      "user_id_column": "Column containing user identifiers",
+      "funnel_steps": "List of event names representing steps in the funnel, in order",
+      "step_names": "Friendly names for the funnel steps (optional)",
+      "max_step_time": "Maximum time allowed between steps in seconds (optional)"
+    }
+  }
+]

@@ -196,20 +196,25 @@ class PandasEngine(Engine):
                     in_select = False
                     in_from = False
                     where_clause = str(token)
-                elif token_str == 'LIMIT':
-                    # Extract LIMIT value from next token
-                    if i + 1 < len(tokens):
-                        next_token = tokens[i + 1]
-                        if isinstance(next_token, sqlparse.sql.Literal):
+                elif isinstance(token, sqlparse.sql.Limit):
+                    # Extract LIMIT value
+                    limit_tokens = token.tokens
+                    for limit_token in limit_tokens:
+                        if isinstance(limit_token, sqlparse.sql.Literal):
                             try:
-                                limit_value = int(str(next_token))
+                                limit_value = int(str(limit_token))
                             except ValueError:
-                                logger.warning(f"Invalid LIMIT value: {next_token}")
-                        elif hasattr(next_token, 'value'):
+                                logger.warning(f"Invalid LIMIT value: {limit_token}")
+                        elif hasattr(limit_token, 'value') and str(limit_token.value).isdigit():
                             try:
-                                limit_value = int(str(next_token.value))
+                                limit_value = int(str(limit_token.value))
                             except ValueError:
-                                logger.warning(f"Invalid LIMIT value: {next_token.value}")
+                                logger.warning(f"Invalid LIMIT value: {limit_token.value}")
+                        elif str(limit_token).isdigit():
+                            try:
+                                limit_value = int(str(limit_token))
+                            except ValueError:
+                                logger.warning(f"Invalid LIMIT value: {limit_token}")
                 elif token_str == 'OFFSET':
                     # Extract OFFSET value from next token
                     if i + 1 < len(tokens):

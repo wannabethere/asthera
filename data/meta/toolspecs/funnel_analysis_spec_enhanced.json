@@ -1,0 +1,304 @@
+{
+    "metadata": {
+        "updated_at": "2024-01-16T12:00:00Z",
+        "llm_generated": true,
+        "total_functions": 6,
+        "categories": ["funnel_analysis"],
+        "complexity_levels": ["intermediate", "advanced"],
+        "pipe_name": "FunnelPipe",
+        "module": "funnelanalysis",
+        "description": "Functions for analyzing user funnels, conversion rates, and user journey paths",
+        "function_list": [
+            "analyze_funnel",
+            "analyze_funnel_by_time",
+            "analyze_funnel_by_segment",
+            "analyze_user_paths",
+            "get_funnel_summary",
+            "compare_segments"
+        ]
+    },
+    "functions": {
+        "analyze_funnel": {
+            "category": "funnel_analysis",
+            "subcategory": "basic_funnel",
+            "pipe_name": "FunnelPipe",
+            "description": "Analyze a user funnel using the existing CohortPipe framework",
+            "complexity": "intermediate",
+            "use_cases": [
+                "conversion funnel analysis",
+                "user journey tracking",
+                "step-by-step conversion rates",
+                "funnel performance measurement"
+            ],
+            "data_requirements": [
+                "Event data with event names/types",
+                "User identifier column",
+                "Funnel step definitions",
+                "Optional step names and time limits"
+            ],
+            "tags": ["funnel", "conversion", "user_journey", "cohort_analysis"],
+            "keywords": ["funnel", "conversion", "user", "journey", "steps", "cohort"],
+            "output_description": "Function that analyzes a funnel in a CohortPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "Analyze e-commerce purchase funnel",
+                "Track user registration process",
+                "Measure feature adoption rates"
+            ],
+            "usage_patterns": [
+                "Basic funnel analysis without time constraints",
+                "Overall conversion rate calculation",
+                "Step-by-step user flow analysis"
+            ],
+            "dependencies": ["pandas", "numpy", "cohortanalysistools"],
+            "related_functions": ["analyze_funnel_by_time", "analyze_funnel_by_segment"],
+            "required_params": [
+                {"name": "event_column", "type": "str", "description": "Column containing event names/types"},
+                {"name": "user_id_column", "type": "str", "description": "Column containing user identifiers"},
+                {"name": "funnel_steps", "type": "List[str]", "description": "List of event names representing steps in the funnel, in order"}
+            ],
+            "optional_params": [
+                {"name": "step_names", "type": "List[str]", "description": "Friendly names for the funnel steps (if None, funnel_steps will be used) (optional)"},
+                {"name": "max_step_time", "type": "int", "description": "Maximum time (in seconds) allowed between steps (if None, no time limit) (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that analyzes a funnel in a CohortPipe."
+            }
+        },
+        "analyze_funnel_by_time": {
+            "category": "funnel_analysis",
+            "subcategory": "temporal_funnel",
+            "pipe_name": "FunnelPipe",
+            "description": "Analyze funnel performance over time using the existing CohortPipe framework",
+            "complexity": "advanced",
+            "use_cases": [
+                "funnel performance trends over time",
+                "seasonal conversion analysis",
+                "cohort-based funnel comparison",
+                "time-series funnel metrics"
+            ],
+            "data_requirements": [
+                "Event data with timestamps",
+                "User identifier column",
+                "Date column for cohort formation",
+                "Funnel step definitions",
+                "Time period specifications"
+            ],
+            "tags": ["funnel", "time_series", "cohort", "temporal", "trends"],
+            "keywords": ["funnel", "time", "cohort", "trends", "seasonal", "temporal"],
+            "output_description": "Function that analyzes funnel by time periods in a CohortPipe",
+            "confidence_score": 0.92,
+            "examples": [
+                "Monthly conversion rate trends",
+                "Quarterly funnel performance analysis",
+                "Seasonal user journey patterns"
+            ],
+            "usage_patterns": [
+                "Time-based funnel analysis",
+                "Cohort comparison over time",
+                "Trend analysis in conversion rates"
+            ],
+            "dependencies": ["pandas", "numpy", "cohortanalysistools", "datetime"],
+            "related_functions": ["analyze_funnel", "form_time_cohorts"],
+            "required_params": [
+                {"name": "event_column", "type": "str", "description": "Column containing event names/types"},
+                {"name": "user_id_column", "type": "str", "description": "Column containing user identifiers"},
+                {"name": "date_column", "type": "str", "description": "Column containing dates for cohort formation"},
+                {"name": "funnel_steps", "type": "List[str]", "description": "List of event names representing steps in the funnel, in order"}
+            ],
+            "optional_params": [
+                {"name": "step_names", "type": "List[str]", "description": "Friendly names for the funnel steps (if None, funnel_steps will be used) (optional)"},
+                {"name": "time_period", "type": "str", "description": "Time period for cohort grouping ('D', 'W', 'M', 'Q', 'Y') (default: 'M')"},
+                {"name": "max_periods", "type": "int", "description": "Maximum number of periods to include (default: 12)"},
+                {"name": "datetime_format", "type": "str", "description": "Format string for parsing dates if they are not already datetime objects (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that analyzes funnel by time periods in a CohortPipe."
+            }
+        },
+        "analyze_funnel_by_segment": {
+            "category": "funnel_analysis",
+            "subcategory": "segmented_funnel",
+            "pipe_name": "FunnelPipe",
+            "description": "Analyze funnel performance across different user segments using the existing CohortPipe framework",
+            "complexity": "advanced",
+            "use_cases": [
+                "segment-based funnel comparison",
+                "user behavior analysis by demographics",
+                "targeted conversion optimization",
+                "segmented user journey analysis"
+            ],
+            "data_requirements": [
+                "Event data with user identifiers",
+                "Segment information column",
+                "Funnel step definitions",
+                "Minimum user count per segment"
+            ],
+            "tags": ["funnel", "segmentation", "cohort", "demographics", "comparison"],
+            "keywords": ["funnel", "segment", "cohort", "demographics", "comparison", "behavior"],
+            "output_description": "Function that analyzes funnel by segments in a CohortPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "Funnel analysis by user age groups",
+                "Conversion rates by geographic region",
+                "Funnel performance by user acquisition channel"
+            ],
+            "usage_patterns": [
+                "Segmented funnel analysis",
+                "Demographic-based conversion comparison",
+                "Behavioral cohort funnel analysis"
+            ],
+            "dependencies": ["pandas", "numpy", "cohortanalysistools"],
+            "related_functions": ["analyze_funnel", "form_behavioral_cohorts"],
+            "required_params": [
+                {"name": "event_column", "type": "str", "description": "Column containing event names/types"},
+                {"name": "user_id_column", "type": "str", "description": "Column containing user identifiers"},
+                {"name": "segment_column", "type": "str", "description": "Column containing segment information to group by"},
+                {"name": "funnel_steps", "type": "List[str]", "description": "List of event names representing steps in the funnel, in order"}
+            ],
+            "optional_params": [
+                {"name": "step_names", "type": "List[str]", "description": "Friendly names for the funnel steps (if None, funnel_steps will be used) (optional)"},
+                {"name": "min_users", "type": "int", "description": "Minimum number of users required for a segment to be included (default: 10)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that analyzes funnel by segments in a CohortPipe."
+            }
+        },
+        "analyze_user_paths": {
+            "category": "funnel_analysis",
+            "subcategory": "path_analysis",
+            "pipe_name": "FunnelPipe",
+            "description": "Analyze actual paths users take through the funnel (not just the ideal path)",
+            "complexity": "advanced",
+            "use_cases": [
+                "user journey path analysis",
+                "alternative conversion paths",
+                "user behavior pattern identification",
+                "funnel optimization insights"
+            ],
+            "data_requirements": [
+                "Event data with timestamps",
+                "User identifier column",
+                "Funnel step definitions",
+                "Path length and frequency constraints"
+            ],
+            "tags": ["funnel", "paths", "journey", "behavior", "patterns"],
+            "keywords": ["funnel", "paths", "journey", "behavior", "patterns", "user_flow"],
+            "output_description": "Function that analyzes actual user paths in a CohortPipe",
+            "confidence_score": 0.88,
+            "examples": [
+                "Identify common user journey patterns",
+                "Find alternative conversion paths",
+                "Analyze user behavior deviations"
+            ],
+            "usage_patterns": [
+                "User journey path analysis",
+                "Behavioral pattern identification",
+                "Funnel optimization research"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["analyze_funnel", "get_funnel_summary"],
+            "required_params": [
+                {"name": "event_column", "type": "str", "description": "Column containing event names/types"},
+                {"name": "user_id_column", "type": "str", "description": "Column containing user identifiers"},
+                {"name": "timestamp_column", "type": "str", "description": "Column containing event timestamps"},
+                {"name": "funnel_steps", "type": "List[str]", "description": "List of event names representing steps in the funnel, in order"}
+            ],
+            "optional_params": [
+                {"name": "step_names", "type": "List[str]", "description": "Friendly names for the funnel steps (if None, funnel_steps will be used) (optional)"},
+                {"name": "max_path_length", "type": "int", "description": "Maximum number of steps to include in a path (default: 10)"},
+                {"name": "min_path_frequency", "type": "int", "description": "Minimum number of users who must take a path for it to be included (default: 5)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that analyzes user paths through the funnel."
+            }
+        },
+        "get_funnel_summary": {
+            "category": "funnel_analysis",
+            "subcategory": "summary",
+            "pipe_name": "FunnelPipe",
+            "description": "Return a summary of funnel analysis results",
+            "complexity": "simple",
+            "use_cases": [
+                "funnel results summary",
+                "quick overview of analysis",
+                "data export for reporting",
+                "funnel metrics aggregation"
+            ],
+            "data_requirements": [
+                "Previously run funnel analysis",
+                "Stored funnel results in pipeline"
+            ],
+            "tags": ["funnel", "summary", "results", "export"],
+            "keywords": ["funnel", "summary", "results", "export", "overview"],
+            "output_description": "Function that returns funnel summary from a CohortPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "Export funnel analysis results",
+                "Generate summary report",
+                "Quick overview of conversion metrics"
+            ],
+            "usage_patterns": [
+                "Results summary and export",
+                "Quick metric overview",
+                "Data aggregation for reporting"
+            ],
+            "dependencies": [],
+            "related_functions": ["analyze_funnel", "analyze_user_paths"],
+            "required_params": [],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that returns funnel analysis summary."
+            }
+        },
+        "compare_segments": {
+            "category": "funnel_analysis",
+            "subcategory": "comparison",
+            "pipe_name": "FunnelPipe",
+            "description": "Compare funnel metrics across segments",
+            "complexity": "intermediate",
+            "use_cases": [
+                "segment performance comparison",
+                "baseline metric analysis",
+                "relative performance measurement",
+                "segment optimization insights"
+            ],
+            "data_requirements": [
+                "Previously run segment funnel analysis",
+                "Metric column for comparison",
+                "Optional baseline segment specification"
+            ],
+            "tags": ["funnel", "comparison", "segments", "metrics", "baseline"],
+            "keywords": ["funnel", "comparison", "segments", "metrics", "baseline", "performance"],
+            "output_description": "Function that compares segments in a CohortPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "Compare conversion rates across user segments",
+                "Analyze relative performance vs baseline",
+                "Identify top-performing segments"
+            ],
+            "usage_patterns": [
+                "Segment performance comparison",
+                "Baseline analysis",
+                "Relative performance measurement"
+            ],
+            "dependencies": ["pandas"],
+            "related_functions": ["analyze_funnel_by_segment", "get_funnel_summary"],
+            "required_params": [
+                {"name": "metric_column", "type": "str", "description": "Column containing the metric to compare (e.g., 'Purchase_rate')"}
+            ],
+            "optional_params": [
+                {"name": "baseline_segment", "type": "str", "description": "Segment to use as the baseline for comparison (if None, use average) (optional)"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that compares funnel metrics across segments."
+            }
+        }
+    }
+}

@@ -212,46 +212,67 @@ class PandasEngine(Engine):
             limit_value = None
             offset_value = None
             
-            # Parse tokens to extract all components
+            # More robust parsing logic
+            in_select = False
+            in_from = False
+            
             for i, token in enumerate(tokens):
-                if isinstance(token, sqlparse.sql.Identifier):
-                    table_name = token.get_real_name()
-                elif isinstance(token, sqlparse.sql.Where):
+                token_str = str(token).strip().upper()
+                
+                if token_str == 'SELECT':
+                    in_select = True
+                    in_from = False
+                elif token_str == 'FROM':
+                    in_select = False
+                    in_from = True
+                elif token_str == 'WHERE':
+                    in_select = False
+                    in_from = False
                     where_clause = str(token)
-                elif isinstance(token, sqlparse.sql.IdentifierList):
-                    select_columns = [str(col).strip() for col in token.get_identifiers()]
-                elif isinstance(token, sqlparse.sql.Identifier) and token.get_name().upper() != 'FROM':
-                    select_columns = [token.get_name()]
-                elif str(token).upper() == 'LIMIT':
-                    # Extract LIMIT value from next token
-                    if i + 1 < len(tokens):
-                        next_token = tokens[i + 1]
-                        # Check if it's a literal number token
-                        if hasattr(next_token, 'ttype') and next_token.ttype in sqlparse.tokens.Literal.Number:
+                elif isinstance(token, sqlparse.sql.Limit):
+                    # Extract LIMIT value
+                    limit_tokens = token.tokens
+                    for limit_token in limit_tokens:
+                        if isinstance(limit_token, sqlparse.sql.Literal):
                             try:
-                                limit_value = int(str(next_token))
+                                limit_value = int(str(limit_token))
                             except ValueError:
-                                logger.warning(f"Invalid LIMIT value: {next_token}")
-                        elif str(next_token).isdigit():
+                                logger.warning(f"Invalid LIMIT value: {limit_token}")
+                        elif hasattr(limit_token, 'value') and str(limit_token.value).isdigit():
                             try:
-                                limit_value = int(str(next_token))
+                                limit_value = int(str(limit_token.value))
                             except ValueError:
-                                logger.warning(f"Invalid LIMIT value: {next_token}")
-                elif str(token).upper() == 'OFFSET':
+                                logger.warning(f"Invalid LIMIT value: {limit_token.value}")
+                        elif str(limit_token).isdigit():
+                            try:
+                                limit_value = int(str(limit_token))
+                            except ValueError:
+                                logger.warning(f"Invalid LIMIT value: {limit_token}")
+                elif token_str == 'OFFSET':
                     # Extract OFFSET value from next token
                     if i + 1 < len(tokens):
                         next_token = tokens[i + 1]
-                        # Check if it's a literal number token
-                        if hasattr(next_token, 'ttype') and next_token.ttype in sqlparse.tokens.Literal.Number:
+                        if isinstance(next_token, sqlparse.sql.Literal):
                             try:
                                 offset_value = int(str(next_token))
                             except ValueError:
                                 logger.warning(f"Invalid OFFSET value: {next_token}")
+                        elif hasattr(next_token, 'value'):
+                            try:
+                                offset_value = int(str(next_token.value))
+                            except ValueError:
+                                logger.warning(f"Invalid OFFSET value: {next_token.value}")
                         elif str(next_token).isdigit():
                             try:
                                 offset_value = int(str(next_token))
                             except ValueError:
                                 logger.warning(f"Invalid OFFSET value: {next_token}")
+                elif in_from and isinstance(token, sqlparse.sql.Identifier):
+                    table_name = token.get_real_name()
+                elif in_select and isinstance(token, sqlparse.sql.IdentifierList):
+                    select_columns = [str(col).strip() for col in token.get_identifiers()]
+                elif in_select and isinstance(token, sqlparse.sql.Identifier) and token.get_name().upper() not in ['SELECT', 'FROM', 'WHERE', 'GROUP', 'ORDER', 'LIMIT', 'OFFSET']:
+                    select_columns = [token.get_name()]
             
             if not table_name or table_name not in self.data_sources:
                 return None

@@ -1,0 +1,288 @@
+[
+  {
+    "function": "PercentChange",
+    "category": "operationstools",
+    "description": "Calculate percentage change in monthly revenue",
+    "prerequisites": ["OperationsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.operationstools import OperationsPipe, PercentChange, Execute\n\n# Step 1: Create sample monthly revenue data\nsample_data = pd.DataFrame({\n    'month': pd.date_range('2023-01-01', periods=12, freq='M'),\n    'revenue': [100000, 105000, 98000, 112000, 108000, 120000, 115000, 125000, 118000, 130000, 122000, 135000],\n    'region': ['North', 'South', 'East', 'West'] * 3,\n    'product_line': ['Electronics', 'Clothing', 'Books'] * 4\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = OperationsPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate percentage change\nresult = pipeline | PercentChange(variable='revenue', output_name='revenue_pct_change')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Revenue percentage change: {metrics['revenue_pct_change']:.2f}%\")\nprint(f\"Current revenue: ${sample_data['revenue'].iloc[-1]:,}\")\nprint(f\"Previous revenue: ${sample_data['revenue'].iloc[-2]:,}\")"
+    },
+    "parameters": {
+      "variable": "Column name to calculate percentage change for",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "PercentChange",
+    "category": "operationstools",
+    "description": "Find percentage change in daily active users",
+    "prerequisites": ["OperationsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.operationstools import OperationsPipe, PercentChange, Execute\n\n# Step 1: Create sample daily active users data\nsample_data = pd.DataFrame({\n    'date': pd.date_range('2023-01-01', periods=30, freq='D'),\n    'dau': [1000, 1050, 980, 1100, 1080, 1200, 1150, 1250, 1180, 1300, 1220, 1350, 1280, 1400, 1320, 1450, 1380, 1500, 1420, 1550, 1480, 1600, 1520, 1650, 1580, 1700, 1620, 1750, 1680, 1800],\n    'platform': ['Web', 'Mobile', 'Desktop'] * 10,\n    'region': ['US', 'EU', 'APAC'] * 10\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = OperationsPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate percentage change\nresult = pipeline | PercentChange(variable='dau', output_name='dau_pct_change')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"DAU percentage change: {metrics['dau_pct_change']:.2f}%\")\nprint(f\"Current DAU: {sample_data['dau'].iloc[-1]}\")\nprint(f\"Previous DAU: {sample_data['dau'].iloc[-2]}\")"
+    },
+    "parameters": {
+      "variable": "Column name to calculate percentage change for",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "AbsoluteChange",
+    "category": "operationstools",
+    "description": "Calculate absolute change in quarterly profits",
+    "prerequisites": ["OperationsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.operationstools import OperationsPipe, AbsoluteChange, Execute\n\n# Step 1: Create sample quarterly profit data\nsample_data = pd.DataFrame({\n    'quarter': ['Q1 2023', 'Q2 2023', 'Q3 2023', 'Q4 2023'],\n    'profit': [50000, 55000, 48000, 62000],\n    'revenue': [200000, 220000, 190000, 250000],\n    'expenses': [150000, 165000, 142000, 188000]\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = OperationsPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate absolute change\nresult = pipeline | AbsoluteChange(variable='profit', output_name='profit_abs_change')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Profit absolute change: ${metrics['profit_abs_change']:,.2f}\")\nprint(f\"Current profit: ${sample_data['profit'].iloc[-1]:,}\")\nprint(f\"Previous profit: ${sample_data['profit'].iloc[-2]:,}\")"
+    },
+    "parameters": {
+      "variable": "Column name to calculate absolute change for",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "AbsoluteChange",
+    "category": "operationstools",
+    "description": "Find absolute change in weekly sales volume",
+    "prerequisites": ["OperationsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.operationstools import OperationsPipe, AbsoluteChange, Execute\n\n# Step 1: Create sample weekly sales volume data\nsample_data = pd.DataFrame({\n    'week': pd.date_range('2023-01-01', periods=8, freq='W'),\n    'sales_volume': [1000, 1200, 950, 1100, 1300, 1150, 1400, 1250],\n    'product_category': ['Electronics', 'Clothing', 'Books', 'Home', 'Sports', 'Toys', 'Beauty', 'Automotive'],\n    'region': ['North', 'South', 'East', 'West'] * 2\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = OperationsPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate absolute change\nresult = pipeline | AbsoluteChange(variable='sales_volume', output_name='volume_abs_change')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Sales volume absolute change: {metrics['volume_abs_change']:,.0f} units\")\nprint(f\"Current volume: {sample_data['sales_volume'].iloc[-1]:,}\")\nprint(f\"Previous volume: {sample_data['sales_volume'].iloc[-2]:,}\")"
+    },
+    "parameters": {
+      "variable": "Column name to calculate absolute change for",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "MH",
+    "category": "operationstools",
+    "description": "Perform Mantel-Haenszel test for A/B testing results",
+    "prerequisites": ["OperationsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.operationstools import OperationsPipe, MH, Execute\n\n# Step 1: Create sample A/B testing data\nsample_data = pd.DataFrame({\n    'group': ['A', 'B'] * 100,\n    'converted': [1, 0, 1, 1, 0, 1, 0, 0, 1, 1] * 20,\n    'stratum': ['Mobile', 'Desktop'] * 100,\n    'user_id': range(1, 201)\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = OperationsPipe.from_dataframe(sample_data)\n\n# Step 3: Perform Mantel-Haenszel test\nresult = pipeline | MH(group='group', outcome='converted', stratum='stratum', output_name='mh_test')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Mantel-Haenszel test result: {metrics['mh_test']}\")\nprint(f\"Group A conversion rate: {sample_data[sample_data['group'] == 'A']['converted'].mean():.2%}\")\nprint(f\"Group B conversion rate: {sample_data[sample_data['group'] == 'B']['converted'].mean():.2%}\")"
+    },
+    "parameters": {
+      "group": "Column name for the treatment group",
+      "outcome": "Column name for the binary outcome",
+      "stratum": "Column name for the stratification variable",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "MH",
+    "category": "operationstools",
+    "description": "Apply Mantel-Haenszel test across different age groups",
+    "prerequisites": ["OperationsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.operationstools import OperationsPipe, MH, Execute\n\n# Step 1: Create sample stratified A/B testing data\nsample_data = pd.DataFrame({\n    'treatment': ['Control', 'Treatment'] * 150,\n    'purchased': [0, 1, 1, 0, 1, 1, 0, 0, 1, 1] * 30,\n    'age_group': ['18-25', '26-35', '36-45', '46-55', '56-65'] * 60,\n    'user_id': range(1, 301)\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = OperationsPipe.from_dataframe(sample_data)\n\n# Step 3: Perform Mantel-Haenszel test\nresult = pipeline | MH(group='treatment', outcome='purchased', stratum='age_group', output_name='mh_age_test')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Mantel-Haenszel test result: {metrics['mh_age_test']}\")\nprint(f\"Control group purchase rate: {sample_data[sample_data['treatment'] == 'Control']['purchased'].mean():.2%}\")\nprint(f\"Treatment group purchase rate: {sample_data[sample_data['treatment'] == 'Treatment']['purchased'].mean():.2%}\")"
+    },
+    "parameters": {
+      "group": "Column name for the treatment group",
+      "outcome": "Column name for the binary outcome",
+      "stratum": "Column name for the stratification variable",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "CUPED",
+    "category": "operationstools",
+    "description": "Apply CUPED adjustment to improve A/B test sensitivity",
+    "prerequisites": ["OperationsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.operationstools import OperationsPipe, CUPED, Execute\n\n# Step 1: Create sample A/B testing data with pre-period metrics\nsample_data = pd.DataFrame({\n    'user_id': range(1, 201),\n    'group': ['A', 'B'] * 100,\n    'post_revenue': [50, 75, 100, 25, 150, 80, 120, 60, 90, 110] * 20,\n    'pre_revenue': [40, 60, 80, 20, 120, 70, 100, 50, 80, 90] * 20,\n    'pre_engagement': [5, 8, 12, 3, 15, 7, 11, 6, 9, 13] * 20\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = OperationsPipe.from_dataframe(sample_data)\n\n# Step 3: Apply CUPED adjustment\nresult = pipeline | CUPED(outcome='post_revenue', covariate='pre_revenue', group='group', output_name='cuped_revenue')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"CUPED adjusted revenue: {metrics['cuped_revenue']}\")\nprint(f\"Group A mean revenue: {sample_data[sample_data['group'] == 'A']['post_revenue'].mean():.2f}\")\nprint(f\"Group B mean revenue: {sample_data[sample_data['group'] == 'B']['post_revenue'].mean():.2f}\")"
+    },
+    "parameters": {
+      "outcome": "Column name for the outcome variable",
+      "covariate": "Column name for the covariate variable",
+      "group": "Column name for the treatment group",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "CUPED",
+    "category": "operationstools",
+    "description": "Use CUPED with multiple covariates for conversion rate analysis",
+    "prerequisites": ["OperationsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.operationstools import OperationsPipe, CUPED, Execute\n\n# Step 1: Create sample conversion data with pre-period metrics\nsample_data = pd.DataFrame({\n    'user_id': range(1, 301),\n    'treatment': ['Control', 'Treatment'] * 150,\n    'converted': [0, 1, 1, 0, 1, 1, 0, 0, 1, 1] * 30,\n    'pre_sessions': [3, 5, 8, 2, 10, 4, 7, 3, 6, 9] * 30,\n    'pre_page_views': [15, 25, 40, 10, 50, 20, 35, 15, 30, 45] * 30\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = OperationsPipe.from_dataframe(sample_data)\n\n# Step 3: Apply CUPED adjustment\nresult = pipeline | CUPED(outcome='converted', covariate='pre_sessions', group='treatment', output_name='cuped_conversion')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"CUPED adjusted conversion: {metrics['cuped_conversion']}\")\nprint(f\"Control group conversion rate: {sample_data[sample_data['treatment'] == 'Control']['converted'].mean():.2%}\")\nprint(f\"Treatment group conversion rate: {sample_data[sample_data['treatment'] == 'Treatment']['converted'].mean():.2%}\")"
+    },
+    "parameters": {
+      "outcome": "Column name for the outcome variable",
+      "covariate": "Column name for the covariate variable",
+      "group": "Column name for the treatment group",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "PrePostChange",
+    "category": "operationstools",
+    "description": "Calculate pre-post change in customer satisfaction scores",
+    "prerequisites": ["OperationsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.operationstools import OperationsPipe, PrePostChange, Execute\n\n# Step 1: Create sample customer satisfaction data\nsample_data = pd.DataFrame({\n    'customer_id': range(1, 101),\n    'pre_score': [3, 4, 2, 5, 3, 4, 2, 5, 3, 4] * 10,\n    'post_score': [4, 5, 3, 5, 4, 5, 3, 5, 4, 5] * 10,\n    'treatment_group': ['Control', 'Treatment'] * 50,\n    'customer_segment': ['Premium', 'Standard', 'Basic'] * 33 + ['Premium']\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = OperationsPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate pre-post change\nresult = pipeline | PrePostChange(pre='pre_score', post='post_score', output_name='satisfaction_change')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Satisfaction score change: {metrics['satisfaction_change']:.2f}\")\nprint(f\"Pre-treatment mean: {sample_data['pre_score'].mean():.2f}\")\nprint(f\"Post-treatment mean: {sample_data['post_score'].mean():.2f}\")"
+    },
+    "parameters": {
+      "pre": "Column name for the pre-treatment value",
+      "post": "Column name for the post-treatment value",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "PrePostChange",
+    "category": "operationstools",
+    "description": "Measure pre-post change in employee productivity metrics",
+    "prerequisites": ["OperationsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.operationstools import OperationsPipe, PrePostChange, Execute\n\n# Step 1: Create sample employee productivity data\nsample_data = pd.DataFrame({\n    'employee_id': range(1, 51),\n    'pre_tasks_completed': [10, 12, 8, 15, 11, 13, 9, 14, 10, 12] * 5,\n    'post_tasks_completed': [12, 15, 10, 18, 13, 16, 11, 17, 12, 15] * 5,\n    'department': ['Sales', 'Marketing', 'Engineering', 'Support', 'HR'] * 10,\n    'training_program': ['A', 'B', 'C'] * 16 + ['A', 'B']\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = OperationsPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate pre-post change\nresult = pipeline | PrePostChange(pre='pre_tasks_completed', post='post_tasks_completed', output_name='productivity_change')\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Productivity change: {metrics['productivity_change']:.2f} tasks\")\nprint(f\"Pre-training mean: {sample_data['pre_tasks_completed'].mean():.2f}\")\nprint(f\"Post-training mean: {sample_data['post_tasks_completed'].mean():.2f}\")"
+    },
+    "parameters": {
+      "pre": "Column name for the pre-treatment value",
+      "post": "Column name for the post-treatment value",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "FilterConditions",
+    "category": "operationstools",
+    "description": "Filter data based on multiple conditions for analysis",
+    "prerequisites": ["OperationsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.operationstools import OperationsPipe, FilterConditions, Execute\n\n# Step 1: Create sample customer data\nsample_data = pd.DataFrame({\n    'customer_id': range(1, 201),\n    'age': [25, 35, 45, 55, 65, 30, 40, 50, 60, 70] * 20,\n    'income': [50000, 75000, 100000, 125000, 150000, 60000, 80000, 110000, 130000, 160000] * 20,\n    'purchase_amount': [100, 250, 500, 750, 1000, 150, 300, 600, 800, 1200] * 20,\n    'region': ['North', 'South', 'East', 'West'] * 50\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = OperationsPipe.from_dataframe(sample_data)\n\n# Step 3: Apply filter conditions\nresult = pipeline | FilterConditions(\n    conditions=[\n        ('age', '>=', 30),\n        ('income', '>', 60000),\n        ('purchase_amount', '>=', 200)\n    ],\n    output_name='filtered_data'\n)\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Filtered data: {metrics['filtered_data']}\")\nprint(f\"Original data size: {len(sample_data)}\")\nprint(f\"Filtered data size: {len(metrics['filtered_data'])}\")"
+    },
+    "parameters": {
+      "conditions": "List of tuples (column, operator, value) for filtering",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "FilterConditions",
+    "category": "operationstools",
+    "description": "Filter sales data for high-value transactions",
+    "prerequisites": ["OperationsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.operationstools import OperationsPipe, FilterConditions, Execute\n\n# Step 1: Create sample sales transaction data\nsample_data = pd.DataFrame({\n    'transaction_id': range(1, 301),\n    'amount': [50, 100, 250, 500, 1000, 150, 300, 600, 800, 1200] * 30,\n    'quantity': [1, 2, 5, 10, 20, 3, 6, 12, 15, 25] * 30,\n    'customer_tier': ['Bronze', 'Silver', 'Gold', 'Platinum'] * 75,\n    'region': ['North', 'South', 'East', 'West'] * 75\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = OperationsPipe.from_dataframe(sample_data)\n\n# Step 3: Apply filter conditions for high-value transactions\nresult = pipeline | FilterConditions(\n    conditions=[\n        ('amount', '>=', 500),\n        ('quantity', '>', 5),\n        ('customer_tier', 'in', ['Gold', 'Platinum'])\n    ],\n    output_name='high_value_transactions'\n)\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"High-value transactions: {metrics['high_value_transactions']}\")\nprint(f\"Original transactions: {len(sample_data)}\")\nprint(f\"High-value count: {len(metrics['high_value_transactions'])}\")"
+    },
+    "parameters": {
+      "conditions": "List of tuples (column, operator, value) for filtering",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "PowerAnalysis",
+    "category": "operationstools",
+    "description": "Perform power analysis for A/B test design",
+    "prerequisites": ["OperationsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.operationstools import OperationsPipe, PowerAnalysis, Execute\n\n# Step 1: Create sample A/B testing data\nsample_data = pd.DataFrame({\n    'group': ['A', 'B'] * 100,\n    'converted': [0, 1, 1, 0, 1, 1, 0, 0, 1, 1] * 20,\n    'user_id': range(1, 201)\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = OperationsPipe.from_dataframe(sample_data)\n\n# Step 3: Perform power analysis\nresult = pipeline | PowerAnalysis(\n    group='group',\n    outcome='converted',\n    alpha=0.05,\n    power=0.8,\n    output_name='power_analysis'\n)\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Power analysis result: {metrics['power_analysis']}\")\nprint(f\"Group A conversion rate: {sample_data[sample_data['group'] == 'A']['converted'].mean():.2%}\")\nprint(f\"Group B conversion rate: {sample_data[sample_data['group'] == 'B']['converted'].mean():.2%}\")"
+    },
+    "parameters": {
+      "group": "Column name for the treatment group",
+      "outcome": "Column name for the binary outcome",
+      "alpha": "Significance level (default: 0.05)",
+      "power": "Desired power (default: 0.8)",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "PowerAnalysis",
+    "category": "operationstools",
+    "description": "Calculate power analysis for revenue impact study",
+    "prerequisites": ["OperationsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.operationstools import OperationsPipe, PowerAnalysis, Execute\n\n# Step 1: Create sample revenue data\nsample_data = pd.DataFrame({\n    'treatment': ['Control', 'Treatment'] * 150,\n    'revenue': [100, 150, 200, 120, 180, 250, 110, 160, 190, 220] * 30,\n    'customer_id': range(1, 301)\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = OperationsPipe.from_dataframe(sample_data)\n\n# Step 3: Perform power analysis\nresult = pipeline | PowerAnalysis(\n    group='treatment',\n    outcome='revenue',\n    alpha=0.01,\n    power=0.9,\n    output_name='revenue_power_analysis'\n)\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Revenue power analysis: {metrics['revenue_power_analysis']}\")\nprint(f\"Control group mean revenue: ${sample_data[sample_data['treatment'] == 'Control']['revenue'].mean():.2f}\")\nprint(f\"Treatment group mean revenue: ${sample_data[sample_data['treatment'] == 'Treatment']['revenue'].mean():.2f}\")"
+    },
+    "parameters": {
+      "group": "Column name for the treatment group",
+      "outcome": "Column name for the binary outcome",
+      "alpha": "Significance level (default: 0.05)",
+      "power": "Desired power (default: 0.8)",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "StratifiedSummary",
+    "category": "operationstools",
+    "description": "Generate stratified summary statistics by customer segment",
+    "prerequisites": ["OperationsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.operationstools import OperationsPipe, StratifiedSummary, Execute\n\n# Step 1: Create sample customer data\nsample_data = pd.DataFrame({\n    'customer_id': range(1, 201),\n    'segment': ['Premium', 'Standard', 'Basic'] * 66 + ['Premium', 'Standard'],\n    'revenue': [500, 300, 150, 600, 350, 180, 550, 320, 160, 580] * 20,\n    'satisfaction': [4.5, 3.8, 3.2, 4.7, 3.9, 3.1, 4.6, 3.7, 3.3, 4.8] * 20,\n    'region': ['North', 'South', 'East', 'West'] * 50\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = OperationsPipe.from_dataframe(sample_data)\n\n# Step 3: Generate stratified summary\nresult = pipeline | StratifiedSummary(\n    stratify_by='segment',\n    metrics=['revenue', 'satisfaction'],\n    output_name='stratified_summary'\n)\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Stratified summary: {metrics['stratified_summary']}\")\nprint(f\"Total customers: {len(sample_data)}\")\nprint(f\"Segments: {sample_data['segment'].unique()}\")"
+    },
+    "parameters": {
+      "stratify_by": "Column name to stratify by",
+      "metrics": "List of column names to summarize",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "StratifiedSummary",
+    "category": "operationstools",
+    "description": "Create stratified summary by product category and region",
+    "prerequisites": ["OperationsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.operationstools import OperationsPipe, StratifiedSummary, Execute\n\n# Step 1: Create sample product sales data\nsample_data = pd.DataFrame({\n    'product_id': range(1, 301),\n    'category': ['Electronics', 'Clothing', 'Books', 'Home', 'Sports'] * 60,\n    'region': ['North', 'South', 'East', 'West'] * 75,\n    'sales': [100, 200, 50, 300, 150, 120, 250, 80, 350, 180] * 30,\n    'profit_margin': [0.2, 0.3, 0.1, 0.4, 0.25, 0.15, 0.35, 0.05, 0.45, 0.3] * 30\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = OperationsPipe.from_dataframe(sample_data)\n\n# Step 3: Generate stratified summary\nresult = pipeline | StratifiedSummary(\n    stratify_by='category',\n    metrics=['sales', 'profit_margin'],\n    output_name='category_summary'\n)\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Category summary: {metrics['category_summary']}\")\nprint(f\"Total products: {len(sample_data)}\")\nprint(f\"Categories: {sample_data['category'].unique()}\")"
+    },
+    "parameters": {
+      "stratify_by": "Column name to stratify by",
+      "metrics": "List of column names to summarize",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "BootstrapCI",
+    "category": "operationstools",
+    "description": "Calculate bootstrap confidence interval for mean revenue",
+    "prerequisites": ["OperationsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.operationstools import OperationsPipe, BootstrapCI, Execute\n\n# Step 1: Create sample revenue data\nsample_data = pd.DataFrame({\n    'customer_id': range(1, 101),\n    'revenue': [100, 150, 200, 120, 180, 250, 110, 160, 190, 220] * 10,\n    'segment': ['Premium', 'Standard', 'Basic'] * 33 + ['Premium']\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = OperationsPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate bootstrap confidence interval\nresult = pipeline | BootstrapCI(\n    variable='revenue',\n    n_bootstrap=1000,\n    confidence_level=0.95,\n    output_name='revenue_ci'\n)\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Revenue confidence interval: {metrics['revenue_ci']}\")\nprint(f\"Mean revenue: ${sample_data['revenue'].mean():.2f}\")\nprint(f\"Sample size: {len(sample_data)}\")"
+    },
+    "parameters": {
+      "variable": "Column name to calculate CI for",
+      "n_bootstrap": "Number of bootstrap samples (default: 1000)",
+      "confidence_level": "Confidence level (default: 0.95)",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "BootstrapCI",
+    "category": "operationstools",
+    "description": "Estimate bootstrap confidence interval for conversion rate",
+    "prerequisites": ["OperationsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.operationstools import OperationsPipe, BootstrapCI, Execute\n\n# Step 1: Create sample conversion data\nsample_data = pd.DataFrame({\n    'user_id': range(1, 201),\n    'converted': [0, 1, 1, 0, 1, 1, 0, 0, 1, 1] * 20,\n    'campaign': ['Email', 'Social', 'Search', 'Display'] * 50\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = OperationsPipe.from_dataframe(sample_data)\n\n# Step 3: Calculate bootstrap confidence interval\nresult = pipeline | BootstrapCI(\n    variable='converted',\n    n_bootstrap=2000,\n    confidence_level=0.99,\n    output_name='conversion_ci'\n)\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Conversion rate CI: {metrics['conversion_ci']}\")\nprint(f\"Conversion rate: {sample_data['converted'].mean():.2%}\")\nprint(f\"Sample size: {len(sample_data)}\")"
+    },
+    "parameters": {
+      "variable": "Column name to calculate CI for",
+      "n_bootstrap": "Number of bootstrap samples (default: 1000)",
+      "confidence_level": "Confidence level (default: 0.95)",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "MultiComparisonAdjustment",
+    "category": "operationstools",
+    "description": "Apply multiple comparison adjustment to A/B test results",
+    "prerequisites": ["OperationsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.operationstools import OperationsPipe, MultiComparisonAdjustment, Execute\n\n# Step 1: Create sample A/B testing data\nsample_data = pd.DataFrame({\n    'group': ['A', 'B', 'C', 'D'] * 50,\n    'converted': [0, 1, 1, 0, 1, 1, 0, 0, 1, 1] * 20,\n    'user_id': range(1, 201)\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = OperationsPipe.from_dataframe(sample_data)\n\n# Step 3: Apply multiple comparison adjustment\nresult = pipeline | MultiComparisonAdjustment(\n    group='group',\n    outcome='converted',\n    method='bonferroni',\n    output_name='adjusted_pvalues'\n)\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"Adjusted p-values: {metrics['adjusted_pvalues']}\")\nprint(f\"Groups: {sample_data['group'].unique()}\")\nprint(f\"Total users: {len(sample_data)}\")"
+    },
+    "parameters": {
+      "group": "Column name for the treatment group",
+      "outcome": "Column name for the binary outcome",
+      "method": "Adjustment method (bonferroni, holm, fdr_bh)",
+      "output_name": "Name for the output metric (optional)"
+    }
+  },
+  {
+    "function": "MultiComparisonAdjustment",
+    "category": "operationstools",
+    "description": "Apply FDR adjustment to multiple metric comparisons",
+    "prerequisites": ["OperationsPipe.from_dataframe()"],
+    "example": {
+      "code": "import pandas as pd\nfrom insightsagents.app.tools.mltools.operationstools import OperationsPipe, MultiComparisonAdjustment, Execute\n\n# Step 1: Create sample multi-metric data\nsample_data = pd.DataFrame({\n    'variant': ['Control', 'Treatment_A', 'Treatment_B', 'Treatment_C'] * 100,\n    'conversion': [0, 1, 1, 0, 1, 1, 0, 0, 1, 1] * 40,\n    'revenue': [100, 150, 200, 120, 180, 250, 110, 160, 190, 220] * 40,\n    'engagement': [5, 8, 12, 6, 10, 15, 7, 9, 13, 11] * 40\n})\n\n# Step 2: Create pipeline from dataframe\npipeline = OperationsPipe.from_dataframe(sample_data)\n\n# Step 3: Apply FDR adjustment\nresult = pipeline | MultiComparisonAdjustment(\n    group='variant',\n    outcome='conversion',\n    method='fdr_bh',\n    output_name='fdr_adjusted_pvalues'\n)\n\n# Step 4: Execute to get results\nmetrics = result | Execute()\nprint(f\"FDR adjusted p-values: {metrics['fdr_adjusted_pvalues']}\")\nprint(f\"Variants: {sample_data['variant'].unique()}\")\nprint(f\"Total observations: {len(sample_data)}\")"
+    },
+    "parameters": {
+      "group": "Column name for the treatment group",
+      "outcome": "Column name for the binary outcome",
+      "method": "Adjustment method (bonferroni, holm, fdr_bh)",
+      "output_name": "Name for the output metric (optional)"
+    }
+  }
+]

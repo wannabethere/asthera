@@ -1,0 +1,703 @@
+{
+    "metadata": {
+        "updated_at": "2024-01-16T12:00:00Z",
+        "llm_generated": true,
+        "total_functions": 18,
+        "categories": ["data_selection", "column_operations", "data_manipulation"],
+        "complexity_levels": ["simple", "intermediate", "advanced"],
+        "pipe_name": "SelectPipe",
+        "module": "select_pipe",
+        "description": "Functions for column selection, data filtering, and DataFrame manipulation operations",
+        "function_list": [
+            "from_engine", "to_df", "get_selected_columns", "get_selection_summary",
+            "get_summary", "Select", "Deselect", "Rename", "Reorder", "AddColumns",
+            "select_numeric", "select_strings", "select_dates", "select_by_pattern",
+            "select_by_prefix", "select_by_suffix", "select_containing", "preview_selection"
+        ]
+    },
+    "functions": {
+        "from_engine": {
+            "category": "data_selection",
+            "subcategory": "initialization",
+            "pipe_name": "SelectPipe",
+            "description": "Create a SelectPipe from an engine and table name",
+            "complexity": "simple",
+            "use_cases": [
+                "database integration",
+                "data source connection",
+                "pipeline initialization",
+                "engine-based operations"
+            ],
+            "data_requirements": [
+                "Valid engine instance",
+                "Existing table name",
+                "Database connection"
+            ],
+            "tags": ["initialization", "database", "engine", "connection"],
+            "keywords": ["initialization", "database", "engine", "connection", "table"],
+            "output_description": "A new SelectPipe instance configured with the engine",
+            "confidence_score": 0.95,
+            "examples": [
+                "from_engine(engine, 'users_table')",
+                "from_engine(my_engine, 'sales_data', **kwargs)"
+            ],
+            "usage_patterns": [
+                "from_engine(engine, table_name)",
+                "from_engine(engine, table_name, **kwargs)"
+            ],
+            "dependencies": ["pandas", "sqlalchemy"],
+            "related_functions": ["to_df", "get_selection_summary"],
+            "required_params": [
+                {"name": "engine", "type": "Engine", "description": "The engine instance to use for data operations"},
+                {"name": "table_name", "type": "str", "description": "Name of the table to select from"}
+            ],
+            "optional_params": [
+                {"name": "**kwargs", "type": "dict", "description": "Additional arguments passed to the constructor"}
+            ],
+            "outputs": {
+                "type": "SelectPipe",
+                "description": "A new SelectPipe instance configured with the engine"
+            }
+        },
+        "to_df": {
+            "category": "data_selection",
+            "subcategory": "data_export",
+            "pipe_name": "SelectPipe",
+            "description": "Convert the selection to a DataFrame",
+            "complexity": "simple",
+            "use_cases": [
+                "data export",
+                "pipeline completion",
+                "data retrieval",
+                "result generation"
+            ],
+            "data_requirements": [
+                "Valid selection configuration",
+                "Accessible data source"
+            ],
+            "tags": ["export", "dataframe", "conversion", "output"],
+            "keywords": ["export", "dataframe", "conversion", "output", "pandas"],
+            "output_description": "DataFrame with selected columns",
+            "confidence_score": 0.95,
+            "examples": [
+                "to_df()",
+                "to_df(fetch_data=False)"
+            ],
+            "usage_patterns": [
+                "to_df()",
+                "to_df(fetch_data=True)"
+            ],
+            "dependencies": ["pandas"],
+            "related_functions": ["from_engine", "get_selected_columns"],
+            "required_params": [],
+            "optional_params": [
+                {"name": "fetch_data", "type": "bool", "description": "Whether to fetch data if using an engine (default: True)"}
+            ],
+            "outputs": {
+                "type": "pd.DataFrame",
+                "description": "DataFrame with selected columns"
+            }
+        },
+        "get_selected_columns": {
+            "category": "data_selection",
+            "subcategory": "information",
+            "pipe_name": "SelectPipe",
+            "description": "Get the list of currently selected columns",
+            "complexity": "simple",
+            "use_cases": [
+                "selection inspection",
+                "debugging",
+                "pipeline monitoring",
+                "column verification"
+            ],
+            "data_requirements": [
+                "Active selection state"
+            ],
+            "tags": ["inspection", "debugging", "monitoring", "verification"],
+            "keywords": ["inspection", "debugging", "monitoring", "verification", "columns"],
+            "output_description": "List of currently selected column names",
+            "confidence_score": 0.95,
+            "examples": [
+                "get_selected_columns()"
+            ],
+            "usage_patterns": [
+                "get_selected_columns()"
+            ],
+            "dependencies": ["pandas"],
+            "related_functions": ["get_selection_summary", "to_df"],
+            "required_params": [],
+            "optional_params": [],
+            "outputs": {
+                "type": "List[str]",
+                "description": "List of currently selected column names"
+            }
+        },
+        "get_selection_summary": {
+            "category": "data_selection",
+            "subcategory": "information",
+            "pipe_name": "SelectPipe",
+            "description": "Get a summary of the current selection",
+            "complexity": "simple",
+            "use_cases": [
+                "selection overview",
+                "pipeline status",
+                "debugging information",
+                "selection validation"
+            ],
+            "data_requirements": [
+                "Active selection state"
+            ],
+            "tags": ["summary", "overview", "status", "validation"],
+            "keywords": ["summary", "overview", "status", "validation", "information"],
+            "output_description": "Summary of the current selection state",
+            "confidence_score": 0.95,
+            "examples": [
+                "get_selection_summary()"
+            ],
+            "usage_patterns": [
+                "get_selection_summary()"
+            ],
+            "dependencies": ["pandas"],
+            "related_functions": ["get_selected_columns", "get_summary"],
+            "required_params": [],
+            "optional_params": [],
+            "outputs": {
+                "type": "Dict[str, Any]",
+                "description": "Summary containing total available columns, selected columns, selection history, and data source information"
+            }
+        },
+        "get_summary": {
+            "category": "data_selection",
+            "subcategory": "information",
+            "pipe_name": "SelectPipe",
+            "description": "Get a summary of the pipe's current state and operations",
+            "complexity": "simple",
+            "use_cases": [
+                "pipe status",
+                "operation overview",
+                "debugging",
+                "pipeline inspection"
+            ],
+            "data_requirements": [
+                "Active pipe state"
+            ],
+            "tags": ["summary", "status", "overview", "inspection"],
+            "keywords": ["summary", "status", "overview", "inspection", "state"],
+            "output_description": "Summary of the pipe's current state",
+            "confidence_score": 0.95,
+            "examples": [
+                "get_summary()",
+                "get_summary(**kwargs)"
+            ],
+            "usage_patterns": [
+                "get_summary()",
+                "get_summary(**kwargs)"
+            ],
+            "dependencies": ["pandas"],
+            "related_functions": ["get_selection_summary", "get_selected_columns"],
+            "required_params": [],
+            "optional_params": [
+                {"name": "**kwargs", "type": "dict", "description": "Additional arguments (not used in this implementation)"}
+            ],
+            "outputs": {
+                "type": "Dict[str, Any]",
+                "description": "Summary of the pipe's current state"
+            }
+        },
+        "Select": {
+            "category": "data_selection",
+            "subcategory": "column_selection",
+            "pipe_name": "SelectPipe",
+            "description": "Select columns using one or more selectors",
+            "complexity": "intermediate",
+            "use_cases": [
+                "column selection",
+                "data filtering",
+                "feature selection",
+                "pipeline operations"
+            ],
+            "data_requirements": [
+                "DataFrame with columns to select",
+                "Valid selector specifications"
+            ],
+            "tags": ["selection", "filtering", "columns", "selectors"],
+            "keywords": ["selection", "filtering", "columns", "selectors", "choose"],
+            "output_description": "Function that applies selection to a SelectPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "Select('column1', 'column2')",
+                "Select(['col1', 'col2'], contains('name'))"
+            ],
+            "usage_patterns": [
+                "Select(*selectors)",
+                "Select('col1', 'col2', contains('pattern'))"
+            ],
+            "dependencies": ["pandas"],
+            "related_functions": ["Deselect", "select_numeric", "select_strings"],
+            "required_params": [
+                {"name": "*selectors", "type": "SelectionType", "description": "One or more selectors to apply (string, list of strings, callable, or Selector objects)"}
+            ],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that applies selection to a SelectPipe"
+            }
+        },
+        "Deselect": {
+            "category": "data_selection",
+            "subcategory": "column_selection",
+            "pipe_name": "SelectPipe",
+            "description": "Remove columns using one or more selectors",
+            "complexity": "intermediate",
+            "use_cases": [
+                "column removal",
+                "data filtering",
+                "exclusion operations",
+                "pipeline cleanup"
+            ],
+            "data_requirements": [
+                "DataFrame with columns to remove",
+                "Valid selector specifications"
+            ],
+            "tags": ["deselection", "removal", "exclusion", "filtering"],
+            "keywords": ["deselection", "removal", "exclusion", "filtering", "remove"],
+            "output_description": "Function that removes selected columns from a SelectPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "Deselect('unwanted_col')",
+                "Deselect(['col1', 'col2'], contains('temp'))"
+            ],
+            "usage_patterns": [
+                "Deselect(*selectors)",
+                "Deselect('col1', 'col2', contains('pattern'))"
+            ],
+            "dependencies": ["pandas"],
+            "related_functions": ["Select", "select_numeric", "select_strings"],
+            "required_params": [
+                {"name": "*selectors", "type": "SelectionType", "description": "One or more selectors to apply for removal"}
+            ],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that removes selected columns from a SelectPipe"
+            }
+        },
+        "Rename": {
+            "category": "data_selection",
+            "subcategory": "column_operations",
+            "pipe_name": "SelectPipe",
+            "description": "Rename columns",
+            "complexity": "simple",
+            "use_cases": [
+                "column renaming",
+                "data standardization",
+                "pipeline operations",
+                "data cleaning"
+            ],
+            "data_requirements": [
+                "DataFrame with columns to rename",
+                "Valid column mapping"
+            ],
+            "tags": ["rename", "standardization", "cleaning", "mapping"],
+            "keywords": ["rename", "standardization", "cleaning", "mapping", "columns"],
+            "output_description": "Function that renames columns in a SelectPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "Rename({'old_name': 'new_name'})",
+                "Rename({'col1': 'first_column', 'col2': 'second_column'})"
+            ],
+            "usage_patterns": [
+                "Rename(column_mapping)",
+                "Rename({'old': 'new', 'another': 'renamed'})"
+            ],
+            "dependencies": ["pandas"],
+            "related_functions": ["Reorder", "AddColumns"],
+            "required_params": [
+                {"name": "column_mapping", "type": "Dict[str, str]", "description": "Mapping of old column names to new column names"}
+            ],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that renames columns in a SelectPipe"
+            }
+        },
+        "Reorder": {
+            "category": "data_selection",
+            "subcategory": "column_operations",
+            "pipe_name": "SelectPipe",
+            "description": "Reorder columns",
+            "complexity": "simple",
+            "use_cases": [
+                "column reordering",
+                "data organization",
+                "pipeline operations",
+                "presentation formatting"
+            ],
+            "data_requirements": [
+                "DataFrame with columns to reorder",
+                "Valid column order specification"
+            ],
+            "tags": ["reorder", "organization", "formatting", "arrangement"],
+            "keywords": ["reorder", "organization", "formatting", "arrangement", "columns"],
+            "output_description": "Function that reorders columns in a SelectPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "Reorder('col1', 'col2', 'col3')",
+                "Reorder('id', 'name', 'date', 'value')"
+            ],
+            "usage_patterns": [
+                "Reorder(*column_order)",
+                "Reorder('first', 'second', 'third')"
+            ],
+            "dependencies": ["pandas"],
+            "related_functions": ["Rename", "AddColumns"],
+            "required_params": [
+                {"name": "*column_order", "type": "str", "description": "Column names in desired order"}
+            ],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that reorders columns in a SelectPipe"
+            }
+        },
+        "AddColumns": {
+            "category": "data_selection",
+            "subcategory": "column_operations",
+            "pipe_name": "SelectPipe",
+            "description": "Add new computed columns",
+            "complexity": "intermediate",
+            "use_cases": [
+                "column creation",
+                "computed fields",
+                "data transformation",
+                "feature engineering"
+            ],
+            "data_requirements": [
+                "DataFrame to add columns to",
+                "Valid column definitions"
+            ],
+            "tags": ["add_columns", "computation", "transformation", "engineering"],
+            "keywords": ["add_columns", "computation", "transformation", "engineering", "new"],
+            "output_description": "Function that adds columns to a SelectPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "AddColumns(new_col=100, computed=lambda df: df['col1'] * 2)",
+                "AddColumns(score=lambda df: df['a'] + df['b'])"
+            ],
+            "usage_patterns": [
+                "AddColumns(**new_columns)",
+                "AddColumns(col1=value, col2=function)"
+            ],
+            "dependencies": ["pandas"],
+            "related_functions": ["Rename", "Reorder"],
+            "required_params": [
+                {"name": "**new_columns", "type": "Any", "description": "Column_name=value pairs for new columns"}
+            ],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that adds columns to a SelectPipe"
+            }
+        },
+        "select_numeric": {
+            "category": "data_selection",
+            "subcategory": "type_selection",
+            "pipe_name": "SelectPipe",
+            "description": "Select all numeric columns",
+            "complexity": "simple",
+            "use_cases": [
+                "numeric data selection",
+                "statistical analysis preparation",
+                "type-based filtering",
+                "data preprocessing"
+            ],
+            "data_requirements": [
+                "DataFrame with numeric columns"
+            ],
+            "tags": ["numeric", "type_selection", "statistical", "preprocessing"],
+            "keywords": ["numeric", "type_selection", "statistical", "preprocessing", "numbers"],
+            "output_description": "Function that selects all numeric columns",
+            "confidence_score": 0.95,
+            "examples": [
+                "select_numeric()"
+            ],
+            "usage_patterns": [
+                "select_numeric()"
+            ],
+            "dependencies": ["pandas"],
+            "related_functions": ["select_strings", "select_dates", "Select"],
+            "required_params": [],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that selects all numeric columns (integer, float, complex)"
+            }
+        },
+        "select_strings": {
+            "category": "data_selection",
+            "subcategory": "type_selection",
+            "pipe_name": "SelectPipe",
+            "description": "Select all string columns",
+            "complexity": "simple",
+            "use_cases": [
+                "text data selection",
+                "categorical analysis preparation",
+                "type-based filtering",
+                "text processing"
+            ],
+            "data_requirements": [
+                "DataFrame with string columns"
+            ],
+            "tags": ["string", "text", "categorical", "type_selection"],
+            "keywords": ["string", "text", "categorical", "type_selection", "text"],
+            "output_description": "Function that selects all string columns",
+            "confidence_score": 0.95,
+            "examples": [
+                "select_strings()"
+            ],
+            "usage_patterns": [
+                "select_strings()"
+            ],
+            "dependencies": ["pandas"],
+            "related_functions": ["select_numeric", "select_dates", "Select"],
+            "required_params": [],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that selects all string/text columns"
+            }
+        },
+        "select_dates": {
+            "category": "data_selection",
+            "subcategory": "type_selection",
+            "pipe_name": "SelectPipe",
+            "description": "Select all date/datetime columns",
+            "complexity": "simple",
+            "use_cases": [
+                "temporal data selection",
+                "time series analysis preparation",
+                "type-based filtering",
+                "date processing"
+            ],
+            "data_requirements": [
+                "DataFrame with date/datetime columns"
+            ],
+            "tags": ["date", "datetime", "temporal", "time_series"],
+            "keywords": ["date", "datetime", "temporal", "time_series", "time"],
+            "output_description": "Function that selects all date/datetime columns",
+            "confidence_score": 0.95,
+            "examples": [
+                "select_dates()"
+            ],
+            "usage_patterns": [
+                "select_dates()"
+            ],
+            "dependencies": ["pandas"],
+            "related_functions": ["select_numeric", "select_strings", "Select"],
+            "required_params": [],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that selects all temporal columns (datetime, date, time)"
+            }
+        },
+        "select_by_pattern": {
+            "category": "data_selection",
+            "subcategory": "pattern_selection",
+            "pipe_name": "SelectPipe",
+            "description": "Select columns matching a regex pattern",
+            "complexity": "intermediate",
+            "use_cases": [
+                "pattern-based selection",
+                "regex filtering",
+                "advanced column selection",
+                "flexible filtering"
+            ],
+            "data_requirements": [
+                "DataFrame with columns to match",
+                "Valid regex pattern"
+            ],
+            "tags": ["pattern", "regex", "advanced", "flexible"],
+            "keywords": ["pattern", "regex", "advanced", "flexible", "matching"],
+            "output_description": "Function that selects columns matching the pattern",
+            "confidence_score": 0.90,
+            "examples": [
+                "select_by_pattern(r'^user_')",
+                "select_by_pattern(r'.*_score$')"
+            ],
+            "usage_patterns": [
+                "select_by_pattern(pattern)",
+                "select_by_pattern(r'regex_pattern')"
+            ],
+            "dependencies": ["pandas", "re"],
+            "related_functions": ["select_by_prefix", "select_by_suffix", "select_containing"],
+            "required_params": [
+                {"name": "pattern", "type": "str", "description": "Regular expression pattern to match column names"}
+            ],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that selects columns matching the pattern"
+            }
+        },
+        "select_by_prefix": {
+            "category": "data_selection",
+            "subcategory": "pattern_selection",
+            "pipe_name": "SelectPipe",
+            "description": "Select columns starting with a prefix",
+            "complexity": "simple",
+            "use_cases": [
+                "prefix-based selection",
+                "grouped column selection",
+                "naming convention filtering",
+                "systematic selection"
+            ],
+            "data_requirements": [
+                "DataFrame with columns to match",
+                "Valid prefix string"
+            ],
+            "tags": ["prefix", "naming", "grouped", "systematic"],
+            "keywords": ["prefix", "naming", "grouped", "systematic", "startswith"],
+            "output_description": "Function that selects columns starting with the prefix",
+            "confidence_score": 0.95,
+            "examples": [
+                "select_by_prefix('user_')",
+                "select_by_prefix('temp_')"
+            ],
+            "usage_patterns": [
+                "select_by_prefix(prefix)",
+                "select_by_prefix('prefix_string')"
+            ],
+            "dependencies": ["pandas"],
+            "related_functions": ["select_by_suffix", "select_containing", "select_by_pattern"],
+            "required_params": [
+                {"name": "prefix", "type": "str", "description": "Prefix to match at the start of column names"}
+            ],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that selects columns starting with the prefix"
+            }
+        },
+        "select_by_suffix": {
+            "category": "data_selection",
+            "subcategory": "pattern_selection",
+            "pipe_name": "SelectPipe",
+            "description": "Select columns ending with a suffix",
+            "complexity": "simple",
+            "use_cases": [
+                "suffix-based selection",
+                "type-based filtering",
+                "naming convention filtering",
+                "systematic selection"
+            ],
+            "data_requirements": [
+                "DataFrame with columns to match",
+                "Valid suffix string"
+            ],
+            "tags": ["suffix", "naming", "type_based", "systematic"],
+            "keywords": ["suffix", "naming", "type_based", "systematic", "endswith"],
+            "output_description": "Function that selects columns ending with the suffix",
+            "confidence_score": 0.95,
+            "examples": [
+                "select_by_suffix('_id')",
+                "select_by_suffix('_score')"
+            ],
+            "usage_patterns": [
+                "select_by_suffix(suffix)",
+                "select_by_suffix('_suffix')"
+            ],
+            "dependencies": ["pandas"],
+            "related_functions": ["select_by_prefix", "select_containing", "select_by_pattern"],
+            "required_params": [
+                {"name": "suffix", "type": "str", "description": "Suffix to match at the end of column names"}
+            ],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that selects columns ending with the suffix"
+            }
+        },
+        "select_containing": {
+            "category": "data_selection",
+            "subcategory": "pattern_selection",
+            "pipe_name": "SelectPipe",
+            "description": "Select columns containing a substring",
+            "complexity": "simple",
+            "use_cases": [
+                "substring-based selection",
+                "keyword filtering",
+                "flexible column selection",
+                "content-based filtering"
+            ],
+            "data_requirements": [
+                "DataFrame with columns to match",
+                "Valid substring"
+            ],
+            "tags": ["substring", "keyword", "flexible", "content_based"],
+            "keywords": ["substring", "keyword", "flexible", "content_based", "contains"],
+            "output_description": "Function that selects columns containing the substring",
+            "confidence_score": 0.95,
+            "examples": [
+                "select_containing('name')",
+                "select_containing('score')"
+            ],
+            "usage_patterns": [
+                "select_containing(substring)",
+                "select_containing('keyword')"
+            ],
+            "dependencies": ["pandas"],
+            "related_functions": ["select_by_prefix", "select_by_suffix", "select_by_pattern"],
+            "required_params": [
+                {"name": "substring", "type": "str", "description": "Substring to search for in column names"}
+            ],
+            "optional_params": [],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that selects columns containing the substring"
+            }
+        },
+        "preview_selection": {
+            "category": "data_selection",
+            "subcategory": "preview",
+            "pipe_name": "SelectPipe",
+            "description": "Preview what columns would be selected without creating a pipe",
+            "complexity": "intermediate",
+            "use_cases": [
+                "selection preview",
+                "testing selectors",
+                "validation",
+                "debugging"
+            ],
+            "data_requirements": [
+                "DataFrame to preview on",
+                "Valid selector specifications"
+            ],
+            "tags": ["preview", "testing", "validation", "debugging"],
+            "keywords": ["preview", "testing", "validation", "debugging", "dry_run"],
+            "output_description": "Preview information about what would be selected",
+            "confidence_score": 0.90,
+            "examples": [
+                "preview_selection(df, 'col1', 'col2')",
+                "preview_selection(df, contains('name'), select_numeric())"
+            ],
+            "usage_patterns": [
+                "preview_selection(df, *selectors)",
+                "preview_selection(df, 'col1', contains('pattern'))"
+            ],
+            "dependencies": ["pandas"],
+            "related_functions": ["Select", "get_selection_summary"],
+            "required_params": [
+                {"name": "df", "type": "pd.DataFrame", "description": "DataFrame to preview selection on"},
+                {"name": "*selectors", "type": "SelectionType", "description": "Selectors to apply"}
+            ],
+            "optional_params": [
+                {"name": "metadata", "type": "SelectMetadata", "description": "Metadata for selection (optional)"}
+            ],
+            "outputs": {
+                "type": "Dict[str, Any]",
+                "description": "Preview information including total columns, selected columns, unselected columns, and selectors applied"
+            }
+        }
+    }
+}

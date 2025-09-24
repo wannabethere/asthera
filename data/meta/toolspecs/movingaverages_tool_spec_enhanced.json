@@ -1,0 +1,830 @@
+{
+    "metadata": {
+        "updated_at": "2024-01-16T12:00:00Z",
+        "llm_generated": true,
+        "total_functions": 17,
+        "categories": ["moving_averages", "time_series"],
+        "complexity_levels": ["simple", "intermediate", "advanced"],
+        "pipe_name": "MovingAggrPipe",
+        "module": "movingaverages",
+        "description": "Functions for calculating moving averages, rolling statistics, and time series aggregations",
+        "function_list": [
+            "moving_average", "moving_variance", "moving_sum", "moving_quantile", 
+            "moving_correlation", "moving_zscore", "moving_apply_by_group", "moving_ratio",
+            "detect_turning_points", "moving_regression", "moving_min_max", "moving_count",
+            "moving_aggregate", "moving_percentile_rank", "time_weighted_average",
+            "moving_cumulative", "expanding_window"
+        ]
+    },
+    "functions": {
+        "moving_average": {
+            "category": "moving_averages",
+            "subcategory": "basic_moving_metrics",
+            "pipe_name": "MovingAggrPipe",
+            "description": "Calculate moving averages for specified columns",
+            "complexity": "simple",
+            "use_cases": [
+                "trend analysis",
+                "smoothing time series data",
+                "noise reduction",
+                "pattern identification"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical columns",
+                "Ordered data (typically by time)"
+            ],
+            "tags": ["moving_average", "smoothing", "trend", "time_series"],
+            "keywords": ["moving_average", "smoothing", "trend", "time_series", "rolling"],
+            "output_description": "Function that calculates moving averages in a MovingAggrPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "moving_average('sales', window=7)",
+                "moving_average(['revenue', 'profit'], window=30, method='exponential')"
+            ],
+            "usage_patterns": [
+                "moving_average(columns, window=7)",
+                "moving_average(columns, window=7, method='exponential')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["moving_variance", "moving_sum", "time_weighted_average"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate moving averages for"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 7)"},
+                {"name": "method", "type": "str", "description": "Moving average method: 'simple', 'weighted', 'exponential' (default: 'simple')"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_ma')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving averages in a MovingAggrPipe"
+            }
+        },
+        "moving_variance": {
+            "category": "moving_averages",
+            "subcategory": "statistical_moving_metrics",
+            "pipe_name": "MovingAggrPipe",
+            "description": "Calculate moving variance for specified columns",
+            "complexity": "intermediate",
+            "use_cases": [
+                "volatility analysis",
+                "risk assessment",
+                "data variability tracking",
+                "statistical analysis"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical columns",
+                "Sufficient data points for variance calculation"
+            ],
+            "tags": ["moving_variance", "volatility", "statistics", "risk"],
+            "keywords": ["moving_variance", "volatility", "statistics", "risk", "variability"],
+            "output_description": "Function that calculates moving variance in a MovingAggrPipe",
+            "confidence_score": 0.92,
+            "examples": [
+                "moving_variance('price', window=14)",
+                "moving_variance(['returns', 'volume'], window=30)"
+            ],
+            "usage_patterns": [
+                "moving_variance(columns, window=14)",
+                "moving_variance(columns, window=14, min_periods=5)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["moving_average", "moving_zscore", "moving_correlation"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate moving variance for"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 14)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_mv')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving variance in a MovingAggrPipe"
+            }
+        },
+        "moving_sum": {
+            "category": "moving_averages",
+            "subcategory": "basic_moving_metrics",
+            "pipe_name": "MovingAggrPipe",
+            "description": "Calculate moving sums for specified columns",
+            "complexity": "simple",
+            "use_cases": [
+                "cumulative calculations",
+                "running totals",
+                "aggregation over time",
+                "progressive metrics"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical columns",
+                "Ordered data (typically by time)"
+            ],
+            "tags": ["moving_sum", "cumulative", "totals", "aggregation"],
+            "keywords": ["moving_sum", "cumulative", "totals", "aggregation", "running"],
+            "output_description": "Function that calculates moving sums in a MovingAggrPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "moving_sum('sales', window=7)",
+                "moving_sum(['revenue', 'costs'], window=30)"
+            ],
+            "usage_patterns": [
+                "moving_sum(columns, window=7)",
+                "moving_sum(columns, window=7, min_periods=1)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["moving_average", "moving_cumulative", "moving_aggregate"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate moving sums for"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 7)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_ms')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving sums in a MovingAggrPipe"
+            }
+        },
+        "moving_quantile": {
+            "category": "moving_averages",
+            "subcategory": "statistical_moving_metrics",
+            "pipe_name": "MovingAggrPipe",
+            "description": "Calculate moving quantiles for specified columns",
+            "complexity": "intermediate",
+            "use_cases": [
+                "percentile analysis",
+                "distribution tracking",
+                "outlier detection",
+                "statistical analysis"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical columns",
+                "Sufficient data points for quantile calculation"
+            ],
+            "tags": ["moving_quantile", "percentile", "distribution", "statistics"],
+            "keywords": ["moving_quantile", "percentile", "distribution", "statistics", "quantile"],
+            "output_description": "Function that calculates moving quantiles in a MovingAggrPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "moving_quantile('price', window=20, quantile=0.5)",
+                "moving_quantile(['returns'], window=30, quantile=0.95)"
+            ],
+            "usage_patterns": [
+                "moving_quantile(columns, window=20, quantile=0.5)",
+                "moving_quantile(columns, window=20, quantile=0.5, method='linear')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["moving_average", "moving_percentile_rank", "moving_min_max"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate moving quantiles for"},
+                {"name": "quantile", "type": "float", "description": "Quantile to calculate (0-1)"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 20)"},
+                {"name": "method", "type": "str", "description": "Quantile calculation method: 'linear', 'lower', 'higher', 'nearest', 'midpoint' (default: 'linear')"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_mq')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving quantiles in a MovingAggrPipe"
+            }
+        },
+        "moving_correlation": {
+            "category": "moving_averages",
+            "subcategory": "relationship_moving_metrics",
+            "pipe_name": "MovingAggrPipe",
+            "description": "Calculate moving correlation between two columns",
+            "complexity": "intermediate",
+            "use_cases": [
+                "dynamic relationship analysis",
+                "correlation tracking over time",
+                "relationship stability assessment",
+                "statistical analysis"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Two numerical columns",
+                "Sufficient data points for correlation calculation"
+            ],
+            "tags": ["moving_correlation", "relationship", "correlation", "time_series"],
+            "keywords": ["moving_correlation", "relationship", "correlation", "time_series", "dynamic"],
+            "output_description": "Function that calculates moving correlation in a MovingAggrPipe",
+            "confidence_score": 0.88,
+            "examples": [
+                "moving_correlation('price', 'volume', window=20)",
+                "moving_correlation('returns1', 'returns2', window=30, method='pearson')"
+            ],
+            "usage_patterns": [
+                "moving_correlation(column1, column2, window=20)",
+                "moving_correlation(column1, column2, window=20, method='spearman')"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["moving_average", "moving_variance", "moving_regression"],
+            "required_params": [
+                {"name": "column1", "type": "str", "description": "First column for correlation"},
+                {"name": "column2", "type": "str", "description": "Second column for correlation"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 20)"},
+                {"name": "method", "type": "str", "description": "Correlation method: 'pearson', 'spearman', 'kendall' (default: 'pearson')"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_mcorr')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving correlation in a MovingAggrPipe"
+            }
+        },
+        "moving_zscore": {
+            "category": "moving_averages",
+            "subcategory": "statistical_moving_metrics",
+            "pipe_name": "MovingAggrPipe",
+            "description": "Calculate moving z-scores for specified columns",
+            "complexity": "intermediate",
+            "use_cases": [
+                "anomaly detection",
+                "standardization over time",
+                "outlier identification",
+                "statistical normalization"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical columns",
+                "Sufficient data points for z-score calculation"
+            ],
+            "tags": ["moving_zscore", "standardization", "anomaly", "normalization"],
+            "keywords": ["moving_zscore", "standardization", "anomaly", "normalization", "zscore"],
+            "output_description": "Function that calculates moving z-scores in a MovingAggrPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "moving_zscore('price', window=20)",
+                "moving_zscore(['returns', 'volume'], window=30)"
+            ],
+            "usage_patterns": [
+                "moving_zscore(columns, window=20)",
+                "moving_zscore(columns, window=20, min_periods=5)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["moving_average", "moving_variance", "moving_quantile"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate moving z-scores for"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 20)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_mz')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving z-scores in a MovingAggrPipe"
+            }
+        },
+        "moving_apply_by_group": {
+            "category": "moving_averages",
+            "subcategory": "grouped_moving_metrics",
+            "pipe_name": "MovingAggrPipe",
+            "description": "Apply custom functions to moving windows within groups",
+            "complexity": "advanced",
+            "use_cases": [
+                "custom group-based calculations",
+                "complex moving window operations",
+                "group-specific metrics",
+                "advanced time series analysis"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Grouping columns",
+                "Custom function for calculations"
+            ],
+            "tags": ["moving_apply", "grouped", "custom", "advanced"],
+            "keywords": ["moving_apply", "grouped", "custom", "advanced", "function"],
+            "output_description": "Function that applies custom functions to moving windows within groups in a MovingAggrPipe",
+            "confidence_score": 0.85,
+            "examples": [
+                "moving_apply_by_group('sales', lambda x: x.quantile(0.8), window=10, group_columns=['category'])",
+                "moving_apply_by_group(['price'], custom_func, window=20, group_columns=['region', 'type'])"
+            ],
+            "usage_patterns": [
+                "moving_apply_by_group(columns, func, window=10, group_columns=['group_col'])",
+                "moving_apply_by_group(columns, func, window=10, group_columns=['group_col'], min_periods=1)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["moving_aggregate", "moving_average", "moving_quantile"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to apply function to"},
+                {"name": "func", "type": "Callable", "description": "Function to apply to each moving window"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before applying moving calculations"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 10)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_ma')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that applies custom functions to moving windows within groups in a MovingAggrPipe"
+            }
+        },
+        "moving_ratio": {
+            "category": "moving_averages",
+            "subcategory": "derived_moving_metrics",
+            "pipe_name": "MovingAggrPipe",
+            "description": "Calculate moving ratios between two columns",
+            "complexity": "intermediate",
+            "use_cases": [
+                "ratio analysis over time",
+                "efficiency metrics tracking",
+                "comparative analysis",
+                "derived metrics calculation"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Two numerical columns",
+                "Non-zero denominator values"
+            ],
+            "tags": ["moving_ratio", "ratio", "efficiency", "derived"],
+            "keywords": ["moving_ratio", "ratio", "efficiency", "derived", "comparison"],
+            "output_description": "Function that calculates moving ratios in a MovingAggrPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "moving_ratio('revenue', 'costs', window=7)",
+                "moving_ratio('conversions', 'visitors', window=14)"
+            ],
+            "usage_patterns": [
+                "moving_ratio(numerator, denominator, window=7)",
+                "moving_ratio(numerator, denominator, window=7, min_periods=1)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["moving_average", "moving_sum", "moving_quantile"],
+            "required_params": [
+                {"name": "numerator", "type": "str", "description": "Column name for numerator"},
+                {"name": "denominator", "type": "str", "description": "Column name for denominator"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 7)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_mratio')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving ratios in a MovingAggrPipe"
+            }
+        },
+        "detect_turning_points": {
+            "category": "moving_averages",
+            "subcategory": "pattern_detection",
+            "pipe_name": "MovingAggrPipe",
+            "description": "Detect turning points in time series data",
+            "complexity": "advanced",
+            "use_cases": [
+                "trend change detection",
+                "pattern recognition",
+                "market analysis",
+                "signal processing"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical columns",
+                "Sufficient data for pattern detection"
+            ],
+            "tags": ["turning_points", "pattern", "trend", "detection"],
+            "keywords": ["turning_points", "pattern", "trend", "detection", "change"],
+            "output_description": "Function that detects turning points in a MovingAggrPipe",
+            "confidence_score": 0.85,
+            "examples": [
+                "detect_turning_points('price', window=10)",
+                "detect_turning_points('sales', window=20, threshold=0.1)"
+            ],
+            "usage_patterns": [
+                "detect_turning_points(columns, window=10)",
+                "detect_turning_points(columns, window=10, threshold=0.1)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["moving_average", "moving_variance", "moving_quantile"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to detect turning points for"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for detection (default: 10)"},
+                {"name": "threshold", "type": "float", "description": "Threshold for turning point detection (default: 0.05)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_tp')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that detects turning points in a MovingAggrPipe"
+            }
+        },
+        "moving_regression": {
+            "category": "moving_averages",
+            "subcategory": "advanced_moving_metrics",
+            "pipe_name": "MovingAggrPipe",
+            "description": "Perform moving window regression analysis",
+            "complexity": "advanced",
+            "use_cases": [
+                "regression analysis over time",
+                "trend analysis",
+                "relationship modeling",
+                "statistical analysis"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Two numerical columns (x and y)",
+                "Sufficient data points for regression"
+            ],
+            "tags": ["moving_regression", "regression", "trend", "analysis"],
+            "keywords": ["moving_regression", "regression", "trend", "analysis", "linear"],
+            "output_description": "Function that performs moving regression in a MovingAggrPipe",
+            "confidence_score": 0.80,
+            "examples": [
+                "moving_regression('x', 'y', window=20)",
+                "moving_regression('price', 'volume', window=30, return_stats=True)"
+            ],
+            "usage_patterns": [
+                "moving_regression(x_column, y_column, window=20)",
+                "moving_regression(x_column, y_column, window=20, return_stats=True)"
+            ],
+            "dependencies": ["pandas", "numpy", "scipy"],
+            "related_functions": ["moving_correlation", "moving_average", "moving_variance"],
+            "required_params": [
+                {"name": "x_column", "type": "str", "description": "Column name for x variable"},
+                {"name": "y_column", "type": "str", "description": "Column name for y variable"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 20)"},
+                {"name": "return_stats", "type": "bool", "description": "Whether to return regression statistics (default: False)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_mreg')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that performs moving regression in a MovingAggrPipe"
+            }
+        },
+        "moving_min_max": {
+            "category": "moving_averages",
+            "subcategory": "basic_moving_metrics",
+            "pipe_name": "MovingAggrPipe",
+            "description": "Calculate moving minimum and maximum values",
+            "complexity": "simple",
+            "use_cases": [
+                "range analysis over time",
+                "extreme value tracking",
+                "boundary detection",
+                "data validation"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical columns",
+                "Ordered data (typically by time)"
+            ],
+            "tags": ["moving_min_max", "range", "extreme", "boundary"],
+            "keywords": ["moving_min_max", "range", "extreme", "boundary", "min_max"],
+            "output_description": "Function that calculates moving min/max in a MovingAggrPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "moving_min_max('price', window=14)",
+                "moving_min_max(['sales', 'revenue'], window=30)"
+            ],
+            "usage_patterns": [
+                "moving_min_max(columns, window=14)",
+                "moving_min_max(columns, window=14, min_periods=1)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["moving_average", "moving_quantile", "moving_sum"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate moving min/max for"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 14)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_mm')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving min/max in a MovingAggrPipe"
+            }
+        },
+        "moving_count": {
+            "category": "moving_averages",
+            "subcategory": "basic_moving_metrics",
+            "pipe_name": "MovingAggrPipe",
+            "description": "Calculate moving counts for specified columns",
+            "complexity": "simple",
+            "use_cases": [
+                "frequency analysis over time",
+                "event counting",
+                "data density tracking",
+                "occurrence analysis"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Any data type columns",
+                "Ordered data (typically by time)"
+            ],
+            "tags": ["moving_count", "frequency", "counting", "occurrence"],
+            "keywords": ["moving_count", "frequency", "counting", "occurrence", "count"],
+            "output_description": "Function that calculates moving counts in a MovingAggrPipe",
+            "confidence_score": 0.95,
+            "examples": [
+                "moving_count('events', window=7)",
+                "moving_count(['transactions', 'visits'], window=30)"
+            ],
+            "usage_patterns": [
+                "moving_count(columns, window=7)",
+                "moving_count(columns, window=7, min_periods=1)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["moving_average", "moving_sum", "moving_aggregate"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate moving counts for"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 7)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_mc')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving counts in a MovingAggrPipe"
+            }
+        },
+        "moving_aggregate": {
+            "category": "moving_averages",
+            "subcategory": "advanced_moving_metrics",
+            "pipe_name": "MovingAggrPipe",
+            "description": "Apply multiple aggregation functions to moving windows",
+            "complexity": "advanced",
+            "use_cases": [
+                "comprehensive moving analysis",
+                "multiple metrics calculation",
+                "complex aggregations",
+                "advanced time series analysis"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical columns",
+                "Aggregation function specifications"
+            ],
+            "tags": ["moving_aggregate", "aggregation", "multiple", "advanced"],
+            "keywords": ["moving_aggregate", "aggregation", "multiple", "advanced", "functions"],
+            "output_description": "Function that applies multiple aggregations to moving windows in a MovingAggrPipe",
+            "confidence_score": 0.85,
+            "examples": [
+                "moving_aggregate('sales', {'mean': 'mean', 'std': 'std'}, window=14)",
+                "moving_aggregate(['price', 'volume'], {'mean': 'mean', 'max': 'max'}, window=30)"
+            ],
+            "usage_patterns": [
+                "moving_aggregate(columns, agg_dict, window=14)",
+                "moving_aggregate(columns, agg_dict, window=14, min_periods=1)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["moving_average", "moving_variance", "moving_apply_by_group"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to aggregate"},
+                {"name": "agg_dict", "type": "Dict[str, str]", "description": "Dictionary mapping output names to aggregation functions"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 14)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_mag')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that applies multiple aggregations to moving windows in a MovingAggrPipe"
+            }
+        },
+        "moving_percentile_rank": {
+            "category": "moving_averages",
+            "subcategory": "statistical_moving_metrics",
+            "pipe_name": "MovingAggrPipe",
+            "description": "Calculate moving percentile ranks for specified columns",
+            "complexity": "intermediate",
+            "use_cases": [
+                "ranking analysis over time",
+                "percentile tracking",
+                "relative position analysis",
+                "statistical ranking"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical columns",
+                "Sufficient data for ranking calculation"
+            ],
+            "tags": ["moving_percentile_rank", "ranking", "percentile", "position"],
+            "keywords": ["moving_percentile_rank", "ranking", "percentile", "position", "rank"],
+            "output_description": "Function that calculates moving percentile ranks in a MovingAggrPipe",
+            "confidence_score": 0.88,
+            "examples": [
+                "moving_percentile_rank('price', window=20)",
+                "moving_percentile_rank(['returns', 'volume'], window=30)"
+            ],
+            "usage_patterns": [
+                "moving_percentile_rank(columns, window=20)",
+                "moving_percentile_rank(columns, window=20, min_periods=1)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["moving_quantile", "moving_average", "moving_variance"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate moving percentile ranks for"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 20)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_mpr')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving percentile ranks in a MovingAggrPipe"
+            }
+        },
+        "time_weighted_average": {
+            "category": "moving_averages",
+            "subcategory": "weighted_moving_metrics",
+            "pipe_name": "MovingAggrPipe",
+            "description": "Calculate time-weighted moving averages",
+            "complexity": "intermediate",
+            "use_cases": [
+                "time-weighted analysis",
+                "recent data emphasis",
+                "temporal weighting",
+                "advanced smoothing"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical columns",
+                "Time column for weighting"
+            ],
+            "tags": ["time_weighted_average", "weighted", "temporal", "smoothing"],
+            "keywords": ["time_weighted_average", "weighted", "temporal", "smoothing", "time"],
+            "output_description": "Function that calculates time-weighted averages in a MovingAggrPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "time_weighted_average('price', time_column='timestamp', window=14)",
+                "time_weighted_average(['sales', 'revenue'], time_column='date', window=30)"
+            ],
+            "usage_patterns": [
+                "time_weighted_average(columns, time_column, window=14)",
+                "time_weighted_average(columns, time_column, window=14, min_periods=1)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["moving_average", "moving_sum", "moving_quantile"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate time-weighted averages for"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for weighting"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 14)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_twa')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates time-weighted averages in a MovingAggrPipe"
+            }
+        },
+        "moving_cumulative": {
+            "category": "moving_averages",
+            "subcategory": "cumulative_moving_metrics",
+            "pipe_name": "MovingAggrPipe",
+            "description": "Calculate moving cumulative values",
+            "complexity": "intermediate",
+            "use_cases": [
+                "cumulative analysis over time",
+                "running totals",
+                "progressive accumulation",
+                "cumulative metrics"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical columns",
+                "Ordered data (typically by time)"
+            ],
+            "tags": ["moving_cumulative", "cumulative", "running", "progressive"],
+            "keywords": ["moving_cumulative", "cumulative", "running", "progressive", "total"],
+            "output_description": "Function that calculates moving cumulative values in a MovingAggrPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "moving_cumulative('sales', window=7)",
+                "moving_cumulative(['revenue', 'profit'], window=30)"
+            ],
+            "usage_patterns": [
+                "moving_cumulative(columns, window=7)",
+                "moving_cumulative(columns, window=7, min_periods=1)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["moving_sum", "moving_average", "moving_aggregate"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate moving cumulative values for"}
+            ],
+            "optional_params": [
+                {"name": "window", "type": "int", "description": "Window size for moving calculations (default: 7)"},
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations in window required to have a value (default: 1)"},
+                {"name": "center", "type": "bool", "description": "Set the labels at the center of the window (default: False)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_mcum')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates moving cumulative values in a MovingAggrPipe"
+            }
+        },
+        "expanding_window": {
+            "category": "moving_averages",
+            "subcategory": "expanding_moving_metrics",
+            "pipe_name": "MovingAggrPipe",
+            "description": "Calculate expanding window statistics",
+            "complexity": "intermediate",
+            "use_cases": [
+                "expanding analysis",
+                "cumulative statistics",
+                "progressive calculations",
+                "growing window analysis"
+            ],
+            "data_requirements": [
+                "Time series data",
+                "Numerical columns",
+                "Ordered data (typically by time)"
+            ],
+            "tags": ["expanding_window", "expanding", "cumulative", "progressive"],
+            "keywords": ["expanding_window", "expanding", "cumulative", "progressive", "growing"],
+            "output_description": "Function that calculates expanding window statistics in a MovingAggrPipe",
+            "confidence_score": 0.90,
+            "examples": [
+                "expanding_window('sales', 'mean')",
+                "expanding_window(['price', 'volume'], 'std')"
+            ],
+            "usage_patterns": [
+                "expanding_window(columns, function)",
+                "expanding_window(columns, function, min_periods=1)"
+            ],
+            "dependencies": ["pandas", "numpy"],
+            "related_functions": ["moving_average", "moving_cumulative", "moving_aggregate"],
+            "required_params": [
+                {"name": "columns", "type": "str or List[str]", "description": "Column(s) to calculate expanding window statistics for"},
+                {"name": "function", "type": "str", "description": "Function to apply: 'mean', 'sum', 'std', 'var', 'min', 'max', 'count'"}
+            ],
+            "optional_params": [
+                {"name": "min_periods", "type": "int", "description": "Minimum number of observations required to have a value (default: 1)"},
+                {"name": "time_column", "type": "str", "description": "Column containing the time/date information for time-based windows (optional)"},
+                {"name": "group_columns", "type": "List[str]", "description": "Columns to group by before calculations (for panel data) (optional)"},
+                {"name": "output_suffix", "type": "str", "description": "Suffix for output columns (default: '_exp')"}
+            ],
+            "outputs": {
+                "type": "Callable",
+                "description": "Function that calculates expanding window statistics in a MovingAggrPipe"
+            }
+        }
+    }
+}

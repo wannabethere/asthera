@@ -1,0 +1,416 @@
+[
+  {
+    "pipe_name": "SelectPipe",
+    "category": "column_selection",
+    "function": "Select",
+    "description": "Select specific columns from a dataframe using various selection criteria",
+    "prerequisites": ["SelectPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Select specific columns by name",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nselected = select_pipe | Select('customer_id', 'name', 'email')\nresult_df = selected.to_df()",
+        "inputs": {
+          "columns": ["customer_id", "name", "email"]
+        }
+      },
+      {
+        "name": "Select columns using startswith condition",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nuser_cols = select_pipe | Select(startswith('user_'))\nresult_df = user_cols.to_df()",
+        "inputs": {
+          "columns": "startswith('user_')"
+        }
+      },
+      {
+        "name": "Select columns using complex boolean logic",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nnumeric_not_id = select_pipe | Select(numeric() & ~endswith('_id'))\nresult_df = numeric_not_id.to_df()",
+        "inputs": {
+          "columns": "numeric() & ~endswith('_id')"
+        }
+      },
+      {
+        "name": "Select columns using OR logic",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nuser_or_customer = select_pipe | Select(startswith('user_') | startswith('customer_'))\nresult_df = user_or_customer.to_df()",
+        "inputs": {
+          "columns": "startswith('user_') | startswith('customer_')"
+        }
+      },
+      {
+        "name": "Select columns using AND logic",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nuser_scores = select_pipe | Select(startswith('user_') & contains('score'))\nresult_df = user_scores.to_df()",
+        "inputs": {
+          "columns": "startswith('user_') & contains('score')"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "SelectPipe",
+    "category": "column_selection",
+    "function": "select_numeric",
+    "description": "Select all numeric columns from the dataframe",
+    "prerequisites": ["SelectPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Select all numeric columns",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nnumeric_data = select_pipe | select_numeric()\nresult_df = numeric_data.to_df()",
+        "inputs": {}
+      },
+      {
+        "name": "Select numeric columns with specific data types",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nnumeric_data = select_pipe | select_numeric(include=['int64', 'float64'])\nresult_df = numeric_data.to_df()",
+        "inputs": {
+          "include": ["int64", "float64"]
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "SelectPipe",
+    "category": "column_selection",
+    "function": "select_strings",
+    "description": "Select all string/text columns from the dataframe",
+    "prerequisites": ["SelectPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Select all string columns",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\ntext_data = select_pipe | select_strings()\nresult_df = text_data.to_df()",
+        "inputs": {}
+      },
+      {
+        "name": "Select string columns with specific data types",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\ntext_data = select_pipe | select_strings(include=['object', 'string'])\nresult_df = text_data.to_df()",
+        "inputs": {
+          "include": ["object", "string"]
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "SelectPipe",
+    "category": "column_selection",
+    "function": "select_dates",
+    "description": "Select all date and time columns from the dataframe",
+    "prerequisites": ["SelectPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Select all date columns",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\ntime_data = select_pipe | select_dates()\nresult_df = time_data.to_df()",
+        "inputs": {}
+      },
+      {
+        "name": "Select date columns with specific formats",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\ntime_data = select_pipe | select_dates(include=['datetime64', 'datetime64[ns]'])\nresult_df = time_data.to_df()",
+        "inputs": {
+          "include": ["datetime64", "datetime64[ns]"]
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "SelectPipe",
+    "category": "column_selection",
+    "function": "select_by_pattern",
+    "description": "Select columns matching a regular expression pattern",
+    "prerequisites": ["SelectPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Select columns containing specific text",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nscore_cols = select_pipe | select_by_pattern('.*score.*')\nresult_df = score_cols.to_df()",
+        "inputs": {
+          "pattern": ".*score.*"
+        }
+      },
+      {
+        "name": "Select columns with complex regex pattern",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nmetric_cols = select_pipe | select_by_pattern('^(user|customer)_.*_(score|rating|index)$')\nresult_df = metric_cols.to_df()",
+        "inputs": {
+          "pattern": "^(user|customer)_.*_(score|rating|index)$"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "SelectPipe",
+    "category": "column_selection",
+    "function": "select_by_suffix",
+    "description": "Select columns ending with a specific suffix",
+    "prerequisites": ["SelectPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Select columns ending with specific suffix",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\ndate_cols = select_pipe | select_by_suffix('_date')\nresult_df = date_cols.to_df()",
+        "inputs": {
+          "suffix": "_date"
+        }
+      },
+      {
+        "name": "Select columns ending with multiple suffixes",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\ntime_cols = select_pipe | select_by_suffix(['_date', '_time', '_timestamp'])\nresult_df = time_cols.to_df()",
+        "inputs": {
+          "suffix": ["_date", "_time", "_timestamp"]
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "SelectPipe",
+    "category": "column_selection",
+    "function": "select_by_prefix",
+    "description": "Select columns starting with a specific prefix",
+    "prerequisites": ["SelectPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Select columns starting with specific prefix",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nproduct_cols = select_pipe | select_by_prefix('product_')\nresult_df = product_cols.to_df()",
+        "inputs": {
+          "prefix": "product_"
+        }
+      },
+      {
+        "name": "Select columns starting with multiple prefixes",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nuser_customer_cols = select_pipe | select_by_prefix(['user_', 'customer_'])\nresult_df = user_customer_cols.to_df()",
+        "inputs": {
+          "prefix": ["user_", "customer_"]
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "SelectPipe",
+    "category": "column_removal",
+    "function": "Deselect",
+    "description": "Remove specific columns from the dataframe",
+    "prerequisites": ["SelectPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Remove specific columns by name",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nclean_data = select_pipe | Deselect('password', 'ssn', 'credit_card')\nresult_df = clean_data.to_df()",
+        "inputs": {
+          "columns": ["password", "ssn", "credit_card"]
+        }
+      },
+      {
+        "name": "Remove columns using contains condition",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nclean_data = select_pipe | Deselect(contains('temp'), contains('debug'))\nresult_df = clean_data.to_df()",
+        "inputs": {
+          "columns": ["contains('temp')", "contains('debug')"]
+        }
+      },
+      {
+        "name": "Remove columns using complex conditions",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nclean_data = select_pipe | Deselect(contains('internal') | contains('test'))\nresult_df = clean_data.to_df()",
+        "inputs": {
+          "columns": "contains('internal') | contains('test')"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "SelectPipe",
+    "category": "column_renaming",
+    "function": "Rename",
+    "description": "Rename columns in the dataframe",
+    "prerequisites": ["SelectPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Rename columns using dictionary mapping",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nrenamed = select_pipe | Rename({\n    'user_id': 'customer_id',\n    'first_name': 'first',\n    'last_name': 'last',\n    'total_spent': 'spending'\n})\nresult_df = renamed.to_df()",
+        "inputs": {
+          "column_mapping": {
+            "user_id": "customer_id",
+            "first_name": "first",
+            "last_name": "last",
+            "total_spent": "spending"
+          }
+        }
+      },
+      {
+        "name": "Rename columns using function",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nrenamed = select_pipe | Rename(lambda col: col.lower().replace('_', ' '))\nresult_df = renamed.to_df()",
+        "inputs": {
+          "column_mapping": "lambda col: col.lower().replace('_', ' ')"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "SelectPipe",
+    "category": "column_reordering",
+    "function": "Reorder",
+    "description": "Reorder columns in the dataframe",
+    "prerequisites": ["SelectPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Reorder columns to specific order",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nreordered = select_pipe | Reorder('customer_id', 'created_date', 'updated_date', 'name', 'email')\nresult_df = reordered.to_df()",
+        "inputs": {
+          "column_order": ["customer_id", "created_date", "updated_date", "name", "email"]
+        }
+      },
+      {
+        "name": "Reorder columns with partial specification",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nreordered = select_pipe | Reorder('customer_id', 'name', 'email')\nresult_df = reordered.to_df()",
+        "inputs": {
+          "column_order": ["customer_id", "name", "email"]
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "SelectPipe",
+    "category": "column_creation",
+    "function": "AddColumns",
+    "description": "Add new computed columns to the dataframe",
+    "prerequisites": ["SelectPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Add calculated columns using lambda functions",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nenhanced = select_pipe | AddColumns({\n    'revenue': lambda df: df['quantity'] * df['price'],\n    'profit': lambda df: (df['quantity'] * df['price']) - (df['quantity'] * df['cost']),\n    'profit_margin': lambda df: ((df['quantity'] * df['price']) - (df['quantity'] * df['cost'])) / (df['quantity'] * df['price'])\n})\nresult_df = enhanced.to_df()",
+        "inputs": {
+          "new_columns": {
+            "revenue": "lambda df: df['quantity'] * df['price']",
+            "profit": "lambda df: (df['quantity'] * df['price']) - (df['quantity'] * df['cost'])",
+            "profit_margin": "lambda df: ((df['quantity'] * df['price']) - (df['quantity'] * df['cost'])) / (df['quantity'] * df['price'])"
+          }
+        }
+      },
+      {
+        "name": "Add conditional columns",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nenhanced = select_pipe | AddColumns({\n    'high_value': lambda df: df['amount'] > 1000,\n    'category_tier': lambda df: df['amount'].apply(lambda x: 'High' if x > 1000 else 'Medium' if x > 500 else 'Low')\n})\nresult_df = enhanced.to_df()",
+        "inputs": {
+          "new_columns": {
+            "high_value": "lambda df: df['amount'] > 1000",
+            "category_tier": "lambda df: df['amount'].apply(lambda x: 'High' if x > 1000 else 'Medium' if x > 500 else 'Low')"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "SelectPipe",
+    "category": "preview_analysis",
+    "function": "preview_selection",
+    "description": "Preview what columns would be selected without applying the selection",
+    "prerequisites": ["dataframe"],
+    "variations": [
+      {
+        "name": "Preview selection with multiple conditions",
+        "example": "preview = preview_selection(data, startswith('user_'), contains('score'))\nprint(f\"Selected columns: {preview['selected_columns']}\")\nprint(f\"Total columns: {preview['total_columns']}\")",
+        "inputs": {
+          "df": "data",
+          "selectors": ["startswith('user_')", "contains('score')"]
+        }
+      },
+      {
+        "name": "Preview complex selection logic",
+        "example": "preview = preview_selection(data, numeric() & ~endswith('_id'))\nprint(f\"Selected columns: {preview['selected_columns']}\")\nprint(f\"Selection criteria: {preview['criteria']}\")",
+        "inputs": {
+          "df": "data",
+          "selectors": "numeric() & ~endswith('_id')"
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "SelectPipe",
+    "category": "pipeline_inspection",
+    "function": "get_selection_summary",
+    "description": "Get a summary of the current selection state and history",
+    "prerequisites": ["SelectPipe instance"],
+    "variations": [
+      {
+        "name": "Get basic selection summary",
+        "example": "summary = select_pipe.get_selection_summary()\nprint(f\"Selected columns: {summary['selected_columns']}\")\nprint(f\"Total available: {summary['total_available_columns']}\")",
+        "inputs": {}
+      },
+      {
+        "name": "Get detailed selection history",
+        "example": "summary = select_pipe.get_selection_summary(include_history=True)\nprint(f\"Selection history: {summary['selection_history']}\")\nprint(f\"Current state: {summary['current_state']}\")",
+        "inputs": {
+          "include_history": true
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "SelectPipe",
+    "category": "database_operations",
+    "function": "from_engine",
+    "description": "Create SelectPipe from database engine for efficient data loading",
+    "prerequisites": ["database_engine"],
+    "variations": [
+      {
+        "name": "Create SelectPipe from database table",
+        "example": "select_pipe = SelectPipe.from_engine(database_engine, 'large_table')\nall_cols = select_pipe | Select('*')\nresult_df = all_cols.to_df()",
+        "inputs": {
+          "engine": "database_engine",
+          "table_name": "large_table"
+        }
+      },
+      {
+        "name": "Create SelectPipe with specific columns",
+        "example": "select_pipe = SelectPipe.from_engine(database_engine, 'large_table')\nselected = select_pipe | Select('customer_id', 'name', 'email', 'total_spent')\nresult_df = selected.to_df()",
+        "inputs": {
+          "engine": "database_engine",
+          "table_name": "large_table",
+          "selected_columns": ["customer_id", "name", "email", "total_spent"]
+        }
+      }
+    ]
+  },
+  {
+    "pipe_name": "SelectPipe",
+    "category": "complex_pipeline",
+    "function": "multiple",
+    "description": "Execute multiple selection operations in sequence",
+    "prerequisites": ["SelectPipe.from_dataframe(data)"],
+    "variations": [
+      {
+        "name": "Customer analysis pipeline",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\ncustomer_analysis = (select_pipe\n    | Select('customer_id', 'name', 'email', 'total_spent', 'visit_count')\n    | Rename({'total_spent': 'spending', 'visit_count': 'visits'})\n    | AddColumns({'avg_spend_per_visit': lambda df: df['spending'] / df['visits']})\n    | Reorder('customer_id', 'name', 'email', 'spending', 'visits', 'avg_spend_per_visit')\n)\nresult_df = customer_analysis.to_df()",
+        "inputs": {
+          "operations": [
+            "Select('customer_id', 'name', 'email', 'total_spent', 'visit_count')",
+            "Rename({'total_spent': 'spending', 'visit_count': 'visits'})",
+            "AddColumns({'avg_spend_per_visit': 'lambda df: df[\"spending\"] / df[\"visits\"]'})",
+            "Reorder('customer_id', 'name', 'email', 'spending', 'visits', 'avg_spend_per_visit')"
+          ]
+        }
+      },
+      {
+        "name": "Financial reporting pipeline",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nfinancial_report = (select_pipe\n    | select_numeric()\n    | Select(contains('amount'), contains('price'), contains('cost'))\n    | AddColumns({\n        'profit': lambda df: df['revenue'] - df['cost'],\n        'profit_margin': lambda df: (df['revenue'] - df['cost']) / df['revenue']\n    })\n)\nresult_df = financial_report.to_df()",
+        "inputs": {
+          "operations": [
+            "select_numeric()",
+            "Select(contains('amount'), contains('price'), contains('cost'))",
+            "AddColumns({'profit': 'lambda df: df[\"revenue\"] - df[\"cost\"]'})",
+            "AddColumns({'profit_margin': 'lambda df: (df[\"revenue\"] - df[\"cost\"]) / df[\"revenue\"]'})"
+          ]
+        }
+      },
+      {
+        "name": "Data cleaning pipeline",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nclean_data = (select_pipe\n    | Deselect(contains('temp'), contains('debug'), contains('internal'))\n    | Rename({\n        'user_id': 'customer_id',\n        'first_name': 'first',\n        'last_name': 'last'\n    })\n    | Reorder('customer_id', 'first', 'last', 'email')\n)\nresult_df = clean_data.to_df()",
+        "inputs": {
+          "operations": [
+            "Deselect(contains('temp'), contains('debug'), contains('internal'))",
+            "Rename({'user_id': 'customer_id', 'first_name': 'first', 'last_name': 'last'})",
+            "Reorder('customer_id', 'first', 'last', 'email')"
+          ]
+        }
+      },
+      {
+        "name": "Machine learning feature selection pipeline",
+        "example": "select_pipe = SelectPipe.from_dataframe(data)\nfeatures = (select_pipe\n    | select_numeric()\n    | Select(contains('feature'), contains('metric'), contains('score'))\n    | Deselect(contains('target'), contains('label'), contains('id'))\n)\nresult_df = features.to_df()",
+        "inputs": {
+          "operations": [
+            "select_numeric()",
+            "Select(contains('feature'), contains('metric'), contains('score'))",
+            "Deselect(contains('target'), contains('label'), contains('id'))"
+          ]
+        }
+      }
+    ]
+  }
+]

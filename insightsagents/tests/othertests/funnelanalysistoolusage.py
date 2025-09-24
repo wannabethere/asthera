@@ -35,14 +35,16 @@ self_correcting_pipeline_code_generator = SelfCorrectingPipelineCodeGenerator(
                 llm=llm,
                 usage_examples_store=usage_examples_vectorstore,
                 code_examples_store=examples_vectorstore,
-                function_definition_store=functions_vectorstore
+                function_definition_store=functions_vectorstore,
+                retrieval_helper=retrieval_helper
             )
 # Initialize the intent planner
 planner = AnalysisIntentPlanner(
     llm=llm,
     function_collection=functions_vectorstore,
     example_collection=examples_vectorstore, 
-    insights_collection=insights_vectorstore
+    insights_collection=insights_vectorstore,
+    retrieval_helper=retrieval_helper
 )
 
 def analyze_question_with_intent_classification(
