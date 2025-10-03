@@ -1,0 +1,222 @@
+[
+  {
+    "categories": [
+      "user_management"
+    ],
+    "question": "What is the distribution of users by organization and their learning activity status?",
+    "sql": "SELECT o.name as organization_name, COUNT(DISTINCT p.personpk) as total_users, COUNT(CASE WHEN p.active = 'Y' THEN 1 END) as active_users, COUNT(CASE WHEN p.deleted = 'N' THEN 1 END) as non_deleted_users, ROUND(COUNT(CASE WHEN p.active = 'Y' THEN 1 END) * 100.0 / COUNT(DISTINCT p.personpk), 2) as active_percentage FROM person_sumtotal p JOIN personorganization_sumtotal po ON p.personpk = po.personfk JOIN organization_sumtotal o ON po.organizationfk = o.organizationpk GROUP BY o.name ORDER BY total_users DESC",
+    "context": "Direct Visualization - Bar Chart. Shows user distribution across organizations with activity status for organizational learning analytics.",
+    "document": "mdl_person.json - user_organization_metrics",
+    "samples": [],
+    "instructions": "Analyze user distribution by organization to understand learning platform adoption and engagement across different business units."
+  },
+  {
+    "categories": [
+      "learning_analytics"
+    ],
+    "question": "Which users have the highest number of learning attempts and what are their completion rates?",
+    "sql": "SELECT p.firstname, p.lastname, p.companyname, COUNT(a.attempt_pk) as total_attempts, COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) as completed_attempts, COUNT(CASE WHEN a.success = 'true' THEN 1 END) as successful_attempts, ROUND(COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) * 100.0 / COUNT(a.attempt_pk), 2) as completion_rate, ROUND(AVG(CAST(a.score AS DECIMAL)), 2) as avg_score FROM person_sumtotal p JOIN tbl_tmx_attempt_sumtotal a ON p.personpk = a.empfk WHERE p.active = 'Y' GROUP BY p.personpk, p.firstname, p.lastname, p.companyname HAVING COUNT(a.attempt_pk) >= 5 ORDER BY total_attempts DESC, completion_rate DESC LIMIT 20",
+    "context": "Direct Visualization - Top N. Identifies most active learners with performance metrics for learning analytics and recognition programs.",
+    "document": "mdl_attempt.json - learner_performance_metrics",
+    "samples": [],
+    "instructions": "Rank users by learning activity and performance to identify top performers and learning engagement patterns."
+  },
+  {
+    "categories": [
+      "course_management"
+    ],
+    "question": "What are the most popular learning activities and their success rates?",
+    "sql": "SELECT act.activityme as activity_name, act.code as activity_code, COUNT(a.attempt_pk) as total_attempts, COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) as completed_attempts, COUNT(CASE WHEN a.success = 'true' THEN 1 END) as successful_attempts, ROUND(COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) * 100.0 / COUNT(a.attempt_pk), 2) as completion_rate, ROUND(COUNT(CASE WHEN a.success = 'true' THEN 1 END) * 100.0 / COUNT(a.attempt_pk), 2) as success_rate, ROUND(AVG(CAST(a.score AS DECIMAL)), 2) as avg_score FROM tbl_tmx_activity_sumtotal act JOIN tbl_tmx_attempt_sumtotal a ON act.activity_pk = a.activityfk WHERE act.active = 'Y' GROUP BY act.activity_pk, act.activityme, act.code ORDER BY total_attempts DESC LIMIT 15",
+    "context": "Direct Visualization - Bar Chart. Shows course popularity and effectiveness metrics for curriculum management and optimization.",
+    "document": "mdl_activity.json - course_popularity_metrics",
+    "samples": [],
+    "instructions": "Analyze course popularity and success rates to optimize curriculum and identify high-performing learning content."
+  },
+  {
+    "categories": [
+      "learning_analytics"
+    ],
+    "question": "How has learning activity participation changed over time by month?",
+    "sql": "SELECT DATE_FORMAT(a.startdt, '%Y-%m') as learning_month, COUNT(a.attempt_pk) as total_attempts, COUNT(DISTINCT a.empfk) as unique_learners, COUNT(DISTINCT a.activityfk) as unique_activities, COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) as completed_attempts, ROUND(COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) * 100.0 / COUNT(a.attempt_pk), 2) as completion_rate FROM tbl_tmx_attempt_sumtotal a WHERE a.startdt >= DATE_SUB(CURRENT_DATE, INTERVAL 12 MONTH) GROUP BY DATE_FORMAT(a.startdt, '%Y-%m') ORDER BY learning_month",
+    "context": "Direct Visualization - Line Chart. Shows monthly learning trends for understanding seasonal patterns and platform growth.",
+    "document": "mdl_attempt.json - learning_trend_analysis",
+    "samples": [],
+    "instructions": "Track monthly learning participation trends to understand seasonal patterns and platform adoption growth."
+  },
+  {
+    "categories": [
+      "user_management"
+    ],
+    "question": "Which organizations have the highest learning engagement and completion rates?",
+    "sql": "SELECT o.name as organization_name, COUNT(DISTINCT p.personpk) as total_users, COUNT(a.attempt_pk) as total_attempts, COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) as completed_attempts, ROUND(COUNT(a.attempt_pk) / COUNT(DISTINCT p.personpk), 2) as avg_attempts_per_user, ROUND(COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) * 100.0 / COUNT(a.attempt_pk), 2) as completion_rate FROM organization_sumtotal o JOIN personorganization_sumtotal po ON o.organizationpk = po.organizationfk JOIN person_sumtotal p ON po.personfk = p.personpk LEFT JOIN tbl_tmx_attempt_sumtotal a ON p.personpk = a.empfk WHERE o.deleted = 'N' AND p.active = 'Y' GROUP BY o.organizationpk, o.name HAVING COUNT(DISTINCT p.personpk) >= 10 ORDER BY completion_rate DESC, avg_attempts_per_user DESC",
+    "context": "Direct Visualization - Bar Chart. Shows organizational learning performance for identifying best practices and improvement opportunities.",
+    "document": "mdl_organization.json - organizational_learning_metrics",
+    "samples": [],
+    "instructions": "Compare organizational learning performance to identify best practices and areas for improvement across business units."
+  },
+  {
+    "categories": [
+      "learning_analytics"
+    ],
+    "question": "What is the average time spent on learning activities by activity type?",
+    "sql": "SELECT act.activityme as activity_name, COUNT(a.attempt_pk) as total_attempts, ROUND(AVG(CAST(a.elapsedseconds AS DECIMAL) / 60), 2) as avg_minutes_spent, ROUND(AVG(CAST(a.elapsedseconds AS DECIMAL) / 3600), 2) as avg_hours_spent, COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) as completed_attempts, ROUND(COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) * 100.0 / COUNT(a.attempt_pk), 2) as completion_rate FROM tbl_tmx_activity_sumtotal act JOIN tbl_tmx_attempt_sumtotal a ON act.activity_pk = a.activityfk WHERE a.elapsedseconds IS NOT NULL AND a.elapsedseconds > 0 GROUP BY act.activity_pk, act.activityme ORDER BY avg_hours_spent DESC",
+    "context": "Maths/Analytics - Learning Duration Analysis. Shows time investment patterns for curriculum planning and learner experience optimization.",
+    "document": "mdl_activity.json - learning_duration_metrics",
+    "samples": [],
+    "instructions": "Analyze learning duration patterns to optimize course design and understand learner time investment across different activities."
+  },
+  {
+    "categories": [
+      "user_management"
+    ],
+    "question": "Which users have not completed any learning activities in the last 90 days?",
+    "sql": "SELECT p.firstname, p.lastname, p.companyname, p.createddate, MAX(a.enddt) as last_activity_date, DATEDIFF(CURRENT_DATE, MAX(a.enddt)) as days_since_last_activity FROM person_sumtotal p LEFT JOIN tbl_tmx_attempt_sumtotal a ON p.personpk = a.empfk WHERE p.active = 'Y' AND p.deleted = 'N' GROUP BY p.personpk, p.firstname, p.lastname, p.companyname, p.createddate HAVING MAX(a.enddt) IS NULL OR DATEDIFF(CURRENT_DATE, MAX(a.enddt)) > 90 ORDER BY days_since_last_activity DESC",
+    "context": "Direct Visualization - Table. Identifies inactive learners requiring re-engagement strategies and follow-up.",
+    "document": "mdl_person.json - inactive_learners_analysis",
+    "samples": [],
+    "instructions": "Identify inactive learners to develop re-engagement strategies and improve platform adoption."
+  },
+  {
+    "categories": [
+      "course_management"
+    ],
+    "question": "What are the most challenging learning activities based on low completion rates?",
+    "sql": "SELECT act.activityme as activity_name, act.code as activity_code, COUNT(a.attempt_pk) as total_attempts, COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) as completed_attempts, ROUND(COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) * 100.0 / COUNT(a.attempt_pk), 2) as completion_rate, ROUND(AVG(CAST(a.score AS DECIMAL)), 2) as avg_score, COUNT(CASE WHEN a.success = 'false' THEN 1 END) as failed_attempts FROM tbl_tmx_activity_sumtotal act JOIN tbl_tmx_attempt_sumtotal a ON act.activity_pk = a.activityfk WHERE act.active = 'Y' GROUP BY act.activity_pk, act.activityme, act.code HAVING COUNT(a.attempt_pk) >= 10 ORDER BY completion_rate ASC, avg_score ASC LIMIT 15",
+    "context": "Direct Visualization - Bar Chart. Identifies challenging courses requiring content review and instructional design improvements.",
+    "document": "mdl_activity.json - challenging_courses_analysis",
+    "samples": [],
+    "instructions": "Identify challenging courses with low completion rates to prioritize content review and instructional design improvements."
+  },
+  {
+    "categories": [
+      "learning_analytics"
+    ],
+    "question": "What is the learning progress distribution by user demographics (gender, company)?",
+    "sql": "SELECT p.gendercode, p.companyname, COUNT(DISTINCT p.personpk) as total_users, COUNT(a.attempt_pk) as total_attempts, COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) as completed_attempts, ROUND(COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) * 100.0 / COUNT(a.attempt_pk), 2) as completion_rate, ROUND(AVG(CAST(a.score AS DECIMAL)), 2) as avg_score FROM person_sumtotal p LEFT JOIN tbl_tmx_attempt_sumtotal a ON p.personpk = a.empfk WHERE p.active = 'Y' AND p.deleted = 'N' GROUP BY p.gendercode, p.companyname HAVING COUNT(DISTINCT p.personpk) >= 5 ORDER BY completion_rate DESC",
+    "context": "Direct Visualization - Stacked Bar Chart. Shows learning performance by demographics for diversity and inclusion analysis.",
+    "document": "mdl_person.json - demographic_learning_analysis",
+    "samples": [],
+    "instructions": "Analyze learning performance by demographics to ensure equitable learning opportunities and identify potential barriers."
+  },
+  {
+    "categories": [
+      "course_management"
+    ],
+    "question": "Which learning activities require registration and how does this affect participation?",
+    "sql": "SELECT CASE WHEN act.openforreg = 'Y' THEN 'Registration Required' ELSE 'No Registration Required' END as registration_status, COUNT(act.activity_pk) as total_activities, COUNT(a.attempt_pk) as total_attempts, COUNT(DISTINCT a.empfk) as unique_participants, ROUND(COUNT(a.attempt_pk) / COUNT(act.activity_pk), 2) as avg_attempts_per_activity, ROUND(COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) * 100.0 / COUNT(a.attempt_pk), 2) as completion_rate FROM tbl_tmx_activity_sumtotal act LEFT JOIN tbl_tmx_attempt_sumtotal a ON act.activity_pk = a.activityfk WHERE act.active = 'Y' GROUP BY act.openforreg ORDER BY avg_attempts_per_activity DESC",
+    "context": "Direct Visualization - Column Chart. Compares participation patterns between registration-required and open activities.",
+    "document": "mdl_activity.json - registration_impact_analysis",
+    "samples": [],
+    "instructions": "Analyze the impact of registration requirements on learning participation to optimize course accessibility."
+  },
+  {
+    "categories": [
+      "learning_analytics"
+    ],
+    "question": "What is the average number of attempts per user for each learning activity?",
+    "sql": "SELECT act.activityme as activity_name, COUNT(DISTINCT a.empfk) as unique_learners, COUNT(a.attempt_pk) as total_attempts, ROUND(COUNT(a.attempt_pk) / COUNT(DISTINCT a.empfk), 2) as avg_attempts_per_learner, COUNT(CASE WHEN a.currentattemptind = 'Y' THEN 1 END) as current_attempts, ROUND(COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) * 100.0 / COUNT(a.attempt_pk), 2) as completion_rate FROM tbl_tmx_activity_sumtotal act JOIN tbl_tmx_attempt_sumtotal a ON act.activity_pk = a.activityfk WHERE act.active = 'Y' GROUP BY act.activity_pk, act.activityme ORDER BY avg_attempts_per_learner DESC",
+    "context": "Maths/Analytics - Attempt Pattern Analysis. Shows retry patterns and learning persistence for course difficulty assessment.",
+    "document": "mdl_activity.json - attempt_pattern_analysis",
+    "samples": [],
+    "instructions": "Analyze attempt patterns to understand course difficulty and learner persistence across different activities."
+  },
+  {
+    "categories": [
+      "user_management"
+    ],
+    "question": "Which users have the highest learning scores and what activities did they complete?",
+    "sql": "SELECT p.firstname, p.lastname, p.companyname, COUNT(a.attempt_pk) as total_attempts, ROUND(AVG(CAST(a.score AS DECIMAL)), 2) as avg_score, ROUND(MAX(CAST(a.score AS DECIMAL)), 2) as max_score, COUNT(CASE WHEN a.success = 'true' THEN 1 END) as successful_attempts, GROUP_CONCAT(DISTINCT act.activityme ORDER BY act.activityme SEPARATOR ', ') as completed_activities FROM person_sumtotal p JOIN tbl_tmx_attempt_sumtotal a ON p.personpk = a.empfk JOIN tbl_tmx_activity_sumtotal act ON a.activityfk = act.activity_pk WHERE p.active = 'Y' AND a.score IS NOT NULL AND a.success = 'true' GROUP BY p.personpk, p.firstname, p.lastname, p.companyname HAVING COUNT(a.attempt_pk) >= 3 ORDER BY avg_score DESC, total_attempts DESC LIMIT 15",
+    "context": "Direct Visualization - Top N. Identifies top-performing learners and their completed activities for recognition programs.",
+    "document": "mdl_person.json - top_performers_analysis",
+    "samples": [],
+    "instructions": "Identify top-performing learners and their achievements to support recognition programs and best practice sharing."
+  },
+  {
+    "categories": [
+      "course_management"
+    ],
+    "question": "What is the distribution of learning activities by activity label and their performance?",
+    "sql": "SELECT al.labelname as activity_label, COUNT(act.activity_pk) as total_activities, COUNT(a.attempt_pk) as total_attempts, COUNT(DISTINCT a.empfk) as unique_learners, ROUND(COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) * 100.0 / COUNT(a.attempt_pk), 2) as completion_rate, ROUND(AVG(CAST(a.score AS DECIMAL)), 2) as avg_score FROM actlabel_sumtotal al JOIN tbl_tmx_activity_sumtotal act ON al.actlabelpk = act.activitylabelfk LEFT JOIN tbl_tmx_attempt_sumtotal a ON act.activity_pk = a.activityfk WHERE act.active = 'Y' GROUP BY al.actlabelpk, al.labelname ORDER BY total_attempts DESC",
+    "context": "Direct Visualization - Bar Chart. Shows learning performance by activity category for curriculum planning and optimization.",
+    "document": "mdl_actlabel.json - activity_label_performance",
+    "samples": [],
+    "instructions": "Analyze learning performance by activity labels to understand category effectiveness and optimize curriculum structure."
+  },
+  {
+    "categories": [
+      "learning_analytics"
+    ],
+    "question": "How many users are currently enrolled in learning activities and what is their progress status?",
+    "sql": "SELECT COUNT(DISTINCT a.empfk) as enrolled_users, COUNT(a.attempt_pk) as total_attempts, COUNT(CASE WHEN a.completionstatus = 'In Progress' THEN 1 END) as in_progress_attempts, COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) as completed_attempts, COUNT(CASE WHEN a.completionstatus = 'Not Started' THEN 1 END) as not_started_attempts, ROUND(COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) * 100.0 / COUNT(a.attempt_pk), 2) as completion_rate FROM tbl_tmx_attempt_sumtotal a WHERE a.currentattemptind = 'Y'",
+    "context": "Dashboard Widget - Current Learning Status. Shows real-time learning progress for monitoring active learners.",
+    "document": "mdl_attempt.json - current_learning_status",
+    "samples": [],
+    "instructions": "Monitor current learning status to track active learners and their progress across the platform."
+  },
+  {
+    "categories": [
+      "user_management"
+    ],
+    "question": "Which organizations have the most diverse learning activity participation?",
+    "sql": "SELECT o.name as organization_name, COUNT(DISTINCT p.personpk) as total_users, COUNT(DISTINCT a.activityfk) as unique_activities, COUNT(DISTINCT act.activityme) as unique_activity_names, ROUND(COUNT(DISTINCT a.activityfk) / COUNT(DISTINCT p.personpk), 2) as activities_per_user, COUNT(a.attempt_pk) as total_attempts FROM organization_sumtotal o JOIN personorganization_sumtotal po ON o.organizationpk = po.organizationfk JOIN person_sumtotal p ON po.personfk = p.personpk LEFT JOIN tbl_tmx_attempt_sumtotal a ON p.personpk = a.empfk LEFT JOIN tbl_tmx_activity_sumtotal act ON a.activityfk = act.activity_pk WHERE o.deleted = 'N' AND p.active = 'Y' GROUP BY o.organizationpk, o.name HAVING COUNT(DISTINCT p.personpk) >= 10 ORDER BY unique_activities DESC, activities_per_user DESC",
+    "context": "Direct Visualization - Bar Chart. Shows organizational learning diversity for identifying comprehensive learning cultures.",
+    "document": "mdl_organization.json - learning_diversity_analysis",
+    "samples": [],
+    "instructions": "Analyze organizational learning diversity to identify comprehensive learning cultures and knowledge sharing patterns."
+  },
+  {
+    "categories": [
+      "learning_analytics"
+    ],
+    "question": "What is the correlation between learning duration and success rates across different activities?",
+    "sql": "SELECT act.activityme as activity_name, COUNT(a.attempt_pk) as total_attempts, ROUND(AVG(CAST(a.elapsedseconds AS DECIMAL) / 60), 2) as avg_minutes, ROUND(COUNT(CASE WHEN a.success = 'true' THEN 1 END) * 100.0 / COUNT(a.attempt_pk), 2) as success_rate, ROUND(AVG(CAST(a.score AS DECIMAL)), 2) as avg_score, ROUND(COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) * 100.0 / COUNT(a.attempt_pk), 2) as completion_rate FROM tbl_tmx_activity_sumtotal act JOIN tbl_tmx_attempt_sumtotal a ON act.activity_pk = a.activityfk WHERE a.elapsedseconds IS NOT NULL AND a.elapsedseconds > 0 GROUP BY act.activity_pk, act.activityme HAVING COUNT(a.attempt_pk) >= 10 ORDER BY success_rate DESC, avg_minutes ASC",
+    "context": "Maths/Analytics - Duration vs Success Analysis. Shows relationship between learning time investment and success rates.",
+    "document": "mdl_activity.json - duration_success_correlation",
+    "samples": [],
+    "instructions": "Analyze the relationship between learning duration and success rates to optimize course design and time allocation."
+  },
+  {
+    "categories": [
+      "course_management"
+    ],
+    "question": "Which learning activities have the highest launch counts and what does this indicate about popularity?",
+    "sql": "SELECT act.activityme as activity_name, act.code as activity_code, COUNT(a.attempt_pk) as total_attempts, ROUND(AVG(CAST(a.launchcount AS DECIMAL)), 2) as avg_launch_count, ROUND(MAX(CAST(a.launchcount AS DECIMAL)), 2) as max_launch_count, COUNT(DISTINCT a.empfk) as unique_learners, ROUND(COUNT(a.attempt_pk) / COUNT(DISTINCT a.empfk), 2) as attempts_per_learner FROM tbl_tmx_activity_sumtotal act JOIN tbl_tmx_attempt_sumtotal a ON act.activity_pk = a.activityfk WHERE act.active = 'Y' AND a.launchcount IS NOT NULL GROUP BY act.activity_pk, act.activityme, act.code ORDER BY avg_launch_count DESC, total_attempts DESC LIMIT 15",
+    "context": "Direct Visualization - Bar Chart. Shows course popularity based on launch frequency for content prioritization.",
+    "document": "mdl_activity.json - course_popularity_launch_analysis",
+    "samples": [],
+    "instructions": "Analyze course popularity based on launch frequency to prioritize content development and resource allocation."
+  },
+  {
+    "categories": [
+      "user_management"
+    ],
+    "question": "What is the learning activity participation pattern for users by their start date?",
+    "sql": "SELECT CASE WHEN p.startdate >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY) THEN 'New (30 days)' WHEN p.startdate >= DATE_SUB(CURRENT_DATE, INTERVAL 90 DAY) THEN 'Recent (90 days)' WHEN p.startdate >= DATE_SUB(CURRENT_DATE, INTERVAL 365 DAY) THEN 'Mature (1 year)' ELSE 'Established (1+ years)' END as user_tenure, COUNT(DISTINCT p.personpk) as total_users, COUNT(a.attempt_pk) as total_attempts, ROUND(COUNT(a.attempt_pk) / COUNT(DISTINCT p.personpk), 2) as avg_attempts_per_user, ROUND(COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) * 100.0 / COUNT(a.attempt_pk), 2) as completion_rate FROM person_sumtotal p LEFT JOIN tbl_tmx_attempt_sumtotal a ON p.personpk = a.empfk WHERE p.active = 'Y' AND p.deleted = 'N' GROUP BY CASE WHEN p.startdate >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY) THEN 'New (30 days)' WHEN p.startdate >= DATE_SUB(CURRENT_DATE, INTERVAL 90 DAY) THEN 'Recent (90 days)' WHEN p.startdate >= DATE_SUB(CURRENT_DATE, INTERVAL 365 DAY) THEN 'Mature (1 year)' ELSE 'Established (1+ years)' END ORDER BY total_users DESC",
+    "context": "Direct Visualization - Stacked Bar Chart. Shows learning participation patterns by user tenure for onboarding analysis.",
+    "document": "mdl_person.json - user_tenure_learning_analysis",
+    "samples": [],
+    "instructions": "Analyze learning participation by user tenure to understand onboarding effectiveness and long-term engagement patterns."
+  },
+  {
+    "categories": [
+      "learning_analytics"
+    ],
+    "question": "What are the peak learning hours and days based on activity start times?",
+    "sql": "SELECT HOUR(a.startdt) as learning_hour, DAYNAME(a.startdt) as learning_day, COUNT(a.attempt_pk) as total_attempts, COUNT(DISTINCT a.empfk) as unique_learners, ROUND(COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) * 100.0 / COUNT(a.attempt_pk), 2) as completion_rate FROM tbl_tmx_attempt_sumtotal a WHERE a.startdt >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY) GROUP BY HOUR(a.startdt), DAYNAME(a.startdt) ORDER BY total_attempts DESC",
+    "context": "Direct Visualization - Heatmap. Shows learning activity patterns by time and day for optimal scheduling recommendations.",
+    "document": "mdl_attempt.json - learning_time_patterns",
+    "samples": [],
+    "instructions": "Analyze learning time patterns to optimize course scheduling and identify peak learning periods."
+  },
+  {
+    "categories": [
+      "comprehensive_learning"
+    ],
+    "question": "Create a comprehensive learning dashboard showing key metrics across all SumTotal Learn data.",
+    "sql": "SELECT 'Total Users' as metric, COUNT(DISTINCT p.personpk) as value FROM person_sumtotal p WHERE p.active = 'Y' AND p.deleted = 'N' UNION ALL SELECT 'Active Organizations', COUNT(DISTINCT o.organizationpk) FROM organization_sumtotal o WHERE o.deleted = 'N' UNION ALL SELECT 'Learning Activities', COUNT(DISTINCT act.activity_pk) FROM tbl_tmx_activity_sumtotal act WHERE act.active = 'Y' UNION ALL SELECT 'Total Learning Attempts', COUNT(a.attempt_pk) FROM tbl_tmx_attempt_sumtotal a UNION ALL SELECT 'Completed Attempts', COUNT(CASE WHEN a.completionstatus = 'Completed' THEN 1 END) FROM tbl_tmx_attempt_sumtotal a UNION ALL SELECT 'Successful Attempts', COUNT(CASE WHEN a.success = 'true' THEN 1 END) FROM tbl_tmx_attempt_sumtotal a UNION ALL SELECT 'Average Score', ROUND(AVG(CAST(a.score AS DECIMAL)), 2) FROM tbl_tmx_attempt_sumtotal a WHERE a.score IS NOT NULL",
+    "context": "Dashboard Widget - Learning Platform Overview. Comprehensive learning metrics for executive dashboard and platform assessment.",
+    "document": "Multiple models - Learning Platform Summary",
+    "samples": [],
+    "instructions": "Calculate comprehensive learning platform metrics across all models for executive-level platform assessment and reporting."
+  }
+]

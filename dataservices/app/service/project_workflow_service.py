@@ -2,6 +2,7 @@
 
 from typing import Dict, Optional, Any, List
 from uuid import uuid4
+import asyncio
 import logging
 from datetime import datetime
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
@@ -253,7 +254,12 @@ class DomainWorkflowService:
             # Store permissions in domain metadata
             # stored_permissions = await self.sharing_service.store_permissions_in_project(domain_id,dataset_id, permissions_data)
 
-            store_permissions_in_db = await SharePermissions().store_info(token, ShareInfo(**permissions), domain_id)
+            #store_permissions_in_db = await SharePermissions().store_info(token, ShareInfo(**permissions), domain_id)
+            if isinstance(permissions, list):
+                task=[SharePermissions().store_info(token, ShareInfo(**permission), domain_id) for permission in permissions]
+                store_permissions_in_db = await asyncio.gather(*task)
+            else:
+                store_permissions_in_db = await SharePermissions().store_info(token, ShareInfo(**permissions), domain_id)
             
             # Update workflow state with permissions
             state = self.get_workflow_state()

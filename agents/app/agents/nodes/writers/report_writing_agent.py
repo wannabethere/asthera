@@ -21,7 +21,6 @@ from dataclasses import dataclass
 
 from langchain_openai import ChatOpenAI
 from langchain_openai import OpenAIEmbeddings
-from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from pydantic import BaseModel, Field
 
@@ -155,8 +154,9 @@ class ContentQualityEvaluator:
     def evaluate_content(self, content: str, context: str, criteria: List[str]) -> Dict[str, Any]:
         """Evaluate content quality"""
         try:
-            chain = LLMChain(llm=self.llm, prompt=self.quality_prompt)
-            result = chain.run({
+            # Use modern LangChain pattern: prompt | llm
+            chain = self.quality_prompt | self.llm
+            result = chain.invoke({
                 "content": content,
                 "context": context,
                 "criteria": "\n".join(criteria)
@@ -164,7 +164,9 @@ class ContentQualityEvaluator:
             
             # Parse the result (assuming it's JSON)
             import json
-            return json.loads(result)
+            # Handle both string and content responses
+            content_str = result.content if hasattr(result, 'content') else str(result)
+            return json.loads(content_str)
         except Exception as e:
             logger.error(f"Error evaluating content quality: {e}")
             return {
@@ -271,12 +273,16 @@ class SelfCorrectingRAG:
         )
         
         try:
-            chain = LLMChain(llm=self.llm, prompt=correction_prompt)
-            corrected_content = chain.run({
+            # Use modern LangChain pattern: prompt | llm
+            chain = correction_prompt | self.llm
+            result = chain.invoke({
                 "content": initial_content,
                 "feedback": str(feedback),
                 "context": "Report generation with self-correction"
             })
+            
+            # Handle both string and content responses
+            corrected_content = result.content if hasattr(result, 'content') else str(result)
             
             # Record correction
             self.correction_history.append({
@@ -386,17 +392,38 @@ class ReportWritingAgent:
         )
         
         try:
-            chain = LLMChain(llm=self.llm, prompt=outline_prompt)
-            result = chain.run({
+            # Use modern LangChain pattern: prompt | llm
+            chain = outline_prompt | self.llm
+            result = chain.invoke({
                 "components": self._format_components_for_prompt(state.thread_components),
                 "actor": state.writer_actor.value,
                 "goal": state.business_goal.dict()
             })
             
-            # Parse the result
+            # Handle both string and content responses
+            content_str = result.content if hasattr(result, 'content') else str(result)
+            
+            # Parse the result with better error handling
             import json
-            outline_data = json.loads(result)
-            return ReportOutline(**outline_data)
+            try:
+                # Try to extract JSON from the response if it's wrapped in markdown
+                if "```json" in content_str:
+                    json_start = content_str.find("```json") + 7
+                    json_end = content_str.find("```", json_start)
+                    if json_end != -1:
+                        content_str = content_str[json_start:json_end].strip()
+                elif "```" in content_str:
+                    json_start = content_str.find("```") + 3
+                    json_end = content_str.find("```", json_start)
+                    if json_end != -1:
+                        content_str = content_str[json_start:json_end].strip()
+                
+                outline_data = json.loads(content_str)
+                return ReportOutline(**outline_data)
+            except json.JSONDecodeError as json_err:
+                logger.error(f"JSON parsing error: {json_err}")
+                logger.error(f"Raw content: {content_str[:500]}...")
+                return self._create_fallback_outline(state)
         except Exception as e:
             logger.error(f"Error generating outline: {e}")
             return self._create_fallback_outline(state)
@@ -481,14 +508,17 @@ class ReportWritingAgent:
             context_results = self.rag_system.retrieve_relevant_context(section.title)
             context_text = "\n".join([result["page_content"] for result in context_results])
             
-            chain = LLMChain(llm=self.llm, prompt=content_prompt)
-            content = chain.run({
+            # Use modern LangChain pattern: prompt | llm
+            chain = content_prompt | self.llm
+            result = chain.invoke({
                 "section": section.dict(),
                 "actor": state.writer_actor.value,
                 "goal": state.business_goal.dict(),
                 "context": context_text
             })
             
+            # Handle both string and content responses
+            content = result.content if hasattr(result, 'content') else str(result)
             return content
         except Exception as e:
             logger.error(f"Error generating section content: {e}")

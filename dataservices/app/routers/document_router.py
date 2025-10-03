@@ -25,7 +25,7 @@ from app.schemas.docs.docmodels import Document as DocModel, DocumentInsight
 from app.core.session_manager import SessionManager
 from app.utils.history import DomainManager
 from app.core.settings import ServiceConfig
-from app.core.dependencies import get_async_db_session
+from app.core.dependencies import get_async_db_session, get_chromadb_client
 
 import chromadb
 
@@ -50,25 +50,26 @@ async def get_document_services():
         session_manager = SessionManager(config)
         domain_manager = DomainManager(None)
         
-        # Initialize ChromaDB client
-        chroma_client = chromadb.PersistentClient(path="./chroma_db")
+        # Initialize ChromaDB client from dependencies
+        chroma_client = get_chromadb_client()
         
         # Create services
         document_persistence_service = create_document_persistence_service(session_manager, domain_manager)
         document_ingestion_service = create_ingestion_service(
             session_manager=session_manager,
             domain_manager=domain_manager,
-            chroma_path="./chroma_db"
+            chroma_client=chroma_client  # Pass the client from dependencies
         )
     
     return document_persistence_service, document_ingestion_service
 
 class MetadataSummarizer:
-    """Simple metadata summarizer for markdown generation"""
+    """Document content and insights summarizer for markdown generation"""
     
     @staticmethod
-    def summarize_metadata(document_type: str, document_id: str, document_name: str, metadata: Dict[str, Any]) -> str:
-        """Generate markdown summary from metadata"""
+    def summarize_metadata(document_type: str, document_id: str, document_name: str, 
+                          document_content: str, insight, metadata: Dict[str, Any]) -> str:
+        """Generate markdown summary from document content and insights"""
         summary_parts = [
             f"# Document Summary",
             f"",
@@ -76,26 +77,71 @@ class MetadataSummarizer:
             f"**Document ID:** {document_id}",
             f"**Document Name:** {document_name}",
             f"",
-            f"## Metadata",
+            f"## Document Content",
+            f"",
+            f"{document_content[:2000]}{'...' if len(document_content) > 2000 else ''}",
             f""
         ]
         
-        # Add metadata fields
-        for key, value in metadata.items():
-            if isinstance(value, list):
-                summary_parts.append(f"**{key.replace('_', ' ').title()}:** {', '.join(map(str, value))}")
-            elif isinstance(value, dict):
-                summary_parts.append(f"**{key.replace('_', ' ').title()}:**")
-                for sub_key, sub_value in value.items():
-                    summary_parts.append(f"  - {sub_key}: {sub_value}")
-            else:
-                summary_parts.append(f"**{key.replace('_', ' ').title()}:** {value}")
+        # Add key phrases if available
+        if insight.key_phrases and len(insight.key_phrases) > 0:
+            summary_parts.extend([
+                f"## Key Phrases",
+                f"",
+                f"{', '.join(insight.key_phrases[:20])}{'...' if len(insight.key_phrases) > 20 else ''}",
+                f""
+            ])
         
+        # Add extracted insights if available
+        if insight.insights:
+            summary_parts.extend([
+                f"## Extracted Insights",
+                f""
+            ])
+            
+            # Add business intelligence insights
+            if 'business_intelligence' in insight.insights:
+                bi_data = insight.insights['business_intelligence']
+                summary_parts.append(f"### Business Intelligence")
+                if bi_data.get('kpis'):
+                    if isinstance(bi_data['kpis'], dict):
+                        summary_parts.append(f"**KPIs:** {', '.join(list(bi_data['kpis'].keys())[:10])}")
+                    else:
+                        summary_parts.append(f"**KPIs:** {', '.join(str(kpi) for kpi in bi_data['kpis'][:10])}")
+                if bi_data.get('business_terms'):
+                    if isinstance(bi_data['business_terms'], dict):
+                        summary_parts.append(f"**Business Terms:** {', '.join(list(bi_data['business_terms'].keys())[:10])}")
+                    else:
+                        summary_parts.append(f"**Business Terms:** {', '.join(str(term) for term in bi_data['business_terms'][:10])}")
+                summary_parts.append("")
+            
+            # Add entities if available
+            if 'entities' in insight.insights:
+                entities = insight.insights['entities']
+                if entities:
+                    if isinstance(entities, dict):
+                        summary_parts.extend([
+                            f"### Entities",
+                            f"**Extracted Entities:** {', '.join(list(entities.keys())[:15])}",
+                            f""
+                        ])
+                    else:
+                        summary_parts.extend([
+                            f"### Entities",
+                            f"**Extracted Entities:** {', '.join(str(entity) for entity in entities[:15])}",
+                            f""
+                        ])
+        
+        # Add processing metadata
         summary_parts.extend([
+            f"## Processing Information",
             f"",
-            f"## Content Preview",
-            f"",
-            f"*Document content has been processed and stored with insights extracted.*"
+            f"**Extraction Types:** {', '.join(metadata.get('extraction_types', []))}",
+            f"**Key Phrases Count:** {metadata.get('key_phrases_count', 0)}",
+            f"**Content Length:** {metadata.get('chunk_content_length', 0)} characters",
+            f"**ChromaDB Status:** {metadata.get('chromadb_status', 'Unknown')}",
+            f"**Extraction Date:** {metadata.get('extraction_date', 'Unknown')}",
+            f""
         ])
         
         return "\n".join(summary_parts)
@@ -254,14 +300,17 @@ async def upload_document(
             document_type=document_type.value,
             document_id=document_id,
             document_name=filename,
+            document_content=document.content,
+            insight=insight,
             metadata={
-                "chromadb_ids": insight.chromadb_ids,
+                "chromadb_ids": insight.chromadb_ids if insight.chromadb_ids else [],
                 "extraction_types": insight.extraction_config.get("extraction_types", []) if insight.extraction_config else [],
                 "key_phrases_count": len(insight.key_phrases) if insight.key_phrases else 0,
                 "chunk_content_length": len(insight.chunk_content) if insight.chunk_content else 0,
                 "extraction_date": insight.extraction_date,
                 "source_type": insight.source_type,
-                "event_type": insight.event_type
+                "event_type": insight.event_type,
+                "chromadb_status": "Success" if insight.chromadb_ids else "Failed or Pending"
             }
         )
 

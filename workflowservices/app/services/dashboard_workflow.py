@@ -347,7 +347,12 @@ class DashboardWorkflowService(BaseService):
         
         # Get workflow if not provided
         if not workflow_id:
-            stmt = select(DashboardWorkflow).where(DashboardWorkflow.dashboard_id == dashboard_id)
+            stmt = select(DashboardWorkflow).options(
+                joinedload(DashboardWorkflow.share_configs),
+                joinedload(DashboardWorkflow.schedule_config),
+                joinedload(DashboardWorkflow.integrations),
+                joinedload(DashboardWorkflow.thread_components)
+            ).where(DashboardWorkflow.dashboard_id == dashboard_id)
             result = await self.db.execute(stmt)
             workflow = result.scalar_one_or_none()
         else:
@@ -358,21 +363,21 @@ class DashboardWorkflowService(BaseService):
         
         # Get sharing configurations
         sharing_configs = []
-        if workflow.share_configurations:
-            for config in workflow.share_configurations:
+        if workflow.share_configs:
+            for config in workflow.share_configs:
                 sharing_configs.append({
                     "id": str(config.id),
                     "share_type": config.share_type.value,
                     "target_id": str(config.target_id) if config.target_id else None,
-                    "target_email": config.target_email,
-                    "permission_level": config.permission_level.value,
+                    "target_email": getattr(config, 'target_email', None),
+                    "permission_level": config.permissions.get('permission_level', 'read') if config.permissions else 'read',
                     "created_at": config.created_at.isoformat()
                 })
         
         # Get schedule configuration
         schedule_config = None
-        if workflow.schedule_configurations:
-            schedule = workflow.schedule_configurations[0]  # Get first schedule
+        if workflow.schedule_config:
+            schedule = workflow.schedule_config
             schedule_config = {
                 "id": str(schedule.id),
                 "schedule_type": schedule.schedule_type.value,
@@ -381,23 +386,23 @@ class DashboardWorkflowService(BaseService):
                 "start_date": schedule.start_date.isoformat() if schedule.start_date else None,
                 "end_date": schedule.end_date.isoformat() if schedule.end_date else None,
                 "next_run": schedule.next_run.isoformat() if schedule.next_run else None,
-                "is_active": schedule.is_active,
-                "run_count": schedule.run_count,
-                "last_run": schedule.last_run.isoformat() if schedule.last_run else None,
-                "configuration": schedule.configuration,
+                "is_active": getattr(schedule, 'is_active', True),
+                "run_count": getattr(schedule, 'run_count', 0),
+                "last_run": schedule.last_run.isoformat() if getattr(schedule, 'last_run', None) else None,
+                "configuration": getattr(schedule, 'configuration', {}),
                 "created_at": schedule.created_at.isoformat()
             }
         
         # Get integration configurations
         integration_configs = []
-        if workflow.integration_configs:
-            for config in workflow.integration_configs:
+        if workflow.integrations:
+            for config in workflow.integrations:
                 integration_configs.append({
                     "id": str(config.id),
                     "integration_type": config.integration_type.value,
                     "connection_config": config.connection_config,
-                    "is_active": config.is_active,
-                    "last_sync": config.last_sync.isoformat() if config.last_sync else None,
+                    "is_active": getattr(config, 'is_active', True),
+                    "last_sync": config.last_sync.isoformat() if getattr(config, 'last_sync', None) else None,
                     "created_at": config.created_at.isoformat()
                 })
         
@@ -413,25 +418,65 @@ class DashboardWorkflowService(BaseService):
                     "configuration": component.configuration,
                     "is_configured": component.is_configured,
                     "thread_message_id": str(component.thread_message_id) if component.thread_message_id else None,
-                    "created_at": component.created_at.isoformat()
+                    "created_at": component.created_at.isoformat(),
                     "sql_query": component.sql_query
                 })
         
-        # Get alert components
+        # Get alert components from ThreadComponent table
         alert_components = []
+        
+        # First, get alert components from ThreadComponent table
+        stmt = select(ThreadComponent).where(
+            and_(
+                ThreadComponent.workflow_id == workflow.id,
+                ThreadComponent.component_type == ComponentType.ALERT
+            )
+        ).order_by(ThreadComponent.sequence_order)
+        result = await self.db.execute(stmt)
+        thread_alert_components = result.scalars().all()
+        
+        for component in thread_alert_components:
+            alert_config = component.alert_config or {}
+            alert_components.append({
+                "id": str(component.id),
+                "question": component.question,
+                "description": component.description,
+                "alert_type": alert_config.get("alert_type"),
+                "severity": alert_config.get("severity"),
+                "alert_status": component.alert_status.value if component.alert_status else None,
+                "trigger_count": component.trigger_count or 0,
+                "last_triggered": component.last_triggered.isoformat() if component.last_triggered else None,
+                "created_at": component.created_at.isoformat(),
+                "sql_query": component.sql_query,
+                "executive_summary": component.executive_summary,
+                "data_overview": component.data_overview,
+                "visualization_data": component.visualization_data,
+                "sample_data": component.sample_data,
+                "metadata": component.thread_metadata,
+                "chart_schema": component.chart_schema,
+                "reasoning": component.reasoning,
+                "data_count": component.data_count,
+                "validation_results": component.validation_results
+            })
+        
+        # Also include alert components from workflow metadata (for backward compatibility)
         if workflow.workflow_metadata and "alerts" in workflow.workflow_metadata:
             for alert in workflow.workflow_metadata["alerts"]:
-                alert_components.append({
-                    "id": alert["id"],
-                    "question": alert["question"],
-                    "description": alert["description"],
-                    "alert_type": alert["alert_config"]["alert_type"],
-                    "severity": alert["alert_config"]["severity"],
-                    "alert_status": alert["alert_status"],
-                    "trigger_count": alert["trigger_count"],
-                    "last_triggered": alert["last_triggered"],
-                    "created_at": alert["created_at"]
-                })
+                # Check if this alert is already included from ThreadComponent table
+                alert_id = alert["id"]
+                if not any(comp["id"] == alert_id for comp in alert_components):
+                    alert_components.append({
+                        "id": alert["id"],
+                        "question": alert["question"],
+                        "description": alert["description"],
+                        "alert_type": alert["alert_config"]["alert_type"],
+                        "severity": alert["alert_config"]["severity"],
+                        "alert_status": alert["alert_status"],
+                        "trigger_count": alert["trigger_count"],
+                        "last_triggered": alert["last_triggered"],
+                        "created_at": alert["created_at"],
+                        "sql_query": alert.get("sql_query")
+                    })
         
         # Get draft changes
         draft_changes = workflow.workflow_metadata.get("draft_changes", {})
@@ -527,7 +572,7 @@ class DashboardWorkflowService(BaseService):
                 data_overview=component_data.data_overview,
                 visualization_data=component_data.visualization_data,
                 sample_data=component_data.sample_data,
-                thread_metadata=component_data.metadata,
+                thread_metadata=component_data.metadata,  # Map metadata to thread_metadata
                 chart_schema=component_data.chart_schema,
                 reasoning=component_data.reasoning,
                 data_count=component_data.data_count,
@@ -830,6 +875,28 @@ class DashboardWorkflowService(BaseService):
             component.alert_status = update_data.alert_status
         if update_data.configuration:
             component.configuration = update_data.configuration
+        
+        # Update SQL-related fields
+        if update_data.sql_query is not None:
+            component.sql_query = update_data.sql_query
+        if update_data.executive_summary is not None:
+            component.executive_summary = update_data.executive_summary
+        if update_data.data_overview is not None:
+            component.data_overview = update_data.data_overview
+        if update_data.visualization_data is not None:
+            component.visualization_data = update_data.visualization_data
+        if update_data.sample_data is not None:
+            component.sample_data = update_data.sample_data
+        if update_data.metadata is not None:
+            component.thread_metadata = update_data.metadata
+        if update_data.chart_schema is not None:
+            component.chart_schema = update_data.chart_schema
+        if update_data.reasoning is not None:
+            component.reasoning = update_data.reasoning
+        if update_data.data_count is not None:
+            component.data_count = update_data.data_count
+        if update_data.validation_results is not None:
+            component.validation_results = update_data.validation_results
 
         component.updated_at = datetime.utcnow()
 
@@ -978,9 +1045,17 @@ class DashboardWorkflowService(BaseService):
         if not component:
             raise ValueError(f"Component {component_id} not found")
 
-        # Update fields
-        for field, value in update_data.dict(exclude_unset=True).items():
-            setattr(component, field, value)
+        # Update fields with proper field mapping
+        update_dict = update_data.dict(exclude_unset=True)
+        
+        # Handle field name mapping
+        if 'metadata' in update_dict:
+            component.thread_metadata = update_dict.pop('metadata')
+        
+        # Update all other fields
+        for field, value in update_dict.items():
+            if hasattr(component, field):
+                setattr(component, field, value)
 
         component.updated_at = datetime.utcnow()
 
@@ -1744,7 +1819,12 @@ class DashboardWorkflowService(BaseService):
     async def _get_workflow(self, workflow_id: UUID, user_id: UUID) -> DashboardWorkflow:
         """Get workflow with permission check"""
 
-        stmt = select(DashboardWorkflow).where(DashboardWorkflow.id == workflow_id)
+        stmt = select(DashboardWorkflow).options(
+            joinedload(DashboardWorkflow.share_configs),
+            joinedload(DashboardWorkflow.schedule_config),
+            joinedload(DashboardWorkflow.integrations),
+            joinedload(DashboardWorkflow.thread_components)
+        ).where(DashboardWorkflow.id == workflow_id)
         result = await self.db.execute(stmt)
         workflow = result.scalar_one_or_none()
 
@@ -1788,6 +1868,14 @@ class DashboardWorkflowService(BaseService):
                 "table": component.table_config,
                 "metadata": component.thread_metadata,
                 "sql_query": component.sql_query,
+                "executive_summary": component.executive_summary,
+                "data_overview": component.data_overview,
+                "visualization_data": component.visualization_data,
+                "sample_data": component.sample_data,
+                "chart_schema": component.chart_schema,
+                "reasoning": component.reasoning,
+                "data_count": component.data_count,
+                "validation_results": component.validation_results,
                 "configuration": component.configuration,
                 "is_configured": component.is_configured
             }

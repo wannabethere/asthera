@@ -18,23 +18,9 @@ class CollectionManager:
     def _initialize_client(self) -> chromadb.Client:
         """Initialize ChromaDB client based on settings"""
         try:
-            if self.settings.CHROMA_USE_LOCAL:
-                # Use local persistent client
-                return chromadb.PersistentClient(
-                    path=self.settings.CHROMA_PERSIST_DIRECTORY,
-                    settings=ChromaSettings(
-                        anonymized_telemetry=False
-                    )
-                )
-            else:
-                # Use HTTP client
-                return chromadb.HttpClient(
-                    host=self.settings.CHROMA_HOST,
-                    port=self.settings.CHROMA_PORT,
-                    settings=ChromaSettings(
-                        anonymized_telemetry=False
-                    )
-                )
+            # Use the centralized dependency injection system
+            from app.core.dependencies import get_chromadb_client
+            return get_chromadb_client()
         except Exception as e:
             logger.error(f"Failed to initialize ChromaDB client: {e}")
             raise

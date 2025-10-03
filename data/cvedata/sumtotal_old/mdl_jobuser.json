@@ -1,0 +1,127 @@
+{
+    "catalog": "sumtotal_learn",
+    "schema": "public",
+    "models": [
+      {
+        "name": "jobuser_sumtotal",
+        "description": "This table serves as a source for summarizing job user data within the Sumtotal Learn system, capturing essential attributes related to job templates and user associations.",
+        "tableReference": {
+          "table": "jobuser_sumtotal"
+        },
+        "columns": [
+          {
+            "name": "jobtemplatefk",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Job Template Foreign Key",
+              "description": "Foreign key reference to the job template associated with the user."
+            }
+          },
+          {
+            "name": "personfk",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Person Foreign Key",
+              "description": "Foreign key reference to the person associated with the job user."
+            }
+          },
+          {
+            "name": "isprimary",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Is Primary",
+              "description": "Indicates whether the job user is a primary user for the job template."
+            }
+          },
+          {
+            "name": "joiningdate",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Joining Date",
+              "description": "The date when a user joined the job or position."
+            }
+          },
+          {
+            "name": "authlstary",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Authorization List Array",
+              "description": "A text field that stores an array of authorization lists associated with a user."
+            }
+          },
+          {
+            "name": "notetext",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Note Text",
+              "description": "Text field for additional notes related to job users."
+            }
+          },
+          {
+            "name": "synchfaultflg",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Synchronization Fault Flag",
+              "description": "Indicates whether there is a synchronization fault for the job user record."
+            }
+          },
+          {
+            "name": "synchfaultcntlstary",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Synchronization Fault Count List Array",
+              "description": "A text field that stores a list of synchronization fault counts in a comma-separated format."
+            }
+          },
+          {
+            "name": "objtypcd",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Object Type Code",
+              "description": "A code representing the type of object associated with the job user."
+            }
+          },
+          {
+            "name": "deleted",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Deleted Flag",
+              "description": "Indicates whether a job user record has been deleted."
+            }
+          },
+          {
+            "name": "mvpbatchid",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "MVP Batch ID",
+              "description": "Identifier for the MVP batch process in the job user summary table."
+            }
+          },
+          {
+            "name": "createddate",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Created Date",
+              "description": "Timestamp indicating when the record was created, stored as a string."
+            }
+          },
+          {
+            "name": "jobname",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Job Name",
+              "description": "The name of the job associated with a user in the jobuser_sumtotal table."
+            }
+          },
+          {
+            "name": "jobnum",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Job Number",
+              "description": "Identifier for jobs within the jobuser_sumtotal table"
+            }
+          }
+        ]
+      }
+    ]
+}

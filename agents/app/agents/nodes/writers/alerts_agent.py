@@ -11,6 +11,7 @@ import uuid
 import re
 import asyncio
 import aiohttp
+import logging
 from typing import Dict, List, Any, Optional, Tuple, Union, Protocol
 from pydantic import BaseModel, Field
 from enum import Enum
@@ -623,7 +624,6 @@ This should generate two conditions: one for completion < 90% and another for ex
         })
         
         # Debug logging: Log the raw JSON result from the LLM
-        import logging
         logger = logging.getLogger(__name__)
         logger.info(f"DEBUG: Raw JSON result from alert generator: {config_result}")
         logger.info(f"DEBUG: Type of config_result: {type(config_result)}")
@@ -732,7 +732,6 @@ If clarification is needed, set "is_valid": false, "needs_clarification": true, 
         })
         
         # Debug logging: Log the critique result
-        import logging
         logger = logging.getLogger(__name__)
         logger.info(f"DEBUG: Critique result: {critique_result}")
         
@@ -818,7 +817,6 @@ Return the same JSON structure as before but with improvements:
             })
             
             # Debug logging: Log the refinement result
-            import logging
             logger = logging.getLogger(__name__)
             logger.info(f"DEBUG: Refinement result: {refined_result}")
             
@@ -849,7 +847,6 @@ Return the same JSON structure as before but with improvements:
         """Main method to generate Lexy Feed alert from SQL + natural language"""
         
         # Debug logging: Log the input request
-        import logging
         logger = logging.getLogger(__name__)
         logger.info(f"DEBUG: generate_alert called with request: {request}")
         

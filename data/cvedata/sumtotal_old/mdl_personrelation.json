@@ -1,0 +1,103 @@
+{
+    "catalog": "sumtotal_learn",
+    "schema": "public",
+    "models": [
+      {
+        "name": "personrelation_sumtotal",
+        "description": "This table captures the relationships between individuals and their respective managers within the organization, providing a comprehensive view of reporting structures.",
+        "tableReference": {
+          "table": "personrelation_sumtotal"
+        },
+        "columns": [
+          {
+            "name": "personfk",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Person Foreign Key",
+              "description": "Foreign key reference to a person in the database, linking to the person entity."
+            }
+          },
+          {
+            "name": "manager1fk",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Manager 1 Foreign Key",
+              "description": "Foreign key reference to the first manager in the person relation table."
+            }
+          },
+          {
+            "name": "manager2fk",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Manager 2 Foreign Key",
+              "description": "Foreign key reference to the second manager in the person relation hierarchy."
+            }
+          },
+          {
+            "name": "manager3fk",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Manager 3 Foreign Key",
+              "description": "Foreign key referencing the third-level manager in the person relation hierarchy."
+            }
+          },
+          {
+            "name": "manager4fk",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Manager 4 Foreign Key",
+              "description": "Foreign key reference to the fourth manager in the person relation hierarchy."
+            }
+          },
+          {
+            "name": "manager5fk",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Manager 5 Foreign Key",
+              "description": "Foreign key reference to the fifth-level manager in the person relation hierarchy."
+            }
+          },
+          {
+            "name": "manager6fk",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Manager 6 Foreign Key",
+              "description": "Foreign key reference to the sixth level manager in the person relation hierarchy."
+            }
+          },
+          {
+            "name": "manager7fk",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Manager 7 Foreign Key",
+              "description": "Foreign key reference to the manager associated with a person in the personrelation_sumtotal table."
+            }
+          },
+          {
+            "name": "manager8fk",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Manager 8 Foreign Key",
+              "description": "Foreign key reference to the eighth manager in the person relation table."
+            }
+          },
+          {
+            "name": "manager9fk",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Manager 9 Foreign Key",
+              "description": "Foreign key reference to the ninth manager in the person relation hierarchy."
+            }
+          },
+          {
+            "name": "createddate_ts",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Created Date",
+              "description": "Timestamp indicating when the record was created, stored as a string."
+            }
+          }
+        ]
+      }
+    ]
+}

@@ -452,13 +452,17 @@ class EnhancedSelfRAGAgent:
         self.tfidf_ranker = TFIDFChunkRanker()
         self.document_grader = DocumentGrader(llm=self.llm)
         
-        # Initialize DocumentChromaStore for document retrieval
-        from app.core.dependencies import get_chromadb_client
-        persistent_client = get_chromadb_client()
+        # Initialize DocumentChromaStore for document retrieval using DataServices configuration
+        from app.settings import get_settings
+        import chromadb
+        
+        settings = get_settings()
+        # Use the same ChromaDB configuration as DataServices
+        persistent_client = chromadb.PersistentClient(path=settings.DATASERVICES_CHROMA_PATH)
         self.doc_store = DocumentChromaStore(
             persistent_client=persistent_client,
-            collection_name="documents",
-            tf_idf=True
+            collection_name=settings.DATASERVICES_CHROMA_COLLECTION,
+            tf_idf=True  # This will also create the TF-IDF collection (documents_tfidf)
         )
         
         # Configure performance settings
@@ -833,7 +837,6 @@ class EnhancedSelfRAGAgent:
                 question=state.question,
                 document_type=None,  # Let planner determine
                 source_type=state.source,
-                max_documents=25,
                 chat_history=state.chat_history
             )
             
@@ -1281,8 +1284,8 @@ class EnhancedSelfRAGAgent:
             try:
                 results = self.doc_store.semantic_search(
                     query=query,
-                    n_results=n_results,
-                    filter={"date_timestamp": {"$gt": timestamp_120_days_ago}}
+                    k=n_results,
+                    where={"date_timestamp": {"$gt": timestamp_120_days_ago}}
                 )
                 
                 # If no results with timestamp filter, fall back to unfiltered search
@@ -1290,14 +1293,14 @@ class EnhancedSelfRAGAgent:
                     logger.warning("No results found with date_timestamp filter, falling back to unfiltered search")
                     results = self.doc_store.semantic_search(
                         query=query,
-                        n_results=n_results
+                        k=n_results
                     )
                     
             except Exception as filter_err:
                 logger.error(f"Error with date-filtered query: {filter_err}, falling back to unfiltered query")
                 results = self.doc_store.semantic_search(
                     query=query,
-                    n_results=n_results
+                    k=n_results
                 )
             
             logger.info(f"Found {len(results)} results from DocumentChromaStore")
@@ -1540,7 +1543,13 @@ class EnhancedSelfRAGAgent:
     
     def _format_enhanced_response(self, result: Any) -> Dict[str, Any]:
         """Format the enhanced agent's response."""
-        if not isinstance(result, EnhancedSelfRAGState):
+        # Handle different result types from LangGraph
+        if hasattr(result, 'get') and 'question' in result:
+            # This is likely an AddableValuesDict from LangGraph
+            state = EnhancedSelfRAGState(**result)
+        elif isinstance(result, EnhancedSelfRAGState):
+            state = result
+        else:
             logger.error(f"Unexpected result type: {type(result)}")
             return {
                 "messages": [
@@ -1554,11 +1563,11 @@ class EnhancedSelfRAGAgent:
             }
         
         # Create enhanced response with metadata
-        message_content = result.final_answer
+        message_content = state.final_answer
         
         # Add source citations
         citations = []
-        for doc in result.selected_documents:
+        for doc in state.selected_documents:
             if doc.source_type == "document":
                 citations.append({
                     "type": "document",
@@ -1586,9 +1595,9 @@ class EnhancedSelfRAGAgent:
                     "message_content": message_content,
                     "message_id": f"ai_{int(time.time())}",
                     "message_extra": {
-                        "metadata": result.metadata_summary,
-                        "action_taken": result.action_taken,
-                        "sources_count": len(result.selected_documents)
+                        "metadata": state.metadata_summary,
+                        "action_taken": state.action_taken,
+                        "sources_count": len(state.selected_documents)
                     }
                 }
             ]

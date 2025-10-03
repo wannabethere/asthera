@@ -19,7 +19,8 @@ SQL_GENERATION_MODEL_KWARGS = {
     "presence_penalty": settings.SQL_GENERATION_PRESENCE_PENALTY,
 }
 
-TEXT_TO_SQL_RULES = """
+# Original comprehensive rules (backup)
+TEXT_TO_SQL_RULES_ORIGINAL = """
 #### SQL RULES ####
 - ONLY USE SELECT statements, NO DELETE, UPDATE OR INSERT etc. statements that might change the data in the database.
 - Strictly Support POSTGRES SQL Syntax.
@@ -103,6 +104,199 @@ TEXT_TO_SQL_RULES = """
   - Join conditions to ensure correct column matching between tables
   - Use the exact column names specified in the relationship conditions
   - Consider the relationship direction when writing JOIN clauses
+  
+"""
+
+# New concise rules optimized for LLM attention
+TEXT_TO_SQL_RULES = """
+#### SQL RULES ####
+- ONLY USE SELECT statements, NO DELETE, UPDATE OR INSERT etc. statements that might change the data in the database.
+- Strictly Support POSTGRES SQL Syntax.
+- ONLY USE the tables and columns mentioned in the database schema. **CRITICAL**: Only use columns that exist in the provided schema for a table. Dont create columns that dont exist in the schema.
+- ONLY USE "*" if the user query asks for all the columns of a table.
+- ONLY CHOOSE columns belong to the tables mentioned in the database schema. 
+- **CRITICAL**: Only use columns that exist in the provided schema for a table. Dont mixup columns from different tables.
+- **CRITICAL**: Dont use comments in the generated SQL query. Do not add any comments in the generated SQL query.
+- DON'T INCLUDE comments in the generated SQL query.
+- YOU MUST USE "JOIN" if you choose columns from multiple tables!
+- ALWAYS QUALIFY column names with their table name or table alias to avoid ambiguity (e.g., orders.OrderId, o.OrderId)
+- **CRITICAL**: IF there are multiple tables provided please ensure columns belonging to the table are aliased correctly. ex: act.activity_pk from tbl_tmx_activity_sumtotal as act,INCORRECT: a.attempt_pk  from tbl_tmx_activity_sumtotal as a is incorrect.
+- **IMPORTANT: Use column names exactly as they appear in the database schema (case-sensitive). If the schema shows 'division' (lowercase), use 'division', not 'Division'.**
+- YOU MUST USE "lower(<table_name>.<column_name>) like lower(<value>)" function or "lower(<table_name>.<column_name>) = lower(<value>)" function for case-insensitive comparison!
+    - Use "lower(<table_name>.<column_name>) LIKE lower(<value>)" when:
+        - The user requests a pattern or partial match.
+        - The value is not specific enough to be a single, exact value.
+        - Wildcards (%) are needed to capture the pattern.
+    - Use "lower(<table_name>.<column_name>) = lower(<value>)" when:
+        - The user requests an exact, specific value.
+        - There is no ambiguity or pattern in the value.
+- ALWAYS CAST the date/time related field to "TIMESTAMP WITH TIME ZONE" type when using them in the query
+    - example 1: CAST(properties_closedate AS TIMESTAMP WITH TIME ZONE)
+    - example 2: CAST('2024-11-09 00:00:00' AS TIMESTAMP WITH TIME ZONE)
+    - example 3: CAST(DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') AS TIMESTAMP WITH TIME ZONE)
+- If the user asks for a specific date, please give the date range in SQL query
+    - example: "What is the total revenue for the month of 2024-11-01?"
+    - answer: "SELECT SUM(r.PriceSum) FROM Revenue r WHERE CAST(r.PurchaseTimestamp AS TIMESTAMP WITH TIME ZONE) >= CAST('2024-11-01 00:00:00' AS TIMESTAMP WITH TIME ZONE) AND CAST(r.PurchaseTimestamp AS TIMESTAMP WITH TIME ZONE) < CAST('2024-11-02 00:00:00' AS TIMESTAMP WITH TIME ZONE)"
+- USE THE VIEW TO SIMPLIFY THE QUERY.
+- DON'T MISUSE THE VIEW NAME. THE ACTUAL NAME IS FOLLOWING THE CREATE VIEW STATEMENT.
+- Use CTEs when views are not available: WITH cte_name AS (subquery)
+- For UNION ALL with CTEs: Create separate CTEs for different logic
+  - **IMPORTANT**: CORRECT: WITH highest AS (SELECT ... ORDER BY ... DESC LIMIT 1), lowest AS (SELECT ... ORDER BY ... ASC LIMIT 1) (SELECT * FROM highest) UNION ALL (SELECT * FROM lowest)
+  - - **IMPORTANT**: INCORRECT: WITH data AS (SELECT ...) SELECT ... FROM data ORDER BY ... DESC LIMIT 1 UNION ALL SELECT ... FROM data ORDER BY ... ASC LIMIT 1
+- MUST USE the value of alias from the comment section of the corresponding table or column in the DATABASE SCHEMA section for the column/table alias.
+  - EXAMPLE
+    DATABASE SCHEMA
+    /* {"displayName":"_orders","description":"A model representing the orders data."} */
+    CREATE TABLE orders (
+      -- {"description":"A column that represents the timestamp when the order was approved.","alias":"_timestamp"}
+      ApprovedTimestamp TIMESTAMP
+    )
+
+    SQL
+    SELECT _orders.ApprovedTimestamp AS _timestamp FROM orders AS _orders;
+- DON'T USE '.' in column/table alias, replace '.' with '_' in column/table alias.
+- DON'T USE "FILTER(WHERE <expression>)" clause in the generated SQL query.
+-DON'T MISUSE THE VIEW NAME. THE ACTUAL NAME IS FOLLOWING THE CREATE VIEW STATEMENT.
+- MUST USE the value of alias from the comment section of the corresponding table or column in the DATABASE SCHEMA section for the column/table alias.
+  - EXAMPLE
+    DATABASE SCHEMA
+    /* {"displayName":"_orders","description":"A model representing the orders data."} */
+    CREATE TABLE orders (
+      -- {"description":"A column that represents the timestamp when the order was approved.","alias":"_timestamp"}
+      ApprovedTimestamp TIMESTAMP
+    )
+
+    SQL
+    SELECT _orders.ApprovedTimestamp AS _timestamp FROM orders AS _orders;
+- DON'T USE '.' in column/table alias, replace '.' with '_' in column/table alias.
+- DON'T USE "FILTER(WHERE <expression>)" clause in the generated SQL query.
+- DON'T USE "EXTRACT(EPOCH FROM <expression>)" clause in the generated SQL query.
+- DON'T USE INTERVAL or generate INTERVAL-like expression in the generated SQL query.
+- DONT USE HAVING CLAUSE WITHOUT GROUP BY CLAUSE.
+- WHEN THRESHOLD OR CONDITIONS are found, use CTE Expressions to evaluate the conditions or thresholds.
+- ONLY USE JSON_QUERY for querying fields if "json_type":"JSON" is identified in the columns comment, NOT the deprecated JSON_EXTRACT_SCALAR function.
+    - DON'T USE CAST for JSON fields, ONLY USE the following funtions:
+      - LAX_BOOL for boolean fields
+      - LAX_FLOAT64 for double and float fields
+      - LAX_INT64 for bigint fields
+      - LAX_STRING for varchar fields
+    - For Example:
+      DATA SCHEMA:
+        `/* {"displayName":"users","description":"A model representing the users data."} */
+        CREATE TABLE users (
+            -- {"alias":"address","description":"A JSON object that represents address information of this user.","json_type":"JSON","json_fields":{"json_type":"JSON","address.json.city":{"name":"city","type":"varchar","path":"$.city","properties":{"displayName":"city","description":"City Name."}},"address.json.state":{"name":"state","type":"varchar","path":"$.state","properties":{"displayName":"state","description":"ISO code or name of the state, province or district."}},"address.json.postcode":{"name":"postcode","type":"varchar","path":"$.postcode","properties":{"displayName":"postcode","description":"Postal code."}},"address.json.country":{"name":"country","type":"varchar","path":"$.country","properties":{"displayName":"country","description":"ISO code of the country."}}}}
+            address JSON
+        )`
+      To get the city of address in user table use SQL:
+      `SELECT LAX_STRING(JSON_QUERY(u.address, '$.city')) FROM user as u`
+- ONLY USE JSON_QUERY_ARRAY for querying "json_type":"JSON_ARRAY" is identified in the comment of the column, NOT the deprecated JSON_EXTRACT_ARRAY.
+    - USE UNNEST to analysis each item individually in the ARRAY. YOU MUST SELECT FROM the parent table ahead of the UNNEST ARRAY.
+    - The alias of the UNNEST(ARRAY) should be in the format `unnest_table_alias(individual_item_alias)`
+      - For Example: `SELECT item FROM UNNEST(ARRAY[1,2,3]) as my_unnested_table(item)`
+    - If the items in the ARRAY are JSON objects, use JSON_QUERY to query the fields inside each JSON item.
+      - For Example:
+      DATA SCHEMA
+        `/* {"displayName":"my_table","description":"A test my_table"} */
+        CREATE TABLE my_table (
+            -- {"alias":"elements","description":"elements column","json_type":"JSON_ARRAY","json_fields":{"json_type":"JSON_ARRAY","elements.json_array.id":{"name":"id","type":"bigint","path":"$.id","properties":{"displayName":"id","description":"data ID."}},"elements.json_array.key":{"name":"key","type":"varchar","path":"$.key","properties":{"displayName":"key","description":"data Key."}},"elements.json_array.value":{"name":"value","type":"varchar","path":"$.value","properties":{"displayName":"value","description":"data Value."}}}}
+            elements JSON
+        )`
+        To get the number of elements in my_table table use SQL:
+        `SELECT LAX_INT64(JSON_QUERY(element, '$.number')) FROM my_table as t, UNNEST(JSON_QUERY_ARRAY(elements)) AS my_unnested_table(element) WHERE LAX_FLOAT64(JSON_QUERY(element, '$.value')) > 3.5`
+    - To JOIN ON the fields inside UNNEST(ARRAY), YOU MUST SELECT FROM the parent table ahead of the UNNEST syntax, and the alias of the UNNEST(ARRAY) SHOULD BE IN THE FORMAT unnest_table_alias(individual_item_alias)
+      - For Example: `SELECT p.column_1, j.column_2 FROM parent_table AS p, join_table AS j JOIN UNNEST(p.array_column) AS unnested(array_item) ON j.id = array_item.id`
+- DON'T USE JSON_QUERY and JSON_QUERY_ARRAY when "json_type":"".
+- DONT CREATE COLUMNS WHICH ARE NOT PRESENT IN THE DATABASE SCHEMA. CHECK FOR SPELLING ERRORS IN COLUMN NAMES TO AVOID ERRORS LIKE nid instead of nuid, devid instead of dev_id, etc.
+- DON'T USE LAX_BOOL, LAX_FLOAT64, LAX_INT64, LAX_STRING when "json_type":"".
+- **RELATIONSHIP HANDLING**: When table relationships are provided, use them to create proper JOINs between tables. Pay attention to:
+  - Join types (ONE_TO_ONE, ONE_TO_MANY, MANY_TO_ONE) to determine the appropriate JOIN syntax
+  - Join conditions to ensure correct column matching between tables
+  - Use the exact column names specified in the relationship conditions
+  - Consider the relationship direction when writing JOIN clauses
+
+#### BASIC RULES ####
+- Use only SELECT statements (no DELETE, UPDATE, INSERT)
+- Use only tables and columns from the database schema
+- Use exact column names as they appear in the schema (case-sensitive)
+- Always qualify column names with table name or alias (e.g., orders.OrderId, o.OrderId)
+- Use JOIN when selecting columns from multiple tables
+- Use "*" only when user asks for all columns of a table
+- **CRITICAL**: Only use columns that exist in the provided schema
+
+#### CASE-INSENSITIVE COMPARISON ####
+- Use lower() function for case-insensitive comparisons
+- Use "lower(table.column) LIKE lower(value)" for pattern matching
+- Use "lower(table.column) = lower(value)" for exact matches
+
+#### DATE/TIME RULES ####
+- CAST date/time fields to "TIMESTAMP WITH TIME ZONE"
+- Use date ranges for specific date queries
+- Example: CAST(properties_closedate AS TIMESTAMP WITH TIME ZONE)
+
+#### CTE AND VIEW RULES ####
+- Use views to simplify queries when available
+- Use CTEs when views are not available: WITH cte_name AS (subquery)
+- For UNION ALL with CTEs: Create separate CTEs for different logic
+- CORRECT: WITH highest AS (SELECT ... ORDER BY ... DESC LIMIT 1), lowest AS (SELECT ... ORDER BY ... ASC LIMIT 1) (SELECT * FROM highest) UNION ALL (SELECT * FROM lowest)
+- INCORRECT: WITH data AS (SELECT ...) SELECT ... FROM data ORDER BY ... DESC LIMIT 1 UNION ALL SELECT ... FROM data ORDER BY ... ASC LIMIT 1
+- **CRITICAL**: Every SELECT statement in a UNION ALL MUST be wrapped in parentheses
+- **CRITICAL**: This is a PostgreSQL requirement - UNION ALL without parentheses will fail
+- **SYNTAX ERROR PREVENTION**: Always wrap each SELECT in parentheses when using UNION ALL
+
+#### COLUMN REFERENCE RULES ####
+- Reference columns from the correct table in JOINs
+- Use meaningful columns for display (not foreign keys)
+- Maintain consistent table aliases throughout the query
+- Check for spelling errors in column names
+- **CRITICAL**: Only use columns that actually exist in the database schema
+- **MANDATORY**: Before using any column, verify it exists in the table schema
+- **CRITICAL**: activity_pk belongs to tbl_tmx_activity_sumtotal (alias 'act'), NOT tbl_tmx_attempt_sumtotal (alias 'a')
+- **CORRECT**: act.activity_pk (from tbl_tmx_activity_sumtotal)
+- **INCORRECT**: a.activity_pk (activity_pk does not exist in tbl_tmx_attempt_sumtotal)
+
+#### EXAMPLE SCHEMA FOR person_sumtotal TABLE ####
+- **Available columns**: personpk, personguid, lastname, firstname, middlename, fullname, active, gendercode, birthdate, companycd, companyname
+- **CORRECT usage**: p.firstname, p.lastname, p.fullname, p.personpk, p.active
+- **DO NOT use**: p.position, p.employee_position, p.job_title, p.role (these columns do not exist)
+
+#### CORRECT QUERY PATTERN EXAMPLE ####
+- **CORRECT**: WITH completion_data AS (SELECT a.activity_pk, p.firstname, COUNT(...) AS completions FROM ... GROUP BY a.activity_pk, p.firstname) (SELECT * FROM completion_data ORDER BY completion_rate DESC LIMIT 1) UNION ALL (SELECT * FROM completion_data ORDER BY completion_rate ASC LIMIT 1)
+- **INCORRECT**: WITH completion_data AS (SELECT a.activity_pk, p.position, ...) SELECT * FROM completion_data ORDER BY completion_rate DESC LIMIT 1 UNION ALL SELECT * FROM completion_data ORDER BY completion_rate ASC LIMIT 1
+
+#### QUERY SIMPLIFICATION ####
+- Use simple approaches for ranking and filtering
+- Use ELSE 0 in CASE WHEN statements: COUNT(CASE WHEN reqstate = 'Completed' THEN 1 ELSE 0 END)
+- Use CTE expressions to evaluate conditions or thresholds
+
+#### RESTRICTIONS ####
+- DON'T use FILTER(WHERE expression) clause
+- DON'T use EXTRACT(EPOCH FROM expression) clause
+- DON'T use INTERVAL or generate INTERVAL-like expressions
+- DON'T use HAVING clause without GROUP BY clause
+- DON'T use OVER clause and GROUP BY clause on the same level with PERCENTILE_CONT function
+
+#### JSON QUERY RULES ####
+- Use JSON_QUERY for "json_type":"JSON" fields
+- Use JSON_QUERY_ARRAY for "json_type":"JSON_ARRAY" fields
+- Use LAX_* functions for JSON fields (not CAST)
+- DON'T use JSON functions when "json_type" is empty
+
+#### ALIAS RULES ####
+- Use alias values from comment sections in database schema
+- DON'T use '.' in column/table aliases (replace with '_')
+
+#### RELATIONSHIP HANDLING ####
+- Use provided table relationships for proper JOINs
+- Pay attention to join types (ONE_TO_ONE, ONE_TO_MANY, MANY_TO_ONE)
+- Use exact column names from relationship conditions
+
+#### COMMON ERROR PREVENTION ####
+- **ALWAYS wrap UNION ALL SELECT statements in parentheses**
+- **NEVER write**: SELECT ... ORDER BY ... LIMIT 1 UNION ALL SELECT ... ORDER BY ... LIMIT 1
+- **ALWAYS write**: (SELECT ... ORDER BY ... LIMIT 1) UNION ALL (SELECT ... ORDER BY ... LIMIT 1)
+- **ONLY use columns that exist in the provided database schema**
+- **For person_sumtotal table**: Use personpk, firstname, lastname, fullname, active, etc.
+- **DO NOT invent column names** that don't exist in the schema
 """
 
 sql_generation_system_prompt = f"""
@@ -112,6 +306,12 @@ Given user's question, database schema, etc., you should think deeply and carefu
 **In addition, you should also provide a column filters chosen,time filters chosen, aggregations applied on columns and group by columns chosen in the SQL query as a JSON object**
 
 **CRITICAL: When generating SQL, use column names exactly as they appear in the database schema. If the schema shows 'division' (lowercase), use 'division', not 'Division'. This prevents SQL execution errors.**
+
+**CRITICAL UNION ALL RULE: When using UNION ALL, EVERY SELECT statement MUST be wrapped in parentheses. This is a PostgreSQL requirement. Example: (SELECT ... ORDER BY ... LIMIT 1) UNION ALL (SELECT ... ORDER BY ... LIMIT 1)**
+
+**CRITICAL COLUMN RULE: person_sumtotal table does NOT have a 'position' column. Use p.firstname, p.lastname, p.fullname instead. NEVER use p.position.**
+
+**CRITICAL ACTIVITY PK RULE: activity_pk belongs to tbl_tmx_activity_sumtotal (alias 'act'), NOT tbl_tmx_attempt_sumtotal (alias 'a'). Use act.activity_pk, NEVER use a.activity_pk.**
 
 **IMPORTANT: Generate SQL queries as single-line statements without unnecessary line breaks. The SQL should be compact and executable.**
 

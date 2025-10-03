@@ -1,0 +1,127 @@
+{
+    "catalog": "sumtotal_learn",
+    "schema": "public",
+    "models": [
+      {
+        "name": "tbl_tmx_userrequiredact_sumtotal",
+        "description": "This table serves as a source for tracking user-required activities and their statuses within the Sumtotal Learn platform, providing insights into user engagement and compliance.",
+        "tableReference": {
+          "table": "tbl_tmx_userrequiredact_sumtotal"
+        },
+        "columns": [
+          {
+            "name": "empfk",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Employee Foreign Key",
+              "description": "Foreign key reference to the employee table, linking user activities to specific employees."
+            }
+          },
+          {
+            "name": "activityfk",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Activity Foreign Key",
+              "description": "Foreign key referencing the activity associated with user-required actions."
+            }
+          },
+          {
+            "name": "reqstate",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Request State",
+              "description": "Indicates the current state of a user-required action in the system."
+            }
+          },
+          {
+            "name": "notifstatus",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Notification Status",
+              "description": "Status of the notification related to user-required activities."
+            }
+          },
+          {
+            "name": "reqstatus",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Request Status",
+              "description": "Indicates the current status of a user-required action request."
+            }
+          },
+          {
+            "name": "plandate",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Plan Date",
+              "description": "The planned date for the required activity, represented as a string in timestamp format without time zone."
+            }
+          },
+          {
+            "name": "duedate",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Due Date",
+              "description": "The date by which a specific action or requirement must be completed."
+            }
+          },
+          {
+            "name": "expirationdate",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Expiration Date",
+              "description": "The date when a user-required action is set to expire."
+            }
+          },
+          {
+            "name": "notif_plandate",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Notification Planned Date",
+              "description": "The date when a notification is planned to be sent, represented as a string in timestamp format without time zone."
+            }
+          },
+          {
+            "name": "notif_duedate",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Notification Due Date",
+              "description": "The date by which a notification related to user-required activities is due."
+            }
+          },
+          {
+            "name": "issatisfied",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Is Satisfied",
+              "description": "Indicates whether the user is satisfied with the activity or requirement."
+            }
+          },
+          {
+            "name": "isrequired",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Is Required",
+              "description": "Indicates whether a specific activity is required for the user."
+            }
+          },
+          {
+            "name": "iscertification",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Is Certification",
+              "description": "Indicates whether a user is certified for a specific activity."
+            }
+          },
+          {
+            "name": "lstupd",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Last Updated",
+              "description": "Timestamp indicating the last time the record was updated."
+            }
+          }
+        ]
+      }
+    ]
+}

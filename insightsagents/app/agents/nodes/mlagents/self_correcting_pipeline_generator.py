@@ -3301,14 +3301,8 @@ Now parse the given step description and return the JSON result.
         for i, step in enumerate(reasoning_plan):
             logger.info(f"Step {i+1}: {step}")
         
-        # Handle dataframe names with spaces
-        if ' ' in dataframe_name:
-            formatted_dataframe_name = f'"{dataframe_name}"'
-        else:
-            formatted_dataframe_name = dataframe_name
-        
         logger.info(f"Starting separate code generation from reasoning plan with {len(reasoning_plan)} steps")
-        logger.info(f"Dataframe name: {formatted_dataframe_name}")
+        logger.info(f"Dataframe name: {dataframe_name}")
         
         # Extract all function names from reasoning plan and validate them
         function_names = []
@@ -3327,7 +3321,7 @@ Now parse the given step description and return the JSON result.
         step_codes = []
         flow_graph_nodes = []
         flow_graph_edges = []
-        current_dataframe = formatted_dataframe_name
+        current_dataframe = "df"  # Always use 'df' parameter instead of hardcoded dataframe name
         
         logger.info(f"Starting to process {len(reasoning_plan)} reasoning plan steps")
         
@@ -3498,7 +3492,7 @@ Now parse the given step description and return the JSON result.
                 "function": function_name,
                 "pipeline_type": pipeline_type.value,
                 "input_dataframe": current_dataframe,
-                "output_dataframe": f"step_{i+1}_result",
+                "output_dataframe": "result",
                 "dependencies": step.get('step_dependencies', []),
                 "input_columns": step.get('input_columns', []),
                 "output_columns": step.get('output_columns', [])
@@ -3521,7 +3515,7 @@ Now parse the given step description and return the JSON result.
                 "function": function_name,
                 "pipeline_type": pipeline_type.value,
                 "input_dataframe": current_dataframe,
-                "output_dataframe": f"step_{i+1}_result",
+                "output_dataframe": "result",
                 "dependencies": step_dependencies,
                 "input_columns": step.get('input_columns', []),
                 "output_columns": step.get('output_columns', [])
@@ -3541,8 +3535,8 @@ Now parse the given step description and return the JSON result.
             
             logger.info(f"Added step {i+1} to step_codes: {step_code_dict}")
             
-            # Update current dataframe for next step
-            current_dataframe = f"step_{i+1}_result"
+            # Update current dataframe for next step - use 'df' for individual functions
+            current_dataframe = "df"
             
             # Log enhanced metadata if available
             if step.get('input_columns'):
@@ -3564,7 +3558,7 @@ Now parse the given step description and return the JSON result.
         logger.info(f"Flow graph has {len(flow_graph_nodes)} nodes and {len(flow_graph_edges)} edges")
         
         # Generate combined code for backward compatibility
-        combined_code = self._generate_combined_code_from_steps(step_codes, formatted_dataframe_name)
+        combined_code = self._generate_combined_code_from_steps(step_codes, "df")
         
         # Debug: Print the combined code
         logger.info(f"=== COMBINED GENERATED CODE ===")
@@ -3691,14 +3685,14 @@ Now parse the given step description and return the JSON result.
                 full_params = f"func={embedded_function}"
             
             step_code = f"""{comment_section}
-step_{step_number}_result = (
+result = (
     {pipeline_type.value}.from_dataframe({current_dataframe})
     | {function_name}({full_params})
     ).to_df()"""
         else:
             # Regular function call
             step_code = f"""{comment_section}
-step_{step_number}_result = (
+result = (
     {pipeline_type.value}.from_dataframe({current_dataframe})
     | {function_name}({param_str})
     ).to_df()"""
@@ -4081,7 +4075,6 @@ result = (
             ENHANCED CONTEXT: {context}
             PRIMARY FUNCTION: {function_name}
             PIPELINE TYPE: {pipeline_type}
-            DATAFRAME NAME: {dataframe_name}
             FUNCTION INPUTS: {function_inputs}
             ITERATION: {iteration}
             
@@ -4155,7 +4148,7 @@ result = (
             SINGLE PIPELINE FORMAT (REQUIRED):
             ```python
             # Start with original data
-            result = {dataframe_name}.copy()
+            result = df.copy()
             
             # Apply single pipeline step
             result = (
@@ -4199,7 +4192,7 @@ result = (
             
             CORRECT EXAMPLE:
             ```python
-            result = (MovingAggrPipe.from_dataframe(result)
+            result = (MovingAggrPipe.from_dataframe(df)
                      | moving_apply_by_group(  # Correct function name
                          columns=['Transactional value'],  # Array format
                          group_column='Region, Project',  # Correct parameter name
@@ -4215,7 +4208,7 @@ result = (
             
             For multiple pipeline types (Metrics/Operations first, then TimeSeries/Cohort/Risk/Anomaly/Segment/Trends):
             ```python
-            result = (MetricsPipe.from_dataframe({dataframe_name})
+            result = (MetricsPipe.from_dataframe(df)
                      | metrics_function1(param1='value1')
                      | metrics_function2(param2='value2')
                      | to_df()
@@ -4228,7 +4221,7 @@ result = (
             
             For funnel analysis (CohortPipe):
             ```python
-            cohort_pipe = CohortPipe.from_dataframe({dataframe_name})
+            cohort_pipe = CohortPipe.from_dataframe(df)
             cohort_pipe = cohort_pipe | analyze_funnel(
                 event_column='event_name',
                 user_id_column='user_id',
@@ -4238,7 +4231,7 @@ result = (
             
             SINGLE PIPELINE EXAMPLE - moving_apply_by_group (NO DUPLICATES):
             ```python
-            result = (MovingAggrPipe.from_dataframe({dataframe_name})
+            result = (MovingAggrPipe.from_dataframe(df)
                      | moving_apply_by_group(
                          columns=['Transactional value'],
                          group_column='Region, Project',
@@ -4254,7 +4247,7 @@ result = (
             
             WRONG EXAMPLE - WITH DUPLICATES (DO NOT USE):
             ```python
-            result = (MovingAggrPipe.from_dataframe({dataframe_name})
+            result = (MovingAggrPipe.from_dataframe(df)
                      | moving_apply_by_group(
                          columns=['Transactional value'],
                          group_column='Region, Project',
@@ -4269,7 +4262,7 @@ result = (
             
             WRONG EXAMPLE - WRONG PARAMETER NAMES (DO NOT USE):
             ```python
-            result = (AnomalyPipe.from_dataframe({dataframe_name})
+            result = (AnomalyPipe.from_dataframe(df)
                      | detect_contextual_anomalies(
                          actual_values='Transactional value',  # WRONG PARAMETER!
                          expected_values='Weekly_Average_Transactional_value',  # WRONG PARAMETER!
@@ -4281,7 +4274,7 @@ result = (
             
             CORRECT EXAMPLE - CORRECT PARAMETER NAMES:
             ```python
-            result = (AnomalyPipe.from_dataframe({dataframe_name})
+            result = (AnomalyPipe.from_dataframe(df)
                      | detect_contextual_anomalies(
                          columns=['Transactional value'],  # CORRECT!
                          time_column='Date',  # CORRECT!
@@ -4362,18 +4355,7 @@ result = (
             result = result
             ```
             
-            Example 2c - WRONG way (mixing pipeline types):
-            ```python
-            # ❌ WRONG: Don't do this - mixing MetricsPipe and TimeSeriesPipe functions
-            result = (
-                TimeSeriesPipe.from_dataframe(df)
-                | moving_apply_by_group(
-                    function=Variance,  # ❌ Variance belongs to MetricsPipe, not TimeSeriesPipe
-                    columns='Transactional value',
-                    ...
-                )
-                ).to_df()
-            ```
+          
             
             Example 3 - Multiple pipeline types (OperationsPipe first, then TimeSeriesPipe) with reasoning plan:
             ```python
@@ -4395,7 +4377,7 @@ result = (
             Example 4 - Dataframe with spaces:
             ```python
             result = (
-                TimeSeriesPipe.from_dataframe("Purchase Orders Data")
+                TimeSeriesPipe.from_dataframe(df)
                 | variance_analysis(
                     columns=['Project', 'Transactional value'],
                     method='rolling',
@@ -4499,18 +4481,7 @@ result = (
                 ).to_df()
             ```
             
-            Example 11 - WRONG way (inventing function names):
-            ```python
-            # ❌ WRONG: Don't invent function names like this
-            result = (
-                TrendsPipe.from_dataframe(df)
-                | aggregate_weekly_transactional_values(  # ❌ This function doesn't exist
-                    date_column='Date',
-                    metric_columns=['Transactional value'],
-                    by=['Region', 'Project']
-                )
-                ).to_df()
-            ```
+           
 
             Example 12 - CORRECT way (using existing function names):
             ```python
@@ -4559,23 +4530,16 @@ result = (
         generation_chain = generation_prompt | self.llm | StrOutputParser()
         
         try:
-            # Handle dataframe names with spaces
-            formatted_dataframe_name = dataframe_name
-            if ' ' in dataframe_name:
-                formatted_dataframe_name = f'"{dataframe_name}"'
-            
             logger.info(f"Calling generation_chain.ainvoke with parameters:")
             logger.info(f"  context: {context}")
             logger.info(f"  function_name: {function_name}")
             logger.info(f"  pipeline_type: {pipeline_type.value}")
-            logger.info(f"  dataframe_name: {formatted_dataframe_name}")
             
             generated_code = await generation_chain.ainvoke({
                 "context": context,
                 "original_context": original_context,
                 "function_name": function_name,
                 "pipeline_type": pipeline_type.value,
-                "dataframe_name": formatted_dataframe_name,
                 "function_inputs": inputs_str,
                 "additional_computations": json.dumps(additional_computations, indent=2),
                 "pipeline_sequence": json.dumps(pipeline_sequence, indent=2),
@@ -5840,21 +5804,31 @@ result = (
             else:
                 retrieved_functions = classification.get('retrieved_functions', [])
             
+            logger.info(f"DEBUG: Retrieved functions count: {len(retrieved_functions)}")
+            logger.info(f"DEBUG: Looking for function '{function_name}' in retrieved functions")
+            
             # Look for the function in retrieved functions to get its pipeline type
             for func in retrieved_functions:
                 if isinstance(func, dict) and func.get('function_name') == function_name:
+                    logger.info(f"DEBUG: Found function '{function_name}' in retrieved functions")
+                    logger.info(f"DEBUG: Function data: {func}")
+                    
                     # Check for pipe_name in retrieved function (most reliable)
                     pipe_name = func.get('pipe_name')
+                    logger.info(f"DEBUG: pipe_name = {pipe_name}")
                     if pipe_name:
                         pipeline_type = self._map_pipe_name_to_pipeline_type(pipe_name)
+                        logger.info(f"DEBUG: Mapped pipe_name '{pipe_name}' to pipeline_type: {pipeline_type}")
                         if pipeline_type:
                             logger.info(f"Detected pipeline type {pipeline_type.value} for function '{function_name}' from retrieved functions pipe_name")
                             return pipeline_type
                     
                     # Check for category in retrieved function
                     category = func.get('category')
+                    logger.info(f"DEBUG: category = {category}")
                     if category and category != "unknown_category":
-                        pipeline_type = self._map_pipe_name_to_pipeline_type(category)
+                        pipeline_type = self._get_pipeline_type_from_function_category(category)
+                        logger.info(f"DEBUG: Mapped category '{category}' to pipeline_type: {pipeline_type}")
                         if pipeline_type:
                             logger.info(f"Detected pipeline type {pipeline_type.value} for function '{function_name}' from retrieved functions category")
                             return pipeline_type
@@ -5931,9 +5905,15 @@ result = (
         if pipeline_type:
             return pipeline_type
         
-        # Final fallback - use context-based detection only as last resort
-        logger.warning(f"Could not determine pipeline type for function '{function_name}', using context-based fallback")
-        return self._detect_pipeline_type_from_context(context)
+        # Final fallback - try to determine pipeline type from function name patterns
+        pipeline_type = self._determine_pipeline_type_from_function_name(function_name)
+        if pipeline_type:
+            logger.warning(f"Could not determine pipeline type for function '{function_name}' from retrieved data, using pattern-based detection: {pipeline_type.value}")
+            return pipeline_type
+        
+        # Ultimate fallback - return default pipeline type
+        logger.warning(f"Could not determine pipeline type for function '{function_name}', using default METRICS pipeline")
+        return PipelineType.METRICS
     
     def _map_pipe_name_to_pipeline_type(self, pipe_name: str) -> Optional[PipelineType]:
         """Map pipe name from FunctionRetrieval to PipelineType enum"""
@@ -5970,30 +5950,81 @@ result = (
         }
         return category_mapping.get(function_category)
     
-    def _detect_pipeline_type_from_context(self, context: str) -> PipelineType:
-        """Fallback context-based pipeline type detection"""
-        context_lower = context.lower()
+    def _determine_pipeline_type_from_function_name(self, function_name: str) -> Optional[PipelineType]:
+        """Determine pipeline type from function name patterns"""
+        function_name_lower = function_name.lower()
         
-        # Use LLM-like reasoning patterns instead of hardcoded keywords
-        if any(term in context_lower for term in ["cohort", "retention", "lifetime"]):
-            return PipelineType.COHORT
-        elif any(term in context_lower for term in ["time series", "lag", "lead", "rolling", "moving"]):
-            return PipelineType.TIMESERIES
-        elif any(term in context_lower for term in ["forecast_with_regressors", "prophet", "regressors", "external regressors"]):
-            return PipelineType.PROPHET
-        elif any(term in context_lower for term in ["trend", "forecast", "growth", "decompose", "seasonal"]):
+        # Trend analysis functions
+        if any(pattern in function_name_lower for pattern in [
+            'aggregate_by_time', 'calculate_growth_rates', 'calculate_trends', 
+            'forecast_metric', 'decompose_trend', 'calculate_statistical_trend',
+            'compare_periods', 'get_top_metrics'
+        ]):
             return PipelineType.TRENDS
-        elif any(term in context_lower for term in ["segment", "cluster", "kmeans", "dbscan", "hierarchical", "grouping"]):
+        
+        # Time series functions
+        if any(pattern in function_name_lower for pattern in [
+            'variance_analysis', 'lead', 'lag', 'rolling_window', 'distribution_analysis',
+            'cumulative_distribution', 'get_distribution_summary', 'rolling_window'
+        ]):
+            return PipelineType.TIMESERIES
+        
+        # Moving aggregation functions
+        if any(pattern in function_name_lower for pattern in [
+            'moving_average', 'moving_variance', 'moving_sum', 'moving_quantile',
+            'moving_correlation', 'moving_zscore', 'moving_apply_by_group', 'moving_ratio',
+            'detect_turning_points', 'moving_regression', 'moving_min_max', 'moving_count',
+            'moving_aggregate', 'moving_percentile_rank', 'time_weighted_average', 'moving_cumulative'
+        ]):
+            return PipelineType.MOVINGAGGR
+        
+        # Cohort analysis functions
+        if any(pattern in function_name_lower for pattern in [
+            'form_time_cohorts', 'form_behavioral_cohorts', 'form_acquisition_cohorts',
+            'calculate_retention', 'calculate_conversion', 'calculate_lifetime_value',
+            'analyze_funnel', 'analyze_funnel_by_time', 'analyze_user_paths', 'analyze_funnel_by_segment'
+        ]):
+            return PipelineType.COHORT
+        
+        # Segmentation functions
+        if any(pattern in function_name_lower for pattern in [
+            'get_features', 'run_kmeans', 'run_dbscan', 'run_hierarchical',
+            'run_rule_based', 'generate_summary', 'get_segment_data', 'compare_algorithms'
+        ]):
             return PipelineType.SEGMENT
-        elif any(term in context_lower for term in ["risk", "var", "volatility"]):
-            return PipelineType.RISK
-        elif any(term in context_lower for term in ["funnel", "conversion"]):
-            return PipelineType.FUNNEL
-        elif any(term in context_lower for term in ["anomaly", "outlier", "detect", "unusual", "abnormal"]):
+        
+        # Anomaly detection functions
+        if any(pattern in function_name_lower for pattern in [
+            'detect_statistical_outliers', 'detect_contextual_anomalies', 'detect_collective_anomalies',
+            'calculate_seasonal_residuals', 'detect_anomalies_from_residuals', 'get_anomaly_summary',
+            'get_top_anomalies', 'detect_change_points', 'forecast_and_detect_anomalies'
+        ]):
             return PipelineType.ANOMALY
-        else:
-            # Default to METRICS for basic statistical operations
+        
+        # Risk analysis functions
+        if any(pattern in function_name_lower for pattern in [
+            'fit_distribution', 'calculate_var', 'calculate_cvar', 'calculate_portfolio_risk',
+            'monte_carlo_simulation', 'stress_test', 'rolling_risk_metrics', 'correlation_analysis',
+            'risk_attribution', 'get_risk_summary', 'compare_distributions'
+        ]):
+            return PipelineType.RISK
+        
+        # Operations functions
+        if any(pattern in function_name_lower for pattern in [
+            'percent_change', 'absolute_change', 'mantel_haenszel_estimate', 'cuped_adjustment',
+            'prepost_adjustment', 'power_analysis', 'stratified_summary', 'bootstrap_confidence_interval',
+            'multi_comparison_adjustment', 'effect_size', 'z_score', 'relative_risk', 'odds_ratio'
+        ]):
+            return PipelineType.OPERATIONS
+        
+        # Metrics functions (basic statistical functions)
+        if any(pattern in function_name_lower for pattern in [
+            'mean', 'sum', 'count', 'max', 'min', 'variance', 'std', 'median', 'quantile',
+            'correlation', 'covariance', 'skewness', 'kurtosis', 'unique_count', 'mode'
+        ]):
             return PipelineType.METRICS
+        
+        return None
     
     def _create_enhanced_query(self, context: str, function_name: str, 
                               pipeline_type: PipelineType) -> str:
@@ -6425,7 +6456,7 @@ result = (
             # Generate a simple, valid fallback code using unified approach
             if inputs_str.strip():
                 fallback_code = f"""# Start with original data
-result_df = {dataframe_name}.copy()
+result_df = df.copy()
 
 # Apply {pipeline_type.value} pipeline
 result = (
@@ -6437,7 +6468,7 @@ result = (
 result = result"""
             else:
                 fallback_code = f"""# Start with original data
-result_df = {dataframe_name}.copy()
+result_df = df.copy()
 
 # Apply {pipeline_type.value} pipeline
 result = (
@@ -6455,7 +6486,7 @@ result = result"""
             except SyntaxError:
                 # If even the fallback has syntax errors, return the most basic version
                 return f"""# Start with original data
-result_df = {dataframe_name}.copy()
+result_df = df.copy()
 
 # Apply {pipeline_type.value} pipeline
 result = {pipeline_type.value}.from_dataframe(result).to_df()

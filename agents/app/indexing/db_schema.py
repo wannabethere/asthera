@@ -91,6 +91,10 @@ class DDLChunker:
                 "name": column.get("name", ""),
                 "type": column.get("type", ""),
                 "table_name": table_name,
+                "properties": column.get("properties", {}),  # Preserve MDL properties
+                "isCalculated": column.get("isCalculated", False),  # Preserve calculated field info
+                "expression": column.get("expression", ""),  # Preserve calculated field expression
+                "relationship": column.get("relationship", {}),  # Preserve relationship info
                 **addition,
             }
 

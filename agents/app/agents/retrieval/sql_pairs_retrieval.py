@@ -89,7 +89,8 @@ class SqlPairsRetrieval:
             List of retrieved documents
         """
         try:
-            if project_id:
+            # Only add project_id filter if it's not "default"
+            if project_id and project_id != "default":
                 where = {"project_id": {"$eq": project_id}}
                 results = self._document_store.semantic_search(
                     query=query,

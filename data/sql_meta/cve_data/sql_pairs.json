@@ -1,290 +1,663 @@
 [
-    {
-      "categories": ["vulnerability_management"],
-      "question": "What is the distribution of vulnerability severity levels across all CVE instances?",
-      "sql": "SELECT severity_category, COUNT(*) as vulnerability_count, (COUNT(*) * 100.0 / (SELECT COUNT(*) FROM vulnerability_instances)) as percentage FROM vulnerability_instances GROUP BY severity_category ORDER BY CASE severity_category WHEN 'Critical' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 ELSE 4 END",
-      "context": "Direct Visualization - Pie Chart. Shows distribution of vulnerability severity levels for overall security risk assessment and prioritization planning.",
-      "document": "mdl_vuln_instance.json - vulnerability_overview_metrics",
-      "samples": [],
-      "instructions": "Calculate percentage distribution of vulnerability severity categories to visualize overall security risk landscape and identify priority areas."
-    },
-    {
-      "categories": ["vulnerability_management"],
-      "question": "How many critical vulnerabilities are currently active and require immediate attention?",
-      "sql": "SELECT COUNT(*) as critical_active_vulnerabilities, COUNT(DISTINCT dev_id) as affected_devices, COUNT(DISTINCT cve_id) as unique_cves FROM vulnerability_instances WHERE is_critical = true AND is_active = true",
-      "context": "Dashboard Widget - Critical Security Alert. Identifies immediate security threats requiring emergency response procedures.",
-      "document": "mdl_vuln_instance.json - vulnerability_overview_metrics",
-      "samples": [],
-      "instructions": "Count critical active vulnerabilities with device and CVE impact to assess immediate security response requirements."
-    },
-    {
-      "categories": ["vulnerability_management"],
-      "question": "Which devices have the highest number of vulnerabilities and need priority remediation?",
-      "sql": "SELECT dev_id, COUNT(*) as total_vulnerabilities, COUNT(CASE WHEN is_critical = true THEN 1 END) as critical_vulnerabilities, COUNT(CASE WHEN is_active = true THEN 1 END) as active_vulnerabilities, AVG(risk_score) as avg_risk_score FROM vulnerability_instances GROUP BY dev_id HAVING COUNT(*) >= 5 ORDER BY critical_vulnerabilities DESC, total_vulnerabilities DESC LIMIT 20",
-      "context": "Direct Visualization - Top N. Identifies most vulnerable devices requiring immediate security attention and remediation resources.",
-      "document": "mdl_vuln_instance.json - device_vulnerability_exposure",
-      "samples": [],
-      "instructions": "Rank devices by vulnerability count and criticality to prioritize remediation efforts and resource allocation."
-    },
-    {
-      "categories": ["vulnerability_management"],
-      "question": "What is the average time to detect vulnerabilities after CVE publication?",
-      "sql": "SELECT AVG(days_to_detection) as avg_days_to_detection, MIN(days_to_detection) as fastest_detection, MAX(days_to_detection) as slowest_detection, COUNT(CASE WHEN days_to_detection <= 1 THEN 1 END) as same_day_detections FROM vulnerability_instances WHERE days_to_detection IS NOT NULL",
-      "context": "Maths/Analytics - Detection Performance. Measures vulnerability detection effectiveness and identifies improvement opportunities.",
-      "document": "mdl_vuln_instance.json - remediation_performance_metrics",
-      "samples": [],
-      "instructions": "Calculate detection timeliness metrics to assess vulnerability scanning and intelligence effectiveness."
-    },
-    {
-      "categories": ["vulnerability_management"],
-      "question": "How many vulnerabilities have been remediated vs still active by severity level?",
-      "sql": "SELECT severity_category, COUNT(*) as total_vulnerabilities, COUNT(CASE WHEN is_remediated = true THEN 1 END) as remediated_count, COUNT(CASE WHEN is_active = true THEN 1 END) as active_count, (COUNT(CASE WHEN is_remediated = true THEN 1 END) * 100.0 / COUNT(*)) as remediation_rate FROM vulnerability_instances GROUP BY severity_category ORDER BY CASE severity_category WHEN 'Critical' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 ELSE 4 END",
-      "context": "Direct Visualization - Stacked Bar Chart. Shows remediation progress by severity level for security program effectiveness assessment.",
-      "document": "mdl_vuln_instance.json - remediation_status_overview",
-      "samples": [],
-      "instructions": "Compare remediation status across severity levels to track security program progress and identify bottlenecks."
-    },
-    {
-      "categories": ["vulnerability_management"],
-      "question": "Which CVEs have the highest risk scores and affect the most devices?",
-      "sql": "SELECT cve_id, COUNT(*) as instance_count, COUNT(DISTINCT dev_id) as affected_devices, AVG(risk_score) as avg_risk_score, MAX(published_time) as latest_published FROM vulnerability_instances WHERE is_active = true GROUP BY cve_id ORDER BY avg_risk_score DESC, affected_devices DESC LIMIT 15",
-      "context": "Direct Visualization - Top N. Identifies highest-risk CVEs requiring immediate attention and coordinated remediation efforts.",
-      "document": "mdl_vuln_instance.json - critical_vulnerabilities_dashboard",
-      "samples": [],
-      "instructions": "Rank CVEs by risk score and device impact to prioritize vulnerability response and resource allocation."
-    },
-    {
-      "categories": ["vulnerability_management"],
-      "question": "What percentage of vulnerabilities have fixes or patches available?",
-      "sql": "SELECT COUNT(*) as total_vulnerabilities, COUNT(CASE WHEN has_fix_available = true THEN 1 END) as vulnerabilities_with_fixes, (COUNT(CASE WHEN has_fix_available = true THEN 1 END) * 100.0 / COUNT(*)) as fix_availability_rate FROM vulnerability_instances",
-      "context": "Maths/Analytics - Patch Availability. Measures remediation feasibility and identifies vulnerabilities requiring alternative mitigation strategies.",
-      "document": "mdl_vuln_instance.json - vulnerability_overview_metrics",
-      "samples": [],
-      "instructions": "Calculate patch availability rate to assess remediation feasibility and identify vulnerabilities needing workarounds."
-    },
-    {
-      "categories": ["vulnerability_management"],
-      "question": "How has the number of new vulnerabilities changed month by month over the past year?",
-      "sql": "SELECT FORMAT(published_time, 'yyyy-MM') as publication_month, COUNT(DISTINCT cve_id) as new_cves, COUNT(*) as total_instances, AVG(cvss_score) as avg_cvss_score FROM vulnerability_instances WHERE published_time >= DATEADD(month, -12, CURRENT_TIMESTAMP) GROUP BY FORMAT(published_time, 'yyyy-MM') ORDER BY publication_month",
-      "context": "Direct Visualization - Timeline/Line Chart. Shows monthly vulnerability discovery trends to identify patterns and threat landscape evolution.",
-      "document": "mdl_vuln_instance.json - cve_trend_analysis",
-      "samples": [],
-      "instructions": "Track monthly CVE publication trends to understand threat landscape evolution and resource planning needs."
-    },
-    {
-      "categories": ["vulnerability_management"],
-      "question": "Which vulnerabilities are tagged as malware-related and require enhanced monitoring?",
-      "sql": "SELECT cve_id, COUNT(*) as instance_count, COUNT(DISTINCT dev_id) as affected_devices, AVG(cvss_score) as avg_cvss_score, AVG(risk_score) as avg_risk_score, MIN(detected_time) as first_detected FROM vulnerability_instances WHERE has_malware_tag = true GROUP BY cve_id ORDER BY avg_risk_score DESC, affected_devices DESC",
-      "context": "Direct Visualization - Table. Identifies malware-linked vulnerabilities requiring enhanced security monitoring and incident response.",
-      "document": "mdl_vuln_instance.json - malware_linked_vulnerabilities",
-      "samples": [],
-      "instructions": "List malware-associated vulnerabilities with impact metrics for enhanced security monitoring and response planning."
-    },
-    {
-      "categories": ["vulnerability_management"],
-      "question": "What is the average time to remediate vulnerabilities by severity level?",
-      "sql": "SELECT severity_category, AVG(days_to_remediation) as avg_days_to_remediation, COUNT(CASE WHEN days_to_remediation <= 7 THEN 1 END) as fast_remediations, COUNT(CASE WHEN days_to_remediation > 90 THEN 1 END) as slow_remediations FROM vulnerability_instances WHERE days_to_remediation IS NOT NULL GROUP BY severity_category ORDER BY CASE severity_category WHEN 'Critical' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 ELSE 4 END",
-      "context": "Maths/Analytics - Remediation Performance. Measures remediation effectiveness by severity to optimize response procedures.",
-      "document": "mdl_vuln_instance.json - remediation_performance_metrics",
-      "samples": [],
-      "instructions": "Calculate remediation timeliness by severity level to assess response effectiveness and identify improvement areas."
-    },
-    {
-      "categories": ["vulnerability_assessment"],
-      "question": "What is the distribution of CVSS v3 scores across all vulnerability assessments?",
-      "sql": "SELECT CASE WHEN cvssv3_base_score >= 9.0 THEN 'Critical (9.0-10.0)' WHEN cvssv3_base_score >= 7.0 THEN 'High (7.0-8.9)' WHEN cvssv3_base_score >= 4.0 THEN 'Medium (4.0-6.9)' WHEN cvssv3_base_score >= 0.1 THEN 'Low (0.1-3.9)' ELSE 'None (0.0)' END as cvss_range, COUNT(*) as vulnerability_count, AVG(cvssv3_base_score) as avg_score FROM vulnerability_assessments WHERE cvssv3_base_score IS NOT NULL GROUP BY CASE WHEN cvssv3_base_score >= 9.0 THEN 'Critical (9.0-10.0)' WHEN cvssv3_base_score >= 7.0 THEN 'High (7.0-8.9)' WHEN cvssv3_base_score >= 4.0 THEN 'Medium (4.0-6.9)' WHEN cvssv3_base_score >= 0.1 THEN 'Low (0.1-3.9)' ELSE 'None (0.0)' END ORDER BY avg_score DESC",
-      "context": "Direct Visualization - Bar Chart. Shows CVSS score distribution for vulnerability severity assessment and risk prioritization.",
-      "document": "mdl_cve.json - cvss_analysis_metrics",
-      "samples": [],
-      "instructions": "Categorize vulnerabilities by CVSS v3 score ranges to visualize severity distribution and risk landscape."
-    },
-    {
-      "categories": ["vulnerability_assessment"],
-      "question": "Which vulnerabilities have the highest Balbix risk scores and require immediate attention?",
-      "sql": "SELECT cve_id, balbix_score, cvssv3_base_score, cvssv3_base_severity, asset_count, days_since_published, has_exploit_available, remediation_urgency FROM vulnerability_assessments WHERE is_critical_severity = true OR is_high_risk = true ORDER BY balbix_score DESC LIMIT 20",
-      "context": "Direct Visualization - Top N. Identifies highest-risk vulnerabilities based on proprietary scoring for emergency response prioritization.",
-      "document": "mdl_cve.json - critical_vulnerabilities_dashboard",
-      "samples": [],
-      "instructions": "Rank vulnerabilities by Balbix risk score to prioritize emergency response and resource allocation."
-    },
-    {
-      "categories": ["vulnerability_assessment"],
-      "question": "How many vulnerabilities have known exploits available and pose immediate threat?",
-      "sql": "SELECT COUNT(*) as total_vulnerabilities, COUNT(CASE WHEN has_exploit_available = true THEN 1 END) as vulnerabilities_with_exploits, (COUNT(CASE WHEN has_exploit_available = true THEN 1 END) * 100.0 / COUNT(*)) as exploit_availability_rate, AVG(exploit_maturity_influence) as avg_exploit_maturity FROM vulnerability_assessments",
-      "context": "Maths/Analytics - Exploit Threat Assessment. Measures immediate threat level based on exploit availability and maturity.",
-      "document": "mdl_cve.json - threat_intelligence_metrics",
-      "samples": [],
-      "instructions": "Calculate exploit availability metrics to assess immediate threat level and prioritize emergency response."
-    },
-    {
-      "categories": ["vulnerability_assessment"],
-      "question": "What is the trend in vulnerability discovery and publication over the past 5 years?",
-      "sql": "SELECT published_year, COUNT(DISTINCT cve_id) as unique_cves, COUNT(*) as total_instances, AVG(cvssv3_base_score) as avg_cvss_score, COUNT(CASE WHEN is_critical_severity = true THEN 1 END) as critical_instances FROM vulnerability_assessments WHERE published_year >= EXTRACT(YEAR FROM CURRENT_DATE) - 5 GROUP BY published_year ORDER BY published_year DESC",
-      "context": "Direct Visualization - Timeline/Line Chart. Shows year-over-year vulnerability trends for threat landscape analysis and resource planning.",
-      "document": "mdl_cve.json - temporal_vulnerability_metrics",
-      "samples": [],
-      "instructions": "Track annual vulnerability publication trends to understand threat landscape evolution and plan security resources."
-    },
-    {
-      "categories": ["vulnerability_assessment"],
-      "question": "Which vulnerabilities have the highest asset exposure and business impact?",
-      "sql": "SELECT cve_id, asset_count, balbix_score, severity_level, threat_level, exposure_influence, bastion_impact FROM vulnerability_assessments WHERE asset_count > 0 ORDER BY asset_count DESC, balbix_score DESC LIMIT 15",
-      "context": "Direct Visualization - Top N. Identifies vulnerabilities with highest business impact based on asset exposure and risk scoring.",
-      "document": "mdl_cve.json - asset_impact_metrics",
-      "samples": [],
-      "instructions": "Rank vulnerabilities by asset exposure to prioritize business-critical security responses."
-    },
-    {
-      "categories": ["software_asset_management"],
-      "question": "What percentage of software installations are vulnerable and require patching?",
-      "sql": "SELECT COUNT(*) as total_software_installations, COUNT(CASE WHEN is_vulnerable = true THEN 1 END) as vulnerable_software, COUNT(CASE WHEN is_patched = true THEN 1 END) as patched_software, (COUNT(CASE WHEN is_vulnerable = true THEN 1 END) * 100.0 / COUNT(*)) as vulnerability_rate FROM software_inventory",
-      "context": "Maths/Analytics - Software Security Posture. Measures overall software security health and patch compliance across the enterprise.",
-      "document": "mdl_software.json - software_inventory_metrics",
-      "samples": [],
-      "instructions": "Calculate software vulnerability rates to assess overall security posture and patch management effectiveness."
-    },
-    {
-      "categories": ["software_asset_management"],
-      "question": "Which software vendors have the highest number of vulnerable installations?",
-      "sql": "SELECT vendor, COUNT(*) as total_installations, COUNT(CASE WHEN is_vulnerable = true THEN 1 END) as vulnerable_installations, COUNT(CASE WHEN is_patched = true THEN 1 END) as patched_installations, (COUNT(CASE WHEN is_vulnerable = true THEN 1 END) * 100.0 / COUNT(*)) as vulnerability_rate FROM software_inventory GROUP BY vendor HAVING COUNT(*) >= 10 ORDER BY vulnerable_installations DESC LIMIT 15",
-      "context": "Direct Visualization - Top N. Identifies vendors with highest vulnerability exposure for vendor risk management and patch prioritization.",
-      "document": "mdl_software.json - vendor_security_scorecard",
-      "samples": [],
-      "instructions": "Rank software vendors by vulnerability count to prioritize vendor risk management and patch coordination efforts."
-    },
-    {
-      "categories": ["software_asset_management"],
-      "question": "How many software installations are overdue for patching by more than 90 days?",
-      "sql": "SELECT COUNT(*) as overdue_installations, COUNT(DISTINCT dev_id) as affected_devices, COUNT(DISTINCT vendor) as affected_vendors, AVG(days_since_last_patch) as avg_days_since_patch FROM software_inventory WHERE is_vulnerable = true AND days_since_last_patch > 90",
-      "context": "Dashboard Widget - Patch Compliance Alert. Identifies severely overdue software installations requiring immediate patching attention.",
-      "document": "mdl_software.json - patch_management_metrics",
-      "samples": [],
-      "instructions": "Count severely overdue software patches to identify installations requiring emergency patching and escalation."
-    },
-    {
-      "categories": ["software_asset_management"],
-      "question": "Which software products have the highest patch deployment delays?",
-      "sql": "SELECT vendor, product, COUNT(*) as installations, AVG(patch_gap_days) as avg_patch_delay, COUNT(CASE WHEN patch_gap_days > 30 THEN 1 END) as slow_patch_adoptions FROM software_inventory WHERE patch_gap_days IS NOT NULL GROUP BY vendor, product HAVING COUNT(*) >= 5 ORDER BY avg_patch_delay DESC LIMIT 15",
-      "context": "Direct Visualization - Top N. Identifies software with slowest patch adoption for process improvement and vendor engagement.",
-      "document": "mdl_software.json - patch_management_metrics",
-      "samples": [],
-      "instructions": "Rank software by patch deployment delays to identify process bottlenecks and vendor coordination issues."
-    },
-    {
-      "categories": ["software_asset_management"],
-      "question": "What is the distribution of software by age category and security state?",
-      "sql": "SELECT software_age_category, COUNT(*) as total_software, COUNT(CASE WHEN is_vulnerable = true THEN 1 END) as vulnerable_count, COUNT(CASE WHEN is_patched = true THEN 1 END) as patched_count, (COUNT(CASE WHEN is_vulnerable = true THEN 1 END) * 100.0 / COUNT(*)) as vulnerability_rate FROM software_inventory GROUP BY software_age_category ORDER BY CASE software_age_category WHEN 'New (30 days)' THEN 1 WHEN 'Recent (90 days)' THEN 2 WHEN 'Mature (1 year)' THEN 3 ELSE 4 END",
-      "context": "Direct Visualization - Stacked Bar Chart. Shows software security state distribution by age for lifecycle management analysis.",
-      "document": "mdl_software.json - software_age_analysis",
-      "samples": [],
-      "instructions": "Analyze software security posture by age category to understand lifecycle security patterns and modernization needs."
-    },
-    {
-      "categories": ["security_monitoring"],
-      "question": "What is the overall health and availability of security monitoring agents?",
-      "sql": "SELECT COUNT(*) as total_agents, COUNT(CASE WHEN is_active = true THEN 1 END) as active_agents, COUNT(CASE WHEN is_stale = true THEN 1 END) as stale_agents, (COUNT(CASE WHEN is_active = true THEN 1 END) * 100.0 / COUNT(*)) as agent_uptime_percentage, AVG(days_since_last_seen) as avg_days_since_last_seen FROM security_agents",
-      "context": "Dashboard Widget - Security Monitoring Health. Overall agent health metrics for security operations monitoring and coverage assessment.",
-      "document": "mdl_agents.json - agent_health_metrics",
-      "samples": [],
-      "instructions": "Calculate comprehensive agent health statistics for security monitoring effectiveness and coverage assessment."
-    },
-    {
-      "categories": ["security_monitoring"],
-      "question": "Which devices have insufficient security agent coverage and need attention?",
-      "sql": "SELECT dev_id, COUNT(DISTINCT agent) as agent_types_deployed, COUNT(CASE WHEN is_active = true THEN 1 END) as active_agents, COUNT(CASE WHEN is_stale = true THEN 1 END) as stale_agents FROM security_agents GROUP BY dev_id HAVING COUNT(DISTINCT agent) < 3 ORDER BY agent_types_deployed ASC LIMIT 20",
-      "context": "Direct Visualization - Table. Identifies devices with insufficient agent coverage requiring security monitoring enhancement.",
-      "document": "mdl_agents.json - agent_coverage_gaps",
-      "samples": [],
-      "instructions": "Identify devices with inadequate security agent coverage to prioritize monitoring infrastructure improvements."
-    },
-    {
-      "categories": ["security_monitoring"],
-      "question": "How many security agents have been inactive for more than 7 days?",
-      "sql": "SELECT COUNT(*) as inactive_agents, COUNT(DISTINCT dev_id) as affected_devices, COUNT(DISTINCT agent) as agent_types, AVG(days_since_last_seen) as avg_days_inactive FROM security_agents WHERE is_active = false ORDER BY days_since_last_seen DESC",
-      "context": "Dashboard Widget - Agent Health Alert. Identifies inactive agents requiring investigation and potential remediation.",
-      "document": "mdl_agents.json - inactive_agents_alert",
-      "samples": [],
-      "instructions": "Count inactive security agents to identify monitoring gaps and prioritize agent maintenance activities."
-    },
-    {
-      "categories": ["asset_management"],
-      "question": "What is the distribution of assets by risk category and device type?",
-      "sql": "SELECT device_type, risk_category, COUNT(*) as asset_count, AVG(effective_risk) as avg_risk_score, COUNT(CASE WHEN is_high_risk = true THEN 1 END) as high_risk_assets FROM security_assets GROUP BY device_type, risk_category ORDER BY device_type, CASE risk_category WHEN 'Critical' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 ELSE 4 END",
-      "context": "Direct Visualization - Heatmap. Shows asset risk distribution by type and category for security posture assessment.",
-      "document": "mdl_assets.json - asset_risk_metrics",
-      "samples": [],
-      "instructions": "Create risk distribution matrix by device type and risk category for comprehensive security posture visualization."
-    },
-    {
-      "categories": ["asset_management"],
-      "question": "Which assets have the highest vulnerability likelihood scores and need immediate attention?",
-      "sql": "SELECT host_name, device_type, effective_risk, risk_category, unpatched_vulnerability_likelihood, weak_credentials_likelihood, misconfiguration_likelihood FROM security_assets WHERE is_high_risk = true ORDER BY effective_risk DESC LIMIT 20",
-      "context": "Direct Visualization - Top N. Identifies highest-risk assets requiring immediate security attention and remediation.",
-      "document": "mdl_assets.json - high_risk_assets_summary",
-      "samples": [],
-      "instructions": "Rank assets by risk score to prioritize security remediation efforts and resource allocation."
-    },
-    {
-      "categories": ["asset_management"],
-      "question": "How many assets are located in different geographic regions and what are their risk profiles?",
-      "sql": "SELECT location_country, location_city, COUNT(*) as total_assets, COUNT(CASE WHEN is_high_risk = true THEN 1 END) as high_risk_assets, AVG(effective_risk) as avg_risk_score FROM security_assets GROUP BY location_country, location_city ORDER BY avg_risk_score DESC",
-      "context": "Direct Visualization - Geographic Risk Map. Shows asset risk distribution by location for geographic security planning.",
-      "document": "mdl_assets.json - asset_risk_by_location",
-      "samples": [],
-      "instructions": "Analyze asset risk by geographic location to support regional security planning and resource allocation."
-    },
-    {
-      "categories": ["asset_management"],
-      "question": "Which bastion hosts have the highest security risk and require enhanced protection?",
-      "sql": "SELECT host_name, location_country, effective_risk, risk_category, unpatched_vulnerability_likelihood, weak_credentials_likelihood FROM security_assets WHERE is_bastion_device = true ORDER BY effective_risk DESC",
-      "context": "Direct Visualization - Table. Identifies high-risk bastion hosts requiring enhanced security measures and monitoring.",
-      "document": "mdl_assets.json - bastion_host_security_status",
-      "samples": [],
-      "instructions": "Assess bastion host security status to prioritize critical infrastructure protection and monitoring."
-    },
-    {
-      "categories": ["network_infrastructure"],
-      "question": "What is the distribution of network devices by manufacturer and their activity status?",
-      "sql": "SELECT manufacturer, COUNT(*) as total_devices, COUNT(CASE WHEN is_stale = false THEN 1 END) as active_devices, COUNT(CASE WHEN is_stale = true THEN 1 END) as stale_devices, (COUNT(CASE WHEN is_stale = false THEN 1 END) * 100.0 / COUNT(*)) as active_percentage FROM network_devices GROUP BY manufacturer ORDER BY total_devices DESC",
-      "context": "Direct Visualization - Bar Chart. Shows device manufacturer distribution and health status for network infrastructure management.",
-      "document": "mdl_interfaces.json - active_devices_summary",
-      "samples": [],
-      "instructions": "Analyze network device distribution by manufacturer and health status for infrastructure management and vendor assessment."
-    },
-    {
-      "categories": ["network_infrastructure"],
-      "question": "How many network devices are cloud-based vs on-premises and what are their activity patterns?",
-      "sql": "SELECT CASE WHEN is_cloud_device = true THEN 'Cloud' ELSE 'On-Premises' END as deployment_type, COUNT(*) as device_count, COUNT(CASE WHEN is_stale = false THEN 1 END) as active_devices, AVG(days_since_last_seen) as avg_days_since_seen FROM network_devices GROUP BY CASE WHEN is_cloud_device = true THEN 'Cloud' ELSE 'On-Premises' END",
-      "context": "Direct Visualization - Column Chart. Compares cloud vs on-premises device activity for hybrid infrastructure management.",
-      "document": "mdl_interfaces.json - cloud_infrastructure_overview",
-      "samples": [],
-      "instructions": "Compare cloud and on-premises device activity patterns to understand hybrid infrastructure health and management needs."
-    },
-    {
-      "categories": ["network_infrastructure"],
-      "question": "Which network subnets have the highest device density and potential security exposure?",
-      "sql": "SELECT subnet, subnet_class, COUNT(*) as device_count, COUNT(DISTINCT manufacturer) as manufacturer_diversity, COUNT(CASE WHEN is_stale = false THEN 1 END) as active_devices FROM network_devices GROUP BY subnet, subnet_class ORDER BY device_count DESC LIMIT 15",
-      "context": "Direct Visualization - Top N. Identifies high-density network segments requiring enhanced monitoring and security controls.",
-      "document": "mdl_interfaces.json - subnet_utilization",
-      "samples": [],
-      "instructions": "Rank network subnets by device density to identify high-traffic segments requiring enhanced security monitoring."
-    },
-    {
-      "categories": ["comprehensive_security"],
-      "question": "What is the overall security posture combining vulnerabilities, assets, and monitoring coverage?",
-      "sql": "SELECT 'Total Vulnerabilities' as metric, COUNT(*) as value FROM vulnerability_instances WHERE is_active = true UNION ALL SELECT 'Critical Vulnerabilities', COUNT(*) FROM vulnerability_instances WHERE is_critical = true AND is_active = true UNION ALL SELECT 'High Risk Assets', COUNT(*) FROM security_assets WHERE is_high_risk = true UNION ALL SELECT 'Active Security Agents', COUNT(*) FROM security_agents WHERE is_active = true UNION ALL SELECT 'Vulnerable Software', COUNT(*) FROM software_inventory WHERE is_vulnerable = true",
-      "context": "Dashboard Widget - Security Posture Overview. Comprehensive security metrics for executive dashboard and risk assessment.",
-      "document": "Multiple models - Security Posture Summary",
-      "samples": [],
-      "instructions": "Calculate comprehensive security metrics across all models for executive-level security posture assessment."
-    },
-    {
-      "categories": ["comprehensive_security"],
-      "question": "Which business units (NUIDs) have the highest security risk exposure across all systems?",
-      "sql": "SELECT nuid, COUNT(DISTINCT CASE WHEN source = 'vulnerability_instances' THEN dev_id END) as vulnerable_devices, COUNT(DISTINCT CASE WHEN source = 'security_assets' THEN dev_id END) as total_assets, COUNT(DISTINCT CASE WHEN source = 'security_agents' THEN dev_id END) as monitored_devices, AVG(CASE WHEN source = 'vulnerability_instances' THEN risk_score END) as avg_vulnerability_risk FROM (SELECT nuid, dev_id, 'vulnerability_instances' as source, risk_score FROM vulnerability_instances WHERE is_active = true UNION ALL SELECT nuid, dev_id, 'security_assets' as source, effective_risk as risk_score FROM security_assets WHERE is_high_risk = true UNION ALL SELECT nuid, dev_id, 'security_agents' as source, 0 as risk_score FROM security_agents WHERE is_active = true) combined GROUP BY nuid ORDER BY vulnerable_devices DESC, avg_vulnerability_risk DESC",
-      "context": "Maths/Analytics - Business Unit Risk Assessment. Identifies highest-risk business units requiring prioritized security attention.",
-      "document": "Multiple models - Business Unit Risk Analysis",
-      "samples": [],
-      "instructions": "Analyze security risk exposure by business unit across all security systems to prioritize organizational security efforts."
-    }
-  ]
+  {
+    "categories": [
+      "vulnerability_management"
+    ],
+    "question": "What is the distribution of vulnerability severity levels across all CVE instances?",
+    "sql": "SELECT severity_category, COUNT(*) as vulnerability_count, (COUNT(*) * 100.0 / (SELECT COUNT(*) FROM vulnerability_instances)) as percentage FROM vulnerability_instances GROUP BY severity_category ORDER BY CASE severity_category WHEN 'Critical' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 ELSE 4 END",
+    "context": "Direct Visualization - Pie Chart. Shows distribution of vulnerability severity levels for overall security risk assessment and prioritization planning.",
+    "document": "mdl_vuln_instance.json - vulnerability_overview_metrics",
+    "samples": [],
+    "instructions": "Calculate percentage distribution of vulnerability severity categories to visualize overall security risk landscape and identify priority areas."
+  },
+  {
+    "categories": [
+      "vulnerability_management"
+    ],
+    "question": "How many critical vulnerabilities are currently active and require immediate attention?",
+    "sql": "SELECT COUNT(*) as critical_active_vulnerabilities, COUNT(DISTINCT dev_id) as affected_devices, COUNT(DISTINCT cve_id) as unique_cves FROM vulnerability_instances WHERE is_critical = true AND is_active = true",
+    "context": "Dashboard Widget - Critical Security Alert. Identifies immediate security threats requiring emergency response procedures.",
+    "document": "mdl_vuln_instance.json - vulnerability_overview_metrics",
+    "samples": [],
+    "instructions": "Count critical active vulnerabilities with device and CVE impact to assess immediate security response requirements."
+  },
+  {
+    "categories": [
+      "vulnerability_management"
+    ],
+    "question": "Which devices have the highest number of vulnerabilities and need priority remediation?",
+    "sql": "SELECT dev_id, COUNT(*) as total_vulnerabilities, COUNT(CASE WHEN is_critical = true THEN 1 END) as critical_vulnerabilities, COUNT(CASE WHEN is_active = true THEN 1 END) as active_vulnerabilities, AVG(risk_score) as avg_risk_score FROM vulnerability_instances GROUP BY dev_id HAVING COUNT(*) >= 5 ORDER BY critical_vulnerabilities DESC, total_vulnerabilities DESC LIMIT 20",
+    "context": "Direct Visualization - Top N. Identifies most vulnerable devices requiring immediate security attention and remediation resources.",
+    "document": "mdl_vuln_instance.json - device_vulnerability_exposure",
+    "samples": [],
+    "instructions": "Rank devices by vulnerability count and criticality to prioritize remediation efforts and resource allocation."
+  },
+  {
+    "categories": [
+      "vulnerability_management"
+    ],
+    "question": "What is the average time to detect vulnerabilities after CVE publication?",
+    "sql": "SELECT AVG(days_to_detection) as avg_days_to_detection, MIN(days_to_detection) as fastest_detection, MAX(days_to_detection) as slowest_detection, COUNT(CASE WHEN days_to_detection <= 1 THEN 1 END) as same_day_detections FROM vulnerability_instances WHERE days_to_detection IS NOT NULL",
+    "context": "Maths/Analytics - Detection Performance. Measures vulnerability detection effectiveness and identifies improvement opportunities.",
+    "document": "mdl_vuln_instance.json - remediation_performance_metrics",
+    "samples": [],
+    "instructions": "Calculate detection timeliness metrics to assess vulnerability scanning and intelligence effectiveness."
+  },
+  {
+    "categories": [
+      "vulnerability_management"
+    ],
+    "question": "How many vulnerabilities have been remediated vs still active by severity level?",
+    "sql": "SELECT severity_category, COUNT(*) as total_vulnerabilities, COUNT(CASE WHEN is_remediated = true THEN 1 END) as remediated_count, COUNT(CASE WHEN is_active = true THEN 1 END) as active_count, (COUNT(CASE WHEN is_remediated = true THEN 1 END) * 100.0 / COUNT(*)) as remediation_rate FROM vulnerability_instances GROUP BY severity_category ORDER BY CASE severity_category WHEN 'Critical' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 ELSE 4 END",
+    "context": "Direct Visualization - Stacked Bar Chart. Shows remediation progress by severity level for security program effectiveness assessment.",
+    "document": "mdl_vuln_instance.json - remediation_status_overview",
+    "samples": [],
+    "instructions": "Compare remediation status across severity levels to track security program progress and identify bottlenecks."
+  },
+  {
+    "categories": [
+      "vulnerability_management"
+    ],
+    "question": "Which CVEs have the highest risk scores and affect the most devices?",
+    "sql": "SELECT cve_id, COUNT(*) as instance_count, COUNT(DISTINCT dev_id) as affected_devices, AVG(risk_score) as avg_risk_score, MAX(published_time) as latest_published FROM vulnerability_instances WHERE is_active = true GROUP BY cve_id ORDER BY avg_risk_score DESC, affected_devices DESC LIMIT 15",
+    "context": "Direct Visualization - Top N. Identifies highest-risk CVEs requiring immediate attention and coordinated remediation efforts.",
+    "document": "mdl_vuln_instance.json - critical_vulnerabilities_dashboard",
+    "samples": [],
+    "instructions": "Rank CVEs by risk score and device impact to prioritize vulnerability response and resource allocation."
+  },
+  {
+    "categories": [
+      "vulnerability_management"
+    ],
+    "question": "What percentage of vulnerabilities have fixes or patches available?",
+    "sql": "SELECT COUNT(*) as total_vulnerabilities, COUNT(CASE WHEN has_fix_available = true THEN 1 END) as vulnerabilities_with_fixes, (COUNT(CASE WHEN has_fix_available = true THEN 1 END) * 100.0 / COUNT(*)) as fix_availability_rate FROM vulnerability_instances",
+    "context": "Maths/Analytics - Patch Availability. Measures remediation feasibility and identifies vulnerabilities requiring alternative mitigation strategies.",
+    "document": "mdl_vuln_instance.json - vulnerability_overview_metrics",
+    "samples": [],
+    "instructions": "Calculate patch availability rate to assess remediation feasibility and identify vulnerabilities needing workarounds."
+  },
+  {
+    "categories": [
+      "vulnerability_management"
+    ],
+    "question": "How has the number of new vulnerabilities changed month by month over the past year?",
+    "sql": "SELECT FORMAT(published_time, 'yyyy-MM') as publication_month, COUNT(DISTINCT cve_id) as new_cves, COUNT(*) as total_instances, AVG(cvss_score) as avg_cvss_score FROM vulnerability_instances WHERE published_time >= DATEADD(month, -12, CURRENT_TIMESTAMP) GROUP BY FORMAT(published_time, 'yyyy-MM') ORDER BY publication_month",
+    "context": "Direct Visualization - Timeline/Line Chart. Shows monthly vulnerability discovery trends to identify patterns and threat landscape evolution.",
+    "document": "mdl_vuln_instance.json - cve_trend_analysis",
+    "samples": [],
+    "instructions": "Track monthly CVE publication trends to understand threat landscape evolution and resource planning needs."
+  },
+  {
+    "categories": [
+      "vulnerability_management"
+    ],
+    "question": "Which vulnerabilities are tagged as malware-related and require enhanced monitoring?",
+    "sql": "SELECT cve_id, COUNT(*) as instance_count, COUNT(DISTINCT dev_id) as affected_devices, AVG(cvss_score) as avg_cvss_score, AVG(risk_score) as avg_risk_score, MIN(detected_time) as first_detected FROM vulnerability_instances WHERE has_malware_tag = true GROUP BY cve_id ORDER BY avg_risk_score DESC, affected_devices DESC",
+    "context": "Direct Visualization - Table. Identifies malware-linked vulnerabilities requiring enhanced security monitoring and incident response.",
+    "document": "mdl_vuln_instance.json - malware_linked_vulnerabilities",
+    "samples": [],
+    "instructions": "List malware-associated vulnerabilities with impact metrics for enhanced security monitoring and response planning."
+  },
+  {
+    "categories": [
+      "vulnerability_management"
+    ],
+    "question": "What is the average time to remediate vulnerabilities by severity level?",
+    "sql": "SELECT severity_category, AVG(days_to_remediation) as avg_days_to_remediation, COUNT(CASE WHEN days_to_remediation <= 7 THEN 1 END) as fast_remediations, COUNT(CASE WHEN days_to_remediation > 90 THEN 1 END) as slow_remediations FROM vulnerability_instances WHERE days_to_remediation IS NOT NULL GROUP BY severity_category ORDER BY CASE severity_category WHEN 'Critical' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 ELSE 4 END",
+    "context": "Maths/Analytics - Remediation Performance. Measures remediation effectiveness by severity to optimize response procedures.",
+    "document": "mdl_vuln_instance.json - remediation_performance_metrics",
+    "samples": [],
+    "instructions": "Calculate remediation timeliness by severity level to assess response effectiveness and identify improvement areas."
+  },
+  {
+    "categories": [
+      "vulnerability_assessment"
+    ],
+    "question": "What is the distribution of CVSS v3 scores across all vulnerability assessments?",
+    "sql": "SELECT CASE WHEN cvssv3_base_score >= 9.0 THEN 'Critical (9.0-10.0)' WHEN cvssv3_base_score >= 7.0 THEN 'High (7.0-8.9)' WHEN cvssv3_base_score >= 4.0 THEN 'Medium (4.0-6.9)' WHEN cvssv3_base_score >= 0.1 THEN 'Low (0.1-3.9)' ELSE 'None (0.0)' END as cvss_range, COUNT(*) as vulnerability_count, AVG(cvssv3_base_score) as avg_score FROM vulnerability_assessments WHERE cvssv3_base_score IS NOT NULL GROUP BY CASE WHEN cvssv3_base_score >= 9.0 THEN 'Critical (9.0-10.0)' WHEN cvssv3_base_score >= 7.0 THEN 'High (7.0-8.9)' WHEN cvssv3_base_score >= 4.0 THEN 'Medium (4.0-6.9)' WHEN cvssv3_base_score >= 0.1 THEN 'Low (0.1-3.9)' ELSE 'None (0.0)' END ORDER BY avg_score DESC",
+    "context": "Direct Visualization - Bar Chart. Shows CVSS score distribution for vulnerability severity assessment and risk prioritization.",
+    "document": "mdl_cve.json - cvss_analysis_metrics",
+    "samples": [],
+    "instructions": "Categorize vulnerabilities by CVSS v3 score ranges to visualize severity distribution and risk landscape."
+  },
+  {
+    "categories": [
+      "vulnerability_assessment"
+    ],
+    "question": "Which vulnerabilities have the highest Balbix risk scores and require immediate attention?",
+    "sql": "SELECT cve_id, balbix_score, cvssv3_base_score, cvssv3_base_severity, asset_count, days_since_published, has_exploit_available, remediation_urgency FROM vulnerability_assessments WHERE is_critical_severity = true OR is_high_risk = true ORDER BY balbix_score DESC LIMIT 20",
+    "context": "Direct Visualization - Top N. Identifies highest-risk vulnerabilities based on proprietary scoring for emergency response prioritization.",
+    "document": "mdl_cve.json - critical_vulnerabilities_dashboard",
+    "samples": [],
+    "instructions": "Rank vulnerabilities by Balbix risk score to prioritize emergency response and resource allocation."
+  },
+  {
+    "categories": [
+      "vulnerability_assessment"
+    ],
+    "question": "How many vulnerabilities have known exploits available and pose immediate threat?",
+    "sql": "SELECT COUNT(*) as total_vulnerabilities, COUNT(CASE WHEN has_exploit_available = true THEN 1 END) as vulnerabilities_with_exploits, (COUNT(CASE WHEN has_exploit_available = true THEN 1 END) * 100.0 / COUNT(*)) as exploit_availability_rate, AVG(exploit_maturity_influence) as avg_exploit_maturity FROM vulnerability_assessments",
+    "context": "Maths/Analytics - Exploit Threat Assessment. Measures immediate threat level based on exploit availability and maturity.",
+    "document": "mdl_cve.json - threat_intelligence_metrics",
+    "samples": [],
+    "instructions": "Calculate exploit availability metrics to assess immediate threat level and prioritize emergency response."
+  },
+  {
+    "categories": [
+      "vulnerability_assessment"
+    ],
+    "question": "What is the trend in vulnerability discovery and publication over the past 5 years?",
+    "sql": "SELECT published_year, COUNT(DISTINCT cve_id) as unique_cves, COUNT(*) as total_instances, AVG(cvssv3_base_score) as avg_cvss_score, COUNT(CASE WHEN is_critical_severity = true THEN 1 END) as critical_instances FROM vulnerability_assessments WHERE published_year >= EXTRACT(YEAR FROM CURRENT_DATE) - 5 GROUP BY published_year ORDER BY published_year DESC",
+    "context": "Direct Visualization - Timeline/Line Chart. Shows year-over-year vulnerability trends for threat landscape analysis and resource planning.",
+    "document": "mdl_cve.json - temporal_vulnerability_metrics",
+    "samples": [],
+    "instructions": "Track annual vulnerability publication trends to understand threat landscape evolution and plan security resources."
+  },
+  {
+    "categories": [
+      "vulnerability_assessment"
+    ],
+    "question": "Which vulnerabilities have the highest asset exposure and business impact?",
+    "sql": "SELECT cve_id, asset_count, balbix_score, severity_level, threat_level, exposure_influence, bastion_impact FROM vulnerability_assessments WHERE asset_count > 0 ORDER BY asset_count DESC, balbix_score DESC LIMIT 15",
+    "context": "Direct Visualization - Top N. Identifies vulnerabilities with highest business impact based on asset exposure and risk scoring.",
+    "document": "mdl_cve.json - asset_impact_metrics",
+    "samples": [],
+    "instructions": "Rank vulnerabilities by asset exposure to prioritize business-critical security responses."
+  },
+  {
+    "categories": [
+      "software_asset_management"
+    ],
+    "question": "What percentage of software installations are vulnerable and require patching?",
+    "sql": "SELECT COUNT(*) as total_software_installations, COUNT(CASE WHEN is_vulnerable = true THEN 1 END) as vulnerable_software, COUNT(CASE WHEN is_patched = true THEN 1 END) as patched_software, (COUNT(CASE WHEN is_vulnerable = true THEN 1 END) * 100.0 / COUNT(*)) as vulnerability_rate FROM software_inventory",
+    "context": "Maths/Analytics - Software Security Posture. Measures overall software security health and patch compliance across the enterprise.",
+    "document": "mdl_software.json - software_inventory_metrics",
+    "samples": [],
+    "instructions": "Calculate software vulnerability rates to assess overall security posture and patch management effectiveness."
+  },
+  {
+    "categories": [
+      "software_asset_management"
+    ],
+    "question": "Which software vendors have the highest number of vulnerable installations?",
+    "sql": "SELECT vendor, COUNT(*) as total_installations, COUNT(CASE WHEN is_vulnerable = true THEN 1 END) as vulnerable_installations, COUNT(CASE WHEN is_patched = true THEN 1 END) as patched_installations, (COUNT(CASE WHEN is_vulnerable = true THEN 1 END) * 100.0 / COUNT(*)) as vulnerability_rate FROM software_inventory GROUP BY vendor HAVING COUNT(*) >= 10 ORDER BY vulnerable_installations DESC LIMIT 15",
+    "context": "Direct Visualization - Top N. Identifies vendors with highest vulnerability exposure for vendor risk management and patch prioritization.",
+    "document": "mdl_software.json - vendor_security_scorecard",
+    "samples": [],
+    "instructions": "Rank software vendors by vulnerability count to prioritize vendor risk management and patch coordination efforts."
+  },
+  {
+    "categories": [
+      "software_asset_management"
+    ],
+    "question": "How many software installations are overdue for patching by more than 90 days?",
+    "sql": "SELECT COUNT(*) as overdue_installations, COUNT(DISTINCT dev_id) as affected_devices, COUNT(DISTINCT vendor) as affected_vendors, AVG(days_since_last_patch) as avg_days_since_patch FROM software_inventory WHERE is_vulnerable = true AND days_since_last_patch > 90",
+    "context": "Dashboard Widget - Patch Compliance Alert. Identifies severely overdue software installations requiring immediate patching attention.",
+    "document": "mdl_software.json - patch_management_metrics",
+    "samples": [],
+    "instructions": "Count severely overdue software patches to identify installations requiring emergency patching and escalation."
+  },
+  {
+    "categories": [
+      "software_asset_management"
+    ],
+    "question": "Which software products have the highest patch deployment delays?",
+    "sql": "SELECT vendor, product, COUNT(*) as installations, AVG(patch_gap_days) as avg_patch_delay, COUNT(CASE WHEN patch_gap_days > 30 THEN 1 END) as slow_patch_adoptions FROM software_inventory WHERE patch_gap_days IS NOT NULL GROUP BY vendor, product HAVING COUNT(*) >= 5 ORDER BY avg_patch_delay DESC LIMIT 15",
+    "context": "Direct Visualization - Top N. Identifies software with slowest patch adoption for process improvement and vendor engagement.",
+    "document": "mdl_software.json - patch_management_metrics",
+    "samples": [],
+    "instructions": "Rank software by patch deployment delays to identify process bottlenecks and vendor coordination issues."
+  },
+  {
+    "categories": [
+      "software_asset_management"
+    ],
+    "question": "What is the distribution of software by age category and security state?",
+    "sql": "SELECT software_age_category, COUNT(*) as total_software, COUNT(CASE WHEN is_vulnerable = true THEN 1 END) as vulnerable_count, COUNT(CASE WHEN is_patched = true THEN 1 END) as patched_count, (COUNT(CASE WHEN is_vulnerable = true THEN 1 END) * 100.0 / COUNT(*)) as vulnerability_rate FROM software_inventory GROUP BY software_age_category ORDER BY CASE software_age_category WHEN 'New (30 days)' THEN 1 WHEN 'Recent (90 days)' THEN 2 WHEN 'Mature (1 year)' THEN 3 ELSE 4 END",
+    "context": "Direct Visualization - Stacked Bar Chart. Shows software security state distribution by age for lifecycle management analysis.",
+    "document": "mdl_software.json - software_age_analysis",
+    "samples": [],
+    "instructions": "Analyze software security posture by age category to understand lifecycle security patterns and modernization needs."
+  },
+  {
+    "categories": [
+      "security_monitoring"
+    ],
+    "question": "What is the overall health and availability of security monitoring agents?",
+    "sql": "SELECT COUNT(*) as total_agents, COUNT(CASE WHEN is_active = true THEN 1 END) as active_agents, COUNT(CASE WHEN is_stale = true THEN 1 END) as stale_agents, (COUNT(CASE WHEN is_active = true THEN 1 END) * 100.0 / COUNT(*)) as agent_uptime_percentage, AVG(days_since_last_seen) as avg_days_since_last_seen FROM security_agents",
+    "context": "Dashboard Widget - Security Monitoring Health. Overall agent health metrics for security operations monitoring and coverage assessment.",
+    "document": "mdl_agents.json - agent_health_metrics",
+    "samples": [],
+    "instructions": "Calculate comprehensive agent health statistics for security monitoring effectiveness and coverage assessment."
+  },
+  {
+    "categories": [
+      "security_monitoring"
+    ],
+    "question": "Which devices have insufficient security agent coverage and need attention?",
+    "sql": "SELECT dev_id, COUNT(DISTINCT agent) as agent_types_deployed, COUNT(CASE WHEN is_active = true THEN 1 END) as active_agents, COUNT(CASE WHEN is_stale = true THEN 1 END) as stale_agents FROM security_agents GROUP BY dev_id HAVING COUNT(DISTINCT agent) < 3 ORDER BY agent_types_deployed ASC LIMIT 20",
+    "context": "Direct Visualization - Table. Identifies devices with insufficient agent coverage requiring security monitoring enhancement.",
+    "document": "mdl_agents.json - agent_coverage_gaps",
+    "samples": [],
+    "instructions": "Identify devices with inadequate security agent coverage to prioritize monitoring infrastructure improvements."
+  },
+  {
+    "categories": [
+      "security_monitoring"
+    ],
+    "question": "How many security agents have been inactive for more than 7 days?",
+    "sql": "SELECT COUNT(*) as inactive_agents, COUNT(DISTINCT dev_id) as affected_devices, COUNT(DISTINCT agent) as agent_types, AVG(days_since_last_seen) as avg_days_inactive FROM security_agents WHERE is_active = false ORDER BY days_since_last_seen DESC",
+    "context": "Dashboard Widget - Agent Health Alert. Identifies inactive agents requiring investigation and potential remediation.",
+    "document": "mdl_agents.json - inactive_agents_alert",
+    "samples": [],
+    "instructions": "Count inactive security agents to identify monitoring gaps and prioritize agent maintenance activities."
+  },
+  {
+    "categories": [
+      "asset_management"
+    ],
+    "question": "What is the distribution of assets by risk category and device type?",
+    "sql": "SELECT device_type, risk_category, COUNT(*) as asset_count, AVG(effective_risk) as avg_risk_score, COUNT(CASE WHEN is_high_risk = true THEN 1 END) as high_risk_assets FROM security_assets GROUP BY device_type, risk_category ORDER BY device_type, CASE risk_category WHEN 'Critical' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 ELSE 4 END",
+    "context": "Direct Visualization - Heatmap. Shows asset risk distribution by type and category for security posture assessment.",
+    "document": "mdl_assets.json - asset_risk_metrics",
+    "samples": [],
+    "instructions": "Create risk distribution matrix by device type and risk category for comprehensive security posture visualization."
+  },
+  {
+    "categories": [
+      "asset_management"
+    ],
+    "question": "Which assets have the highest vulnerability likelihood scores and need immediate attention?",
+    "sql": "SELECT host_name, device_type, effective_risk, risk_category, unpatched_vulnerability_likelihood, weak_credentials_likelihood, misconfiguration_likelihood FROM security_assets WHERE is_high_risk = true ORDER BY effective_risk DESC LIMIT 20",
+    "context": "Direct Visualization - Top N. Identifies highest-risk assets requiring immediate security attention and remediation.",
+    "document": "mdl_assets.json - high_risk_assets_summary",
+    "samples": [],
+    "instructions": "Rank assets by risk score to prioritize security remediation efforts and resource allocation."
+  },
+  {
+    "categories": [
+      "asset_management"
+    ],
+    "question": "How many assets are located in different geographic regions and what are their risk profiles?",
+    "sql": "SELECT location_country, location_city, COUNT(*) as total_assets, COUNT(CASE WHEN is_high_risk = true THEN 1 END) as high_risk_assets, AVG(effective_risk) as avg_risk_score FROM security_assets GROUP BY location_country, location_city ORDER BY avg_risk_score DESC",
+    "context": "Direct Visualization - Geographic Risk Map. Shows asset risk distribution by location for geographic security planning.",
+    "document": "mdl_assets.json - asset_risk_by_location",
+    "samples": [],
+    "instructions": "Analyze asset risk by geographic location to support regional security planning and resource allocation."
+  },
+  {
+    "categories": [
+      "asset_management"
+    ],
+    "question": "Which bastion hosts have the highest security risk and require enhanced protection?",
+    "sql": "SELECT host_name, location_country, effective_risk, risk_category, unpatched_vulnerability_likelihood, weak_credentials_likelihood FROM security_assets WHERE is_bastion_device = true ORDER BY effective_risk DESC",
+    "context": "Direct Visualization - Table. Identifies high-risk bastion hosts requiring enhanced security measures and monitoring.",
+    "document": "mdl_assets.json - bastion_host_security_status",
+    "samples": [],
+    "instructions": "Assess bastion host security status to prioritize critical infrastructure protection and monitoring."
+  },
+  {
+    "categories": [
+      "network_infrastructure"
+    ],
+    "question": "What is the distribution of network devices by manufacturer and their activity status?",
+    "sql": "SELECT manufacturer, COUNT(*) as total_devices, COUNT(CASE WHEN is_stale = false THEN 1 END) as active_devices, COUNT(CASE WHEN is_stale = true THEN 1 END) as stale_devices, (COUNT(CASE WHEN is_stale = false THEN 1 END) * 100.0 / COUNT(*)) as active_percentage FROM network_devices GROUP BY manufacturer ORDER BY total_devices DESC",
+    "context": "Direct Visualization - Bar Chart. Shows device manufacturer distribution and health status for network infrastructure management.",
+    "document": "mdl_interfaces.json - active_devices_summary",
+    "samples": [],
+    "instructions": "Analyze network device distribution by manufacturer and health status for infrastructure management and vendor assessment."
+  },
+  {
+    "categories": [
+      "network_infrastructure"
+    ],
+    "question": "How many network devices are cloud-based vs on-premises and what are their activity patterns?",
+    "sql": "SELECT CASE WHEN is_cloud_device = true THEN 'Cloud' ELSE 'On-Premises' END as deployment_type, COUNT(*) as device_count, COUNT(CASE WHEN is_stale = false THEN 1 END) as active_devices, AVG(days_since_last_seen) as avg_days_since_seen FROM network_devices GROUP BY CASE WHEN is_cloud_device = true THEN 'Cloud' ELSE 'On-Premises' END",
+    "context": "Direct Visualization - Column Chart. Compares cloud vs on-premises device activity for hybrid infrastructure management.",
+    "document": "mdl_interfaces.json - cloud_infrastructure_overview",
+    "samples": [],
+    "instructions": "Compare cloud and on-premises device activity patterns to understand hybrid infrastructure health and management needs."
+  },
+  {
+    "categories": [
+      "network_infrastructure"
+    ],
+    "question": "Which network subnets have the highest device density and potential security exposure?",
+    "sql": "SELECT subnet, subnet_class, COUNT(*) as device_count, COUNT(DISTINCT manufacturer) as manufacturer_diversity, COUNT(CASE WHEN is_stale = false THEN 1 END) as active_devices FROM network_devices GROUP BY subnet, subnet_class ORDER BY device_count DESC LIMIT 15",
+    "context": "Direct Visualization - Top N. Identifies high-density network segments requiring enhanced monitoring and security controls.",
+    "document": "mdl_interfaces.json - subnet_utilization",
+    "samples": [],
+    "instructions": "Rank network subnets by device density to identify high-traffic segments requiring enhanced security monitoring."
+  },
+  {
+    "categories": [
+      "comprehensive_security"
+    ],
+    "question": "What is the overall security posture combining vulnerabilities, assets, and monitoring coverage?",
+    "sql": "SELECT 'Total Vulnerabilities' as metric, COUNT(*) as value FROM vulnerability_instances WHERE is_active = true UNION ALL SELECT 'Critical Vulnerabilities', COUNT(*) FROM vulnerability_instances WHERE is_critical = true AND is_active = true UNION ALL SELECT 'High Risk Assets', COUNT(*) FROM security_assets WHERE is_high_risk = true UNION ALL SELECT 'Active Security Agents', COUNT(*) FROM security_agents WHERE is_active = true UNION ALL SELECT 'Vulnerable Software', COUNT(*) FROM software_inventory WHERE is_vulnerable = true",
+    "context": "Dashboard Widget - Security Posture Overview. Comprehensive security metrics for executive dashboard and risk assessment.",
+    "document": "Multiple models - Security Posture Summary",
+    "samples": [],
+    "instructions": "Calculate comprehensive security metrics across all models for executive-level security posture assessment."
+  },
+  {
+    "categories": [
+      "comprehensive_security"
+    ],
+    "question": "Which business units (NUIDs) have the highest security risk exposure across all systems?",
+    "sql": "SELECT nuid, COUNT(DISTINCT CASE WHEN source = 'vulnerability_instances' THEN dev_id END) as vulnerable_devices, COUNT(DISTINCT CASE WHEN source = 'security_assets' THEN dev_id END) as total_assets, COUNT(DISTINCT CASE WHEN source = 'security_agents' THEN dev_id END) as monitored_devices, AVG(CASE WHEN source = 'vulnerability_instances' THEN risk_score END) as avg_vulnerability_risk FROM (SELECT nuid, dev_id, 'vulnerability_instances' as source, risk_score FROM vulnerability_instances WHERE is_active = true UNION ALL SELECT nuid, dev_id, 'security_assets' as source, effective_risk as risk_score FROM security_assets WHERE is_high_risk = true UNION ALL SELECT nuid, dev_id, 'security_agents' as source, 0 as risk_score FROM security_agents WHERE is_active = true) combined GROUP BY nuid ORDER BY vulnerable_devices DESC, avg_vulnerability_risk DESC",
+    "context": "Maths/Analytics - Business Unit Risk Assessment. Identifies highest-risk business units requiring prioritized security attention.",
+    "document": "Multiple models - Business Unit Risk Analysis",
+    "samples": [],
+    "instructions": "Analyze security risk exposure by business unit across all security systems to prioritize organizational security efforts."
+  },
+  {
+    "categories": [
+      "vulnerability_management",
+      "composite_key_analysis"
+    ],
+    "question": "What are the most critical 2024-2025 CVEs affecting our assets and how many devices are impacted?",
+    "sql": "SELECT vi.cve_id, c.cvss, c.cwe_name, COUNT(DISTINCT CONCAT(vi.nuid, '-', vi.dev_id)) as affected_assets, COUNT(vi.instance_id) as total_instances, AVG(CAST(vi.cvssv3_basescore AS DECIMAL)) as avg_cvss FROM vulnerability_instances vi JOIN cve c ON vi.cve_id = c.cve_id WHERE vi.cve_id LIKE 'CVE-2024%' OR vi.cve_id LIKE 'CVE-2025%' GROUP BY vi.cve_id, c.cvss, c.cwe_name ORDER BY avg_cvss DESC, affected_assets DESC LIMIT 20",
+    "context": "Direct Visualization - Top N. Identifies most critical recent CVEs with asset impact for emergency response prioritization.",
+    "document": "mdl_vuln_instance.json - recent_critical_cves",
+    "samples": [],
+    "instructions": "Rank 2024-2025 CVEs by severity and asset impact to prioritize emergency response and resource allocation."
+  },
+  {
+    "categories": [
+      "composite_key_analysis",
+      "asset_management"
+    ],
+    "question": "For each NUID, show the total number of devices, vulnerabilities, and software instances using the composite key system.",
+    "sql": "SELECT a.nuid, COUNT(DISTINCT a.dev_id) as total_devices, COUNT(DISTINCT vi.instance_id) as total_vulnerabilities, COUNT(DISTINCT si.key) as total_software_instances, COUNT(DISTINCT vi.cve_id) as unique_cves, COUNT(CASE WHEN vi.severity = 'CRITICAL' THEN 1 END) as critical_vulns FROM assets a LEFT JOIN vulnerability_instances vi ON a.nuid = vi.nuid AND a.dev_id = vi.dev_id LEFT JOIN software_instances si ON a.nuid = si.nuid AND a.dev_id = si.dev_id GROUP BY a.nuid ORDER BY critical_vulns DESC, total_vulnerabilities DESC",
+    "context": "Direct Visualization - Table. Shows comprehensive asset inventory and security posture by organizational unit.",
+    "document": "Multiple models - NUID Security Overview",
+    "samples": [],
+    "instructions": "Analyze security posture by NUID using composite keys to understand organizational risk distribution."
+  },
+  {
+    "categories": [
+      "vulnerability_management",
+      "software_asset_management"
+    ],
+    "question": "Which software products are most vulnerable to 2024-2025 CVEs and on how many devices?",
+    "sql": "SELECT si.vendor, si.product, si.version, COUNT(DISTINCT CONCAT(si.nuid, '-', si.dev_id)) as affected_devices, COUNT(DISTINCT vi.cve_id) as unique_cves, AVG(CAST(vi.cvssv3_basescore AS DECIMAL)) as avg_cvss FROM software_instances si JOIN vulnerability_instances vi ON si.nuid = vi.nuid AND si.dev_id = vi.dev_id WHERE vi.cve_id LIKE 'CVE-2024%' OR vi.cve_id LIKE 'CVE-2025%' AND si.product_state = 'VULNERABLE' GROUP BY si.vendor, si.product, si.version ORDER BY affected_devices DESC, avg_cvss DESC LIMIT 15",
+    "context": "Direct Visualization - Top N. Identifies most vulnerable software products affected by recent CVEs.",
+    "document": "mdl_software_instances.json - vulnerable_software_analysis",
+    "samples": [],
+    "instructions": "Rank software products by vulnerability to recent CVEs to prioritize patch management and vendor coordination."
+  },
+  {
+    "categories": [
+      "composite_key_analysis",
+      "vulnerability_management"
+    ],
+    "question": "Find all data for a specific asset using composite key (nuid + dev_id) - show agent, software, and vulnerability details.",
+    "sql": "SELECT a.nuid, a.dev_id, a.host_name, a.ip, a.os_name, ag.agent, ag.first_seen, ag.last_seen, COUNT(DISTINCT si.key) as software_count, COUNT(vi.instance_id) as vulnerability_count, COUNT(DISTINCT vi.cve_id) as unique_cves, COUNT(CASE WHEN vi.severity = 'CRITICAL' THEN 1 END) as critical_vulns FROM assets a LEFT JOIN agents ag ON a.nuid = ag.nuid AND a.dev_id = ag.dev_id LEFT JOIN software_instances si ON a.nuid = si.nuid AND a.dev_id = si.dev_id LEFT JOIN vulnerability_instances vi ON a.nuid = vi.nuid AND a.dev_id = vi.dev_id WHERE a.nuid = 87 AND a.dev_id = 2000000 GROUP BY a.nuid, a.dev_id, a.host_name, a.ip, a.os_name, ag.agent, ag.first_seen, ag.last_seen",
+    "context": "Direct Visualization - Asset Detail View. Comprehensive asset information using composite key lookup.",
+    "document": "Multiple models - Asset Comprehensive View",
+    "samples": [],
+    "instructions": "Demonstrate composite key usage to retrieve complete asset information across all related datasets."
+  },
+  {
+    "categories": [
+      "vulnerability_management",
+      "temporal_analysis"
+    ],
+    "question": "How many 2024-2025 CVEs were published each month and what's the trend?",
+    "sql": "SELECT DATE_FORMAT(pub_date, '%Y-%m') as publication_month, COUNT(DISTINCT cve_id) as new_cves, AVG(CAST(cvss AS DECIMAL)) as avg_cvss, COUNT(CASE WHEN CAST(cvss AS DECIMAL) >= 7.0 THEN 1 END) as high_severity_cves FROM cve WHERE cve_id LIKE 'CVE-2024%' OR cve_id LIKE 'CVE-2025%' GROUP BY DATE_FORMAT(pub_date, '%Y-%m') ORDER BY publication_month",
+    "context": "Direct Visualization - Line Chart. Shows monthly CVE publication trends for threat landscape analysis.",
+    "document": "mdl_cve.json - cve_publication_trends",
+    "samples": [],
+    "instructions": "Track monthly CVE publication trends to understand threat landscape evolution and resource planning."
+  },
+  {
+    "categories": [
+      "composite_key_analysis",
+      "network_infrastructure"
+    ],
+    "question": "Show network interfaces for NUID 87 devices and their associated vulnerabilities.",
+    "sql": "SELECT i.nuid, i.dev_id, i.ip, i.subnet, i.manufacturer, COUNT(vi.instance_id) as vulnerability_count, COUNT(DISTINCT vi.cve_id) as unique_cves, COUNT(CASE WHEN vi.severity = 'CRITICAL' THEN 1 END) as critical_vulns FROM interfaces i LEFT JOIN vulnerability_instances vi ON i.nuid = vi.nuid AND i.dev_id = vi.dev_id WHERE i.nuid = 87 GROUP BY i.nuid, i.dev_id, i.ip, i.subnet, i.manufacturer ORDER BY vulnerability_count DESC",
+    "context": "Direct Visualization - Table. Shows network interface security status for NUID 87 devices.",
+    "document": "mdl_interfaces.json - interface_security_analysis",
+    "samples": [],
+    "instructions": "Analyze network interface security using composite keys to identify vulnerable network segments."
+  },
+  {
+    "categories": [
+      "vulnerability_management",
+      "software_asset_management"
+    ],
+    "question": "Which devices have the most vulnerable software installations and what are the associated CVEs?",
+    "sql": "SELECT a.nuid, a.dev_id, a.host_name, COUNT(DISTINCT si.key) as vulnerable_software_count, COUNT(vi.instance_id) as vulnerability_instances, COUNT(DISTINCT vi.cve_id) as unique_cves, GROUP_CONCAT(DISTINCT si.product ORDER BY si.product SEPARATOR ', ') as vulnerable_products FROM assets a JOIN software_instances si ON a.nuid = si.nuid AND a.dev_id = si.dev_id JOIN vulnerability_instances vi ON a.nuid = vi.nuid AND a.dev_id = vi.dev_id WHERE si.product_state = 'VULNERABLE' AND (vi.cve_id LIKE 'CVE-2024%' OR vi.cve_id LIKE 'CVE-2025%') GROUP BY a.nuid, a.dev_id, a.host_name ORDER BY vulnerable_software_count DESC, vulnerability_instances DESC LIMIT 15",
+    "context": "Direct Visualization - Top N. Identifies devices with highest vulnerable software exposure.",
+    "document": "Multiple models - Device Vulnerability Exposure",
+    "samples": [],
+    "instructions": "Rank devices by vulnerable software count to prioritize patch management and security hardening efforts."
+  },
+  {
+    "categories": [
+      "composite_key_analysis",
+      "vulnerability_management"
+    ],
+    "question": "Find all 2024-2025 vulnerabilities for a specific software product across all devices.",
+    "sql": "SELECT si.vendor, si.product, si.version, a.nuid, a.dev_id, a.host_name, vi.cve_id, vi.severity, vi.cvssv3_basescore, vi.state FROM software_instances si JOIN assets a ON si.nuid = a.nuid AND si.dev_id = a.dev_id JOIN vulnerability_instances vi ON si.nuid = vi.nuid AND si.dev_id = vi.dev_id WHERE si.product = 'Windows 10' AND (vi.cve_id LIKE 'CVE-2024%' OR vi.cve_id LIKE 'CVE-2025%') ORDER BY a.nuid, a.dev_id, vi.severity DESC",
+    "context": "Direct Visualization - Table. Shows specific software vulnerability details across all devices.",
+    "document": "Multiple models - Software Vulnerability Mapping",
+    "samples": [],
+    "instructions": "Map specific software vulnerabilities across all devices using composite keys for targeted remediation."
+  },
+  {
+    "categories": [
+      "vulnerability_management",
+      "temporal_analysis"
+    ],
+    "question": "What is the average time between CVE publication and detection for 2024-2025 CVEs?",
+    "sql": "SELECT AVG(DATEDIFF(vi.detected_time, c.pub_date)) as avg_detection_days, MIN(DATEDIFF(vi.detected_time, c.pub_date)) as fastest_detection, MAX(DATEDIFF(vi.detected_time, c.pub_date)) as slowest_detection, COUNT(CASE WHEN DATEDIFF(vi.detected_time, c.pub_date) <= 1 THEN 1 END) as same_day_detections FROM vulnerability_instances vi JOIN cve c ON vi.cve_id = c.cve_id WHERE vi.cve_id LIKE 'CVE-2024%' OR vi.cve_id LIKE 'CVE-2025%' AND vi.detected_time IS NOT NULL AND c.pub_date IS NOT NULL",
+    "context": "Maths/Analytics - Detection Performance. Measures detection timeliness for recent CVEs.",
+    "document": "mdl_vuln_instance.json - detection_performance_metrics",
+    "samples": [],
+    "instructions": "Calculate detection timeliness for 2024-2025 CVEs to assess vulnerability scanning effectiveness."
+  },
+  {
+    "categories": [
+      "comprehensive_security",
+      "composite_key_analysis"
+    ],
+    "question": "Show comprehensive security posture for NUID 87 devices including all metrics.",
+    "sql": "SELECT a.nuid, COUNT(DISTINCT a.dev_id) as total_devices, COUNT(DISTINCT ag.agent) as agent_types, COUNT(DISTINCT si.key) as software_installations, COUNT(vi.instance_id) as vulnerability_instances, COUNT(DISTINCT vi.cve_id) as unique_cves, COUNT(CASE WHEN vi.severity = 'CRITICAL' THEN 1 END) as critical_vulns, COUNT(CASE WHEN si.product_state = 'VULNERABLE' THEN 1 END) as vulnerable_software, AVG(CAST(vi.cvssv3_basescore AS DECIMAL)) as avg_cvss FROM assets a LEFT JOIN agents ag ON a.nuid = ag.nuid AND a.dev_id = ag.dev_id LEFT JOIN software_instances si ON a.nuid = si.nuid AND a.dev_id = si.dev_id LEFT JOIN vulnerability_instances vi ON a.nuid = vi.nuid AND a.dev_id = vi.dev_id WHERE a.nuid = 87 GROUP BY a.nuid",
+    "context": "Dashboard Widget - NUID Security Posture. Comprehensive security metrics for specific organizational unit.",
+    "document": "Multiple models - NUID Security Dashboard",
+    "samples": [],
+    "instructions": "Calculate comprehensive security metrics for NUID 87 using composite keys for organizational risk assessment."
+  },
+  {
+    "categories": [
+      "vulnerability_management",
+      "software_asset_management"
+    ],
+    "question": "Which software vendors have the most 2024-2025 CVE exposures and what are the affected products?",
+    "sql": "SELECT si.vendor, COUNT(DISTINCT si.product) as affected_products, COUNT(DISTINCT CONCAT(si.nuid, '-', si.dev_id)) as affected_devices, COUNT(vi.instance_id) as vulnerability_instances, COUNT(DISTINCT vi.cve_id) as unique_cves, AVG(CAST(vi.cvssv3_basescore AS DECIMAL)) as avg_cvss FROM software_instances si JOIN vulnerability_instances vi ON si.nuid = vi.nuid AND si.dev_id = vi.dev_id WHERE (vi.cve_id LIKE 'CVE-2024%' OR vi.cve_id LIKE 'CVE-2025%') AND si.product_state = 'VULNERABLE' GROUP BY si.vendor ORDER BY affected_devices DESC, vulnerability_instances DESC LIMIT 10",
+    "context": "Direct Visualization - Top N. Identifies vendors with highest 2024-2025 CVE exposure.",
+    "document": "mdl_software_instances.json - vendor_cve_exposure",
+    "samples": [],
+    "instructions": "Rank software vendors by 2024-2025 CVE exposure to prioritize vendor risk management and patch coordination."
+  },
+  {
+    "categories": [
+      "composite_key_analysis",
+      "vulnerability_management"
+    ],
+    "question": "Find all critical vulnerabilities affecting Windows systems across all NUIDs.",
+    "sql": "SELECT a.nuid, a.dev_id, a.host_name, a.os_name, vi.cve_id, vi.severity, vi.cvssv3_basescore, vi.state, c.cwe_name, c.summary FROM assets a JOIN vulnerability_instances vi ON a.nuid = vi.nuid AND a.dev_id = vi.dev_id JOIN cve c ON vi.cve_id = c.cve_id WHERE a.os_name LIKE '%Windows%' AND vi.severity = 'CRITICAL' AND (vi.cve_id LIKE 'CVE-2024%' OR vi.cve_id LIKE 'CVE-2025%') ORDER BY a.nuid, a.dev_id, vi.cvssv3_basescore DESC",
+    "context": "Direct Visualization - Table. Shows critical Windows vulnerabilities across all organizational units.",
+    "document": "Multiple models - Windows Critical Vulnerabilities",
+    "samples": [],
+    "instructions": "Identify critical Windows vulnerabilities across all NUIDs for prioritized remediation efforts."
+  },
+  {
+    "categories": [
+      "vulnerability_management",
+      "temporal_analysis"
+    ],
+    "question": "Show the distribution of 2024-2025 CVEs by CWE category and their average CVSS scores.",
+    "sql": "SELECT c.cwe_name, COUNT(DISTINCT c.cve_id) as unique_cves, COUNT(vi.instance_id) as total_instances, COUNT(DISTINCT CONCAT(vi.nuid, '-', vi.dev_id)) as affected_assets, AVG(CAST(c.cvss AS DECIMAL)) as avg_cvss, COUNT(CASE WHEN CAST(c.cvss AS DECIMAL) >= 7.0 THEN 1 END) as high_severity_cves FROM cve c JOIN vulnerability_instances vi ON c.cve_id = vi.cve_id WHERE c.cve_id LIKE 'CVE-2024%' OR c.cve_id LIKE 'CVE-2025%' GROUP BY c.cwe_name ORDER BY unique_cves DESC, avg_cvss DESC",
+    "context": "Direct Visualization - Bar Chart. Shows CWE distribution for 2024-2025 CVEs with severity analysis.",
+    "document": "mdl_cve.json - cwe_analysis_2024_2025",
+    "samples": [],
+    "instructions": "Analyze CWE distribution for recent CVEs to understand vulnerability patterns and focus areas."
+  },
+  {
+    "categories": [
+      "composite_key_analysis",
+      "network_infrastructure"
+    ],
+    "question": "Show network topology security status by analyzing interfaces and their associated vulnerabilities.",
+    "sql": "SELECT i.subnet, i.site, COUNT(DISTINCT CONCAT(i.nuid, '-', i.dev_id)) as devices_in_subnet, COUNT(vi.instance_id) as vulnerability_count, COUNT(DISTINCT vi.cve_id) as unique_cves, COUNT(CASE WHEN vi.severity = 'CRITICAL' THEN 1 END) as critical_vulns, AVG(CAST(vi.cvssv3_basescore AS DECIMAL)) as avg_cvss FROM interfaces i LEFT JOIN vulnerability_instances vi ON i.nuid = vi.nuid AND i.dev_id = vi.dev_id WHERE (vi.cve_id LIKE 'CVE-2024%' OR vi.cve_id LIKE 'CVE-2025%') OR vi.cve_id IS NULL GROUP BY i.subnet, i.site ORDER BY critical_vulns DESC, vulnerability_count DESC",
+    "context": "Direct Visualization - Network Security Map. Shows subnet-level security posture and vulnerability distribution.",
+    "document": "mdl_interfaces.json - network_security_analysis",
+    "samples": [],
+    "instructions": "Analyze network security by subnet to identify vulnerable network segments and prioritize security controls."
+  },
+  {
+    "categories": [
+      "comprehensive_security",
+      "composite_key_analysis"
+    ],
+    "question": "Create a comprehensive security dashboard showing key metrics for each NUID using composite keys.",
+    "sql": "SELECT a.nuid, COUNT(DISTINCT a.dev_id) as total_devices, COUNT(DISTINCT ag.agent) as active_agents, COUNT(DISTINCT si.key) as software_installations, COUNT(vi.instance_id) as total_vulnerabilities, COUNT(DISTINCT vi.cve_id) as unique_cves, COUNT(CASE WHEN vi.severity = 'CRITICAL' THEN 1 END) as critical_vulns, COUNT(CASE WHEN vi.severity = 'HIGH' THEN 1 END) as high_vulns, COUNT(CASE WHEN si.product_state = 'VULNERABLE' THEN 1 END) as vulnerable_software, ROUND(COUNT(CASE WHEN vi.severity = 'CRITICAL' THEN 1 END) * 100.0 / COUNT(vi.instance_id), 2) as critical_percentage FROM assets a LEFT JOIN agents ag ON a.nuid = ag.nuid AND a.dev_id = ag.dev_id LEFT JOIN software_instances si ON a.nuid = si.nuid AND a.dev_id = si.dev_id LEFT JOIN vulnerability_instances vi ON a.nuid = vi.nuid AND a.dev_id = vi.dev_id GROUP BY a.nuid ORDER BY critical_vulns DESC, total_vulnerabilities DESC",
+    "context": "Dashboard Widget - Executive Security Dashboard. Comprehensive security metrics by organizational unit.",
+    "document": "Multiple models - Executive Security Dashboard",
+    "samples": [],
+    "instructions": "Create executive-level security dashboard using composite keys for organizational risk assessment and reporting."
+  },
+  {
+    "categories": [
+      "vulnerability_management",
+      "advanced_analytics"
+    ],
+    "question": "What are the percentile distributions of CVSS scores for 2024-2025 CVEs using advanced aggregation?",
+    "sql": "WITH cve_cvss_stats AS (SELECT cve_id, CAST(cvss AS DECIMAL) as cvss_score FROM cve WHERE cve_id LIKE 'CVE-2024%' OR cve_id LIKE 'CVE-2025%' AND cvss IS NOT NULL) SELECT 'P25' as percentile, PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY cvss_score) as value FROM cve_cvss_stats UNION ALL SELECT 'P50' as percentile, PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY cvss_score) as value FROM cve_cvss_stats UNION ALL SELECT 'P75' as percentile, PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY cvss_score) as value FROM cve_cvss_stats UNION ALL SELECT 'P90' as percentile, PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY cvss_score) as value FROM cve_cvss_stats UNION ALL SELECT 'P95' as percentile, PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY cvss_score) as value FROM cve_cvss_stats UNION ALL SELECT 'P99' as percentile, PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY cvss_score) as value FROM cve_cvss_stats ORDER BY value",
+    "context": "Maths/Analytics - Percentile Analysis. Shows CVSS score distribution using advanced percentile functions for risk assessment.",
+    "document": "mdl_cve.json - cvss_percentile_analysis",
+    "samples": [],
+    "instructions": "Calculate percentile distributions of CVSS scores to understand vulnerability severity distribution patterns."
+  },
+  {
+    "categories": [
+      "vulnerability_management",
+      "advanced_analytics",
+      "composite_key_analysis"
+    ],
+    "question": "Using CTEs and window functions, rank devices by vulnerability count and show running totals by NUID.",
+    "sql": "WITH device_vuln_counts AS (SELECT nuid, dev_id, COUNT(vi.instance_id) as vuln_count, COUNT(CASE WHEN vi.severity = 'CRITICAL' THEN 1 END) as critical_count FROM assets a LEFT JOIN vulnerability_instances vi ON a.nuid = vi.nuid AND a.dev_id = vi.dev_id GROUP BY nuid, dev_id), ranked_devices AS (SELECT nuid, dev_id, vuln_count, critical_count, ROW_NUMBER() OVER (PARTITION BY nuid ORDER BY vuln_count DESC) as device_rank, RANK() OVER (ORDER BY vuln_count DESC) as global_rank, DENSE_RANK() OVER (ORDER BY vuln_count DESC) as global_dense_rank FROM device_vuln_counts), running_totals AS (SELECT nuid, dev_id, vuln_count, critical_count, device_rank, global_rank, SUM(vuln_count) OVER (PARTITION BY nuid ORDER BY device_rank ROWS UNBOUNDED PRECEDING) as running_total_nuid, SUM(vuln_count) OVER (ORDER BY global_rank ROWS UNBOUNDED PRECEDING) as running_total_global FROM ranked_devices) SELECT * FROM running_totals WHERE device_rank <= 5 ORDER BY nuid, device_rank",
+    "context": "Direct Visualization - Advanced Ranking Table. Shows device vulnerability rankings with running totals using window functions.",
+    "document": "Multiple models - Advanced Device Ranking",
+    "samples": [],
+    "instructions": "Use CTEs and window functions to rank devices by vulnerability count and calculate running totals for comprehensive analysis."
+  },
+  {
+    "categories": [
+      "vulnerability_management",
+      "temporal_analysis",
+      "advanced_analytics"
+    ],
+    "question": "Using CTEs, calculate the moving average of CVE publications and detect trend changes for 2024-2025 CVEs.",
+    "sql": "WITH monthly_cve_counts AS (SELECT DATE_FORMAT(pub_date, '%Y-%m') as month, COUNT(DISTINCT cve_id) as cve_count, AVG(CAST(cvss AS DECIMAL)) as avg_cvss FROM cve WHERE cve_id LIKE 'CVE-2024%' OR cve_id LIKE 'CVE-2025%' GROUP BY DATE_FORMAT(pub_date, '%Y-%m')), moving_averages AS (SELECT month, cve_count, avg_cvss, AVG(cve_count) OVER (ORDER BY month ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) as moving_avg_3m, AVG(cve_count) OVER (ORDER BY month ROWS BETWEEN 5 PRECEDING AND CURRENT ROW) as moving_avg_6m, LAG(cve_count, 1) OVER (ORDER BY month) as prev_month_count, LAG(cve_count, 12) OVER (ORDER BY month) as prev_year_count FROM monthly_cve_counts), trend_analysis AS (SELECT month, cve_count, moving_avg_3m, moving_avg_6m, prev_month_count, prev_year_count, CASE WHEN cve_count > moving_avg_3m * 1.2 THEN 'Spike' WHEN cve_count < moving_avg_3m * 0.8 THEN 'Drop' ELSE 'Normal' END as trend_status, ROUND((cve_count - prev_month_count) * 100.0 / prev_month_count, 2) as month_over_month_pct, ROUND((cve_count - prev_year_count) * 100.0 / prev_year_count, 2) as year_over_year_pct FROM moving_averages) SELECT * FROM trend_analysis ORDER BY month",
+    "context": "Direct Visualization - Time Series Analysis. Shows CVE publication trends with moving averages and trend detection.",
+    "document": "mdl_cve.json - temporal_trend_analysis",
+    "samples": [],
+    "instructions": "Use CTEs and window functions to calculate moving averages and detect trend changes in CVE publications."
+  },
+  {
+    "categories": [
+      "software_asset_management",
+      "advanced_analytics",
+      "composite_key_analysis"
+    ],
+    "question": "Using window functions and CTEs, identify software vendors with the highest vulnerability density and their risk progression.",
+    "sql": "WITH vendor_vuln_stats AS (SELECT si.vendor, COUNT(DISTINCT si.key) as total_installations, COUNT(vi.instance_id) as total_vulnerabilities, COUNT(DISTINCT vi.cve_id) as unique_cves, AVG(CAST(vi.cvssv3_basescore AS DECIMAL)) as avg_cvss, COUNT(CASE WHEN vi.severity = 'CRITICAL' THEN 1 END) as critical_vulns FROM software_instances si LEFT JOIN vulnerability_instances vi ON si.nuid = vi.nuid AND si.dev_id = vi.dev_id WHERE si.product_state = 'VULNERABLE' GROUP BY si.vendor), vendor_metrics AS (SELECT vendor, total_installations, total_vulnerabilities, unique_cves, avg_cvss, critical_vulns, ROUND(total_vulnerabilities * 100.0 / total_installations, 2) as vuln_density, ROUND(critical_vulns * 100.0 / total_vulnerabilities, 2) as critical_percentage FROM vendor_vuln_stats WHERE total_installations >= 10), ranked_vendors AS (SELECT *, ROW_NUMBER() OVER (ORDER BY vuln_density DESC) as density_rank, RANK() OVER (ORDER BY avg_cvss DESC) as severity_rank, NTILE(4) OVER (ORDER BY vuln_density) as risk_quartile FROM vendor_metrics), vendor_progression AS (SELECT vendor, total_installations, vuln_density, critical_percentage, density_rank, severity_rank, risk_quartile, LAG(vuln_density, 1) OVER (ORDER BY density_rank) as prev_vendor_density, CASE WHEN risk_quartile = 1 THEN 'High Risk' WHEN risk_quartile = 2 THEN 'Medium-High Risk' WHEN risk_quartile = 3 THEN 'Medium-Low Risk' ELSE 'Low Risk' END as risk_category FROM ranked_vendors) SELECT * FROM vendor_progression WHERE density_rank <= 20 ORDER BY density_rank",
+    "context": "Direct Visualization - Advanced Vendor Analysis. Shows vendor vulnerability density with risk quartiles and progression analysis.",
+    "document": "mdl_software_instances.json - advanced_vendor_analysis",
+    "samples": [],
+    "instructions": "Use CTEs and window functions to analyze vendor vulnerability density, risk quartiles, and progression patterns."
+  },
+  {
+    "categories": [
+      "vulnerability_management",
+      "composite_key_analysis",
+      "advanced_analytics"
+    ],
+    "question": "Using recursive CTEs, find the vulnerability propagation path through connected assets in the same subnet.",
+    "sql": "WITH RECURSIVE subnet_assets AS (SELECT DISTINCT i.subnet, i.nuid, i.dev_id, i.ip, i.manufacturer FROM interfaces i WHERE i.subnet IS NOT NULL), asset_vulnerabilities AS (SELECT sa.subnet, sa.nuid, sa.dev_id, sa.ip, COUNT(vi.instance_id) as vuln_count, COUNT(CASE WHEN vi.severity = 'CRITICAL' THEN 1 END) as critical_vulns, AVG(CAST(vi.cvssv3_basescore AS DECIMAL)) as avg_cvss FROM subnet_assets sa LEFT JOIN vulnerability_instances vi ON sa.nuid = vi.nuid AND sa.dev_id = vi.dev_id GROUP BY sa.subnet, sa.nuid, sa.dev_id, sa.ip), vulnerability_propagation AS (SELECT subnet, nuid, dev_id, ip, vuln_count, critical_vulns, avg_cvss, 0 as propagation_level, CAST(CONCAT(nuid, '-', dev_id) AS CHAR(1000)) as propagation_path FROM asset_vulnerabilities WHERE critical_vulns > 0 UNION ALL SELECT av.subnet, av.nuid, av.dev_id, av.ip, av.vuln_count, av.critical_vulns, av.avg_cvss, vp.propagation_level + 1, CONCAT(vp.propagation_path, ' -> ', av.nuid, '-', av.dev_id) FROM vulnerability_propagation vp JOIN asset_vulnerabilities av ON vp.subnet = av.subnet AND vp.nuid != av.nuid WHERE vp.propagation_level < 3 AND av.critical_vulns > 0) SELECT subnet, propagation_level, COUNT(DISTINCT CONCAT(nuid, '-', dev_id)) as affected_devices, AVG(vuln_count) as avg_vuln_count, AVG(critical_vulns) as avg_critical_vulns, GROUP_CONCAT(DISTINCT CONCAT(nuid, '-', dev_id) ORDER BY nuid, dev_id SEPARATOR ', ') as device_list FROM vulnerability_propagation GROUP BY subnet, propagation_level ORDER BY subnet, propagation_level",
+    "context": "Maths/Analytics - Vulnerability Propagation Analysis. Shows how vulnerabilities spread through connected assets using recursive CTEs.",
+    "document": "Multiple models - Vulnerability Propagation Analysis",
+    "samples": [],
+    "instructions": "Use recursive CTEs to analyze vulnerability propagation paths through connected assets in the same subnet."
+  },
+  {
+    "categories": [
+      "vulnerability_management",
+      "temporal_analysis",
+      "advanced_analytics"
+    ],
+    "question": "Using window functions and CTEs, calculate the vulnerability detection lag percentiles and identify detection performance outliers.",
+    "sql": "WITH detection_lag_data AS (SELECT vi.cve_id, vi.nuid, vi.dev_id, vi.detected_time, c.pub_date, DATEDIFF(vi.detected_time, c.pub_date) as detection_lag_days, vi.severity, CAST(vi.cvssv3_basescore AS DECIMAL) as cvss_score FROM vulnerability_instances vi JOIN cve c ON vi.cve_id = c.cve_id WHERE vi.detected_time IS NOT NULL AND c.pub_date IS NOT NULL AND vi.cve_id LIKE 'CVE-2024%' OR vi.cve_id LIKE 'CVE-2025%'), lag_percentiles AS (SELECT PERCENTILE_CONT(0.10) WITHIN GROUP (ORDER BY detection_lag_days) as p10, PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY detection_lag_days) as p25, PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY detection_lag_days) as p50, PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY detection_lag_days) as p75, PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY detection_lag_days) as p90, PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY detection_lag_days) as p95, PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY detection_lag_days) as p99 FROM detection_lag_data), detection_performance AS (SELECT cve_id, nuid, dev_id, detection_lag_days, severity, cvss_score, ROW_NUMBER() OVER (PARTITION BY severity ORDER BY detection_lag_days) as severity_rank, ROW_NUMBER() OVER (ORDER BY detection_lag_days) as global_rank, NTILE(10) OVER (ORDER BY detection_lag_days) as performance_decile FROM detection_lag_data), outlier_analysis AS (SELECT dp.*, lp.p50, lp.p90, CASE WHEN dp.detection_lag_days > lp.p90 THEN 'Slow Detector' WHEN dp.detection_lag_days < lp.p10 THEN 'Fast Detector' ELSE 'Normal' END as performance_category, CASE WHEN dp.detection_lag_days > lp.p95 THEN 'Outlier' ELSE 'Normal' END as outlier_status FROM detection_performance dp CROSS JOIN lag_percentiles lp) SELECT performance_category, COUNT(*) as device_count, AVG(detection_lag_days) as avg_lag_days, AVG(cvss_score) as avg_cvss, COUNT(CASE WHEN outlier_status = 'Outlier' THEN 1 END) as outlier_count FROM outlier_analysis GROUP BY performance_category ORDER BY avg_lag_days",
+    "context": "Maths/Analytics - Detection Performance Analysis. Shows vulnerability detection lag percentiles and identifies performance outliers.",
+    "document": "mdl_vuln_instance.json - detection_performance_analysis",
+    "samples": [],
+    "instructions": "Use window functions and CTEs to calculate detection lag percentiles and identify performance outliers."
+  },
+  {
+    "categories": [
+      "comprehensive_security",
+      "composite_key_analysis",
+      "advanced_analytics"
+    ],
+    "question": "Using CTEs and window functions, create a comprehensive security risk score for each NUID with weighted factors and trend analysis.",
+    "sql": "WITH nuid_metrics AS (SELECT a.nuid, COUNT(DISTINCT a.dev_id) as total_devices, COUNT(vi.instance_id) as total_vulnerabilities, COUNT(CASE WHEN vi.severity = 'CRITICAL' THEN 1 END) as critical_vulns, COUNT(CASE WHEN vi.severity = 'HIGH' THEN 1 END) as high_vulns, COUNT(CASE WHEN si.product_state = 'VULNERABLE' THEN 1 END) as vulnerable_software, AVG(CAST(vi.cvssv3_basescore AS DECIMAL)) as avg_cvss, COUNT(CASE WHEN ag.is_stale = 'True' THEN 1 END) as stale_agents FROM assets a LEFT JOIN vulnerability_instances vi ON a.nuid = vi.nuid AND a.dev_id = vi.dev_id LEFT JOIN software_instances si ON a.nuid = si.nuid AND a.dev_id = si.dev_id LEFT JOIN agents ag ON a.nuid = ag.nuid AND a.dev_id = ag.dev_id GROUP BY a.nuid), risk_calculations AS (SELECT nuid, total_devices, total_vulnerabilities, critical_vulns, high_vulns, vulnerable_software, avg_cvss, stale_agents, ROUND(total_vulnerabilities * 100.0 / total_devices, 2) as vuln_density, ROUND(critical_vulns * 100.0 / total_vulnerabilities, 2) as critical_percentage, ROUND(vulnerable_software * 100.0 / total_devices, 2) as vulnerable_software_percentage, ROUND(stale_agents * 100.0 / total_devices, 2) as stale_agent_percentage FROM nuid_metrics), weighted_scores AS (SELECT *, (vuln_density * 0.3 + critical_percentage * 0.25 + avg_cvss * 10 * 0.2 + vulnerable_software_percentage * 0.15 + stale_agent_percentage * 0.1) as raw_risk_score FROM risk_calculations), normalized_scores AS (SELECT *, ROUND(raw_risk_score, 2) as risk_score, ROW_NUMBER() OVER (ORDER BY raw_risk_score DESC) as risk_rank, RANK() OVER (ORDER BY raw_risk_score DESC) as risk_rank_tied, NTILE(5) OVER (ORDER BY raw_risk_score DESC) as risk_quintile, LAG(raw_risk_score, 1) OVER (ORDER BY risk_rank) as prev_nuid_score FROM weighted_scores), risk_trends AS (SELECT *, CASE WHEN prev_nuid_score IS NULL THEN 'Baseline' WHEN raw_risk_score > prev_nuid_score * 1.1 THEN 'Increasing' WHEN raw_risk_score < prev_nuid_score * 0.9 THEN 'Decreasing' ELSE 'Stable' END as risk_trend, CASE WHEN risk_quintile = 1 THEN 'Very High Risk' WHEN risk_quintile = 2 THEN 'High Risk' WHEN risk_quintile = 3 THEN 'Medium Risk' WHEN risk_quintile = 4 THEN 'Low Risk' ELSE 'Very Low Risk' END as risk_category FROM normalized_scores) SELECT nuid, total_devices, risk_score, risk_rank, risk_category, risk_trend, vuln_density, critical_percentage, avg_cvss, vulnerable_software_percentage, stale_agent_percentage FROM risk_trends ORDER BY risk_rank",
+    "context": "Dashboard Widget - Advanced Risk Analysis. Shows comprehensive security risk scores with weighted factors and trend analysis.",
+    "document": "Multiple models - Advanced Risk Analysis",
+    "samples": [],
+    "instructions": "Use CTEs and window functions to create comprehensive security risk scores with weighted factors and trend analysis."
+  },
+  {
+    "categories": [
+      "vulnerability_management",
+      "temporal_analysis",
+      "advanced_analytics"
+    ],
+    "question": "Using window functions and CTEs, identify vulnerability clusters and their temporal patterns across different NUIDs.",
+    "sql": "WITH vulnerability_timeline AS (SELECT vi.cve_id, vi.nuid, vi.detected_time, vi.severity, CAST(vi.cvssv3_basescore AS DECIMAL) as cvss_score, DATE_FORMAT(vi.detected_time, '%Y-%m-%d') as detection_date, ROW_NUMBER() OVER (PARTITION BY vi.cve_id ORDER BY vi.detected_time) as detection_sequence FROM vulnerability_instances vi WHERE vi.cve_id LIKE 'CVE-2024%' OR vi.cve_id LIKE 'CVE-2025%'), cve_clusters AS (SELECT cve_id, COUNT(DISTINCT nuid) as affected_nuids, COUNT(*) as total_instances, MIN(detected_time) as first_detection, MAX(detected_time) as last_detection, DATEDIFF(MAX(detected_time), MIN(detected_time)) as cluster_duration_days, AVG(cvss_score) as avg_cvss, COUNT(CASE WHEN severity = 'CRITICAL' THEN 1 END) as critical_count FROM vulnerability_timeline GROUP BY cve_id HAVING COUNT(DISTINCT nuid) > 1), cluster_analysis AS (SELECT cve_id, affected_nuids, total_instances, first_detection, last_detection, cluster_duration_days, avg_cvss, critical_count, ROW_NUMBER() OVER (ORDER BY affected_nuids DESC, total_instances DESC) as cluster_rank, RANK() OVER (ORDER BY cluster_duration_days DESC) as duration_rank, NTILE(4) OVER (ORDER BY affected_nuids) as spread_quartile FROM cve_clusters), temporal_patterns AS (SELECT ca.*, vt.detection_date, vt.detection_sequence, vt.nuid, vt.severity, LAG(vt.detection_date, 1) OVER (PARTITION BY ca.cve_id ORDER BY vt.detection_sequence) as prev_detection_date, DATEDIFF(vt.detection_date, LAG(vt.detection_date, 1) OVER (PARTITION BY ca.cve_id ORDER BY vt.detection_sequence)) as days_since_prev_detection FROM cluster_analysis ca JOIN vulnerability_timeline vt ON ca.cve_id = vt.cve_id), pattern_summary AS (SELECT cve_id, affected_nuids, cluster_duration_days, avg_cvss, spread_quartile, AVG(days_since_prev_detection) as avg_detection_interval, STDDEV(days_since_prev_detection) as detection_interval_stddev, COUNT(CASE WHEN days_since_prev_detection <= 1 THEN 1 END) as same_day_detections, COUNT(CASE WHEN days_since_prev_detection > 7 THEN 1 END) as delayed_detections FROM temporal_patterns WHERE days_since_prev_detection IS NOT NULL GROUP BY cve_id, affected_nuids, cluster_duration_days, avg_cvss, spread_quartile) SELECT cve_id, affected_nuids, cluster_duration_days, ROUND(avg_cvss, 2) as avg_cvss, CASE WHEN spread_quartile = 1 THEN 'Wide Spread' WHEN spread_quartile = 2 THEN 'Medium Spread' WHEN spread_quartile = 3 THEN 'Limited Spread' ELSE 'Localized' END as spread_category, ROUND(avg_detection_interval, 1) as avg_detection_interval, same_day_detections, delayed_detections FROM pattern_summary WHERE cluster_rank <= 20 ORDER BY cluster_rank",
+    "context": "Maths/Analytics - Vulnerability Cluster Analysis. Shows vulnerability clusters and their temporal patterns across NUIDs.",
+    "document": "mdl_vuln_instance.json - vulnerability_cluster_analysis",
+    "samples": [],
+    "instructions": "Use window functions and CTEs to identify vulnerability clusters and analyze their temporal patterns across different NUIDs."
+  },
+  {
+    "categories": [
+      "software_asset_management",
+      "composite_key_analysis",
+      "advanced_analytics"
+    ],
+    "question": "Using window functions and CTEs, analyze software installation patterns and identify anomalous installations across NUIDs.",
+    "sql": "WITH software_installations AS (SELECT si.nuid, si.dev_id, si.vendor, si.product, si.version, si.install_time, si.product_state, DATE_FORMAT(si.install_time, '%Y-%m') as install_month, ROW_NUMBER() OVER (PARTITION BY si.nuid, si.vendor, si.product ORDER BY si.install_time) as install_sequence FROM software_instances si), vendor_install_patterns AS (SELECT vendor, product, COUNT(DISTINCT CONCAT(nuid, '-', dev_id)) as total_installations, COUNT(DISTINCT nuid) as affected_nuids, MIN(install_time) as first_installation, MAX(install_time) as last_installation, DATEDIFF(MAX(install_time), MIN(install_time)) as installation_span_days, COUNT(CASE WHEN product_state = 'VULNERABLE' THEN 1 END) as vulnerable_installations FROM software_installations GROUP BY vendor, product), installation_metrics AS (SELECT vp.*, ROUND(vp.vulnerable_installations * 100.0 / vp.total_installations, 2) as vulnerability_rate, ROW_NUMBER() OVER (ORDER BY vp.total_installations DESC) as popularity_rank, RANK() OVER (ORDER BY vp.vulnerability_rate DESC) as risk_rank, NTILE(5) OVER (ORDER BY vp.total_installations) as popularity_quintile FROM vendor_install_patterns WHERE vp.total_installations >= 5), nuid_software_diversity AS (SELECT nuid, COUNT(DISTINCT vendor) as vendor_diversity, COUNT(DISTINCT product) as product_diversity, COUNT(*) as total_installations, AVG(CASE WHEN product_state = 'VULNERABLE' THEN 1.0 ELSE 0.0 END) as vulnerability_rate FROM software_installations GROUP BY nuid), anomalous_installations AS (SELECT si.nuid, si.dev_id, si.vendor, si.product, si.version, si.install_time, si.product_state, nsd.vendor_diversity, nsd.product_diversity, nsd.vulnerability_rate, im.popularity_rank, im.risk_rank, im.popularity_quintile, CASE WHEN im.popularity_quintile = 5 AND nsd.vendor_diversity < 3 THEN 'Rare Software' WHEN im.risk_rank <= 10 AND nsd.vulnerability_rate > 0.5 THEN 'High Risk Software' WHEN nsd.vendor_diversity > 10 AND nsd.product_diversity > 50 THEN 'Diverse Environment' ELSE 'Normal' END as installation_category FROM software_installations si JOIN nuid_software_diversity nsd ON si.nuid = nsd.nuid JOIN installation_metrics im ON si.vendor = im.vendor AND si.product = im.product) SELECT installation_category, COUNT(*) as installation_count, COUNT(DISTINCT CONCAT(nuid, '-', dev_id)) as affected_devices, COUNT(DISTINCT nuid) as affected_nuids, AVG(vendor_diversity) as avg_vendor_diversity, AVG(product_diversity) as avg_product_diversity, AVG(vulnerability_rate) as avg_vulnerability_rate FROM anomalous_installations GROUP BY installation_category ORDER BY installation_count DESC",
+    "context": "Maths/Analytics - Software Installation Pattern Analysis. Shows software installation patterns and identifies anomalous installations.",
+    "document": "mdl_software_instances.json - installation_pattern_analysis",
+    "samples": [],
+    "instructions": "Use window functions and CTEs to analyze software installation patterns and identify anomalous installations across NUIDs."
+  },
+  {
+    "categories": [
+      "vulnerability_management",
+      "composite_key_analysis",
+      "advanced_analytics"
+    ],
+    "question": "Using advanced window functions and CTEs, calculate the vulnerability exposure index for each device and identify high-risk device clusters.",
+    "sql": "WITH device_vulnerability_metrics AS (SELECT a.nuid, a.dev_id, a.host_name, a.os_name, COUNT(vi.instance_id) as total_vulnerabilities, COUNT(CASE WHEN vi.severity = 'CRITICAL' THEN 1 END) as critical_vulns, COUNT(CASE WHEN vi.severity = 'HIGH' THEN 1 END) as high_vulns, AVG(CAST(vi.cvssv3_basescore AS DECIMAL)) as avg_cvss, MAX(CAST(vi.cvssv3_basescore AS DECIMAL)) as max_cvss, COUNT(DISTINCT vi.cve_id) as unique_cves, COUNT(CASE WHEN si.product_state = 'VULNERABLE' THEN 1 END) as vulnerable_software FROM assets a LEFT JOIN vulnerability_instances vi ON a.nuid = vi.nuid AND a.dev_id = vi.dev_id LEFT JOIN software_instances si ON a.nuid = si.nuid AND a.dev_id = si.dev_id GROUP BY a.nuid, a.dev_id, a.host_name, a.os_name), exposure_calculations AS (SELECT *, (critical_vulns * 4 + high_vulns * 2 + total_vulnerabilities * 1) as raw_exposure_score, (avg_cvss * 10) as cvss_weight, (vulnerable_software * 0.5) as software_weight FROM device_vulnerability_metrics), normalized_exposure AS (SELECT *, (raw_exposure_score + cvss_weight + software_weight) as exposure_index, ROW_NUMBER() OVER (ORDER BY (raw_exposure_score + cvss_weight + software_weight) DESC) as exposure_rank, RANK() OVER (ORDER BY (raw_exposure_score + cvss_weight + software_weight) DESC) as exposure_rank_tied, NTILE(10) OVER (ORDER BY (raw_exposure_score + cvss_weight + software_weight) DESC) as exposure_decile, PERCENT_RANK() OVER (ORDER BY (raw_exposure_score + cvss_weight + software_weight)) as exposure_percentile FROM exposure_calculations), device_clusters AS (SELECT nuid, COUNT(*) as device_count, AVG(exposure_index) as avg_exposure, MAX(exposure_index) as max_exposure, MIN(exposure_index) as min_exposure, STDDEV(exposure_index) as exposure_stddev, COUNT(CASE WHEN exposure_decile <= 3 THEN 1 END) as high_risk_devices FROM normalized_exposure GROUP BY nuid HAVING COUNT(*) >= 5), cluster_analysis AS (SELECT dc.nuid, dc.device_count, ROUND(dc.avg_exposure, 2) as avg_exposure, ROUND(dc.max_exposure, 2) as max_exposure, ROUND(dc.exposure_stddev, 2) as exposure_stddev, dc.high_risk_devices, ROUND(dc.high_risk_devices * 100.0 / dc.device_count, 2) as high_risk_percentage, ROW_NUMBER() OVER (ORDER BY dc.avg_exposure DESC) as cluster_risk_rank, CASE WHEN dc.avg_exposure > (SELECT AVG(avg_exposure) + STDDEV(avg_exposure) FROM device_clusters) THEN 'High Risk Cluster' WHEN dc.avg_exposure < (SELECT AVG(avg_exposure) - STDDEV(avg_exposure) FROM device_clusters) THEN 'Low Risk Cluster' ELSE 'Normal Risk Cluster' END as cluster_risk_category FROM device_clusters) SELECT ca.nuid, ca.device_count, ca.avg_exposure, ca.max_exposure, ca.exposure_stddev, ca.high_risk_devices, ca.high_risk_percentage, ca.cluster_risk_rank, ca.cluster_risk_category FROM cluster_analysis ca ORDER BY ca.cluster_risk_rank",
+    "context": "Maths/Analytics - Device Vulnerability Exposure Analysis. Shows vulnerability exposure index and identifies high-risk device clusters.",
+    "document": "Multiple models - Device Exposure Analysis",
+    "samples": [],
+    "instructions": "Use advanced window functions and CTEs to calculate vulnerability exposure index and identify high-risk device clusters."
+  }
+]

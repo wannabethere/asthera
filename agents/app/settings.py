@@ -140,6 +140,11 @@ class Settings(BaseSettings):
     CHROMA_COLLECTION_NAME: str = "default"
     CHROMA_PERSIST_DIRECTORY: str = CHROMA_STORE_PATH
     
+    # DataServices ChromaDB Settings (for document storage)
+    DATASERVICES_CHROMA_PATH: str = "./chroma_db"  # Path used by DataServices document router
+    DATASERVICES_CHROMA_COLLECTION: str = "documents"  # Collection name used by DataServices
+    DATASERVICES_CHROMA_TFIDF_COLLECTION: str = "documents_tfidf"  # TF-IDF collection used by DataServices
+    
     # Embedding Settings
     EMBEDDING_PROVIDER: str = "openai"
     EMBEDDING_MODEL: str = "text-embedding-3-small"

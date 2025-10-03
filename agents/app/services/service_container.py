@@ -261,11 +261,9 @@ class SQLServiceContainer:
         Returns:
             ProjectReader instance
         """
-        from app.settings import get_settings
-        import chromadb
+        from app.core.dependencies import get_chromadb_client
         
-        settings = get_settings()
-        persistent_client = chromadb.PersistentClient(path=settings.CHROMA_STORE_PATH)
+        persistent_client = get_chromadb_client()
         
         return ProjectReader(
             base_path="/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/sql_meta",

@@ -1,5 +1,7 @@
 Based on the CVaR research paper and your existing insights agents, here's how you can create a CVaR calculation pipeline using your current tools:
 
+Calculation of CRQ for an asset:
+
 ## CVaR Pipeline Using Existing Insights Agents
 
 ### Step 1: Data Preparation & Asset Valuation

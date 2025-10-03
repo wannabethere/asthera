@@ -1,0 +1,162 @@
+{
+  "catalog": "sumtotal_learn",
+  "schema": "public",
+  "models": [
+    {
+      "name": "tbl_tmx_attempt_sumtotal",
+      "description": "This table records every attempt a user makes on learning activities, including completion status, scores, and attempt details. It tracks how many times a user has attempted each activity and whether they passed or failed. This is the table for finding the history of user learning attempts and completion records. Use this table when you need to: 1. Find how many attempts a user has made on specific activities, 2. Track completion status and scores for learning attempts, 3. Generate completion reports and compliance dashboards, 4. Analyze learning effectiveness and user engagement, 5. Calculate completion rates and success metrics, 6. Audit learning history for regulatory compliance, 7. Identify users who need additional support or retraining.",
+      "tableReference": {
+        "catalog": "sumtotal_learn",
+        "schema": "public",
+        "table": "tbl_tmx_attempt_sumtotal"
+      },
+      "columns": [
+        {
+          "name": "attempt_pk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Attempt Primary Key",
+            "description": "The unique, system-generated primary key that unambiguously identifies a single learning attempt."
+          }
+        },
+        {
+          "name": "empfk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Employee Foreign Key",
+            "description": "An identifier that establishes a relational link to the Person table, associating each attempt record with a unique individual. This foreign key identifies the actor (learner, employee) in the learning event, making it possible to aggregate and analyze performance data at the individual level."
+          }
+        },
+        {
+          "name": "activityfk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Activity Foreign Key",
+            "description": "An identifier that establishes a relational link to the Activity table, associating each attempt record with a specific learning activity. This foreign key enables the system to track and analyze performance data at the activity level, allowing for the aggregation of data across multiple attempts and activities."
+          }
+        },
+        {
+          "name": "authregfk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Authentication Registration Foreign Key",
+            "description": "A foreign key to the registration table. This value may be null."
+          }
+        },
+        {
+          "name": "startdt",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Start Date",
+            "description": "The precise date and time the user launched or initiated the learning activity. This timestamp, stored without time zone information, marks the official start of the attempt and serves as the baseline for measuring its duration."
+          }
+        },
+        {
+          "name": "enddt",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "End Date",
+            "description": "The official completion date and time for the learning attempt, marking the moment the user finished the activity. This timestamp represents the end of the learning interaction.It is used in conjunction with the start date to calculate the total duration of the learning session if elapsed seconds is null."
+          }
+        },
+        {
+          "name": "waiveind",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Waive Indicator",
+            "description": "Indicates whether a certain condition for waiving is met in the context of the attempt."
+          }
+        },
+        {
+          "name": "completionstatus",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Completion Status",
+            "description": "The textual status of the attempt, indicating its position in the learning lifecycle (e.g., 'Completed', 'Partial', 'Not Completed')"
+          }
+        },
+        {
+          "name": "success",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Success",
+            "description": "Indicates whether the attempt was successful or not means passed or failed or null."
+          }
+        },
+        {
+          "name": "score",
+          "type": "DOUBLE",
+          "properties": {
+            "displayName": "Score",
+            "description": "Column representing the score achieved in an attempt."
+          }
+        },
+        {
+          "name": "attndstatusfk",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Attendance Status Foreign Key",
+            "description": "Stores the textual status of the user's attendance or participation (e.g., 'Attended', 'Registered', 'No-show'). Note: Despite its name containing 'fk', this column functions as a descriptive label and is not a foreign key; it does not join to another table."
+          }
+        },
+        {
+          "name": "elapsedseconds",
+          "type": "DOUBLE",
+          "properties": {
+            "displayName": "Elapsed Seconds",
+            "description": "The total duration of the user's learning attempt for the specific learning Activity, measured in seconds. It quantifies the time from when the user started the activity until they completed it."
+          }
+        },
+        {
+          "name": "launchcourseversion",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Launch Course Version",
+            "description": "Version of the course being launched in the system."
+          }
+        },
+        {
+          "name": "currentattemptind",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Current Attempt Indicator",
+            "description": "A flag (e.g., 1 or 0) to identify the most recent or currently active attempt for a user on a specific activity, especially when multiple attempts are allowed."
+          }
+        },
+        {
+          "name": "launchcount",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Launch Count",
+            "description": "The number of times a course or activity has been launched by a user."
+          }
+        }
+      ],
+      "primaryKey": "attempt_pk",
+      "properties": {
+        "displayName": "Learning Attempt Table",
+        "description": "This table records every attempt a user makes on learning activities, including completion status, scores, and attempt details. It tracks how many times a user has attempted each activity and whether they passed or failed. This is the table for finding the history of user learning attempts and completion records."
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "name": "attempt_to_person",
+      "models": ["tbl_tmx_attempt_sumtotal", "person_sumtotal"],
+      "joinType": "MANY_TO_ONE",
+      "condition": "tbl_tmx_attempt_sumtotal.empfk = person_sumtotal.personpk",
+      "properties": {
+        "description": "Links attempts to persons for user performance tracking"
+      }
+    },
+    {
+      "name": "attempt_to_activity",
+      "models": ["tbl_tmx_attempt_sumtotal", "tbl_tmx_activity_sumtotal"],
+      "joinType": "MANY_TO_ONE",
+      "condition": "tbl_tmx_attempt_sumtotal.activityfk = tbl_tmx_activity_sumtotal.activity_pk",
+      "properties": {
+        "description": "Links attempts to activities for learning progress analysis"
+      }
+    }
+  ]
+}

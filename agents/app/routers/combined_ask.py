@@ -163,6 +163,11 @@ async def process_combined_request(request: AskRequest, fastapi_request: Request
     Combined endpoint that processes both ask request and question recommendations in a single call.
     """
     try:
+        # Debug logging for project_id
+        logger.info(f"DEBUG: Received request with project_id: {request.project_id}")
+        logger.info(f"DEBUG: project_id type: {type(request.project_id)}")
+        logger.info(f"DEBUG: project_id value: {repr(request.project_id)}")
+        
         # Get services from the service container
         sql_container = fastapi_request.app.state.sql_service_container
         ask_service = sql_container.get_service("ask_service")
@@ -182,16 +187,23 @@ async def process_combined_request(request: AskRequest, fastapi_request: Request
         )
         
         # Process ask request and recommendations in parallel
+        # Create AskRequest with debugging
+        ask_request = AskRequest(
+            query_id=request.query_id,
+            query=request.query,
+            project_id=request.project_id,
+            configurations=request.configurations,
+            histories=request.histories or [],
+            enable_scoring=True,
+            schema_context={"mdl": ""}  # Add empty schema context if not provided
+        )
+        
+        logger.info(f"DEBUG: Created AskRequest with project_id: {ask_request.project_id}")
+        logger.info(f"DEBUG: AskRequest project_id type: {type(ask_request.project_id)}")
+        logger.info(f"DEBUG: AskRequest project_id value: {repr(ask_request.project_id)}")
+        
         ask_result, recommendation_result = await asyncio.gather(
-            ask_service.process_request(AskRequest(
-                query_id=request.query_id,
-                query=request.query,
-                project_id=request.project_id,
-                configurations=request.configurations,
-                histories=request.histories or [],
-                enable_scoring=True,
-                schema_context={"mdl": ""}  # Add empty schema context if not provided
-            )),
+            ask_service.process_request(ask_request),
             question_recommendation_service.recommend(recommendation_request)
         )
         

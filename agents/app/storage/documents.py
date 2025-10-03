@@ -18,6 +18,20 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from enum import Enum, auto
 
 import numpy as np
+
+# Check ChromaDB version and warn about potential issues
+try:
+    chromadb_version = chromadb.__version__
+    logger = logging.getLogger(__name__)
+    logger.info(f"ChromaDB version: {chromadb_version}")
+    
+    # Warn about known problematic versions
+    if chromadb_version.startswith("0.6."):
+        logger.warning(f"ChromaDB version {chromadb_version} may have compatibility issues. Consider upgrading to 1.0.x")
+    elif chromadb_version.startswith("0.4.") or chromadb_version.startswith("0.5."):
+        logger.warning(f"ChromaDB version {chromadb_version} is very old and may have significant issues. Consider upgrading to 1.0.x")
+except Exception as e:
+    logger.warning(f"Could not determine ChromaDB version: {e}")
 settings = get_settings()
 logger = logging.getLogger(__name__)
 embedding_provider: str = "openai"
@@ -329,117 +343,52 @@ class DocumentChromaStore:
             logger.info(f"Initializing Chroma store with collection {self.collection_name}")
             print("initializing Chroma store with collection", self.collection_name)  
             
-            # Test the client connection first
-            try:
-                # Log the client type being used
-                client_type = type(self.persistent_client).__name__
-                logger.info(f"Using ChromaDB client type: {client_type}")
-                
-                # Try to list existing collections to test connection
-                try:
-                    existing_collections = self.persistent_client.list_collections()
-                    logger.info(f"Successfully connected to ChromaDB. Found {len(existing_collections)} existing collections")
-                except Exception as list_error:
-                    # If list_collections fails with '_type' error, log warning but continue
-                    if "'_type'" in str(list_error):
-                        logger.warning(f"ChromaDB list_collections failed with '_type' error: {list_error}")
-                        logger.warning("This might be a version compatibility issue, but continuing with collection creation...")
-                    else:
-                        logger.warning(f"ChromaDB list_collections failed: {list_error}, but continuing...")
-            except Exception as e:
-                logger.error(f"Failed to connect to ChromaDB: {e}")
-                # Check if it's a specific '_type' error
-                if "'_type'" in str(e):
-                    logger.error("ChromaDB '_type' error detected. This might be a version compatibility issue.")
-                    logger.error("Try updating ChromaDB or check client configuration.")
-                raise
+            # First, try to clean up any corrupted collections
+            self._cleanup_corrupted_collections()
             
-            # Get or create the collection
-            logger.info(f"Creating collection '{self.collection_name}' without metadata")
+            # Assume collections already exist - just get them directly
+            logger.info(f"Assuming collection '{self.collection_name}' already exists - getting collection directly")
             
             try:
-                # Try with minimal metadata first
-                self.collection = self.persistent_client.get_or_create_collection(
-                    name=self.collection_name,
-                    metadata={"description": f"Collection for {self.collection_name}"}
-                )
-                logger.info(f"Successfully created collection '{self.collection_name}' with metadata")
+                # Get the existing collection directly
+                self.collection = self.persistent_client.get_collection(name=self.collection_name)
+                logger.info(f"Successfully retrieved existing collection '{self.collection_name}'")
             except Exception as e:
-                logger.warning(f"Failed to create collection with metadata, trying without: {e}")
-                # Check if it's a specific '_type' error
-                if "'_type'" in str(e):
-                    logger.warning("ChromaDB '_type' error during collection creation with metadata. Trying without metadata...")
+                logger.warning(f"Collection '{self.collection_name}' does not exist, creating it...")
                 try:
-                    # Try without any metadata
-                    self.collection = self.persistent_client.get_or_create_collection(
-                        name=self.collection_name
-                    )
-                    logger.info(f"Successfully created collection '{self.collection_name}' without metadata")
-                except Exception as e2:
-                    logger.error(f"Failed to create collection even without metadata: {e2}")
-                    if "'_type'" in str(e2):
-                        logger.error("ChromaDB '_type' error persists. This is likely a version compatibility issue.")
-                        # Try one more time with a different approach
-                        try:
-                            logger.info("Attempting alternative collection creation approach...")
-                            # Try to get existing collection first
-                            try:
-                                self.collection = self.persistent_client.get_collection(name=self.collection_name)
-                                logger.info(f"Found existing collection '{self.collection_name}'")
-                            except:
-                                # If get fails, try create with minimal parameters
-                                self.collection = self.persistent_client.create_collection(name=self.collection_name)
-                                logger.info(f"Created new collection '{self.collection_name}' using create_collection")
-                        except Exception as e3:
-                            logger.error(f"All collection creation attempts failed: {e3}")
-                            raise
-                    else:
-                        raise
+                    # Try to create the collection as a fallback
+                    self.collection = self.persistent_client.create_collection(name=self.collection_name)
+                    logger.info(f"Successfully created collection '{self.collection_name}'")
+                except Exception as create_error:
+                    logger.error(f"Failed to create collection '{self.collection_name}': {create_error}")
+                    logger.error("Please create the collection manually before using this service.")
+                    raise
+            
+            # Get TF-IDF collection if enabled
             if self.tf_idf:
                 try:
-                    self.tfidf_collection = self.persistent_client.get_or_create_collection(
-                        name=self.tfidf_collection_name,
-                        metadata={
-                            "hnsw:space": "cosine", 
-                            "description": f"TF-IDF collection for {self.collection_name}"
-                        }
-                    )
-                    logger.info(f"Successfully created TF-IDF collection '{self.tfidf_collection_name}' with metadata")
+                    self.tfidf_collection = self.persistent_client.get_collection(name=self.tfidf_collection_name)
+                    logger.info(f"Successfully retrieved existing TF-IDF collection '{self.tfidf_collection_name}'")
                 except Exception as e:
-                    logger.warning(f"Failed to create TF-IDF collection with metadata, trying without: {e}")
-                    # Check if it's a specific '_type' error
-                    if "'_type'" in str(e):
-                        logger.warning("ChromaDB '_type' error during TF-IDF collection creation with metadata. Trying without metadata...")
+                    logger.warning(f"TF-IDF collection '{self.tfidf_collection_name}' does not exist, creating it...")
                     try:
-                        self.tfidf_collection = self.persistent_client.get_or_create_collection(
-                            name=self.tfidf_collection_name
-                        )
-                        logger.info(f"Successfully created TF-IDF collection '{self.tfidf_collection_name}' without metadata")
-                    except Exception as e2:
-                        logger.error(f"Failed to create TF-IDF collection even without metadata: {e2}")
-                        if "'_type'" in str(e2):
-                            logger.error("ChromaDB '_type' error persists for TF-IDF collection.")
-                            # Try alternative approach for TF-IDF collection
-                            try:
-                                logger.info("Attempting alternative TF-IDF collection creation approach...")
-                                try:
-                                    self.tfidf_collection = self.persistent_client.get_collection(name=self.tfidf_collection_name)
-                                    logger.info(f"Found existing TF-IDF collection '{self.tfidf_collection_name}'")
-                                except:
-                                    self.tfidf_collection = self.persistent_client.create_collection(name=self.tfidf_collection_name)
-                                    logger.info(f"Created new TF-IDF collection '{self.tfidf_collection_name}' using create_collection")
-                            except Exception as e3:
-                                logger.error(f"All TF-IDF collection creation attempts failed: {e3}")
-                                raise
-                        else:
-                            raise
+                        # Try to create the TF-IDF collection as a fallback
+                        self.tfidf_collection = self.persistent_client.create_collection(name=self.tfidf_collection_name)
+                        logger.info(f"Successfully created TF-IDF collection '{self.tfidf_collection_name}'")
+                    except Exception as create_error:
+                        logger.error(f"Failed to create TF-IDF collection '{self.tfidf_collection_name}': {create_error}")
+                        logger.error("TF-IDF collection creation failed. Continuing without TF-IDF functionality.")
+                        # Don't raise here - continue without TF-IDF
+                        self.tf_idf = False
+                        logger.warning("Continuing without TF-IDF functionality")
+            
             # Initialize the Langchain Chroma wrapper
             self.vectorstore = Chroma(
                 client=self.persistent_client,
                 collection_name=self.collection_name,
                 embedding_function=self.embeddings_model,
             )
-            if self.tf_idf:
+            if self.tf_idf and self.tfidf_collection:
                 self.tfidf_vectorstore = Chroma(
                     client=self.persistent_client,
                     collection_name=self.tfidf_collection_name,
@@ -451,6 +400,87 @@ class DocumentChromaStore:
         except Exception as e:
             logger.error(f"Failed to initialize Chroma store: {str(e)}")
             raise
+
+    def _cleanup_corrupted_collections(self):
+        """Clean up corrupted collections that might have invalid configurations."""
+        try:
+            logger.info("Checking for corrupted collections...")
+            
+            # List all collections to check for corruption
+            try:
+                collections = self.persistent_client.list_collections()
+                logger.info(f"Found {len(collections)} existing collections")
+            except Exception as e:
+                logger.warning(f"Could not list collections, may indicate corruption: {str(e)}")
+                # If we can't list collections, try to clean up the database
+                self._reset_chromadb_database()
+                return
+            
+            # Check each collection for corruption
+            corrupted_collections = []
+            for collection in collections:
+                try:
+                    # Try to get the collection to see if it's accessible
+                    test_collection = self.persistent_client.get_collection(name=collection.name)
+                    logger.debug(f"Collection '{collection.name}' is accessible")
+                except Exception as e:
+                    if "_type" in str(e) or "JSON" in str(e) or "configuration" in str(e):
+                        logger.warning(f"Collection '{collection.name}' appears to be corrupted: {str(e)}")
+                        corrupted_collections.append(collection.name)
+                    else:
+                        logger.debug(f"Collection '{collection.name}' has other issues: {str(e)}")
+            
+            # Delete corrupted collections
+            for collection_name in corrupted_collections:
+                try:
+                    logger.info(f"Attempting to delete corrupted collection: {collection_name}")
+                    self.persistent_client.delete_collection(name=collection_name)
+                    logger.info(f"Successfully deleted corrupted collection: {collection_name}")
+                except Exception as e:
+                    logger.error(f"Failed to delete corrupted collection '{collection_name}': {str(e)}")
+                    # If we can't delete individual collections, try to reset the entire database
+                    if "Collection" in str(e) or "not found" in str(e):
+                        logger.warning("Attempting to reset ChromaDB database due to corruption")
+                        self._reset_chromadb_database()
+                        return
+                        
+        except Exception as e:
+            logger.error(f"Error during collection cleanup: {str(e)}")
+            # If cleanup fails, try to reset the database
+            logger.warning("Collection cleanup failed, attempting to reset ChromaDB database")
+            self._reset_chromadb_database()
+
+    def _reset_chromadb_database(self):
+        """Reset the ChromaDB database by removing corrupted data."""
+        try:
+            logger.warning("Resetting ChromaDB database due to corruption...")
+            
+            # Get the database path
+            db_path = self.persistent_client._settings.persist_directory
+            
+            if db_path and os.path.exists(db_path):
+                logger.info(f"Removing corrupted database at: {db_path}")
+                
+                # Remove the entire database directory
+                import shutil
+                shutil.rmtree(db_path)
+                logger.info("Successfully removed corrupted database")
+                
+                # Recreate the persistent client
+                self.persistent_client = chromadb.PersistentClient(path=db_path)
+                logger.info("Recreated ChromaDB persistent client")
+            else:
+                logger.warning("Could not determine database path for reset")
+                
+        except Exception as e:
+            logger.error(f"Failed to reset ChromaDB database: {str(e)}")
+            # Create a new client as a last resort
+            try:
+                self.persistent_client = chromadb.PersistentClient(path=self.vectorstore_path)
+                logger.info("Created new ChromaDB persistent client as fallback")
+            except Exception as fallback_error:
+                logger.error(f"Failed to create fallback ChromaDB client: {str(fallback_error)}")
+                raise
 
     def compute_document_embeddings(self, documents: List[LangchainDocument]) -> List[List[float]]:
         """Compute embeddings for a list of documents.
@@ -478,10 +508,13 @@ class DocumentChromaStore:
         
         Args:
             docs: List of dictionaries containing 'metadata' and 'data' keys
+            
+        Returns:
+            List of document IDs that were added
         """
         if not docs:
             logger.warning("No documents provided to add to the vectorstore.")
-            return
+            return []
             
         documents, ids = [], []
         for doc in docs:
@@ -501,10 +534,16 @@ class DocumentChromaStore:
                     logger.warning(f"Skipping document missing required fields: {doc}")
                     continue    
               
-                document_id, document = create_langchain_doc_util(metadata=doc['metadata'], data=doc['data'])    
-                if document and document_id:
-                    documents.append(document)
-                    ids.append(document_id)
+                try:
+                    document_id, document = create_langchain_doc_util(metadata=doc['metadata'], data=doc['data'])    
+                    if document and document_id:
+                        documents.append(document)
+                        ids.append(document_id)
+                    else:
+                        logger.warning(f"Failed to create document from doc: {doc}")
+                except Exception as e:
+                    logger.error(f"Error creating document from doc {doc}: {str(e)}")
+                    continue
         
         if documents:
             # Filter complex metadata from documents before adding to ChromaDB
@@ -532,14 +571,17 @@ class DocumentChromaStore:
                 
                 logger.info(f"Added {len(filtered_documents)} documents with embeddings to the vectorstore.")
                 print("documents added to the vectorstore", len(filtered_documents))
+                return ids
             else:
                 # Fallback to regular document addition if embedding computation fails
                 self.vectorstore.add_documents(documents=filtered_documents, ids=ids)
                 if self.tf_idf:
                     self.add_tfidf_vectors(documents=filtered_documents, ids=ids)
                 logger.info(f"Added {len(filtered_documents)} documents to the vectorstore (without pre-computed embeddings).")
+                return ids
         else:
             logger.warning("No valid documents were found to add to the vectorstore.")
+            return []
 
     def add_tfidf_vectors(self, documents: List[LangchainDocument], ids: List[str]):
         if not self.tf_idf:
@@ -581,26 +623,30 @@ class DocumentChromaStore:
         return
 
     def semantic_search(self, query: str, k: int = 5, where: Dict = None, query_embedding: List[float] = None) -> List[Dict]:
-        """Perform semantic search on the Chroma store.
+        """Perform direct query on the Chroma store without embeddings.
         
         Args:
-            query: The search query string
+            query: The search query string (not used for direct query)
             k: Number of results to return (default: 5)
             where: Optional metadata filter dictionary
-            query_embedding: Optional pre-computed query embedding vector
+            query_embedding: Optional pre-computed query embedding vector (not used)
             
         Returns:
             List of dictionaries containing search results with scores
         """
-        if not self.vectorstore:
-            logger.warning("Chroma store not initialized. Please initialize first.")
+        if not self.collection:
+            logger.warning("Chroma collection not initialized. Please initialize first.")
             return []
             
         try:
             logger.info(f"query in semantic_search for {self.collection_name}: {query}")
             
+            # Prepare query parameters for direct ChromaDB query
+            query_kwargs = {
+                "limit": k
+            }
+            
             # Handle the where parameter safely - only pass filter if where is not None and contains valid values
-            search_kwargs = {"query": query, "k": k}
             if where is not None and isinstance(where, dict) and where:
                 # Log the original where parameter for debugging
                 logger.debug(f"Original where parameter: {where}")
@@ -615,55 +661,82 @@ class DocumentChromaStore:
                 
                 # Only add filter if we have valid filters
                 if filtered_where:
-                    search_kwargs["filter"] = filtered_where
+                    query_kwargs["where"] = filtered_where
                     logger.debug(f"Using filtered where clause: {filtered_where}")
                 else:
                     logger.info("No valid filters found in where clause, proceeding without filter")
             else:
                 logger.debug(f"Where parameter is {where}, proceeding without filter")
+            
+            # Perform direct query on ChromaDB collection
+            try:
+                logger.debug(f"Performing direct query on collection {self.collection_name}")
+                results = self.collection.get(**query_kwargs)
                 
-            # Perform similarity search
-            results = self.vectorstore.similarity_search_with_score(**search_kwargs)
-            logger.info(f"results in semantic_search for {self.collection_name}: {results}")
+                logger.info(f"results in semantic_search for {self.collection_name}: {len(results['ids']) if results['ids'] else 0} results")
+            except Exception as search_error:
+                logger.error(f"Error in direct query: {str(search_error)}")
+                # Fallback to basic query without filters
+                try:
+                    logger.warning("Falling back to basic query without filters")
+                    basic_kwargs = {"limit": k}
+                    results = self.collection.get(**basic_kwargs)
+                except Exception as fallback_error:
+                    logger.error(f"Fallback query also failed: {str(fallback_error)}")
+                    return []
+            
             # Format results
             formatted_results = []
-            for doc, score in results:
-                formatted_results.append({
-                    "content": doc.page_content,
-                    "metadata": doc.metadata,
-                    "score": float(score),  # Convert numpy float to Python float
-                    "id": doc.metadata.get("id", None)
-                })
+            if results and results.get('ids'):
+                for i in range(len(results['ids'])):
+                    try:
+                        # Get document content and metadata
+                        content = results.get('documents', [None])[i] if results.get('documents') else ""
+                        metadata = results.get('metadatas', [{}])[i] if results.get('metadatas') else {}
+                        doc_id = results['ids'][i]
+                        
+                        # Create a simple score based on position (first result gets highest score)
+                        score = 1.0 / (i + 1)  # Higher score for earlier results
+                        
+                        formatted_results.append({
+                            "content": content,
+                            "metadata": metadata,
+                            "score": float(score),
+                            "id": doc_id
+                        })
+                    except Exception as format_error:
+                        logger.warning(f"Error formatting result {i}: {str(format_error)}")
+                        continue
             
-            # Sort results by score (lower is better for Chroma)
-            formatted_results.sort(key=lambda x: x["score"])
+            # Sort results by score (higher is better for our simple scoring)
+            formatted_results.sort(key=lambda x: x["score"], reverse=True)
             
-            logger.info(f"Found {len(formatted_results)}  {self.collection_name} results for query: {query}")
+            logger.info(f"Found {len(formatted_results)} {self.collection_name} results for query: {query}")
             return formatted_results
             
         except Exception as e:
-            logger.error(f"Error during semantic search: {str(e)}")
+            logger.error(f"Error during direct query: {str(e)}")
             return []
 
     def semantic_search_with_bm25(self, query: str, k: int = 5, where: Dict = None, query_embedding: List[float] = None) -> List[Dict]:
-        """Perform semantic search using both vector similarity and BM25 ranking.
+        """Perform direct query with BM25 ranking.
         
         Args:
             query: The search query string
             k: Number of results to return (default: 5)
             where: Optional metadata filter dictionary
-            query_embedding: Optional pre-computed query embedding vector
+            query_embedding: Optional pre-computed query embedding vector (not used)
             
         Returns:
-            List of dictionaries containing search results with combined scores
+            List of dictionaries containing search results with BM25 scores
         """
-        if not self.vectorstore:
-            logger.warning("Chroma store not initialized. Please initialize first.")
+        if not self.collection:
+            logger.warning("Chroma collection not initialized. Please initialize first.")
             return []
             
         try:
-            # Get vector similarity results using query embedding if provided
-            search_kwargs = {"query": query, "k": k}
+            # First get documents using direct query
+            query_kwargs = {"limit": k * 2}  # Get more documents for BM25 ranking
             
             # Only add filter if where is not None and contains valid values
             if where is not None and isinstance(where, dict) and where:
@@ -680,72 +753,86 @@ class DocumentChromaStore:
                 
                 # Only add filter if we have valid filters
                 if filtered_where:
-                    search_kwargs["filter"] = filtered_where
+                    query_kwargs["where"] = filtered_where
                     logger.debug(f"Using filtered where clause in BM25 search: {filtered_where}")
                 else:
                     logger.info("No valid filters found in BM25 where clause, proceeding without filter")
             else:
                 logger.debug(f"Where parameter in BM25 search is {where}, proceeding without filter")
                 
-            vector_results = self.vectorstore.similarity_search_with_score(**search_kwargs)
+            # Perform direct query on ChromaDB collection
+            results = self.collection.get(**query_kwargs)
             
+            if not results or not results.get('ids'):
+                logger.info(f"No documents found for BM25 search")
+                return []
+            
+            # Prepare documents for BM25
+            documents = []
+            metadatas = []
+            ids = []
+            
+            for i in range(len(results['ids'])):
+                content = results.get('documents', [None])[i] if results.get('documents') else ""
+                metadata = results.get('metadatas', [{}])[i] if results.get('metadatas') else {}
+                doc_id = results['ids'][i]
                 
+                if content:  # Only include documents with content
+                    documents.append(content)
+                    metadatas.append(metadata)
+                    ids.append(doc_id)
+            
+            if not documents:
+                logger.info(f"No documents with content found for BM25 search")
+                return []
             
             # Initialize BM25 ranker
             bm25 = BM25Ranker()
-            
-            # Prepare documents for BM25
-            documents = [doc.page_content for doc, _ in vector_results]
             bm25.fit(documents)
             
             # Get BM25 scores
-            bm25_scores = bm25.rank(query, k=k)
+            bm25_scores = bm25.rank(query, k=min(k, len(documents)))
             
-            # Combine scores
+            # Format results with BM25 scores
             combined_results = []
-            for (doc, vector_score), (idx, bm25_score) in zip(vector_results, bm25_scores):
-                # Normalize scores to [0, 1] range
-                norm_vector_score = 1 / (1 + vector_score)  # Convert distance to similarity
-                norm_bm25_score = bm25_score / max(score for _, score in bm25_scores)
-                
-                # Combine scores (weighted average)
-                combined_score = 0.7 * norm_vector_score + 0.3 * norm_bm25_score
-                
-                combined_results.append({
-                    "content": doc.page_content,
-                    "metadata": doc.metadata,
-                    "vector_score": float(vector_score),
-                    "bm25_score": float(bm25_score),
-                    "combined_score": float(combined_score),
-                    "id": doc.metadata.get("id", None)
-                })
+            for idx, bm25_score in bm25_scores:
+                if idx < len(documents):
+                    combined_results.append({
+                        "content": documents[idx],
+                        "metadata": metadatas[idx],
+                        "bm25_score": float(bm25_score),
+                        "id": ids[idx]
+                    })
             
-            # Sort by combined score
-            combined_results.sort(key=lambda x: x["combined_score"], reverse=True)
+            # Sort by BM25 score (higher is better)
+            combined_results.sort(key=lambda x: x["bm25_score"], reverse=True)
             
-            logger.info(f"Found {len(combined_results)} results for query: {query}")
+            logger.info(f"Found {len(combined_results)} BM25 results for query: {query}")
             return combined_results
             
         except Exception as e:
-            logger.error(f"Error during semantic search with BM25: {str(e)}")
+            logger.error(f"Error during BM25 search: {str(e)}")
             return []
 
     def semantic_search_with_tfidf(self, query: str, k: int = 5, where: Dict = None, query_embedding: List[float] = None) -> List[Dict]:
-        """Perform semantic search combined with TF-IDF ranking.
-        If TF-IDF calculation fails, falls back to semantic search results.
+        """Perform direct query with TF-IDF ranking.
         
         Args:
             query: The search query string
             k: Number of results to return (default: 5)
             where: Optional metadata filter dictionary
-            query_embedding: Optional pre-computed query embedding vector
+            query_embedding: Optional pre-computed query embedding vector (not used)
             
         Returns:
-            List of dictionaries containing search results with combined scores
+            List of dictionaries containing search results with TF-IDF scores
         """
+        if not self.collection:
+            logger.warning("Chroma collection not initialized. Please initialize first.")
+            return []
+            
         try:
-            # Prepare search parameters
-            search_kwargs = {"k": k}
+            # First get documents using direct query
+            query_kwargs = {"limit": k * 2}  # Get more documents for TF-IDF ranking
             
             # Only add filter if where is not None and contains valid values
             if where is not None and isinstance(where, dict) and where:
@@ -762,38 +849,43 @@ class DocumentChromaStore:
                 
                 # Only add filter if we have valid filters
                 if filtered_where:
-                    search_kwargs["filter"] = filtered_where
+                    query_kwargs["where"] = filtered_where
                     logger.debug(f"Using filtered where clause in TF-IDF search: {filtered_where}")
                 else:
                     logger.info("No valid filters found in TF-IDF where clause, proceeding without filter")
             else:
                 logger.debug(f"Where parameter in TF-IDF search is {where}, proceeding without filter")
                 
-            # Semantic search using query embedding if provided
-            if query_embedding is not None:
-                sem_results = self.vectorstore.similarity_search_by_vector(
-                    query_embedding,
-                    **search_kwargs
-                )
-            else:
-                sem_results = self.vectorstore.similarity_search_with_score(
-                    query,
-                    **search_kwargs
-                )
+            # Perform direct query on ChromaDB collection
+            results = self.collection.get(**query_kwargs)
             
-            sem_docs = [doc for doc, _ in sem_results]
-            sem_scores = [score for _, score in sem_results]
+            if not results or not results.get('ids'):
+                logger.info(f"No documents found for TF-IDF search")
+                return []
             
-            # If we have no semantic results, return empty list
-            if not sem_docs:
-                logger.info(f"No semantic search results found for query: {query}")
+            # Prepare documents for TF-IDF
+            documents = []
+            metadatas = []
+            ids = []
+            
+            for i in range(len(results['ids'])):
+                content = results.get('documents', [None])[i] if results.get('documents') else ""
+                metadata = results.get('metadatas', [{}])[i] if results.get('metadatas') else {}
+                doc_id = results['ids'][i]
+                
+                if content:  # Only include documents with content
+                    documents.append(content)
+                    metadatas.append(metadata)
+                    ids.append(doc_id)
+            
+            if not documents:
+                logger.info(f"No documents with content found for TF-IDF search")
                 return []
 
             try:
                 # TF-IDF vector for query
-                all_docs = [doc.page_content for doc in sem_docs]
                 tfidf_vectorizer = TfidfVectorizer()
-                tfidf_matrix = tfidf_vectorizer.fit_transform(all_docs + [query])
+                tfidf_matrix = tfidf_vectorizer.fit_transform(documents + [query])
                 query_vector = tfidf_matrix[-1].toarray()[0]
 
                 # TF-IDF similarity scores (cosine)
@@ -801,50 +893,45 @@ class DocumentChromaStore:
                 cosine_scores = np.dot(tfidf_doc_vectors, query_vector) / (
                     np.linalg.norm(tfidf_doc_vectors, axis=1) * np.linalg.norm(query_vector) + 1e-10)
 
-                # Combine scores
-                results = []
-                for i, doc in enumerate(sem_docs):
-                    norm_sem = 1 / (1 + sem_scores[i])  # Chroma score is distance
-                    norm_tfidf = cosine_scores[i]
-                    combined_score = 0.7 * norm_sem + 0.3 * norm_tfidf
-                    results.append({
-                        "content": doc.page_content,
-                        "metadata": doc.metadata,
-                        "semantic_score": float(sem_scores[i]),
-                        "tfidf_score": float(norm_tfidf),
-                        "combined_score": float(combined_score),
-                        "id": doc.metadata.get("id", None)
+                # Format results with TF-IDF scores
+                results_list = []
+                for i in range(len(documents)):
+                    results_list.append({
+                        "content": documents[i],
+                        "metadata": metadatas[i],
+                        "tfidf_score": float(cosine_scores[i]),
+                        "id": ids[i]
                     })
 
-                # Sort by combined score descending
-                results.sort(key=lambda x: x["combined_score"], reverse=True)
-                logger.info(f"Found {len(results)} combined semantic+TF-IDF results for query: {query}")
-                return results
+                # Sort by TF-IDF score descending
+                results_list.sort(key=lambda x: x["tfidf_score"], reverse=True)
+                
+                # Return top k results
+                top_results = results_list[:k]
+                logger.info(f"Found {len(top_results)} TF-IDF results for query: {query}")
+                return top_results
                 
             except Exception as e:
-                # TF-IDF calculation failed, fall back to semantic search results
-                logger.warning(f"TF-IDF calculation failed, falling back to semantic results: {str(e)}")
-                # Format semantic results only
-                results = []
-                for i, (doc, score) in enumerate(sem_results):
-                    results.append({
-                        "content": doc.page_content,
-                        "metadata": doc.metadata,
-                        "semantic_score": float(score),
-                        "tfidf_score": None,
-                        "combined_score": None,
-                        "id": doc.metadata.get("id", None)
+                # TF-IDF calculation failed, fall back to direct query results
+                logger.warning(f"TF-IDF calculation failed, falling back to direct query results: {str(e)}")
+                # Format direct query results only
+                results_list = []
+                for i in range(len(documents)):
+                    results_list.append({
+                        "content": documents[i],
+                        "metadata": metadatas[i],
+                        "tfidf_score": 0.0,
+                        "id": ids[i]
                     })
-                logger.info(f"Returning {len(results)} semantic-only results for query: {query}")
-                return results
+                logger.info(f"Returning {len(results_list)} direct query results for query: {query}")
+                return results_list
                 
         except Exception as e:
-            # If semantic search itself fails
-            logger.error(f"Error during semantic search with TF-IDF: {str(e)}")
+            logger.error(f"Error during TF-IDF search: {str(e)}")
             return []
     
     def tfidf_search(self, query: str, k: int = 5, where: Dict = None) -> List[Dict]:
-        """Perform search using only TF-IDF vectors.
+        """Perform search using direct query with TF-IDF ranking.
         
         Args:
             query: The search query string
@@ -854,19 +941,13 @@ class DocumentChromaStore:
         Returns:
             List of dictionaries containing search results with scores
         """
-        if not self.tf_idf or not self.tfidf_collection:
-            logger.warning("TF-IDF search not enabled or collection not initialized.")
+        if not self.collection:
+            logger.warning("Chroma collection not initialized.")
             return []
             
         try:
-            # Convert query to TF-IDF vector
-            query_vector = self.vectorizer.transform([query]).toarray()[0]
-            
-            # Prepare query parameters
-            query_kwargs = {
-                "query_embeddings": query_vector.reshape(1, -1),
-                "n_results": k
-            }
+            # First get documents using direct query
+            query_kwargs = {"limit": k * 2}  # Get more documents for TF-IDF ranking
             
             # Only add where clause if it's not None and contains valid values
             if where is not None and isinstance(where, dict) and where:
@@ -890,24 +971,59 @@ class DocumentChromaStore:
             else:
                 logger.debug(f"Where parameter in TF-IDF only search is {where}, proceeding without filter")
                 
-            # Query the TF-IDF collection
-            results = self.tfidf_collection.query(**query_kwargs)
+            # Query the main collection
+            results = self.collection.get(**query_kwargs)
+            
+            if not results or not results.get('ids'):
+                logger.info(f"No documents found for TF-IDF search")
+                return []
+            
+            # Prepare documents for TF-IDF
+            documents = []
+            metadatas = []
+            ids = []
+            
+            for i in range(len(results['ids'])):
+                content = results.get('documents', [None])[i] if results.get('documents') else ""
+                metadata = results.get('metadatas', [{}])[i] if results.get('metadatas') else {}
+                doc_id = results['ids'][i]
+                
+                if content:  # Only include documents with content
+                    documents.append(content)
+                    metadatas.append(metadata)
+                    ids.append(doc_id)
+            
+            if not documents:
+                logger.info(f"No documents with content found for TF-IDF search")
+                return []
+            
+            # Convert query to TF-IDF vector
+            tfidf_vectorizer = TfidfVectorizer()
+            tfidf_matrix = tfidf_vectorizer.fit_transform(documents + [query])
+            query_vector = tfidf_matrix[-1].toarray()[0]
+            
+            # Calculate TF-IDF similarity scores
+            tfidf_doc_vectors = tfidf_matrix[:-1].toarray()
+            cosine_scores = np.dot(tfidf_doc_vectors, query_vector) / (
+                np.linalg.norm(tfidf_doc_vectors, axis=1) * np.linalg.norm(query_vector) + 1e-10)
             
             # Format results
             formatted_results = []
-            for i in range(len(results['ids'][0])):
+            for i in range(len(documents)):
                 formatted_results.append({
-                    "content": results.get('documents', [[None]])[0][i],
-                    "metadata": results['metadatas'][0][i],
-                    "score": float(results['distances'][0][i]),
-                    "id": results['ids'][0][i]
+                    "content": documents[i],
+                    "metadata": metadatas[i],
+                    "score": float(cosine_scores[i]),
+                    "id": ids[i]
                 })
             
             # Sort results by score (higher is better for cosine similarity)
             formatted_results.sort(key=lambda x: x["score"], reverse=True)
             
-            logger.info(f"Found {len(formatted_results)} TF-IDF results for query: {query}")
-            return formatted_results
+            # Return top k results
+            top_results = formatted_results[:k]
+            logger.info(f"Found {len(top_results)} TF-IDF results for query: {query}")
+            return top_results
             
         except Exception as e:
             logger.error(f"Error during TF-IDF search: {str(e)}")
@@ -924,11 +1040,38 @@ def create_langchain_doc_util(metadata: Dict, data: Dict) -> tuple[str, Langchai
         Tuple of (document_id, LangchainDocument) or (None, None) if invalid
     """
     try:
+        # Handle None metadata
+        if metadata is None:
+            logger.warning("Metadata is None, using empty dict")
+            metadata = {}
         
-       
+        # Handle None data
+        if data is None:
+            logger.warning("Data is None, using empty string for page_content")
+            page_content = ""
+        else:
+            # Convert data to string, handling various data types
+            if isinstance(data, str):
+                page_content = data
+            elif isinstance(data, dict):
+                # Try to extract meaningful content from dict
+                if 'content' in data:
+                    page_content = str(data['content'])
+                elif 'text' in data:
+                    page_content = str(data['text'])
+                else:
+                    page_content = str(data)
+            else:
+                page_content = str(data)
+        
+        # Ensure page_content is not None
+        if page_content is None:
+            logger.warning("page_content is None after processing, using empty string")
+            page_content = ""
+        
         document_id = str(uuid4())
         document = LangchainDocument(
-            page_content=str(data),  # Convert data dict to string representation
+            page_content=page_content,
             metadata=metadata,
             id=document_id
         )
@@ -936,6 +1079,8 @@ def create_langchain_doc_util(metadata: Dict, data: Dict) -> tuple[str, Langchai
         return document_id, document
     except Exception as e:
         logger.error(f"Error creating Langchain document: {str(e)}")
+        logger.error(f"Metadata: {metadata}")
+        logger.error(f"Data: {data}")
         return None, None
 
 class AsyncDocumentWriter:

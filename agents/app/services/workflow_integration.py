@@ -188,7 +188,7 @@ class WorkflowIntegrationService:
                         "sql": component.get("sql", ""),
                         "query": component.get("question", ""),
                         "data_description": component.get("description", ""),
-                        "project_id": workflow_data.get("project_id", "default"),
+                        "project_id": workflow_data.get("project_id"),
                         "configuration": component.get("configuration", {}),
                         "chart_config": component.get("chart_config", {}),
                         "table_config": component.get("table_config", {}),

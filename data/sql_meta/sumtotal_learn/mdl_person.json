@@ -1,0 +1,162 @@
+{
+  "catalog": "sumtotal_learn",
+  "schema": "public",
+  "models": [
+    {
+      "name": "person_sumtotal",
+      "description": "This table is the master record for every individual in the system. It serves as the central source of truth for a person's identity, where the term 'person' is used synonymously with 'user', 'learner', and 'employee'. All other tables that track user activity, such as attempts or job details or Activity Assignments etc, link back to this table to identify the specific individual involved. Use this table when you need to: 1. Identify and authenticate users in the system, 2. Generate user profiles and demographic reports, 3. Track individual learning paths and personalization, 4. Manage user accounts and access permissions, 5. Create personalized learning experiences, 6. Generate user-specific compliance and progress reports, 7. Handle user onboarding and offboarding processes.",
+      "tableReference": {
+        "catalog": "sumtotal_learn",
+        "schema": "public",
+        "table": "person_sumtotal"
+      },
+      "columns": [
+        {
+          "name": "personpk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Person Primary Key",
+            "description": "Unique identifier for each person in the person_sumtotal table."
+          }
+        },
+        {
+          "name": "personguid",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Person GUID",
+            "description": "A unique identifier for individuals in the person_sumtotal table."
+          }
+        },
+        {
+          "name": "lastname",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Last Name",
+            "description": "Column representing the last name of a person."
+          }
+        },
+        {
+          "name": "firstname",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "First Name",
+            "description": "The first name of the person, represented as a text string."
+          }
+        },
+        {
+          "name": "middlename",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Middle Name",
+            "description": "The middle name of a person, stored as a variable character string."
+          }
+        },
+        {
+          "name": "fullname",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Full Name",
+            "description": "The full name of the person, combining first, middle, and last names."
+          }
+        },
+        {
+          "name": "active",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Active Status",
+            "description": "Indicates whether a person is currently active in the system."
+          }
+        },
+        {
+          "name": "gendercode",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Gender Code",
+            "description": "Column representing the gender of a person, stored as a text value."
+          }
+        },
+        {
+          "name": "birthdate",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Birthdate",
+            "description": "The date of birth of the person, stored as a string in the format YYYY-MM-DD."
+          }
+        },
+        {
+          "name": "companycd",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Company Code",
+            "description": "A code representing the company associated with a person."
+          }
+        },
+        {
+          "name": "companyname",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Company Name",
+            "description": "The name of the company associated with the person."
+          }
+        },
+        {
+          "name": "startdate",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Start Date",
+            "description": "The date when a person record becomes effective, represented as a string in the format YYYY-MM-DD."
+          }
+        },
+        {
+          "name": "enddate",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "End Date",
+            "description": "The date when a person's record is considered inactive or no longer valid."
+          }
+        },
+        {
+          "name": "deleted",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Deleted Indicator",
+            "description": "Indicates whether a person record has been deleted."
+          }
+        },
+        {
+          "name": "createddate",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Created Date",
+            "description": "Date when the record was created in the system."
+          }
+        }
+      ],
+      "primaryKey": "personpk",
+      "properties": {
+        "displayName": "Person Table",
+        "description": "This table is the master record for every individual in the system. It serves as the central source of truth for a person's identity, where the term 'person' is used synonymously with 'user', 'learner', and 'employee'. All other tables that track user activity, such as attempts or job details or Activity Assignments etc, link back to this table to identify the specific individual involved."
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "name": "person_to_organization",
+      "models": ["person_sumtotal", "organization_sumtotal"],
+      "joinType": "MANY_TO_MANY",
+      "condition": "person_sumtotal.personpk = personorganization_sumtotal.personfk AND personorganization_sumtotal.organizationfk = organization_sumtotal.organizationpk",
+      "properties": {
+        "description": "Links persons to organizations through the personorganization junction table"
+      }
+    },
+    {
+      "name": "person_to_attempt",
+      "models": ["person_sumtotal", "tbl_tmx_attempt_sumtotal"],
+      "joinType": "ONE_TO_MANY",
+      "condition": "person_sumtotal.personpk = tbl_tmx_attempt_sumtotal.empfk",
+      "properties": {
+        "description": "Links persons to their learning attempts"
+      }
+    }
+  ]
+}

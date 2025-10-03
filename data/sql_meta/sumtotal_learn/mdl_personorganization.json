@@ -1,0 +1,126 @@
+{
+  "catalog": "sumtotal_learn",
+  "schema": "public",
+  "models": [
+    {
+      "name": "personorganization_sumtotal",
+      "description": "This table aggregates information about individuals and their associated organizations, including their primary status, joining dates, and synchronization details. Use this table when you need to: 1. Track organizational membership and reporting relationships, 2. Generate department-specific learning reports, 3. Manage organizational changes and transfers, 4. Implement organization-based access controls, 5. Create organizational learning dashboards, 6. Track learning compliance by organizational unit, 7. Manage cross-organizational learning initiatives, 8. Handle organizational restructuring and user reassignments.",
+      "tableReference": {
+        "catalog": "sumtotal_learn",
+        "schema": "public",
+        "table": "personorganization_sumtotal"
+      },
+      "columns": [
+        {
+          "name": "personfk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Person Foreign Key",
+            "description": "Foreign key referencing the person entity in the database."
+          }
+        },
+        {
+          "name": "organizationfk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Organization Foreign Key",
+            "description": "Foreign key referencing the organization table to get organization details."
+          }
+        },
+        {
+          "name": "isprimary",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Is Primary",
+            "description": "Indicates whether the organization is the primary one associated with the person."
+          }
+        },
+        {
+          "name": "joiningdate",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Joining Date",
+            "description": "The date when a person joined the organization."
+          }
+        },
+        {
+          "name": "createdby",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Created By",
+            "description": "Identifier for the user or system that created the record."
+          }
+        },
+        {
+          "name": "mainorganization",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Main Organization",
+            "description": "Column representing the main organization associated with a person."
+          }
+        },
+        {
+          "name": "synchfaultflg",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Synchronization Fault Flag",
+            "description": "Indicates whether there is a synchronization fault for the associated person and organization."
+          }
+        },
+        {
+          "name": "synchfaultcntlstary",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Synchronization Fault Count List Array",
+            "description": "A text field that stores a list of synchronization fault counts related to person-organization records."
+          }
+        },
+        {
+          "name": "mvpbatchid",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "MVP Batch ID",
+            "description": "Identifier for the batch process related to the person organization records."
+          }
+        },
+        {
+          "name": "deleted",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Deleted Flag",
+            "description": "Indicates whether the record has been marked as deleted."
+          }
+        },
+        {
+          "name": "createddate",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Created Date",
+            "description": "Timestamp indicating when the record was created in the system."
+          }
+        },
+        {
+          "name": "modifieddate",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Modified Date",
+            "description": "Timestamp indicating when the record was last modified."
+          }
+        },
+        {
+          "name": "modifiedby",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Modified By",
+            "description": "Column indicating the user who last modified the record."
+          }
+        }
+      ],
+      "primaryKey": "personfk",
+      "properties": {
+        "displayName": "Person Organization Table",
+        "description": "This table aggregates information about individuals and their associated organizations, including their primary status, joining dates, and synchronization details."
+      }
+    }
+  ]
+}

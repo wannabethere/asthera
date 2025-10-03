@@ -1,0 +1,87 @@
+{
+    "catalog": "sumtotal_learn",
+    "schema": "public",
+    "models": [
+      {
+        "name": "persondomain_sumtotal",
+        "description": "This table captures the relationships between individuals (persons), their associated domains, and roles within the Sumtotal Learn system, including metadata about creation and modification.",
+        "tableReference": {
+          "table": "persondomain_sumtotal"
+        },
+        "columns": [
+          {
+            "name": "personfk",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Person Foreign Key",
+              "description": "Foreign key reference to the person entity in the database."
+            }
+          },
+          {
+            "name": "domainfk",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Domain Foreign Key",
+              "description": "Foreign key referencing the domain associated with a person in the persondomain_sumtotal table."
+            }
+          },
+          {
+            "name": "rolefk",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Role Foreign Key",
+              "description": "Foreign key referencing the role associated with a person in the system."
+            }
+          },
+          {
+            "name": "isprimary",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Is Primary",
+              "description": "Indicates whether the person is a primary contact for the associated domain."
+            }
+          },
+          {
+            "name": "createddate",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Created Date",
+              "description": "Timestamp indicating when the record was created in the system."
+            }
+          },
+          {
+            "name": "deleted",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Deleted Flag",
+              "description": "Indicates whether the record has been marked as deleted."
+            }
+          },
+          {
+            "name": "createdby",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Created By",
+              "description": "Column indicating the user or system that created the record."
+            }
+          },
+          {
+            "name": "modifieddate",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Modified Date",
+              "description": "Timestamp indicating when the record was last modified."
+            }
+          },
+          {
+            "name": "modifiedby",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Modified By",
+              "description": "Column indicating the user who last modified the record."
+            }
+          }
+        ]
+      }
+    ]
+}

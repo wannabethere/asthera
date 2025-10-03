@@ -1,0 +1,644 @@
+{
+  "table_id": "9aa944d6-7f08-4c03-a2dc-27112e356b18",
+  "name": "organization_sumtotal",
+  "display_name": "organization_sumtotal",
+  "description": "This table serves as a comprehensive source of organizational data, capturing essential attributes and relationships for effective management and analysis within the Sumtotal Learn platform.",
+  "table_type": "table",
+  "dataset_id": "44c9e3e2-4bdf-421c-a1c3-379dff92e1b5",
+  "dataset_name": "Sumtotal Learn Dataset",
+  "created_at": "2025-09-26T20:23:29.079226+00:00",
+  "updated_at": "2025-09-26T20:23:29.079226+00:00",
+  "entity_version": 1,
+  "columns": [
+    {
+      "column_id": "65d5d021-0536-4c8c-9b22-59c575d5e1e6",
+      "name": "organizationpk",
+      "display_name": "Organization Primary Key",
+      "description": "Unique identifier for organizations within the organization_sumtotal table.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "identifier",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 1
+    },
+    {
+      "column_id": "fc8d42f3-9d22-4eb5-b1ef-065b6dd6f7e5",
+      "name": "code",
+      "display_name": "Code",
+      "description": "A textual code representing the organization within the system.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 2
+    },
+    {
+      "column_id": "f175913b-e076-4378-ba77-633fd4665984",
+      "name": "name",
+      "display_name": "Organization Name",
+      "description": "The name of the organization as recorded in the system.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 3
+    },
+    {
+      "column_id": "4c3377c6-cf58-4a5a-9935-121548f27d1e",
+      "name": "parentorganizationfk",
+      "display_name": "Parent Organization Foreign Key",
+      "description": "Foreign key referencing the parent organization in the organization hierarchy.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "identifier",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 4
+    },
+    {
+      "column_id": "80bf9363-8a6a-49e9-8cfa-c2d8904520eb",
+      "name": "hierarchyfk",
+      "display_name": "Hierarchy Foreign Key",
+      "description": "Foreign key that references the hierarchy of organizations within the organization structure.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "identifier",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 5
+    },
+    {
+      "column_id": "ca033449-40a0-44db-9bd1-9fd738aca5e3",
+      "name": "orgtypecode",
+      "display_name": "Organization Type Code",
+      "description": "Code representing the type of organization.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 6
+    },
+    {
+      "column_id": "5d04c141-60b4-4349-af75-c659bac23fdd",
+      "name": "lveelval",
+      "display_name": "Level Value",
+      "description": "Column lveelval",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 7
+    },
+    {
+      "column_id": "afc33bd2-afb9-4e86-8374-90ba8bd2d26e",
+      "name": "orgdomainind",
+      "display_name": "Organization Domain Indicator",
+      "description": "Indicates the domain associated with the organization, represented as a string.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 8
+    },
+    {
+      "column_id": "2737564d-919e-418e-88c8-2663984bdd14",
+      "name": "contactpersonfk",
+      "display_name": "Contact Person Foreign Key",
+      "description": "Foreign key referencing the contact person associated with the organization.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "identifier",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 9
+    },
+    {
+      "column_id": "2e4c4bfc-1e78-4883-840e-2a5db757c539",
+      "name": "contactemail",
+      "display_name": "Contact Email",
+      "description": "Email address for contacting the organization.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 10
+    },
+    {
+      "column_id": "24baa702-f795-46ef-9552-63dc54ecf7fb",
+      "name": "defaultaudiencefk",
+      "display_name": "Default Audience Foreign Key",
+      "description": "Foreign key reference to the default audience in the organization context.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "identifier",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 11
+    },
+    {
+      "column_id": "7eb114fa-15ad-47c4-8481-ef32bb69c5e0",
+      "name": "roottavenodefk",
+      "display_name": "Root Tave Node Foreign Key",
+      "description": "Foreign key reference to the root tave node in the organization hierarchy.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "identifier",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 12
+    },
+    {
+      "column_id": "532a3a33-283a-4fb5-aa83-1fd092f36050",
+      "name": "starttavenodefk",
+      "display_name": "Start Tave Node Foreign Key",
+      "description": "Foreign key reference to the start tave node in the organization structure.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "identifier",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 13
+    },
+    {
+      "column_id": "687237af-c327-43c6-bd8d-19e1b6b22210",
+      "name": "defaultkdocaudiencefk",
+      "display_name": "Default Kdoc Audience FK",
+      "description": "Foreign key reference to the default audience for Kdoc.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "identifier",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 14
+    },
+    {
+      "column_id": "9b028714-231c-4480-9800-afe8cfeb1120",
+      "name": "personcount",
+      "display_name": "Person Count",
+      "description": "Represents the number of persons associated with an organization.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "measure",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 15
+    },
+    {
+      "column_id": "d47ce919-88ac-44b0-9a54-6fee22b1161d",
+      "name": "descriptiontveet",
+      "display_name": "Description of Organization",
+      "description": "A textual description of the organization.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 16
+    },
+    {
+      "column_id": "53aef511-4b05-4d92-b7e7-ea5cb5c0e994",
+      "name": "url",
+      "display_name": "URL",
+      "description": "A web address associated with the organization.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 17
+    },
+    {
+      "column_id": "2a14be58-a1f5-402a-b71f-0a4d83e552a4",
+      "name": "synchfaultflg",
+      "display_name": "Synchronization Fault Flag",
+      "description": "Indicates whether there is a synchronization fault for the organization.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "flag",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 18
+    },
+    {
+      "column_id": "69ce9652-eaed-4eba-b4ed-dadd96db52f6",
+      "name": "synchfaultcntlstary",
+      "display_name": "Synchronization Fault Count List Array",
+      "description": "A text representation of synchronization fault counts related to the organization.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 19
+    },
+    {
+      "column_id": "b832c9fb-21b3-4fa9-834d-7042223803c0",
+      "name": "attribute1",
+      "display_name": "Attribute 1",
+      "description": "Column attribute1",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 20
+    },
+    {
+      "column_id": "c7375407-0e58-42d5-9ea7-2c4e1963c19a",
+      "name": "attribute2",
+      "display_name": "Attribute 2",
+      "description": "Column attribute2",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 21
+    },
+    {
+      "column_id": "c2b9fd53-b7ea-4cd4-b267-0dd697037d01",
+      "name": "attribute3",
+      "display_name": "Attribute 3",
+      "description": "Column attribute3",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 22
+    },
+    {
+      "column_id": "e503452c-2a28-467f-8904-a5bfbdaf961c",
+      "name": "attribute4",
+      "display_name": "Attribute 4",
+      "description": "Column attribute4",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 23
+    },
+    {
+      "column_id": "3225cc1c-6d2b-41a2-956e-271a5c57f0a1",
+      "name": "attribute5",
+      "display_name": "Attribute 5",
+      "description": "Column attribute5",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 24
+    },
+    {
+      "column_id": "aecc63b1-0310-4f8e-8d59-a965c17dd4be",
+      "name": "disableusersearch",
+      "display_name": "Disable User Search",
+      "description": "Indicates whether user search functionality is disabled for the organization.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "flag",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 25
+    },
+    {
+      "column_id": "d4094432-f616-4efb-a67e-98f45f4cef8b",
+      "name": "limitusersearch",
+      "display_name": "Limit User Search",
+      "description": "Column indicating the limit on user search functionality within the organization.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 26
+    },
+    {
+      "column_id": "6e77a385-793d-4033-868f-1076967e18e9",
+      "name": "mvpbatchid",
+      "display_name": "MVP Batch ID",
+      "description": "Identifier for the batch process related to the organization.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "identifier",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 27
+    },
+    {
+      "column_id": "cedc07eb-ec98-4beb-9eda-35d139eb067c",
+      "name": "deleted",
+      "display_name": "Deleted Flag",
+      "description": "Indicates whether the organization record has been deleted.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "flag",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 28
+    },
+    {
+      "column_id": "891b71ac-b1b9-4bb5-82ca-75a485baa4a0",
+      "name": "createddate",
+      "display_name": "Created Date",
+      "description": "Timestamp indicating when the record was created in the organization_sumtotal table.",
+      "column_type": "column",
+      "data_type": "VARCHAR(timestamp without time zone)",
+      "usage_type": "timestamp",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 29
+    }
+  ],
+  "metadata": {
+    "columns": [
+      {
+        "name": "organizationpk",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column organizationpk",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "code",
+        "data_type": "VARCHAR(text)",
+        "description": "Column code",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "name",
+        "data_type": "VARCHAR(text)",
+        "description": "Column name",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "parentorganizationfk",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column parentorganizationfk",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "hierarchyfk",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column hierarchyfk",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "orgtypecode",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column orgtypecode",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "lveelval",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column lveelval",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "orgdomainind",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column orgdomainind",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "contactpersonfk",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column contactpersonfk",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "contactemail",
+        "data_type": "VARCHAR(text)",
+        "description": "Column contactemail",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "defaultaudiencefk",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column defaultaudiencefk",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "roottavenodefk",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column roottavenodefk",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "starttavenodefk",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column starttavenodefk",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "defaultkdocaudiencefk",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column defaultkdocaudiencefk",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "personcount",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column personcount",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "descriptiontveet",
+        "data_type": "VARCHAR(text)",
+        "description": "Column descriptiontveet",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "url",
+        "data_type": "VARCHAR(text)",
+        "description": "Column url",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "synchfaultflg",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column synchfaultflg",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "synchfaultcntlstary",
+        "data_type": "VARCHAR(text)",
+        "description": "Column synchfaultcntlstary",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "attribute1",
+        "data_type": "VARCHAR(text)",
+        "description": "Column attribute1",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "attribute2",
+        "data_type": "VARCHAR(text)",
+        "description": "Column attribute2",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "attribute3",
+        "data_type": "VARCHAR(text)",
+        "description": "Column attribute3",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "attribute4",
+        "data_type": "VARCHAR(text)",
+        "description": "Column attribute4",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "attribute5",
+        "data_type": "VARCHAR(text)",
+        "description": "Column attribute5",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "disableusersearch",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column disableusersearch",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "limitusersearch",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column limitusersearch",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "mvpbatchid",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column mvpbatchid",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "deleted",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column deleted",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "createddate",
+        "data_type": "VARCHAR(timestamp without time zone)",
+        "description": "Column createddate",
+        "is_nullable": true,
+        "is_primary_key": false
+      }
+    ],
+    "data_lineage": "Data is sourced from various organizational inputs and is populated through automated processes that integrate with the Sumtotal Learn platform.",
+    "data_retention": "Data is retained for a period of 5 years to comply with business and regulatory requirements.",
+    "access_patterns": [
+      "Frequent read access for reporting and analysis by data analysts",
+      "Occasional write access for updates by administrators"
+    ],
+    "business_purpose": "The organization_sumtotal table exists to centralize and manage organizational information, enabling better decision-making, reporting, and user management within the Sumtotal Learn system.",
+    "update_frequency": "daily",
+    "key_relationships": [
+      "Parent organization relationships for hierarchical reporting",
+      "Linking contact persons to organizations for communication purposes"
+    ],
+    "primary_use_cases": [
+      "Tracking organizational hierarchies and relationships",
+      "Managing user access and permissions based on organizational attributes",
+      "Analyzing organizational performance metrics"
+    ]
+  }
+}

@@ -1,0 +1,393 @@
+{
+  "table_id": "531a2b22-b334-4b7e-a242-f9d8659fbd71",
+  "name": "tbl_tmx_activity_sumtotal",
+  "display_name": "tbl_tmx_activity_sumtotal",
+  "description": "This table serves as a comprehensive source for tracking and managing activities within the Sumtotal Learn platform, capturing essential details about each activity's configuration, scheduling, and participant management.",
+  "table_type": "table",
+  "dataset_id": "44c9e3e2-4bdf-421c-a1c3-379dff92e1b5",
+  "dataset_name": "Sumtotal Learn Dataset",
+  "created_at": "2025-09-26T20:22:15.551286+00:00",
+  "updated_at": "2025-09-26T20:22:15.551286+00:00",
+  "entity_version": 1,
+  "columns": [
+    {
+      "column_id": "e9c86f5f-4078-4222-9ff2-043ecb8bcd07",
+      "name": "activity_pk",
+      "display_name": "Activity Primary Key",
+      "description": "Unique identifier for activities in the tbl_tmx_activity_sumtotal table.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "identifier",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 1
+    },
+    {
+      "column_id": "4c096247-a110-4e16-ab69-7e9a4c6a9fb8",
+      "name": "activityme",
+      "display_name": "Activity Me",
+      "description": "Column activityme",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 2
+    },
+    {
+      "column_id": "4e191e03-ee02-43e9-a82a-d508eae2f0c7",
+      "name": "activitylabelfk",
+      "display_name": "Activity Label Foreign Key",
+      "description": "Foreign key reference to the activity label in the related activity table.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "identifier",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 3
+    },
+    {
+      "column_id": "49184bf6-5c23-4281-ab31-ca27b655af8e",
+      "name": "prntactfk",
+      "display_name": "Parent Activity Foreign Key",
+      "description": "Foreign key reference to the parent activity in the activity hierarchy.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "identifier",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 4
+    },
+    {
+      "column_id": "50a21b3b-7e8f-41e1-a03d-9f908315d796",
+      "name": "code",
+      "display_name": "Code",
+      "description": "A textual code representing specific activities within the system.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 5
+    },
+    {
+      "column_id": "acd27510-0fa6-43ee-b78a-c72a001795bc",
+      "name": "ccenter",
+      "display_name": "Center",
+      "description": "Column representing the center associated with the activity.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 6
+    },
+    {
+      "column_id": "2744a2cc-a3e1-4da0-9d46-687b2395b69f",
+      "name": "activitydesc",
+      "display_name": "Activity Description",
+      "description": "A textual description of the activity, providing details about what the activity entails.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 7
+    },
+    {
+      "column_id": "d77c3259-6488-4b7f-a76f-97ec22c7274e",
+      "name": "activitydescfmt",
+      "display_name": "Activity Description Format",
+      "description": "Format of the activity description, which may include HTML or other markup.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 8
+    },
+    {
+      "column_id": "9f852396-7938-42d5-8d10-7e181bcd1926",
+      "name": "active",
+      "display_name": "Active",
+      "description": "Indicates whether the activity is currently active or not.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "flag",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 9
+    },
+    {
+      "column_id": "156c8792-2ad9-4ac4-ac7e-d25fed260258",
+      "name": "openforreg",
+      "display_name": "Open for Registration",
+      "description": "Indicates whether the activity is open for registration.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "flag",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 10
+    },
+    {
+      "column_id": "9f0836a6-bd33-413d-be29-e7dfd5a41bf9",
+      "name": "noregreqd",
+      "display_name": "No Registration Required",
+      "description": "Indicates whether registration is required for the activity.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "flag",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 11
+    },
+    {
+      "column_id": "7dcb77e1-5484-4c0c-a875-de09cab2df53",
+      "name": "maxattempts",
+      "display_name": "Max Attempts",
+      "description": "Maximum number of attempts allowed for a specific activity.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 12
+    },
+    {
+      "column_id": "c62f2c0c-c1f8-4301-b0cd-14b68395b79b",
+      "name": "maxattemptsperparent",
+      "display_name": "Max Attempts Per Parent",
+      "description": "Maximum number of attempts allowed per parent activity.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 13
+    },
+    {
+      "column_id": "4a76553c-a401-4f38-a451-195509ffd042",
+      "name": "cancelled",
+      "display_name": "Cancelled",
+      "description": "Indicates whether an activity has been cancelled.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "flag",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 14
+    },
+    {
+      "column_id": "d45fc3d9-7a93-4896-81a8-76b0988e43a3",
+      "name": "private",
+      "display_name": "Private",
+      "description": "Column indicating whether the activity is private or not.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 16
+    },
+    {
+      "column_id": "48f724f3-c226-44a8-9ba8-57201a4a2cf8",
+      "name": "empnotesfmt",
+      "display_name": "Employee Notes Format",
+      "description": "Format for employee notes stored in the database, allowing for structured text representation.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 18
+    },
+    {
+      "column_id": "fb1ae21f-b776-45bf-8c62-eda6a71a82f8",
+      "name": "instrnotesfmt",
+      "display_name": "Instructor Notes Format",
+      "description": "Format for instructor notes associated with activities.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 20
+    }
+  ],
+  "metadata": {
+    "columns": [
+      {
+        "name": "activity_pk",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column activity_pk",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "activityme",
+        "data_type": "VARCHAR(text)",
+        "description": "Column activityme",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "activitylabelfk",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column activitylabelfk",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "prntactfk",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column prntactfk",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "code",
+        "data_type": "VARCHAR(text)",
+        "description": "Column code",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "ccenter",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column ccenter",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "activitydesc",
+        "data_type": "VARCHAR(text)",
+        "description": "Column activitydesc",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "activitydescfmt",
+        "data_type": "VARCHAR(text)",
+        "description": "Column activitydescfmt",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "active",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column active",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "openforreg",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column openforreg",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "noregreqd",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column noregreqd",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "maxattempts",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column maxattempts",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "maxattemptsperparent",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column maxattemptsperparent",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "cancelled",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column cancelled",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "private",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column private",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "empnotesfmt",
+        "data_type": "VARCHAR(text)",
+        "description": "Column empnotesfmt",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "instrnotesfmt",
+        "data_type": "VARCHAR(text)",
+        "description": "Column instrnotesfmt",
+        "is_nullable": true,
+        "is_primary_key": false
+      }
+    ],
+    "data_lineage": "Data is sourced from activity management systems and is populated through automated processes that track activity configurations and participant management within the Sumtotal Learn platform.",
+    "data_retention": "Data is retained for a period of 5 years to comply with business and regulatory requirements.",
+    "access_patterns": [
+      "Frequent read access for activity management and reporting by administrators",
+      "Occasional write access for updates by the learning management system"
+    ],
+    "business_purpose": "The tbl_tmx_activity_sumtotal table exists to manage learning activities, enabling activity configuration, participant management, and progress tracking within the Sumtotal Learn system.",
+    "update_frequency": "daily",
+    "key_relationships": [
+      "Activity to attempt relationships for learning progress tracking",
+      "Activity to label relationships for activity categorization"
+    ],
+    "primary_use_cases": [
+      "Activity configuration and management",
+      "Participant registration and access control",
+      "Learning progress tracking and analytics",
+      "Activity scheduling and availability management"
+    ]
+  }
+}

@@ -209,7 +209,7 @@ class ReportService(BaseService):
             business_goal = self._determine_business_goal_from_workflow(workflow_info)
             
             # Create report context from workflow
-            report_context = self._create_report_context_from_workflow(workflow_info, report_queries)
+            report_context = self._create_report_context_from_workflow_data(workflow_info)
             
             # Send initial status update
             self._send_status_update(
@@ -317,24 +317,20 @@ class ReportService(BaseService):
                 # Create ThreadComponentData
                 thread_component = ThreadComponentData(
                     id=comp.get("id", f"component_{len(components)}"),
-                    name=comp.get("question", f"Component {comp.get('sequence_order', len(components))}"),
-                    type=component_type,
-                    content=comp.get("description", ""),
-                    metadata={
-                        "workflow_component": True,
-                        "sequence_order": comp.get("sequence_order", 0),
-                        "original_type": comp.get("component_type"),
-                        "configuration": comp.get("configuration", {}),
-                        "alert_config": comp.get("alert_config"),
-                        "chart_config": comp.get("chart_config"),
-                        "table_config": comp.get("table_config")
-                    }
+                    component_type=component_type,
+                    sequence_order=comp.get("sequence_order", 0),
+                    question=comp.get("question", f"Component {comp.get('sequence_order', len(components))}"),
+                    description=comp.get("description", ""),
+                    overview=comp.get("overview"),
+                    chart_config=comp.get("chart_config"),
+                    table_config=comp.get("table_config"),
+                    configuration=comp.get("configuration", {})
                 )
                 
                 components.append(thread_component)
             
             # Sort by sequence order
-            components.sort(key=lambda x: x.metadata.get("sequence_order", 0))
+            components.sort(key=lambda x: x.sequence_order)
             
             return components
             
@@ -345,18 +341,18 @@ class ReportService(BaseService):
     def _map_workflow_component_type(self, workflow_type: str) -> ComponentType:
         """Map workflow component types to report component types"""
         type_mapping = {
-            "question": ComponentType.TEXT,
-            "description": ComponentType.TEXT,
-            "overview": ComponentType.TEXT,
+            "question": ComponentType.QUESTION,
+            "description": ComponentType.DESCRIPTION,
+            "overview": ComponentType.OVERVIEW,
             "chart": ComponentType.CHART,
             "table": ComponentType.TABLE,
             "metric": ComponentType.METRIC,
-            "insight": ComponentType.TEXT,
-            "narrative": ComponentType.TEXT,
+            "insight": ComponentType.INSIGHT,
+            "narrative": ComponentType.NARRATIVE,
             "alert": ComponentType.ALERT
         }
         
-        return type_mapping.get(workflow_type.lower(), ComponentType.TEXT)
+        return type_mapping.get(workflow_type.lower(), ComponentType.QUESTION)
     
     def _determine_writer_actor_from_workflow(self, workflow_info: Dict[str, Any]) -> WriterActorType:
         """Determine writer actor from workflow metadata"""
@@ -444,61 +440,6 @@ class ReportService(BaseService):
                 timeframe="weekly"
             )
     
-    def _create_report_context_from_workflow(
-        self, 
-        workflow_info: Dict[str, Any], 
-        report_queries: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
-        """Create report context from workflow data"""
-        try:
-            metadata = workflow_info.get("workflow_metadata", {})
-            
-            # Extract available columns from queries
-            available_columns = set()
-            data_types = {}
-            
-            for query in report_queries:
-                if "data_description" in query:
-                    # Try to extract column information from description
-                    desc = query["data_description"].lower()
-                    if "region" in desc:
-                        available_columns.add("region")
-                        data_types["region"] = "categorical"
-                    if "sales" in desc or "amount" in desc:
-                        available_columns.add("sales")
-                        data_types["sales"] = "numeric"
-                    if "date" in desc or "time" in desc:
-                        available_columns.add("date")
-                        data_types["date"] = "datetime"
-                    if "performance" in desc or "score" in desc:
-                        available_columns.add("performance_score")
-                        data_types["performance_score"] = "numeric"
-            
-            # Create report context
-            context = {
-                "title": metadata.get("report_title", f"Report from Workflow {workflow_info.get('id', 'Unknown')}"),
-                "description": metadata.get("report_description", "Report generated from workflow configuration"),
-                "sections": metadata.get("report_sections", ["overview", "analysis", "conclusions"]),
-                "available_columns": list(available_columns),
-                "data_types": data_types,
-                "workflow_id": workflow_info.get("id"),
-                "workflow_state": workflow_info.get("state"),
-                "workflow_metadata": metadata
-            }
-            
-            return context
-            
-        except Exception as e:
-            logger.error(f"Error creating report context from workflow: {e}")
-            # Return basic context
-            return {
-                "title": "Report from Workflow",
-                "description": "Report generated from workflow configuration",
-                "sections": ["overview", "analysis", "conclusions"],
-                "available_columns": [],
-                "data_types": {},
-                "workflow_id": workflow_info.get("id", "unknown")
-            }
     
     async def generate_comprehensive_report(
         self,
@@ -798,10 +739,10 @@ class ReportService(BaseService):
         for component_name in component_names:
             component = ThreadComponentData(
                 id=f"component_{component_name}",
-                name=component_name.replace("_", " ").title(),
-                type=ComponentType.TEXT,
-                content=f"Generate {component_name.replace('_', ' ')} content",
-                metadata={"template_component": True}
+                component_type=ComponentType.QUESTION,
+                sequence_order=0,
+                question=component_name.replace("_", " ").title(),
+                description=f"Generate {component_name.replace('_', ' ')} content"
             )
             components.append(component)
         
@@ -812,24 +753,24 @@ class ReportService(BaseService):
         return [
             ThreadComponentData(
                 id="component_executive_summary",
-                name="Executive Summary",
-                type=ComponentType.TEXT,
-                content="Generate executive summary content",
-                metadata={"default_component": True}
+                component_type=ComponentType.OVERVIEW,
+                sequence_order=0,
+                question="Executive Summary",
+                description="Generate executive summary content"
             ),
             ThreadComponentData(
                 id="component_key_findings",
-                name="Key Findings",
-                type=ComponentType.TEXT,
-                content="Generate key findings content",
-                metadata={"default_component": True}
+                component_type=ComponentType.INSIGHT,
+                sequence_order=1,
+                question="Key Findings",
+                description="Generate key findings content"
             ),
             ThreadComponentData(
                 id="component_recommendations",
-                name="Recommendations",
-                type=ComponentType.TEXT,
-                content="Generate recommendations content",
-                metadata={"default_component": True}
+                component_type=ComponentType.NARRATIVE,
+                sequence_order=2,
+                question="Recommendations",
+                description="Generate recommendations content"
             )
         ]
     
@@ -1213,54 +1154,93 @@ class ReportService(BaseService):
                 "workflow_id": dashboard_context.get("workflow_id", "unknown")
             }
     
-    def _parse_writer_actor(self, writer_actor: Optional[str]) -> Optional[WriterActorType]:
-        """Parse writer actor string to WriterActorType enum"""
+    def _parse_writer_actor(self, writer_actor: Optional[Union[str, Dict[str, Any]]]) -> Optional[WriterActorType]:
+        """Parse writer actor string or dict to WriterActorType enum"""
         if not writer_actor:
             return None
         
         try:
-            return WriterActorType[writer_actor.upper()]
+            # Handle dict input
+            if isinstance(writer_actor, dict):
+                # Extract the actual actor type from the dict
+                actor_value = writer_actor.get("actor_type") or writer_actor.get("type") or str(writer_actor)
+                if actor_value and actor_value != "string":
+                    return WriterActorType[actor_value.upper()]
+                else:
+                    logger.warning(f"Invalid writer actor dict: {writer_actor}")
+                    return None
+            
+            # Handle string input
+            if isinstance(writer_actor, str) and writer_actor != "string":
+                return WriterActorType[writer_actor.upper()]
+            
+            logger.warning(f"Invalid writer actor: {writer_actor}")
+            return None
+            
         except KeyError:
             logger.warning(f"Unknown writer actor: {writer_actor}")
             return None
     
-    def _parse_business_goal(self, business_goal: Optional[str]) -> Optional[BusinessGoal]:
-        """Parse business goal string to BusinessGoal object"""
+    def _parse_business_goal(self, business_goal: Optional[Union[str, Dict[str, Any]]]) -> Optional[BusinessGoal]:
+        """Parse business goal string or dict to BusinessGoal object"""
         if not business_goal:
             return None
         
         try:
-            # If it's a JSON string, parse it
-            if isinstance(business_goal, str) and business_goal.startswith("{"):
-                import json
-                goal_dict = json.loads(business_goal)
-                return BusinessGoal(**goal_dict)
-            else:
-                # Simple string mapping
-                goal_mapping = {
-                    "strategic": BusinessGoal(
-                        primary_objective="Strategic decision making",
-                        target_audience=["executives", "stakeholders"],
-                        decision_context="High-level strategic planning",
-                        success_metrics=["strategic alignment", "decision quality"],
-                        timeframe="quarterly"
-                    ),
-                    "operational": BusinessGoal(
-                        primary_objective="Operational insights",
-                        target_audience=["operations team", "managers"],
-                        decision_context="Day-to-day operational decisions",
-                        success_metrics=["efficiency", "productivity"],
-                        timeframe="weekly"
-                    ),
-                    "performance": BusinessGoal(
-                        primary_objective="Performance optimization",
-                        target_audience=["performance team", "management"],
-                        decision_context="Performance improvement decisions",
-                        success_metrics=["performance metrics", "optimization results"],
-                        timeframe="monthly"
-                    )
-                }
-                return goal_mapping.get(business_goal.lower())
+            # Handle dict input
+            if isinstance(business_goal, dict):
+                # Check if it's a valid business goal dict
+                if "primary_objective" in business_goal or "goal_name" in business_goal:
+                    # Map the dict fields to BusinessGoal fields
+                    goal_data = {
+                        "primary_objective": business_goal.get("primary_objective") or business_goal.get("objective") or business_goal.get("goal_name", "Operational insights"),
+                        "target_audience": business_goal.get("target_audience") or ["operations team", "managers"],
+                        "decision_context": business_goal.get("decision_context") or "Day-to-day operational decisions",
+                        "success_metrics": business_goal.get("success_metrics") or business_goal.get("metrics") or ["efficiency", "productivity"],
+                        "timeframe": business_goal.get("timeframe") or "weekly"
+                    }
+                    return BusinessGoal(**goal_data)
+                else:
+                    logger.warning(f"Invalid business goal dict structure: {business_goal}")
+                    return None
+            
+            # Handle string input
+            if isinstance(business_goal, str):
+                # If it's a JSON string, parse it
+                if business_goal.startswith("{"):
+                    import json
+                    goal_dict = json.loads(business_goal)
+                    return self._parse_business_goal(goal_dict)
+                else:
+                    # Simple string mapping
+                    goal_mapping = {
+                        "strategic": BusinessGoal(
+                            primary_objective="Strategic decision making",
+                            target_audience=["executives", "stakeholders"],
+                            decision_context="High-level strategic planning",
+                            success_metrics=["strategic alignment", "decision quality"],
+                            timeframe="quarterly"
+                        ),
+                        "operational": BusinessGoal(
+                            primary_objective="Operational insights",
+                            target_audience=["operations team", "managers"],
+                            decision_context="Day-to-day operational decisions",
+                            success_metrics=["efficiency", "productivity"],
+                            timeframe="weekly"
+                        ),
+                        "performance": BusinessGoal(
+                            primary_objective="Performance optimization",
+                            target_audience=["performance team", "management"],
+                            decision_context="Performance improvement decisions",
+                            success_metrics=["performance metrics", "optimization results"],
+                            timeframe="monthly"
+                        )
+                    }
+                    return goal_mapping.get(business_goal.lower())
+            
+            logger.warning(f"Invalid business goal type: {type(business_goal)}")
+            return None
+            
         except Exception as e:
             logger.warning(f"Error parsing business goal: {e}")
             return None
@@ -1474,11 +1454,17 @@ class ReportService(BaseService):
         queries = []
         
         try:
-            for component in thread_components:
+            logger.info(f"Processing {len(thread_components)} thread components for report extraction")
+            for i, component in enumerate(thread_components):
                 component_type = component.get("component_type", "").lower()
+                has_sql_query = bool(component.get("sql_query"))
+                
+                logger.info(f"Component {i}: type='{component_type}', has_sql_query={has_sql_query}")
+                logger.info(f"Component {i} sql_query: {component.get('sql_query', 'None')[:100]}...")
                 
                 # Only process components that have SQL queries
-                if component.get("sql_query") and component_type in ["chart", "table", "metric", "sql_summary"]:
+                if component.get("sql_query") and component_type in ["chart", "table", "metric", "sql_summary", "question"]:
+                    logger.info(f"Processing component {i} as valid query component")
                     query_data = {
                         "chart_schema": component.get("chart_schema", {}),
                         "sql": component.get("sql_query", ""),
@@ -1500,10 +1486,13 @@ class ReportService(BaseService):
                         "validation_results": component.get("validation_results", {})
                     }
                     queries.append(query_data)
+                else:
+                    logger.info(f"Skipping component {i}: type='{component_type}', has_sql_query={has_sql_query}")
             
             # Sort by sequence order
             queries.sort(key=lambda x: x.get("sequence_order", 0))
             
+            logger.info(f"Extracted {len(queries)} report queries from workflow components")
             return queries
             
         except Exception as e:

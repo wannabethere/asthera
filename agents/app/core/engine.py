@@ -100,7 +100,7 @@ def add_quotes(sql: str) -> Tuple[str, str]:
         # Disable automatic quoting to prevent issues with PostgreSQL case sensitivity
         # The original code used identify=True which caused problems with column names
         quoted_sql = sqlglot.transpile(
-            cleaned_sql, read="trino", identify=False, error_level=sqlglot.ErrorLevel.RAISE
+            cleaned_sql, read="postgres", write="postgres", identify=False, error_level=sqlglot.ErrorLevel.RAISE
         )[0]
     except Exception as e:
         logger.exception(f"Error in sqlglot.transpile for SQL: {sql[:100]}... Error: {e}")
@@ -112,7 +112,7 @@ def add_quotes(sql: str) -> Tuple[str, str]:
             if select_match:
                 select_sql = select_match.group(1).strip()
                 quoted_sql = sqlglot.transpile(
-                    select_sql, read="trino", identify=False, error_level=sqlglot.ErrorLevel.RAISE
+                    select_sql, read="postgres", identify=False, error_level=sqlglot.ErrorLevel.RAISE
                 )[0]
                 logger.info(f"Successfully extracted and processed SQL: {select_sql[:100]}...")
                 return quoted_sql, ""

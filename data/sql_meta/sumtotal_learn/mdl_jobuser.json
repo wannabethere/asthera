@@ -1,0 +1,134 @@
+{
+  "catalog": "sumtotal_learn",
+  "schema": "public",
+  "models": [
+    {
+      "name": "jobuser_sumtotal",
+      "description": "This table maps each person to their specific job details. It connects an individual to a predefined job template and stores details unique to that job role, such as their joining date and primary role status. This table is essential for understanding a user's role within the company structure. Use this table when you need to: 1. Assign role-specific learning paths and requirements, 2. Generate job-based compliance reports, 3. Track career progression and role changes, 4. Implement role-based access controls for learning content, 5. Create targeted learning recommendations based on job functions, 6. Analyze learning effectiveness by job role, 7. Manage succession planning and development programs.",
+      "tableReference": {
+        "catalog": "sumtotal_learn",
+        "schema": "public",
+        "table": "jobuser_sumtotal"
+      },
+      "columns": [
+        {
+          "name": "jobtemplatefk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Job Template Foreign Key",
+            "description": "A foreign key that links this job to a predefined job template. The template contains the standard details of the role, such as its title and core functions."
+          }
+        },
+        {
+          "name": "personfk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Person Foreign Key",
+            "description": "The foreign key that identifies the employee by linking to their record in the Person table. It is the essential link that defines 'who' holds this job role."
+          }
+        },
+        {
+          "name": "isprimary",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Is Primary",
+            "description": "A flag that indicates if this is the employee's primary job, especially when a person can hold more than one role."
+          }
+        },
+        {
+          "name": "joiningdate",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Joining Date",
+            "description": "The date when the employee officially started in this specific job role."
+          }
+        },
+        {
+          "name": "authlstary",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Authorization List Array",
+            "description": "A system field that stores a list of permissions or access groups associated with this job role."
+          }
+        },
+        {
+          "name": "notetext",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Note Text",
+            "description": "A free-text field for any additional notes or comments related to this job role."
+          }
+        },
+        {
+          "name": "synchfaultflg",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Synchronization Fault Flag",
+            "description": "A system flag indicating if an error occurred while synchronizing this record with another system."
+          }
+        },
+        {
+          "name": "synchfaultcntlstary",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Synchronization Fault Count List Array",
+            "description": "A system field that stores details or counts related to data synchronization errors."
+          }
+        },
+        {
+          "name": "objtypcd",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Object Type Code",
+            "description": "A system code used to classify the type of this record."
+          }
+        },
+        {
+          "name": "deleted",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Deleted Flag",
+            "description": "A flag indicating that this job role is no longer active but is kept for historical records."
+          }
+        },
+        {
+          "name": "mvpbatchid",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "MVP Batch ID",
+            "description": "An identifier for the batch process that created or last updated this record."
+          }
+        },
+        {
+          "name": "createddate",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Created Date",
+            "description": "The exact date and time when this job role record was created."
+          }
+        },
+        {
+          "name": "jobname",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Job Name",
+            "description": "The descriptive name of the job role (e.g., 'Senior Analyst'). This is likely copied from the job template for convenient access."
+          }
+        },
+        {
+          "name": "jobnum",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Job Number",
+            "description": "The unique business code or number for the job role. This is likely copied from the job template for convenient access."
+          }
+        }
+      ],
+      "primaryKey": "personfk",
+      "properties": {
+        "displayName": "Job User Table",
+        "description": "This table maps each person to their specific job details. It connects an individual to a predefined job template and stores details unique to that job role, such as their joining date and primary role status. This table is essential for understanding a user's role within the company structure."
+      }
+    }
+  ]
+}

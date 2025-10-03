@@ -221,7 +221,7 @@ Please provide your response in proper Markdown string format.
                 configuration = input_data.get("configuration", {})
                 
                 result = asyncio.run(self._generate_sql_internal(
-                    query, contexts, reasoning, configuration
+                    query, contexts, reasoning, configuration, **kwargs
                 ))
                 return orjson.dumps(result).decode()
             except Exception as e:
@@ -305,7 +305,9 @@ Please provide your response in proper Markdown string format.
                 query = input_data.get("query", "")
                 contexts = input_data.get("contexts", [])
                 language = input_data.get("language", "English")
-                project_id = input_data.get("project_id", "default")
+                project_id = input_data.get("project_id")
+                if not project_id:
+                    raise ValueError("project_id is required")
                 
                 # Create kwargs dict for the internal method
                 kwargs = {
@@ -389,10 +391,10 @@ Please provide your response in proper Markdown string format.
     
     def _create_schema_retrieval_tool(self) -> Tool:
         """Create schema retrieval tool"""
-        def retrieve_schema_func(query: str) -> str:
+        def retrieve_schema_func(query: str, project_id: str) -> str:
             try:
                 schema_result = asyncio.run(self.retrieval_helper.get_database_schemas(
-                    project_id="default",
+                    project_id=project_id,
                     table_retrieval={
                         "table_retrieval_size": 10,
                         "table_column_retrieval_size": 100,
@@ -424,11 +426,11 @@ Please provide your response in proper Markdown string format.
     
     def _create_sample_retrieval_tool(self) -> Tool:
         """Create sample retrieval tool"""
-        def retrieve_samples_func(query: str) -> str:
+        def retrieve_samples_func(query: str, project_id: str) -> str:
             try:
                 sql_pairs_result = asyncio.run(self.retrieval_helper.get_sql_pairs(
                     query=query,
-                    project_id="default",
+                    project_id=project_id,
                     similarity_threshold=0.3,
                     max_retrieval_size=3
                 ))
@@ -553,8 +555,12 @@ Please provide your response in proper Markdown string format.
                 "parsed_entities": {}
             }
 
-    async def _retrieve_schema_context(self, query: str, project_id: str = "default") -> Dict[str, Any]:
+    async def _retrieve_schema_context(self, query: str, project_id: str) -> Dict[str, Any]:
         """Helper method to retrieve schema context and table names"""
+        print(f"=== RETRIEVING SCHEMA CONTEXT ===")
+        print(f"Query: {query}")
+        print(f"Project ID: {project_id}")
+        
         schema_data = await self.retrieval_helper.get_table_names_and_schema_contexts(
             query=query,
             project_id=project_id,
@@ -564,6 +570,19 @@ Please provide your response in proper Markdown string format.
                 "allow_using_db_schemas_without_pruning": False
             }
         )
+        
+        print(f"=== SCHEMA DATA RETRIEVED ===")
+        print(f"Schema data keys: {list(schema_data.keys()) if schema_data else 'None'}")
+        print(f"Table names: {schema_data.get('table_names', [])}")
+        print(f"Schema contexts count: {len(schema_data.get('schema_contexts', []))}")
+        print(f"Total tables: {schema_data.get('total_tables', 0)}")
+        print(f"Total contexts: {schema_data.get('total_contexts', 0)}")
+        print(f"Total relationships: {schema_data.get('total_relationships', 0)}")
+        
+        # Log each schema context
+        schema_contexts = schema_data.get("schema_contexts", [])
+        for i, context in enumerate(schema_contexts):
+            print(f"Schema context {i}: {context[:200]}..." if len(context) > 200 else f"Schema context {i}: {context}")
         
         return {
             "table_names": schema_data.get("table_names", []),
@@ -575,15 +594,19 @@ Please provide your response in proper Markdown string format.
     async def _get_schema_and_samples(self, query: str, **kwargs):
         """Get schema and sample documents using RetrievalHelper"""
         # Get schema context using helper method
+        project_id = kwargs.get("project_id")
+        if not project_id:
+            raise ValueError("project_id is required")
+            
         schema_data = await self._retrieve_schema_context(
             query=query,
-            project_id=kwargs.get("project_id", "default")
+            project_id=project_id
         )
         
         # Get SQL pairs
         sql_pairs_result = await self.retrieval_helper.get_sql_pairs(
             query=query,
-            project_id=kwargs.get("project_id", "default"),
+            project_id=project_id,
             similarity_threshold=0.3,
             max_retrieval_size=3
         )
@@ -596,10 +619,14 @@ Please provide your response in proper Markdown string format.
 
     async def _get_schema_context(self, query: str, **kwargs):
         """Get schema context for SQL generation"""
+        project_id = kwargs.get("project_id")
+        if not project_id:
+            raise ValueError("project_id is required")
+            
         # Get schema context using helper method
         schema_data = await self._retrieve_schema_context(
             query=query,
-            project_id=kwargs.get("project_id", "default")
+            project_id=project_id
         )
         
         return schema_data["schema_contexts"]
@@ -615,14 +642,20 @@ Please provide your response in proper Markdown string format.
     ) -> Dict[str, Any]:
         """Internal method for SQL generation"""
         try:
-            # Get schema and sample documents using helper method
-            schema_data = await self._retrieve_schema_context(
-                query=query,
-                project_id=kwargs.get("project_id", "default")
-            )
+            project_id = kwargs.get("project_id")
+            if not project_id:
+                raise ValueError("project_id is required")
+                
+            # Schema contexts are already provided from table retrieval run method
+            # No need to retrieve them again
+            schema_data = {
+                "table_names": [],
+                "schema_contexts": contexts,  # Use the provided contexts
+                "has_calculated_field": False,
+                "has_metric": False
+            }
             
             # Use cached metadata instead of making duplicate calls
-            project_id = kwargs.get("project_id", "default")
             metadata = await self._retrieve_and_cache_metadata(
                 query=query,
                 project_id=project_id
@@ -632,9 +665,19 @@ Please provide your response in proper Markdown string format.
             sql_pairs = metadata.get("sql_pairs", [])
             instructions = metadata.get("instructions", [])
             
-            # Combine all contexts
-            all_contexts = json.dumps(contexts) + json.dumps(schema_data["schema_contexts"]) + json.dumps(instructions)
-
+            # Combine all contexts - contexts parameter contains DDL definitions from table retrieval
+            all_contexts = list(contexts)  # Start with the DDL contexts passed in (already selected by table retrieval)
+            all_contexts.extend(instructions)  # Add instructions
+            
+            print(f"=== ALL CONTEXTS IN GENERATE SQL INTERNAL ===")
+            print(f"Total contexts: {len(all_contexts)}")
+            print(f"DDL contexts from table retrieval: {len(contexts)}")
+            print(f"Instructions: {len(instructions)}")
+            
+            # Log each context with details
+            for i, context in enumerate(all_contexts):
+                context_type = "DDL from table retrieval" if i < len(contexts) else "Instruction"
+                print(f"Context {i} ({context_type}): {str(context)[:150]}..." if len(str(context)) > 150 else f"Context {i} ({context_type}): {str(context)}")
             if sql_pairs:
                 for pair in sql_pairs:
                     if isinstance(pair, dict):
@@ -669,6 +712,11 @@ Please provide your response in proper Markdown string format.
             
             # Add query and contexts
             instructions += f"\n### DATABASE SCHEMA ###\n{chr(10).join(all_contexts)}\n\n### QUESTION ###\nUser's Question: {query}\nCurrent Time: {config.show_current_time()}\n\nLet's think step by step."
+            
+            print(f"=== FINAL INSTRUCTIONS TO LLM ===")
+            print(f"Instructions length: {len(instructions)}")
+            print(f"Instructions preview: {instructions[:500]}...")
+            print(f"=== END INSTRUCTIONS PREVIEW ===")
             
             
             
@@ -1135,7 +1183,9 @@ Please provide your response in proper Markdown string format.
         """Internal SQL reasoning logic with enhanced metadata"""
         try:
             # Get additional metadata for better reasoning
-            project_id = kwargs.get("project_id", "default")
+            project_id = kwargs.get("project_id")
+            if not project_id:
+                raise ValueError("project_id is required")
             metadata = await self._retrieve_and_cache_metadata(
                 query=query,
                 project_id=project_id
@@ -1510,19 +1560,49 @@ Please provide your response in proper Markdown string format.
     
     async def _handle_sql_generation(self, query: str, **kwargs) -> Dict[str, Any]:
         """Handle SQL generation with RAG and self-correction"""
-        # Retrieve relevant schema
-        schema_data = await self.retrieval_helper.get_table_names_and_schema_contexts(
+        project_id = kwargs.get("project_id")
+        if not project_id:
+            raise ValueError("project_id is required")
+            
+        # Use the table retrieval run method to get properly selected columns and DDL
+        print(f"=== CALLING TABLE RETRIEVAL RUN METHOD ===")
+        print(f"Query: {query}")
+        print(f"Project ID: {project_id}")
+        
+        # Get the table retrieval instance from retrieval_helper
+        table_retrieval = self.retrieval_helper.retrievers["table_retrieval"]
+        
+        # Call the run method which includes column selection logic
+        retrieval_result = await table_retrieval.run(
             query=query,
-            project_id=kwargs.get("project_id", "default"),
-            table_retrieval={
-                "table_retrieval_size": 10,
-                "table_column_retrieval_size": 100,
-                "allow_using_db_schemas_without_pruning": False
-            }
+            project_id=project_id,
+            tables=None,
+            histories=None
         )
         
-        schema_contexts = schema_data.get("schema_contexts", [])
-        relationships = schema_data.get("relationships", [])
+        print(f"=== TABLE RETRIEVAL RUN RESULT ===")
+        print(f"Retrieval results count: {len(retrieval_result.get('retrieval_results', []))}")
+        print(f"Has calculated field: {retrieval_result.get('has_calculated_field', False)}")
+        print(f"Has metric: {retrieval_result.get('has_metric', False)}")
+        
+        # Extract schema contexts and relationships from the retrieval results
+        schema_contexts = []
+        relationships = []
+        
+        for result in retrieval_result.get("retrieval_results", []):
+            if isinstance(result, dict):
+                table_ddl = result.get("table_ddl", "")
+                if table_ddl:
+                    schema_contexts.append(table_ddl)
+                    print(f"Added DDL for table {result.get('table_name', 'unknown')}: {table_ddl[:100]}...")
+                
+                table_relationships = result.get("relationships", [])
+                if table_relationships:
+                    relationships.extend(table_relationships)
+        
+        print(f"=== EXTRACTED SCHEMA DATA ===")
+        print(f"Schema contexts count: {len(schema_contexts)}")
+        print(f"Relationships count: {len(relationships)}")
         
         # Generate reasoning first
         # Remove schema_contexts and contexts from kwargs to avoid duplicate parameter error
@@ -1540,9 +1620,9 @@ Please provide your response in proper Markdown string format.
             content = reasoning.content
             reasoning = content
         
-        # Generate SQL with the reasoning
+        # Generate SQL with the reasoning using the selected schema contexts
         sql_result = await self._generate_sql_internal(
-            query, schema_contexts, reasoning, kwargs.get("configuration", {}), relationships=relationships
+            query, schema_contexts, reasoning, kwargs.get("configuration", {}), relationships=relationships, **kwargs_copy
         )
         
         # Standardize the result format

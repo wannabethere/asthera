@@ -363,41 +363,61 @@ class DocumentChromaStore:
         if not docs:
             logger.warning("No documents provided to add to the vectorstore.")
             return
-            
+        
+        logger.info(f"Processing {len(docs)} documents for ChromaDB storage")
+        
         documents, ids = [], []
-        for doc in docs:
-            if isinstance(doc, LangchainDocument):
-                documents.append(doc)
-                document_id = str(uuid4())
-                if doc.metadata.get("id", None) is None:
-                    doc.metadata["id"] = document_id
-                ids.append(doc.metadata.get("id", document_id))
-                continue
-            else:
-                if not isinstance(doc, dict):
-                    logger.warning(f"Skipping invalid document format: {doc}")
+        for i, doc in enumerate(docs):
+            try:
+                if isinstance(doc, LangchainDocument):
+                    documents.append(doc)
+                    document_id = str(uuid4())
+                    if doc.metadata.get("id", None) is None:
+                        doc.metadata["id"] = document_id
+                    ids.append(doc.metadata.get("id", document_id))
                     continue
-                    
-                if 'metadata' not in doc or 'data' not in doc:
-                    logger.warning(f"Skipping document missing required fields: {doc}")
-                    continue    
-              
-                document_id, document = create_langchain_doc_util(metadata=doc['metadata'], data=doc['data'])    
-                if document and document_id:
-                    documents.append(document)
-                    ids.append(document_id)
+                else:
+                    if not isinstance(doc, dict):
+                        logger.warning(f"Skipping invalid document format: {type(doc)}")
+                        continue
+                        
+                    if 'metadata' not in doc or 'data' not in doc:
+                        logger.warning(f"Skipping document missing required fields: {list(doc.keys()) if isinstance(doc, dict) else 'Not a dict'}")
+                        continue    
+                  
+                    document_id, document = create_langchain_doc_util(metadata=doc['metadata'], data=doc['data'])    
+                    if document and document_id:
+                        documents.append(document)
+                        ids.append(document_id)
+                    else:
+                        logger.warning(f"Failed to create LangchainDocument from dict {i}")
+                        
+            except Exception as doc_error:
+                logger.error(f"Error processing document {i}: {doc_error}")
+                logger.error(f"Document {i} type: {type(doc)}")
+                raise doc_error
         
         if documents:
             # Compute embeddings for all documents
             embeddings = self.compute_document_embeddings(documents)
             
             if embeddings:
-                # Add documents with pre-computed embeddings
-                self.vectorstore.add_documents(
-                    documents=documents,
-                    ids=ids,
-                    embeddings=embeddings
-                )
+                # Add documents with pre-computed embeddings using ChromaDB wrapper
+                logger.info(f"Calling ChromaDB add_documents_with_embeddings with {len(documents)} documents")
+                
+                try:
+                    self.chroma_client.add_documents_with_embeddings(
+                        collection_name=self.collection_name,
+                        documents=[doc.page_content for doc in documents],
+                        ids=ids,
+                        embeddings=embeddings,
+                        metadata=[doc.metadata for doc in documents]
+                    )
+                    logger.info("ChromaDB add_documents_with_embeddings completed successfully")
+                except Exception as chroma_error:
+                    logger.error(f"ChromaDB add_documents_with_embeddings failed: {chroma_error}")
+                    logger.error(f"ChromaDB error type: {type(chroma_error).__name__}")
+                    raise chroma_error
                 
                 # Add TF-IDF vectors if enabled
                 if self.tf_idf:
@@ -405,14 +425,17 @@ class DocumentChromaStore:
                 
                 logger.info(f"Added {len(documents)} documents with embeddings to the vectorstore.")
                 print("documents added to the vectorstore", len(documents))
+                return ids  # Return the IDs that were used
             else:
                 # Fallback to regular document addition if embedding computation fails
-                self.vectorstore.add_documents(documents=documents, ids=ids)
+                self.vectorstore.add_documents(documents=documents)
                 if self.tf_idf:
                     self.add_tfidf_vectors(documents=documents, ids=ids)
                 logger.info(f"Added {len(documents)} documents to the vectorstore (without pre-computed embeddings).")
+                return ids  # Return the IDs that were used
         else:
             logger.warning("No valid documents were found to add to the vectorstore.")
+            return []
 
     def add_tfidf_vectors(self, documents: List[LangchainDocument], ids: List[str]):
         if not self.tf_idf:
@@ -428,7 +451,9 @@ class DocumentChromaStore:
             # Get all existing documents from TF-IDF collection to refit vectorizer
             try:
                 existing_docs = self.chroma_client.get_all_records(self.tfidf_collection_name)
-                existing_texts = existing_docs.get('documents', [])
+                logger.info(f"Retrieved existing docs from ChromaDB: {type(existing_docs)}")
+                logger.info(f"Existing docs keys: {existing_docs.keys() if isinstance(existing_docs, dict) else 'Not a dict'}")
+                existing_texts = existing_docs.get('documents', []) if isinstance(existing_docs, dict) else []
                 all_texts = existing_texts + texts
                 logger.info(f"Found {len(existing_texts)} existing documents, adding {len(texts)} new documents")
             except Exception as e:

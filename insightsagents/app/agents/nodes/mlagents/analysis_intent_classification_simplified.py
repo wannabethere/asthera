@@ -158,8 +158,10 @@ Analyze the user's question and create a high-level reasoning plan for data anal
 ### IMPORTANT CONSTRAINTS ###
 - **DO NOT include data preparation steps** - assume data is already clean and prepared by a separate agent
 - **DO NOT include visualization steps** - assume visualization is handled by other specialized agents
+- **DO NOT include summary/statistical summary steps** - assume summary generation is handled by other specialized agents
+- **DO NOT include reporting or presentation steps** - assume reporting is handled by other specialized agents
 - **Focus only on analytical computation steps** - calculations, aggregations, transformations, statistical analysis
-- **Start directly with the core analysis logic** - no data cleaning, validation, or visualization steps
+- **Start directly with the core analysis logic** - no data cleaning, validation, visualization, or summary steps
 
 ### FUNCTION SELECTION GUIDANCE ###
 When selecting functions for each step, consider these common analytical functions:
@@ -196,16 +198,17 @@ Example reasoning plan for "How does the 5-day rolling variance of flux change o
         "function_name": "variance_analysis",
         "pipeline_type": "TimeSeriesPipe",
         "data_requirements": ["group_columns", "rolling_variance_results", "date_column"]
-    }},
-    {{
-        "step_number": 3,
-        "step_title": "Statistical Summary",
-        "step_description": "Generate statistical summary of variance trends by group",
-        "function_name": "Variance",
-        "pipeline_type": "MetricsPipe",
-        "data_requirements": ["rolling_variance_results", "group_columns"]
     }}
 ]
+
+**IMPORTANT: Do NOT include summary, visualization, or reporting steps like:**
+- "Statistical Summary" 
+- "Generate Report"
+- "Create Visualization"
+- "Summary Statistics"
+- "Final Summary"
+- "Data Summary"
+- "Results Summary"
 
 ### OUTPUT FORMAT ###
 **CRITICAL: Provide your response as a VALID JSON object ONLY. Do NOT wrap it in markdown code blocks, do NOT use ```json or ```. Return pure JSON that can be parsed directly.**
@@ -473,8 +476,10 @@ For each step in the reasoning plan, create detailed reasoning that includes:
 ### IMPORTANT CONSTRAINTS ###
 - **DO NOT include data preparation functions** - assume data is already clean and prepared
 - **DO NOT include visualization functions** - assume visualization is handled by other agents
+- **DO NOT include summary/statistical summary functions** - assume summary generation is handled by other agents
+- **DO NOT include reporting or presentation functions** - assume reporting is handled by other agents
 - **Focus only on analytical computation functions** - calculations, aggregations, transformations, statistical analysis
-- **Skip any steps that are purely data cleaning, validation, or visualization**
+- **Skip any steps that are purely data cleaning, validation, visualization, or summary generation**
 
 ### OUTPUT FORMAT ###
 **CRITICAL: Provide your response as a VALID JSON object ONLY. Do NOT wrap it in markdown code blocks, do NOT use ```json or ```. Return pure JSON that can be parsed directly.**
@@ -642,9 +647,11 @@ Organize the detailed steps into a pipeline by:
 4. **Add pipeline metadata** - overall pipeline characteristics
 
 ### IMPORTANT CONSTRAINTS ###
-- **Focus only on analytical computation steps** - no data preparation or visualization steps
+- **Focus only on analytical computation steps** - no data preparation, visualization, or summary steps
 - **Ensure all steps are purely analytical** - calculations, aggregations, transformations, statistical analysis
-- **Skip any data cleaning, validation, or visualization steps** - these are handled by other agents
+- **Skip any data cleaning, validation, visualization, or summary steps** - these are handled by other agents
+- **DO NOT include summary/statistical summary steps** - assume summary generation is handled by other specialized agents
+- **DO NOT include reporting or presentation steps** - assume reporting is handled by other specialized agents
 
 ### OUTPUT FORMAT ###
 **CRITICAL: Provide your response as a VALID JSON object ONLY. Do NOT wrap it in markdown code blocks, do NOT use ```json or ```. Return pure JSON that can be parsed directly.**

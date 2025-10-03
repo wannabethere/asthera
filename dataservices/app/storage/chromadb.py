@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, List, Optional
 
 from chromadb import (
@@ -11,6 +12,8 @@ from chromadb import (
     Where,
     WhereDocument,
 )
+
+logger = logging.getLogger(__name__)
 
 class ChromaDB:
     def __init__(self, client=None, connection_params: Dict[str, Any] | None = None):
@@ -146,7 +149,7 @@ class ChromaDB:
             self._connect_client()
             collection: Collection = self.get_collection(collection_name)
 
-            # Convert list metadata values to strings and handle None values
+            # Convert metadata values to ChromaDB-compatible types
             if metadata:
                 processed_metadata = []
                 for meta in metadata:
@@ -154,12 +157,32 @@ class ChromaDB:
                     for key, value in meta.items():
                         if value is None:
                             processed_meta[key] = ""  # Convert None to empty string
+                        elif isinstance(value, bool):
+                            processed_meta[key] = value  # Keep bool as is
+                        elif isinstance(value, (int, float)):
+                            processed_meta[key] = value  # Keep numbers as is
+                        elif isinstance(value, str):
+                            processed_meta[key] = value  # Keep strings as is
                         elif isinstance(value, list):
+                            # Convert lists to comma-separated strings
                             processed_meta[key] = ", ".join(str(v) for v in value)
+                        elif isinstance(value, dict):
+                            # Convert dictionaries to JSON strings
+                            import json
+                            processed_meta[key] = json.dumps(value)
                         else:
-                            processed_meta[key] = value
+                            # Convert any other type to string
+                            processed_meta[key] = str(value)
+                    
+                    # Ensure metadata is not empty for ChromaDB 0.6.3 compatibility
+                    if not processed_meta:
+                        processed_meta = {"source": "document_upload"}
+                    
                     processed_metadata.append(processed_meta)
                 metadata = processed_metadata
+            else:
+                # Provide default metadata for each document if none provided
+                metadata = [{"source": "document_upload"} for _ in documents]
 
             collection.add(
                 documents=documents, ids=ids, metadatas=metadata
@@ -190,20 +213,50 @@ class ChromaDB:
             self._connect_client()
             collection: Collection = self.get_collection(collection_name)
 
-            # Convert list metadata values to strings and handle None values
+            logger.debug(f"ChromaDB add_documents_with_embeddings: {len(documents)} documents, {len(ids)} ids, {len(embeddings)} embeddings")
+
+            # Convert metadata values to ChromaDB-compatible types
             if metadata:
                 processed_metadata = []
-                for meta in metadata:
-                    processed_meta = {}
-                    for key, value in meta.items():
-                        if value is None:
-                            processed_meta[key] = ""  # Convert None to empty string
-                        elif isinstance(value, list):
-                            processed_meta[key] = ", ".join(str(v) for v in value)
-                        else:
-                            processed_meta[key] = value
-                    processed_metadata.append(processed_meta)
+                for i, meta in enumerate(metadata):
+                    try:
+                        processed_meta = {}
+                        for key, value in meta.items():
+                            if value is None:
+                                processed_meta[key] = ""  # Convert None to empty string
+                            elif isinstance(value, bool):
+                                processed_meta[key] = value  # Keep bool as is
+                            elif isinstance(value, (int, float)):
+                                processed_meta[key] = value  # Keep numbers as is
+                            elif isinstance(value, str):
+                                processed_meta[key] = value  # Keep strings as is
+                            elif isinstance(value, list):
+                                # Convert lists to comma-separated strings
+                                processed_meta[key] = ", ".join(str(v) for v in value)
+                            elif isinstance(value, dict):
+                                # Convert dictionaries to JSON strings
+                                import json
+                                processed_meta[key] = json.dumps(value)
+                            else:
+                                # Convert any other type to string
+                                processed_meta[key] = str(value)
+
+                        # Ensure metadata is not empty for ChromaDB 0.6.3 compatibility
+                        if not processed_meta:
+                            processed_meta = {"source": "document_upload"}
+
+                        processed_metadata.append(processed_meta)
+                    except Exception as meta_error:
+                        logger.error(f"Error processing metadata {i}: {meta_error}")
+                        logger.error(f"Metadata {i} type: {type(meta)}")
+                        logger.error(f"Metadata {i} content: {meta}")
+                        raise meta_error
                 metadata = processed_metadata
+            else:
+                # Provide default metadata for each document if none provided
+                metadata = [{"source": "document_upload"} for _ in documents]
+
+            logger.debug(f"Processed metadata length: {len(metadata)}")
 
             collection.add(
                 documents=documents, ids=ids, embeddings=embeddings, metadatas=metadata
@@ -330,4 +383,22 @@ class ChromaDB:
         except Exception as e:
             raise Exception(
                 f"Failed to get record {document_id} from collection {collection_name}: {str(e)}"
+            ) from e
+
+    def get_all_records(self, collection_name: str) -> Dict:
+        """Get all records from a collection.
+
+        Args:
+            collection_name: Name of the collection
+
+        Returns:
+            Dict containing all records with documents, metadatas, and ids
+        """
+        try:
+            self._connect_client()
+            collection: Collection = self.get_collection(collection_name)
+            return collection.get(include=["documents", "metadatas", "ids"])
+        except Exception as e:
+            raise Exception(
+                f"Failed to get all records from collection {collection_name}: {str(e)}"
             ) from e

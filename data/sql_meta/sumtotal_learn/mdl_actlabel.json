@@ -1,0 +1,62 @@
+{
+  "catalog": "sumtotal_learn",
+  "schema": "public",
+  "models": [
+    {
+      "name": "actlabel_sumtotal",
+      "description": "This table serves as a lookup or dictionary for all possible learning activity types. It defines the distinct categories (e.g., 'eLearning Course', 'Instructor-Led Training') that an activity can be classified as within the system. Use this table when you need to: 1. Categorize and filter learning activities by type, 2. Generate activity type reports and analytics, 3. Configure different learning paths based on activity categories, 4. Display activity type icons and labels in the UI, 5. Set up automated workflows based on activity types, 6. Create learning catalogs organized by activity categories.",
+      "tableReference": {
+        "catalog": "sumtotal_learn",
+        "schema": "public",
+        "table": "actlabel_sumtotal"
+      },
+      "columns": [
+        {
+          "name": "actlabel_pk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Activity Label Primary Key",
+            "description": "The unique primary key for an activity type. This identifier is referenced by the 'activitylabelfk' in the main activity table to categorize each learning activity."
+          }
+        },
+        {
+          "name": "actlabel_name",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Activity Label Name",
+            "description": "The official, user-facing name of the activity type or category (e.g., 'Virtual Classroom', 'Assessment', 'Webinar')."
+          }
+        },
+        {
+          "name": "labeldesc",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Label Description",
+            "description": "A detailed description of the activity type, explaining its purpose or what it represents."
+          }
+        },
+        {
+          "name": "icon",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Icon",
+            "description": "A reference to a graphical icon used in the user interface to visually represent the activity type."
+          }
+        },
+        {
+          "name": "createddate_ts",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Created Date Timestamp",
+            "description": "The exact date and time when the activity type was first defined in the system."
+          }
+        }
+      ],
+      "primaryKey": "actlabel_pk",
+      "properties": {
+        "displayName": "Activity Label Table",
+        "description": "This table serves as a lookup or dictionary for all possible learning activity types. It defines the distinct categories (e.g., 'eLearning Course', 'Instructor-Led Training') that an activity can be classified as within the system."
+      }
+    }
+  ]
+}

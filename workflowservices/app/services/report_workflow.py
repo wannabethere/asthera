@@ -16,7 +16,7 @@ from app.models.workflowmodels import SharingPermission
 from app.services.reportservice import ReportService
 from app.models.workflowmodels import (
     WorkflowState, ComponentType, ShareType, ScheduleType, IntegrationType,
-    ThreadComponentCreate, ShareConfigCreate, ScheduleConfigCreate,
+    ThreadComponent, ThreadComponentCreate, ShareConfigCreate, ScheduleConfigCreate,
     IntegrationConfigCreate, AlertType, AlertSeverity, AlertStatus,
     AlertThreadComponentCreate, AlertThreadComponentUpdate
 )
@@ -403,21 +403,61 @@ class ReportWorkflowService(BaseService):
         # Get formatting
         formatting = workflow.formatting or {}
         
-        # Get alert components
+        # Get alert components from ThreadComponent table
         alert_components = []
+        
+        # First, get alert components from ThreadComponent table
+        stmt = select(ThreadComponent).where(
+            and_(
+                ThreadComponent.workflow_id == workflow.id,
+                ThreadComponent.component_type == ComponentType.ALERT
+            )
+        ).order_by(ThreadComponent.sequence_order)
+        result = await self.db.execute(stmt)
+        thread_alert_components = result.scalars().all()
+        
+        for component in thread_alert_components:
+            alert_config = component.alert_config or {}
+            alert_components.append({
+                "id": str(component.id),
+                "question": component.question,
+                "description": component.description,
+                "alert_type": alert_config.get("alert_type"),
+                "severity": alert_config.get("severity"),
+                "alert_status": component.alert_status.value if component.alert_status else None,
+                "trigger_count": component.trigger_count or 0,
+                "last_triggered": component.last_triggered.isoformat() if component.last_triggered else None,
+                "created_at": component.created_at.isoformat(),
+                "sql_query": component.sql_query,
+                "executive_summary": component.executive_summary,
+                "data_overview": component.data_overview,
+                "visualization_data": component.visualization_data,
+                "sample_data": component.sample_data,
+                "metadata": component.thread_metadata,
+                "chart_schema": component.chart_schema,
+                "reasoning": component.reasoning,
+                "data_count": component.data_count,
+                "validation_results": component.validation_results
+            })
+        
+        # Also include alert components from workflow metadata (for backward compatibility)
         if workflow.workflow_metadata and "alerts" in workflow.workflow_metadata:
             for alert in workflow.workflow_metadata["alerts"]:
-                alert_components.append({
-                    "id": alert["id"],
-                    "question": alert["question"],
-                    "description": alert["description"],
-                    "alert_type": alert["alert_config"]["alert_type"],
-                    "severity": alert["alert_config"]["severity"],
-                    "alert_status": alert["alert_status"],
-                    "trigger_count": alert["trigger_count"],
-                    "last_triggered": alert["last_triggered"],
-                    "created_at": alert["created_at"]
-                })
+                # Check if this alert is already included from ThreadComponent table
+                alert_id = alert["id"]
+                if not any(comp["id"] == alert_id for comp in alert_components):
+                    alert_components.append({
+                        "id": alert["id"],
+                        "question": alert["question"],
+                        "description": alert["description"],
+                        "alert_type": alert["alert_config"]["alert_type"],
+                        "severity": alert["alert_config"]["severity"],
+                        "alert_status": alert["alert_status"],
+                        "trigger_count": alert["trigger_count"],
+                        "last_triggered": alert["last_triggered"],
+                        "created_at": alert["created_at"],
+                        "sql_query": alert.get("sql_query")
+                    })
         
         # Get draft changes
         draft_changes = workflow.workflow_metadata.get("draft_changes", {})
@@ -697,7 +737,17 @@ class ReportWorkflowService(BaseService):
                 "last_triggered": None,
                 "configuration": alert_data.configuration,
                 "created_at": utc_now().isoformat(),
-                "created_by": str(user_id)
+                "created_by": str(user_id),
+                "sql_query": alert_data.sql_query,
+                "executive_summary": alert_data.executive_summary,
+                "data_overview": alert_data.data_overview,
+                "visualization_data": alert_data.visualization_data,
+                "sample_data": alert_data.sample_data,
+                "metadata": alert_data.metadata,
+                "chart_schema": alert_data.chart_schema,
+                "reasoning": alert_data.reasoning,
+                "data_count": alert_data.data_count,
+                "validation_results": alert_data.validation_results
             }
 
             workflow.workflow_metadata["alerts"].append(alert_component)
@@ -798,6 +848,28 @@ class ReportWorkflowService(BaseService):
             alert_component["alert_status"] = update_data.alert_status.value
         if update_data.configuration:
             alert_component["configuration"] = update_data.configuration
+        
+        # Update SQL-related fields
+        if update_data.sql_query is not None:
+            alert_component["sql_query"] = update_data.sql_query
+        if update_data.executive_summary is not None:
+            alert_component["executive_summary"] = update_data.executive_summary
+        if update_data.data_overview is not None:
+            alert_component["data_overview"] = update_data.data_overview
+        if update_data.visualization_data is not None:
+            alert_component["visualization_data"] = update_data.visualization_data
+        if update_data.sample_data is not None:
+            alert_component["sample_data"] = update_data.sample_data
+        if update_data.metadata is not None:
+            alert_component["metadata"] = update_data.metadata
+        if update_data.chart_schema is not None:
+            alert_component["chart_schema"] = update_data.chart_schema
+        if update_data.reasoning is not None:
+            alert_component["reasoning"] = update_data.reasoning
+        if update_data.data_count is not None:
+            alert_component["data_count"] = update_data.data_count
+        if update_data.validation_results is not None:
+            alert_component["validation_results"] = update_data.validation_results
 
         alert_component["updated_at"] = utc_now().isoformat()
 
@@ -1008,7 +1080,12 @@ class ReportWorkflowService(BaseService):
     async def _get_report_workflow(self, workflow_id: UUID, user_id: UUID) -> ReportWorkflow:
         """Get report workflow with permission check"""
 
-        stmt = select(ReportWorkflow).where(ReportWorkflow.id == workflow_id)
+        stmt = select(ReportWorkflow).options(
+            joinedload(ReportWorkflow.share_configs),
+            joinedload(ReportWorkflow.schedule_config),
+            joinedload(ReportWorkflow.integrations),
+            joinedload(ReportWorkflow.thread_components)
+        ).where(ReportWorkflow.id == workflow_id)
         result = await self.db.execute(stmt)
         workflow = result.scalar_one_or_none()
 

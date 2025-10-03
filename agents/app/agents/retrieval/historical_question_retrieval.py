@@ -124,7 +124,8 @@ class HistoricalQuestionRetrieval:
         Returns:
             List of retrieved LangchainDocument objects
         """
-        where = {"project_id": project_id} if project_id else None
+        # Only add project_id filter if it's not "default"
+        where = {"project_id": project_id} if project_id and project_id != "default" else None
         
         results = self._document_store.semantic_search(
             query=query,

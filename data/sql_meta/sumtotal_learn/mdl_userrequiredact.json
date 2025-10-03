@@ -1,0 +1,134 @@
+{
+  "catalog": "sumtotal_learn",
+  "schema": "public",
+  "models": [
+    {
+      "name": "tbl_tmx_userrequiredact_sumtotal",
+      "description": "This table tracks required learning assignments for users. It contains all mandatory and recommended learning activities assigned to specific users, including due dates, completion status, and assignment details. This is the table for finding what learning activities a user is required to complete. Use this table when you need to: 1. Find what learning activities are assigned to a user, 2. Track mandatory vs. optional learning assignments, 3. Check due dates and completion status of user assignments, 4. Generate compliance reports for required training, 5. Send notifications for overdue assignments, 6. Manage learning deadlines and expiration dates, 7. Track certification requirements and renewals, 8. Generate manager reports on team learning assignments.",
+      "tableReference": {
+        "catalog": "sumtotal_learn",
+        "schema": "public",
+        "table": "tbl_tmx_userrequiredact_sumtotal"
+      },
+      "columns": [
+        {
+          "name": "empfk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Employee Foreign Key",
+            "description": "Foreign key reference to the person_sumtotal table, linking user activities to specific employees."
+          }
+        },
+        {
+          "name": "activityfk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Activity Foreign Key",
+            "description": "Foreign key referencing the activity_sumtotal table associated with user-required actions."
+          }
+        },
+        {
+          "name": "reqstate",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Request State",
+            "description": "Indicates the current state of a user-required action in the system. THe value is 1 for active and 0 for inactive."
+          }
+        },
+        {
+          "name": "notifstatus",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Notification Status",
+            "description": "Status of the notification related to user-required activities."
+          }
+        },
+        {
+          "name": "reqstatus",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Request Status",
+            "description": "Indicates the current status of user's activity-assignment. This has ENrolled, Assigned, In Progress, Completed, Overdue, Expired."
+          }
+        },
+        {
+          "name": "plandate",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Plan Date",
+            "description": "The primary status of the user's assignment, indicating their progress (e.g., 'Assigned', 'In Progress', 'Overdue', 'Completed')."
+          }
+        },
+        {
+          "name": "duedate",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Due Date",
+            "description": "The deadline by which the user is required to complete this learning assignment."
+          }
+        },
+        {
+          "name": "expirationdate",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Expiration Date",
+            "description": "The date when a user-required action is set to expire. Referenced as Expiration date."
+          }
+        },
+        {
+          "name": "notif_plandate",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Notification Planned Date",
+            "description": "The date when a notification is planned to be sent, represented as a string in timestamp format without time zone."
+          }
+        },
+        {
+          "name": "notif_duedate",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Notification Due Date",
+            "description": "The date by which a notification related to user-required activities is due."
+          }
+        },
+        {
+          "name": "issatisfied",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Is Satisfied",
+            "description": "Indicates whether the user is satisfied with the activity or requirement."
+          }
+        },
+        {
+          "name": "isrequired",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Is Required",
+            "description": "Indicates whether a specific activity is required for the user."
+          }
+        },
+        {
+          "name": "iscertification",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Is Certification",
+            "description": "Indicates whether whether the activity is a certification or not."
+          }
+        },
+        {
+          "name": "lstupd",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Last Updated",
+            "description": "Timestamp indicating the last time the record was updated."
+          }
+        }
+      ],
+      "primaryKey": "empfk",
+      "properties": {
+        "displayName": "User Required Activity Table",
+        "description": "This table tracks required learning assignments for users. It contains all mandatory and recommended learning activities assigned to specific users, including due dates, completion status, and assignment details. This is the table for finding what learning activities a user is required to complete."
+      }
+    }
+  ]
+}

@@ -31,19 +31,40 @@ class TableDescriptionChunker:
 
         # Create chunks
         logger.info("Creating document chunks")
-        chunks = [
-            {
-                "page_content": str(chunk),
+        chunks = []
+        for chunk in table_descriptions:
+            # Create stringified dictionary content (compatible with ast.literal_eval)
+            content_dict = {
+                "name": chunk['name'],
+                "mdl_type": chunk['mdl_type'],
+                "type": "TABLE_DESCRIPTION",
+                "description": chunk['description'],
+                "columns": ', '.join(chunk['columns']) if isinstance(chunk['columns'], list) else str(chunk['columns'])
+            }
+
+            # Add relationships if they exist
+            if chunk.get('relationships'):
+                content_dict["relationships"] = chunk['relationships']
+
+            # Convert to stringified dictionary
+            page_content = str(content_dict)
+            
+            # Debug logging
+            logger.info(f"Created page content for {chunk['name']}:")
+            logger.info(f"Description in content: {chunk['description'][:100]}...")
+            logger.info(f"Page content preview: {page_content[:200]}...")
+            
+            chunks.append({
+                "page_content": page_content,
                 "metadata": {
-                    "type": chunk["mdl_type"],
+                    "type": "TABLE_DESCRIPTION",
+                    "mdl_type": chunk["mdl_type"],
                     "name": chunk["name"],
                     "description": chunk["description"],
                     "relationships": chunk.get("relationships", []),
                     **_additional_meta(),
                 }
-            }
-            for chunk in table_descriptions
-        ]
+            })
         
         logger.info(f"Created {len(chunks)} document chunks")
         
@@ -61,7 +82,7 @@ class TableDescriptionChunker:
 
         return {"documents": documents}
 
-    def _get_table_descriptions(self, mdl: Dict[str, Any]) -> List[str]:
+    def _get_table_descriptions(self, mdl: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Extract table descriptions from MDL."""
         logger.info("Starting table description extraction from MDL")
         
@@ -69,6 +90,7 @@ class TableDescriptionChunker:
             return {
                 "mdl_type": mdl_type,
                 "name": payload.get("name"),
+                "description": payload.get("description", ""),
                 "columns": [column["name"] for column in payload.get("columns", [])],
                 "properties": payload.get("properties", {}),
             }
@@ -120,15 +142,20 @@ class TableDescriptionChunker:
                 table_name = resource["name"]
                 table_rels = table_relationships.get(table_name, [])
                 
+                # Debug logging
+                logger.info(f"Processing resource: {table_name}")
+                logger.info(f"Resource description: {resource.get('description', 'NO DESCRIPTION')}")
+                
                 description = {
                     "name": table_name,
                     "mdl_type": resource["mdl_type"],
                     "type": "TABLE_DESCRIPTION",
-                    "description": resource["properties"].get("description", ""),
+                    "description": resource.get("description", ""),
                     "columns": ", ".join(resource["columns"]),
                     "relationships": table_rels
                 }
                 descriptions.append(description)
+                logger.info(f"Created description for {table_name}: {description['description'][:100]}...")
         
         logger.info(f"Created {len(descriptions)} table descriptions with relationships")
         

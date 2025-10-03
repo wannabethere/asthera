@@ -686,13 +686,18 @@ class DocumentIngestionService:
                     extraction_result = self._perform_extraction(content, chunks, questions)
                 
                 # Create Document object
+                # Ensure metadata is not empty for ChromaDB 0.6.3 compatibility
+                document_metadata = metadata or {}
+                if not document_metadata:
+                    document_metadata = {"source": "document_upload", "created_by": created_by}
+                
                 document = self._create_document(
                     content=content,
                     source_type=source_type,
                     document_type=document_type,
                     created_by=created_by,
                     domain_id=domain_id,
-                    metadata=metadata or {}
+                    metadata=document_metadata
                 )
                 
                 # Create DocumentInsight object with chunks
@@ -714,6 +719,10 @@ class DocumentIngestionService:
                 if self.config.store_in_chromadb and self.chroma_store:
                     chromadb_ids = self._store_in_chromadb(document, document_insight, chunks)
                     document_insight.chromadb_ids = chromadb_ids
+                    if not chromadb_ids:
+                        logger.warning(f"ChromaDB storage failed for document {document.id} - no IDs returned")
+                    else:
+                        logger.info(f"ChromaDB storage successful for document {document.id} - {len(chromadb_ids)} chunks stored")
                 
                 await session.commit()
                 
@@ -1026,6 +1035,12 @@ class DocumentIngestionService:
                           chunks: List[DocumentChunk]) -> List[str]:
         """Store document chunks in ChromaDB with flexible insights metadata"""
         try:
+            logger.info(f"Starting ChromaDB storage for document {document.id}")
+            logger.info(f"Document type: {document.document_type}, source: {document.source_type}")
+            logger.info(f"Number of chunks to process: {len(chunks) if chunks else 0}")
+            logger.info(f"ChromaDB store initialized: {self.chroma_store is not None}")
+            logger.info(f"TF-IDF enabled: {self.chroma_store.tf_idf if self.chroma_store else False}")
+            
             chromadb_ids = []
             
             # Parse extraction date for metadata
@@ -1049,6 +1064,8 @@ class DocumentIngestionService:
                 "extraction_types": insight.extraction_config.get("extraction_types", []) if insight.extraction_config else [],
                 "extraction_version": insight.extraction_config.get("extraction_version", "1.0") if insight.extraction_config else "1.0",
             }
+            
+            logger.debug(f"Base metadata created with {len(base_metadata)} fields: {list(base_metadata.keys())}")
             
             # Add simplified metadata
             base_metadata.update({
@@ -1091,36 +1108,96 @@ class DocumentIngestionService:
                 base_metadata["entity_count"] = len(insight.insights.get("extracted_entities", {}))
             
             # Create Langchain documents from chunks
+            logger.info(f"Creating Langchain documents from {len(chunks)} chunks for document {document.id}")
             langchain_docs = []
+            
+            # Validate chunks before processing
+            logger.debug(f"Chunks type: {type(chunks)}, length: {len(chunks) if chunks else 0}")
+            
             for i, chunk in enumerate(chunks):
-                chunk_metadata = {
-                    **base_metadata,
-                    **chunk.metadata,
-                    "chunk_index": i,
-                    "chunk_id": chunk.chunk_id,
-                    "chunk_length": len(chunk.content),
-                    # Add all insights data to metadata for searchability
-                    "insights": insight.insights or {},
-                    "extraction_config": insight.extraction_config or {},
-                }
-                
-                doc = LangchainDocument(
-                    page_content=chunk.content,
-                    metadata=chunk_metadata
-                )
-                langchain_docs.append(doc)
+                try:
+                    # Handle both DocumentChunk objects and dictionaries
+                    if isinstance(chunk, dict):
+                        # Extract data from dictionary format
+                        chunk_content = chunk.get('content', chunk.get('page_content', ''))
+                        chunk_meta = chunk.get('metadata', {})
+                        chunk_id = chunk.get('chunk_id', f"chunk_{i}")
+                    else:
+                        # Handle DocumentChunk object format
+                        if not hasattr(chunk, 'metadata'):
+                            logger.error(f"Chunk {i} does not have metadata attribute. Chunk type: {type(chunk)}")
+                            continue
+                        
+                        if not hasattr(chunk, 'content'):
+                            logger.error(f"Chunk {i} does not have content attribute")
+                            continue
+                        
+                        if not hasattr(chunk, 'chunk_id'):
+                            logger.error(f"Chunk {i} does not have chunk_id attribute")
+                            continue
+                        
+                        chunk_content = chunk.content
+                        chunk_meta = chunk.metadata or {}
+                        chunk_id = chunk.chunk_id
+                    
+                    chunk_metadata = {
+                        **base_metadata,
+                        **chunk_meta,
+                        "chunk_index": i,
+                        "chunk_id": chunk_id,
+                        "chunk_length": len(chunk_content),
+                        # Add all insights data to metadata for searchability
+                        "insights": insight.insights or {},
+                        "extraction_config": insight.extraction_config or {},
+                    }
+                    
+                    # Ensure metadata is not empty for ChromaDB 0.6.3 compatibility
+                    if not chunk_metadata:
+                        logger.warning(f"Chunk {i} metadata was empty, using default metadata")
+                        chunk_metadata = {"source": "document_upload", "chunk_index": i}
+                    
+                    doc = LangchainDocument(
+                        page_content=chunk_content,
+                        metadata=chunk_metadata
+                    )
+                    langchain_docs.append(doc)
+                    
+                except Exception as chunk_error:
+                    logger.error(f"Error processing chunk {i}: {chunk_error}")
+                    logger.error(f"Chunk {i} error type: {type(chunk_error).__name__}")
+                    raise chunk_error
+            
+            logger.info(f"Created {len(langchain_docs)} Langchain documents, attempting ChromaDB storage")
             
             # Store in ChromaDB
-            ids = self.chroma_store.add_documents([{
-                "metadata": doc.metadata,
-                "data": doc.page_content
-            } for doc in langchain_docs])
+            try:
+                logger.info(f"Calling chroma_store.add_documents with {len(langchain_docs)} documents")
+                ids = self.chroma_store.add_documents(langchain_docs)
+                logger.info(f"ChromaDB storage completed. Returned: {ids}")
+                logger.info(f"ChromaDB storage successful: {len(ids) if ids else 0} document IDs returned")
+                if ids:
+                    logger.debug(f"ChromaDB IDs: {ids[:3]}{'...' if len(ids) > 3 else ''}")
+                else:
+                    logger.warning("ChromaDB storage returned empty IDs list")
+                    # Add more debugging to understand why no IDs are returned
+                    logger.warning("ChromaDB storage completed but returned no IDs - this may indicate an issue with the ChromaDB wrapper")
+            except Exception as chroma_error:
+                logger.error(f"ChromaDB storage failed: {chroma_error}")
+                logger.error(f"ChromaDB error type: {type(chroma_error).__name__}")
+                logger.error(f"ChromaDB error details: {str(chroma_error)}")
+                raise chroma_error
             
             # Store chunk content and key phrases for TF-IDF indexing
             if insight.chunk_content and self.chroma_store.tf_idf:
-                self._store_tfidf_content(document, insight, langchain_docs)
+                logger.info(f"Starting TF-IDF storage for {len(langchain_docs)} documents")
+                try:
+                    self._store_tfidf_content(document, insight, langchain_docs)
+                    logger.info("TF-IDF storage completed successfully")
+                except Exception as tfidf_error:
+                    logger.error(f"TF-IDF storage failed: {tfidf_error}")
+                    # Don't raise here as TF-IDF is optional
             
-            logger.info(f"Stored {len(langchain_docs)} chunks in ChromaDB with flexible insights metadata")
+            logger.info(f"Successfully stored {len(langchain_docs)} chunks in ChromaDB with flexible insights metadata")
             return ids or []
             
         except Exception as e:
@@ -1557,7 +1634,7 @@ class DocumentIngestionService:
 
 
 # Helper function to create services with proper initialization
-def create_services_with_config(config: ServiceConfig = None, chroma_path: str = "./chroma_db") -> Tuple['DocumentIngestionService', 'DocumentPersistenceService']:
+def create_services_with_config(config: ServiceConfig = None, chroma_client: chromadb.PersistentClient = None, chroma_path: str = "./chroma_db") -> Tuple['DocumentIngestionService', 'DocumentPersistenceService']:
     """Create both DocumentIngestionService and DocumentPersistenceService with proper initialization"""
     from app.service.document_persistence_service import create_document_persistence_service
     
@@ -1570,10 +1647,11 @@ def create_services_with_config(config: ServiceConfig = None, chroma_path: str =
     # Initialize domain manager (with None for async usage)
     domain_manager = DomainManager(None)
     
-    # Create ingestion service
+    # Create ingestion service with provided client or fallback to path
     ingestion_service = create_ingestion_service(
         session_manager=session_manager,
         domain_manager=domain_manager,
+        chroma_client=chroma_client,
         chroma_path=chroma_path
     )
     
@@ -1588,14 +1666,16 @@ def create_services_with_config(config: ServiceConfig = None, chroma_path: str =
 # Example usage and factory functions
 def create_ingestion_service(session_manager: SessionManager,
                            domain_manager: DomainManager,
+                           chroma_client: chromadb.PersistentClient = None,
                            chroma_path: str = "./chroma_db",
                            collection_name: str = "documents",
                            extraction_types: List[str] = None,
                            custom_extraction_config: Dict = None) -> DocumentIngestionService:
     """Factory function to create a configured ingestion service with session manager"""
     
-    # Initialize ChromaDB client
-    chroma_client = chromadb.PersistentClient(path=chroma_path)
+    # Use provided client or create a new one
+    if chroma_client is None:
+        chroma_client = chromadb.PersistentClient(path=chroma_path)
     
     # Configure processing with flexible extraction types
     config = ProcessingConfig(

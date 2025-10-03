@@ -1,0 +1,351 @@
+{
+  "table_id": "2f276be0-4600-47fd-9142-90334676c3d2",
+  "name": "person_sumtotal",
+  "display_name": "person_sumtotal",
+  "description": "This table contains comprehensive information about individuals, including personal identifiers, names, demographics, and employment details, serving as a source for various applications within the Sumtotal Learn system.",
+  "table_type": "table",
+  "dataset_id": "44c9e3e2-4bdf-421c-a1c3-379dff92e1b5",
+  "dataset_name": "Sumtotal Learn Dataset",
+  "created_at": "2025-09-26T20:23:50.605953+00:00",
+  "updated_at": "2025-09-26T20:23:50.605953+00:00",
+  "entity_version": 1,
+  "columns": [
+    {
+      "column_id": "2da779a1-089a-4053-ac98-f60fbbfa3b13",
+      "name": "personpk",
+      "display_name": "Person Primary Key",
+      "description": "Unique identifier for each person in the person_sumtotal table.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "identifier",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 1
+    },
+    {
+      "column_id": "c06a15ab-0017-41e0-b53d-c8d09e0ade83",
+      "name": "personguid",
+      "display_name": "Person GUID",
+      "description": "A unique identifier for individuals in the person_sumtotal table.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "identifier",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 2
+    },
+    {
+      "column_id": "4efdac7b-3497-408d-a249-8f3c7443bedb",
+      "name": "lastname",
+      "display_name": "Last Name",
+      "description": "Column representing the last name of a person.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 5
+    },
+    {
+      "column_id": "f7a47b2d-f770-4fb4-a4f1-e6dc480823c4",
+      "name": "firstname",
+      "display_name": "First Name",
+      "description": "The first name of the person, represented as a text string.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 6
+    },
+    {
+      "column_id": "0b50f03d-8698-4d5b-94b0-6df041a903d0",
+      "name": "middlename",
+      "display_name": "Middle Name",
+      "description": "The middle name of a person, stored as a variable character string.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 7
+    },
+    {
+      "column_id": "fe5411af-7cc6-4213-bf4a-d55601174af9",
+      "name": "fullname",
+      "display_name": "Full Name",
+      "description": "The full name of the person, combining first, middle, and last names.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 34
+    },
+    {
+      "column_id": "0b2b3781-cc5b-4da3-aed7-5a6011ccbafd",
+      "name": "active",
+      "display_name": "Active Status",
+      "description": "Indicates whether a person is currently active in the system.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "flag",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 15
+    },
+    {
+      "column_id": "733b91d6-dbfe-4e91-ac6f-104c6dd09a0b",
+      "name": "gendercode",
+      "display_name": "Gender Code",
+      "description": "Column representing the gender of a person, stored as a text value.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 19
+    },
+    {
+      "column_id": "24c7dec2-c90c-4d53-b58d-fb80782e534f",
+      "name": "birthdate",
+      "display_name": "Birthdate",
+      "description": "The date of birth of the person, stored as a string in the format YYYY-MM-DD.",
+      "column_type": "column",
+      "data_type": "VARCHAR(timestamp without time zone)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 27
+    },
+    {
+      "column_id": "57568c17-b355-4fc0-aa9a-32f4e91932ae",
+      "name": "companycd",
+      "display_name": "Company Code",
+      "description": "A code representing the company associated with a person.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 23
+    },
+    {
+      "column_id": "1a5b6715-4bd6-4a17-a9e6-86b4d8753264",
+      "name": "companyname",
+      "display_name": "Company Name",
+      "description": "The name of the company associated with the person.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 24
+    },
+    {
+      "column_id": "53de8112-0b46-4b99-ac4d-ec119b6caf8e",
+      "name": "startdate",
+      "display_name": "Start Date",
+      "description": "The date when a person record becomes effective, represented as a string in the format YYYY-MM-DD.",
+      "column_type": "column",
+      "data_type": "VARCHAR(timestamp without time zone)",
+      "usage_type": "timestamp",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 25
+    },
+    {
+      "column_id": "9d988b3b-6a64-440f-9ebf-3005446de43d",
+      "name": "enddate",
+      "display_name": "End Date",
+      "description": "The date when a person's record is considered inactive or no longer valid.",
+      "column_type": "column",
+      "data_type": "VARCHAR(timestamp without time zone)",
+      "usage_type": "timestamp",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 26
+    },
+    {
+      "column_id": "e73872a1-834b-44a7-a9e4-93472213ed3f",
+      "name": "deleted",
+      "display_name": "Deleted Indicator",
+      "description": "Indicates whether a person record has been deleted.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "flag",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 30
+    },
+    {
+      "column_id": "4328fa6d-2cec-4849-84e6-c90c03962385",
+      "name": "createddate",
+      "display_name": "Created Date",
+      "description": "Date when the record was created in the system.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "timestamp",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 40
+    }
+  ],
+  "metadata": {
+    "columns": [
+      {
+        "name": "personpk",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column personpk",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "personguid",
+        "data_type": "VARCHAR(text)",
+        "description": "Column personguid",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "lastname",
+        "data_type": "VARCHAR(text)",
+        "description": "Column lastname",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "firstname",
+        "data_type": "VARCHAR(text)",
+        "description": "Column firstname",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "middlename",
+        "data_type": "VARCHAR(text)",
+        "description": "Column middlename",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "fullname",
+        "data_type": "VARCHAR(text)",
+        "description": "Column fullname",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "active",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column active",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "gendercode",
+        "data_type": "VARCHAR(text)",
+        "description": "Column gendercode",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "birthdate",
+        "data_type": "VARCHAR(timestamp without time zone)",
+        "description": "Column birthdate",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "companycd",
+        "data_type": "VARCHAR(text)",
+        "description": "Column companycd",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "companyname",
+        "data_type": "VARCHAR(text)",
+        "description": "Column companyname",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "startdate",
+        "data_type": "VARCHAR(timestamp without time zone)",
+        "description": "Column startdate",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "enddate",
+        "data_type": "VARCHAR(timestamp without time zone)",
+        "description": "Column enddate",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "deleted",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column deleted",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "createddate",
+        "data_type": "VARCHAR(text)",
+        "description": "Column createddate",
+        "is_nullable": true,
+        "is_primary_key": false
+      }
+    ],
+    "data_lineage": "Data is sourced from various personal information inputs and is populated through automated processes that integrate with the Sumtotal Learn platform.",
+    "data_retention": "Data is retained for a period of 7 years to comply with business and regulatory requirements.",
+    "access_patterns": [
+      "Frequent read access for user management and reporting by administrators",
+      "Occasional write access for updates by HR and user management systems"
+    ],
+    "business_purpose": "The person_sumtotal table exists to centralize and manage personal information, enabling better user management, reporting, and personalization within the Sumtotal Learn system.",
+    "update_frequency": "daily",
+    "key_relationships": [
+      "Person to organization relationships for organizational reporting",
+      "Person to activity relationships for learning progress tracking"
+    ],
+    "primary_use_cases": [
+      "User identification and authentication",
+      "Personalized learning experiences",
+      "Demographic analysis and reporting",
+      "User management and administration"
+    ]
+  }
+}

@@ -1,0 +1,184 @@
+{
+  "catalog": "sumtotal_learn",
+  "schema": "public",
+  "models": [
+    {
+      "name": "tbl_tmx_activity_sumtotal",
+      "description": "This table defines the learning activities and courses available in the SumTotal Learn platform. It contains the master catalog of all learning content including course details, settings, and configurations. This is the reference table for what learning activities exist in the system. Use this table when you need to: 1. Find available courses and learning activities, 2. Get course details like names, descriptions, and settings, 3. Understand course hierarchies and relationships, 4. Check course availability and registration requirements, 5. Generate course catalogs and learning content listings.",
+      "tableReference": {
+        "catalog": "sumtotal_learn",
+        "schema": "public",
+        "table": "tbl_tmx_activity_sumtotal"
+      },
+      "columns": [
+        {
+          "name": "activity_pk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Activity Primary Key",
+            "description": "This column provides a unique, system-generated identifier for each learning activity. It serves as the primary key for this table and is the essential link to connect activity information with related details in other tables, such as attempts,assignments,registrations etc."
+          }
+        },
+        {
+          "name": "activityname",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Activity Name",
+            "description": "This column contains the official title of the learning activity. It serves as the primary descriptive label for the course or training throughout the system."
+          }
+        },
+        {
+          "name": "activitylabelfk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Activity Label Foreign Key",
+            "description": "A foreign key that references the Actlable table to define the activity's unique type. This link classifies the activity's Type within the system."
+          }
+        },
+        {
+          "name": "prntactfk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Parent Activity Foreign Key",
+            "description": "A self-referencing foreign key that links an activity to its parent, creating a structured hierarchy within this table. This is primarily used to define collections, such as a curriculum (parent) that contains a set of individual courses (children)."
+          }
+        },
+        {
+          "name": "code",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Code",
+            "description": "The unique code used to identify each activity."
+          }
+        },
+        {
+          "name": "ccenter",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Center",
+            "description": "Column representing whether collaboration center is enabled or not for the activity."
+          }
+        },
+        {
+          "name": "activitydesc",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Activity Description",
+            "description": "A textual description of the activity, providing details about what the activity entails."
+          }
+        },
+        {
+          "name": "activitydescfmt",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Activity Description Format",
+            "description": "Format of the activity description, which may include HTML or other markup."
+          }
+        },
+        {
+          "name": "active",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Active",
+            "description": "Indicates whether the activity is currently active or not."
+          }
+        },
+        {
+          "name": "openforreg",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Open for Registration",
+            "description": "Indicates whether the activity is open for registration."
+          }
+        },
+        {
+          "name": "noregreqd",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "No Registration Required",
+            "description": "Indicates whether registration is required for the activity."
+          }
+        },
+        {
+          "name": "maxattempts",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Max Attempts",
+            "description": "Maximum number of attempts allowed for a specific activity."
+          }
+        },
+        {
+          "name": "maxattemptsperparent",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Max Attempts Per Parent",
+            "description": "Maximum number of attempts allowed per parent activity."
+          }
+        },
+        {
+          "name": "cancelled",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Cancelled",
+            "description": "Indicates whether an activity has been cancelled."
+          }
+        },
+        {
+          "name": "private",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Private",
+            "description": "Column indicating whether the activity is private or not."
+          }
+        },
+        {
+          "name": "empnotesfmt",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Employee Notes Format",
+            "description": "Format for employee notes stored in the database, allowing for structured text representation."
+          }
+        },
+        {
+          "name": "instrnotesfmt",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Instructor Notes Format",
+            "description": "Format for instructor notes associated with activities."
+          }
+        }
+      ],
+      "primaryKey": "activity_pk",
+      "properties": {
+        "displayName": "SumTotal Activity Table",
+        "description": "This table defines the learning activities and courses available in the SumTotal Learn platform. It contains the master catalog of all learning content including course details, settings, and configurations. This is the reference table for what learning activities exist in the system."
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "name": "activity_to_label",
+      "models": ["tbl_tmx_activity_sumtotal", "actlabel_sumtotal"],
+      "joinType": "MANY_TO_ONE",
+      "condition": "tbl_tmx_activity_sumtotal.activitylabelfk = actlabel_sumtotal.actlabel_pk",
+      "properties": {
+        "description": "Links activities to their activity labels for categorization"
+      }
+    },
+    {
+      "name": "activity_hierarchy",
+      "models": ["tbl_tmx_activity_sumtotal", "tbl_tmx_activity_sumtotal"],
+      "joinType": "MANY_TO_ONE",
+      "condition": "tbl_tmx_activity_sumtotal.prntactfk = parent_activity.activity_pk",
+      "properties": {
+        "description": "Self-referencing relationship for activity hierarchy (parent-child relationships)"
+      }
+    }
+  ],
+  "metrics": [],
+  "views": [],
+  "enumDefinitions": [],
+  "macros": [],
+  "cumulativeMetrics": [],
+  "dateSpine": {}
+}

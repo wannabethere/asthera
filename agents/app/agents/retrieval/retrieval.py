@@ -381,6 +381,21 @@ class TableRetrieval:
         Returns:
             Dictionary containing retrieval results and metadata
         """
+        # Project ID mapping for backward compatibility - DISABLED
+        # project_id_mapping = {
+        #     "sumtotal_learn": "sumtotal_learn_demo",
+        #     "csodworkday": "csodworkday_demo",
+        #     "cornerstone_learning": "cornerstone_learning_demo",
+        #     "cornerstone_talent": "cornerstone_talent_demo",
+        #     "cornerstone": "cornerstone_demo"
+        # }
+        
+        # Map project_id if needed - DISABLED
+        # original_project_id = project_id
+        # if project_id in project_id_mapping:
+        #     project_id = project_id_mapping[project_id]
+        #     logger.info(f"Mapped project_id from '{original_project_id}' to '{project_id}'")
+        
         logger.info(f"Table retrieval is running... for {project_id}")
         logger.info(f"DEBUG: TableRetrieval.run() called with project_id: {project_id}")
         logger.info(f"DEBUG: project_id type: {type(project_id)}")
@@ -391,9 +406,14 @@ class TableRetrieval:
             logger.info(f"DEBUG: TableRetrieval.run() - about to call _retrieve_table_descriptions with project_id: {project_id}")
             
             # Get table descriptions
-            table_docs = await self._retrieve_table_descriptions(
-                query, tables, project_id
-            )
+            try:
+                table_docs = await self._retrieve_table_descriptions(
+                    query, tables, project_id
+                )
+                logger.info(f"DEBUG: _retrieve_table_descriptions completed successfully, got {len(table_docs)} table docs")
+            except Exception as e:
+                logger.error(f"DEBUG: Error in _retrieve_table_descriptions: {str(e)}")
+                raise
             #print("table_docs in run table retrieval", table_docs)
             if not table_docs:
                 return {
@@ -403,46 +423,94 @@ class TableRetrieval:
                 }
            
             # Get schema information
-            schema_docs = await self._retrieve_schemas(
-                table_docs, project_id
-            )
+            try:
+                schema_docs = await self._retrieve_schemas(
+                    table_docs, project_id
+                )
+                logger.info(f"DEBUG: _retrieve_schemas completed successfully, got {len(schema_docs)} schema docs")
+            except Exception as e:
+                logger.error(f"DEBUG: Error in _retrieve_schemas: {str(e)}")
+                raise
             
-            
-            metrics = await self._retrieve_metrics(query, tables, project_id)
-            views = await self._retrieve_views(query, tables, project_id)
-           
+            try:
+                metrics = await self._retrieve_metrics(query, tables, project_id)
+                logger.info(f"DEBUG: _retrieve_metrics completed successfully, got {len(metrics)} metrics")
+            except Exception as e:
+                logger.error(f"DEBUG: Error in _retrieve_metrics: {str(e)}")
+                raise
+                
+            try:
+                views = await self._retrieve_views(query, tables, project_id)
+                logger.info(f"DEBUG: _retrieve_views completed successfully, got {len(views)} views")
+            except Exception as e:
+                logger.error(f"DEBUG: Error in _retrieve_views: {str(e)}")
+                raise
 
             # Combine all
             schema_docs = schema_docs + metrics + views
+            logger.info(f"DEBUG: Combined schema_docs count: {len(schema_docs)}")
             
             # Construct database schemas
-            db_schemas = self._construct_db_schemas(schema_docs, table_docs)
+            try:
+                logger.info(f"DEBUG: About to call _construct_db_schemas with {len(schema_docs)} schema_docs and {len(table_docs)} table_docs")
+                logger.info(f"DEBUG: schema_docs sample: {schema_docs[:1] if schema_docs else 'None'}")
+                logger.info(f"DEBUG: table_docs sample: {table_docs[:1] if table_docs else 'None'}")
+                db_schemas = self._construct_db_schemas(schema_docs, table_docs)
+                logger.info(f"DEBUG: _construct_db_schemas completed successfully, got {len(db_schemas)} schemas")
+            except Exception as e:
+                logger.error(f"DEBUG: Error in _construct_db_schemas: {str(e)}")
+                raise
             
             
             # Check if we can use schemas without pruning
-            schema_check = self._check_schemas_without_pruning(
-                db_schemas, schema_docs
-            )
+            try:
+                logger.info(f"DEBUG: About to call _check_schemas_without_pruning with {len(db_schemas)} db_schemas and {len(schema_docs)} schema_docs")
+                schema_check = self._check_schemas_without_pruning(
+                    db_schemas, schema_docs
+                )
+                logger.info(f"DEBUG: _check_schemas_without_pruning completed successfully")
+            except Exception as e:
+                logger.error(f"DEBUG: Error in _check_schemas_without_pruning: {str(e)}")
+                raise
             
-            if schema_check["db_schemas"]:
+            # Check if we can use schemas without pruning (important logic flow)
+            if schema_check["db_schemas"] and self._allow_using_db_schemas_without_pruning:
+                logger.info(f"=== USING SCHEMAS WITHOUT PRUNING ===")
+                logger.info(f"Schema check returned {len(schema_check['db_schemas'])} schemas")
+                logger.info(f"Token count: {schema_check.get('tokens', 0)}")
+                logger.info(f"Allow using db schemas without pruning: {self._allow_using_db_schemas_without_pruning}")
                 return {
                     "retrieval_results": schema_check["db_schemas"],
                     "has_calculated_field": schema_check["has_calculated_field"],
                     "has_metric": schema_check["has_metric"]
                 }
             
-           
-            #logger.info(f"query in run table retrieval: {schema_docs}")
+            # If we can't use schemas without pruning, do column selection
+            logger.info(f"=== DOING COLUMN SELECTION (SCHEMAS TOO LARGE OR PRUNING REQUIRED) ===")
+            logger.info(f"Query: {query}")
+            logger.info(f"Schema docs count: {len(schema_docs)}")
+            logger.info(f"Allow using db schemas without pruning: {self._allow_using_db_schemas_without_pruning}")
+            logger.info(f"Schema check tokens: {schema_check.get('tokens', 0)}")
+            
             if query:
                 # Build prompt with schemas
                 prompt = self._build_prompt(query, schema_docs, histories)
+                print(f"=== BUILT PROMPT FOR COLUMN SELECTION ===")
+                print(f"Prompt length: {len(prompt)}")
+                print(f"Prompt preview: {prompt[:500]}...")
+                
                 # Get column selection from LLM
                 column_selection = await self._get_column_selection(prompt)
-                #print("column_selection", column_selection)
+                print(f"=== COLUMN SELECTION RESULT ===")
+                print(f"Column selection: {column_selection}")
+                
                 # Construct final results with selected columns
-                return self._construct_retrieval_results(
+                result = self._construct_retrieval_results(
                     column_selection, db_schemas, schema_docs
                 )
+                print(f"=== FINAL RETRIEVAL RESULTS ===")
+                print(f"Retrieval results count: {len(result.get('retrieval_results', []))}")
+                return result
             
             return {
                 "retrieval_results": [],
@@ -488,7 +556,8 @@ class TableRetrieval:
                 
                 # Check document type
                 doc_type = content_dict.get('type')
-                if doc_type not in ['TABLE', 'TABLE_DESCRIPTION', 'MODEL', 'TABLE_SCHEMA', 'TABLE_COLUMNS']:
+                mdl_type = content_dict.get('mdl_type')
+                if doc_type != 'TABLE_DESCRIPTION' or mdl_type not in ['TABLE_SCHEMA', 'METRIC', 'VIEW']:
                     continue
                 
                 # Get table name from content
@@ -519,9 +588,9 @@ class TableRetrieval:
         """Retrieve table descriptions from the document store."""
         try:
             where = {"type": {"$eq": 'METRIC'}}
-            if project_id:
+            # Only add project_id filter if it's not "default"
+            if project_id and project_id != "default":
                 where = {"$and": [{"project_id": {"$eq": project_id}},{"type": {"$eq": "METRIC"}}]}
-            where = {"project_id": {"$eq": project_id}}
             #where = None
             if query:
                 # Get query embedding
@@ -576,9 +645,9 @@ class TableRetrieval:
         """Retrieve table descriptions from the document store."""
         try:
             where = {"type": {"$eq": 'VIEW'}}
-            if project_id:
+            # Only add project_id filter if it's not "default"
+            if project_id and project_id != "default":
                 where = {"$and": [{"project_id": {"$eq": project_id}},{"type": {"$eq": "VIEW"}}]}
-            where = {"project_id": {"$eq": project_id}}
             #where = None
             if query:
                 # Get query embedding
@@ -632,59 +701,59 @@ class TableRetrieval:
     ) -> List[Any]:
         """Retrieve table descriptions from the document store."""
         try:
+            # Project ID mapping for backward compatibility - DISABLED
+            # project_id_mapping = {
+            #     "sumtotal_learn": "sumtotal_learn_demo",
+            #     "csodworkday": "csodworkday_demo",
+            #     "cornerstone_learning": "cornerstone_learning_demo",
+            #     "cornerstone_talent": "cornerstone_talent_demo",
+            #     "cornerstone": "cornerstone_demo"
+            # }
+            
+            # Map project_id if needed - DISABLED
+            # if project_id in project_id_mapping:
+            #     project_id = project_id_mapping[project_id]
+            #     logger.info(f"Mapped project_id in _retrieve_table_descriptions to: {project_id}")
+            
             logger.info(f"DEBUG: _retrieve_table_descriptions called with project_id: {project_id}")
-            logger.info(f"DEBUG: project_id type: {type(project_id)}")
-            logger.info(f"DEBUG: project_id value: {repr(project_id)}")
             
-            where = {"type": {"$eq": 'TABLE_SCHEMA'}}
-            if project_id:
-                where = {"$and": [{"project_id": {"$eq": project_id}},{"type": {"$eq": "TABLE_SCHEMA"}}]}
+            # Use the original approach - search only table_description collection
+            # but with the correct document type filter
+            where = {"type": {"$eq": 'TABLE_DESCRIPTION'}}
+            if project_id and project_id != "default":
+                where = {"$and": [{"project_id": {"$eq": project_id}},{"type": {"$eq": "TABLE_DESCRIPTION"}}]}
             
-            logger.info(f"DEBUG: _retrieve_table_descriptions - final where clause: {where}")
-            #where = None
+            logger.info(f"DEBUG: _retrieve_table_descriptions - where clause: {where}")
+            
             if query:
-                # Get query embedding
-                #embedding_result = await self._embedder.aembed_query(query)
-                # Get results from document store
-                if where:
-                    results = self.table_store.semantic_search(
-                        query=query,
-                        k=30,
-                        where=where,
-                        #query_embedding=embedding_result
-                    )
-                else:
-                    results = self.table_store.semantic_search(
-                        query=query,
-                        k=100
-                    )
+                results = self.table_store.semantic_search(
+                    query=query,
+                    k=30,
+                    where=where,
+                )
+            else:
+                results = self.table_store.semantic_search(
+                    query="",
+                    k=100,
+                    where=where
+                )
         
             if not results:
                 return []
             
+            # Filter to only include documents with correct mdl_type
             filtered_results = [
                 item for item in results
                 if (
-                    (
-                        isinstance(item.get('content'), str) and
-                        ast.literal_eval(item['content']).get('type') == 'TABLE_DESCRIPTION' and
-                        ast.literal_eval(item['content']).get('mdl_type') == 'TABLE_SCHEMA'
-                    )
-                    or (
-                        isinstance(item.get('metadata'), dict) and
-                        item['metadata'].get('type') == 'TABLE_DESCRIPTION' and
-                        item['metadata'].get('mdl_type') == 'TABLE_SCHEMA'
-                    )
+                    isinstance(item.get('content'), str) and
+                    self._is_table_doc_from_content(item['content'])
+                ) or (
+                    isinstance(item.get('metadata'), dict) and
+                    self._is_table_doc_from_metadata(item['metadata'])
                 )
             ]
             
             logger.info(f"DEBUG: _retrieve_table_descriptions - filtered {len(results)} results down to {len(filtered_results)} results")
-            
-            # Extract table names
-            #table_names = self._extract_table_names(results)
-            #print("table_names in retrieve_table_descriptions", table_names)
-           
-            # Results are already a list of documents
             return filtered_results
         except Exception as e:
             logger.error(f"Error in table retrieval: {str(e)}")
@@ -697,30 +766,45 @@ class TableRetrieval:
     ) -> List[Any]:
         """Retrieve schema information for the given tables."""
         table_names = self._extract_table_names(table_docs)
-        results = []  # Initialize results at the start
+        results = []
         
         if not table_names:
-            # Always create a valid where clause for TABLE_SCHEMA type
-            where = {"type": {"$eq": 'TABLE_SCHEMA'}}
-            if project_id:
-                where = {"$and": [{"project_id": {"$eq": project_id}}, {"type": {"$eq": 'TABLE_SCHEMA'}}]}
+            # Search both table_description and db_schema collections
+            where_table_desc = {"type": {"$eq": 'TABLE_DESCRIPTION'}}
+            where_db_schema = {"type": {"$eq": 'TABLE_SCHEMA'}}
+            if project_id and project_id != "default":
+                where_table_desc = {"$and": [{"project_id": {"$eq": project_id}}, {"type": {"$eq": 'TABLE_DESCRIPTION'}}]}
+                where_db_schema = {"$and": [{"project_id": {"$eq": project_id}}, {"type": {"$eq": 'TABLE_SCHEMA'}}]}
             
-            # Add debug logging for where clause
-            logger.info(f"DEBUG: _retrieve_schemas - project_id: {project_id}")
-            logger.info(f"DEBUG: _retrieve_schemas - where clause: {where}")
-            logger.info(f"DEBUG: _retrieve_schemas - where clause type: {type(where)}")
-            
-            # Perform search with empty table names - where is guaranteed to be valid here
-            results = self.schema_store.semantic_search(
+            logger.info(f"DEBUG: _retrieve_schemas - searching table_description with where: {where_table_desc}")
+            table_desc_results = self.table_store.semantic_search(
                 query="",
                 k=10,
-                where=where
+                where=where_table_desc
             )
+            
+            logger.info(f"DEBUG: _retrieve_schemas - searching db_schema with where: {where_db_schema}")
+            db_schema_results = self.schema_store.semantic_search(
+                query="",
+                k=10,
+                where=where_db_schema
+            )
+            
+            results = table_desc_results + db_schema_results
         else:
             for table_name in table_names:
-                where = {"$and": [{"name": {"$eq": table_name}}, {"type": {"$eq": 'TABLE_SCHEMA'}}]}
-                if project_id:
-                    where = {
+                # Search table_description collection
+                where_table_desc = {"$and": [{"name": {"$eq": table_name}}, {"type": {"$eq": 'TABLE_DESCRIPTION'}}]}
+                where_db_schema = {"$and": [{"name": {"$eq": table_name}}, {"type": {"$eq": 'TABLE_SCHEMA'}}]}
+                if project_id and project_id != "default":
+                    where_table_desc = {
+                        "$and": [
+                            {"project_id": {"$eq": project_id}},
+                            {"name": {"$eq": table_name}},
+                            {"type": {"$eq": 'TABLE_DESCRIPTION'}}
+                        ]
+                    }
+                    where_db_schema = {
                         "$and": [
                             {"project_id": {"$eq": project_id}},
                             {"name": {"$eq": table_name}},
@@ -728,19 +812,23 @@ class TableRetrieval:
                         ]
                     }    
                 
-                # Add debug logging for where clause
-                logger.info(f"DEBUG: _retrieve_schemas - table_name: {table_name}, project_id: {project_id}")
-                logger.info(f"DEBUG: _retrieve_schemas - where clause: {where}")
-                
-                # Use schema store's semantic search
-                tresults = self.schema_store.semantic_search(
-                    query="",  # Empty query since we're filtering by table names
+                logger.info(f"DEBUG: _retrieve_schemas - searching table_description for table {table_name} with where: {where_table_desc}")
+                table_desc_results = self.table_store.semantic_search(
+                    query="",
                     k=10,
-                    where=where
+                    where=where_table_desc
                 )
-                results.extend(tresults)
+                
+                logger.info(f"DEBUG: _retrieve_schemas - searching db_schema for table {table_name} with where: {where_db_schema}")
+                db_schema_results = self.schema_store.semantic_search(
+                    query="",
+                    k=10,
+                    where=where_db_schema
+                )
+                
+                results.extend(table_desc_results + db_schema_results)
         
-        #logger.info(f"results in retrieve_schemas: {json.dumps(results, indent=4)}")        
+        logger.info(f"DEBUG: _retrieve_schemas - total results: {len(results)}")
         if not results:
             return []
         
@@ -749,17 +837,37 @@ class TableRetrieval:
     def _parse_doc_content(self, doc) -> dict:
         """Safely parse the 'content' field from a document and return a dict."""
         content = doc.get('content', '')
+        logger.info(f"DEBUG: _parse_doc_content - raw content: {content[:200]}...")
+        
         if not content:
+            logger.info("DEBUG: _parse_doc_content - no content found")
             return {}
         try:
             content = content.strip("'").strip('"')
-            return ast.literal_eval(content)
+            logger.info(f"DEBUG: _parse_doc_content - cleaned content: {content[:200]}...")
+            
+            parsed = ast.literal_eval(content)
+            logger.info(f"DEBUG: _parse_doc_content - parsed result: {parsed}")
+            return parsed
         except Exception as e:
-            logger.warning(f"Failed to parse content: {content} | Error: {str(e)}")
+            logger.warning(f"Failed to parse content: {content[:200]}... | Error: {str(e)}")
             return {}
 
     def _is_table_doc(self, content_dict) -> bool:
-        return content_dict.get('type') in ['TABLE_SCHEMA', 'TABLE_DESCRIPTION', 'MODEL','METRIC','VIEW']
+        return content_dict.get('type') == 'TABLE_DESCRIPTION' and content_dict.get('mdl_type') in ['TABLE_SCHEMA', 'METRIC', 'VIEW']
+
+    def _is_table_doc_from_content(self, content: str) -> bool:
+        """Check if content string represents a valid table document."""
+        try:
+            content_dict = ast.literal_eval(content)
+            return self._is_table_doc(content_dict)
+        except:
+            return False
+
+    def _is_table_doc_from_metadata(self, metadata: dict) -> bool:
+        """Check if metadata represents a valid table document."""
+        return (metadata.get('type') == 'TABLE_DESCRIPTION' and 
+                metadata.get('mdl_type') in ['TABLE_SCHEMA', 'METRIC', 'VIEW'])
 
     def _is_column_doc(self, content_dict) -> bool:
         return content_dict.get('type') in ['TABLE_COLUMNS', 'COLUMNS']
@@ -775,106 +883,456 @@ class TableRetrieval:
             return [col.strip() if isinstance(col, str) else str(col) for col in columns]
         return []
 
-    def _build_column_defs(self, columns, default_type="STRING"):
+    def _build_column_defs(self, columns, default_type="VARCHAR"):
         col_defs = []
-        for col in columns:
-            # If col['name'] is a stringified dict, parse it
-            if isinstance(col, dict) and isinstance(col.get('name'), str) and col['name'].strip().startswith("{'type': 'COLUMN'"):
-                try:
-                    col_info = ast.literal_eval(col['name'])
-                    name = col_info.get('name', '')
-                    dtype = col_info.get('data_type', default_type)
-                    comment = col_info.get('comment', '')
-                except Exception as e:
-                    logger.warning(f"Failed to parse column name as dict: {col['name']} | Error: {str(e)}")
+        if not columns:
+            return []
+            
+        for i, col in enumerate(columns):
+            try:
+                logger.debug(f"Processing column {i}: {col}")
+                
+                # If col['name'] is a stringified dict, parse it
+                if isinstance(col, dict) and isinstance(col.get('name'), str) and col['name'].strip().startswith("{'type': 'COLUMN'"):
+                    try:
+                        col_info = ast.literal_eval(col['name'])
+                        name = col_info.get('name', '')
+                        dtype = col_info.get('data_type', default_type)
+                        comment = col_info.get('comment', '')
+                        is_primary_key = col_info.get('is_primary_key', False)
+                        is_foreign_key = col_info.get('is_foreign_key', False)
+                        not_null = col_info.get('notNull', False)
+                        
+                        # Handle notNull constraint
+                        if not_null and dtype.upper() != 'PRIMARY KEY':
+                            dtype += ' NOT NULL'
+                            
+                        logger.debug(f"Parsed column from stringified dict: name='{name}', type='{dtype}', comment='{comment[:50] if comment else 'None'}...'")
+                    except Exception as e:
+                        logger.warning(f"Failed to parse column name as dict: {col['name']} | Error: {str(e)}")
+                        name = col.get('name', '')
+                        dtype = col.get('data_type', default_type)
+                        comment = col.get('comment', '')
+                elif isinstance(col, dict):
                     name = col.get('name', '')
-                    dtype = col.get('data_type', default_type)
+                    # Try both 'type' and 'data_type' for compatibility
+                    dtype = col.get('type', col.get('data_type', default_type))
+                    
+                    # Get comment and description from properties or direct fields
                     comment = col.get('comment', '')
-            elif isinstance(col, dict):
-                name = col.get('name', '')
-                dtype = col.get('data_type', default_type)
-                comment = col.get('comment', '')
-            else:
-                name = str(col)
-                dtype = default_type
-                comment = ''
-            col_def = f"{name} {dtype}"
-            if comment:
-                if comment.strip().startswith("--"):
-                    col_def += f"\n{comment.strip()}"
+                    description = col.get('description', '')
+                    
+                    if 'properties' in col and isinstance(col['properties'], dict):
+                        # Get display name as comment if available
+                        if not comment:
+                            comment = col['properties'].get('displayName', '')
+                        # Get description if not already set
+                        if not description:
+                            description = col['properties'].get('description', '')
+                        
+                        # Enhanced logging for debugging
+                        logger.info(f"DEBUG: Column {col.get('name', '')} properties in _build_column_defs: {col['properties']}")
+                        logger.info(f"DEBUG: Column {col.get('name', '')}: comment='{comment[:50] if comment else 'None'}...', description='{description[:50] if description else 'None'}...'")
+                    
+                    # Handle notNull constraint
+                    not_null = col.get('notNull', False)
+                    if not_null and dtype.upper() != 'PRIMARY KEY':
+                        dtype += ' NOT NULL'
+                    
+                    logger.debug(f"Column {i}: name='{name}', type='{dtype}', comment='{comment[:50] if comment else 'None'}...', description='{description[:50] if description else 'None'}...'")
                 else:
-                    col_def += f" -- {comment}"
-            col_defs.append(col_def)
-        return col_defs if col_defs else [f"id {default_type}"]
+                    name = str(col) if col is not None else ''
+                    dtype = default_type
+                    comment = ''
+                
+                # Skip empty column names
+                if not name or not name.strip():
+                    logger.warning("Skipping column with empty name")
+                    continue
+                
+                # Validate column name doesn't contain problematic characters
+                if any(char in name for char in ['(', ')', ';', '\n', '\r']):
+                    logger.warning(f"Column name contains problematic characters, skipping: {name}")
+                    continue
+                    
+                col_def = f"{name} {dtype}"
+                
+                # Add comment and description in the format: -- comment -- Description
+                comment_parts = []
+                if comment:
+                    clean_comment = comment.strip().replace('\n', ' ').replace('\r', ' ')
+                    if clean_comment and not clean_comment.startswith("--"):
+                        comment_parts.append(clean_comment)
+                
+                if description:
+                    clean_description = description.strip().replace('\n', ' ').replace('\r', ' ')
+                    if clean_description and not clean_description.startswith("--"):
+                        comment_parts.append(clean_description)
+                
+                if comment_parts:
+                    col_def += f" -- {' -- '.join(comment_parts)}"
+                
+                logger.debug(f"Generated column definition: {col_def}")
+                col_defs.append(col_def)
+            except Exception as e:
+                logger.warning(f"Error processing column {i} ({col}): {str(e)}")
+                continue
+                
+        return col_defs
+
+    def _validate_ddl_syntax(self, ddl: str) -> bool:
+        """Basic validation of DDL syntax to catch obvious issues."""
+        try:
+            logger.debug(f"Validating DDL: {repr(ddl[:100])}...")
+            
+            # Check for unmatched parentheses (excluding those in comments)
+            lines = ddl.split('\n')
+            sql_content = []
+            for line in lines:
+                # Remove comment portions from each line
+                if '--' in line:
+                    comment_start = line.find('--')
+                    sql_content.append(line[:comment_start])
+                else:
+                    sql_content.append(line)
+            
+            # Join the SQL content and count parentheses
+            sql_text = '\n'.join(sql_content)
+            open_parens = sql_text.count('(')
+            close_parens = sql_text.count(')')
+            if open_parens != close_parens:
+                logger.error(f"Unmatched parentheses in DDL: {open_parens} open, {close_parens} close")
+                logger.error(f"DDL content: {repr(ddl)}")
+                logger.error(f"SQL content (without comments): {repr(sql_text)}")
+                return False
+            
+            # Check for basic SQL structure - allow comments before CREATE
+            ddl_content = ddl.strip()
+            # Skip comment lines to find the actual CREATE statement
+            lines = ddl_content.split('\n')
+            create_line = None
+            for line in lines:
+                line = line.strip()
+                if line and not line.startswith('--'):
+                    create_line = line
+                    break
+            
+            if not create_line or not create_line.upper().startswith('CREATE'):
+                logger.error(f"DDL doesn't contain CREATE statement: {repr(ddl[:50])}...")
+                return False
+            
+            # Check for empty table definition
+            if 'CREATE TABLE' in ddl.upper() and '()' in ddl:
+                logger.error(f"Empty table definition in DDL: {repr(ddl)}")
+                return False
+                
+            # Check for problematic characters in table/column names
+            if any(char in ddl for char in ['\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07', '\x08', '\x0b', '\x0c', '\x0e', '\x0f']):
+                logger.error(f"DDL contains control characters")
+                return False
+            
+            # Check for common SQL syntax issues
+            if 'CREATE TABLE' in ddl.upper() and not ddl.strip().endswith(';'):
+                logger.error(f"DDL doesn't end with semicolon: {repr(ddl[-20:])}")
+                return False
+                
+            logger.debug(f"DDL validation passed for: {ddl[:50]}...")
+            return True
+        except Exception as e:
+            logger.error(f"Error validating DDL syntax: {str(e)}")
+            logger.error(f"DDL that caused error: {repr(ddl)}")
+            return False
 
     def _build_table_ddl(self, table_name, description, columns):
-        col_defs = self._build_column_defs(columns)
-        #print("col_defs in build_table_ddl: ", col_defs)
-        table_comment = f"-- {description}\n" if description else ""
-        return f"{table_comment}CREATE TABLE {table_name} (\n  " + ",\n  ".join(col_defs) + "\n);"
+        try:
+            logger.debug(f"Building DDL for table {table_name}")
+            logger.debug(f"Description: {description[:100] if description else 'None'}...")
+            logger.debug(f"Columns type: {type(columns)}, length: {len(columns) if columns else 0}")
+            logger.debug(f"Columns sample: {columns[:2] if columns else 'None'}")
+            
+            col_defs = self._build_column_defs(columns)
+            logger.debug(f"Generated column definitions: {col_defs}")
+            
+            # Clean description for SQL comment
+            if description:
+                # Remove problematic characters and limit length
+                clean_description = description.replace('\n', ' ').replace('\r', ' ').strip()
+                # Remove or replace problematic characters that could cause SQL issues
+                clean_description = clean_description.replace('(', '[').replace(')', ']')
+                # Limit comment length to avoid issues
+                if len(clean_description) > 200:
+                    clean_description = clean_description[:200] + "..."
+                table_comment = f"-- {clean_description}\n"
+            else:
+                table_comment = ""
+            
+            # Ensure we have valid table name and column definitions
+            if not table_name:
+                logger.warning("No table name provided, skipping DDL generation")
+                return ""
+            
+            if not col_defs:
+                logger.warning(f"No column definitions for table {table_name}, skipping DDL generation")
+                return ""
+            
+            ddl = f"{table_comment}CREATE TABLE {table_name} (\n  " + ",\n  ".join(col_defs) + "\n);"
+            logger.debug(f"Generated DDL for {table_name}: {ddl}")
+            
+            # Validate the generated DDL
+            if not self._validate_ddl_syntax(ddl):
+                logger.error(f"Generated DDL failed syntax validation for table {table_name}")
+                logger.error(f"Problematic DDL: {repr(ddl)}")
+                logger.error(f"DDL length: {len(ddl)}")
+                logger.error(f"DDL first 200 chars: {ddl[:200]}")
+                return ""
+            
+            return ddl
+        except Exception as e:
+            logger.error(f"Error building table DDL for {table_name}: {str(e)}")
+            logger.error(f"Columns that caused error: {columns}")
+            return ""
 
     def _build_metric_ddl(self, content_dict):
-        table_name = content_dict.get("name", "")
-        description = content_dict.get("description", "")
-        columns = content_dict.get("columns", [])
-        if not columns:
-            columns = [
-                {"name": "metric_name", "data_type": "STRING", "comment": "Name of the metric"},
-                {"name": "metric_value", "data_type": "FLOAT", "comment": "Value of the metric"},
-                {"name": "dimension", "data_type": "STRING", "comment": "Dimension being measured"},
-                {"name": "timestamp", "data_type": "TIMESTAMP", "comment": "When the metric was calculated"}
-            ]
-        col_defs = self._build_column_defs(columns, default_type="FLOAT")
-        table_comment = f"-- {description}\n" if description else ""
-        return f"{table_comment}CREATE TABLE {table_name} (\n  " + ",\n  ".join(col_defs) + "\n);"
+        try:
+            table_name = content_dict.get("name", "")
+            description = content_dict.get("description", "")
+            columns = content_dict.get("columns", [])
+            
+            # Ensure we have valid table name
+            if not table_name:
+                logger.warning("No table name provided for metric, skipping DDL generation")
+                return ""
+            
+            if not columns:
+                logger.warning(f"No column definitions for metric {table_name}, skipping DDL generation")
+                return ""
+            
+            col_defs = self._build_column_defs(columns, default_type="FLOAT")
+            
+            # Clean description for SQL comment
+            if description:
+                clean_description = description.replace('\n', ' ').replace('\r', ' ').strip()
+                clean_description = clean_description.replace('(', '[').replace(')', ']')
+                if len(clean_description) > 200:
+                    clean_description = clean_description[:200] + "..."
+                table_comment = f"-- {clean_description}\n"
+            else:
+                table_comment = ""
+            
+            if not col_defs:
+                logger.warning(f"No valid column definitions for metric {table_name}, skipping DDL generation")
+                return ""
+            
+            ddl = f"{table_comment}CREATE TABLE {table_name} (\n  " + ",\n  ".join(col_defs) + "\n);"
+            
+            # Validate the generated DDL
+            if not self._validate_ddl_syntax(ddl):
+                logger.error(f"Generated metric DDL failed syntax validation for {table_name}")
+                return ""
+            
+            return ddl
+        except Exception as e:
+            logger.error(f"Error building metric DDL: {str(e)}")
+            return ""
 
     def _build_view_ddl(self, content_dict):
-        view_name = content_dict.get("name", "")
-        description = content_dict.get("description", "")
-        statement = content_dict.get("statement", "")
-        view_comment = f"-- {description}\n" if description else ""
-        return f"{view_comment}CREATE VIEW {view_name}\nAS {statement}"
+        try:
+            view_name = content_dict.get("name", "")
+            description = content_dict.get("description", "")
+            statement = content_dict.get("statement", "")
+            
+            # Ensure we have valid view name and statement
+            if not view_name:
+                logger.warning("No view name provided, skipping DDL generation")
+                return ""
+            
+            if not statement:
+                logger.warning(f"No statement provided for view {view_name}, skipping DDL generation")
+                return ""
+            
+            # Clean description for SQL comment
+            if description:
+                clean_description = description.replace('\n', ' ').replace('\r', ' ').strip()
+                clean_description = clean_description.replace('(', '[').replace(')', ']')
+                if len(clean_description) > 200:
+                    clean_description = clean_description[:200] + "..."
+                view_comment = f"-- {clean_description}\n"
+            else:
+                view_comment = ""
+            ddl = f"{view_comment}CREATE VIEW {view_name}\nAS {statement}"
+            
+            # Validate the generated DDL
+            if not self._validate_ddl_syntax(ddl):
+                logger.error(f"Generated view DDL failed syntax validation for {view_name}")
+                return ""
+            
+            return ddl
+        except Exception as e:
+            logger.error(f"Error building view DDL: {str(e)}")
+            return ""
 
     def _construct_db_schemas(self, column_docs: List[Dict], table_docs: List[Dict]) -> List[Dict]:
         """Construct database schemas from retrieved documents."""
         tables = {}
         logger.info(f"Processing {len(table_docs)} table documents and {len(column_docs)} column documents")
-        # Collect all tables from table docs
-        for doc in table_docs:
+        
+        # Process all documents (both table_docs and column_docs are now schema documents)
+        all_docs = table_docs + column_docs
+        
+        for doc in all_docs:
             content_dict = self._parse_doc_content(doc)
-            if not self._is_table_doc(content_dict):
-                continue
-            table_name = self._extract_table_name(doc, content_dict)
-            if not table_name:
-                continue
-            description = content_dict.get('description', '')
-            if table_name not in tables:
-                tables[table_name] = {
-                    "name": table_name,
-                    "type": content_dict.get('type', 'TABLE'),
-                    "description": description,
-                    "columns": [],
-                    "relationships": content_dict.get('relationships', [])
-                }
-        # Process column documents
-        for doc in column_docs:
-            content_dict = self._parse_doc_content(doc)
-            if not self._is_column_doc(content_dict):
-                continue
-            table_name = doc.get('metadata', {}).get('name')
-            if not table_name or table_name not in tables:
-                continue
-            columns = self._extract_columns(content_dict)
-            for col_name in columns:
-                if col_name:
-                    tables[table_name]["columns"].append({
-                        "name": col_name,
-                        "data_type": "STRING",
-                        "comment": "",
-                        "is_primary_key": False
-                    })
+            logger.info(f"DEBUG: Processing schema doc: {content_dict}")
+            
+            # Check if this is a schema document with columns
+            if (content_dict.get('type') in ['TABLE_DESCRIPTION', 'TABLE_SCHEMA'] and 
+                content_dict.get('mdl_type') in ['TABLE_SCHEMA', 'METRIC', 'VIEW'] and 
+                'columns' in content_dict):
+                
+                logger.info(f"DEBUG: Found columns in content_dict: {content_dict.get('columns', [])[:2] if content_dict.get('columns') else 'None'}")
+                table_name = content_dict.get('name', '')
+                if not table_name:
+                    continue
+                    
+                # Extract columns from the schema document
+                columns = content_dict.get('columns', [])
+                logger.debug(f"Found columns for table {table_name}: {columns}")
+                logger.debug(f"Columns type: {type(columns)}")
+                
+                # Process columns to extract proper information
+                processed_columns = []
+                
+                # Handle different column formats
+                if isinstance(columns, str):
+                    # Columns are stored as comma-separated string (from table_description.py)
+                    logger.debug(f"Processing string columns: {columns}")
+                    column_names = self._extract_columns(content_dict)
+                    for col_name in column_names:
+                        processed_columns.append({
+                            "name": col_name,
+                            "type": "VARCHAR",  # Default type for string columns
+                            "comment": "",
+                            "is_primary_key": False,
+                            "is_foreign_key": False,
+                            "notNull": False
+                        })
+                elif isinstance(columns, list):
+                    # Columns are stored as list of dictionaries (from db_schema.py)
+                    logger.debug(f"Processing list columns: {len(columns)} items")
+                    for col in columns:
+                        if isinstance(col, dict):
+                            # Extract comment and description from properties
+                            comment = col.get('comment', '')
+                            description = ''
+                            
+                            logger.debug(f"DEBUG: Processing column {col.get('name', '')} in _construct_db_schemas")
+                            logger.debug(f"DEBUG: Column has properties: {'properties' in col}")
+                            if 'properties' in col:
+                                logger.debug(f"DEBUG: Properties: {col['properties']}")
+                            
+                            if 'properties' in col and isinstance(col['properties'], dict):
+                                # Get display name as comment if available
+                                if not comment:
+                                    comment = col['properties'].get('displayName', '')
+                                # Get description
+                                description = col['properties'].get('description', '')
+                                logger.debug(f"DEBUG: Extracted comment='{comment}', description='{description[:50] if description else 'None'}...'")
+                                
+                                # Enhanced logging for debugging
+                                logger.info(f"DEBUG: Column {col.get('name', '')} properties: {col['properties']}")
+                                logger.info(f"DEBUG: Column {col.get('name', '')}: comment='{comment[:50] if comment else 'None'}...', description='{description[:50] if description else 'None'}...'")
+                            
+                            # Extract primary key and foreign key info from properties if available
+                            is_primary_key = col.get('is_primary_key', False)
+                            is_foreign_key = col.get('is_foreign_key', False)
+                            
+                            if 'properties' in col and isinstance(col['properties'], dict):
+                                # Handle string values for boolean fields
+                                if 'is_primary_key' in col['properties']:
+                                    pk_val = col['properties']['is_primary_key']
+                                    is_primary_key = pk_val if isinstance(pk_val, bool) else pk_val.lower() == 'true'
+                                if 'is_foreign_key' in col['properties']:
+                                    fk_val = col['properties']['is_foreign_key']
+                                    is_foreign_key = fk_val if isinstance(fk_val, bool) else fk_val.lower() == 'true'
+                            
+                            processed_columns.append({
+                                "name": col.get('name', ''),
+                                "type": col.get('type', 'VARCHAR'),
+                                "comment": comment,
+                                "description": description,
+                                "is_primary_key": is_primary_key,
+                                "is_foreign_key": is_foreign_key,
+                                "notNull": col.get('notNull', False)
+                            })
+                        else:
+                            # Handle string column names in list
+                            processed_columns.append({
+                                "name": str(col),
+                                "type": "VARCHAR",
+                                "comment": "",
+                                "is_primary_key": False,
+                                "is_foreign_key": False,
+                                "notNull": False
+                            })
+                
+                # Only add table if we have processed columns or if it's a new table
+                if processed_columns or table_name not in tables:
+                    tables[table_name] = {
+                        "name": table_name,
+                        "type": content_dict.get('type', 'TABLE'),
+                        "description": content_dict.get('description', ''),
+                        "columns": processed_columns,
+                        "relationships": content_dict.get('relationships', [])
+                    }
+                    logger.debug(f"Added table {table_name} with {len(processed_columns)} columns")
+                else:
+                    # Update existing table with additional columns if any
+                    existing_columns = tables[table_name].get('columns', [])
+                    existing_columns.extend(processed_columns)
+                    tables[table_name]['columns'] = existing_columns
+                    logger.debug(f"Updated table {table_name} with additional {len(processed_columns)} columns")
+        
+        # Fallback: Process column documents if no schema documents were found
+        if not tables:
+            logger.warning("No schema documents with columns found, falling back to column documents")
+            # Collect all tables from table docs
+            for doc in table_docs:
+                content_dict = self._parse_doc_content(doc)
+                if not self._is_table_doc(content_dict):
+                    continue
+                table_name = self._extract_table_name(doc, content_dict)
+                if not table_name:
+                    continue
+                description = content_dict.get('description', '')
+                if table_name not in tables:
+                    tables[table_name] = {
+                        "name": table_name,
+                        "type": content_dict.get('type', 'TABLE'),
+                        "description": description,
+                        "columns": [],
+                        "relationships": content_dict.get('relationships', [])
+                    }
+            # Process column documents
+            for doc in column_docs:
+                content_dict = self._parse_doc_content(doc)
+                if not self._is_column_doc(content_dict):
+                    continue
+                table_name = doc.get('metadata', {}).get('name')
+                if not table_name or table_name not in tables:
+                    continue
+                columns = self._extract_columns(content_dict)
+                for col_name in columns:
+                    if col_name:
+                        tables[table_name]["columns"].append({
+                            "name": col_name,
+                            "type": "VARCHAR",
+                            "comment": "",
+                            "is_primary_key": False
+                        })
+        
         final_schemas = list(tables.values())
         logger.info(f"Constructed {len(final_schemas)} schemas")
+        for schema in final_schemas:
+            logger.debug(f"Schema {schema['name']}: {len(schema['columns'])} columns")
         return final_schemas
 
     def _check_schemas_without_pruning(
@@ -893,34 +1351,65 @@ class TableRetrieval:
                 if not schema_type:
                     continue
                 if schema_type in ["TABLE", "TABLE_DESCRIPTION", "MODEL"]:
-                    ddl = self._build_table_ddl(schema.get("name", ""), schema.get("description", ""), schema.get("columns", []))
-                    # Extract relationships from schema
-                    relationships = schema.get("relationships", [])
-                    retrieval_results.append({
-                        "table_name": schema.get("name", ""),
-                        "table_ddl": ddl,
-                        "relationships": relationships
-                    })
+                    table_name = schema.get("name", "")
+                    description = schema.get("description", "")
+                    columns = schema.get("columns", [])
+                    
+                    logger.info(f"DEBUG: Building DDL for schema type {schema_type}")
+                    logger.info(f"DEBUG: Table name: {table_name}")
+                    logger.info(f"DEBUG: Description: {description}")
+                    logger.info(f"DEBUG: Columns: {columns}")
+                    
+                    # Skip DDL generation if no columns are available
+                    if not columns or len(columns) == 0:
+                        logger.warning(f"DEBUG: Skipping DDL generation for table {table_name} - no columns available")
+                        # Still add basic table information without DDL
+                        retrieval_results.append({
+                            "table_name": table_name,
+                            "table_ddl": f"-- Table: {table_name}\n-- Description: {description[:200] if description else 'No description available'}...",
+                            "relationships": schema.get("relationships", [])
+                        })
+                        continue
+                    
+                    ddl = self._build_table_ddl(table_name, description, columns)
+                    
+                    logger.info(f"DEBUG: Generated DDL: {ddl}")
+                    
+                    # Only add to results if DDL was successfully generated
+                    if ddl:
+                        # Extract relationships from schema
+                        relationships = schema.get("relationships", [])
+                        retrieval_results.append({
+                            "table_name": table_name,
+                            "table_ddl": ddl,
+                            "relationships": relationships
+                        })
+                    else:
+                        logger.warning(f"DEBUG: DDL generation failed for table {table_name}")
             for doc in schema_docs:
                 content_dict = self._parse_doc_content(doc)
                 doc_type = content_dict.get('type')
                 if doc_type == "METRIC":
                     # Extract relationships for metrics
-                    relationships = content_dict.get('relationships', [])
-                    retrieval_results.append({
-                        "table_name": content_dict.get("name", ""),
-                        "table_ddl": self._build_metric_ddl(content_dict),
-                        "relationships": relationships
-                    })
-                    has_metric = True
+                    ddl = self._build_metric_ddl(content_dict)
+                    if ddl:
+                        relationships = content_dict.get('relationships', [])
+                        retrieval_results.append({
+                            "table_name": content_dict.get("name", ""),
+                            "table_ddl": ddl,
+                            "relationships": relationships
+                        })
+                        has_metric = True
                 elif doc_type == "VIEW":
                     # Extract relationships for views
-                    relationships = content_dict.get('relationships', [])
-                    retrieval_results.append({
-                        "table_name": content_dict.get("name", ""),
-                        "table_ddl": self._build_view_ddl(content_dict),
-                        "relationships": relationships
-                    })
+                    ddl = self._build_view_ddl(content_dict)
+                    if ddl:
+                        relationships = content_dict.get('relationships', [])
+                        retrieval_results.append({
+                            "table_name": content_dict.get("name", ""),
+                            "table_ddl": ddl,
+                            "relationships": relationships
+                        })
             table_ddls = [result["table_ddl"] for result in retrieval_results]
             token_count = len(self._encoding.encode(" ".join(table_ddls)))
             if token_count > 100_000 or not self._allow_using_db_schemas_without_pruning:
@@ -1139,28 +1628,44 @@ class TableRetrieval:
             if not table_name or table_name not in enhanced_selection:
                 continue
                 
-            # Get selected columns for this table (including relationship-enhanced columns)
+            # Use the full schema columns instead of just selected ones
+            # This ensures we get all column information with proper types and descriptions
+            schema_columns = schema.get("columns", [])
             
-            selected_column_names = enhanced_selection[table_name]
-           
-            # Filter the schema's columns to only those selected
-            all_columns = schema.get("columns", [])
+            # Convert schema columns to the format expected by _build_column_defs
             filtered_columns = []
-            for col in all_columns:
-                # Handle stringified dict columns
-                if isinstance(col, dict) and isinstance(col.get('name'), str) and col['name'].strip().startswith("{'type': 'COLUMN'"):
-                    try:
-                        col_info = ast.literal_eval(col['name'])
-                        col_name = col_info.get('name', '')
-                    except Exception:
-                        col_name = col.get('name', '')
-                elif isinstance(col, dict):
-                    col_name = col.get('name', '')
+            logger.info(f"DEBUG: Processing {len(schema_columns)} columns for table {table_name}")
+            for col in schema_columns:
+                if isinstance(col, dict):
+                    # The comment and description are already processed in _construct_db_schemas
+                    # Just use them directly
+                    comment = col.get('comment', '')
+                    description = col.get('description', '')
+                    
+                    column_info = {
+                        'name': col.get('name', ''),
+                        'data_type': col.get('type', col.get('data_type', 'VARCHAR')),
+                        'comment': comment,
+                        'description': description,
+                        'is_primary_key': col.get('is_primary_key', False),
+                        'is_foreign_key': col.get('is_foreign_key', False),
+                        'notNull': col.get('notNull', False)
+                    }
+                    filtered_columns.append(column_info)
+                    logger.info(f"DEBUG: Column {col.get('name', '')}: comment='{comment[:50] if comment else 'None'}...', description='{description[:50] if description else 'None'}...'")
                 else:
-                    col_name = str(col)
-                if col_name in selected_column_names:
-                    filtered_columns.append(col)
-            # Build DDL with filtered columns
+                    # Fallback for string columns
+                    filtered_columns.append({
+                        'name': str(col),
+                        'data_type': 'VARCHAR',
+                        'comment': f'Column {col}',
+                        'description': '',
+                        'is_primary_key': False,
+                        'is_foreign_key': False,
+                        'notNull': False
+                    })
+            
+            # Build DDL with full schema columns
             ddl = self._build_table_ddl(
                 table_name,
                 schema.get("description", ""),
@@ -1168,36 +1673,38 @@ class TableRetrieval:
             )
             #logger.info(f"selected_tables ddl in table retrieval: {ddl}")
             
-            # Extract relationships from table descriptions
-            relationships = []
-            for doc in schema_docs:
-                try:
-                    content = doc.get('content', '')
-                    if not content:
-                        continue
-                        
+            # Only add to results if DDL was successfully generated
+            if ddl:
+                # Extract relationships from table descriptions
+                relationships = []
+                for doc in schema_docs:
                     try:
-                        content_dict = ast.literal_eval(content)
-                    except:
-                        continue
-                    
-                    if not isinstance(content_dict, dict):
-                        continue
+                        content = doc.get('content', '')
+                        if not content:
+                            continue
+                            
+                        try:
+                            content_dict = ast.literal_eval(content)
+                        except:
+                            continue
                         
-                    # Check if this is a table description for the current table
-                    if (content_dict.get('name') == table_name and 
-                        content_dict.get('type') == 'TABLE_DESCRIPTION'):
-                        relationships = content_dict.get('relationships', [])
-                        break
-                except Exception as e:
-                    logger.warning(f"Error extracting relationships: {str(e)}")
-                    continue
-            
-            retrieval_results.append({
-                "table_name": table_name,
-                "table_ddl": ddl,
-                "relationships": relationships
-            })
+                        if not isinstance(content_dict, dict):
+                            continue
+                            
+                        # Check if this is a table description for the current table
+                        if (content_dict.get('name') == table_name and 
+                            content_dict.get('type') == 'TABLE_DESCRIPTION'):
+                            relationships = content_dict.get('relationships', [])
+                            break
+                    except Exception as e:
+                        logger.warning(f"Error extracting relationships: {str(e)}")
+                        continue
+                
+                retrieval_results.append({
+                    "table_name": table_name,
+                    "table_ddl": ddl,
+                    "relationships": relationships
+                })
         
         # Process metrics and views
         #print("schema_docs in table retrieval: ", schema_docs)
@@ -1230,21 +1737,25 @@ class TableRetrieval:
                 
                 if doc_type == "METRIC" or content_dict.get('mdl_type') == "METRIC":
                     # Extract relationships for metrics
-                    relationships = content_dict.get('relationships', [])
-                    retrieval_results.append({
-                        "table_name": table_name,
-                        "table_ddl": self._build_metric_ddl(content_dict),
-                        "relationships": relationships
-                    })
-                    has_metric = True
+                    ddl = self._build_metric_ddl(content_dict)
+                    if ddl:
+                        relationships = content_dict.get('relationships', [])
+                        retrieval_results.append({
+                            "table_name": table_name,
+                            "table_ddl": ddl,
+                            "relationships": relationships
+                        })
+                        has_metric = True
                 elif doc_type == "VIEW" or content_dict.get('mdl_type') == "VIEW":
                     # Extract relationships for views
-                    relationships = content_dict.get('relationships', [])
-                    retrieval_results.append({
-                        "table_name": table_name,
-                        "table_ddl": self._build_view_ddl(content_dict),
-                        "relationships": relationships
-                    })
+                    ddl = self._build_view_ddl(content_dict)
+                    if ddl:
+                        relationships = content_dict.get('relationships', [])
+                        retrieval_results.append({
+                            "table_name": table_name,
+                            "table_ddl": ddl,
+                            "relationships": relationships
+                        })
             except Exception as e:
                 logger.warning(f"Error processing schema document: {str(e)}")
                 continue

@@ -57,6 +57,10 @@ class ProjectReader:
         logger.info("Initializing alert knowledge base")
         self._init_alert_knowledge_base()
         
+        # Initialize column metadata store
+        logger.info("Initializing column metadata store")
+        self._init_column_metadata_store()
+        
         logger.info("IndexingOrchestrator initialization complete")
 
     def _init_document_stores(self):
@@ -99,18 +103,83 @@ class ProjectReader:
         """Initialize alert knowledge base with domain-specific knowledge."""
         logger.info("Setting up alert knowledge base")
         
-        # Create alert knowledge base document store
-        self.alert_knowledge_store = DocumentChromaStore(
-            persistent_client=self.persistent_client,
-            collection_name="alert_knowledge_base",
-            embeddings_model=self.embeddings,
-            tf_idf=True  # Enable TF-IDF for better search
-        )
+        try:
+            # Use the document store provider to get the alert knowledge store
+            # This ensures it uses the same path and configuration as other stores
+            logger.info("Getting alert knowledge store from document store provider")
+            
+            # Check if alert_knowledge_base store exists in the provider
+            if "alert_knowledge_base" in self.document_stores:
+                self.alert_knowledge_store = self.document_stores["alert_knowledge_base"]
+                logger.info("Using existing alert knowledge store from document store provider")
+            else:
+                # Create the alert knowledge store using the same pattern as other stores
+                logger.info("Creating alert knowledge store using document store provider pattern")
+                self.alert_knowledge_store = DocumentChromaStore(
+                    persistent_client=self.persistent_client,
+                    collection_name="alert_knowledge_base",
+                    embeddings_model=self.embeddings,
+                    tf_idf=True  # Enable TF-IDF for better search
+                )
+                # Add it to the document stores for consistency
+                self.document_stores["alert_knowledge_base"] = self.alert_knowledge_store
+            
+            # Initialize with alert domain knowledge
+            self._populate_alert_knowledge_base()
+            
+            logger.info("Alert knowledge base initialized successfully")
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize alert knowledge base: {e}")
+            # Create a minimal fallback store without TF-IDF
+            logger.warning("Creating fallback alert knowledge store without TF-IDF")
+            try:
+                self.alert_knowledge_store = DocumentChromaStore(
+                    persistent_client=self.persistent_client,
+                    collection_name="alert_knowledge_base",
+                    embeddings_model=self.embeddings,
+                    tf_idf=False  # Disable TF-IDF to avoid collection creation issues
+                )
+                # Add it to the document stores for consistency
+                self.document_stores["alert_knowledge_base"] = self.alert_knowledge_store
+                logger.info("Fallback alert knowledge store created successfully")
+            except Exception as fallback_error:
+                logger.error(f"Fallback initialization also failed: {fallback_error}")
+                self.alert_knowledge_store = None
+
+    def _init_column_metadata_store(self):
+        """Initialize column metadata store for storing detailed column information."""
+        logger.info("Setting up column metadata store")
         
-        # Initialize with alert domain knowledge
-        self._populate_alert_knowledge_base()
-        
-        logger.info("Alert knowledge base initialized successfully")
+        try:
+            # Create the column metadata store
+            self.column_metadata_store = DocumentChromaStore(
+                persistent_client=self.persistent_client,
+                collection_name="column_metadata",
+                embeddings_model=self.embeddings,
+                tf_idf=True  # Enable TF-IDF for better search
+            )
+            # Add it to the document stores for consistency
+            self.document_stores["column_metadata"] = self.column_metadata_store
+            logger.info("Column metadata store initialized successfully")
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize column metadata store: {e}")
+            # Create a minimal fallback store without TF-IDF
+            logger.warning("Creating fallback column metadata store without TF-IDF")
+            try:
+                self.column_metadata_store = DocumentChromaStore(
+                    persistent_client=self.persistent_client,
+                    collection_name="column_metadata",
+                    embeddings_model=self.embeddings,
+                    tf_idf=False  # Disable TF-IDF to avoid collection creation issues
+                )
+                # Add it to the document stores for consistency
+                self.document_stores["column_metadata"] = self.column_metadata_store
+                logger.info("Fallback column metadata store created successfully")
+            except Exception as fallback_error:
+                logger.error(f"Fallback initialization also failed: {fallback_error}")
+                self.column_metadata_store = None
 
     def _populate_alert_knowledge_base(self):
         """Populate the alert knowledge base with domain-specific knowledge."""
@@ -295,6 +364,11 @@ class ProjectReader:
             List of search results with content and metadata
         """
         try:
+            # Check if alert knowledge store is available
+            if self.alert_knowledge_store is None:
+                logger.warning("Alert knowledge store is not available, returning empty results")
+                return []
+                
             if search_type == "semantic":
                 results = self.alert_knowledge_store.semantic_search(query, k=k)
             elif search_type == "bm25":
@@ -333,20 +407,27 @@ class ProjectReader:
         # Read project metadata
         metadata = self._read_project_metadata(project_path)
         
+        # Extract the actual project_id from metadata
+        project_id = metadata.get("project_id")
+        if not project_id:
+            raise ValueError(f"Project metadata does not contain 'project_id' field for project: {project_key}")
+        
+        logger.info(f"Using project_id from metadata: {project_id}")
+        
         # Process each table's files
         tables = []
         for table_meta in metadata["tables"]:
-            table_data = await self._process_table_files(project_path, table_meta, metadata["project_id"])
+            table_data = await self._process_table_files(project_path, table_meta, project_id)
             tables.append(table_data)
         
         # Process knowledge base files
-        knowledge_base = await self._process_knowledge_base_files(project_path, metadata.get("knowledge_base", []), metadata["project_id"])
+        knowledge_base = await self._process_knowledge_base_files(project_path, metadata.get("knowledge_base", []), project_id)
         
         # Process example files
-        examples = await self._process_example_files(project_path, metadata.get("examples", []), metadata["project_id"])
+        examples = await self._process_example_files(project_path, metadata.get("examples", []), project_id)
 
         return {
-            "project_id": metadata["project_id"],
+            "project_id": project_id,
             "tables": tables,
             "knowledge_base": knowledge_base,
             "examples": examples
@@ -407,11 +488,414 @@ class ProjectReader:
             )
             logger.info(f"Table Descriptions processing complete: {results['table_description']}")
             
+            # Process column metadata
+            logger.info(f"Processing Column Metadata with MDL {project_id}")
+            results["column_metadata"] = await self._process_column_metadata(
+                mdl_str=mdl_str,
+                project_id=project_id
+            )
+            logger.info(f"Column Metadata processing complete: {results['column_metadata']}")
+            
+            # Generate DDL for each table
+            logger.info(f"Generating DDL for tables in project {project_id}")
+            results["table_ddl"] = await self._generate_table_ddl(
+                mdl_str=mdl_str,
+                project_id=project_id
+            )
+            logger.info(f"DDL generation complete: {len(results['table_ddl'])} tables processed")
+            
             return results
             
         except Exception as e:
             logger.error(f"Error processing MDL file {mdl_path}: {str(e)}")
             return None
+   
+    def _build_table_ddl(self, table_name, description, columns):
+        try:
+            logger.debug(f"Building DDL for table {table_name}")
+            logger.debug(f"Description: {description[:100] if description else 'None'}...")
+            logger.debug(f"Columns type: {type(columns)}, length: {len(columns) if columns else 0}")
+            logger.debug(f"Columns sample: {columns[:2] if columns else 'None'}")
+            
+            col_defs = self._build_column_defs(columns)
+            logger.debug(f"Generated column definitions: {col_defs}")
+            
+            # Clean description for SQL comment
+            if description:
+                # Remove problematic characters and limit length
+                clean_description = description.replace('\n', ' ').replace('\r', ' ').strip()
+                # Remove or replace problematic characters that could cause SQL issues
+                clean_description = clean_description.replace('(', '[').replace(')', ']')
+                # Limit comment length to avoid issues
+                if len(clean_description) > 200:
+                    clean_description = clean_description[:200] + "..."
+                table_comment = f"-- {clean_description}\n"
+            else:
+                table_comment = ""
+            
+            # Ensure we have valid table name and column definitions
+            if not table_name:
+                logger.warning("No table name provided, skipping DDL generation")
+                return ""
+            
+            if not col_defs:
+                logger.warning(f"No column definitions for table {table_name}, skipping DDL generation")
+                return ""
+            
+            ddl = f"{table_comment}CREATE TABLE {table_name} (\n  " + ",\n  ".join(col_defs) + "\n);"
+            logger.info(f"Generated DDL for {table_name}: {ddl}")
+            print(f"Generated DDL for {table_name}: {ddl}")
+            
+            # Validate the generated DDL
+            if not self._validate_ddl_syntax(ddl):
+                logger.error(f"Generated DDL failed syntax validation for table {table_name}")
+                logger.error(f"Problematic DDL: {repr(ddl)}")
+                logger.error(f"DDL length: {len(ddl)}")
+                logger.error(f"DDL first 200 chars: {ddl[:200]}")
+                return ""
+            
+            return ddl
+        except Exception as e:
+            logger.error(f"Error building table DDL for {table_name}: {str(e)}")
+            logger.error(f"Columns that caused error: {columns}")
+            return ""
+
+    def _build_column_defs(self, columns, default_type="VARCHAR"):
+        """Build column definitions for DDL generation."""
+        col_defs = []
+        if not columns:
+            return []
+            
+        for i, col in enumerate(columns):
+            try:
+                logger.debug(f"Processing column {i}: {col}")
+                
+                # Handle different column formats
+                if isinstance(col, dict):
+                    name = col.get('name', '')
+                    # Try both 'type' and 'data_type' for compatibility
+                    dtype = col.get('type', col.get('data_type', default_type))
+                    
+                    # Get comment and description from properties or direct fields
+                    comment = col.get('comment', '')
+                    description = col.get('description', '')
+                    
+                    if 'properties' in col and isinstance(col['properties'], dict):
+                        # Get display name as comment if available
+                        if not comment:
+                            comment = col['properties'].get('displayName', '')
+                        # Get description if not already set
+                        if not description:
+                            description = col['properties'].get('description', '')
+                        
+                        # Enhanced logging for debugging
+                        logger.info(f"DEBUG: Column {col.get('name', '')} properties in _build_column_defs: {col['properties']}")
+                        logger.info(f"DEBUG: Column {col.get('name', '')}: comment='{comment[:50] if comment else 'None'}...', description='{description[:50] if description else 'None'}...'")
+                    
+                    # Handle notNull constraint
+                    not_null = col.get('notNull', False)
+                    if not_null and dtype.upper() != 'PRIMARY KEY':
+                        dtype += ' NOT NULL'
+                    
+                    logger.debug(f"Column {i}: name='{name}', type='{dtype}', comment='{comment[:50] if comment else 'None'}...', description='{description[:50] if description else 'None'}...'")
+                else:
+                    name = str(col) if col is not None else ''
+                    dtype = default_type
+                    comment = ''
+                
+                # Skip empty column names
+                if not name or not name.strip():
+                    logger.warning("Skipping column with empty name")
+                    continue
+                
+                # Validate column name doesn't contain problematic characters
+                if any(char in name for char in ['(', ')', ';', '\n', '\r']):
+                    logger.warning(f"Column name contains problematic characters, skipping: {name}")
+                    continue
+                    
+                col_def = f"{name} {dtype}"
+                
+                # Add comment and description in the format: -- comment -- Description
+                comment_parts = []
+                if comment:
+                    clean_comment = comment.strip().replace('\n', ' ').replace('\r', ' ')
+                    if clean_comment and not clean_comment.startswith("--"):
+                        comment_parts.append(clean_comment)
+                
+                if description:
+                    clean_description = description.strip().replace('\n', ' ').replace('\r', ' ')
+                    if clean_description and not clean_description.startswith("--"):
+                        comment_parts.append(clean_description)
+                
+                if comment_parts:
+                    col_def += f" -- {' -- '.join(comment_parts)}"
+                
+                logger.debug(f"Generated column definition: {col_def}")
+                col_defs.append(col_def)
+            except Exception as e:
+                logger.warning(f"Error processing column {i} ({col}): {str(e)}")
+                continue
+                
+        return col_defs
+
+    def _validate_ddl_syntax(self, ddl: str) -> bool:
+        """Validate DDL syntax."""
+        try:
+            # Basic validation - check for common issues
+            if not ddl or not ddl.strip():
+                return False
+            
+            # Check for balanced parentheses
+            if ddl.count('(') != ddl.count(')'):
+                logger.error("Unbalanced parentheses in DDL")
+                return False
+            
+            # Check for basic SQL structure
+            if not ddl.upper().startswith('CREATE TABLE'):
+                logger.error("DDL does not start with CREATE TABLE")
+                return False
+            
+            # Check for semicolon at the end
+            if not ddl.strip().endswith(';'):
+                logger.error("DDL does not end with semicolon")
+                return False
+            
+            # Check for empty column list
+            if '()' in ddl:
+                logger.error("DDL contains empty column list")
+                return False
+            
+            return True
+        except Exception as e:
+            logger.error(f"Error validating DDL syntax: {str(e)}")
+            return False
+
+    async def _generate_table_ddl(self, mdl_str: str, project_id: str) -> Dict[str, str]:
+        """Generate DDL for each table in the MDL."""
+        logger.info(f"Starting DDL generation for project: {project_id}")
+        
+        try:
+            # Parse MDL string
+            import json
+            mdl = json.loads(mdl_str)
+            logger.info("MDL string parsed successfully for DDL generation")
+            
+            table_ddl_map = {}
+            
+            # Process each model
+            for model in mdl.get("models", []):
+                table_name = model.get("name", "")
+                if not table_name:
+                    continue
+                    
+                logger.info(f"Generating DDL for table: {table_name}")
+                
+                # Get table description
+                table_description = model.get("description", "")
+                if not table_description:
+                    # Try to get description from properties
+                    properties = model.get("properties", {})
+                    table_description = properties.get("description", "")
+                
+                # Process columns for DDL generation
+                columns = model.get("columns", [])
+                processed_columns = []
+                
+                for column in columns:
+                    column_name = column.get("name", "")
+                    if not column_name:
+                        continue
+                    
+                    # Extract column metadata
+                    properties = column.get("properties", {})
+                    display_name = properties.get("displayName", "")
+                    description = properties.get("description", "")
+                    
+                    # Create column structure for DDL generation
+                    processed_column = {
+                        "name": column_name,
+                        "type": column.get("type", "VARCHAR"),
+                        "comment": display_name,  # Use display name as comment
+                        "description": description,
+                        "is_primary_key": column.get("name", "") == model.get("primaryKey", ""),
+                        "is_foreign_key": "relationship" in column,
+                        "notNull": column.get("notNull", False),
+                        "isCalculated": column.get("isCalculated", False),
+                        "expression": column.get("expression", ""),
+                        "properties": properties
+                    }
+                    
+                    processed_columns.append(processed_column)
+                    
+                    # Log column processing
+                    logger.info(f"  Column {column_name}: type={processed_column['type']}, display_name='{display_name}', description='{description[:50] if description else 'None'}...'")
+                
+                # Generate DDL for this table
+                ddl = self._build_table_ddl(
+                    table_name=table_name,
+                    description=table_description,
+                    columns=processed_columns
+                )
+                
+                if ddl:
+                    table_ddl_map[table_name] = ddl
+                    logger.info(f"Generated DDL for {table_name}: {len(ddl)} characters")
+                    logger.info(f"DDL preview: {ddl[:200]}...")
+                else:
+                    logger.warning(f"Failed to generate DDL for table {table_name}")
+            
+            logger.info(f"DDL generation completed: {len(table_ddl_map)} tables processed")
+            return table_ddl_map
+            
+        except Exception as e:
+            logger.error(f"Error generating table DDL: {str(e)}")
+            return {}
+
+    async def _process_column_metadata(self, mdl_str: str, project_id: str) -> Dict[str, Any]:
+        """Process column metadata from MDL and store in column metadata store."""
+        logger.info(f"Starting column metadata processing for project: {project_id}")
+        
+        try:
+            # Parse MDL string
+            import json
+            mdl = json.loads(mdl_str)
+            logger.info("MDL string parsed successfully for column metadata")
+            
+            # Process each model's columns
+            documents = []
+            total_columns = 0
+            
+            for model in mdl.get("models", []):
+                table_name = model.get("name", "")
+                if not table_name:
+                    continue
+                    
+                logger.info(f"Processing columns for table: {table_name}")
+                
+                for column in model.get("columns", []):
+                    column_name = column.get("name", "")
+                    if not column_name:
+                        continue
+                    
+                    # Extract column metadata
+                    properties = column.get("properties", {})
+                    display_name = properties.get("displayName", "")
+                    description = properties.get("description", "")
+                    
+                    # Create column metadata document
+                    column_metadata = {
+                        "column_name": column_name,
+                        "table_name": table_name,
+                        "data_type": column.get("type", "VARCHAR"),
+                        "display_name": display_name,
+                        "description": description,
+                        "is_calculated": column.get("isCalculated", False),
+                        "expression": column.get("expression", ""),
+                        "is_primary_key": column.get("name", "") == model.get("primaryKey", ""),
+                        "is_foreign_key": "relationship" in column,
+                        "relationship": column.get("relationship", {}),
+                        "properties": properties,
+                        "not_null": column.get("notNull", False)
+                    }
+                    
+                    # Create document for storage
+                    doc_content = json.dumps(column_metadata)
+                    doc_metadata = {
+                        "type": "COLUMN_METADATA",
+                        "project_id": project_id,
+                        "table_name": table_name,
+                        "column_name": column_name,
+                        "data_type": column.get("type", "VARCHAR"),
+                        "display_name": display_name,
+                        "description": description[:100] if description else "",
+                        "is_calculated": column.get("isCalculated", False),
+                        "is_primary_key": column.get("name", "") == model.get("primaryKey", ""),
+                        "is_foreign_key": "relationship" in column
+                    }
+                    
+                    document = Document(
+                        page_content=doc_content,
+                        metadata=doc_metadata
+                    )
+                    documents.append(document)
+                    total_columns += 1
+                    
+                    # Log column metadata for debugging
+                    logger.info(f"Column {table_name}.{column_name}: display_name='{display_name}', description='{description[:50] if description else 'None'}...'")
+            
+            # Store documents in column metadata store
+            if documents and self.column_metadata_store:
+                logger.info(f"Storing {len(documents)} column metadata documents")
+                write_result = await self.column_metadata_store.add_documents(documents)
+                logger.info(f"Successfully stored {write_result.get('documents_written', 0)} column metadata documents")
+            else:
+                logger.warning("No column metadata documents to store or store not available")
+            
+            result = {
+                "documents_written": len(documents),
+                "total_columns": total_columns,
+                "project_id": project_id
+            }
+            
+            logger.info(f"Column metadata processing completed successfully: {result}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error processing column metadata: {str(e)}")
+            return {
+                "documents_written": 0,
+                "total_columns": 0,
+                "project_id": project_id,
+                "error": str(e)
+            }
+
+    async def get_column_metadata(self, table_name: str, project_id: str) -> List[Dict[str, Any]]:
+        """Retrieve column metadata for a specific table.
+        
+        Args:
+            table_name: Name of the table
+            project_id: Project identifier
+            
+        Returns:
+            List of column metadata dictionaries
+        """
+        try:
+            if not self.column_metadata_store:
+                logger.warning("Column metadata store not available")
+                return []
+            
+            # Search for column metadata for this table
+            where_clause = {
+                "$and": [
+                    {"project_id": {"$eq": project_id}},
+                    {"table_name": {"$eq": table_name}},
+                    {"type": {"$eq": "COLUMN_METADATA"}}
+                ]
+            }
+            
+            results = self.column_metadata_store.semantic_search(
+                query="",
+                k=100,  # Get all columns for the table
+                where=where_clause
+            )
+            
+            # Parse results
+            column_metadata = []
+            for result in results:
+                try:
+                    content = json.loads(result['content'])
+                    column_metadata.append(content)
+                    logger.info(f"Retrieved metadata for column {table_name}.{content.get('column_name', 'Unknown')}: display_name='{content.get('display_name', 'None')}', description='{content.get('description', 'None')[:50]}...'")
+                except Exception as e:
+                    logger.warning(f"Error parsing column metadata: {e}")
+                    continue
+            
+            logger.info(f"Retrieved {len(column_metadata)} column metadata records for table {table_name}")
+            return column_metadata
+            
+        except Exception as e:
+            logger.error(f"Error retrieving column metadata for table {table_name}: {str(e)}")
+            return []
 
     def _process_ddl_file(self, project_path: Path, ddl_file: str) -> Optional[Dict]:
         """Process DDL file and extract relevant information."""
@@ -675,7 +1159,7 @@ async def main():
     reader = ProjectReader(base_path, persistent_client)
     
     # Test projects
-    test_projects = ["cornerstone_talent" ] #, "cornerstone_talent"]
+    test_projects = ["csodworkday"] # ,"cornerstone_learning", "cornerstone_talent", "cornerstone","sumtotal_learn"] #, "cornerstone_talent"]
     
     for project in test_projects:
         try:
@@ -866,7 +1350,7 @@ async def test_delete_project():
     reader = ProjectReader(base_path, persistent_client)
     
     # Test project deletion
-    test_project_id = "cve_data"
+    test_project_id = "sumtotal_learn_demo"  # Use the actual project_id from metadata
     
     try:
         logger.info(f"\n{'='*50}")
@@ -897,6 +1381,7 @@ async def test_delete_project():
 
 if __name__ == "__main__":
     import asyncio
+    #asyncio.run(test_delete_project()) 
     asyncio.run(main())
     
     # Uncomment the line below to test project deletion

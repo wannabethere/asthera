@@ -135,16 +135,8 @@ class RetrievalHelper:
                     } for history in histories
                 ]
             
-            print("Input get_database_schemas tables: ", tables)
-            print("Input get_database_schemas table_retrieval: ", table_retrieval)
-            print("Input get_database_schemas query: ", query)
-            print("Input get_database_schemas project_id: ", project_id)
             
-            # Add debug logging
-            logger.info(f"DEBUG: get_database_schemas called with project_id: {project_id}")
-            logger.info(f"DEBUG: project_id type: {type(project_id)}")
-            logger.info(f"DEBUG: project_id value: {repr(project_id)}")
-            logger.info(f"DEBUG: About to call table_retrieval.run() with project_id: {project_id}")
+          
             
             # Use the table retrieval to get schema information
             schema_result = await self.retrievers["table_retrieval"].run(
@@ -164,16 +156,28 @@ class RetrievalHelper:
             
             # Process and format the schema information
             schemas = []
-            for result in schema_result["retrieval_results"]:
+            print(f"=== PROCESSING SCHEMA RESULTS ===")
+            print(f"Number of retrieval_results: {len(schema_result['retrieval_results'])}")
+            for i, result in enumerate(schema_result["retrieval_results"]):
+                print(f"Processing result {i}: {type(result)}")
                 if isinstance(result, dict):
+                    table_name = result.get("table_name", "")
+                    table_ddl = result.get("table_ddl", "")
+                    print(f"Result {i} - table_name: {table_name}, table_ddl_length: {len(table_ddl) if table_ddl else 0}")
+                    if table_ddl:
+                        print(f"Result {i} - table_ddl preview: {table_ddl[:200]}...")
+                    
                     schema_info = {
-                        "table_name": result.get("table_name", ""),
-                        "table_ddl": result.get("table_ddl", ""),
+                        "table_name": table_name,
+                        "table_ddl": table_ddl,
                         "relationships": result.get("relationships", []),
                         "has_calculated_field": schema_result.get("has_calculated_field", False),
                         "has_metric": schema_result.get("has_metric", False)
                     }
                     schemas.append(schema_info)
+                    print(f"Added schema {i} to schemas list")
+                else:
+                    print(f"Result {i} is not a dict, skipping")
             
             result = {
                 "schemas": schemas,
@@ -185,6 +189,14 @@ class RetrievalHelper:
                 "has_calculated_field": schema_result.get("has_calculated_field", False),
                 "has_metric": schema_result.get("has_metric", False)
             }
+            
+            print(f"=== FINAL SCHEMA RESULT ===")
+            print(f"Total schemas: {len(schemas)}")
+            for i, schema in enumerate(schemas):
+                print(f"Schema {i}: table_name={schema['table_name']}, table_ddl_length={len(schema['table_ddl']) if schema['table_ddl'] else 0}")
+                if schema['table_ddl']:
+                    print(f"Schema {i} DDL preview: {schema['table_ddl'][:150]}...")
+            
             if schemas:
                 await self.cache.set(cache_key, result, ttl=300)
             return result
@@ -560,7 +572,9 @@ class RetrievalHelper:
             all_relationships = []
             
             if schema_result and "schemas" in schema_result:
-                for schema in schema_result["schemas"]:
+                print(f"Found {len(schema_result['schemas'])} schemas in schema_result")
+                for i, schema in enumerate(schema_result["schemas"]):
+                    print(f"Processing schema {i}: {type(schema)}, keys: {list(schema.keys()) if isinstance(schema, dict) else 'Not a dict'}")
                     if isinstance(schema, dict):
                         # Extract table name from schema
                         table_name = schema.get("table_name", "")
@@ -569,9 +583,12 @@ class RetrievalHelper:
                         
                         # Extract table DDL from schema
                         table_ddl = schema.get("table_ddl", "")
+                        print(f"table_ddl in get_table_names_and_schema_contexts: table_name={table_name}, table_ddl_length={len(table_ddl) if table_ddl else 0}")
                         if table_ddl:
                             schema_contexts.append(table_ddl)
-                        
+                            print(f"Added table_ddl to schema_contexts: {table_ddl[:100]}...")
+                        else:
+                            print(f"No table_ddl found for table: {table_name}")
                         # Extract relationships from schema
                         relationships = schema.get("relationships", [])
                         if relationships:
@@ -606,6 +623,69 @@ class RetrievalHelper:
                 "has_metric": False,
                 "error": str(e)
             }
+
+    async def search(
+        self,
+        query: str,
+        collection_name: str,
+        project_id: str,
+        top_k: int = 5
+    ) -> List[Dict[str, Any]]:
+        """
+        Generic search method for different collection types
+        
+        Args:
+            query: Search query
+            collection_name: Name of the collection to search
+            project_id: Project identifier
+            top_k: Number of results to return
+            
+        Returns:
+            List of search results
+        """
+        try:
+            # Map collection names to appropriate retrieval methods
+            if collection_name == "conditional_formatting_history":
+                # Use historical questions for conditional formatting history
+                result = await self.get_historical_questions(
+                    query=query,
+                    project_id=project_id,
+                    similarity_threshold=0.7
+                )
+                return result.get("historical_questions", [])[:top_k]
+                
+            elif collection_name == "filter_examples":
+                # Use instructions for filter examples
+                result = await self.get_instructions(
+                    query=query,
+                    project_id=project_id,
+                    similarity_threshold=0.7
+                )
+                return result.get("instructions", [])[:top_k]
+                
+            elif collection_name == "sql_pairs":
+                # Use SQL pairs for SQL examples
+                result = await self.get_sql_pairs(
+                    query=query,
+                    project_id=project_id,
+                    similarity_threshold=0.7,
+                    max_retrieval_size=top_k
+                )
+                return result.get("sql_pairs", [])[:top_k]
+                
+            else:
+                # Default to historical questions for unknown collections
+                logger.warning(f"Unknown collection name: {collection_name}, using historical questions")
+                result = await self.get_historical_questions(
+                    query=query,
+                    project_id=project_id,
+                    similarity_threshold=0.7
+                )
+                return result.get("historical_questions", [])[:top_k]
+                
+        except Exception as e:
+            logger.error(f"Error in search method: {e}")
+            return []
 
 async def main():
     """Main function to test the RetrievalHelper functionality."""

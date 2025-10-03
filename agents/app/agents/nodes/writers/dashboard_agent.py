@@ -5,7 +5,7 @@ from typing import Dict, Any, Optional, List
 from dataclasses import asdict
 from datetime import datetime
 
-from langchain.agents import Tool, AgentExecutor, create_openai_functions_agent
+from langchain.agents import Tool, AgentExecutor, create_tool_calling_agent
 from langchain.prompts import PromptTemplate, ChatPromptTemplate, MessagesPlaceholder
 from langchain.memory import ConversationBufferWindowMemory
 from langchain.tools import BaseTool
@@ -107,11 +107,18 @@ class ConditionalFormattingAgent:
                 super().__init__()
                 self._retriever = retriever
             
-            def _run(self, filter_type: str, project_id: str = "default") -> str:
+            def _run(self, filter_type: str, project_id: str) -> str:
                 try:
                     examples = asyncio.run(
                         self._retriever.retrieve_filter_examples(filter_type, project_id)
                     )
+                    return json.dumps(examples, indent=2)
+                except Exception as e:
+                    return f"Error retrieving examples: {e}"
+            
+            async def _arun(self, filter_type: str, project_id: str) -> str:
+                try:
+                    examples = await self._retriever.retrieve_filter_examples(filter_type, project_id)
                     return json.dumps(examples, indent=2)
                 except Exception as e:
                     return f"Error retrieving examples: {e}"
@@ -124,11 +131,18 @@ class ConditionalFormattingAgent:
                 super().__init__()
                 self._retriever = retriever
             
-            def _run(self, query: str, project_id: str = "default") -> str:
+            def _run(self, query: str, project_id: str) -> str:
                 try:
                     configurations = asyncio.run(
                         self._retriever.retrieve_similar_configurations(query, project_id)
                     )
+                    return json.dumps(configurations, indent=2)
+                except Exception as e:
+                    return f"Error retrieving configurations: {e}"
+            
+            async def _arun(self, query: str, project_id: str) -> str:
+                try:
+                    configurations = await self._retriever.retrieve_similar_configurations(query, project_id)
                     return json.dumps(configurations, indent=2)
                 except Exception as e:
                     return f"Error retrieving configurations: {e}"
@@ -154,6 +168,10 @@ class ConditionalFormattingAgent:
                     return "Configuration is valid"
                 except Exception as e:
                     return f"Validation error: {e}"
+            
+            async def _arun(self, config_json: str) -> str:
+                # Same logic as _run since validation is synchronous
+                return self._run(config_json)
         
         return [FilterExamplesTool(self.retriever), SimilarConfigurationsTool(self.retriever), ValidateConfigurationTool()]
     
@@ -187,42 +205,42 @@ Always use the available tools to:
 
 Generate configurations in this format:
 ```json
-{
+{{
     "dashboard_id": "dashboard_123",
     "filters": [
-        {
+        {{
             "filter_id": "filter_1",
             "filter_type": "column_filter",
             "column_name": "status",
             "operator": "equals",
             "value": "active",
             "description": "Filter for active records"
-        }
+        }}
     ],
     "conditional_formats": [
-        {
+        {{
             "format_id": "format_1",
             "chart_id": "chart_1",
-            "condition": {
+            "condition": {{
                 "filter_id": "condition_1",
                 "filter_type": "conditional_format",
                 "column_name": "sales",
                 "operator": "greater_than",
                 "value": 1000
-            },
-            "formatting_rules": {
+            }},
+            "formatting_rules": {{
                 "color": "green",
                 "font_weight": "bold"
-            },
+            }},
             "description": "Highlight high sales"
-        }
+        }}
     ],
-    "time_filters": {
+    "time_filters": {{
         "start_date": "2024-01-01",
         "end_date": "2024-12-31",
         "period": "last_30_days"
-    }
-}
+    }}
+}}
 ```
 
 Remember to self-evaluate your configurations and use tools for validation."""
@@ -234,7 +252,7 @@ Remember to self-evaluate your configurations and use tools for validation."""
             MessagesPlaceholder(variable_name="agent_scratchpad")
         ])
         
-        return create_openai_functions_agent(
+        return create_tool_calling_agent(
             llm=self.llm,
             tools=self.tools,
             prompt=prompt
@@ -245,7 +263,7 @@ Remember to self-evaluate your configurations and use tools for validation."""
         self,
         query: str,
         dashboard_context: Dict[str, Any],
-        project_id: str = "default",
+        project_id: str,
         additional_context: Optional[Dict[str, Any]] = None,
         time_filters: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
@@ -297,7 +315,7 @@ Remember to self-evaluate your configurations and use tools for validation."""
         self,
         query: str,
         dashboard_context: Dict[str, Any],
-        project_id: str = "default",
+        project_id: str,
         additional_context: Optional[Dict[str, Any]] = None
     ) -> DashboardConfiguration:
         """Process natural language query and generate configuration"""

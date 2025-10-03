@@ -1,566 +1,672 @@
 {
-    "catalog": "network_infrastructure",
-    "schema": "public",
-    "models": [
-      {
-        "name": "dev_network_devices",
-        "description": "Network device inventory and management system tracking IP addresses, MAC addresses, manufacturers, and device lifecycle information across different network sites and subnets",
-        "tableReference": {
-          "table": "dev_network_devices"
+  "catalog": "network_infrastructure",
+  "schema": "public",
+  "models": [
+    {
+      "name": "dev_network_devices",
+      "description": "Network device inventory and management system tracking IP addresses, MAC addresses, manufacturers, and device lifecycle information across different network sites and subnets",
+      "tableReference": {
+        "table": "dev_network_devices"
+      },
+      "columns": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "notNull": true,
+          "properties": {
+            "displayName": "Device ID",
+            "description": "Unique identifier for the network device record"
+          }
         },
-        "columns": [
-          {
-            "name": "id",
-            "type": "BIGINT",
-            "notNull": true,
-            "properties": {
-              "displayName": "Device ID",
-              "description": "Unique identifier for the network device record"
-            }
-          },
-          {
-            "name": "ip",
-            "type": "VARCHAR",
-            "properties": {
-              "displayName": "IP Address",
-              "description": "IPv4 address assigned to the network device"
-            }
-          },
-          {
-            "name": "subnet",
-            "type": "VARCHAR",
-            "properties": {
-              "displayName": "Subnet",
-              "description": "Network subnet in CIDR notation (e.g., 192.168.1.0/24) that the device belongs to"
-            }
-          },
-          {
-            "name": "site",
-            "type": "VARCHAR",
-            "properties": {
-              "displayName": "Site Location",
-              "description": "Physical site or location identifier where the device is deployed (Unknown if not specified)"
-            }
-          },
-          {
-            "name": "mac",
-            "type": "VARCHAR",
-            "properties": {
-              "displayName": "MAC Address",
-              "description": "Media Access Control (MAC) address - unique hardware identifier for the network interface"
-            }
-          },
-          {
-            "name": "manufacturer",
-            "type": "VARCHAR",
-            "properties": {
-              "displayName": "Manufacturer",
-              "description": "Device manufacturer name (e.g., Microsoft Corporation, VMware Inc., AWS) based on MAC address OUI lookup"
-            }
-          },
-          {
-            "name": "updated_at",
-            "type": "TIMESTAMP",
-            "properties": {
-              "displayName": "Last Updated",
-              "description": "Timestamp when the device record was last updated or seen on the network"
-            }
-          },
-          {
-            "name": "nuid",
-            "type": "INTEGER",
-            "properties": {
-              "displayName": "Network Unit ID",
-              "description": "Network unit identifier for grouping or organizational purposes"
-            }
-          },
-          {
-            "name": "dev_id",
-            "type": "INTEGER",
-            "properties": {
-              "displayName": "Device Internal ID",
-              "description": "Internal device identifier used by the network management system"
-            }
-          },
-          {
-            "name": "is_stale",
-            "type": "BOOLEAN",
-            "notNull": true,
-            "properties": {
-              "displayName": "Is Stale",
-              "description": "Boolean flag indicating if the device record is considered stale or outdated (not recently seen)"
-            }
-          },
-          {
-            "name": "raw_created_at",
-            "type": "TIMESTAMP",
-            "properties": {
-              "displayName": "Raw Creation Time",
-              "description": "Original timestamp when the device was first detected or created in the raw data collection system"
-            }
-          },
-          {
-            "name": "store_created_at",
-            "type": "TIMESTAMP",
-            "properties": {
-              "displayName": "Store Creation Time",
-              "description": "Timestamp when the device record was first stored in the data warehouse"
-            }
-          },
-          {
-            "name": "store_updated_at",
-            "type": "TIMESTAMP",
-            "properties": {
-              "displayName": "Store Updated Time",
-              "description": "Timestamp when the device record was last updated in the data warehouse"
-            }
-          },
-          {
-            "name": "process_id",
-            "type": "VARCHAR",
-            "properties": {
-              "displayName": "Process ID",
-              "description": "UUID of the data processing job or batch that processed this device record"
-            }
-          },
-          {
-            "name": "is_cloud_device",
-            "type": "BOOLEAN",
-            "isCalculated": true,
-            "expression": "CASE WHEN manufacturer IN ('AWS', 'Microsoft Corporation') OR ip LIKE '10.%' OR ip LIKE '172.%' OR ip LIKE '100.%' THEN true ELSE false END",
-            "properties": {
-              "displayName": "Is Cloud Device",
-              "description": "Calculated field indicating if device appears to be cloud-based (AWS, Azure, or private IP ranges)"
-            }
-          },
-          {
-            "name": "is_virtual_machine",
-            "type": "BOOLEAN",
-            "isCalculated": true,
-            "expression": "CASE WHEN manufacturer LIKE '%VMware%' OR manufacturer LIKE '%Virtual%' THEN true ELSE false END",
-            "properties": {
-              "displayName": "Is Virtual Machine",
-              "description": "Calculated field indicating if device is likely a virtual machine based on manufacturer"
-            }
-          },
-          {
-            "name": "subnet_class",
-            "type": "VARCHAR",
-            "isCalculated": true,
-            "expression": "CASE WHEN subnet LIKE '10.%' THEN 'Class A Private' WHEN subnet LIKE '172.%' THEN 'Class B Private' WHEN subnet LIKE '192.168.%' THEN 'Class C Private' WHEN subnet LIKE '127.%' THEN 'Loopback' WHEN subnet LIKE '100.%' THEN 'CGNAT' ELSE 'Public/Other' END",
-            "properties": {
-              "displayName": "Subnet Class",
-              "description": "Classification of the subnet type (Private Class A/B/C, Public, Loopback, etc.)"
-            }
-          },
-          {
-            "name": "days_since_last_seen",
-            "type": "INTEGER",
-            "isCalculated": true,
-            "expression": "DATEDIFF(day, updated_at, CURRENT_TIMESTAMP)",
-            "properties": {
-              "displayName": "Days Since Last Seen",
-              "description": "Number of days since the device was last updated or seen on the network"
-            }
-          },
-          {
-            "name": "device_age_category",
-            "type": "VARCHAR",
-            "isCalculated": true,
-            "expression": "CASE WHEN DATEDIFF(day, updated_at, CURRENT_TIMESTAMP) <= 1 THEN 'Active (1 day)' WHEN DATEDIFF(day, updated_at, CURRENT_TIMESTAMP) <= 7 THEN 'Recent (1 week)' WHEN DATEDIFF(day, updated_at, CURRENT_TIMESTAMP) <= 30 THEN 'Stale (1 month)' ELSE 'Old (>1 month)' END",
-            "properties": {
-              "displayName": "Device Age Category",
-              "description": "Categorical age of device based on last seen date"
-            }
-          },
-          {
-            "name": "ip_octets",
-            "type": "VARCHAR",
-            "isCalculated": true,
-            "expression": "SPLIT_PART(ip, '.', 1) + '.' + SPLIT_PART(ip, '.', 2) + '.x.x'",
-            "properties": {
-              "displayName": "IP Network Segment",
-              "description": "Masked IP address showing network segment (first two octets) for privacy and grouping"
-            }
+        {
+          "name": "ip",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "IP Address",
+            "description": "IPv4 address assigned to the network device"
           }
-        ],
-        "primaryKey": "id",
-        "properties": {
-          "displayName": "Network Devices",
-          "description": "Comprehensive network device inventory and management"
+        },
+        {
+          "name": "subnet",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Subnet",
+            "description": "Network subnet in CIDR notation (e.g., 192.168.1.0/24) that the device belongs to"
+          }
+        },
+        {
+          "name": "site",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Site Location",
+            "description": "Physical site or location identifier where the device is deployed (Unknown if not specified)"
+          }
+        },
+        {
+          "name": "mac",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "MAC Address",
+            "description": "Media Access Control (MAC) address - unique hardware identifier for the network interface"
+          }
+        },
+        {
+          "name": "manufacturer",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Manufacturer",
+            "description": "Device manufacturer name (e.g., Microsoft Corporation, VMware Inc., AWS) based on MAC address OUI lookup"
+          }
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Last Updated",
+            "description": "Timestamp when the device record was last updated or seen on the network"
+          }
+        },
+        {
+          "name": "nuid",
+          "type": "INTEGER",
+          "properties": {
+            "displayName": "Network Unit ID",
+            "description": "Network unit identifier for grouping or organizational purposes"
+          }
+        },
+        {
+          "name": "dev_id",
+          "type": "INTEGER",
+          "properties": {
+            "displayName": "Device Internal ID",
+            "description": "Internal device identifier used by the network management system"
+          }
+        },
+        {
+          "name": "is_stale",
+          "type": "BOOLEAN",
+          "notNull": true,
+          "properties": {
+            "displayName": "Is Stale",
+            "description": "Boolean flag indicating if the device record is considered stale or outdated (not recently seen)"
+          }
+        },
+        {
+          "name": "raw_created_at",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Raw Creation Time",
+            "description": "Original timestamp when the device was first detected or created in the raw data collection system"
+          }
+        },
+        {
+          "name": "store_created_at",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Store Creation Time",
+            "description": "Timestamp when the device record was first stored in the data warehouse"
+          }
+        },
+        {
+          "name": "store_updated_at",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Store Updated Time",
+            "description": "Timestamp when the device record was last updated in the data warehouse"
+          }
+        },
+        {
+          "name": "process_id",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Process ID",
+            "description": "UUID of the data processing job or batch that processed this device record"
+          }
+        },
+        {
+          "name": "is_cloud_device",
+          "type": "BOOLEAN",
+          "isCalculated": true,
+          "expression": "CASE WHEN manufacturer IN ('AWS', 'Microsoft Corporation') OR ip LIKE '10.%' OR ip LIKE '172.%' OR ip LIKE '100.%' THEN true ELSE false END",
+          "properties": {
+            "displayName": "Is Cloud Device",
+            "description": "Calculated field indicating if device appears to be cloud-based (AWS, Azure, or private IP ranges)"
+          }
+        },
+        {
+          "name": "is_virtual_machine",
+          "type": "BOOLEAN",
+          "isCalculated": true,
+          "expression": "CASE WHEN manufacturer LIKE '%VMware%' OR manufacturer LIKE '%Virtual%' THEN true ELSE false END",
+          "properties": {
+            "displayName": "Is Virtual Machine",
+            "description": "Calculated field indicating if device is likely a virtual machine based on manufacturer"
+          }
+        },
+        {
+          "name": "subnet_class",
+          "type": "VARCHAR",
+          "isCalculated": true,
+          "expression": "CASE WHEN subnet LIKE '10.%' THEN 'Class A Private' WHEN subnet LIKE '172.%' THEN 'Class B Private' WHEN subnet LIKE '192.168.%' THEN 'Class C Private' WHEN subnet LIKE '127.%' THEN 'Loopback' WHEN subnet LIKE '100.%' THEN 'CGNAT' ELSE 'Public/Other' END",
+          "properties": {
+            "displayName": "Subnet Class",
+            "description": "Classification of the subnet type (Private Class A/B/C, Public, Loopback, etc.)"
+          }
+        },
+        {
+          "name": "days_since_last_seen",
+          "type": "INTEGER",
+          "isCalculated": true,
+          "expression": "DATEDIFF(day, updated_at, CURRENT_TIMESTAMP)",
+          "properties": {
+            "displayName": "Days Since Last Seen",
+            "description": "Number of days since the device was last updated or seen on the network"
+          }
+        },
+        {
+          "name": "device_age_category",
+          "type": "VARCHAR",
+          "isCalculated": true,
+          "expression": "CASE WHEN DATEDIFF(day, updated_at, CURRENT_TIMESTAMP) <= 1 THEN 'Active (1 day)' WHEN DATEDIFF(day, updated_at, CURRENT_TIMESTAMP) <= 7 THEN 'Recent (1 week)' WHEN DATEDIFF(day, updated_at, CURRENT_TIMESTAMP) <= 30 THEN 'Stale (1 month)' ELSE 'Old (>1 month)' END",
+          "properties": {
+            "displayName": "Device Age Category",
+            "description": "Categorical age of device based on last seen date"
+          }
+        },
+        {
+          "name": "ip_octets",
+          "type": "VARCHAR",
+          "isCalculated": true,
+          "expression": "SPLIT_PART(ip, '.', 1) + '.' + SPLIT_PART(ip, '.', 2) + '.x.x'",
+          "properties": {
+            "displayName": "IP Network Segment",
+            "description": "Masked IP address showing network segment (first two octets) for privacy and grouping"
+          }
         }
+      ],
+      "primaryKey": "id",
+      "properties": {
+        "displayName": "Network Devices",
+        "description": "Comprehensive network device inventory and management"
+      },
+      "sampleData": [
+        {
+          "id": 18536081,
+          "ip": "60.86.250.123",
+          "subnet": "60.86.250.0/24",
+          "site": "Remote",
+          "mac": "ac:f3:3e:25:5e:0f",
+          "manufacturer": "IBM Corporation",
+          "updated_at": "2024-07-22T00:00:00",
+          "nuid": 87,
+          "dev_id": 3000000,
+          "is_stale": false,
+          "raw_created_at": "2024-07-06 00:00:00.000000",
+          "store_created_at": "2024-07-06 00:00:00.000000",
+          "store_updated_at": "2024-07-22 00:00:00.000000",
+          "process_id": "ee9a68a4-621c-4d2a-882d-d9383b867e6a"
+        },
+        {
+          "id": 60286811,
+          "ip": "19.190.75.242",
+          "subnet": "19.190.75.0/24",
+          "site": "Office",
+          "mac": "16:9f:e1:e2:2a:8e",
+          "manufacturer": "Lenovo",
+          "updated_at": "2025-01-07T00:00:00",
+          "nuid": 87,
+          "dev_id": 3000000,
+          "is_stale": false,
+          "raw_created_at": "2025-01-03 00:00:00.000000",
+          "store_created_at": "2025-01-03 00:00:00.000000",
+          "store_updated_at": "2025-01-07 00:00:00.000000",
+          "process_id": "b5b4d817-f176-4c0a-b95c-53ad980141b3"
+        },
+        {
+          "id": 16459178,
+          "ip": "10.183.197.186",
+          "subnet": "10.183.197.0/24",
+          "site": "Data Center",
+          "mac": "64:2f:c7:32:0b:ab",
+          "manufacturer": "Hewlett Packard",
+          "updated_at": "2024-04-30T00:00:00",
+          "nuid": 87,
+          "dev_id": 3000000,
+          "is_stale": false,
+          "raw_created_at": "2024-04-07 00:00:00.000000",
+          "store_created_at": "2024-04-07 00:00:00.000000",
+          "store_updated_at": "2024-04-30 00:00:00.000000",
+          "process_id": "039ff39d-83bd-4437-a641-35dabafdb3ae"
+        },
+        {
+          "id": 54536500,
+          "ip": "16.50.6.143",
+          "subnet": "16.50.6.0/24",
+          "site": "Office",
+          "mac": "5e:27:79:fd:2c:de",
+          "manufacturer": "VMware, Inc.",
+          "updated_at": "2025-06-22T00:00:00",
+          "nuid": 87,
+          "dev_id": 3000001,
+          "is_stale": false,
+          "raw_created_at": "2025-06-03 00:00:00.000000",
+          "store_created_at": "2025-06-03 00:00:00.000000",
+          "store_updated_at": "2025-06-22 00:00:00.000000",
+          "process_id": "ff12c743-ed10-4d42-9158-3f3eed5ad2fa"
+        },
+        {
+          "id": 77819800,
+          "ip": "77.97.37.214",
+          "subnet": "77.97.37.0/24",
+          "site": "Remote",
+          "mac": "0e:a5:21:3c:c1:02",
+          "manufacturer": "Intel Corporation",
+          "updated_at": "2024-10-31T00:00:00",
+          "nuid": 87,
+          "dev_id": 3000001,
+          "is_stale": false,
+          "raw_created_at": "2024-10-05 00:00:00.000000",
+          "store_created_at": "2024-10-05 00:00:00.000000",
+          "store_updated_at": "2024-10-31 00:00:00.000000",
+          "process_id": "8a0a62d3-65c4-4c51-abd3-cb5d4a00bc29"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "name": "network_device_to_asset_relationship",
+      "models": [
+        "dev_network_devices",
+        "dev_assets"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "dev_network_devices.dev_id = dev_assets.dev_id AND dev_network_devices.nuid = dev_assets.nuid",
+      "properties": {
+        "displayName": "Network Device to Asset Relationship",
+        "description": "Relationship between network devices and their corresponding assets"
       }
-    ],
-    "metrics": [
-      {
-        "name": "device_inventory_metrics",
-        "baseObject": "network_devices",
-        "description": "Core inventory and health metrics for network devices",
-        "dimension": [
-          {
-            "name": "manufacturer",
-            "type": "VARCHAR"
-          },
-          {
-            "name": "site",
-            "type": "VARCHAR"
-          },
-          {
-            "name": "subnet_class",
-            "type": "VARCHAR"
-          },
-          {
-            "name": "device_age_category",
-            "type": "VARCHAR"
-          }
-        ],
-        "measure": [
-          {
-            "name": "total_devices",
-            "type": "INTEGER",
-            "expression": "COUNT(*)"
-          },
-          {
-            "name": "active_devices",
-            "type": "INTEGER",
-            "expression": "COUNT(CASE WHEN is_stale = false THEN 1 END)"
-          },
-          {
-            "name": "stale_devices",
-            "type": "INTEGER",
-            "expression": "COUNT(CASE WHEN is_stale = true THEN 1 END)"
-          },
-          {
-            "name": "unique_subnets",
-            "type": "INTEGER",
-            "expression": "COUNT(DISTINCT subnet)"
-          },
-          {
-            "name": "cloud_devices",
-            "type": "INTEGER",
-            "expression": "COUNT(CASE WHEN is_cloud_device = true THEN 1 END)"
-          },
-          {
-            "name": "virtual_machines",
-            "type": "INTEGER",
-            "expression": "COUNT(CASE WHEN is_virtual_machine = true THEN 1 END)"
-          },
-          {
-            "name": "device_health_score",
-            "type": "DECIMAL",
-            "expression": "COUNT(CASE WHEN is_stale = false THEN 1 END) * 100.0 / COUNT(*)"
-          }
-        ],
-        "timeGrain": [
-          {
-            "name": "updated_date_grain",
-            "refColumn": "updated_at",
-            "dateParts": ["YEAR", "QUARTER", "MONTH", "WEEK", "DAY"]
-          }
-        ],
-        "properties": {
-          "displayName": "Device Inventory Metrics",
-          "description": "Key performance indicators for network device management"
+    }
+  ],
+  "metrics": [
+    {
+      "name": "device_inventory_metrics",
+      "baseObject": "network_devices",
+      "description": "Core inventory and health metrics for network devices",
+      "dimension": [
+        {
+          "name": "manufacturer",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "site",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "subnet_class",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "device_age_category",
+          "type": "VARCHAR"
         }
-      },
-      {
-        "name": "network_topology_metrics",
-        "baseObject": "network_devices",
-        "description": "Network topology and segmentation analysis",
-        "dimension": [
-          {
-            "name": "subnet",
-            "type": "VARCHAR"
-          },
-          {
-            "name": "subnet_class",
-            "type": "VARCHAR"
-          },
-          {
-            "name": "site",
-            "type": "VARCHAR"
-          }
-        ],
-        "measure": [
-          {
-            "name": "devices_per_subnet",
-            "type": "INTEGER",
-            "expression": "COUNT(*)"
-          },
-          {
-            "name": "unique_manufacturers_per_subnet",
-            "type": "INTEGER",
-            "expression": "COUNT(DISTINCT manufacturer)"
-          },
-          {
-            "name": "subnet_utilization_indicator",
-            "type": "DECIMAL",
-            "expression": "COUNT(*) * 1.0"
-          },
-          {
-            "name": "active_devices_in_subnet",
-            "type": "INTEGER",
-            "expression": "COUNT(CASE WHEN is_stale = false THEN 1 END)"
-          }
-        ],
-        "properties": {
-          "displayName": "Network Topology Metrics",
-          "description": "Metrics for analyzing network structure and subnet utilization"
-        }
-      },
-      {
-        "name": "manufacturer_analytics",
-        "baseObject": "network_devices",
-        "description": "Device manufacturer and vendor analysis",
-        "dimension": [
-          {
-            "name": "manufacturer",
-            "type": "VARCHAR"
-          },
-          {
-            "name": "site",
-            "type": "VARCHAR"
-          }
-        ],
-        "measure": [
-          {
-            "name": "manufacturer_device_count",
-            "type": "INTEGER",
-            "expression": "COUNT(*)"
-          },
-          {
-            "name": "manufacturer_market_share",
-            "type": "DECIMAL",
-            "expression": "COUNT(*) * 100.0 / (SELECT COUNT(*) FROM network_devices)"
-          },
-          {
-            "name": "manufacturer_active_ratio",
-            "type": "DECIMAL",
-            "expression": "COUNT(CASE WHEN is_stale = false THEN 1 END) * 100.0 / COUNT(*)"
-          },
-          {
-            "name": "unique_sites_served",
-            "type": "INTEGER",
-            "expression": "COUNT(DISTINCT site)"
-          }
-        ],
-        "properties": {
-          "displayName": "Manufacturer Analytics",
-          "description": "Analysis of device manufacturers and vendor diversity"
-        }
-      },
-      {
-        "name": "device_lifecycle_metrics",
-        "baseObject": "network_devices",
-        "description": "Device lifecycle and freshness tracking",
-        "dimension": [
-          {
-            "name": "device_age_category",
-            "type": "VARCHAR"
-          },
-          {
-            "name": "site",
-            "type": "VARCHAR"
-          },
-          {
-            "name": "manufacturer",
-            "type": "VARCHAR"
-          }
-        ],
-        "measure": [
-          {
-            "name": "avg_days_since_seen",
-            "type": "DECIMAL",
-            "expression": "AVG(days_since_last_seen)"
-          },
-          {
-            "name": "devices_not_seen_week",
-            "type": "INTEGER",
-            "expression": "COUNT(CASE WHEN days_since_last_seen > 7 THEN 1 END)"
-          },
-          {
-            "name": "devices_not_seen_month",
-            "type": "INTEGER",
-            "expression": "COUNT(CASE WHEN days_since_last_seen > 30 THEN 1 END)"
-          },
-          {
-            "name": "freshness_score",
-            "type": "DECIMAL",
-            "expression": "COUNT(CASE WHEN days_since_last_seen <= 1 THEN 1 END) * 100.0 / COUNT(*)"
-          }
-        ],
-        "properties": {
-          "displayName": "Device Lifecycle Metrics",
-          "description": "Tracking device activity and lifecycle patterns"
-        }
-      }
-    ],
-    "views": [
-      {
-        "name": "active_devices_summary",
-        "statement": "SELECT manufacturer, COUNT(*) as total_devices, COUNT(CASE WHEN is_stale = false THEN 1 END) as active_devices, COUNT(CASE WHEN is_stale = false THEN 1 END) * 100.0 / COUNT(*) as active_percentage FROM network_devices GROUP BY manufacturer ORDER BY total_devices DESC",
-        "properties": {
-          "displayName": "Active Devices by Manufacturer",
-          "description": "Summary of active vs total devices by manufacturer"
-        }
-      },
-      {
-        "name": "subnet_utilization",
-        "statement": "SELECT subnet, subnet_class, COUNT(*) as device_count, COUNT(DISTINCT manufacturer) as manufacturer_diversity, COUNT(CASE WHEN is_stale = false THEN 1 END) as active_devices FROM network_devices GROUP BY subnet, subnet_class ORDER BY device_count DESC",
-        "properties": {
-          "displayName": "Subnet Utilization Analysis",
-          "description": "Device density and diversity per subnet"
-        }
-      },
-      {
-        "name": "stale_devices_alert",
-        "statement": "SELECT * FROM network_devices WHERE is_stale = true OR days_since_last_seen > 30 ORDER BY days_since_last_seen DESC",
-        "properties": {
-          "displayName": "Stale Devices Alert",
-          "description": "Devices that haven't been seen recently and may need investigation"
-        }
-      },
-      {
-        "name": "cloud_infrastructure_overview",
-        "statement": "SELECT manufacturer, subnet_class, COUNT(*) as device_count, AVG(days_since_last_seen) as avg_days_since_seen FROM network_devices WHERE is_cloud_device = true GROUP BY manufacturer, subnet_class ORDER BY device_count DESC",
-        "properties": {
-          "displayName": "Cloud Infrastructure Overview",
-          "description": "Analysis of cloud-based devices and their activity"
-        }
-      },
-      {
-        "name": "site_inventory_dashboard",
-        "statement": "SELECT site, COUNT(*) as total_devices, COUNT(CASE WHEN is_stale = false THEN 1 END) as active_devices, COUNT(DISTINCT manufacturer) as manufacturer_count, COUNT(DISTINCT subnet) as subnet_count FROM network_devices GROUP BY site ORDER BY total_devices DESC",
-        "properties": {
-          "displayName": "Site Inventory Dashboard",
-          "description": "Comprehensive device inventory by site location"
-        }
-      },
-      {
-        "name": "virtual_machine_analysis",
-        "statement": "SELECT manufacturer, COUNT(*) as vm_count, COUNT(CASE WHEN is_stale = false THEN 1 END) as active_vms, AVG(days_since_last_seen) as avg_days_since_seen FROM network_devices WHERE is_virtual_machine = true GROUP BY manufacturer ORDER BY vm_count DESC",
-        "properties": {
-          "displayName": "Virtual Machine Analysis",
-          "description": "Analysis of virtual machine infrastructure"
-        }
-      },
-      {
-        "name": "network_health_scorecard",
-        "statement": "SELECT 'Total Devices' as metric, COUNT(*) as value FROM network_devices UNION ALL SELECT 'Active Devices', COUNT(*) FROM network_devices WHERE is_stale = false UNION ALL SELECT 'Unique Subnets', COUNT(DISTINCT subnet) FROM network_devices UNION ALL SELECT 'Cloud Devices', COUNT(*) FROM network_devices WHERE is_cloud_device = true",
-        "properties": {
-          "displayName": "Network Health Scorecard",
-          "description": "Key network health metrics at a glance"
-        }
-      }
-    ],
-    "enumDefinitions": [
-      {
-        "name": "DeviceAgeCategory",
-        "values": [
-          {
-            "name": "Active",
-            "value": "Active (1 day)",
-            "properties": {
-              "description": "Device seen within the last day"
-            }
-          },
-          {
-            "name": "Recent",
-            "value": "Recent (1 week)",
-            "properties": {
-              "description": "Device seen within the last week"
-            }
-          },
-          {
-            "name": "Stale",
-            "value": "Stale (1 month)",
-            "properties": {
-              "description": "Device seen within the last month"
-            }
-          },
-          {
-            "name": "Old",
-            "value": "Old (>1 month)",
-            "properties": {
-              "description": "Device not seen for over a month"
-            }
-          }
-        ],
-        "properties": {
-          "displayName": "Device Age Categories",
-          "description": "Categories for device activity status based on last seen date"
-        }
-      },
-      {
-        "name": "SubnetClass",
-        "values": [
-          {
-            "name": "ClassAPrivate",
-            "value": "Class A Private",
-            "properties": {
-              "description": "Private IP range 10.0.0.0/8"
-            }
-          },
-          {
-            "name": "ClassBPrivate",
-            "value": "Class B Private",
-            "properties": {
-              "description": "Private IP range 172.16.0.0/12"
-            }
-          },
-          {
-            "name": "ClassCPrivate",
-            "value": "Class C Private",
-            "properties": {
-              "description": "Private IP range 192.168.0.0/16"
-            }
-          },
-          {
-            "name": "Loopback",
-            "value": "Loopback",
-            "properties": {
-              "description": "Loopback range 127.0.0.0/8"
-            }
-          },
-          {
-            "name": "CGNAT",
-            "value": "CGNAT",
-            "properties": {
-              "description": "Carrier-grade NAT range 100.64.0.0/10"
-            }
-          },
-          {
-            "name": "PublicOther",
-            "value": "Public/Other",
-            "properties": {
-              "description": "Public IP addresses or other ranges"
-            }
-          }
-        ],
-        "properties": {
-          "displayName": "Subnet Classifications",
-          "description": "Standard IP subnet classifications"
-        }
-      }
-    ],
-    "cumulativeMetrics": [
-      {
-        "name": "device_discovery_trend",
-        "baseObject": "network_devices",
-        "description": "Track device discovery patterns over time",
-        "timeColumn": "store_created_at",
-        "aggregation": "COUNT",
-        "window": "DAY",
-        "measure": {
-          "name": "daily_discoveries",
+      ],
+      "measure": [
+        {
+          "name": "total_devices",
           "type": "INTEGER",
           "expression": "COUNT(*)"
         },
-        "dimensions": ["manufacturer", "site"],
-        "properties": {
-          "displayName": "Device Discovery Trend",
-          "description": "Daily tracking of new device discoveries"
+        {
+          "name": "active_devices",
+          "type": "INTEGER",
+          "expression": "COUNT(CASE WHEN is_stale = false THEN 1 END)"
+        },
+        {
+          "name": "stale_devices",
+          "type": "INTEGER",
+          "expression": "COUNT(CASE WHEN is_stale = true THEN 1 END)"
+        },
+        {
+          "name": "unique_subnets",
+          "type": "INTEGER",
+          "expression": "COUNT(DISTINCT subnet)"
+        },
+        {
+          "name": "cloud_devices",
+          "type": "INTEGER",
+          "expression": "COUNT(CASE WHEN is_cloud_device = true THEN 1 END)"
+        },
+        {
+          "name": "virtual_machines",
+          "type": "INTEGER",
+          "expression": "COUNT(CASE WHEN is_virtual_machine = true THEN 1 END)"
+        },
+        {
+          "name": "device_health_score",
+          "type": "DECIMAL",
+          "expression": "COUNT(CASE WHEN is_stale = false THEN 1 END) * 100.0 / COUNT(*)"
         }
+      ],
+      "timeGrain": [
+        {
+          "name": "updated_date_grain",
+          "refColumn": "updated_at",
+          "dateParts": [
+            "YEAR",
+            "QUARTER",
+            "MONTH",
+            "WEEK",
+            "DAY"
+          ]
+        }
+      ],
+      "properties": {
+        "displayName": "Device Inventory Metrics",
+        "description": "Key performance indicators for network device management"
       }
-    ]
-  }
+    },
+    {
+      "name": "network_topology_metrics",
+      "baseObject": "network_devices",
+      "description": "Network topology and segmentation analysis",
+      "dimension": [
+        {
+          "name": "subnet",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "subnet_class",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "site",
+          "type": "VARCHAR"
+        }
+      ],
+      "measure": [
+        {
+          "name": "devices_per_subnet",
+          "type": "INTEGER",
+          "expression": "COUNT(*)"
+        },
+        {
+          "name": "unique_manufacturers_per_subnet",
+          "type": "INTEGER",
+          "expression": "COUNT(DISTINCT manufacturer)"
+        },
+        {
+          "name": "subnet_utilization_indicator",
+          "type": "DECIMAL",
+          "expression": "COUNT(*) * 1.0"
+        },
+        {
+          "name": "active_devices_in_subnet",
+          "type": "INTEGER",
+          "expression": "COUNT(CASE WHEN is_stale = false THEN 1 END)"
+        }
+      ],
+      "properties": {
+        "displayName": "Network Topology Metrics",
+        "description": "Metrics for analyzing network structure and subnet utilization"
+      }
+    },
+    {
+      "name": "manufacturer_analytics",
+      "baseObject": "network_devices",
+      "description": "Device manufacturer and vendor analysis",
+      "dimension": [
+        {
+          "name": "manufacturer",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "site",
+          "type": "VARCHAR"
+        }
+      ],
+      "measure": [
+        {
+          "name": "manufacturer_device_count",
+          "type": "INTEGER",
+          "expression": "COUNT(*)"
+        },
+        {
+          "name": "manufacturer_market_share",
+          "type": "DECIMAL",
+          "expression": "COUNT(*) * 100.0 / (SELECT COUNT(*) FROM network_devices)"
+        },
+        {
+          "name": "manufacturer_active_ratio",
+          "type": "DECIMAL",
+          "expression": "COUNT(CASE WHEN is_stale = false THEN 1 END) * 100.0 / COUNT(*)"
+        },
+        {
+          "name": "unique_sites_served",
+          "type": "INTEGER",
+          "expression": "COUNT(DISTINCT site)"
+        }
+      ],
+      "properties": {
+        "displayName": "Manufacturer Analytics",
+        "description": "Analysis of device manufacturers and vendor diversity"
+      }
+    },
+    {
+      "name": "device_lifecycle_metrics",
+      "baseObject": "network_devices",
+      "description": "Device lifecycle and freshness tracking",
+      "dimension": [
+        {
+          "name": "device_age_category",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "site",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "manufacturer",
+          "type": "VARCHAR"
+        }
+      ],
+      "measure": [
+        {
+          "name": "avg_days_since_seen",
+          "type": "DECIMAL",
+          "expression": "AVG(days_since_last_seen)"
+        },
+        {
+          "name": "devices_not_seen_week",
+          "type": "INTEGER",
+          "expression": "COUNT(CASE WHEN days_since_last_seen > 7 THEN 1 END)"
+        },
+        {
+          "name": "devices_not_seen_month",
+          "type": "INTEGER",
+          "expression": "COUNT(CASE WHEN days_since_last_seen > 30 THEN 1 END)"
+        },
+        {
+          "name": "freshness_score",
+          "type": "DECIMAL",
+          "expression": "COUNT(CASE WHEN days_since_last_seen <= 1 THEN 1 END) * 100.0 / COUNT(*)"
+        }
+      ],
+      "properties": {
+        "displayName": "Device Lifecycle Metrics",
+        "description": "Tracking device activity and lifecycle patterns"
+      }
+    }
+  ],
+  "views": [
+    {
+      "name": "active_devices_summary",
+      "statement": "SELECT manufacturer, COUNT(*) as total_devices, COUNT(CASE WHEN is_stale = false THEN 1 END) as active_devices, COUNT(CASE WHEN is_stale = false THEN 1 END) * 100.0 / COUNT(*) as active_percentage FROM network_devices GROUP BY manufacturer ORDER BY total_devices DESC",
+      "properties": {
+        "displayName": "Active Devices by Manufacturer",
+        "description": "Summary of active vs total devices by manufacturer"
+      }
+    },
+    {
+      "name": "subnet_utilization",
+      "statement": "SELECT subnet, subnet_class, COUNT(*) as device_count, COUNT(DISTINCT manufacturer) as manufacturer_diversity, COUNT(CASE WHEN is_stale = false THEN 1 END) as active_devices FROM network_devices GROUP BY subnet, subnet_class ORDER BY device_count DESC",
+      "properties": {
+        "displayName": "Subnet Utilization Analysis",
+        "description": "Device density and diversity per subnet"
+      }
+    },
+    {
+      "name": "stale_devices_alert",
+      "statement": "SELECT * FROM network_devices WHERE is_stale = true OR days_since_last_seen > 30 ORDER BY days_since_last_seen DESC",
+      "properties": {
+        "displayName": "Stale Devices Alert",
+        "description": "Devices that haven't been seen recently and may need investigation"
+      }
+    },
+    {
+      "name": "cloud_infrastructure_overview",
+      "statement": "SELECT manufacturer, subnet_class, COUNT(*) as device_count, AVG(days_since_last_seen) as avg_days_since_seen FROM network_devices WHERE is_cloud_device = true GROUP BY manufacturer, subnet_class ORDER BY device_count DESC",
+      "properties": {
+        "displayName": "Cloud Infrastructure Overview",
+        "description": "Analysis of cloud-based devices and their activity"
+      }
+    },
+    {
+      "name": "site_inventory_dashboard",
+      "statement": "SELECT site, COUNT(*) as total_devices, COUNT(CASE WHEN is_stale = false THEN 1 END) as active_devices, COUNT(DISTINCT manufacturer) as manufacturer_count, COUNT(DISTINCT subnet) as subnet_count FROM network_devices GROUP BY site ORDER BY total_devices DESC",
+      "properties": {
+        "displayName": "Site Inventory Dashboard",
+        "description": "Comprehensive device inventory by site location"
+      }
+    },
+    {
+      "name": "virtual_machine_analysis",
+      "statement": "SELECT manufacturer, COUNT(*) as vm_count, COUNT(CASE WHEN is_stale = false THEN 1 END) as active_vms, AVG(days_since_last_seen) as avg_days_since_seen FROM network_devices WHERE is_virtual_machine = true GROUP BY manufacturer ORDER BY vm_count DESC",
+      "properties": {
+        "displayName": "Virtual Machine Analysis",
+        "description": "Analysis of virtual machine infrastructure"
+      }
+    },
+    {
+      "name": "network_health_scorecard",
+      "statement": "SELECT 'Total Devices' as metric, COUNT(*) as value FROM network_devices UNION ALL SELECT 'Active Devices', COUNT(*) FROM network_devices WHERE is_stale = false UNION ALL SELECT 'Unique Subnets', COUNT(DISTINCT subnet) FROM network_devices UNION ALL SELECT 'Cloud Devices', COUNT(*) FROM network_devices WHERE is_cloud_device = true",
+      "properties": {
+        "displayName": "Network Health Scorecard",
+        "description": "Key network health metrics at a glance"
+      }
+    }
+  ],
+  "enumDefinitions": [
+    {
+      "name": "DeviceAgeCategory",
+      "values": [
+        {
+          "name": "Active",
+          "value": "Active (1 day)",
+          "properties": {
+            "description": "Device seen within the last day"
+          }
+        },
+        {
+          "name": "Recent",
+          "value": "Recent (1 week)",
+          "properties": {
+            "description": "Device seen within the last week"
+          }
+        },
+        {
+          "name": "Stale",
+          "value": "Stale (1 month)",
+          "properties": {
+            "description": "Device seen within the last month"
+          }
+        },
+        {
+          "name": "Old",
+          "value": "Old (>1 month)",
+          "properties": {
+            "description": "Device not seen for over a month"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Device Age Categories",
+        "description": "Categories for device activity status based on last seen date"
+      }
+    },
+    {
+      "name": "SubnetClass",
+      "values": [
+        {
+          "name": "ClassAPrivate",
+          "value": "Class A Private",
+          "properties": {
+            "description": "Private IP range 10.0.0.0/8"
+          }
+        },
+        {
+          "name": "ClassBPrivate",
+          "value": "Class B Private",
+          "properties": {
+            "description": "Private IP range 172.16.0.0/12"
+          }
+        },
+        {
+          "name": "ClassCPrivate",
+          "value": "Class C Private",
+          "properties": {
+            "description": "Private IP range 192.168.0.0/16"
+          }
+        },
+        {
+          "name": "Loopback",
+          "value": "Loopback",
+          "properties": {
+            "description": "Loopback range 127.0.0.0/8"
+          }
+        },
+        {
+          "name": "CGNAT",
+          "value": "CGNAT",
+          "properties": {
+            "description": "Carrier-grade NAT range 100.64.0.0/10"
+          }
+        },
+        {
+          "name": "PublicOther",
+          "value": "Public/Other",
+          "properties": {
+            "description": "Public IP addresses or other ranges"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Subnet Classifications",
+        "description": "Standard IP subnet classifications"
+      }
+    }
+  ],
+  "cumulativeMetrics": [
+    {
+      "name": "device_discovery_trend",
+      "baseObject": "network_devices",
+      "description": "Track device discovery patterns over time",
+      "timeColumn": "store_created_at",
+      "aggregation": "COUNT",
+      "window": "DAY",
+      "measure": {
+        "name": "daily_discoveries",
+        "type": "INTEGER",
+        "expression": "COUNT(*)"
+      },
+      "dimensions": [
+        "manufacturer",
+        "site"
+      ],
+      "properties": {
+        "displayName": "Device Discovery Trend",
+        "description": "Daily tracking of new device discoveries"
+      }
+    }
+  ]
+}

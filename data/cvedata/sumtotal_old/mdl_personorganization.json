@@ -1,0 +1,119 @@
+{
+    "catalog": "sumtotal_learn",
+    "schema": "public",
+    "models": [
+      {
+        "name": "personorganization_sumtotal",
+        "description": "This table aggregates information about individuals and their associated organizations, including their primary status, joining dates, and synchronization details.",
+        "tableReference": {
+          "table": "personorganization_sumtotal"
+        },
+        "columns": [
+          {
+            "name": "personfk",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Person Foreign Key",
+              "description": "Foreign key referencing the person entity in the database."
+            }
+          },
+          {
+            "name": "organizationfk",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Organization Foreign Key",
+              "description": "Foreign key referencing the organization associated with a person."
+            }
+          },
+          {
+            "name": "isprimary",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Is Primary",
+              "description": "Indicates whether the organization is the primary one associated with the person."
+            }
+          },
+          {
+            "name": "joiningdate",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Joining Date",
+              "description": "The date when a person joined the organization."
+            }
+          },
+          {
+            "name": "createdby",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Created By",
+              "description": "Identifier for the user or system that created the record."
+            }
+          },
+          {
+            "name": "mainorganization",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Main Organization",
+              "description": "Column representing the main organization associated with a person."
+            }
+          },
+          {
+            "name": "synchfaultflg",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Synchronization Fault Flag",
+              "description": "Indicates whether there is a synchronization fault for the associated person and organization."
+            }
+          },
+          {
+            "name": "synchfaultcntlstary",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Synchronization Fault Count List Array",
+              "description": "A text field that stores a list of synchronization fault counts related to person-organization records."
+            }
+          },
+          {
+            "name": "mvpbatchid",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "MVP Batch ID",
+              "description": "Identifier for the batch process related to the person organization records."
+            }
+          },
+          {
+            "name": "deleted",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Deleted Flag",
+              "description": "Indicates whether the record has been marked as deleted."
+            }
+          },
+          {
+            "name": "createddate",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Created Date",
+              "description": "Timestamp indicating when the record was created in the system."
+            }
+          },
+          {
+            "name": "modifieddate",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Modified Date",
+              "description": "Timestamp indicating when the record was last modified."
+            }
+          },
+          {
+            "name": "modifiedby",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Modified By",
+              "description": "Column indicating the user who last modified the record."
+            }
+          }
+        ]
+      }
+    ]
+}

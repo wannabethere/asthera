@@ -1,0 +1,20 @@
+{
+  "database": {
+    "host": "unedadevpostgresql.postgres.database.azure.com",
+    "port": 5432,
+    "database": "phenom_egen_ai",
+    "user": "pixentia",
+    "password": "FLc%26dL%40M9A5Q7wI%3B"
+  },
+  "data_directory": "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/cvedata/data",
+  "mdl_directory": "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/sql_meta/cve_data",
+  "batch_size": 1000,
+  "mdl_files": {
+    "dev_assets": "data/sql_meta/cve_data/mdl_assets_complete.json",
+    "dev_agents": "data/sql_meta/cve_data/mdl_agents.json",
+    "dev_software_instances": "data/sql_meta/cve_data/mdl_software_instances.json",
+    "dev_cve": "data/sql_meta/cve_data/mdl_cve.json",
+    "dev_interfaces": "data/sql_meta/cve_data/mdl_interfaces.json",
+    "dev_vuln_instance": "data/sql_meta/cve_data/mdl_vuln_instance.json"
+  }
+}

@@ -160,7 +160,7 @@ def get_doc_store_provider():
         ),
         "table_description": DocumentChromaStore(
             persistent_client=client,
-            collection_name="table_description"
+            collection_name="table_descriptions"
         ),
         "project_meta": DocumentChromaStore(
             persistent_client=client,
@@ -173,9 +173,33 @@ def get_doc_store_provider():
         "document_planning": DocumentChromaStore(
             persistent_client=client,   
             collection_name="document_planning"
+        ),
+        "alert_knowledge_base": DocumentChromaStore(
+            persistent_client=client,
+            collection_name="alert_knowledge_base",
+            tf_idf=True  # Enable TF-IDF for better search
         )
-
     }
+    
+    # Add DataServices collections if using local ChromaDB
+    settings = get_settings()
+    if settings.CHROMA_USE_LOCAL:
+        # Create DataServices client for document collections using the same client
+        # This ensures consistent configuration and caching
+        dataservices_client = client  # Use the same client as other stores
+        
+        # Add DataServices document collections
+        sql_stores.update({
+            "dataservices_documents": DocumentChromaStore(
+                persistent_client=dataservices_client,
+                collection_name=settings.DATASERVICES_CHROMA_COLLECTION,
+                tf_idf=True
+            ),
+            "dataservices_documents_tfidf": DocumentChromaStore(
+                persistent_client=dataservices_client,
+                collection_name=settings.DATASERVICES_CHROMA_TFIDF_COLLECTION
+            )
+        })
     # Create and return the document store provider
     _doc_store_provider_cache = DocumentStoreProvider(
         stores=sql_stores,

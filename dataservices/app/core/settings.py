@@ -181,7 +181,7 @@ class Settings(BaseSettings):
     CHROMA_STORE_PATH: str = "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/lexy/data/service/chroma_db"
     #host='ec2-54-161-71-105.compute-1.amazonaws.com', port=8888
     # ChromaDB Settings
-    CHROMA_USE_LOCAL: bool = True
+    CHROMA_USE_LOCAL: bool = False
     CHROMA_HOST: str = "ec2-54-161-71-105.compute-1.amazonaws.com"
     CHROMA_PORT: int = 8888
     CHROMA_COLLECTION_NAME: str = "default"

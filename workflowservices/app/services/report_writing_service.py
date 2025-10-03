@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_async_db_session
 from app.models.workflowmodels import ReportWorkflow, ThreadComponent
 from app.models.dbmodels import Report
-from app.agents.report_writing_agent import (
+from app.agents.nodes.writers.report_writing_agent import (
     ReportWritingAgent,
     WriterActorType,
     BusinessGoal,

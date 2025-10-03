@@ -253,7 +253,6 @@ class ReportOrchestratorPipeline(AgentPipeline):
                 # Create workflow data
                 workflow_data = ReportWorkflowData(
                     id=f"workflow-{project_id}-{datetime.now().isoformat()}",
-                    project_id=project_id,
                     state="active",
                     current_step=1
                 )

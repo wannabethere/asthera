@@ -5,7 +5,7 @@
   "workday_data": {
     "instructions": "1. Always use employee_id as the primary key for employee-related queries. 2. For date-based queries, use the standard workday date format (YYYY-MM-DD). -- Please follow these additional rules for generating the sql"
   },
-  "default": {
-    "instructions": "Please generate accurate SQL queries based on the provided schema and requirements."
+  "sumtotal_learn": {
+    "instructions": "1. Always use activity_pk as the primary key for learning activities. 2. Use personpk as the primary key for user/learner information. 3. For date-based queries, use TIMESTAMP format. 4. When analyzing learning progress, join tbl_tmx_attempt_sumtotal with tbl_tmx_activity_sumtotal using activityfk = activity_pk. 5. For user information, join with person_sumtotal using empfk = personpk. 6. Use completionstatus and success fields to track learning outcomes. 7. For enrollment vs completion analysis, use startdt and enddt timestamps from attempts table. -- Please follow these additional rules for generating the sql"
   }
 }

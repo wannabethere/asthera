@@ -1,0 +1,94 @@
+{
+  "catalog": "sumtotal_learn",
+  "schema": "public",
+  "models": [
+    {
+      "name": "persondomain_sumtotal",
+      "description": "This table captures the relationships between individuals (persons), their associated domains, and roles within the Sumtotal Learn system, including metadata about creation and modification. Use this table when you need to: 1. Control domain-specific access to learning content, 2. Generate domain-based learning reports and analytics, 3. Implement multi-tenant learning environments, 4. Track user roles and permissions across different domains, 5. Manage domain-specific learning policies and compliance, 6. Create domain-isolated learning experiences, 7. Audit domain access and role assignments.",
+      "tableReference": {
+        "catalog": "sumtotal_learn",
+        "schema": "public",
+        "table": "persondomain_sumtotal"
+      },
+      "columns": [
+        {
+          "name": "personfk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Person Foreign Key",
+            "description": "Foreign key reference to the person entity to get person details."
+          }
+        },
+        {
+          "name": "domainfk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Domain Foreign Key",
+            "description": "Foreign key referencing the organization table to get domain details."
+          }
+        },
+        {
+          "name": "rolefk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Role Foreign Key",
+            "description": "Foreign key referencing the role table to get role details."
+          }
+        },
+        {
+          "name": "isprimary",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Is Primary",
+            "description": "Indicates whether the current domain is primary for the person."
+          }
+        },
+        {
+          "name": "createddate",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Created Date",
+            "description": "Timestamp indicating when the record was created in the Sumtotal Learn system."
+          }
+        },
+        {
+          "name": "deleted",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Deleted Flag",
+            "description": "Indicates whether the record has been marked as deleted in the Sumtotal Learn system."
+          }
+        },
+        {
+          "name": "createdby",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Created By",
+            "description": "Column indicating the user or system that created the record in the Sumtotal Learn system."
+          }
+        },
+        {
+          "name": "modifieddate",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Modified Date",
+            "description": "Timestamp indicating when the record was last modified in the Sumtotal Learn system."
+          }
+        },
+        {
+          "name": "modifiedby",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Modified By",
+            "description": "Column indicating the user who last modified the record in the Sumtotal Learn system."
+          }
+        }
+      ],
+      "primaryKey": "personfk",
+      "properties": {
+        "displayName": "Person Domain Table",
+        "description": "This table captures the relationships between individuals (persons), their associated domains, and roles within the Sumtotal Learn system, including metadata about creation and modification."
+      }
+    }
+  ]
+}

@@ -9,10 +9,7 @@ import logging
 from typing import List, Dict, Optional
 from app.indexing.project_reader import ProjectReader
 from app.storage.documents import DocumentChromaStore
-from app.core.dependencies import get_doc_store_provider
-from app.settings import get_settings
-import chromadb
-from app.core.dependencies import get_chromadb_client
+from app.core.dependencies import get_doc_store_provider, get_chromadb_client
 
 logger = logging.getLogger(__name__)
 
@@ -37,21 +34,21 @@ class AlertKnowledgeHelper:
                 # Use existing project reader's knowledge store
                 self.alert_knowledge_store = self.project_reader.get_alert_knowledge_store()
             else:
-                # Create a new knowledge store connection
-                settings = get_settings()
-                persistent_client = get_chromadb_client()
+                # Use the document store provider to get the alert knowledge store
+                logger.info("Getting alert knowledge store from document store provider")
+                doc_store_provider = get_doc_store_provider()
+                self.alert_knowledge_store = doc_store_provider.get_store("alert_knowledge_base")
                 
-                self.alert_knowledge_store = DocumentChromaStore(
-                    persistent_client=persistent_client,
-                    collection_name="alert_knowledge_base",
-                    tf_idf=True
-                )
-                
-            logger.info("Alert knowledge store initialized successfully")
+            if self.alert_knowledge_store is None:
+                logger.warning("Alert knowledge store is not available")
+            else:
+                logger.info("Alert knowledge store initialized successfully")
             
         except Exception as e:
             logger.error(f"Failed to initialize alert knowledge store: {str(e)}")
-            raise
+            # Set to None as fallback
+            self.alert_knowledge_store = None
+            logger.warning("Alert knowledge store set to None due to initialization failure")
     
     def search_knowledge(self, query: str, k: int = 5, search_type: str = "semantic") -> List[str]:
         """Search the alert knowledge base and return content strings.

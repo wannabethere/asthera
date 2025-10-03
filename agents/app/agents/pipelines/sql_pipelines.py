@@ -967,8 +967,11 @@ class RelationshipRecommendationPipeline(AgentPipeline):
         configuration = kwargs.get("configuration", Configuration())
         
         # Create input for relationship recommendation
+        if not project_id:
+            raise ValueError("project_id is required")
+            
         request = RelationshipRecommendation.Input(
-            id=project_id or "default",
+            id=project_id,
             mdl=mdl,
             project_id=project_id,
             configuration=configuration
@@ -1034,9 +1037,12 @@ class SemanticsDescriptionPipeline(AgentPipeline):
         project_id = kwargs.get("project_id")
         configuration = kwargs.get("configuration", Configuration())
         
+        if not project_id:
+            raise ValueError("project_id is required")
+            
         # Create input for semantics description
         request = SemanticsDescription.Input(
-            id=project_id or "default",
+            id=project_id,
             mdl=mdl,
             project_id=project_id,
             configuration=configuration
@@ -1143,10 +1149,13 @@ class QuestionSuggestionPipeline(AgentPipeline):
         query_id = kwargs.get("query_id")
         
         # Prepare request dataclass
+        if not project_id:
+            raise ValueError("project_id is required")
+            
         request = SQLQuestionSuggestionRequest(
             query_id=query_id or "default",
             query=query,
-            project_id=project_id or "default",
+            project_id=project_id,
             language=language,
             db_schemas=db_schemas,
             histories=histories,

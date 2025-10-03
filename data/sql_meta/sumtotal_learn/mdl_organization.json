@@ -1,0 +1,265 @@
+{
+  "catalog": "sumtotal_learn",
+  "schema": "public",
+  "models": [
+    {
+      "name": "organization_sumtotal",
+      "description": "This table is the master list for all organizational units, like domains or departments. It serves as the central source of truth for the company's hierarchy, referenced by other tables (e.g., persondomain,personorganization) to link users to their correct place in the structure. Use this table when you need to: 1. Map organizational structure and reporting hierarchies, 2. Control access and permissions based on organizational units, 3. Generate department-specific learning reports and analytics, 4. Manage organizational changes and restructuring, 5. Track learning initiatives by department or division, 6. Implement role-based access controls and content filtering.",
+      "tableReference": {
+        "catalog": "sumtotal_learn",
+        "schema": "public",
+        "table": "organization_sumtotal"
+      },
+      "columns": [
+        {
+          "name": "organizationpk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Organization Primary Key",
+            "description": "Unique identifier for organizations within the organization_sumtotal table."
+          }
+        },
+        {
+          "name": "code",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Code",
+            "description": "A textual code representing the organization within the system."
+          }
+        },
+        {
+          "name": "name",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Organization Name",
+            "description": "The name of the organization as recorded in the system."
+          }
+        },
+        {
+          "name": "parentorganizationfk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Parent Organization Foreign Key",
+            "description": "Foreign key referencing the parent organization in the organization hierarchy."
+          }
+        },
+        {
+          "name": "hierarchyfk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Hierarchy Foreign Key",
+            "description": "Foreign key that references the hierarchy of organizations within the organization structure."
+          }
+        },
+        {
+          "name": "orgtypecode",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Organization Type Code",
+            "description": "Code representing the type of organization."
+          }
+        },
+        {
+          "name": "lveelval",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Level Value",
+            "description": "Column lveelval"
+          }
+        },
+        {
+          "name": "orgdomainind",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Organization Domain Indicator",
+            "description": "Indicates the domain associated with the organization, represented as a string."
+          }
+        },
+        {
+          "name": "contactpersonfk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Contact Person Foreign Key",
+            "description": "Foreign key referencing the contact person associated with the organization."
+          }
+        },
+        {
+          "name": "contactemail",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Contact Email",
+            "description": "Email address for contacting the organization."
+          }
+        },
+        {
+          "name": "defaultaudiencefk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Default Audience Foreign Key",
+            "description": "Foreign key reference to the default audience in the organization context."
+          }
+        },
+        {
+          "name": "roottavenodefk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Root Tave Node Foreign Key",
+            "description": "Foreign key reference to the root tave node in the organization hierarchy."
+          }
+        },
+        {
+          "name": "starttavenodefk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Start Tave Node Foreign Key",
+            "description": "Foreign key reference to the start tave node in the organization structure."
+          }
+        },
+        {
+          "name": "defaultkdocaudiencefk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Default Kdoc Audience FK",
+            "description": "Foreign key reference to the default audience for Kdoc."
+          }
+        },
+        {
+          "name": "personcount",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Person Count",
+            "description": "Represents the number of persons associated with an organization."
+          }
+        },
+        {
+          "name": "descriptiontveet",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Description of Organization",
+            "description": "A textual description of the organization."
+          }
+        },
+        {
+          "name": "url",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "URL",
+            "description": "A web address associated with the organization."
+          }
+        },
+        {
+          "name": "synchfaultflg",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Synchronization Fault Flag",
+            "description": "Indicates whether there is a synchronization fault for the organization."
+          }
+        },
+        {
+          "name": "synchfaultcntlstary",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Synchronization Fault Count List Array",
+            "description": "A text representation of synchronization fault counts related to the organization."
+          }
+        },
+        {
+          "name": "attribute1",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Attribute 1",
+            "description": "Column attribute1"
+          }
+        },
+        {
+          "name": "attribute2",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Attribute 2",
+            "description": "Column attribute2"
+          }
+        },
+        {
+          "name": "attribute3",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Attribute 3",
+            "description": "Column attribute3"
+          }
+        },
+        {
+          "name": "attribute4",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Attribute 4",
+            "description": "Column attribute4"
+          }
+        },
+        {
+          "name": "attribute5",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Attribute 5",
+            "description": "Column attribute5"
+          }
+        },
+        {
+          "name": "disableusersearch",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Disable User Search",
+            "description": "Indicates whether user search functionality is disabled for the organization."
+          }
+        },
+        {
+          "name": "limitusersearch",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Limit User Search",
+            "description": "Column indicating the limit on user search functionality within the organization."
+          }
+        },
+        {
+          "name": "mvpbatchid",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "MVP Batch ID",
+            "description": "Identifier for the batch process related to the organization."
+          }
+        },
+        {
+          "name": "deleted",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Deleted Flag",
+            "description": "Indicates whether the organization record has been deleted."
+          }
+        },
+        {
+          "name": "createddate",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Created Date",
+            "description": "Timestamp indicating when the record was created in the organization_sumtotal table."
+          }
+        }
+      ],
+      "primaryKey": "organizationpk",
+      "properties": {
+        "displayName": "Organization Table",
+        "description": "This table is the master list for all organizational units, like domains or departments. It serves as the central source of truth for the company's hierarchy, referenced by other tables (e.g., persondomain,personorganization) to link users to their correct place in the structure."
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "name": "organization_hierarchy",
+      "models": ["organization_sumtotal", "organization_sumtotal"],
+      "joinType": "MANY_TO_ONE",
+      "condition": "organization_sumtotal.parentorganizationfk = parent_org.organizationpk",
+      "properties": {
+        "description": "Self-referencing relationship for organizational hierarchy"
+      }
+    }
+  ]
+}

@@ -62,6 +62,7 @@ def get_enhanced_rag_agent(
 ) -> EnhancedSelfRAGAgent:
     """Get enhanced RAG agent instance from service container"""
     # The EnhancedSelfRAGAgent initializes its own DocumentChromaStore internally
+    # using the same ChromaDB configuration as DataServices (./chroma_db/documents)
     # We get the doc_store_provider for consistency but the agent manages its own store
     return EnhancedSelfRAGAgent()
 
@@ -278,6 +279,12 @@ async def get_capabilities():
             "meeting_notes",
             "performance_report"
         ],
+        "chromadb_collections": {
+            "main_documents": "documents",
+            "tfidf_vectors": "documents_tfidf", 
+            "document_insights": "document_insights",
+            "document_planning": "document_planning"
+        },
         "note": "This agent focuses on document search and analysis. For database queries, use dedicated SQL agents.",
         "api_endpoints": [
             "/ask - Ask a single question",

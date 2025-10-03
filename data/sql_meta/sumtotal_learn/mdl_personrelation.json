@@ -1,0 +1,110 @@
+{
+  "catalog": "sumtotal_learn",
+  "schema": "public",
+  "models": [
+    {
+      "name": "personrelation_sumtotal",
+      "description": "This table captures the relationships between individuals and their respective managers within the organization, providing a comprehensive view of reporting structures. Use this table when you need to: 1. Generate manager-specific learning reports and dashboards, 2. Implement manager approval workflows for learning requests, 3. Create hierarchical learning compliance reports, 4. Track learning progress across management levels, 5. Enable manager notifications for team learning activities, 6. Implement cascading learning requirements through management hierarchy, 7. Create organizational learning analytics by management level, 8. Support succession planning and leadership development programs.",
+      "tableReference": {
+        "catalog": "sumtotal_learn",
+        "schema": "public",
+        "table": "personrelation_sumtotal"
+      },
+      "columns": [
+        {
+          "name": "personfk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Person Foreign Key",
+            "description": "Foreign key reference to a person in the database, linking to the person entity."
+          }
+        },
+        {
+          "name": "manager1fk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Manager 1 Foreign Key",
+            "description": "This column establishes the employee's direct reporting line by linking to the record of their primary manager. As a self-referencing foreign key, it contains the identifier of another person within this same person_sumtotal table."
+          }
+        },
+        {
+          "name": "manager2fk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Manager 2 Foreign Key",
+            "description": "Foreign key reference to the second manager in the person relation hierarchy."
+          }
+        },
+        {
+          "name": "manager3fk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Manager 3 Foreign Key",
+            "description": "Foreign key referencing the third-level manager in the person relation hierarchy."
+          }
+        },
+        {
+          "name": "manager4fk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Manager 4 Foreign Key",
+            "description": "Foreign key reference to the fourth manager in the person relation hierarchy."
+          }
+        },
+        {
+          "name": "manager5fk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Manager 5 Foreign Key",
+            "description": "Foreign key reference to the fifth-level manager in the person relation hierarchy."
+          }
+        },
+        {
+          "name": "manager6fk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Manager 6 Foreign Key",
+            "description": "Foreign key reference to the sixth level manager in the person relation hierarchy."
+          }
+        },
+        {
+          "name": "manager7fk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Manager 7 Foreign Key",
+            "description": "Foreign key reference to the manager associated with a person in the personrelation_sumtotal table."
+          }
+        },
+        {
+          "name": "manager8fk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Manager 8 Foreign Key",
+            "description": "Foreign key reference to the eighth manager in the person relation table."
+          }
+        },
+        {
+          "name": "manager9fk",
+          "type": "BIGINT",
+          "properties": {
+            "displayName": "Manager 9 Foreign Key",
+            "description": "Foreign key reference to the ninth manager in the person relation hierarchy."
+          }
+        },
+        {
+          "name": "createddate_ts",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Created Date",
+            "description": "Timestamp indicating when the record was created, stored as a string."
+          }
+        }
+      ],
+      "primaryKey": "personfk",
+      "properties": {
+        "displayName": "Person Relation Table",
+        "description": "This table captures the relationships between individuals and their respective managers within the organization, providing a comprehensive view of reporting structures."
+      }
+    }
+  ]
+}

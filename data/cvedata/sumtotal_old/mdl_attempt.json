@@ -1,0 +1,351 @@
+{
+  "table_id": "1e3c5b43-cf2b-440b-9cf3-a5e6c22c74bd",
+  "name": "tbl_tmx_attempt_sumtotal",
+  "display_name": "tbl_tmx_attempt_sumtotal",
+  "description": "This table captures detailed information about user attempts in the Sumtotal Learn system, including metrics on performance, status, and user engagement.",
+  "table_type": "table",
+  "dataset_id": "44c9e3e2-4bdf-421c-a1c3-379dff92e1b5",
+  "dataset_name": "Sumtotal Learn Dataset",
+  "created_at": "2025-09-26T20:22:15.535724+00:00",
+  "updated_at": "2025-09-26T20:22:15.535724+00:00",
+  "entity_version": 1,
+  "columns": [
+    {
+      "column_id": "6c0f2ae0-5fb9-4e70-8651-4f77e2de18d5",
+      "name": "attempt_pk",
+      "display_name": "Attempt Primary Key",
+      "description": "Unique identifier for each attempt record in the tbl_tmx_attempt_sumtotal table.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "identifier",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 1
+    },
+    {
+      "column_id": "2600d61b-5ebd-4f83-b018-d96d4029301b",
+      "name": "empfk",
+      "display_name": "Employee Foreign Key",
+      "description": "Foreign key reference to the employee table, linking attempts to specific employees.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "identifier",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 2
+    },
+    {
+      "column_id": "cda50172-05ab-4b4f-9c0f-149bc0b9dd31",
+      "name": "activityfk",
+      "display_name": "Activity Foreign Key",
+      "description": "Foreign key referencing the activity associated with the attempt.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "identifier",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 3
+    },
+    {
+      "column_id": "83125813-3c57-4bf2-8975-bf744b50c7e4",
+      "name": "authregfk",
+      "display_name": "Authentication Registration Foreign Key",
+      "description": "Foreign key reference to the authentication registration record.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "identifier",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 4
+    },
+    {
+      "column_id": "1b74b7f5-a3a7-4eb5-92b5-5266e725ec47",
+      "name": "startdt",
+      "display_name": "Start Date",
+      "description": "The date when the attempt started, represented as a timestamp without time zone.",
+      "column_type": "column",
+      "data_type": "VARCHAR(timestamp without time zone)",
+      "usage_type": "timestamp",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 5
+    },
+    {
+      "column_id": "a9e4137f-e742-4013-b2ef-497b80e2995e",
+      "name": "enddt",
+      "display_name": "End Date",
+      "description": "The date when the attempt ends, represented as a timestamp without time zone.",
+      "column_type": "column",
+      "data_type": "VARCHAR(timestamp without time zone)",
+      "usage_type": "timestamp",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 6
+    },
+    {
+      "column_id": "ba00a3b0-21d6-42eb-955e-c5675b99c2e0",
+      "name": "waiveind",
+      "display_name": "Waive Indicator",
+      "description": "Indicates whether a certain condition for waiving is met in the context of the attempt.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "flag",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 7
+    },
+    {
+      "column_id": "a44b2deb-ff70-4f3f-b067-4c63439b0d32",
+      "name": "completionstatus",
+      "display_name": "Completion Status",
+      "description": "Indicates the completion status of an attempt in the learning management system.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 8
+    },
+    {
+      "column_id": "2b22ee76-b662-4037-be62-eeffea2761af",
+      "name": "success",
+      "display_name": "Success",
+      "description": "Indicates whether the attempt was successful or not.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "flag",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 9
+    },
+    {
+      "column_id": "53fe5622-5a05-472b-bd8d-a0d626bf760c",
+      "name": "score",
+      "display_name": "Score",
+      "description": "Column representing the score achieved in an attempt.",
+      "column_type": "column",
+      "data_type": "VARCHAR(double precision)",
+      "usage_type": "measure",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 10
+    },
+    {
+      "column_id": "c458aa49-3e68-40ee-a770-6abe40589f9b",
+      "name": "attndstatusfk",
+      "display_name": "Attendance Status Foreign Key",
+      "description": "Foreign key referencing the attendance status in the related attendance status table.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "identifier",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 11
+    },
+    {
+      "column_id": "793b31f8-0914-4a04-931f-2966225af1fa",
+      "name": "elapsedseconds",
+      "display_name": "Elapsed Seconds",
+      "description": "Represents the total elapsed time in seconds for a specific activity or session.",
+      "column_type": "column",
+      "data_type": "VARCHAR(double precision)",
+      "usage_type": "measure",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 14
+    },
+    {
+      "column_id": "54b08a43-7cb0-43db-a881-f31e0de01229",
+      "name": "launchcourseversion",
+      "display_name": "Launch Course Version",
+      "description": "Version of the course being launched in the system.",
+      "column_type": "column",
+      "data_type": "VARCHAR(text)",
+      "usage_type": "attribute",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 15
+    },
+    {
+      "column_id": "4fdbf690-b96a-4cda-ae73-24269e658514",
+      "name": "currentattemptind",
+      "display_name": "Current Attempt Indicator",
+      "description": "Indicates the current attempt of a user in a specific activity.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "flag",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 17
+    },
+    {
+      "column_id": "f7ea4225-7e61-4f35-b315-03357765b7d5",
+      "name": "launchcount",
+      "display_name": "Launch Count",
+      "description": "The number of times a course or activity has been launched by a user.",
+      "column_type": "column",
+      "data_type": "VARCHAR(bigint)",
+      "usage_type": "measure",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "ordinal_position": 18
+    }
+  ],
+  "metadata": {
+    "columns": [
+      {
+        "name": "attempt_pk",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column attempt_pk",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "empfk",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column empfk",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "activityfk",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column activityfk",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "authregfk",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column authregfk",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "startdt",
+        "data_type": "VARCHAR(timestamp without time zone)",
+        "description": "Column startdt",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "enddt",
+        "data_type": "VARCHAR(timestamp without time zone)",
+        "description": "Column enddt",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "waiveind",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column waiveind",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "completionstatus",
+        "data_type": "VARCHAR(text)",
+        "description": "Column completionstatus",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "success",
+        "data_type": "VARCHAR(text)",
+        "description": "Column success",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "score",
+        "data_type": "VARCHAR(double precision)",
+        "description": "Column score",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "attndstatusfk",
+        "data_type": "VARCHAR(text)",
+        "description": "Column attndstatusfk",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "elapsedseconds",
+        "data_type": "VARCHAR(double precision)",
+        "description": "Column elapsedseconds",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "launchcourseversion",
+        "data_type": "VARCHAR(text)",
+        "description": "Column launchcourseversion",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "currentattemptind",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column currentattemptind",
+        "is_nullable": true,
+        "is_primary_key": false
+      },
+      {
+        "name": "launchcount",
+        "data_type": "VARCHAR(bigint)",
+        "description": "Column launchcount",
+        "is_nullable": true,
+        "is_primary_key": false
+      }
+    ],
+    "data_lineage": "Data is sourced from user learning activities and is populated through automated processes that track user interactions with the Sumtotal Learn platform.",
+    "data_retention": "Data is retained for a period of 3 years to comply with business and regulatory requirements.",
+    "access_patterns": [
+      "Frequent read access for learning analytics and reporting by administrators",
+      "Occasional write access for updates by the learning management system"
+    ],
+    "business_purpose": "The tbl_tmx_attempt_sumtotal table exists to track user learning attempts, enabling performance analysis, progress monitoring, and compliance reporting within the Sumtotal Learn system.",
+    "update_frequency": "real-time",
+    "key_relationships": [
+      "Employee to attempt relationships for user performance tracking",
+      "Activity to attempt relationships for learning progress analysis"
+    ],
+    "primary_use_cases": [
+      "Learning progress tracking and analytics",
+      "Performance assessment and scoring",
+      "Compliance monitoring and reporting",
+      "User engagement analysis"
+    ]
+  }
+}

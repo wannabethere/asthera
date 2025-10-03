@@ -1,0 +1,55 @@
+{
+    "catalog": "sumtotal_learn",
+    "schema": "public",
+    "models": [
+      {
+        "name": "actlabel_sumtotal",
+        "description": "This table serves as a source for summarizing activity labels within the Sumtotal Learn platform, providing essential metadata about each label.",
+        "tableReference": {
+          "table": "actlabel_sumtotal"
+        },
+        "columns": [
+          {
+            "name": "actlabel_pk",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Activity Label Primary Key",
+              "description": "A unique identifier for activity labels in the actlabel_sumtotal table."
+            }
+          },
+          {
+            "name": "actlabel_name",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Activity Label Name",
+              "description": "Name of the activity label used in the Sumtotal Learn system."
+            }
+          },
+          {
+            "name": "labeldesc",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Label Description",
+              "description": "Column labeldesc"
+            }
+          },
+          {
+            "name": "icon",
+            "type": "VARCHAR",
+            "properties": {
+              "displayName": "Icon",
+              "description": "Column representing an icon associated with the act label."
+            }
+          },
+          {
+            "name": "createddate_ts",
+            "type": "TIMESTAMP",
+            "properties": {
+              "displayName": "Created Date Timestamp",
+              "description": "Timestamp indicating when the record was created, stored as a VARCHAR."
+            }
+          }
+        ]
+      }
+    ]
+}

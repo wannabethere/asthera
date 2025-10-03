@@ -176,8 +176,8 @@ class Instructions:
             
             return [
                 LangchainDocument(
-                    page_content=doc["text"],
-                    metadata=doc["metadata"]
+                    page_content=doc["text"] if doc["text"] is not None else "",
+                    metadata=doc["metadata"] if doc["metadata"] is not None else {}
                 )
                 for doc in combined_docs
             ]
@@ -202,9 +202,11 @@ class Instructions:
         """
         try:
             logger.info(f"project_id in retrieve_documents for Instructions: {project_id} {query}")
+            # Only add project_id filter if it's not "default"
+            where = {"project_id": {"$eq": project_id}} if project_id and project_id != "default" else None
             results = self._document_store.semantic_search(
                 query=query,
-                where={"project_id": {"$eq": project_id}} if project_id else None,
+                where=where,
                 k=self._top_k if self._top_k < 10 else 5
             )
             print(f"results in instructions: {results}")
@@ -230,6 +232,11 @@ class Instructions:
                     for key in ["instruction", "instruction_id", "chain_of_thought", "sql", "is_default"]:
                         if key in content_dict:
                             metadata[key] = content_dict[key]
+                    # Ensure page_content is not None
+                    if page_content is None:
+                        logger.warning(f"page_content is None for document, using empty string")
+                        page_content = ""
+                    
                     combined_docs.append(
                         LangchainDocument(
                             page_content=page_content,

@@ -1,0 +1,83 @@
+{
+  "project_id": "sumtotal_learn_demo",
+  "description": "The SumTotal Learn domain contains comprehensive, real-world learning data, encompassing all tables necessary to capture learning activities, user progress, courses, events, and related metadata. It serves as a complete representation of an organization's learning ecosystem.",
+  "title": "SumTotal Learn Training Platform",
+  "tables": [
+    {
+      "name": "persondomain_sumtotal",
+      "display_name": "Person Domain",
+      "description": "This table captures the relationships between individuals (persons), their associated domains, and roles within the Sumtotal Learn system, including metadata about creation and modification.",
+      "mdl_file": "mdl_persondomain.json"
+    },
+    {
+      "name": "personrelation_sumtotal",
+      "display_name": "Person Relations",
+      "description": "This table captures the relationships between individuals and their respective managers within the organization, providing a comprehensive view of reporting structures.",
+      "mdl_file": "mdl_personrelation.json"
+    },
+    {
+      "name": "personorganization_sumtotal",
+      "display_name": "Person Organization",
+      "description": "This table aggregates information about individuals and their associated organizations, including their primary status, joining dates, and synchronization details.",
+      "mdl_file": "mdl_personorganization.json"
+    },
+    {
+      "name": "tbl_tmx_userrequiredact_sumtotal",
+      "display_name": "User Required Activities",
+      "description": "This table serves as a source for tracking user-required activities and their statuses within the Sumtotal Learn platform, providing insights into user engagement and compliance.",
+      "mdl_file": "mdl_userrequiredact.json"
+    },
+    {
+      "name": "actlabel_sumtotal",
+      "display_name": "Activity Labels",
+      "description": "This table serves as a source for summarizing activity labels within the Sumtotal Learn platform, providing essential metadata about each label.",
+      "mdl_file": "mdl_actlabel.json"
+    },
+    {
+      "name": "jobuser_sumtotal",
+      "display_name": "Job User",
+      "description": "This table serves as a source for summarizing job user data within the Sumtotal Learn system, capturing essential attributes related to job templates and user associations.",
+      "mdl_file": "mdl_jobuser.json"
+    },
+    {
+      "name": "organization_sumtotal",
+      "display_name": "Organization",
+      "description": "This table serves as a comprehensive source of organizational data, capturing essential attributes and relationships for effective management and analysis within the Sumtotal Learn platform.",
+      "mdl_file": "mdl_organization.json"
+    },
+    {
+      "name": "person_sumtotal",
+      "display_name": "Person",
+      "description": "This table contains comprehensive information about individuals, including personal identifiers, names, demographics, and employment details, serving as a source for various applications within the Sumtotal Learn system.",
+      "mdl_file": "mdl_person.json"
+    },
+    {
+      "name": "tbl_tmx_attempt_sumtotal",
+      "display_name": "Attempt Records",
+      "description": "This table captures detailed information about user attempts in the Sumtotal Learn system, including metrics on performance, status, and user engagement.",
+      "mdl_file": "mdl_attempt.json"
+    },
+    {
+      "name": "tbl_tmx_activity_sumtotal",
+      "display_name": "Activity Records",
+      "description": "This table serves as a comprehensive source for tracking and managing activities within the Sumtotal Learn platform, capturing essential details about each activity's configuration, scheduling, and participant management.",
+      "mdl_file": "mdl_activity.json"
+    }
+  ],
+  "knowledge_base": [
+    {
+      "name": "sumtotal_learn_knowledge_base",
+      "display_name": "SumTotal Learn Knowledge Base",
+      "description": "Knowledge base for SumTotal Learn Training Platform",
+      "file_path": "instructions.json"
+    }
+  ],
+  "examples": [
+    {
+      "name": "sumtotal_learn_example",
+      "display_name": "SumTotal Learn Example",
+      "description": "Example of SumTotal Learn Training Platform",
+      "file_path": "sql_pairs.json"
+    }
+  ]
+}
