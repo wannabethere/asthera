@@ -221,17 +221,26 @@ class DocumentVectorstore:
         """
         try:
             logger.info(f"Deleting documents for project ID: {project_id}")
+            print(f"DEBUG: Collection name: {self.collection_name}")
+            print(f"DEBUG: Collection object: {self.collection}")
             
             # Get all documents with the specified project_id to count them
-            results = self.collection.get(where={"project_id": project_id})
+            where_clause = {"project_id": project_id}
+            print(f"DEBUG: Using where clause: {where_clause}")
+            
+            results = self.collection.get(where=where_clause)
+            print(f"DEBUG: Query results: {results}")
             document_count = len(results['ids']) if results['ids'] else 0
+            print(f"DEBUG: Found {document_count} documents to delete")
             
             if document_count == 0:
                 logger.info(f"No documents found for project ID: {project_id}")
                 return {"documents_deleted": 0}
             
             # Delete documents with the specified project_id
-            self.collection.delete(where={"project_id": project_id})
+            print(f"DEBUG: Attempting to delete documents with where clause: {where_clause}")
+            self.collection.delete(where=where_clause)
+            print(f"DEBUG: Delete operation completed")
             
             # Also delete from TF-IDF collection if enabled
             if self.tf_idf and self.tfidf_collection:
@@ -408,8 +417,9 @@ class DocumentChromaStore:
             
             # List all collections to check for corruption
             try:
-                collections = self.persistent_client.list_collections()
-                logger.info(f"Found {len(collections)} existing collections")
+                # In ChromaDB v0.6.0+, list_collections() only returns collection names
+                collection_names = self.persistent_client.list_collections()
+                logger.info(f"Found {len(collection_names)} existing collections: {collection_names}")
             except Exception as e:
                 logger.warning(f"Could not list collections, may indicate corruption: {str(e)}")
                 # If we can't list collections, try to clean up the database
@@ -418,17 +428,17 @@ class DocumentChromaStore:
             
             # Check each collection for corruption
             corrupted_collections = []
-            for collection in collections:
+            for collection_name in collection_names:
                 try:
                     # Try to get the collection to see if it's accessible
-                    test_collection = self.persistent_client.get_collection(name=collection.name)
-                    logger.debug(f"Collection '{collection.name}' is accessible")
+                    test_collection = self.persistent_client.get_collection(name=collection_name)
+                    logger.debug(f"Collection '{collection_name}' is accessible")
                 except Exception as e:
                     if "_type" in str(e) or "JSON" in str(e) or "configuration" in str(e):
-                        logger.warning(f"Collection '{collection.name}' appears to be corrupted: {str(e)}")
-                        corrupted_collections.append(collection.name)
+                        logger.warning(f"Collection '{collection_name}' appears to be corrupted: {str(e)}")
+                        corrupted_collections.append(collection_name)
                     else:
-                        logger.debug(f"Collection '{collection.name}' has other issues: {str(e)}")
+                        logger.debug(f"Collection '{collection_name}' has other issues: {str(e)}")
             
             # Delete corrupted collections
             for collection_name in corrupted_collections:
@@ -455,8 +465,8 @@ class DocumentChromaStore:
         try:
             logger.warning("Resetting ChromaDB database due to corruption...")
             
-            # Get the database path
-            db_path = self.persistent_client._settings.persist_directory
+            # Get the database path from the vectorstore_path or use default
+            db_path = self.vectorstore_path or CHROMA_STORE_PATH
             
             if db_path and os.path.exists(db_path):
                 logger.info(f"Removing corrupted database at: {db_path}")
@@ -470,7 +480,7 @@ class DocumentChromaStore:
                 self.persistent_client = chromadb.PersistentClient(path=db_path)
                 logger.info("Recreated ChromaDB persistent client")
             else:
-                logger.warning("Could not determine database path for reset")
+                logger.warning(f"Database path {db_path} does not exist, skipping reset")
                 
         except Exception as e:
             logger.error(f"Failed to reset ChromaDB database: {str(e)}")

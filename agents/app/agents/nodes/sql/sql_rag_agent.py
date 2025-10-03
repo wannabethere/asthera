@@ -187,6 +187,35 @@ You are also given a list of similar questions, instructions and examples to hel
 4. Make sure to consider the current time provided in the input if the user's question is related to the date/time.
 5. Each step in the reasoning plan must start with a number, a title(in bold format in markdown), and a reasoning for the step.
 
+### SCHEMA ANALYSIS REQUIREMENTS ###
+Before generating your reasoning plan, you MUST:
+- **SCHEMA VALIDATION**: Carefully examine the database schema and identify all available tables and their exact column names (case-sensitive)
+- **COLUMN EXISTENCE VERIFICATION**: For any column you plan to use, verify it exists in the schema exactly as written and use the exact case-sensitive name
+- **CALCULATED FIELDS IDENTIFICATION**: Look for pre-calculated fields that can be used directly instead of recreating calculations
+- **METRICS IDENTIFICATION**: Look for tables marked as "metric" with base objects, dimensions, and measures
+- **REFERENCE FORMAT**: Table names must be in format: `table: <table_name>`, Column names must be in format: `column: <table_name>.<column_name>`
+- **NO SQL CODE**: Do not include SQL code in the reasoning plan
+- **NO MARKDOWN BLOCKS**: Do not include ```markdown or ``` in the answer
+
+### CALCULATION REASONING WHEN NO PRE-CALCULATED FIELDS ###
+When no calculated fields or metrics are available, you MUST:
+- **ANALYZE THE USER'S INTENT**: Understand what calculation or aggregation the user is asking for
+- **IDENTIFY BASE COLUMNS**: Determine which raw columns from the schema can be used to perform the calculation
+- **REASON THROUGH THE CALCULATION**: Think step-by-step about how to derive the desired result from available columns
+- **CONSIDER AGGREGATION FUNCTIONS**: Determine if you need SUM, COUNT, AVG, MIN, MAX, or other SQL functions
+- **PLAN GROUPING**: Identify which columns should be used for GROUP BY clauses
+- **CONSIDER FILTERING**: Determine if WHERE clauses are needed to filter the data
+- **THINK ABOUT RELATIONSHIPS**: If multiple tables are involved, reason through how to join them properly
+- **VALIDATE CALCULATION LOGIC**: Ensure the calculation approach makes logical sense for the user's question
+
+### CRITICAL SCHEMA RULES ###
+- **ONLY use columns that exist in the provided schema**
+- **Use exact column names as they appear in the schema (case-sensitive)**
+- **Verify table names exist before referencing them**
+- **For calculated fields, use the pre-calculated values when available**
+- **For metrics, understand the base object and use appropriate dimensions/measures**
+- **NEVER invent or assume column names that don't exist in the schema**
+
 ### FINAL ANSWER FORMAT ###
 The final answer must be a reasoning plan in plain Markdown string format
 """,
@@ -221,7 +250,7 @@ Please provide your response in proper Markdown string format.
                 configuration = input_data.get("configuration", {})
                 
                 result = asyncio.run(self._generate_sql_internal(
-                    query, contexts, reasoning, configuration, **kwargs
+                    query, contexts, reasoning, configuration
                 ))
                 return orjson.dumps(result).decode()
             except Exception as e:
@@ -655,6 +684,8 @@ Please provide your response in proper Markdown string format.
                 "has_metric": False
             }
             
+            logger.info(f"Retrieving metadata for query: {query}")
+            logger.info(f"Retrieving schema data for query: {schema_data}")
             # Use cached metadata instead of making duplicate calls
             metadata = await self._retrieve_and_cache_metadata(
                 query=query,
@@ -1213,6 +1244,33 @@ Please provide your response in proper Markdown string format.
                 User's Question: {query}
                 Language: {language}
                 
+                ### CRITICAL REASONING REQUIREMENTS ###
+                Before generating your reasoning plan, you MUST:
+                1. **SCHEMA VALIDATION**: Carefully examine the database schema above and identify:
+                   - All available tables and their exact names (case-sensitive)
+                   - All available columns for each table with their exact names (case-sensitive)
+                   - Data types for each column
+                   - Any calculated fields or computed columns
+                   - Any metrics with their dimensions and measures
+                   - Any views and their definitions
+                
+                2. **COLUMN EXISTENCE VERIFICATION**: For any column you plan to use:
+                   - Verify it exists in the schema exactly as written
+                   - Use the exact case-sensitive name from the schema
+                   - Reference it as `column: <table_name>.<column_name>`
+                   - NEVER invent or assume column names that don't exist
+                
+                3. **CALCULATED FIELDS IDENTIFICATION**: Look for:
+                   - Pre-calculated fields that can be used directly
+                   - Fields marked as "Calculated Field" in the schema
+                   - Fields with expressions or computed values
+                   - Use these instead of recreating calculations
+                
+                4. **METRICS IDENTIFICATION**: Look for:
+                   - Tables marked as "metric" in the schema
+                   - Base objects, dimensions, and measures
+                   - Use metric tables for complex aggregations when available
+                
                 Let's think step by step. Consider the relationships between tables when analyzing the query and planning the SQL generation.
                 """
             )
@@ -1303,7 +1361,7 @@ Please provide your response in proper Markdown string format.
         return "\n".join(formatted_relationships)
     
     def _format_metadata_for_reasoning(self, metadata: Dict[str, Any]) -> str:
-        """Format metadata into a readable string for reasoning prompts"""
+        """Format metadata into a readable string for reasoning prompts with enhanced schema analysis"""
         formatted_parts = []
         
         # Format SQL pairs
@@ -1327,31 +1385,95 @@ Please provide your response in proper Markdown string format.
                     formatted_parts.append(f"- {instruction}")
             formatted_parts.append("")
         
-        # Format metrics
+        # Format calculated fields with detailed information
+        if metadata.get("calculated_fields"):
+            formatted_parts.append("### CALCULATED FIELDS ###")
+            for field in metadata["calculated_fields"][:5]:  # Limit to 5 calculated fields
+                if isinstance(field, dict):
+                    field_name = field.get('name', '')
+                    field_expression = field.get('expression', '')
+                    field_description = field.get('description', '')
+                    field_table = field.get('table', '')
+                    
+                    formatted_parts.append(f"- **{field_name}** (table: {field_table})")
+                    if field_description:
+                        formatted_parts.append(f"  - Description: {field_description}")
+                    if field_expression:
+                        formatted_parts.append(f"  - Expression: {field_expression}")
+                    formatted_parts.append("")
+                else:
+                    formatted_parts.append(f"- {field}")
+            formatted_parts.append("")
+        
+        # Format metrics with detailed structure
         if metadata.get("metrics"):
             formatted_parts.append("### AVAILABLE METRICS ###")
             for metric in metadata["metrics"][:5]:  # Limit to 5 metrics
                 if isinstance(metric, dict):
                     metric_name = metric.get('name', '')
                     metric_description = metric.get('description', '')
-                    if metric_name and metric_description:
-                        formatted_parts.append(f"- {metric_name}: {metric_description}")
+                    base_object = metric.get('base_object', '')
+                    dimensions = metric.get('dimensions', [])
+                    measures = metric.get('measures', [])
+                    
+                    formatted_parts.append(f"- **{metric_name}**")
+                    if metric_description:
+                        formatted_parts.append(f"  - Description: {metric_description}")
+                    if base_object:
+                        formatted_parts.append(f"  - Base Object: {base_object}")
+                    if dimensions:
+                        formatted_parts.append(f"  - Dimensions: {', '.join(dimensions)}")
+                    if measures:
+                        formatted_parts.append(f"  - Measures: {', '.join(measures)}")
+                    formatted_parts.append("")
                 else:
                     formatted_parts.append(f"- {metric}")
             formatted_parts.append("")
         
-        # Format views
+        # Format views with detailed information
         if metadata.get("views"):
             formatted_parts.append("### AVAILABLE VIEWS ###")
             for view in metadata["views"][:5]:  # Limit to 5 views
                 if isinstance(view, dict):
                     view_name = view.get('name', '')
                     view_description = view.get('description', '')
-                    if view_name and view_description:
-                        formatted_parts.append(f"- {view_name}: {view_description}")
+                    view_definition = view.get('definition', '')
+                    
+                    formatted_parts.append(f"- **{view_name}**")
+                    if view_description:
+                        formatted_parts.append(f"  - Description: {view_description}")
+                    if view_definition:
+                        formatted_parts.append(f"  - Definition: {view_definition}")
+                    formatted_parts.append("")
                 else:
                     formatted_parts.append(f"- {view}")
             formatted_parts.append("")
+        
+        # Format schema summary for better reasoning
+        if metadata.get("schema_summary"):
+            formatted_parts.append("### SCHEMA SUMMARY ###")
+            schema_summary = metadata["schema_summary"]
+            if isinstance(schema_summary, dict):
+                tables = schema_summary.get('tables', [])
+                total_columns = schema_summary.get('total_columns', 0)
+                calculated_fields_count = schema_summary.get('calculated_fields_count', 0)
+                metrics_count = schema_summary.get('metrics_count', 0)
+                
+                formatted_parts.append(f"- Total Tables: {len(tables)}")
+                formatted_parts.append(f"- Total Columns: {total_columns}")
+                formatted_parts.append(f"- Calculated Fields: {calculated_fields_count}")
+                formatted_parts.append(f"- Metrics: {metrics_count}")
+                formatted_parts.append("")
+                
+                # List key tables and their column counts
+                for table in tables[:10]:  # Limit to 10 tables
+                    if isinstance(table, dict):
+                        table_name = table.get('name', '')
+                        column_count = table.get('column_count', 0)
+                        has_calculated_fields = table.get('has_calculated_fields', False)
+                        formatted_parts.append(f"  - {table_name}: {column_count} columns" + 
+                                             (" (has calculated fields)" if has_calculated_fields else ""))
+                formatted_parts.append("")
         
         return "\n".join(formatted_parts) if formatted_parts else "No additional metadata available."
     
@@ -1564,39 +1686,41 @@ Please provide your response in proper Markdown string format.
         if not project_id:
             raise ValueError("project_id is required")
             
-        # Use the table retrieval run method to get properly selected columns and DDL
-        print(f"=== CALLING TABLE RETRIEVAL RUN METHOD ===")
+        # Use the enhanced database schemas retrieval to get DDL with column metadata
+        print(f"=== CALLING ENHANCED DATABASE SCHEMAS RETRIEVAL ===")
         print(f"Query: {query}")
         print(f"Project ID: {project_id}")
         
-        # Get the table retrieval instance from retrieval_helper
-        table_retrieval = self.retrieval_helper.retrievers["table_retrieval"]
-        
-        # Call the run method which includes column selection logic
-        retrieval_result = await table_retrieval.run(
-            query=query,
+        # Use get_database_schemas to get enhanced DDL with column metadata
+        schema_result = await self.retrieval_helper.get_database_schemas(
             project_id=project_id,
+            table_retrieval={
+                "table_retrieval_size": 10,
+                "table_column_retrieval_size": 100,
+                "allow_using_db_schemas_without_pruning": False
+            },
+            query=query,
             tables=None,
             histories=None
         )
         
-        print(f"=== TABLE RETRIEVAL RUN RESULT ===")
-        print(f"Retrieval results count: {len(retrieval_result.get('retrieval_results', []))}")
-        print(f"Has calculated field: {retrieval_result.get('has_calculated_field', False)}")
-        print(f"Has metric: {retrieval_result.get('has_metric', False)}")
+        print(f"=== ENHANCED SCHEMA RETRIEVAL RESULT ===")
+        print(f"Schema results count: {len(schema_result.get('schemas', []))}")
+        print(f"Has calculated field: {schema_result.get('has_calculated_field', False)}")
+        print(f"Has metric: {schema_result.get('has_metric', False)}")
         
-        # Extract schema contexts and relationships from the retrieval results
+        # Extract schema contexts and relationships from the enhanced schema results
         schema_contexts = []
         relationships = []
         
-        for result in retrieval_result.get("retrieval_results", []):
-            if isinstance(result, dict):
-                table_ddl = result.get("table_ddl", "")
+        for schema in schema_result.get("schemas", []):
+            if isinstance(schema, dict):
+                table_ddl = schema.get("table_ddl", "")
                 if table_ddl:
                     schema_contexts.append(table_ddl)
-                    print(f"Added DDL for table {result.get('table_name', 'unknown')}: {table_ddl[:100]}...")
+                    print(f"Added enhanced DDL for table {schema.get('table_name', 'unknown')}: {table_ddl[:100]}...")
                 
-                table_relationships = result.get("relationships", [])
+                table_relationships = schema.get("relationships", [])
                 if table_relationships:
                     relationships.extend(table_relationships)
         

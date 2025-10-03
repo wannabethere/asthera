@@ -154,6 +154,25 @@ class RetrievalHelper:
                 }
                 return result
             
+            # ADD COLUMN METADATA RETRIEVAL
+            print(f"=== RETRIEVING COLUMN METADATA ===")
+            if "retrieval_results" in schema_result:
+                for result in schema_result["retrieval_results"]:
+                    if isinstance(result, dict):
+                        table_name = result.get("table_name", "")
+                        if table_name:
+                            # Retrieve column metadata for this table
+                            try:
+                                column_metadata = await self._get_column_metadata_for_table(
+                                    table_name=table_name,
+                                    project_id=project_id
+                                )
+                                result["column_metadata"] = column_metadata
+                                print(f"Retrieved {len(column_metadata)} columns for table {table_name}")
+                            except Exception as e:
+                                logger.warning(f"Failed to retrieve column metadata for table {table_name}: {e}")
+                                result["column_metadata"] = []
+
             # Process and format the schema information
             schemas = []
             print(f"=== PROCESSING SCHEMA RESULTS ===")
@@ -163,19 +182,27 @@ class RetrievalHelper:
                 if isinstance(result, dict):
                     table_name = result.get("table_name", "")
                     table_ddl = result.get("table_ddl", "")
+                    column_metadata = result.get("column_metadata", [])  # Get column metadata
+                    
                     print(f"Result {i} - table_name: {table_name}, table_ddl_length: {len(table_ddl) if table_ddl else 0}")
+                    print(f"Result {i} - column_metadata_count: {len(column_metadata)}")
+                    
                     if table_ddl:
                         print(f"Result {i} - table_ddl preview: {table_ddl[:200]}...")
                     
+                    # Create enhanced DDL with column metadata
+                    enhanced_ddl = self._enhance_ddl_with_column_metadata(table_ddl, column_metadata)
+                    
                     schema_info = {
                         "table_name": table_name,
-                        "table_ddl": table_ddl,
+                        "table_ddl": enhanced_ddl,  # Use enhanced DDL
+                        "column_metadata": column_metadata,  # Include column metadata
                         "relationships": result.get("relationships", []),
                         "has_calculated_field": schema_result.get("has_calculated_field", False),
                         "has_metric": schema_result.get("has_metric", False)
                     }
                     schemas.append(schema_info)
-                    print(f"Added schema {i} to schemas list")
+                    print(f"Added schema {i} to schemas list with {len(column_metadata)} columns")
                 else:
                     print(f"Result {i} is not a dict, skipping")
             
@@ -686,6 +713,125 @@ class RetrievalHelper:
         except Exception as e:
             logger.error(f"Error in search method: {e}")
             return []
+
+    async def _get_column_metadata_for_table(self, table_name: str, project_id: str) -> List[Dict[str, Any]]:
+        """Retrieve column metadata for a specific table from column_metadata store"""
+        try:
+            if "column_metadata" not in self.document_stores:
+                logger.warning("Column metadata store not available")
+                return []
+            
+            column_store = self.document_stores["column_metadata"]
+            
+            # Search for column metadata for this table
+            where_clause = {
+                "$and": [
+                    {"project_id": {"$eq": project_id}},
+                    {"table_name": {"$eq": table_name}},
+                    {"type": {"$eq": "COLUMN_METADATA"}}
+                ]
+            }
+            
+            logger.debug(f"Searching for column metadata for table {table_name} in project {project_id}")
+            logger.debug(f"Where clause: {where_clause}")
+            
+            results = column_store.semantic_search(
+                query="",
+                k=100,  # Get all columns for the table
+                where=where_clause
+            )
+            
+            logger.info(f"Found {len(results)} results from column metadata store")
+            
+            # Parse results
+            column_metadata = []
+            for i, result in enumerate(results):
+                try:
+                    if isinstance(result, dict) and "content" in result:
+                        # The column metadata is stored in the document content, not metadata
+                        import json
+                        content = json.loads(result["content"])
+                        column_info = {
+                            "column_name": content.get("column_name", ""),
+                            "type": content.get("type", ""),
+                            "display_name": content.get("display_name", ""),
+                            "description": content.get("description", ""),
+                            "is_calculated": content.get("is_calculated", False),
+                            "is_primary_key": content.get("is_primary_key", False),
+                            "is_foreign_key": content.get("is_foreign_key", False)
+                        }
+                        column_metadata.append(column_info)
+                        logger.debug(f"Parsed column info: {column_info}")
+                        
+                        # Debug logging for active column specifically
+                        if column_info["column_name"] == "active":
+                            logger.debug(f"Found active column metadata:")
+                            logger.debug(f"  Column name: {column_info['column_name']}")
+                            logger.debug(f"  Data type: {column_info['type']}")
+                            logger.debug(f"  Raw content: {content}")
+                except Exception as e:
+                    logger.warning(f"Error parsing column metadata: {e}")
+                    continue
+            
+            logger.info(f"Returning {len(column_metadata)} column metadata entries")
+            return column_metadata
+            
+        except Exception as e:
+            logger.error(f"Error retrieving column metadata for table {table_name}: {e}")
+            return []
+
+    def _enhance_ddl_with_column_metadata(self, table_ddl: str, column_metadata: List[Dict[str, Any]]) -> str:
+        """Enhance DDL with detailed column metadata including datatypes"""
+        if not column_metadata:
+            return table_ddl
+        
+        logger.info(f"Enhancing DDL with {len(column_metadata)} column metadata entries")
+        
+        # Create a mapping of column names to their correct data types
+        column_type_map = {}
+        for col in column_metadata:
+            col_name = col.get("column_name", "")
+            data_type = col.get("type", "")
+            if col_name and data_type and data_type != "VARCHAR":
+                column_type_map[col_name] = data_type
+                logger.debug(f"Column {col_name} -> type: {data_type}")
+        
+        logger.info(f"Found {len(column_type_map)} columns with non-VARCHAR types")
+        
+        # Update the DDL with correct data types
+        enhanced_ddl = table_ddl
+        for col_name, correct_type in column_type_map.items():
+            # Replace VARCHAR with correct data type for this column
+            # Pattern: column_name VARCHAR, -> column_name CORRECT_TYPE,
+            import re
+            pattern = rf'(\b{re.escape(col_name)}\s+)VARCHAR(\s*[,)])'
+            replacement = rf'\1{correct_type}\2'
+            enhanced_ddl = re.sub(pattern, replacement, enhanced_ddl)
+            logger.debug(f"Replaced {col_name} VARCHAR with {correct_type}")
+        
+        # Create column metadata section
+        metadata_section = "\n\n-- COLUMN METADATA WITH DATATYPES --\n"
+        for col in column_metadata:
+            col_name = col.get("column_name", "")
+            data_type = col.get("type", "")
+            description = col.get("description", "")
+            is_calculated = col.get("is_calculated", False)
+            is_primary_key = col.get("is_primary_key", False)
+            is_foreign_key = col.get("is_foreign_key", False)
+            
+            if col_name and data_type:
+                metadata_section += f"-- {col_name} ({data_type})"
+                if description:
+                    metadata_section += f": {description}"
+                if is_calculated:
+                    metadata_section += " [CALCULATED FIELD]"
+                if is_primary_key:
+                    metadata_section += " [PRIMARY KEY]"
+                if is_foreign_key:
+                    metadata_section += " [FOREIGN KEY]"
+                metadata_section += "\n"
+        
+        return enhanced_ddl + metadata_section
 
 async def main():
     """Main function to test the RetrievalHelper functionality."""

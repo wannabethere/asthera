@@ -897,7 +897,7 @@ class TableRetrieval:
                     try:
                         col_info = ast.literal_eval(col['name'])
                         name = col_info.get('name', '')
-                        dtype = col_info.get('data_type', default_type)
+                        dtype = col_info.get('data_type', col_info.get('type', default_type))
                         comment = col_info.get('comment', '')
                         is_primary_key = col_info.get('is_primary_key', False)
                         is_foreign_key = col_info.get('is_foreign_key', False)
@@ -911,12 +911,12 @@ class TableRetrieval:
                     except Exception as e:
                         logger.warning(f"Failed to parse column name as dict: {col['name']} | Error: {str(e)}")
                         name = col.get('name', '')
-                        dtype = col.get('data_type', default_type)
+                        dtype = col.get('data_type', col.get('type', default_type))
                         comment = col.get('comment', '')
                 elif isinstance(col, dict):
                     name = col.get('name', '')
-                    # Try both 'type' and 'data_type' for compatibility
-                    dtype = col.get('type', col.get('data_type', default_type))
+                    # Try both 'data_type' and 'type' for compatibility - prioritize data_type
+                    dtype = col.get('data_type', col.get('type', default_type))
                     
                     # Get comment and description from properties or direct fields
                     comment = col.get('comment', '')

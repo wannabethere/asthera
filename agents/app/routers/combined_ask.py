@@ -55,6 +55,30 @@ def extract_sql_result(ask_result: Dict[str, Any]) -> Dict[str, Any]:
     """Extract SQL result and metadata from ask result."""
 
     print("ask_result in extract_sql_result", ask_result)
+    
+    # Handle AskResultResponse object (Pydantic model)
+    if hasattr(ask_result, 'status') and hasattr(ask_result, 'type'):
+        # This is an AskResultResponse object
+        # Convert to dict to safely access all fields
+        ask_result_dict = ask_result.dict() if hasattr(ask_result, 'dict') else ask_result.__dict__
+        
+        return {
+            "status": ask_result.status,
+            "type": ask_result.type,
+            "response": ask_result.response,
+            "error": ask_result.error,
+            "retrieved_tables": ask_result.retrieved_tables,
+            "sql_generation_reasoning": ask_result.sql_generation_reasoning,
+            "is_followup": getattr(ask_result, 'is_followup', False),
+            "quality_scoring": ask_result.quality_scoring,
+            "invalid_sql": getattr(ask_result, 'invalid_sql', None),
+            "metadata": ask_result_dict.get("metadata", {}),
+            "processing_time_seconds": ask_result_dict.get("processing_time_seconds", 0.0),
+            "timestamp": ask_result_dict.get("timestamp", ""),
+            "answer": ask_result_dict.get("answer", ""),
+            "explanation": ask_result_dict.get("explanation", "")
+        }
+    
     if isinstance(ask_result, str):
         return {
             "status": "finished",
@@ -194,8 +218,7 @@ async def process_combined_request(request: AskRequest, fastapi_request: Request
             project_id=request.project_id,
             configurations=request.configurations,
             histories=request.histories or [],
-            enable_scoring=True,
-            schema_context={"mdl": ""}  # Add empty schema context if not provided
+            enable_scoring=True
         )
         
         logger.info(f"DEBUG: Created AskRequest with project_id: {ask_request.project_id}")
@@ -209,30 +232,38 @@ async def process_combined_request(request: AskRequest, fastapi_request: Request
         
         # Extract SQL result and metadata in one go
         sql_result = extract_sql_result(ask_result)
+        logger.info(f"DEBUG: Extracted sql_result: {sql_result}")
         
         # Parse recommendation content
         parsed_recommendations = recommendation_result.response
+        logger.info(f"DEBUG: Parsed recommendations: {parsed_recommendations}")
         
         # Combine results
-        combined_response = CombinedAskResponse(
-            status=sql_result["status"],
-            type=sql_result["type"],
-            response=sql_result["response"],
-            error=sql_result["error"],
-            retrieved_tables=sql_result["retrieved_tables"],
-            sql_generation_reasoning=sql_result["sql_generation_reasoning"],
-            is_followup=sql_result["is_followup"],
-            quality_scoring=sql_result["quality_scoring"],
-            invalid_sql=sql_result["invalid_sql"],
-            questions=parsed_recommendations["questions"],
-            categories=parsed_recommendations["categories"],
-            reasoning=parsed_recommendations["reasoning"],
-            metadata=sql_result.get("metadata", {}),
-            processing_time_seconds=sql_result.get("processing_time_seconds", 0.0),
-            timestamp=sql_result.get("timestamp", ""),
-            answer=sql_result.get("answer", ""),
-            explanation=sql_result.get("explanation", "")
-        )
+        try:
+            combined_response = CombinedAskResponse(
+                status=sql_result["status"],
+                type=sql_result["type"],
+                response=sql_result["response"],
+                error=sql_result["error"],
+                retrieved_tables=sql_result["retrieved_tables"],
+                sql_generation_reasoning=sql_result["sql_generation_reasoning"],
+                is_followup=sql_result["is_followup"],
+                quality_scoring=sql_result["quality_scoring"],
+                invalid_sql=sql_result["invalid_sql"],
+                questions=parsed_recommendations["questions"],
+                categories=parsed_recommendations["categories"],
+                reasoning=sql_result.get("sql_generation_reasoning", ""),
+                metadata=sql_result.get("metadata", {}),
+                processing_time_seconds=sql_result.get("processing_time_seconds", 0.0),
+                timestamp=sql_result.get("timestamp", ""),
+                answer=sql_result.get("answer", ""),
+                explanation=sql_result.get("explanation", "")
+            )
+        except Exception as e:
+            logger.error(f"Error creating CombinedAskResponse: {e}")
+            logger.error(f"sql_result keys: {list(sql_result.keys())}")
+            logger.error(f"sql_result values: {sql_result}")
+            raise
         
         print(f"[DEBUG] [router] Forwarding: {combined_response}")
         

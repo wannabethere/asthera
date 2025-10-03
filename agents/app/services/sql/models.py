@@ -10,13 +10,13 @@ class QualityScoring(BaseModel):
     """Base model for quality scoring with common fields and functionality"""
     final_score: float = Field(default=0.0, description="Final quality score between 0 and 1")
     quality_level: str = Field(default="unknown", description="Quality level (excellent, good, fair, poor)")
-    improvement_recommendations: Optional[List[str]] = Field(default_factory=None, description="List of recommendations for improvement")
+    improvement_recommendations: Optional[List[str]] = Field(default_factory=list, description="List of recommendations for improvement")
     processing_time_seconds: Optional[float] = Field(default=None, description="Time taken to process the request")
     explanation_quality: Optional[str] = Field(default=None, description="Quality of the explanation provided")
     detected_operation_type: Optional[str] = Field(default=None, description="Type of operation detected")
     attempt_number: int = Field(default=1, description="Number of attempts made")
-    reasoning_components: Optional[Dict[str, float]] = Field(default_factory=None, description="Scores for different reasoning components")
-    sql_components: Optional[Dict[str, float]] = Field(default_factory=None, description="Scores for different SQL components")
+    reasoning_components: Optional[Dict[str, float]] = Field(default_factory=dict, description="Scores for different reasoning components")
+    sql_components: Optional[Dict[str, float]] = Field(default_factory=dict, description="Scores for different SQL components")
     
     class Config:
         arbitrary_types_allowed = True
@@ -82,11 +82,6 @@ class AskResultRequest(BaseModel):
     query_id: str
 
 
-class QualityScoring(BaseModel):
-    final_score: float = 0.0
-    quality_level: str = "unknown"
-    improvement_recommendations: List[str] = Field(default_factory=list)
-    processing_time_seconds: Optional[float] = None
 
 class GenerateRequest(BaseModel):
         id: str
@@ -441,13 +436,6 @@ class AskDetailsResultRequest(BaseModel):
     query_id: str
 
 
-# Added model for quality scoring
-class QualityScoring(BaseModel):
-    final_score: float = 0.0
-    quality_level: str = "unknown"
-    improvement_recommendations: List[str] = []
-    processing_time_seconds: Optional[float] = None
-    explanation_quality: Optional[str] = None
 
 
 class AskDetailsResultResponse(BaseModel):

@@ -565,6 +565,10 @@ class ProjectReader:
         col_defs = []
         if not columns:
             return []
+        
+        print(f"DEBUG: _build_column_defs called with {len(columns)} columns")
+        print(f"DEBUG: Default type: {default_type}")
+        print(f"DEBUG: First few columns: {columns[:3] if columns else 'None'}")
             
         for i, col in enumerate(columns):
             try:
@@ -573,8 +577,16 @@ class ProjectReader:
                 # Handle different column formats
                 if isinstance(col, dict):
                     name = col.get('name', '')
-                    # Try both 'type' and 'data_type' for compatibility
-                    dtype = col.get('type', col.get('data_type', default_type))
+                    # Use 'type' field consistently
+                    dtype = col.get('type', default_type)
+                    
+                    # Debug logging for specific columns
+                    if name in ['jobtemplatefk', 'personfk', 'isprimary', 'active', 'personfk', 'manager1fk', 'createddate_ts']:
+                        print(f"DEBUG: Processing column {name} in _build_column_defs:")
+                        print(f"  Raw column object: {col}")
+                        print(f"  Extracted type: {col.get('type')}")
+                        print(f"  Final dtype: {dtype}")
+                        print(f"  Default type: {default_type}")
                     
                     # Get comment and description from properties or direct fields
                     comment = col.get('comment', '')
@@ -650,9 +662,22 @@ class ProjectReader:
                 logger.error("Unbalanced parentheses in DDL")
                 return False
             
-            # Check for basic SQL structure
-            if not ddl.upper().startswith('CREATE TABLE'):
-                logger.error("DDL does not start with CREATE TABLE")
+            # Check for basic SQL structure - handle DDL that starts with comments
+            ddl_upper = ddl.upper()
+            # Remove leading comments and whitespace to check for CREATE TABLE
+            lines = ddl.split('\n')
+            create_table_found = False
+            for line in lines:
+                line = line.strip()
+                if line and not line.startswith('--'):
+                    if line.upper().startswith('CREATE TABLE'):
+                        create_table_found = True
+                        break
+                    else:
+                        break  # Stop at first non-comment line that doesn't start with CREATE TABLE
+            
+            if not create_table_found:
+                logger.error("DDL does not contain CREATE TABLE statement")
                 return False
             
             # Check for semicolon at the end
@@ -712,9 +737,12 @@ class ProjectReader:
                     description = properties.get("description", "")
                     
                     # Create column structure for DDL generation
+                    # Use the actual type from the MDL column
+                    column_type = column.get("type", "VARCHAR")
+                    
                     processed_column = {
                         "name": column_name,
-                        "type": column.get("type", "VARCHAR"),
+                        "type": column_type,  # Use the actual type from MDL
                         "comment": display_name,  # Use display name as comment
                         "description": description,
                         "is_primary_key": column.get("name", "") == model.get("primaryKey", ""),
@@ -783,10 +811,20 @@ class ProjectReader:
                     description = properties.get("description", "")
                     
                     # Create column metadata document
+                    column_type = column.get("type", "VARCHAR")
+                    
+                    # Debug logging for active column specifically
+                    if column_name == "active":
+                        print(f"DEBUG: Processing active column in project reader:")
+                        print(f"  Column name: {column_name}")
+                        print(f"  Raw type from MDL: {column.get('type')}")
+                        print(f"  Final data_type: {column_type}")
+                        print(f"  Full column object: {column}")
+                    
                     column_metadata = {
                         "column_name": column_name,
                         "table_name": table_name,
-                        "data_type": column.get("type", "VARCHAR"),
+                        "type": column_type,
                         "display_name": display_name,
                         "description": description,
                         "is_calculated": column.get("isCalculated", False),
@@ -1092,16 +1130,23 @@ class ProjectReader:
             for component_name, component in self.components.items():
                 try:
                     logger.info(f"Deleting {component_name} data for project: {project_id}")
+                    print(f"DEBUG: Processing component: {component_name}")
+                    print(f"DEBUG: Component type: {type(component)}")
+                    print(f"DEBUG: Component has clean method: {hasattr(component, 'clean')}")
+                    print(f"DEBUG: Component has _document_store: {hasattr(component, '_document_store')}")
                     
                     # Use the clean method if available
                     if hasattr(component, 'clean'):
+                        print(f"DEBUG: Using clean method for {component_name}")
                         await component.clean(project_id=project_id)
                         deletion_results["components_deleted"][component_name] = "cleaned"
                         logger.info(f"Successfully cleaned {component_name} for project: {project_id}")
                     else:
                         # Fallback to direct document store deletion
                         if hasattr(component, '_document_store'):
+                            print(f"DEBUG: Using _document_store.delete_by_project_id for {component_name}")
                             result = component._document_store.delete_by_project_id(project_id)
+                            print(f"DEBUG: Delete result for {component_name}: {result}")
                             deletion_results["components_deleted"][component_name] = result
                             deletion_results["total_documents_deleted"] += result.get("documents_deleted", 0)
                             logger.info(f"Successfully deleted {result.get('documents_deleted', 0)} documents from {component_name}")
@@ -1159,7 +1204,7 @@ async def main():
     reader = ProjectReader(base_path, persistent_client)
     
     # Test projects
-    test_projects = ["csodworkday"] # ,"cornerstone_learning", "cornerstone_talent", "cornerstone","sumtotal_learn"] #, "cornerstone_talent"]
+    test_projects = ["sumtotal_learn",] #"csodworkday","cornerstone_learning", "cornerstone_talent", "cornerstone","sumtotal_learn"] #, "cornerstone_talent"]
     
     for project in test_projects:
         try:
@@ -1350,7 +1395,7 @@ async def test_delete_project():
     reader = ProjectReader(base_path, persistent_client)
     
     # Test project deletion
-    test_project_id = "sumtotal_learn_demo"  # Use the actual project_id from metadata
+    test_project_id = "sumtotal_learn_v2"  # Use the actual project_id from metadata
     
     try:
         logger.info(f"\n{'='*50}")
@@ -1381,7 +1426,7 @@ async def test_delete_project():
 
 if __name__ == "__main__":
     import asyncio
-    #asyncio.run(test_delete_project()) 
+    asyncio.run(test_delete_project()) 
     asyncio.run(main())
     
     # Uncomment the line below to test project deletion

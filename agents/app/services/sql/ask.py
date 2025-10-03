@@ -196,6 +196,8 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         stream_update: callable = None
     ) -> dict:
         """Shared logic for ask pipeline steps, optionally streaming updates."""
+        logger.info(f"Starting ask pipeline steps for {query_id}")
+        
         # Step 3: Retrieve relevant data (currently stub)
         retrieval_result = {}
         retrieval_result["success"] = True
@@ -211,10 +213,12 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         # Step 4: Generate SQL
         if stream_update:
             await stream_update(query_id, "generating_sql", {"query": user_query})
+        logger.info(f"Generating SQL for {query_id}")
         sql_result = await self._generate_sql(
             query_id, user_query, histories, request, retrieval_result["data"]
         )
         reasoning_result = None
+        logger.info(f"SQL generation completed for {query_id}, success: {sql_result.get('success')}")
         print("sql_result in ask service", sql_result)
         # Step 5: Generate SQL data
         if stream_update:
@@ -226,27 +230,33 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         # Step 6: Generate SQL answer
         if stream_update:
             await stream_update(query_id, "generating_answer", {"query": user_query})
+        logger.info(f"Generating SQL answer for {query_id}")
         answer_result = await self._generate_sql_answer(
             query_id, sql_data, user_query, sql_result, request
         )
+        logger.info(f"SQL answer generation completed for {query_id}, success: {answer_result.get('success')}")
 
         # Step 7: Process final results with answer
         if stream_update:
             await stream_update(query_id, "processing_results", {"query": user_query})
+        logger.info(f"Processing final results for {query_id}")
         final_result = await self._process_final_results(
             query_id, sql_result, reasoning_result, retrieval_result["data"]
         )
+        logger.info(f"Final results processed for {query_id}, status: {final_result.get('status')}")
         #print("final_result in ask service", answer_result)
         # Add answer to the final result
         if answer_result.get("success"):
             final_result["answer"] = answer_result.get("answer")
             final_result["explanation"] = answer_result.get("explanation")
             final_result["metadata"]["answer_metadata"] = answer_result.get("metadata", {})
+            logger.info(f"Added answer to final result for {query_id}")
 
         # Include sql_data and answer_result in the metadata to preserve AskResultResponse structure
         final_result["metadata"]["sql_data"] = sql_data
         final_result["metadata"]["answer_result"] = answer_result
 
+        logger.info(f"Returning final result for {query_id}, status: {final_result.get('status')}, api_results: {len(final_result.get('api_results', []))}")
         return final_result
 
     async def _process_request_impl(self, request: AskRequest) -> Dict[str, Any]:
@@ -256,20 +266,28 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         user_query = request.query
 
         try:
+            logger.info(f"Processing request for {query_id}: {user_query}")
+            
             # Step 1: Check historical questions
+            logger.info(f"Checking historical questions for {query_id}")
             historical_result = await self._check_historical_questions(query_id, user_query, request.project_id, histories)
             if historical_result:
+                logger.info(f"Found historical result for {query_id}")
                 return historical_result
 
             # Step 2: Process intent classification
+            logger.info(f"Processing intent classification for {query_id}")
             intent_result = await self._process_intent_classification(query_id, user_query, histories, request)
             if intent_result:
+                logger.info(f"Found intent result for {query_id}")
                 return intent_result
 
             # Shared pipeline steps
+            logger.info(f"Running pipeline steps for {query_id}")
             final_result = await self._run_ask_pipeline_steps(
                 query_id, user_query, histories, request, stream_update=None
             )
+            logger.info(f"Pipeline steps completed for {query_id}, status: {final_result.get('status')}")
             return final_result
 
         except Exception as e:
@@ -1163,6 +1181,91 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                     "categories": []
                 }
             }
+
+    def _convert_to_ask_result_response(self, result: Dict[str, Any]) -> AskResultResponse:
+        """Convert a result dictionary to AskResultResponse format"""
+        try:
+            # Handle different result types
+            if result.get("status") == "finished":
+                # Check if this is a SQL result (has api_results) or general result
+                if result.get("api_results") is not None:
+                    # Handle SQL results - this is the main case for our pipeline
+                    api_results = result.get("api_results", [])
+                    quality_scoring = result.get("quality_scoring")
+                    
+                    # Convert QualityScoring object to dict if it exists
+                    quality_scoring_dict = None
+                    if quality_scoring:
+                        if hasattr(quality_scoring, 'dict'):
+                            quality_scoring_dict = quality_scoring.dict()
+                        elif isinstance(quality_scoring, dict):
+                            quality_scoring_dict = quality_scoring
+                        else:
+                            quality_scoring_dict = quality_scoring
+                    
+                    return AskResultResponse(
+                        status="finished",
+                        type="TEXT_TO_SQL",
+                        response=api_results,
+                        quality_scoring=quality_scoring_dict,
+                        is_followup=result.get("is_followup", False),
+                        retrieved_tables=result.get("retrieved_tables"),
+                        sql_generation_reasoning=result.get("sql_generation_reasoning"),
+                        metadata=result.get("metadata", {})
+                    )
+                elif result.get("type") == "GENERAL":
+                    # Handle general results
+                    return AskResultResponse(
+                        status="finished",
+                        type="GENERAL",
+                        rephrased_question=result.get("rephrased_question"),
+                        intent_reasoning=result.get("intent_reasoning"),
+                        is_followup=result.get("is_followup", False),
+                        general_type=result.get("general_type"),
+                        metadata=result.get("metadata", {})
+                    )
+                else:
+                    # Handle other finished results - default to TEXT_TO_SQL
+                    return AskResultResponse(
+                        status="finished",
+                        type="TEXT_TO_SQL",
+                        response=result.get("api_results", []),
+                        is_followup=result.get("is_followup", False),
+                        metadata=result.get("metadata", {})
+                    )
+            elif result.get("status") == "failed":
+                # Handle failed results
+                return AskResultResponse(
+                    status="failed",
+                    type="TEXT_TO_SQL",  # Default to TEXT_TO_SQL for failed results
+                    error=AskError(
+                        code=result.get("error_type", "OTHERS"),
+                        message=result.get("error_message", "Unknown error")
+                    ),
+                    is_followup=result.get("is_followup", False)
+                )
+            else:
+                # Handle other statuses - ensure we use valid status values
+                status = result.get("status", "finished")
+                # Map invalid statuses to valid ones
+                if status not in ["understanding", "searching", "planning", "generating", "correcting", "finished", "failed", "stopped", "summarizing", "reasoning", "executing_sql", "generating_answer", "generating_summary"]:
+                    status = "finished"  # Default to finished for invalid statuses
+                
+                return AskResultResponse(
+                    status=status,
+                    type="TEXT_TO_SQL",  # Default to TEXT_TO_SQL for unknown types
+                    is_followup=result.get("is_followup", False),
+                    metadata=result.get("metadata", {})
+                )
+        except Exception as e:
+            logger.error(f"Error converting result to AskResultResponse: {e}")
+            return AskResultResponse(
+                status="failed",
+                error=AskError(
+                    code="OTHERS",  # Use valid error code
+                    message=f"Error converting result: {str(e)}"
+                )
+            )
 
     def _create_response(self, event_id: str, result: Dict[str, Any]) -> AskResultResponse:
         """Create a response object from the processing result"""
