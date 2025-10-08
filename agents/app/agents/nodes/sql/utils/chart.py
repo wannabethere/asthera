@@ -830,7 +830,7 @@ class ChartExecutionConfig:
         sort_by: Optional[str] = None,
         sort_order: str = "ASC",
         timeout_seconds: int = 30,
-        cache_results: bool = True,
+        cache_results: bool = False,  # Disabled to fix empty results issue
         cache_ttl_seconds: int = 300
     ):
         self.page_size = page_size

@@ -88,12 +88,14 @@ class SQLExecutionPipeline(AgentPipeline):
                     )
                 else:
                     # Use regular execution
+                    logger.info(f"SQL execution pipeline calling engine.execute_sql for: {sql[:100]}...")
                     success, result = await self._engine.execute_sql(
                         sql=sql,
                         session=session,
                         dry_run=False,
                         **kwargs
                     )
+                    logger.info(f"SQL execution pipeline received result, success: {success}")
                 
                 # Update metrics
                 self._metrics.update({
@@ -437,7 +439,7 @@ class DataSummarizationPipeline(AgentPipeline):
             "sort_by": None,
             "sort_order": "ASC",
             "timeout_seconds": 30,
-            "cache_results": True,
+            "cache_results": False,  # Disabled to fix empty results issue
             "cache_ttl_seconds": 300
         }
         self._engine = engine
@@ -590,7 +592,7 @@ class DataSummarizationPipeline(AgentPipeline):
                             sort_by=self._configuration.get("sort_by"),
                             sort_order=self._configuration.get("sort_order", "ASC"),
                             timeout_seconds=self._configuration.get("timeout_seconds", 30),
-                            cache_results=self._configuration.get("cache_results", True),
+                            cache_results=self._configuration.get("cache_results", False),  # Disabled to fix empty results issue
                             cache_ttl_seconds=self._configuration.get("cache_ttl_seconds", 300)
                         )
                         
@@ -678,7 +680,7 @@ class DataSummarizationPipeline(AgentPipeline):
                                 sort_by=self._configuration.get("sort_by"),
                                 sort_order=self._configuration.get("sort_order", "ASC"),
                                 timeout_seconds=self._configuration.get("timeout_seconds", 30),
-                                cache_results=self._configuration.get("cache_results", True),
+                                cache_results=self._configuration.get("cache_results", False),  # Disabled to fix empty results issue
                                 cache_ttl_seconds=self._configuration.get("cache_ttl_seconds", 300)
                             )
                             
@@ -1343,7 +1345,7 @@ class ChartExecutionPipeline(AgentPipeline):
             "sort_by": None,
             "sort_order": "ASC",
             "timeout_seconds": 30,
-            "cache_results": True,
+            "cache_results": False,  # Disabled to fix empty results issue
             "cache_ttl_seconds": 300,
             "chart_format": "vega_lite",  # vega_lite, plotly, powerbi
             "include_other_formats": False,
@@ -1618,7 +1620,7 @@ class ChartExecutionPipeline(AgentPipeline):
                 sort_by=self._configuration.get("sort_by"),
                 sort_order=self._configuration.get("sort_order", "ASC"),
                 timeout_seconds=self._configuration.get("timeout_seconds", 30),
-                cache_results=self._configuration.get("cache_results", True),
+                cache_results=self._configuration.get("cache_results", False),  # Disabled to fix empty results issue
                 cache_ttl_seconds=self._configuration.get("cache_ttl_seconds", 300)
             )
             

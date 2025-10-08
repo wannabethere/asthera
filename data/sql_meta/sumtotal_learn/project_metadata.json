@@ -1,5 +1,5 @@
 {
-  "project_id": "sumtotal_learn_demo",
+  "project_id": "sumtotal_learn_v2",
   "description": "The SumTotal Learn domain contains comprehensive, real-world learning data, encompassing all tables necessary to capture learning activities, user progress, courses, events, and related metadata. It serves as a complete representation of an organization's learning ecosystem.",
   "title": "SumTotal Learn Training Platform",
   "tables": [

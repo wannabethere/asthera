@@ -1826,7 +1826,7 @@ class DashboardWorkflowService(BaseService):
             joinedload(DashboardWorkflow.thread_components)
         ).where(DashboardWorkflow.id == workflow_id)
         result = await self.db.execute(stmt)
-        workflow = result.scalar_one_or_none()
+        workflow = result.unique().scalar_one_or_none()
 
         if not workflow:
             stmt = select(ReportWorkflow).where(ReportWorkflow.id == workflow_id)

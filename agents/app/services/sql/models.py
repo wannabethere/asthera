@@ -121,6 +121,9 @@ class _AskResultResponse(BaseModel):
         Literal["MISLEADING_QUERY", "DATA_ASSISTANCE", "USER_GUIDE", "DATA_SUMMARIZATION", "GENERAL", "QUESTION_SUGGESTION", "ANALYSIS_HELPER"]
     ] = None
     quality_scoring: Optional[Union[QualityScoring, Dict[str, Any], float]] = None
+    answer: Optional[str] = None
+    explanation: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 
 class AskResultResponse(_AskResultResponse):

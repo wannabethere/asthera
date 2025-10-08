@@ -227,6 +227,19 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             query_id, sql_result, request.project_id, configuration={"timeout": 60, "dry_run": False}
         )
 
+        # Check if SQL execution was successful
+        if not sql_data.get("success", False):
+            logger.warning(f"SQL execution failed for {query_id}: {sql_data.get('error', 'Unknown error')}")
+            # Return a failed result with the SQL execution error
+            return {
+                "status": "failed",
+                "api_results": [],
+                "metadata": {
+                    "sql_data": sql_data,
+                    "error": sql_data.get("error", {"code": "SQL_EXECUTION_ERROR", "message": "SQL execution failed"})
+                }
+            }
+
         # Step 6: Generate SQL answer
         if stream_update:
             await stream_update(query_id, "generating_answer", {"query": user_query})
@@ -251,12 +264,18 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             final_result["explanation"] = answer_result.get("explanation")
             final_result["metadata"]["answer_metadata"] = answer_result.get("metadata", {})
             logger.info(f"Added answer to final result for {query_id}")
+            logger.info(f"Answer added: {final_result.get('answer')}")
+            logger.info(f"Explanation added: {final_result.get('explanation')}")
 
         # Include sql_data and answer_result in the metadata to preserve AskResultResponse structure
         final_result["metadata"]["sql_data"] = sql_data
         final_result["metadata"]["answer_result"] = answer_result
 
         logger.info(f"Returning final result for {query_id}, status: {final_result.get('status')}, api_results: {len(final_result.get('api_results', []))}")
+        logger.info(f"Final result answer: {final_result.get('answer')}")
+        logger.info(f"Final result explanation: {final_result.get('explanation')}")
+        logger.info(f"Final result keys: {list(final_result.keys())}")
+        logger.info(f"Final result full: {final_result}")
         return final_result
 
     async def _process_request_impl(self, request: AskRequest) -> Dict[str, Any]:
@@ -916,7 +935,9 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             'quality_scoring': quality_scoring,
             'metadata': sql_result.get('metadata', {}),
             'processing_time_seconds': sql_result.get('processing_time_seconds', 0.0),
-            'timestamp': sql_result.get('timestamp', '')
+            'timestamp': sql_result.get('timestamp', ''),
+            'answer': sql_result.get('answer', ''),  # Use existing answer if available
+            'explanation': sql_result.get('explanation', '')  # Use existing explanation if available
         }
 
     def _handle_error(self, query_id: str, error: Exception, histories: List[Dict]) -> Dict[str, Any]:
@@ -1203,16 +1224,22 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                         else:
                             quality_scoring_dict = quality_scoring
                     
-                    return AskResultResponse(
+                    metadata = result.get("metadata", {})
+                    logger.info(f"DEBUG: metadata in _convert_to_ask_result_response: {metadata}")
+                    ask_result = AskResultResponse(
                         status="finished",
                         type="TEXT_TO_SQL",
                         response=api_results,
                         quality_scoring=quality_scoring_dict,
                         is_followup=result.get("is_followup", False),
                         retrieved_tables=result.get("retrieved_tables"),
-                        sql_generation_reasoning=result.get("sql_generation_reasoning"),
-                        metadata=result.get("metadata", {})
+                        sql_generation_reasoning=result.get("sql_generation_reasoning") or result.get("metadata", {}).get("reasoning"),
+                        metadata=metadata,
+                        answer=result.get("answer", ""),
+                        explanation=result.get("explanation", "")
                     )
+                    logger.info(f"DEBUG: ask_result.metadata after creation: {ask_result.metadata}")
+                    return ask_result
                 elif result.get("type") == "GENERAL":
                     # Handle general results
                     return AskResultResponse(
@@ -1222,7 +1249,9 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                         intent_reasoning=result.get("intent_reasoning"),
                         is_followup=result.get("is_followup", False),
                         general_type=result.get("general_type"),
-                        metadata=result.get("metadata", {})
+                        metadata=result.get("metadata", {}),
+                        answer=result.get("answer", ""),
+                        explanation=result.get("explanation", "")
                     )
                 else:
                     # Handle other finished results - default to TEXT_TO_SQL
@@ -1231,7 +1260,9 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                         type="TEXT_TO_SQL",
                         response=result.get("api_results", []),
                         is_followup=result.get("is_followup", False),
-                        metadata=result.get("metadata", {})
+                        metadata=result.get("metadata", {}),
+                        answer=result.get("answer", ""),
+                        explanation=result.get("explanation", "")
                     )
             elif result.get("status") == "failed":
                 # Handle failed results
@@ -1269,6 +1300,14 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
 
     def _create_response(self, event_id: str, result: Dict[str, Any]) -> AskResultResponse:
         """Create a response object from the processing result"""
+        # Use the provided result directly instead of checking cache
+        # This ensures we return the fresh result even if there are cache issues
+        print(f"DEBUG: result in _create_response: {result}")
+        if result and isinstance(result, dict):
+            # Convert the dictionary result to AskResultResponse using the existing method
+            return self._convert_to_ask_result_response(result)
+        
+        # Fallback to cache if result is not in expected format
         cached_result = self._results_cache.get(event_id)
         if not cached_result:
             logger.warning(f"Cache miss for event_id: {event_id}")
@@ -1836,10 +1875,14 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                 configuration=configuration
             )
 
+            logger.info(f"result in generate_sql_data post process: {result}")
             if result.get("post_process"):
+                post_process = result["post_process"]
                 return {
                     "success": True,
-                    "data": result["post_process"]['data']
+                    "data": post_process.get('data', []),
+                    "columns": post_process.get('columns', []),
+                    "row_count": post_process.get('row_count', 0)
                 }
             else:
                 return {
@@ -1893,20 +1936,36 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                     "error": "No SQL found in result"
                 }
 
-            if not sql_data.get("success") or not sql_data.get("data"):
+            if not sql_data.get("success"):
+                return {
+                    "success": False,
+                    "error": "SQL execution failed"
+                }
+            
+            # Check if data exists (even if empty)
+            if "data" not in sql_data:
                 return {
                     "success": False,
                     "error": "No SQL execution data available"
                 }
 
             # Format SQL data for the answer pipeline
-            formatted_sql_data = {
-                "columns": list(sql_data["data"][0].keys()) if sql_data["data"] else [],
-                "rows": sql_data["data"],
-                "row_count": len(sql_data["data"])
-            }
+            if sql_data["data"] and len(sql_data["data"]) > 0:
+                formatted_sql_data = {
+                    "columns": list(sql_data["data"][0].keys()),
+                    "rows": sql_data["data"],
+                    "row_count": len(sql_data["data"])
+                }
+            else:
+                # Handle case where SQL returns no results
+                formatted_sql_data = {
+                    "columns": sql_data.get("columns", []),
+                    "rows": [],
+                    "row_count": 0
+                }
 
             # Generate answer using the pipeline
+            logger.info(f"Calling answer pipeline with sql_data: {formatted_sql_data}")
             answer_result = await answer_pipeline.run(
                 query=user_query,
                 sql=sql,
@@ -1917,6 +1976,11 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             )
 
             logger.info(f"SQL answer generation result: {answer_result}")
+            if not answer_result.get("success", False):
+                logger.error(f"SQL answer generation failed: {answer_result.get('error', 'Unknown error')}")
+                logger.error(f"Full answer_result: {answer_result}")
+            else:
+                logger.info(f"SQL answer generation successful: {answer_result.get('data', {})}")
 
             # Handle the response format
             if answer_result.get("success"):

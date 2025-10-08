@@ -1385,6 +1385,7 @@ class SQLAnswerPipeline(AgentPipeline):
             schema_context = kwargs.pop("schema_context", None)  # Remove schema_context from kwargs
             print("sql_data in sql answer pipeline", len(sql_data))
             # Generate answer usin g the appropriate agent
+            logger.info(f"Answer pipeline: query={query}, sql={sql[:100]}..., sql_data={sql_data}")
             if self.use_enhanced_agent:
                 result = await self.agent.process_sql_request_enhanced(
                     operation="ANSWER",
@@ -1403,8 +1404,15 @@ class SQLAnswerPipeline(AgentPipeline):
                     **kwargs
                 )
             
+            logger.info(f"Answer pipeline result: {result}")
+            
+            success = result.get("success", False)
+            if not success:
+                logger.error(f"Answer pipeline failed: {result.get('error', 'Unknown error')}")
+                logger.error(f"Full result: {result}")
+            
             return {
-                "success": result.get("success", False),
+                "success": success,
                 "data": {
                     "answer": result.get("answer", ""),
                     "reasoning": result.get("reasoning", ""),

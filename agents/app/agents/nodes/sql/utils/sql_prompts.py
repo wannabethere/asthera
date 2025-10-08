@@ -116,8 +116,9 @@ TEXT_TO_SQL_RULES = """
 - ONLY USE "*" if the user query asks for all the columns of a table.
 - **CRITICAL**: ONLY CHOOSE columns belong to the tables mentioned in the database schema and make sure alias is used correctly from the table definition. 
 - **CRITICAL**: Only use columns that exist in the provided schema for a table. Dont mixup columns from different tables.
-- **CRITICAL**: Please use the data types for the columns to build the SQL query donot generate strings if the column type is BigInt.
-- **CRITICAL**: Dont use comments in the generated SQL query. Do not add any comments in the generated SQL query.
+- **CRITICAL**: Please use the data types for the columns to build the SQL query as an example: donot generate strings if the column type is BigInt.
+- **CRITICAL**: Dont use comments in the generated SQL query. Do not add any comments in the generated SQL query. ***IMPORTANT***
+- **CRITICAL**: Please make sure the column names are correct and match the schema provided. For ex: activityname is provided then use activityname in the SQL query and not activityme.
 - DON'T INCLUDE comments in the generated SQL query.
 - YOU MUST USE "JOIN" if you choose columns from multiple tables!
 - ALWAYS QUALIFY column names with their table name or table alias to avoid ambiguity (e.g., orders.OrderId, o.OrderId)
@@ -223,26 +224,44 @@ You are a helpful assistant that converts natural language queries into ANSI SQL
 
 Given user's question, database schema, etc., you should think deeply and carefully and generate the SQL query based on the given reasoning plan step by step.
 **In addition, you should also provide a column filters chosen,time filters chosen, aggregations applied on columns and group by columns chosen in the SQL query as a JSON object**
-
+**CRITICAL: When generating SQL, use table, views or metrics names exactly as they are provided.Donot create new table, hallucinate tables, schemas, views or metrics. This prevents SQL execution errors.**
 **CRITICAL: When generating SQL, use column names exactly as they appear in the database schema. If the schema shows 'division' (lowercase), use 'division', not 'Division'. This prevents SQL execution errors.**
 
 **CRITICAL UNION ALL RULE: When using UNION ALL, EVERY SELECT statement MUST be wrapped in parentheses. This is a PostgreSQL requirement. Example: (SELECT ... ORDER BY ... LIMIT 1) UNION ALL (SELECT ... ORDER BY ... LIMIT 1)**
-
 **CRITICAL COLUMN RULE: person_sumtotal table does NOT have a 'position' column. Use p.firstname, p.lastname, p.fullname instead. NEVER use p.position.**
-
 **CRITICAL ACTIVITY PK RULE: activity_pk belongs to tbl_tmx_activity_sumtotal (alias 'act'), NOT tbl_tmx_attempt_sumtotal (alias 'a'). Use act.activity_pk, NEVER use a.activity_pk.**
 
-**IMPORTANT: Generate SQL queries as single-line statements without unnecessary line breaks. The SQL should be compact and executable.**
+**IMPORTANT: Generate SQL queries as single-line statements without unnecessary line breaks. The SQL should be compact and executable. Should not have any comments in them.**
+**IMPORTANT: Generate one final SQL query, no multiple SQL queries.**
+**IMPORTANT: Your entire response must be ONLY a valid JSON object with SQL and parsed_entities nothing else.**
 
 {TEXT_TO_SQL_RULES}
 
-### FINAL ANSWER FORMAT ###
-The final answer must be a ANSI SQL query in JSON format. Please adhere to strict JSON format:
+### CRITICAL OUTPUT FORMAT REQUIREMENTS ###
+**YOU MUST RESPOND WITH ONLY A VALID JSON OBJECT. NO EXPLANATIONS, NO STEP-BY-STEP BREAKDOWN, NO ADDITIONAL TEXT.**
 
+**DO NOT INCLUDE:**
+- Explanations or reasoning
+- Step-by-step breakdowns
+- Code examples
+- Markdown formatting
+- Any text before or after the JSON
+
+**ONLY INCLUDE:**
+- A single, valid JSON object with the exact structure shown below
+
+### REQUIRED JSON FORMAT ###
 {{
-    "sql": <SQL_QUERY_STRING>
-    "parsed_entities":<JSON_OBJECT>
+    "sql": "<YOUR_SQL_QUERY_HERE>",
+    "parsed_entities": {{
+        "column_filters": {{}},
+        "time_filters": {{}},
+        "aggregations": {{}},
+        "group_by_columns": {{}}
+    }}
 }}
+
+**REMEMBER: Your entire response must be ONLY this JSON object, nothing else.**
 """
 
 calculated_field_instructions = """

@@ -1087,7 +1087,7 @@ class ReportWorkflowService(BaseService):
             joinedload(ReportWorkflow.thread_components)
         ).where(ReportWorkflow.id == workflow_id)
         result = await self.db.execute(stmt)
-        workflow = result.scalar_one_or_none()
+        workflow = result.unique().scalar_one_or_none()
 
         if not workflow:
             raise ValueError(f"Report workflow {workflow_id} not found")

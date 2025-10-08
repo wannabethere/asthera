@@ -1516,7 +1516,11 @@ Please provide your response in proper Markdown string format.
             result = await self.llm.ainvoke(prompt)
             logger.info(f"LLM SQL answer result: {result}")
             
-            return {"answer": result, "success": True}
+            # Extract content from the result
+            answer_content = result.content if hasattr(result, 'content') else str(result)
+            logger.info(f"Extracted answer content: {answer_content}")
+            
+            return {"answer": answer_content, "success": True}
         except Exception as e:
             logger.error(f"Error in internal SQL answer: {e}")
             return {"answer": "", "success": False, "error": str(e)}

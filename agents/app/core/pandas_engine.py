@@ -334,7 +334,9 @@ class PandasEngine(Engine):
                 # Try direct DataFrame execution first
                 result_df = self._execute_df_query(quoted_sql)
             elif engine_type_str == 'POSTGRES' or self.engine_type == EngineType.POSTGRES:
+                logger.info(f"Calling PostgreSQL execution for SQL: {quoted_sql[:100]}...")
                 result_df = self._execute_postgres_query(quoted_sql)
+                logger.info(f"PostgreSQL execution completed, result shape: {result_df.shape if result_df is not None else 'None'}")
             elif engine_type_str == 'SQLITE' or self.engine_type == EngineType.SQLITE:
                 result_df = self._execute_sqlite_query(quoted_sql)
             
@@ -432,8 +434,9 @@ class PandasEngine(Engine):
                 # Use provided limit
                 sql = f"{sql} LIMIT {limit}"
             
+            # Disable caching for SQL execution to prevent empty results
             # Check cache if enabled
-            if use_cache:
+            if use_cache and False:  # Disabled caching to fix empty results issue
                 cache_key = self._generate_cache_key(sql, limit, **kwargs)
                 cached_result = await self.cache_provider.get(cache_key)
                 
@@ -444,6 +447,7 @@ class PandasEngine(Engine):
                     logger.info(f"Cache miss for query: {sql[:100]}...")
             
             # Execute SQL in thread pool to avoid blocking
+            logger.info(f"About to execute SQL in thread pool: {sql[:100]}...")
             loop = asyncio.get_event_loop()
             success, result = await loop.run_in_executor(
                 self.executor, 
@@ -451,9 +455,11 @@ class PandasEngine(Engine):
                 sql, 
                 limit
             )
+            logger.info(f"SQL execution completed, success: {success}, result keys: {list(result.keys()) if result else 'None'}")
             
+            # Disable caching to prevent empty results issue
             # Cache the result if execution was successful and caching is enabled
-            if success and use_cache and result:
+            if success and use_cache and result and False:  # Disabled caching to fix empty results issue
                 cache_key = self._generate_cache_key(sql, limit, **kwargs)
                 await self.cache_provider.set(cache_key, result, ttl=self.cache_ttl)
                 logger.info(f"Cached result for query: {sql[:100]}...")
@@ -605,8 +611,9 @@ class PandasEngine(Engine):
                 except Exception as e:
                     return False, {"error": f"SQL syntax error: {str(e)}"}
 
+            # Disable caching for batch operations to prevent empty results
             # Check cache for batch operations if enabled
-            if use_cache:
+            if use_cache and False:  # Disabled caching to fix empty results issue
                 cache_key = self._generate_cache_key(
                     sql, 
                     limit=None, 
@@ -683,8 +690,9 @@ class PandasEngine(Engine):
                     }
                 }
                 
+                # Disable caching to prevent empty results issue
                 # Cache the result if enabled
-                if use_cache:
+                if use_cache and False:  # Disabled caching to fix empty results issue
                     cache_key = self._generate_cache_key(
                         sql, 
                         limit=None, 
@@ -740,8 +748,9 @@ class PandasEngine(Engine):
                 "batch_size": batch_size
             }
             
+            # Disable caching to prevent empty results issue
             # Cache the result if enabled
-            if use_cache:
+            if use_cache and False:  # Disabled caching to fix empty results issue
                 cache_key = self._generate_cache_key(
                     sql, 
                     limit=None, 

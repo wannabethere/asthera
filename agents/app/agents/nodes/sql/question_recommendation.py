@@ -18,25 +18,38 @@ question_recommendation_system_prompt = """
 You are an expert in data analysis and SQL query generation. Given a data model specification, optionally a user's question, and a list of categories, your task is to generate insightful, specific questions that can be answered using the provided data model. 
 Each question should be accompanied by a brief explanation of its relevance or importance. Please generate only natural language questions that can be answered sql analysis and data model provided.
 
-### JSON Output Structure
+### CRITICAL OUTPUT REQUIREMENTS ###
+**YOU MUST RESPOND WITH ONLY A VALID JSON OBJECT. NO EXPLANATIONS, NO MARKDOWN FORMATTING, NO ADDITIONAL TEXT.**
 
-Output all questions in the following JSON format:
+**DO NOT INCLUDE:**
+- Explanations or reasoning outside the JSON
+- Markdown formatting (```json, ###, etc.)
+- Any text before or after the JSON
 
-```json
+**ONLY INCLUDE:**
+- A single, valid JSON object with the exact structure shown below
+
+### REQUIRED JSON FORMAT ###
 {
-    "questions": [
-        {
-            "question": "<generated question>",
-            "category": "<category of the question>"
-        },
-        ...
-    ]
+    "questions": {
+        "User Engagement": [
+            {"question": "<generated question>"},
+            {"question": "<generated question>"}
+        ],
+        "Activity Performance": [
+            {"question": "<generated question>"},
+            {"question": "<generated question>"}
+        ],
+        "Organizational Insights": [
+            {"question": "<generated question>"},
+            {"question": "<generated question>"}
+        ]
+    },
+    "categories": ["User Engagement", "Activity Performance", "Organizational Insights"],
+    "reasoning": "Brief explanation of the question generation approach"
 }
-```
 
 ### Guidelines for Generating Questions
-** Please generate a valid Json 
-** donot add quotes with json demarkation
 1. **If Categories Are Provided:**
    - **Randomly select categories** from the list and ensure no single category dominates the output.
    - Ensure a balanced distribution of questions across all provided categories.
@@ -77,7 +90,31 @@ Categories: {categories}
 
 Current Date: {current_date}
 
-Please generate {max_questions} sql related insightful questions for each of the {max_categories} categories based on the provided data model. Both the questions and category names should be translated into {language}. If previous questions are provided, ensure the new questions are related to the user's question. The output format should maintain the structure but with localized text.
+Please generate {max_questions} sql related insightful questions for each of the {max_categories} categories based on the provided data model. Both the questions and category names should be translated into {language}. If previous questions are provided, ensure the new questions are related to the user's question.
+
+**CRITICAL: You MUST respond with ONLY a valid JSON object. No explanations, no markdown formatting, no additional text.**
+
+**REQUIRED JSON FORMAT:**
+{{
+    "questions": {{
+        "User Engagement": [
+            {{"question": "question 1"}},
+            {{"question": "question 2"}}
+        ],
+        "Activity Performance": [
+            {{"question": "question 1"}},
+            {{"question": "question 2"}}
+        ],
+        "Organizational Insights": [
+            {{"question": "question 1"}},
+            {{"question": "question 2"}}
+        ]
+    }},
+    "categories": ["User Engagement", "Activity Performance", "Organizational Insights"],
+    "reasoning": "Brief explanation of the question generation approach"
+}}
+
+**REMEMBER: Your entire response must be ONLY this JSON object, nothing else.**
 """
 
 
@@ -150,9 +187,34 @@ class QuestionRecommendation:
             # Parse the result
             print(f"Result: {result}")
             try:
-                # Get the markdown content directly
-                recommendations = {"content": result.content}
-                print(f"Recommendations: {recommendations}")
+                # Try to parse as JSON first
+                content = result.content
+                logger.info(f"Raw LLM response: {content}")
+                
+                # Try to extract JSON from the response
+                import re
+                json_match = re.search(r'\{[\s\S]*\}', content)
+                if json_match:
+                    json_str = json_match.group(0)
+                    logger.info(f"Extracted JSON: {json_str}")
+                    recommendations = orjson.loads(json_str)
+                    logger.info(f"Parsed JSON successfully: {recommendations}")
+                else:
+                    # Fallback to markdown parsing if no JSON found
+                    logger.warning("No JSON found in response, falling back to markdown parsing")
+                    recommendations = {"content": content}
+                    print(f"Recommendations: {recommendations}")
+                    
+            except orjson.JSONDecodeError as e:
+                logger.error(f"Failed to parse JSON response: {str(e)}")
+                logger.error(f"Response content: {result}")
+                return {
+                    "status": "failed",
+                    "error": {
+                        "code": "JSON_PARSE_ERROR",
+                        "message": f"Failed to parse JSON response: {str(e)}"
+                    }
+                }
             except Exception as e:
                 logger.error(f"Failed to parse response: {str(e)}")
                 logger.error(f"Response content: {result}")

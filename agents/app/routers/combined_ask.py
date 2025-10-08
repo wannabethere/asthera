@@ -64,7 +64,7 @@ def extract_sql_result(ask_result: Dict[str, Any]) -> Dict[str, Any]:
         
         return {
             "status": ask_result.status,
-            "type": ask_result.type,
+            "type": ask_result.type or "TEXT_TO_SQL",  # Ensure type is never None
             "response": ask_result.response,
             "error": ask_result.error,
             "retrieved_tables": ask_result.retrieved_tables,
@@ -113,6 +113,29 @@ def extract_sql_result(ask_result: Dict[str, Any]) -> Dict[str, Any]:
             "timestamp": "",
             "answer": "",
             "explanation": ""
+        }
+
+    # Handle successful result from ask service
+    if ask_result.get("success", False) and "api_results" in ask_result:
+        # Extract the successful result
+        api_results = ask_result.get("api_results", [])
+        metadata = ask_result.get("metadata", {})
+        
+        return {
+            "status": "finished",
+            "type": "TEXT_TO_SQL",
+            "response": api_results,
+            "error": None,
+            "retrieved_tables": None,
+            "sql_generation_reasoning": metadata.get("reasoning"),
+            "is_followup": False,
+            "quality_scoring": ask_result.get("quality_scoring"),
+            "invalid_sql": None,
+            "metadata": metadata,
+            "processing_time_seconds": metadata.get("processing_time_seconds", 0.0),
+            "timestamp": metadata.get("timestamp", ""),
+            "answer": ask_result.get("answer", metadata.get("answer", "")),
+            "explanation": ask_result.get("explanation", metadata.get("explanation", ""))
         }
 
     # Handle error case
@@ -231,6 +254,13 @@ async def process_combined_request(request: AskRequest, fastapi_request: Request
         )
         
         # Extract SQL result and metadata in one go
+        logger.info(f"DEBUG: ask_result before extraction: {ask_result}")
+        logger.info(f"DEBUG: ask_result type: {type(ask_result)}")
+        logger.info(f"DEBUG: ask_result keys: {list(ask_result.keys()) if isinstance(ask_result, dict) else 'Not a dict'}")
+        if hasattr(ask_result, 'metadata'):
+            logger.info(f"DEBUG: ask_result.metadata: {ask_result.metadata}")
+        else:
+            logger.info("DEBUG: ask_result has no metadata attribute")
         sql_result = extract_sql_result(ask_result)
         logger.info(f"DEBUG: Extracted sql_result: {sql_result}")
         
@@ -240,9 +270,42 @@ async def process_combined_request(request: AskRequest, fastapi_request: Request
         
         # Combine results
         try:
+            # Ensure type is always a valid string, defaulting to "TEXT_TO_SQL" if None
+            sql_type = sql_result.get("type") or "TEXT_TO_SQL"
+            
+            # Include SQL execution data in metadata
+            metadata = sql_result.get("metadata", {})
+            
+            # The SQL execution data should be available in the ask_result
+            if hasattr(ask_result, 'metadata') and ask_result.metadata:
+                logger.info(f"DEBUG: ask_result.metadata: {ask_result.metadata}")
+                # Look for sql_data first (stored by ask service), then sql_execution_data as fallback
+                sql_execution_data = ask_result.metadata.get('sql_data') or ask_result.metadata.get('sql_execution_data')
+                logger.info(f"DEBUG: sql_execution_data found: {sql_execution_data}")
+                if sql_execution_data:
+                    metadata["sql_execution_data"] = sql_execution_data
+                else:
+                    # Fallback if no execution data found
+                    metadata["sql_execution_data"] = {
+                        "success": True,
+                        "data": [],
+                        "columns": [],
+                        "row_count": 0,
+                        "message": "SQL executed successfully but returned no results"
+                    }
+            else:
+                # Fallback if no metadata found
+                metadata["sql_execution_data"] = {
+                    "success": True,
+                    "data": [],
+                    "columns": [],
+                    "row_count": 0,
+                    "message": "SQL executed successfully but returned no results"
+                }
+            
             combined_response = CombinedAskResponse(
                 status=sql_result["status"],
-                type=sql_result["type"],
+                type=sql_type,
                 response=sql_result["response"],
                 error=sql_result["error"],
                 retrieved_tables=sql_result["retrieved_tables"],
@@ -253,12 +316,14 @@ async def process_combined_request(request: AskRequest, fastapi_request: Request
                 questions=parsed_recommendations["questions"],
                 categories=parsed_recommendations["categories"],
                 reasoning=sql_result.get("sql_generation_reasoning", ""),
-                metadata=sql_result.get("metadata", {}),
+                metadata=metadata,
                 processing_time_seconds=sql_result.get("processing_time_seconds", 0.0),
                 timestamp=sql_result.get("timestamp", ""),
-                answer=sql_result.get("answer", ""),
-                explanation=sql_result.get("explanation", "")
+                answer=sql_result.get("answer") or "",
+                explanation=sql_result.get("explanation") or ""
             )
+
+            print(f"[DEBUG] [router] CombinedAskResponse: {combined_response}")
         except Exception as e:
             logger.error(f"Error creating CombinedAskResponse: {e}")
             logger.error(f"sql_result keys: {list(sql_result.keys())}")
@@ -314,9 +379,12 @@ async def process_combined_request_stream(request: AskRequest, fastapi_request: 
                 recommendation_result = await recommendation_task
 
             sql_result = extract_sql_result(ask_update)
+            # Ensure type is always a valid string, defaulting to "TEXT_TO_SQL" if None
+            sql_type = sql_result.get("type") or "TEXT_TO_SQL"
+            
             combined_response = {
                 "status": sql_result["status"],
-                "type": sql_result["type"],
+                "type": sql_type,
                 "response": sql_result["response"],
                 "error": sql_result["error"],
                 "retrieved_tables": sql_result["retrieved_tables"],
@@ -415,9 +483,12 @@ async def websocket_combined_endpoint(websocket: WebSocket, query_id: str, fasta
                     if ask_update.get("status") == "starting":
                         continue
                     sql_result = extract_sql_result(ask_update)
+                    # Ensure type is always a valid string, defaulting to "TEXT_TO_SQL" if None
+                    sql_type = sql_result.get("type") or "TEXT_TO_SQL"
+                    
                     combined_response = {
                         "status": sql_result["status"],
-                        "type": sql_result["type"],
+                        "type": sql_type,
                         "response": sql_result["response"],
                         "error": sql_result["error"],
                         "retrieved_tables": sql_result["retrieved_tables"],

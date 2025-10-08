@@ -1204,7 +1204,7 @@ async def main():
     reader = ProjectReader(base_path, persistent_client)
     
     # Test projects
-    test_projects = ["sumtotal_learn",] #"csodworkday","cornerstone_learning", "cornerstone_talent", "cornerstone","sumtotal_learn"] #, "cornerstone_talent"]
+    test_projects = ["csodworkday","cornerstone_learning", "cornerstone_talent", "cornerstone","sumtotal_learn"] #, "cornerstone_talent"]
     
     for project in test_projects:
         try:
@@ -1426,7 +1426,7 @@ async def test_delete_project():
 
 if __name__ == "__main__":
     import asyncio
-    asyncio.run(test_delete_project()) 
+    #asyncio.run(test_delete_project()) 
     asyncio.run(main())
     
     # Uncomment the line below to test project deletion
