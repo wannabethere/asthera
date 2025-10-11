@@ -313,10 +313,22 @@ class ReportService(BaseService):
             
             # Check if we have a final_result at the top level (data summarization pipeline output)
             final_result = workflow_info.get("final_result")
-            if final_result and not workflow_components:
-                logger.info("Found final_result at top level, creating dynamic components from data summarization pipeline output")
-                components = self._create_dynamic_components_from_final_result(final_result)
-                return components
+            if final_result:
+                # Check if final_result contains chart data
+                chart_schema = final_result.get('post_process', {}).get('visualization', {}).get('chart_schema')
+                has_chart_data = bool(chart_schema)
+                logger.info(f"Found final_result at top level, has_chart_data: {has_chart_data}")
+                
+                if has_chart_data:
+                    # Prioritize data summarization pipeline output with chart data
+                    logger.info("Creating dynamic components from data summarization pipeline output with chart data")
+                    components = self._create_dynamic_components_from_final_result(final_result)
+                    return components
+                elif not workflow_components:
+                    # Fallback: no workflow_components but we have final_result
+                    logger.info("No workflow components found, creating from final_result")
+                    components = self._create_dynamic_components_from_final_result(final_result)
+                    return components
             
             # If no thread components, try to create them from query results
             if not workflow_components:
@@ -753,6 +765,9 @@ class ReportService(BaseService):
                 writer_actor=writer_actor,
                 business_goal=business_goal
             )
+            
+            # Add chart schema information to response metadata if available
+            self._add_chart_schemas_to_response(result)
             
             # Send completion status
             self._send_status_update(
@@ -1629,12 +1644,26 @@ class ReportService(BaseService):
                     final_result = report_results["final_result"]
                     logger.info("Found final_result in report_data.report_results")
             
-            if not thread_components and final_result:
-                # This might be data summarization pipeline output
-                logger.info("Detected data summarization pipeline output format")
-                logger.info(f"Final result contains chart data: {final_result.get('post_process', {}).get('visualization', {}).get('chart_schema') is not None}")
+            # Check if we have data summarization pipeline output with chart data
+            has_chart_data = False
+            if final_result:
+                chart_schema = final_result.get('post_process', {}).get('visualization', {}).get('chart_schema')
+                has_chart_data = bool(chart_schema)
+                logger.info(f"Final result contains chart data: {has_chart_data}")
+            
+            if final_result and has_chart_data:
+                # This is data summarization pipeline output with chart data - prioritize it
+                logger.info("Detected data summarization pipeline output with chart data - creating dynamic components")
                 
                 # Dynamically extract information from final_result
+                thread_components = self._create_dynamic_components_from_final_result(final_result)
+                logger.info(f"Created {len(thread_components)} dynamic components from final_result")
+                for i, comp in enumerate(thread_components):
+                    logger.info(f"Dynamic component {i}: id={comp.id}, type={comp.component_type}, "
+                              f"has_chart_config={bool(comp.chart_config)}, has_final_result={bool(comp.final_result)}")
+            elif not thread_components and final_result:
+                # Fallback: no thread_components but we have final_result
+                logger.info("No thread components found, creating from final_result")
                 thread_components = self._create_dynamic_components_from_final_result(final_result)
             
             # Transform workflow data to report format
@@ -1643,7 +1672,38 @@ class ReportService(BaseService):
             
             # Determine writer actor and business goal
             writer_actor_type = self._parse_writer_actor(writer_actor or workflow_metadata.get("writer_actor"))
-            business_goal_obj = self._parse_business_goal(business_goal or str(workflow_metadata.get("business_goal", "")))
+            business_goal_obj = self._parse_business_goal(business_goal or workflow_metadata.get("business_goal"))
+            
+            # Convert dictionary thread components to ThreadComponentData objects
+            converted_thread_components = []
+            for i, comp in enumerate(thread_components):
+                if isinstance(comp, dict):
+                    # Convert dictionary to ThreadComponentData
+                    thread_component = ThreadComponentData(
+                        id=comp.get("id", f"component_{i}"),
+                        component_type=self._map_workflow_component_type(comp.get("component_type", "question")),
+                        sequence_order=comp.get("sequence_order", i),
+                        question=comp.get("question", f"Component {i}"),
+                        description=comp.get("description", ""),
+                        overview=comp.get("overview"),
+                        chart_config=comp.get("chart_config"),
+                        table_config=comp.get("table_config"),
+                        configuration=comp.get("configuration", {}),
+                        final_result=comp.get("final_result")
+                    )
+                    converted_thread_components.append(thread_component)
+                else:
+                    # Already a ThreadComponentData object
+                    converted_thread_components.append(comp)
+            
+            thread_components = converted_thread_components
+            
+            # Debug logging
+            logger.info(f"Writer actor type: {writer_actor_type}")
+            logger.info(f"Business goal object: {business_goal_obj}")
+            logger.info(f"Thread components count: {len(thread_components)}")
+            for i, comp in enumerate(thread_components):
+                logger.info(f"Thread component {i}: id={comp.id}, type={comp.component_type}, has_chart_config={bool(comp.chart_config)}")
             
             # Send initial status update
             self._send_status_update(
@@ -1668,6 +1728,7 @@ class ReportService(BaseService):
                 report_context=report_context,
                 natural_language_query=natural_language_query,
                 report_template=report_template,
+                custom_components=thread_components,  # Pass the thread components created from final_result
                 writer_actor=writer_actor_type,
                 business_goal=business_goal_obj,
                 additional_context=additional_context,
@@ -1689,6 +1750,9 @@ class ReportService(BaseService):
                 "dashboard_layout": workflow_metadata.get("dashboard_layout"),
                 "refresh_rate": workflow_metadata.get("refresh_rate")
             }
+            
+            # Add chart schema information to response metadata if available
+            self._add_chart_schemas_to_response(result)
             
             return result
             
@@ -1881,6 +1945,57 @@ class ReportService(BaseService):
                 "workflow_state": workflow_data.get("state", "unknown"),
                 "total_components": len(workflow_data.get("thread_components", []))
             }
+
+    def _add_chart_schemas_to_response(self, result: Dict[str, Any]) -> None:
+        """Add chart schema information to response metadata if available"""
+        try:
+            # Safely navigate the nested structure
+            post_process = result.get("post_process", {})
+            comprehensive_report = post_process.get("comprehensive_report")
+            
+            if not comprehensive_report:
+                logger.info("No comprehensive report found in response")
+                return
+            
+            report_outline = comprehensive_report.get("report_outline")
+            if not report_outline:
+                logger.info("No report outline found in comprehensive report")
+                return
+            
+            sections = report_outline.get("sections", [])
+            if not sections:
+                logger.info("No sections found in report outline")
+                return
+            
+            chart_schemas = []
+            for section in sections:
+                # Check both chart_schema and chart_data fields
+                chart_schema = section.get("chart_schema") or section.get("chart_data")
+                if chart_schema:
+                    chart_schemas.append({
+                        "section_title": section.get("title"),
+                        "component_id": section.get("component_id"),
+                        "component_type": section.get("component_type"),
+                        "chart_schema": chart_schema,
+                        "has_chart_data": bool(section.get("chart_data")),
+                        "has_chart_schema": bool(section.get("chart_schema"))
+                    })
+            
+            if chart_schemas:
+                result["chart_schemas"] = chart_schemas
+                logger.info(f"Added {len(chart_schemas)} chart schemas to response metadata")
+                # Log details for debugging
+                for chart_info in chart_schemas:
+                    logger.info(f"Chart schema for section '{chart_info['section_title']}': "
+                              f"has_chart_data={chart_info['has_chart_data']}, "
+                              f"has_chart_schema={chart_info['has_chart_schema']}")
+            else:
+                logger.info("No chart schemas found in report sections")
+                
+        except Exception as e:
+            logger.error(f"Error adding chart schemas to response: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
 
     def clear_cache(self):
         """Clear configuration and execution caches"""

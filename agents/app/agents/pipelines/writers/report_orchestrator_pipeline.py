@@ -241,6 +241,14 @@ class ReportOrchestratorPipeline(AgentPipeline):
             
             # Step 3: Generate comprehensive report using report writing agent (if components provided)
             comprehensive_report = None
+            
+            # Debug logging for comprehensive report generation conditions
+            logger.info(f"Comprehensive report generation conditions:")
+            logger.info(f"  - thread_components: {bool(thread_components)} (count: {len(thread_components) if thread_components else 0})")
+            logger.info(f"  - writer_actor: {bool(writer_actor)} (type: {type(writer_actor)})")
+            logger.info(f"  - business_goal: {bool(business_goal)} (type: {type(business_goal)})")
+            logger.info(f"  - enable_report_generation: {self._configuration.get('enable_report_generation', 'NOT_SET')}")
+            
             if (thread_components and writer_actor and business_goal and 
                 self._configuration["enable_report_generation"]):
                 
@@ -269,6 +277,8 @@ class ReportOrchestratorPipeline(AgentPipeline):
                     "comprehensive_report_generation_completed",
                     {"project_id": project_id}
                 )
+            else:
+                logger.info("Comprehensive report generation skipped due to missing requirements")
             
             # Calculate final metrics
             end_time = datetime.now()

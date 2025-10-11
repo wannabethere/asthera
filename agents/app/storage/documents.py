@@ -362,6 +362,56 @@ class DocumentChromaStore:
                 # Get the existing collection directly
                 self.collection = self.persistent_client.get_collection(name=self.collection_name)
                 logger.info(f"Successfully retrieved existing collection '{self.collection_name}'")
+                
+                # Check if there's an embedding dimension mismatch by testing the collection
+                try:
+                    # Test if we can add a document to check for dimension mismatch
+                    test_embedding = self.embeddings_model.embed_query("test")
+                    test_ids = ["test_dimension_check"]
+                    test_doc = {
+                        "embeddings": [test_embedding],
+                        "documents": ["test"],
+                        "metadatas": [{"test": True}]
+                    }
+                    # This will fail if there's a dimension mismatch
+                    self.collection.add(ids=test_ids, **test_doc)
+                    # If successful, remove the test document
+                    self.collection.delete(ids=test_ids)
+                    logger.info("Collection embedding dimension is compatible")
+                except Exception as dim_error:
+                    if "dimension" in str(dim_error).lower():
+                        logger.warning(f"Embedding dimension mismatch detected: {dim_error}")
+                        logger.info(f"Using alternative collection name for '{self.collection_name}' with correct embedding model")
+                        
+                        # Store original collection name
+                        original_collection_name = self.collection_name
+                        # Use a different collection name to avoid conflicts
+                        alternative_collection_name = f"{self.collection_name}_v2"
+                        self.collection_name = alternative_collection_name
+                        
+                        try:
+                            # Try to get the alternative collection
+                            self.collection = self.persistent_client.get_collection(name=self.collection_name)
+                            logger.info(f"Successfully retrieved alternative collection '{self.collection_name}'")
+                        except Exception as get_error:
+                            logger.info(f"Alternative collection '{self.collection_name}' does not exist, creating it...")
+                            try:
+                                # Create the alternative collection with correct embedding model
+                                self.collection = self.persistent_client.create_collection(name=self.collection_name)
+                                logger.info(f"Successfully created alternative collection '{self.collection_name}' with correct embedding model")
+                            except Exception as create_error:
+                                logger.error(f"Error creating alternative collection '{self.collection_name}': {create_error}")
+                                # Fallback to original collection name
+                                self.collection_name = original_collection_name
+                                try:
+                                    self.collection = self.persistent_client.get_collection(name=self.collection_name)
+                                    logger.info(f"Using original collection '{self.collection_name}' as fallback")
+                                except Exception as fallback_error:
+                                    logger.error(f"Failed to get original collection '{self.collection_name}': {fallback_error}")
+                                    raise create_error
+                    else:
+                        raise dim_error
+                        
             except Exception as e:
                 logger.warning(f"Collection '{self.collection_name}' does not exist, creating it...")
                 try:
@@ -378,6 +428,58 @@ class DocumentChromaStore:
                 try:
                     self.tfidf_collection = self.persistent_client.get_collection(name=self.tfidf_collection_name)
                     logger.info(f"Successfully retrieved existing TF-IDF collection '{self.tfidf_collection_name}'")
+                    
+                    # Check if there's an embedding dimension mismatch for TF-IDF collection too
+                    try:
+                        # Test if we can add a document to check for dimension mismatch
+                        test_embedding = self.embeddings_model.embed_query("test")
+                        test_ids = ["test_tfidf_dimension_check"]
+                        test_doc = {
+                            "embeddings": [test_embedding],
+                            "documents": ["test"],
+                            "metadatas": [{"test": True}]
+                        }
+                        # This will fail if there's a dimension mismatch
+                        self.tfidf_collection.add(ids=test_ids, **test_doc)
+                        # If successful, remove the test document
+                        self.tfidf_collection.delete(ids=test_ids)
+                        logger.info("TF-IDF collection embedding dimension is compatible")
+                    except Exception as dim_error:
+                        if "dimension" in str(dim_error).lower():
+                            logger.warning(f"TF-IDF collection embedding dimension mismatch detected: {dim_error}")
+                            logger.info(f"Using alternative TF-IDF collection name for '{self.tfidf_collection_name}' with correct embedding model")
+                            
+                            # Store original TF-IDF collection name
+                            original_tfidf_collection_name = self.tfidf_collection_name
+                            # Use a different collection name to avoid conflicts
+                            alternative_tfidf_collection_name = f"{self.tfidf_collection_name}_v2"
+                            self.tfidf_collection_name = alternative_tfidf_collection_name
+                            
+                            try:
+                                # Try to get the alternative TF-IDF collection
+                                self.tfidf_collection = self.persistent_client.get_collection(name=self.tfidf_collection_name)
+                                logger.info(f"Successfully retrieved alternative TF-IDF collection '{self.tfidf_collection_name}'")
+                            except Exception as get_error:
+                                logger.info(f"Alternative TF-IDF collection '{self.tfidf_collection_name}' does not exist, creating it...")
+                                try:
+                                    # Create the alternative TF-IDF collection with correct embedding model
+                                    self.tfidf_collection = self.persistent_client.create_collection(name=self.tfidf_collection_name)
+                                    logger.info(f"Successfully created alternative TF-IDF collection '{self.tfidf_collection_name}' with correct embedding model")
+                                except Exception as create_error:
+                                    logger.error(f"Error creating alternative TF-IDF collection '{self.tfidf_collection_name}': {create_error}")
+                                    # Fallback to original collection name
+                                    self.tfidf_collection_name = original_tfidf_collection_name
+                                    try:
+                                        self.tfidf_collection = self.persistent_client.get_collection(name=self.tfidf_collection_name)
+                                        logger.info(f"Using original TF-IDF collection '{self.tfidf_collection_name}' as fallback")
+                                    except Exception as fallback_error:
+                                        logger.error(f"Failed to get original TF-IDF collection '{self.tfidf_collection_name}': {fallback_error}")
+                                        # Disable TF-IDF functionality as fallback
+                                        self.tf_idf = False
+                                        logger.warning("Disabling TF-IDF functionality due to collection issues")
+                        else:
+                            raise dim_error
+                            
                 except Exception as e:
                     logger.warning(f"TF-IDF collection '{self.tfidf_collection_name}' does not exist, creating it...")
                     try:

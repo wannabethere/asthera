@@ -101,6 +101,7 @@ class ReportSection(BaseModel):
     confidence_score: float = Field(..., description="Confidence in the analysis (0-1)")
     recommendations: List[str] = Field(default_factory=list, description="Recommendations")
     chart_data: Optional[Dict[str, Any]] = Field(default=None, description="Chart visualization data")
+    chart_schema: Optional[Dict[str, Any]] = Field(default=None, description="Chart schema from data summarization")
     component_id: Optional[str] = Field(default=None, description="Source thread component ID")
     component_type: Optional[str] = Field(default=None, description="Source component type")
 
@@ -429,7 +430,36 @@ class ReportWritingAgent:
                 outline_data = json.loads(content_str)
                 
                 # Use component-based sections instead of LLM-generated ones
-                outline_data["sections"] = component_sections
+                # Convert component sections to ReportSection objects
+                report_sections = []
+                for section_dict in component_sections:
+                    try:
+                        # Convert UUID to string if needed
+                        if "component_id" in section_dict and section_dict["component_id"] is not None:
+                            if hasattr(section_dict["component_id"], '__str__'):
+                                section_dict["component_id"] = str(section_dict["component_id"])
+                        
+                        report_section = ReportSection(**section_dict)
+                        report_sections.append(report_section)
+                    except Exception as e:
+                        logger.error(f"Error creating ReportSection from dict: {e}")
+                        logger.error(f"Section dict: {section_dict}")
+                        # Create a fallback section
+                        report_section = ReportSection(
+                            title=section_dict.get("title", "Unknown Section"),
+                            content=section_dict.get("content", "Content generation failed"),
+                            key_insights=section_dict.get("key_insights", []),
+                            data_sources=section_dict.get("data_sources", []),
+                            confidence_score=section_dict.get("confidence_score", 0.0),
+                            recommendations=section_dict.get("recommendations", []),
+                            chart_data=section_dict.get("chart_data"),
+                            chart_schema=section_dict.get("chart_schema"),
+                            component_id=str(section_dict.get("component_id")) if section_dict.get("component_id") else None,
+                            component_type=section_dict.get("component_type")
+                        )
+                        report_sections.append(report_section)
+                
+                outline_data["sections"] = report_sections
                 
                 return ReportOutline(**outline_data)
             except json.JSONDecodeError as json_err:
@@ -503,8 +533,14 @@ class ReportWritingAgent:
         if section.chart_data:
             return self._generate_chart_section_content(section, state)
         
+        # Try to extract content from existing summary first
+        existing_content = self._extract_existing_content_for_section(section, state)
+        if existing_content:
+            logger.info(f"Found existing content for section: {section.title}, will enhance it with LLM")
+        
+        # Generate new content using LLM
         content_prompt = PromptTemplate(
-            input_variables=["section", "actor", "goal", "context"],
+            input_variables=["section", "actor", "goal", "context", "existing_content"],
             template="""
             Generate content for the following report section:
             
@@ -512,6 +548,7 @@ class ReportWritingAgent:
             Writer Actor: {actor}
             Business Goal: {goal}
             Context: {context}
+            Existing Content: {existing_content}
             
             Write professional, engaging content that:
             1. Addresses the business goal
@@ -519,6 +556,12 @@ class ReportWritingAgent:
             3. Incorporates relevant data and insights
             4. Provides actionable recommendations
             5. Maintains appropriate tone and complexity
+            6. Performs data analysis when data is available (extract patterns, trends, statistics, ranges, outliers)
+            7. Provides meaningful insights based on the actual data content
+            
+            If existing content is provided, use it as a foundation and enhance/rewrite it to better fit the section requirements and business goals. If no existing content is provided, generate new content from scratch.
+            
+            If the section contains data (chart_data, metrics, etc.), analyze it thoroughly and provide insights based on the actual data values, patterns, and trends.
             
             Focus on clarity, relevance, and business value.
             """
@@ -535,7 +578,8 @@ class ReportWritingAgent:
                 "section": section.dict(),
                 "actor": state.writer_actor.value,
                 "goal": state.business_goal.dict(),
-                "context": context_text
+                "context": context_text,
+                "existing_content": existing_content or "No existing content available"
             })
             
             # Handle both string and content responses
@@ -545,10 +589,36 @@ class ReportWritingAgent:
             logger.error(f"Error generating section content: {e}")
             return f"Error generating content for {section.title}: {str(e)}"
     
+    def _extract_existing_content_for_section(self, section: ReportSection, state: ReportWritingState) -> str:
+        """Extract existing content from thread components if available"""
+        try:
+            # Look for the corresponding thread component
+            for component in state.thread_components:
+                if component.id == section.component_id:
+                    # Check if component has final_result with executive summary
+                    if hasattr(component, 'final_result') and component.final_result:
+                        post_process = component.final_result.get('post_process', {})
+                        executive_summary = post_process.get('executive_summary', '')
+                        
+                        if executive_summary:
+                            logger.info(f"Found executive summary for component: {component.id}")
+                            return self._extract_section_content_from_summary(executive_summary)
+                    
+                    # Check if component has description
+                    if component.description:
+                        logger.info(f"Using component description for component: {component.id}")
+                        return component.description
+            
+            return ""
+            
+        except Exception as e:
+            logger.error(f"Error extracting existing content: {e}")
+            return ""
+    
     def _generate_chart_section_content(self, section: ReportSection, state: ReportWritingState) -> str:
         """Generate content specifically for chart sections"""
         chart_prompt = PromptTemplate(
-            input_variables=["section", "actor", "goal", "chart_data"],
+            input_variables=["section", "actor", "goal", "chart_data", "existing_content"],
             template="""
             Generate content for a chart section in the report:
             
@@ -556,28 +626,40 @@ class ReportWritingAgent:
             Writer Actor: {actor}
             Business Goal: {goal}
             Chart Data: {chart_data}
+            Existing Content: {existing_content}
             
-            Write content that:
+            Analyze the chart data and write content that:
             1. Describes the chart and its key findings
-            2. Explains what the data shows
+            2. Explains what the data shows (analyze patterns, trends, ranges, outliers)
             3. Highlights important trends or patterns
             4. Connects the visualization to business goals
-            5. Provides insights based on the chart data
+            5. Provides insights based on the chart data analysis
+            6. Extracts key statistics (min/max values, averages, distributions, etc.)
+            
+            If existing content is provided, use it as a foundation and enhance it with your data analysis.
+            If no existing content is provided, generate comprehensive analysis from scratch.
             
             Include a placeholder for the chart: [CHART_PLACEHOLDER]
             
             Focus on making the chart data actionable and relevant to the business goal.
+            Perform thorough data analysis and provide meaningful insights.
             """
         )
         
         try:
+            # Extract existing content for chart sections
+            existing_content = self._extract_existing_content_for_section(section, state)
+            if existing_content:
+                logger.info(f"Found existing content for chart section: {section.title}, will enhance it with LLM")
+            
             # Use modern LangChain pattern: prompt | llm
             chain = chart_prompt | self.llm
             result = chain.invoke({
                 "section": section.dict(),
                 "actor": state.writer_actor.value,
                 "goal": state.business_goal.dict(),
-                "chart_data": section.chart_data
+                "chart_data": section.chart_data,
+                "existing_content": existing_content or "No existing content available"
             })
             
             # Handle both string and content responses
@@ -668,52 +750,42 @@ class ReportWritingAgent:
             if component.chart_config:
                 chart_data = component.chart_config
                 has_chart_data = True
+                logger.info(f"Using chart_config for component {i}: {bool(chart_data)}")
             elif hasattr(component, 'final_result') and component.final_result:
                 post_process = component.final_result.get('post_process', {})
                 chart_data = post_process.get('visualization', {}).get('chart_schema', {})
                 if chart_data:
                     has_chart_data = True
+                    logger.info(f"Using final_result chart_schema for component {i}: {bool(chart_data)}")
+            
+            # Log chart data availability
+            logger.info(f"Component {i} chart data available: {has_chart_data}, chart_data keys: {list(chart_data.keys()) if chart_data else 'None'}")
             
             # Create section based on component type and data availability
             if component.component_type == ComponentType.CHART:
                 if has_chart_data and chart_data:
                     # Chart section with visualization data
                     section = {
-                        "title": f"Training Completion Analysis: {component.question or 'Position-based Completion Rates'}",
-                        "content": f"This section presents a comprehensive analysis of training completion rates across different positions within the organization. The visualization below shows completion percentages for each role, providing insights into training effectiveness and areas requiring attention.",
-                        "key_insights": [
-                            f"Completion rates vary significantly across positions, ranging from {self._extract_min_max_rates(chart_data)}",
-                            "Certain roles show consistently higher completion rates, indicating effective training programs",
-                            "Areas with lower completion rates may require targeted training interventions"
-                        ],
-                        "data_sources": ["Training completion data", "Position-based analytics", "LMS platform records"],
+                        "title": f"Data Visualization: {component.question or 'Chart Analysis'}",
+                        "content": "This section will be populated with dynamic content based on the chart data.",
+                        "key_insights": [],
+                        "data_sources": [],
                         "confidence_score": 0.85,
-                        "recommendations": [
-                            "Focus training efforts on positions with lower completion rates",
-                            "Analyze successful training programs for positions with high completion rates",
-                            "Implement targeted interventions for underperforming areas"
-                        ],
+                        "recommendations": [],
                         "chart_data": chart_data,
+                        "chart_schema": chart_data,  # Include chart schema for reference
                         "component_id": component.id,
                         "component_type": component.component_type.value
                     }
                 else:
                     # Chart section without data (failed query)
                     section = {
-                        "title": f"Training Completion Analysis: {component.question or 'Position-based Completion Rates'}",
-                        "content": f"This section was intended to present training completion analysis across different positions. However, the data query encountered an issue and could not be executed successfully. This may be due to data availability, query complexity, or system constraints.",
-                        "key_insights": [
-                            "Data query execution failed - analysis cannot be completed at this time",
-                            "This section requires data access to provide meaningful insights",
-                            "Alternative data sources or query modifications may be needed"
-                        ],
-                        "data_sources": ["Training completion data (unavailable)", "Position-based analytics (unavailable)"],
+                        "title": f"Data Analysis: {component.question or 'Chart Analysis'}",
+                        "content": "This section was intended to present data analysis. However, the data query encountered an issue and could not be executed successfully.",
+                        "key_insights": ["Data query execution failed - analysis cannot be completed at this time"],
+                        "data_sources": ["Data analysis (unavailable)"],
                         "confidence_score": 0.0,
-                        "recommendations": [
-                            "Verify data availability and query syntax",
-                            "Check system connectivity and permissions",
-                            "Consider alternative data sources or simplified queries"
-                        ],
+                        "recommendations": ["Verify data availability and query syntax"],
                         "chart_data": None,
                         "component_id": component.id,
                         "component_type": component.component_type.value
@@ -721,12 +793,12 @@ class ReportWritingAgent:
             elif component.component_type == ComponentType.TABLE:
                 # Table section
                 section = {
-                    "title": f"Data Table: {component.question or 'Training Data Overview'}",
-                    "content": f"This section presents tabular data showing {component.description or 'training completion details'}. The table provides a structured view of the data for detailed analysis.",
-                    "key_insights": [f"Table displays {component.question or 'structured training data'}"],
-                    "data_sources": [component.description or "Training data analysis"],
+                    "title": f"Data Table: {component.question or 'Data Overview'}",
+                    "content": "This section will be populated with dynamic content based on the table data.",
+                    "key_insights": [],
+                    "data_sources": [],
                     "confidence_score": 0.8,
-                    "recommendations": ["Review table data for patterns and trends"],
+                    "recommendations": [],
                     "chart_data": None,
                     "component_id": component.id,
                     "component_type": component.component_type.value
@@ -734,12 +806,12 @@ class ReportWritingAgent:
             elif component.component_type == ComponentType.METRIC:
                 # Metric section
                 section = {
-                    "title": f"Key Performance Metric: {component.question or 'Training Completion Rate'}",
-                    "content": f"This section focuses on a key performance metric: {component.description or 'overall training completion rate'}. This metric provides a high-level view of training effectiveness across the organization.",
-                    "key_insights": [f"Metric indicates {component.question or 'current performance level'}"],
-                    "data_sources": [component.description or "Performance data"],
+                    "title": f"Key Performance Metric: {component.question or 'Performance Metric'}",
+                    "content": "This section will be populated with dynamic content based on the metric data.",
+                    "key_insights": [],
+                    "data_sources": [],
                     "confidence_score": 0.85,
-                    "recommendations": ["Monitor metric trends over time"],
+                    "recommendations": [],
                     "chart_data": None,
                     "component_id": component.id,
                     "component_type": component.component_type.value
@@ -747,12 +819,12 @@ class ReportWritingAgent:
             else:
                 # Generic section for other component types
                 section = {
-                    "title": f"{component.component_type.value.title()}: {component.question or 'Training Analysis'}",
-                    "content": f"This section provides analysis of {component.description or 'training-related insights'}. The analysis aims to provide actionable insights for improving training effectiveness.",
-                    "key_insights": [f"Analysis reveals {component.question or 'key findings about training performance'}"],
-                    "data_sources": [component.description or "Training analysis data"],
+                    "title": f"{component.component_type.value.title()}: {component.question or 'Data Analysis'}",
+                    "content": "This section will be populated with dynamic content based on the analysis data.",
+                    "key_insights": [],
+                    "data_sources": [],
                     "confidence_score": 0.7,
-                    "recommendations": ["Review analysis for actionable insights"],
+                    "recommendations": [],
                     "chart_data": chart_data if chart_data else None,
                     "component_id": component.id,
                     "component_type": component.component_type.value
@@ -762,20 +834,7 @@ class ReportWritingAgent:
         
         return sections
     
-    def _extract_min_max_rates(self, chart_data: Dict[str, Any]) -> str:
-        """Extract min and max completion rates from chart data"""
-        try:
-            if 'data' in chart_data and 'values' in chart_data['data']:
-                values = chart_data['data']['values']
-                if values and len(values) > 0:
-                    rates = [float(v.get('completion_rate', 0)) for v in values if 'completion_rate' in v]
-                    if rates:
-                        min_rate = min(rates)
-                        max_rate = max(rates)
-                        return f"{min_rate:.1f}% to {max_rate:.1f}%"
-            return "varying percentages"
-        except Exception:
-            return "varying percentages"
+    
     
     def _create_chart_sections_from_components(self, thread_components: List[ThreadComponentData]) -> List[Dict[str, Any]]:
         """Create chart sections from thread components that have chart data"""
