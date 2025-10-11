@@ -66,6 +66,7 @@ class ThreadComponentData:
     table_config: Optional[Dict[str, Any]] = None
     configuration: Optional[Dict[str, Any]] = None
     created_at: Optional[datetime] = None
+    final_result: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -99,6 +100,9 @@ class ReportSection(BaseModel):
     data_sources: List[str] = Field(..., description="Data sources used")
     confidence_score: float = Field(..., description="Confidence in the analysis (0-1)")
     recommendations: List[str] = Field(default_factory=list, description="Recommendations")
+    chart_data: Optional[Dict[str, Any]] = Field(default=None, description="Chart visualization data")
+    component_id: Optional[str] = Field(default=None, description="Source thread component ID")
+    component_type: Optional[str] = Field(default=None, description="Source component type")
 
 
 class ReportOutline(BaseModel):
@@ -354,39 +358,42 @@ class ReportWritingAgent:
         }
     
     def _generate_report_outline(self, state: ReportWritingState) -> ReportOutline:
-        """Generate initial report outline"""
+        """Generate initial report outline based on thread components"""
+        
+        # Create component-based sections first
+        component_sections = self._create_sections_from_components(state.thread_components)
+        
+        # Generate executive summary and other metadata
         outline_prompt = PromptTemplate(
-            input_variables=["components", "actor", "goal"],
+            input_variables=["components", "actor", "goal", "sections"],
             template="""
             Create a comprehensive report outline based on the following:
             
             Thread Components: {components}
             Writer Actor Type: {actor}
             Business Goal: {goal}
+            Component Sections: {sections}
             
-            Generate a structured outline with:
-            1. Executive Summary
-            2. Main Sections (based on component types)
-            3. Key Findings
-            4. Recommendations
-            5. Data Quality Assessment
-            6. Limitations
+            Generate ONLY the following metadata (do not create additional sections):
+            1. Executive Summary - A professional summary that explains the purpose of this training analysis report, what data was analyzed, and key insights for executives and stakeholders
+            2. Key Findings - Based on the component sections, extract the most important findings about training completion rates and performance
+            3. Overall Recommendations - Based on the component sections, provide actionable recommendations for improving training effectiveness
+            4. Data Quality Assessment - Assess the quality and reliability of the training data used in this analysis
+            5. Limitations - Identify any limitations or constraints in the analysis
+            
+            IMPORTANT: 
+            - Do NOT create additional sections - use only the provided component sections
+            - Focus on training completion analysis and LMS platform effectiveness
+            - Make the executive summary suitable for executives, stakeholders, and HR
+            - Base all findings and recommendations on the actual component sections provided
             
             Format as JSON with the structure:
             {{
-                "executive_summary": "Brief overview",
-                "sections": [
-                    {{
-                        "title": "Section Title",
-                        "key_insights": ["Insight 1", "Insight 2"],
-                        "data_sources": ["Source 1"],
-                        "recommendations": ["Rec 1"]
-                    }}
-                ],
-                "key_findings": ["Finding 1", "Finding 2"],
-                "overall_recommendations": ["Overall Rec 1"],
-                "data_quality_assessment": "Assessment text",
-                "limitations": ["Limitation 1"]
+                "executive_summary": "Professional executive summary focusing on training completion analysis and its business impact",
+                "key_findings": ["Finding 1 about training completion", "Finding 2 about training effectiveness"],
+                "overall_recommendations": ["Recommendation 1 for improving training", "Recommendation 2 for training optimization"],
+                "data_quality_assessment": "Assessment of training data quality and reliability",
+                "limitations": ["Limitation 1 of the analysis", "Limitation 2 of the data"]
             }}
             """
         )
@@ -397,7 +404,8 @@ class ReportWritingAgent:
             result = chain.invoke({
                 "components": self._format_components_for_prompt(state.thread_components),
                 "actor": state.writer_actor.value,
-                "goal": state.business_goal.dict()
+                "goal": state.business_goal.dict(),
+                "sections": [s["title"] for s in component_sections]
             })
             
             # Handle both string and content responses
@@ -419,10 +427,18 @@ class ReportWritingAgent:
                         content_str = content_str[json_start:json_end].strip()
                 
                 outline_data = json.loads(content_str)
+                
+                # Use component-based sections instead of LLM-generated ones
+                outline_data["sections"] = component_sections
+                
                 return ReportOutline(**outline_data)
             except json.JSONDecodeError as json_err:
                 logger.error(f"JSON parsing error: {json_err}")
                 logger.error(f"Raw content: {content_str[:500]}...")
+                return self._create_fallback_outline(state)
+            except Exception as validation_err:
+                logger.error(f"Validation error creating ReportOutline: {validation_err}")
+                logger.error(f"Outline data: {outline_data}")
                 return self._create_fallback_outline(state)
         except Exception as e:
             logger.error(f"Error generating outline: {e}")
@@ -482,6 +498,11 @@ class ReportWritingAgent:
     
     def _generate_section_content(self, section: ReportSection, state: ReportWritingState) -> str:
         """Generate content for a specific section"""
+        
+        # Check if this is a chart section
+        if section.chart_data:
+            return self._generate_chart_section_content(section, state)
+        
         content_prompt = PromptTemplate(
             input_variables=["section", "actor", "goal", "context"],
             template="""
@@ -523,6 +544,62 @@ class ReportWritingAgent:
         except Exception as e:
             logger.error(f"Error generating section content: {e}")
             return f"Error generating content for {section.title}: {str(e)}"
+    
+    def _generate_chart_section_content(self, section: ReportSection, state: ReportWritingState) -> str:
+        """Generate content specifically for chart sections"""
+        chart_prompt = PromptTemplate(
+            input_variables=["section", "actor", "goal", "chart_data"],
+            template="""
+            Generate content for a chart section in the report:
+            
+            Section: {section}
+            Writer Actor: {actor}
+            Business Goal: {goal}
+            Chart Data: {chart_data}
+            
+            Write content that:
+            1. Describes the chart and its key findings
+            2. Explains what the data shows
+            3. Highlights important trends or patterns
+            4. Connects the visualization to business goals
+            5. Provides insights based on the chart data
+            
+            Include a placeholder for the chart: [CHART_PLACEHOLDER]
+            
+            Focus on making the chart data actionable and relevant to the business goal.
+            """
+        )
+        
+        try:
+            # Use modern LangChain pattern: prompt | llm
+            chain = chart_prompt | self.llm
+            result = chain.invoke({
+                "section": section.dict(),
+                "actor": state.writer_actor.value,
+                "goal": state.business_goal.dict(),
+                "chart_data": section.chart_data
+            })
+            
+            # Handle both string and content responses
+            content = result.content if hasattr(result, 'content') else str(result)
+            
+            # Add chart data as a structured element
+            chart_content = {
+                "text": content,
+                "chart_data": section.chart_data,
+                "component_id": section.component_id,
+                "component_type": section.component_type
+            }
+            
+            return chart_content
+        except Exception as e:
+            logger.error(f"Error generating chart section content: {e}")
+            return {
+                "text": f"Error generating chart content for {section.title}: {str(e)}",
+                "chart_data": section.chart_data,
+                "component_id": section.component_id,
+                "component_type": section.component_type
+            }
     
     def _assess_final_quality(self, content: Dict[str, Any], state: ReportWritingState) -> Dict[str, Any]:
         """Assess final report quality"""
@@ -566,8 +643,173 @@ class ReportWritingAgent:
                 formatted.append(f"  Description: {comp.description}")
             if comp.overview:
                 formatted.append(f"  Overview: {comp.overview}")
+            if comp.chart_config:
+                formatted.append(f"  Chart Config: {comp.chart_config}")
+            if hasattr(comp, 'final_result') and comp.final_result:
+                post_process = comp.final_result.get('post_process', {})
+                visualization = post_process.get('visualization', {})
+                if visualization.get('chart_schema'):
+                    formatted.append(f"  Chart Schema: {visualization['chart_schema']}")
         
         return "\n".join(formatted)
+    
+    def _create_sections_from_components(self, thread_components: List[ThreadComponentData]) -> List[Dict[str, Any]]:
+        """Create report sections from thread components"""
+        sections = []
+        
+        logger.info(f"Creating sections from {len(thread_components)} thread components")
+        for i, component in enumerate(thread_components):
+            logger.info(f"Component {i}: id={component.id}, type={component.component_type}, question={component.question}")
+            logger.info(f"Component {i}: chart_config={component.chart_config}, final_result={component.final_result is not None}")
+            # Extract chart data if available
+            chart_data = None
+            has_chart_data = False
+            
+            if component.chart_config:
+                chart_data = component.chart_config
+                has_chart_data = True
+            elif hasattr(component, 'final_result') and component.final_result:
+                post_process = component.final_result.get('post_process', {})
+                chart_data = post_process.get('visualization', {}).get('chart_schema', {})
+                if chart_data:
+                    has_chart_data = True
+            
+            # Create section based on component type and data availability
+            if component.component_type == ComponentType.CHART:
+                if has_chart_data and chart_data:
+                    # Chart section with visualization data
+                    section = {
+                        "title": f"Training Completion Analysis: {component.question or 'Position-based Completion Rates'}",
+                        "content": f"This section presents a comprehensive analysis of training completion rates across different positions within the organization. The visualization below shows completion percentages for each role, providing insights into training effectiveness and areas requiring attention.",
+                        "key_insights": [
+                            f"Completion rates vary significantly across positions, ranging from {self._extract_min_max_rates(chart_data)}",
+                            "Certain roles show consistently higher completion rates, indicating effective training programs",
+                            "Areas with lower completion rates may require targeted training interventions"
+                        ],
+                        "data_sources": ["Training completion data", "Position-based analytics", "LMS platform records"],
+                        "confidence_score": 0.85,
+                        "recommendations": [
+                            "Focus training efforts on positions with lower completion rates",
+                            "Analyze successful training programs for positions with high completion rates",
+                            "Implement targeted interventions for underperforming areas"
+                        ],
+                        "chart_data": chart_data,
+                        "component_id": component.id,
+                        "component_type": component.component_type.value
+                    }
+                else:
+                    # Chart section without data (failed query)
+                    section = {
+                        "title": f"Training Completion Analysis: {component.question or 'Position-based Completion Rates'}",
+                        "content": f"This section was intended to present training completion analysis across different positions. However, the data query encountered an issue and could not be executed successfully. This may be due to data availability, query complexity, or system constraints.",
+                        "key_insights": [
+                            "Data query execution failed - analysis cannot be completed at this time",
+                            "This section requires data access to provide meaningful insights",
+                            "Alternative data sources or query modifications may be needed"
+                        ],
+                        "data_sources": ["Training completion data (unavailable)", "Position-based analytics (unavailable)"],
+                        "confidence_score": 0.0,
+                        "recommendations": [
+                            "Verify data availability and query syntax",
+                            "Check system connectivity and permissions",
+                            "Consider alternative data sources or simplified queries"
+                        ],
+                        "chart_data": None,
+                        "component_id": component.id,
+                        "component_type": component.component_type.value
+                    }
+            elif component.component_type == ComponentType.TABLE:
+                # Table section
+                section = {
+                    "title": f"Data Table: {component.question or 'Training Data Overview'}",
+                    "content": f"This section presents tabular data showing {component.description or 'training completion details'}. The table provides a structured view of the data for detailed analysis.",
+                    "key_insights": [f"Table displays {component.question or 'structured training data'}"],
+                    "data_sources": [component.description or "Training data analysis"],
+                    "confidence_score": 0.8,
+                    "recommendations": ["Review table data for patterns and trends"],
+                    "chart_data": None,
+                    "component_id": component.id,
+                    "component_type": component.component_type.value
+                }
+            elif component.component_type == ComponentType.METRIC:
+                # Metric section
+                section = {
+                    "title": f"Key Performance Metric: {component.question or 'Training Completion Rate'}",
+                    "content": f"This section focuses on a key performance metric: {component.description or 'overall training completion rate'}. This metric provides a high-level view of training effectiveness across the organization.",
+                    "key_insights": [f"Metric indicates {component.question or 'current performance level'}"],
+                    "data_sources": [component.description or "Performance data"],
+                    "confidence_score": 0.85,
+                    "recommendations": ["Monitor metric trends over time"],
+                    "chart_data": None,
+                    "component_id": component.id,
+                    "component_type": component.component_type.value
+                }
+            else:
+                # Generic section for other component types
+                section = {
+                    "title": f"{component.component_type.value.title()}: {component.question or 'Training Analysis'}",
+                    "content": f"This section provides analysis of {component.description or 'training-related insights'}. The analysis aims to provide actionable insights for improving training effectiveness.",
+                    "key_insights": [f"Analysis reveals {component.question or 'key findings about training performance'}"],
+                    "data_sources": [component.description or "Training analysis data"],
+                    "confidence_score": 0.7,
+                    "recommendations": ["Review analysis for actionable insights"],
+                    "chart_data": chart_data if chart_data else None,
+                    "component_id": component.id,
+                    "component_type": component.component_type.value
+                }
+            
+            sections.append(section)
+        
+        return sections
+    
+    def _extract_min_max_rates(self, chart_data: Dict[str, Any]) -> str:
+        """Extract min and max completion rates from chart data"""
+        try:
+            if 'data' in chart_data and 'values' in chart_data['data']:
+                values = chart_data['data']['values']
+                if values and len(values) > 0:
+                    rates = [float(v.get('completion_rate', 0)) for v in values if 'completion_rate' in v]
+                    if rates:
+                        min_rate = min(rates)
+                        max_rate = max(rates)
+                        return f"{min_rate:.1f}% to {max_rate:.1f}%"
+            return "varying percentages"
+        except Exception:
+            return "varying percentages"
+    
+    def _create_chart_sections_from_components(self, thread_components: List[ThreadComponentData]) -> List[Dict[str, Any]]:
+        """Create chart sections from thread components that have chart data"""
+        chart_sections = []
+        
+        for component in thread_components:
+            # Check if component has chart data
+            if (component.chart_config or 
+                (hasattr(component, 'final_result') and component.final_result and 
+                 component.final_result.get('post_process', {}).get('visualization', {}).get('chart_schema'))):
+                
+                # Extract chart data
+                chart_data = None
+                if component.chart_config:
+                    chart_data = component.chart_config
+                elif hasattr(component, 'final_result') and component.final_result:
+                    post_process = component.final_result.get('post_process', {})
+                    chart_data = post_process.get('visualization', {}).get('chart_schema', {})
+                
+                if chart_data:
+                    chart_section = {
+                        "title": f"Chart: {component.question or 'Data Visualization'}",
+                        "content": f"Visualization of {component.description or 'data analysis'}",
+                        "key_insights": [f"Chart shows {component.question or 'data trends'}"],
+                        "data_sources": [component.description or "Data analysis"],
+                        "confidence_score": 0.8,  # High confidence for visualizations
+                        "recommendations": ["Review chart for insights"],
+                        "chart_data": chart_data,
+                        "component_id": component.id,
+                        "component_type": component.component_type.value
+                    }
+                    chart_sections.append(chart_section)
+        
+        return chart_sections
     
     def _create_fallback_outline(self, state: ReportWritingState) -> ReportOutline:
         """Create fallback outline if generation fails"""

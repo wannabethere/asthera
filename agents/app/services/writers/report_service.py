@@ -309,25 +309,39 @@ class ReportService(BaseService):
         
         try:
             workflow_components = workflow_info.get("thread_components", [])
+            logger.info(f"Found {len(workflow_components)} workflow components")
             
-            for comp in workflow_components:
-                # Convert workflow component type to report component type
-                component_type = self._map_workflow_component_type(comp.get("component_type"))
-                
-                # Create ThreadComponentData
-                thread_component = ThreadComponentData(
-                    id=comp.get("id", f"component_{len(components)}"),
-                    component_type=component_type,
-                    sequence_order=comp.get("sequence_order", 0),
-                    question=comp.get("question", f"Component {comp.get('sequence_order', len(components))}"),
-                    description=comp.get("description", ""),
-                    overview=comp.get("overview"),
-                    chart_config=comp.get("chart_config"),
-                    table_config=comp.get("table_config"),
-                    configuration=comp.get("configuration", {})
-                )
-                
-                components.append(thread_component)
+            # Check if we have a final_result at the top level (data summarization pipeline output)
+            final_result = workflow_info.get("final_result")
+            if final_result and not workflow_components:
+                logger.info("Found final_result at top level, creating dynamic components from data summarization pipeline output")
+                components = self._create_dynamic_components_from_final_result(final_result)
+                return components
+            
+            # If no thread components, try to create them from query results
+            if not workflow_components:
+                logger.info("No workflow components found, creating from query results")
+                components = self._create_components_from_query_results(workflow_info)
+            else:
+                for comp in workflow_components:
+                    # Convert workflow component type to report component type
+                    component_type = self._map_workflow_component_type(comp.get("component_type"))
+                    
+                    # Create ThreadComponentData
+                    thread_component = ThreadComponentData(
+                        id=comp.get("id", f"component_{len(components)}"),
+                        component_type=component_type,
+                        sequence_order=comp.get("sequence_order", 0),
+                        question=comp.get("question", f"Component {comp.get('sequence_order', len(components))}"),
+                        description=comp.get("description", ""),
+                        overview=comp.get("overview"),
+                        chart_config=comp.get("chart_config"),
+                        table_config=comp.get("table_config"),
+                        configuration=comp.get("configuration", {}),
+                        final_result=comp.get("final_result")
+                    )
+                    
+                    components.append(thread_component)
             
             # Sort by sequence order
             components.sort(key=lambda x: x.sequence_order)
@@ -336,6 +350,222 @@ class ReportService(BaseService):
             
         except Exception as e:
             logger.error(f"Error extracting thread components from workflow: {e}")
+            return []
+    
+    def _create_dynamic_components_from_final_result(self, final_result: Dict[str, Any]) -> List[ThreadComponentData]:
+        """Create thread components dynamically from final_result data"""
+        components = []
+        
+        try:
+            # Extract metadata from final_result
+            post_process = final_result.get('post_process', {})
+            visualization = post_process.get('visualization', {})
+            chart_schema = visualization.get('chart_schema', {})
+            executive_summary = post_process.get('executive_summary', '')
+            data_overview = post_process.get('data_overview', {})
+            
+            # Determine component type based on available data
+            component_type = ComponentType.CHART
+            if chart_schema:
+                component_type = ComponentType.CHART
+            elif data_overview:
+                component_type = ComponentType.TABLE
+            else:
+                component_type = ComponentType.OVERVIEW
+            
+            # Extract dynamic title and description from executive summary or chart data
+            title = self._extract_dynamic_title(executive_summary, chart_schema)
+            description = self._extract_dynamic_description(executive_summary, chart_schema, data_overview)
+            
+            # Create component with dynamic information
+            thread_component = ThreadComponentData(
+                id="dynamic_analysis_component",
+                component_type=component_type,
+                sequence_order=0,
+                question=title,
+                description=description,
+                overview=data_overview,
+                chart_config=chart_schema,
+                table_config=None,
+                configuration={},
+                final_result=final_result
+            )
+            
+            components.append(thread_component)
+            logger.info(f"Created dynamic component: {title} with type: {component_type.value}")
+            
+            return components
+            
+        except Exception as e:
+            logger.error(f"Error creating dynamic components from final_result: {e}")
+            return []
+    
+    def _extract_dynamic_title(self, executive_summary: str, chart_schema: Dict[str, Any]) -> str:
+        """Extract dynamic title from executive summary or chart data"""
+        try:
+            # Try to extract title from executive summary
+            if executive_summary:
+                # Look for patterns like "analysis of", "report on", etc.
+                lines = executive_summary.split('\n')
+                for line in lines:
+                    line = line.strip()
+                    if 'analysis' in line.lower() and ('completion' in line.lower() or 'training' in line.lower()):
+                        # Extract the main subject
+                        if 'completion' in line.lower():
+                            return "Training Completion Analysis"
+                        elif 'performance' in line.lower():
+                            return "Performance Analysis"
+                        elif 'training' in line.lower():
+                            return "Training Analysis"
+            
+            # Try to extract title from chart schema
+            if chart_schema and 'title' in chart_schema:
+                return chart_schema['title']
+            
+            # Look at chart data to determine title
+            if chart_schema and 'data' in chart_schema and 'values' in chart_schema['data']:
+                values = chart_schema['data']['values']
+                if values:
+                    # Check field names to determine analysis type
+                    first_item = values[0] if values else {}
+                    if 'completion_rate' in first_item:
+                        return "Training Completion Analysis"
+                    elif 'performance' in first_item:
+                        return "Performance Analysis"
+                    elif 'sales' in first_item:
+                        return "Sales Analysis"
+                    elif 'revenue' in first_item:
+                        return "Revenue Analysis"
+            
+            # Default fallback
+            return "Data Analysis"
+            
+        except Exception as e:
+            logger.error(f"Error extracting dynamic title: {e}")
+            return "Data Analysis"
+    
+    def _extract_dynamic_description(self, executive_summary: str, chart_schema: Dict[str, Any], data_overview: Dict[str, Any]) -> str:
+        """Extract dynamic description from executive summary, chart data, or data overview"""
+        try:
+            # Try to extract description from executive summary
+            if executive_summary:
+                # Look for the first meaningful sentence
+                sentences = executive_summary.split('.')
+                for sentence in sentences:
+                    sentence = sentence.strip()
+                    if len(sentence) > 20 and ('analysis' in sentence.lower() or 'report' in sentence.lower()):
+                        return sentence
+            
+            # Try to extract from chart schema
+            if chart_schema and 'data' in chart_schema and 'values' in chart_schema['data']:
+                values = chart_schema['data']['values']
+                if values:
+                    first_item = values[0] if values else {}
+                    if 'completion_rate' in first_item:
+                        return "Analysis of training completion rates across different positions"
+                    elif 'performance' in first_item:
+                        return "Analysis of performance metrics across different roles"
+                    elif 'sales' in first_item:
+                        return "Analysis of sales data across different categories"
+                    elif 'revenue' in first_item:
+                        return "Analysis of revenue data across different segments"
+            
+            # Try to extract from data overview
+            if data_overview:
+                total_rows = data_overview.get('total_rows', 0)
+                if total_rows > 0:
+                    return f"Analysis of {total_rows} data points across different categories"
+            
+            # Default fallback
+            return "Analysis of data across different categories"
+            
+        except Exception as e:
+            logger.error(f"Error extracting dynamic description: {e}")
+            return "Analysis of data across different categories"
+    
+    def _create_components_from_query_results(self, workflow_info: Dict[str, Any]) -> List[ThreadComponentData]:
+        """Create thread components from query results when no thread components exist"""
+        components = []
+        
+        try:
+            # Look for query results in the workflow data
+            query_results = workflow_info.get("query_results", {})
+            if not query_results:
+                # Try to find query results in nested structures
+                report_results = workflow_info.get("report_results", {})
+                if report_results:
+                    query_results = report_results.get("query_results", {})
+            
+            # Also check for data summarization pipeline output
+            final_result = workflow_info.get("final_result")
+            if final_result and not query_results:
+                logger.info("Found data summarization pipeline output, creating dynamic components from final_result")
+                components = self._create_dynamic_components_from_final_result(final_result)
+                return components
+            
+            if query_results:
+                for query_id, query_data in query_results.items():
+                    # Determine component type based on query data
+                    component_type = ComponentType.CHART  # Default to chart for visualization
+                    
+                    # Extract chart schema from query data
+                    chart_schema = query_data.get("chart_schema", {})
+                    
+                    # Create meaningful question and description based on the query
+                    question = query_data.get("name", f"Query {query_id}")
+                    if "completion" in question.lower() or "completion" in str(query_data.get("sql", "")).lower():
+                        question = "Training Completion Analysis"
+                        description = "Analysis of training completion rates across different positions"
+                    else:
+                        description = f"Analysis of {query_data.get('name', 'training data')}"
+                    
+                    # Create ThreadComponentData from query result
+                    thread_component = ThreadComponentData(
+                        id=f"query_{query_id}",
+                        component_type=component_type,
+                        sequence_order=0,
+                        question=question,
+                        description=description,
+                        overview=None,
+                        chart_config=chart_schema,
+                        table_config=None,
+                        configuration={},
+                        final_result={
+                            "post_process": {
+                                "visualization": {
+                                    "chart_schema": chart_schema
+                                },
+                                "executive_summary": f"Analysis of {question}",
+                                "data_overview": {
+                                    "total_rows": query_data.get("row_count", 0),
+                                    "columns": query_data.get("columns", [])
+                                }
+                            }
+                        } if chart_schema else None
+                    )
+                    
+                    logger.info(f"Created thread component: {thread_component.id} with chart_data: {chart_schema is not None}")
+                    components.append(thread_component)
+            else:
+                # Create a default component if no query results
+                thread_component = ThreadComponentData(
+                    id="default_analysis",
+                    component_type=ComponentType.CHART,
+                    sequence_order=0,
+                    question="Training Completion Analysis",
+                    description="Analysis of training completion rates across positions",
+                    overview=None,
+                    chart_config=None,
+                    table_config=None,
+                    configuration={},
+                    final_result=None
+                )
+                components.append(thread_component)
+            
+            return components
+            
+        except Exception as e:
+            logger.error(f"Error creating components from query results: {e}")
             return []
     
     def _map_workflow_component_type(self, workflow_type: str) -> ComponentType:
@@ -1381,6 +1611,32 @@ class ReportService(BaseService):
             thread_components = workflow_data.get("thread_components", [])
             workflow_metadata = workflow_data.get("workflow_metadata", {})
             
+            # Debug: Log the workflow data structure
+            logger.info(f"Workflow data keys: {list(workflow_data.keys())}")
+            logger.info(f"Thread components count: {len(thread_components)}")
+            if thread_components:
+                logger.info(f"First component keys: {list(thread_components[0].keys()) if thread_components else 'None'}")
+            
+            # Handle case where workflow data might have a different structure
+            # Check for final_result in various locations
+            final_result = None
+            if "final_result" in workflow_data:
+                final_result = workflow_data["final_result"]
+                logger.info("Found final_result at top level")
+            elif "report_data" in workflow_data and "report_results" in workflow_data["report_data"]:
+                report_results = workflow_data["report_data"]["report_results"]
+                if "final_result" in report_results:
+                    final_result = report_results["final_result"]
+                    logger.info("Found final_result in report_data.report_results")
+            
+            if not thread_components and final_result:
+                # This might be data summarization pipeline output
+                logger.info("Detected data summarization pipeline output format")
+                logger.info(f"Final result contains chart data: {final_result.get('post_process', {}).get('visualization', {}).get('chart_schema') is not None}")
+                
+                # Dynamically extract information from final_result
+                thread_components = self._create_dynamic_components_from_final_result(final_result)
+            
             # Transform workflow data to report format
             report_queries = self._extract_queries_from_workflow_components(thread_components)
             report_context = self._create_report_context_from_workflow_data(workflow_data)
@@ -1458,12 +1714,45 @@ class ReportService(BaseService):
             for i, component in enumerate(thread_components):
                 component_type = component.get("component_type", "").lower()
                 has_sql_query = bool(component.get("sql_query"))
+                has_final_result = bool(component.get("final_result"))
                 
-                logger.info(f"Component {i}: type='{component_type}', has_sql_query={has_sql_query}")
-                logger.info(f"Component {i} sql_query: {component.get('sql_query', 'None')[:100]}...")
+                logger.info(f"Component {i}: type='{component_type}', has_sql_query={has_sql_query}, has_final_result={has_final_result}")
                 
-                # Only process components that have SQL queries
-                if component.get("sql_query") and component_type in ["chart", "table", "metric", "sql_summary", "question"]:
+                # Handle data summarization pipeline output format
+                if has_final_result and component.get("final_result"):
+                    final_result = component.get("final_result", {})
+                    logger.info(f"Processing component {i} as data summarization result")
+                    
+                    # Extract data from final_result structure
+                    post_process = final_result.get("post_process", {})
+                    visualization = post_process.get("visualization", {})
+                    chart_schema = visualization.get("chart_schema", {})
+                    
+                    query_data = {
+                        "chart_schema": chart_schema,
+                        "sql": component.get("sql_query", ""),  # May be empty for data summarization
+                        "query": component.get("question", "Data Analysis"),
+                        "data_description": component.get("description", "Data analysis results"),
+                        "component_type": component_type or "data_analysis",
+                        "sequence_order": component.get("sequence_order", i),
+                        "configuration": component.get("configuration", {}),
+                        "chart_config": component.get("chart_config", {}),
+                        "table_config": component.get("table_config", {}),
+                        "alert_config": component.get("alert_config", {}),
+                        "executive_summary": post_process.get("executive_summary", ""),
+                        "data_overview": post_process.get("data_overview", {}),
+                        "visualization_data": visualization,
+                        "sample_data": component.get("sample_data", {}),
+                        "thread_metadata": component.get("thread_metadata", {}),
+                        "reasoning": component.get("reasoning"),
+                        "data_count": component.get("data_count"),
+                        "validation_results": component.get("validation_results", {}),
+                        "final_result": final_result  # Include the full result for report generation
+                    }
+                    queries.append(query_data)
+                    
+                # Handle traditional SQL query components
+                elif component.get("sql_query") and component_type in ["chart", "table", "metric", "sql_summary", "question"]:
                     logger.info(f"Processing component {i} as valid query component")
                     query_data = {
                         "chart_schema": component.get("chart_schema", {}),
@@ -1487,7 +1776,7 @@ class ReportService(BaseService):
                     }
                     queries.append(query_data)
                 else:
-                    logger.info(f"Skipping component {i}: type='{component_type}', has_sql_query={has_sql_query}")
+                    logger.info(f"Skipping component {i}: type='{component_type}', has_sql_query={has_sql_query}, has_final_result={has_final_result}")
             
             # Sort by sequence order
             queries.sort(key=lambda x: x.get("sequence_order", 0))
@@ -1505,17 +1794,57 @@ class ReportService(BaseService):
             workflow_metadata = workflow_data.get("workflow_metadata", {})
             thread_components = workflow_data.get("thread_components", [])
             
+            # Handle case where workflow data might have a different structure
+            if not thread_components and "final_result" in workflow_data:
+                # This might be data summarization pipeline output
+                logger.info("Creating report context from data summarization pipeline output")
+                thread_components = [ThreadComponentData(
+                    id="data_analysis_component",
+                    component_type=ComponentType.CHART,
+                    sequence_order=0,
+                    question="Data Analysis",
+                    description="Data analysis results",
+                    final_result=workflow_data["final_result"]
+                )]
+            
             # Extract available columns from components
             available_columns = set()
             data_types = {}
             
             for component in thread_components:
-                if component.get("data_overview"):
-                    overview = component["data_overview"]
+                # Handle ThreadComponentData objects
+                if hasattr(component, 'overview') and component.overview:
+                    overview = component.overview
                     if "columns" in overview:
                         for col in overview["columns"]:
                             available_columns.add(col.get("name", ""))
                             data_types[col.get("name", "")] = col.get("type", "string")
+                elif hasattr(component, 'final_result') and component.final_result:
+                    # Extract columns from final_result structure
+                    final_result = component.final_result
+                    post_process = final_result.get("post_process", {})
+                    data_overview = post_process.get("data_overview", {})
+                    if "columns" in data_overview:
+                        for col in data_overview["columns"]:
+                            available_columns.add(col.get("name", ""))
+                            data_types[col.get("name", "")] = col.get("type", "string")
+                # Handle dict components (fallback)
+                elif isinstance(component, dict):
+                    if component.get("data_overview"):
+                        overview = component["data_overview"]
+                        if "columns" in overview:
+                            for col in overview["columns"]:
+                                available_columns.add(col.get("name", ""))
+                                data_types[col.get("name", "")] = col.get("type", "string")
+                    elif component.get("final_result"):
+                        # Extract columns from final_result structure
+                        final_result = component["final_result"]
+                        post_process = final_result.get("post_process", {})
+                        data_overview = post_process.get("data_overview", {})
+                        if "columns" in data_overview:
+                            for col in data_overview["columns"]:
+                                available_columns.add(col.get("name", ""))
+                                data_types[col.get("name", "")] = col.get("type", "string")
             
             # Create report context
             context = {
