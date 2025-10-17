@@ -1155,6 +1155,7 @@ class DashboardWorkflowService(BaseService):
                 "error": str(e),
                 "message": "Failed to trigger alert"
             }
+
     async def update_thread_component(
         self,
         user_id: UUID,
@@ -1465,7 +1466,7 @@ class DashboardWorkflowService(BaseService):
                     print("I am after incoming_component_ids", incoming_component_ids)
                     
                     # **Delete components that existed before but are not in the new list**
-                    components_to_delete =  incoming_component_ids - existing_component_ids
+                    components_to_delete = [x for x in existing_component_ids if x not in incoming_component_ids]
                     print("I am after components_to_delete", components_to_delete)
                     from sqlalchemy import and_, delete
                     if components_to_delete:
