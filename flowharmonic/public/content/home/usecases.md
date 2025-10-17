@@ -1,0 +1,20 @@
+---
+title: "Discover more on our blog"
+cases:
+  - heading: "Marketing Intelligence"
+    text: "Real-time insights into campaigns, attribution, and customer behavior."
+    publish: "September 22, 2025" 
+    image: "/useCase/blog.webp"
+  - heading: "Financial Forecasting"
+    text: "Predict revenue streams and manage risk with AI-driven analytics."
+    publish: "July 12, 2025"
+    image: "/useCase/blog.webp"
+  - heading: "Operational Efficiency"
+    text: "Optimize resource allocation and reduce costs across processes."
+    publish: "October 15, 2025"
+    image: "/useCase/blog.webp"
+  - heading: "Customer Experience"
+    text: "Leverage data to personalize journeys and increase satisfaction."
+    publish: "August 22, 2025"
+    image: "/useCase/blog.webp"
+---

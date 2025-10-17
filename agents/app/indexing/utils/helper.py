@@ -30,28 +30,14 @@ class Helper:
 
 def _properties_comment(column: Dict[str, Any], **_) -> str:
     props = column["properties"]
-    column_properties = {
-        "alias": props.get("displayName", ""),
-        "description": props.get("description", ""),
-    }
-
-    # Add any nested columns if they exist
-    nested = {k: v for k, v in props.items() if k.startswith("nested")}
-    if nested:
-        column_properties["nested_columns"] = nested
-
-    if (json_type := props.get("json_type", "")) and json_type in [
-        "JSON",
-        "JSON_ARRAY",
-    ]:
-        json_fields = {
-            k: v for k, v in column["properties"].items() if re.match(r".*json.*", k)
-        }
-        if json_fields:
-            column_properties["json_type"] = json_type
-            column_properties["json_fields"] = json_fields
-
-    return f"-- {orjson.dumps(column_properties).decode('utf-8')}\n  "
+    
+    # Include all properties, filtering out empty values
+    meaningful_properties = {k: v for k, v in props.items() if v}
+    
+    if not meaningful_properties:
+        return ""  # Return empty string if no meaningful properties
+    
+    return f"-- {orjson.dumps(meaningful_properties).decode('utf-8')}\n  "
 
 
 COLUMN_PREPROCESSORS = {
@@ -75,7 +61,7 @@ COLUMN_PREPROCESSORS = {
 
 COLUMN_COMMENT_HELPERS = {
     "properties": Helper(
-        condition=lambda column, **_: "properties" in column,
+        condition=lambda column, **_: "properties" in column and any(column.get("properties", {}).values()),
         helper=_properties_comment,
     ),
     "isCalculated": Helper(

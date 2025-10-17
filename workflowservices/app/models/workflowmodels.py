@@ -351,6 +351,7 @@ class ReportWorkflow(Base):
     schedule_config = relationship("ScheduleConfiguration", back_populates="report_workflow", uselist=False, cascade="all, delete-orphan")
     integrations = relationship("IntegrationConfig", back_populates="report_workflow", cascade="all, delete-orphan")
     workflow_versions = relationship("WorkflowVersion", back_populates="report_workflow", cascade="all, delete-orphan")
+    report = relationship("Report", back_populates="report_workflows", foreign_keys=[report_id])
 
 # Pydantic Models for API
 class ThreadComponentCreate(BaseModel):

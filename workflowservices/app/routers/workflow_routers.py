@@ -1,11 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, List, Dict, Any,Union
+import asyncio
 from uuid import UUID
 from datetime import datetime
+from app.models.schema import RequestType
 
 from app.core.dependencies import get_async_db_session
 from app.services.workflow_orchestrator import WorkflowOrchestrator, WorkflowType
+from app.services.alertservice import AlertService
 from app.models.workflowmodels import (
     WorkflowState, ThreadComponentCreate, ShareConfigCreate,ShareReportCreate,
     ScheduleConfigCreate, IntegrationConfigCreate, AlertThreadComponentCreate,
@@ -118,6 +121,39 @@ async def create_alert_workflow(
             condition_details=condition_details or [],
             metadata=metadata
         )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/alert/all")
+async def get_alerts(
+    db: AsyncSession = Depends(get_async_db_session),
+    user_id: str = "1e0cba86-110a-4d45-a205-182963880d75",
+    # current_user = Depends(get_current_user)
+):
+    """
+    Get all alerts
+    """
+    orchestrator = AlertService(db)
+    try:
+        result = await orchestrator.get_all_alerts()
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/alert/{alert_id}")
+async def get_alert(
+    alert_id: UUID,
+    db: AsyncSession = Depends(get_async_db_session),
+    user_id: str = "1e0cba86-110a-4d45-a205-182963880d75",
+    # current_user = Depends(get_current_user)
+):
+    """
+    Get a specific alert
+    """
+    orchestrator = AlertService(db)
+    try:
+        result = await orchestrator.get_alert_by_id(str(alert_id))
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -361,8 +397,8 @@ async def get_dashboard_by_id(
 @router.post("/{workflow_id}/report/add-section")
 async def add_report_section(
     workflow_id: UUID,
-    section_type: str,
-    section_config: Dict[str, Any],
+    section_config: Union[Dict[str, Any], List[Dict[str, Any]]],
+    section_type: Optional[str] = None,
     db: AsyncSession = Depends(get_async_db_session),
     user_id:str="1e0cba86-110a-4d45-a205-182963880d75",
     # current_user = Depends(get_current_user)
@@ -371,15 +407,32 @@ async def add_report_section(
     orchestrator = WorkflowOrchestrator(db)
 
     try:
-        result = await orchestrator.execute_workflow_step(
-            user_id=UUID(user_id),  # current_user.id
-            workflow_id=workflow_id,
-            step_name="add_section",
-            step_data={
-                "section_type": section_type,
-                "section_config": section_config
-            }
-        )
+        if isinstance(section_config, list):
+            # --- MODIFICATION START ---
+            # Process the list of sections sequentially instead of concurrently
+            results = []
+            for i in section_config:
+                result = await orchestrator.execute_workflow_step(
+                    user_id=UUID(user_id),
+                    workflow_id=workflow_id,
+                    step_name="add_section",
+                    step_data={
+                        "section_type": i.get("section_type"), # Use .get for safety
+                        "section_config": i
+                    }
+                )
+                results.append(result)
+            return results
+        else:
+            result = await orchestrator.execute_workflow_step(
+                user_id=UUID(user_id),  # current_user.id
+                workflow_id=workflow_id,
+                step_name="add_section",
+                step_data={
+                    "section_type": section_type,
+                    "section_config": section_config
+                }
+            )
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -490,6 +543,52 @@ async def publish_report(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.get("/workflow/getAllReports")
+async def get_all_reports(
+    db: AsyncSession = Depends(get_async_db_session),
+    user_id:str="1e0cba86-110a-4d45-a205-182963880d75",
+    limit: int = Query(default=20, le=100),
+    # current_user = Depends(get_current_user)
+):
+    """Get all reports for the current user"""
+    orchestrator = WorkflowOrchestrator(db)
+    reports = await orchestrator.get_all_reports(
+        user_id=UUID(user_id),  # current_user.id
+        state=None,
+        limit=limit,
+    )
+    return {"reports": reports}
+
+
+@router.get("/workflow/getReportById")
+async def get_report_by_id(
+    report_id: Optional[UUID] = None,
+    workflow_id: Optional[UUID] = None,
+    db: AsyncSession = Depends(get_async_db_session),
+    user_id: str = "1e0cba86-110a-4d45-a205-182963880d75",
+    # current_user = Depends(get_current_user)
+):
+    """
+    Get a specific report by ID with all details including sharing, scheduling, and integrations
+    
+    Parameters:
+    - report_id: The report ID (optional if workflow_id provided)
+    - workflow_id: The workflow ID (optional if report_id provided)
+    """
+    orchestrator = WorkflowOrchestrator(db)
+    
+    try:
+        result = await orchestrator.get_report_by_id(
+            user_id=UUID(user_id),
+            report_id=report_id,
+            workflow_id=workflow_id
+        )
+        
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
 @router.get("/{workflow_id}/report/preview")
 async def preview_report(
     workflow_id: UUID,
@@ -512,6 +611,28 @@ async def preview_report(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@router.get("/share/{shareType}/getAllShares/{entityid}")
+async def get_all_shares(
+    shareType: RequestType,
+    entityid: str,
+    db: AsyncSession = Depends(get_async_db_session),
+    user_id: str = "1e0cba86-110a-4d45-a205-182963880d75",
+    # current_user = Depends(get_current_user)
+):
+    """
+    Get all shares for the current user
+    """
+    orchestrator = WorkflowOrchestrator(db)
+    
+    try:
+        result = await orchestrator.get_all_shares(
+            user_id=UUID(user_id),
+            share_type=shareType.value,
+            entity_id=entityid
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
 # ==================== Batch Operations ====================
 
 @router.post("/{workflow_id}/batch")

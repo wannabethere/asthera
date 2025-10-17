@@ -9,7 +9,7 @@ import sqlite3
 import tempfile
 import os
 import hashlib
-from .engine import Engine, clean_generation_result, add_quotes
+from .engine import Engine, clean_generation_result, add_quotes, remove_limit_statement
 from app.settings import EngineType
 from app.utils.cache import Cache, InMemoryCache
 from app.settings import get_settings
@@ -426,12 +426,15 @@ class PandasEngine(Engine):
             sql_upper = sql.upper()
             has_limit = 'LIMIT' in sql_upper
             
-            # Only add default limit if no LIMIT clause is present and no specific limit is provided
-            if not has_limit and limit is None:
-                limit = 1000
+            # Handle LIMIT clause properly
+            if limit is not None:
+                # If a specific limit is provided, remove any existing LIMIT and add the new one
+                if has_limit:
+                    sql = remove_limit_statement(sql)
                 sql = f"{sql} LIMIT {limit}"
-            elif limit is not None and not has_limit:
-                # Use provided limit
+            elif not has_limit:
+                # Only add default limit if no LIMIT clause is present and no specific limit is provided
+                limit = 1000
                 sql = f"{sql} LIMIT {limit}"
             
             # Disable caching for SQL execution to prevent empty results
@@ -660,7 +663,9 @@ class PandasEngine(Engine):
                     }
                 
                 offset = batch_num * batch_size
-                batch_sql = f"{sql} LIMIT {batch_size} OFFSET {offset}"
+                # Remove existing LIMIT clause before adding pagination
+                sql_without_limit = remove_limit_statement(sql)
+                batch_sql = f"{sql_without_limit} LIMIT {batch_size} OFFSET {offset}"
                 
                 success, batch_result = await self.execute_sql(
                     batch_sql,
@@ -709,9 +714,12 @@ class PandasEngine(Engine):
             all_data = []
             columns = None
             
+            # Remove existing LIMIT clause before processing batches
+            sql_without_limit = remove_limit_statement(sql)
+            
             for current_batch in range(num_batches):
                 offset = current_batch * batch_size
-                batch_sql = f"{sql} LIMIT {batch_size} OFFSET {offset}"
+                batch_sql = f"{sql_without_limit} LIMIT {batch_size} OFFSET {offset}"
                 
                 success, batch_result = await self.execute_sql(
                     batch_sql,

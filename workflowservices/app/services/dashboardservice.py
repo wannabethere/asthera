@@ -125,7 +125,7 @@ class DashboardService(BaseService):
         
         # Check permissions via ChromaDB metadata
         collection = await self._create_chroma_collection(self.collection_name)
-        result = await collection.get(ids=[str(dashboard_id)])
+        result = collection.get(ids=[str(dashboard_id)])
         
         if not result["ids"]:
             return None
@@ -153,7 +153,7 @@ class DashboardService(BaseService):
         
         # Check update permission
         collection = await self._create_chroma_collection(self.collection_name)
-        result = await collection.get(ids=[str(dashboard_id)])
+        result = collection.get(ids=[str(dashboard_id)])
         metadata = result["metadatas"][0]
         
         if metadata["created_by"] != str(user_id) and not await self._check_user_permission(
@@ -209,7 +209,7 @@ class DashboardService(BaseService):
         
         # Check delete permission
         collection = await self._create_chroma_collection(self.collection_name)
-        result = await collection.get(ids=[str(dashboard_id)])
+        result = collection.get(ids=[str(dashboard_id)])
         metadata = result["metadatas"][0]
         
         if metadata["created_by"] != str(user_id) and not await self._check_user_permission(
@@ -300,7 +300,7 @@ class DashboardService(BaseService):
             where_clause["project_id"] = str(project_id)
         
         # Get all matching documents
-        all_results = await collection.get(where=where_clause) if where_clause else await collection.get()
+        all_results = collection.get(where=where_clause) if where_clause else collection.get()
         
         # Filter by access permissions
         accessible_dashboards = []
@@ -346,7 +346,7 @@ class DashboardService(BaseService):
         # Get dashboard and check ownership
         collection = await self._create_chroma_collection(self.collection_name)
         result =  collection.get(ids=[str(dashboard_id)])
-        
+        print("I am in Share Dashboard")
         if not result["ids"]:
             raise ValueError(f"Dashboard {dashboard_id} not found")
         
@@ -412,7 +412,7 @@ class DashboardService(BaseService):
         
         # Check update permission
         collection = await self._create_chroma_collection(self.collection_name)
-        result = await collection.get(ids=[str(dashboard_id)])
+        result = collection.get(ids=[str(dashboard_id)])
         metadata = result["metadatas"][0]
         
         if metadata["created_by"] != str(user_id) and not await self._check_user_permission(

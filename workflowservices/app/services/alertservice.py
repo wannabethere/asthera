@@ -1,13 +1,14 @@
 from typing import Optional, List, Dict, Any, Union
 from uuid import UUID
+from sqlalchemy.exc import SQLAlchemyError
 import uuid
 from datetime import datetime, date
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, or_, func, select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload,joinedload
 from app.services.baseservice import BaseService, SharingPermission
 from app.models.dbmodels import (
-    Task, Dataset, Metric, Condition, Alert, UpdateAction, MetricType
+    Task, AlertDataset, Metric, Condition, Alert, UpdateAction, MetricType
 )
 from app.models.thread import Thread, Workflow
 from app.models.workspace import Workspace, Project
@@ -15,6 +16,20 @@ from app.models.schema import (
     TaskCreate, TaskUpdate, DatasetDetails, MetricDetails, 
     ConditionDetails, AlertResponse
 )
+import traceback
+class alertServiceError(Exception):
+    """General service error"""
+
+    pass
+
+class TaskNotFoundError(Exception):
+    """Raised when a task is not found"""
+
+    pass
+class AlertServiceError(Exception):
+    """General service error"""
+
+    pass
 
 class AlertService(BaseService):
     """Service for managing alerts, tasks, and conditions"""
@@ -57,7 +72,7 @@ class AlertService(BaseService):
                 user_id, "thread", workflow.thread_id, "read"
             ):
                 raise PermissionError("User doesn't have access to this workflow")
-        
+        print("Crossed Workflow, Now creating task")
         # Create task
         task = Task(
             name=task_data.name,
@@ -67,8 +82,10 @@ class AlertService(BaseService):
         
         self.db.add(task)
         await self.db.flush()
+        print("Crossed flush")
         
         # Create datasets
+        print("Start of datasets")
         datasets = task_data.dataset_details
         if not isinstance(datasets, list):
             datasets = [datasets]
@@ -78,24 +95,41 @@ class AlertService(BaseService):
             self.db.add(dataset)
         
         # Create metrics
+        print("Start of metrics")
         metrics = task_data.metric_details
         if not isinstance(metrics, list):
             metrics = [metrics]
+        try:
+            for metric_data in metrics:
+                metric = await self._create_metric(task.id, metric_data)
+                self.db.add(metric)
+        except Exception:
+            print("Error while creating metrics:")
+            print("============== Error in MEtric Creation ==================")
+            traceback.print_exc()
+            print("============== Error Ended in MEtric Creation ==================")
+            raise
         
-        for metric_data in metrics:
-            metric = await self._create_metric(task.id, metric_data)
-            self.db.add(metric)
-        
+        print("Crossed metrics")
         # Create conditions and alerts
+        print("Start of conditions")
         conditions = task_data.condition_details
         if not isinstance(conditions, list):
             conditions = [conditions]
-        
-        for condition_data in conditions:
-            condition = await self._create_condition(task.id, condition_data, project_id)
-            self.db.add(condition)
+        try:
+            for condition_data in conditions:
+                condition = await self._create_condition(task.id, condition_data, project_id)
+                self.db.add(condition)
+
+        except Exception:
+            print("Error while creating conditions:")
+            print("============== Error in Condition Creation ==================")
+            traceback.print_exc()
+            print("============== Error Ended in Condition Creation ==================")
+            raise
         
         # Store in ChromaDB for searchability
+        print("Start of chromadb")
         metadata = {
             "created_by": str(user_id),
             "workflow_id": str(workflow_id) if workflow_id else None,
@@ -103,8 +137,10 @@ class AlertService(BaseService):
             "workspace_id": str(workspace_id) if workspace_id else None,
             "status": task.status
         }
+        metadata={k: v for k, v in metadata.items() if v is not None}
         
-        await self._add_to_chroma(
+        try:
+            await self._add_to_chroma(
             self.task_collection,
             str(task.id),
             {
@@ -117,8 +153,15 @@ class AlertService(BaseService):
             },
             metadata
         )
+        except Exception:
+            print("Error while adding to chromadb:")
+            print("============== Error in Chromadb Addition ==================")
+            traceback.print_exc()
+            print("============== Error Ended in Chromadb Addition ==================")
+            raise
         
         await self.db.commit()
+        print("Crossed commit")
         return task
     
     async def get_task(
@@ -137,7 +180,7 @@ class AlertService(BaseService):
         
         # Check permissions via ChromaDB metadata
         collection = await self._create_chroma_collection(self.task_collection)
-        result = await collection.get(ids=[str(task_id)])
+        result = collection.get(ids=[str(task_id)])
         
         if not result["ids"]:
             return None
@@ -164,7 +207,7 @@ class AlertService(BaseService):
         
         # Check update permission
         collection = await self._create_chroma_collection(self.task_collection)
-        result = await collection.get(ids=[str(task_id)])
+        result = collection.get(ids=[str(task_id)])
         metadata = result["metadatas"][0]
         
         if metadata["created_by"] != str(user_id) and not await self._check_user_permission(
@@ -231,7 +274,7 @@ class AlertService(BaseService):
         
         # Check delete permission
         collection = await self._create_chroma_collection(self.task_collection)
-        result = await collection.get(ids=[str(task_id)])
+        result = collection.get(ids=[str(task_id)])
         metadata = result["metadatas"][0]
         
         if metadata["created_by"] != str(user_id) and not await self._check_user_permission(
@@ -331,7 +374,7 @@ class AlertService(BaseService):
         for alert in alerts:
             # Get task metadata from ChromaDB
             collection = await self._create_chroma_collection(self.task_collection)
-            result = await collection.get(ids=[str(alert.condition.task_id)])
+            result = collection.get(ids=[str(alert.condition.task_id)])
             if result["ids"]:
                 metadata = result["metadatas"][0]
                 if await self._has_task_access(user_id, metadata):
@@ -422,9 +465,9 @@ class AlertService(BaseService):
         
         return triggered_alerts
     
-    async def _create_dataset(self, task_id: UUID, dataset_data: DatasetDetails) -> Dataset:
+    async def _create_dataset(self, task_id: UUID, dataset_data: DatasetDetails) -> AlertDataset:
         """Create a dataset entity"""
-        return Dataset(
+        return AlertDataset(
             task_id=task_id,
             project_id=dataset_data.project_id or "",
             name=dataset_data.name,
@@ -485,7 +528,7 @@ class AlertService(BaseService):
         
         return condition
     
-    async def _update_dataset(self, dataset: Dataset, update_data: DatasetDetails):
+    async def _update_dataset(self, dataset: AlertDataset, update_data: DatasetDetails):
         """Update dataset entity"""
         if update_data.name:
             dataset.name = update_data.name
@@ -570,6 +613,135 @@ class AlertService(BaseService):
         # Implement the action execution logic
         # This could update database records, trigger workflows, etc.
         pass
+    
+
+    def _serialize_alert_data(self, task: Task) -> Dict[str, Any]:
+        """
+        Serialize alert/task data for safe JSON response
+        """
+        return {
+            "id": str(task.id),
+            "name": task.name,
+            "description": task.description,
+            "status": task.status,
+            "created_at": task.created_at.isoformat() if task.created_at else None,
+            "updated_at": task.updated_at.isoformat() if task.updated_at else None,
+            "dataset_details": [
+                {
+                    "id": str(dataset.id),
+                    "name": dataset.name,
+                    "begin_date": (
+                        dataset.begin_date.isoformat() if dataset.begin_date else None
+                    ),
+                    "end_date": (
+                        dataset.end_date.isoformat() if dataset.end_date else None
+                    ),
+                    "time_dimension": dataset.time_dimension,
+                    "indexes": dataset.indexes or {},
+                    "columns": dataset.columns or [],
+                }
+                for dataset in task.datasets
+            ],
+            "metric_details": [
+                {
+                    "id": str(metric.id),
+                    "metric_name": metric.name,
+                    "metric_type": metric.type.value if metric.type else None,
+                    "metric_params": metric.type_params or {},
+                    "description": metric.description,
+                    "label": metric.label,
+                }
+                for metric in task.metrics
+            ],
+            "condition_details": [
+                {
+                    "id": str(condition.id),
+                    "condition_name": condition.name,
+                    "condition_type": condition.condition_type,
+                    "metric_name": condition.metric_name,
+                    "comparison": condition.comparison,
+                    "value": condition.value,
+                    "alert_details": (
+                        {
+                            "id": str(condition.alert.id),
+                            "notification_group": condition.alert.notification_group,
+                            "project_id": condition.alert.project_id,
+                        }
+                        if condition.alert
+                        else None
+                    ),
+                    "update_details": (
+                        {
+                            "id": str(condition.update.id),
+                            "action": condition.update.action,
+                        }
+                        if condition.update
+                        else None
+                    ),
+                }
+                for condition in task.conditions
+            ],
+        }
+
+    async def get_alert_by_id(self, alert_id: str) -> Dict[str, Any]:
+        """Get alert by ID"""
+        try:
+            # Validate UUID format
+            try:
+                uuid.UUID(alert_id)
+            except ValueError:
+                raise AlertServiceError("Invalid alert ID format")
+
+            # Query task with all related data
+            stmt = select(Task).options(
+            joinedload(Task.datasets),
+            joinedload(Task.metrics),
+            joinedload(Task.conditions).options(
+                joinedload(Condition.alert),
+                joinedload(Condition.update)
+            ),
+        ).filter(Task.id == alert_id)
+
+            result = await self.db.execute(stmt)
+            task = result.unique().scalar_one_or_none()
+
+            if not task:
+                raise TaskNotFoundError(f"Alert with ID {alert_id} not found")
+
+            return self._serialize_alert_data(task)
+
+        except TaskNotFoundError:
+            raise
+        except SQLAlchemyError as e:
+            print(f"Database error getting alert by ID: {str(e)}")
+            raise AlertServiceError("Failed to retrieve alert")
+        except Exception as e:
+            print(f"Unexpected error getting alert by ID: {str(e)}")
+            traceback.print_exc()
+            raise AlertServiceError(f"Failed to retrieve alert: {str(e)}")
+
+    async def get_all_alerts(self) -> List[Dict[str, Any]]:
+        """Get all alerts with comprehensive formatted data"""
+        try:
+            # Query tasks with all related data
+            stmt = select(Task).options(
+                    joinedload(Task.datasets),
+                    joinedload(Task.metrics),
+                    joinedload(Task.conditions).options(
+                        joinedload(Condition.alert),
+                        joinedload(Condition.update)
+                    ),
+                )
+            result = await self.db.execute(stmt)
+            tasks = result.unique().scalars().all()
+            return [self._serialize_alert_data(task) for task in tasks]
+
+        except SQLAlchemyError as e:
+            print(f"Database error getting all alerts: {str(e)}")
+            raise AlertServiceError("Failed to retrieve alerts")
+        except Exception as e:
+            print(f"Unexpected error getting all alerts: {str(e)}")
+            raise AlertServiceError(f"Failed to retrieve alerts: {str(e)}")
     
     async def _has_task_access(
         self,

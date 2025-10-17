@@ -312,7 +312,27 @@ class WorkflowOrchestrator:
 
         else:
             raise ValueError(f"Unknown step: {step_name}")
-
+    async def get_all_shares(
+        self,
+        user_id: UUID,
+        share_type: str,
+        entity_id: str
+    ) -> Dict[str, Any]:
+        """Get all shares for the current user"""
+        if share_type == "dashboard":
+            return await self.dashboard_workflow_service.get_all_shares(
+                user_id=user_id,
+                share_type=share_type,
+                entity_id=entity_id
+            )
+        elif share_type == "report":
+            return await self.report_workflow_service.get_all_shares(
+                user_id=user_id,
+                share_type=share_type,
+                entity_id=entity_id
+            )
+        else:
+            raise ValueError(f"Unknown share type: {share_type}")
     async def _execute_report_step(
         self,
         user_id: UUID,
@@ -606,8 +626,17 @@ class WorkflowOrchestrator:
 
         return workflows[:limit]
 
-    async def get_all_dashboards(self,user_id,state,limit):
-        return await self.dashboard_workflow_service.get_all_dashboards(user_id,state,limit)
+    async def get_all_dashboards(self, user_id: UUID, state: Optional[WorkflowState] = None, limit: int = 20) -> List[Dict[str, Any]]:
+        """Get all dashboards for a user"""
+        return await self.dashboard_workflow_service.get_all_dashboards(user_id, state, limit)
+
+    async def get_all_reports(self, user_id: UUID, state: Optional[WorkflowState] = None, limit: int = 20) -> List[Dict[str, Any]]:
+        """Get all reports for a user"""
+        return await self.report_workflow_service.get_all_reports(user_id, state, limit)
+
+    async def get_report_by_id(self, user_id: UUID, report_id: Optional[UUID] = None, workflow_id: Optional[UUID] = None) -> Dict[str, Any]:
+        """Get a specific report by ID with all details"""
+        return await self.report_workflow_service.get_report_by_id(user_id, report_id, workflow_id)
 
     async def get_dashboard_by_id(
         self,

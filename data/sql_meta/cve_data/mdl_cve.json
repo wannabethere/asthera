@@ -10,6 +10,14 @@
       },
       "columns": [
         {
+          "name": "nuid",
+          "type": "INTEGER",
+          "properties": {
+            "displayName": "Numeric Unique ID",
+            "description": "Numeric unique identifier for the vulnerability record, serving as an alternative primary key or unique reference within the vulnerability database. This field provides a sequential or generated numeric identifier that can be used for efficient indexing, sorting, and referencing of vulnerability records. The NUID is typically used for internal database operations, performance optimization, and as a stable reference point for vulnerability records across different systems and interfaces. This field enables efficient data retrieval, supports database performance optimization, and provides a consistent reference for vulnerability records in reporting and analysis systems."
+          }
+        },
+        {
           "name": "cve_partition_id",
           "type": "VARCHAR",
           "properties": {
@@ -390,7 +398,7 @@
           "name": "is_critical_severity",
           "type": "BOOLEAN",
           "isCalculated": true,
-          "expression": "CASE WHEN cvssv3_base_severity = 'CRITICAL' OR cvssv3_base_score >= 9.0 THEN true ELSE false END",
+          "expression": "CASE WHEN (cvssv3_base_severity = 'CRITICAL' OR cvssv3_base_score >= 9.0) AND cvssv3_base_severity IS NOT NULL THEN true ELSE false END",
           "properties": {
             "displayName": "Is Critical Severity",
             "description": "Boolean flag indicating if vulnerability has critical severity rating"
@@ -400,7 +408,7 @@
           "name": "is_high_risk",
           "type": "BOOLEAN",
           "isCalculated": true,
-          "expression": "CASE WHEN balbix_score >= 25.0 THEN true ELSE false END",
+          "expression": "CASE WHEN balbix_score >= 25.0 AND balbix_score IS NOT NULL THEN true ELSE false END",
           "properties": {
             "displayName": "Is High Risk",
             "description": "Boolean flag indicating high risk based on Balbix scoring threshold"
@@ -410,7 +418,7 @@
           "name": "mitigation_effectiveness",
           "type": "DECIMAL",
           "isCalculated": true,
-          "expression": "CASE WHEN balbix_score > 0 THEN ((balbix_score - balbix_mitigated_score) / balbix_score) * 100.0 ELSE 0 END",
+          "expression": "CASE WHEN balbix_score > 0 AND balbix_score IS NOT NULL THEN ((balbix_score - COALESCE(balbix_mitigated_score, 0)) / balbix_score) * 100.0 ELSE 0.0 END",
           "properties": {
             "displayName": "Mitigation Effectiveness %",
             "description": "Percentage reduction in risk achieved through mitigations"
@@ -420,7 +428,7 @@
           "name": "days_since_published",
           "type": "INTEGER",
           "isCalculated": true,
-          "expression": "DATEDIFF(day, published_date, CURRENT_TIMESTAMP)",
+          "expression": "EXTRACT(DAY FROM (CURRENT_TIMESTAMP - published_date))",
           "properties": {
             "displayName": "Days Since Published",
             "description": "Number of days since vulnerability was first published"
@@ -430,7 +438,7 @@
           "name": "vulnerability_age_category",
           "type": "VARCHAR",
           "isCalculated": true,
-          "expression": "CASE WHEN DATEDIFF(day, published_date, CURRENT_TIMESTAMP) <= 30 THEN 'New (30 days)' WHEN DATEDIFF(day, published_date, CURRENT_TIMESTAMP) <= 90 THEN 'Recent (90 days)' WHEN DATEDIFF(day, published_date, CURRENT_TIMESTAMP) <= 365 THEN 'Mature (1 year)' ELSE 'Old (>1 year)' END",
+          "expression": "CASE WHEN EXTRACT(DAY FROM (CURRENT_TIMESTAMP - published_date)) <= 30 THEN 'New (30 days)' WHEN EXTRACT(DAY FROM (CURRENT_TIMESTAMP - published_date)) <= 90 THEN 'Recent (90 days)' WHEN EXTRACT(DAY FROM (CURRENT_TIMESTAMP - published_date)) <= 365 THEN 'Mature (1 year)' ELSE 'Old (>1 year)' END",
           "properties": {
             "displayName": "Vulnerability Age Category",
             "description": "Categorical age of vulnerability based on publication date"
@@ -440,7 +448,7 @@
           "name": "cvss_score_gap",
           "type": "DECIMAL",
           "isCalculated": true,
-          "expression": "ABS(COALESCE(cvssv3_base_score, 0) - COALESCE(cvssv2_base_score, 0))",
+          "expression": "ABS(COALESCE(cvssv3_base_score, 0.0) - COALESCE(cvssv2_base_score, 0.0))",
           "properties": {
             "displayName": "CVSS Score Gap",
             "description": "Difference between CVSS v3 and v2 scores (indicates scoring evolution)"
@@ -450,7 +458,7 @@
           "name": "has_exploit_available",
           "type": "BOOLEAN",
           "isCalculated": true,
-          "expression": "CASE WHEN exploit_maturity_influence > 50.0 THEN true ELSE false END",
+          "expression": "CASE WHEN exploit_maturity_influence > 50.0 AND exploit_maturity_influence IS NOT NULL THEN true ELSE false END",
           "properties": {
             "displayName": "Has Exploit Available",
             "description": "Indicates if mature exploit code is likely available"
@@ -460,20 +468,21 @@
           "name": "remediation_urgency",
           "type": "VARCHAR",
           "isCalculated": true,
-          "expression": "CASE WHEN balbix_score >= 25.0 AND asset_count > 0 THEN 'Urgent' WHEN balbix_score >= 15.0 AND asset_count > 0 THEN 'High' WHEN balbix_score >= 8.0 AND asset_count > 0 THEN 'Medium' ELSE 'Low' END",
+          "expression": "CASE WHEN balbix_score >= 25.0 AND COALESCE(asset_count, 0) > 0 AND balbix_score IS NOT NULL THEN 'Urgent' WHEN balbix_score >= 15.0 AND COALESCE(asset_count, 0) > 0 AND balbix_score IS NOT NULL THEN 'High' WHEN balbix_score >= 8.0 AND COALESCE(asset_count, 0) > 0 AND balbix_score IS NOT NULL THEN 'Medium' ELSE 'Low' END",
           "properties": {
             "displayName": "Remediation Urgency",
             "description": "Urgency level for remediation based on risk and asset exposure"
           }
         }
       ],
-      "primaryKey": "cve_id",
+      "primaryKey": "nuid",
       "properties": {
         "displayName": "Vulnerability Assessments",
         "description": "Comprehensive vulnerability and CVE risk assessment data"
       },
       "sampleData": [
         {
+          "nuid": 1,
           "cve_id": "CVE-2024-6470",
           "cve_partition_id": "CVE-2024",
           "balbix_score": 22.04,
@@ -484,6 +493,7 @@
           "last_modified": "2024-04-08 00:00:00"
         },
         {
+          "nuid": 2,
           "cve_id": "CVE-2025-4841",
           "cve_partition_id": "CVE-2025",
           "balbix_score": 58.61,
@@ -494,6 +504,7 @@
           "last_modified": "2025-04-13 00:00:00"
         },
         {
+          "nuid": 3,
           "cve_id": "CVE-2024-2218",
           "cve_partition_id": "CVE-2024",
           "balbix_score": 4.61,
@@ -504,6 +515,7 @@
           "last_modified": "2025-04-19 00:00:00"
         },
         {
+          "nuid": 4,
           "cve_id": "CVE-2024-7884",
           "cve_partition_id": "CVE-2024",
           "balbix_score": 15.1,
@@ -514,6 +526,7 @@
           "last_modified": "2025-11-26 00:00:00"
         },
         {
+          "nuid": 5,
           "cve_id": "CVE-2024-2844",
           "cve_partition_id": "CVE-2024",
           "balbix_score": 87.05,
@@ -524,6 +537,7 @@
           "last_modified": "2025-09-15 00:00:00"
         },
         {
+          "nuid": 6,
           "cve_id": "CVE-2024-5674",
           "cve_partition_id": "CVE-2024",
           "balbix_score": 88.88,
@@ -534,6 +548,7 @@
           "last_modified": "2024-06-23 00:00:00"
         },
         {
+          "nuid": 7,
           "cve_id": "CVE-2025-3754",
           "cve_partition_id": "CVE-2025",
           "balbix_score": 72.64,
@@ -544,6 +559,7 @@
           "last_modified": "2025-08-18 00:00:00"
         },
         {
+          "nuid": 8,
           "cve_id": "CVE-2024-2757",
           "cve_partition_id": "CVE-2024",
           "balbix_score": 64.13,
@@ -554,6 +570,7 @@
           "last_modified": "2024-02-16 00:00:00"
         },
         {
+          "nuid": 9,
           "cve_id": "CVE-2025-5987",
           "cve_partition_id": "CVE-2025",
           "balbix_score": 57.23,
@@ -564,6 +581,7 @@
           "last_modified": "2025-11-27 00:00:00"
         },
         {
+          "nuid": 10,
           "cve_id": "CVE-2024-3285",
           "cve_partition_id": "CVE-2024",
           "balbix_score": 85.72,
@@ -853,7 +871,7 @@
         {
           "name": "avg_days_to_process",
           "type": "DECIMAL",
-          "expression": "AVG(DATEDIFF(day, published_date, computed_at))"
+          "expression": "AVG(EXTRACT(DAY FROM (computed_at - published_date)))"
         },
         {
           "name": "avg_vulnerability_age",
@@ -1158,6 +1176,7 @@
   ],
   "sampleData": [
     {
+      "nuid": 11,
       "cve_id": "CVE-2025-1842",
       "cve_partition_id": "CVE-2025",
       "balbix_score": 0.84,
@@ -1168,6 +1187,7 @@
       "last_modified": "2024-05-11T00:00:00"
     },
     {
+      "nuid": 12,
       "cve_id": "CVE-2024-4139",
       "cve_partition_id": "CVE-2024",
       "balbix_score": 44.64,
@@ -1178,6 +1198,7 @@
       "last_modified": "2024-09-19T00:00:00"
     },
     {
+      "nuid": 13,
       "cve_id": "CVE-2024-5396",
       "cve_partition_id": "CVE-2024",
       "balbix_score": 61.74,
@@ -1188,6 +1209,7 @@
       "last_modified": "2024-06-28T00:00:00"
     },
     {
+      "nuid": 14,
       "cve_id": "CVE-2025-5046",
       "cve_partition_id": "CVE-2025",
       "balbix_score": 82.87,
@@ -1198,6 +1220,7 @@
       "last_modified": "2024-05-31T00:00:00"
     },
     {
+      "nuid": 15,
       "cve_id": "CVE-2025-5892",
       "cve_partition_id": "CVE-2025",
       "balbix_score": 0.44,
@@ -1208,6 +1231,7 @@
       "last_modified": "2025-01-14T00:00:00"
     },
     {
+      "nuid": 16,
       "cve_id": "CVE-2024-3087",
       "cve_partition_id": "CVE-2024",
       "balbix_score": 7.86,
@@ -1218,6 +1242,7 @@
       "last_modified": "2025-06-16T00:00:00"
     },
     {
+      "nuid": 17,
       "cve_id": "CVE-2025-4645",
       "cve_partition_id": "CVE-2025",
       "balbix_score": 31.36,
@@ -1228,6 +1253,7 @@
       "last_modified": "2025-03-17T00:00:00"
     },
     {
+      "nuid": 18,
       "cve_id": "CVE-2025-2662",
       "cve_partition_id": "CVE-2025",
       "balbix_score": 43.14,
@@ -1238,6 +1264,7 @@
       "last_modified": "2024-07-01T00:00:00"
     },
     {
+      "nuid": 19,
       "cve_id": "CVE-2024-9045",
       "cve_partition_id": "CVE-2024",
       "balbix_score": 56.04,
@@ -1248,6 +1275,7 @@
       "last_modified": "2025-12-31T00:00:00"
     },
     {
+      "nuid": 20,
       "cve_id": "CVE-2024-2160",
       "cve_partition_id": "CVE-2024",
       "balbix_score": 9.69,
@@ -1258,6 +1286,7 @@
       "last_modified": "2024-08-01T00:00:00"
     },
     {
+      "nuid": 21,
       "cve_id": "CVE-2024-3818",
       "cve_partition_id": "CVE-2024",
       "balbix_score": 7.68,
@@ -1268,6 +1297,7 @@
       "last_modified": "2024-08-01T00:00:00"
     },
     {
+      "nuid": 22,
       "cve_id": "CVE-2025-2645",
       "cve_partition_id": "CVE-2025",
       "balbix_score": 57.56,
@@ -1278,6 +1308,7 @@
       "last_modified": "2024-11-14T00:00:00"
     },
     {
+      "nuid": 23,
       "cve_id": "CVE-2024-7926",
       "cve_partition_id": "CVE-2024",
       "balbix_score": 14.96,
@@ -1288,6 +1319,7 @@
       "last_modified": "2025-11-18T00:00:00"
     },
     {
+      "nuid": 24,
       "cve_id": "CVE-2024-4031",
       "cve_partition_id": "CVE-2024",
       "balbix_score": 26.84,
@@ -1320,6 +1352,7 @@
       "last_modified": "2024-12-31T00:00:00"
     },
     {
+      "nuid": 25,
       "cve_id": "CVE-2024-5797",
       "cve_partition_id": "CVE-2024",
       "balbix_score": 45.91,
@@ -1330,6 +1363,7 @@
       "last_modified": "2024-04-16T00:00:00"
     },
     {
+      "nuid": 26,
       "cve_id": "CVE-2024-4831",
       "cve_partition_id": "CVE-2024",
       "balbix_score": 36.33,

@@ -135,7 +135,7 @@ class Settings(BaseSettings):
     
     # ChromaDB Settings
     CHROMA_USE_LOCAL: bool = False  # Default to HTTP client
-    CHROMA_HOST: str = "ec2-54-161-71-105.compute-1.amazonaws.com"  # Default EC2 host
+    CHROMA_HOST: str = "ec2-44-202-8-38.compute-1.amazonaws.com"  # Default EC2 host
     CHROMA_PORT: int = 8888  # Default EC2 port
     CHROMA_COLLECTION_NAME: str = "default"
     CHROMA_PERSIST_DIRECTORY: str = CHROMA_STORE_PATH

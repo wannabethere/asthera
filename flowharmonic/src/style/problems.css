@@ -1,0 +1,155 @@
+/* problems.css - neon dark styling (asymmetric card sizes + title inside left card) */
+
+.problems-section {
+  background:
+    radial-gradient(900px 400px at 90% 55%, rgba(10, 28, 30, 0.45), transparent 15%),
+    linear-gradient(90deg, #050b0c 0%, #07121a 45%, #071b1c 100%);
+  color: #e6eef3;
+  min-height: 60vh;
+  padding-top: 4rem;
+  padding-bottom: 4rem;
+}
+
+/* when title appears above (fallback) */
+.section-title {
+  font-size: 2.25rem;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  /* text-shadow: 0 6px 28px rgba(0,0,0,0.7); */
+}
+
+/* Card base */
+.problem-card {
+  background: rgba(6, 6, 6, 0.75);
+  border-radius: 1rem;
+  padding: 1.4rem;
+  min-height: 180px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.03);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.02), 0 16px 40px rgba(2,6,7,0.6);
+  transition: transform 220ms ease, box-shadow 220ms ease;
+}
+
+/* Hover lift */
+.problem-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 30px 60px rgba(2,6,7,0.7), inset 0 1px 0 rgba(255,255,255,0.02);
+}
+
+/* card heading inside card (as requested) */
+.card-heading {
+  font-weight: 800;
+  font-size: 1.25rem;
+  margin-bottom: 0.6rem;
+  z-index: 6;
+  position: relative;
+}
+
+.card-text { color: #bfc9cc; font-size: 0.95rem; line-height: 1.6; z-index: 6; position: relative; }
+
+/* big section title displayed inside left card */
+.left-big-title {
+  /* position: absolute; */
+  /* left: 28px;
+  top: 18px; */
+  font-size: 3rem;  
+  line-height: 0.95;
+  font-weight: 900;
+  color: #ffffff;
+  opacity: 0.95;
+  pointer-events: none;
+  z-index: 2;
+  text-shadow: 0 12px 40px rgba(0,0,0,0.7);
+  padding: 5%;
+}
+
+/* push the main content down a bit so it doesn't collide with left-big-title */
+.tall-card .card-heading { margin-top: 120px; }
+
+/* Asymmetric sizes: tuned to mimic the image layout */
+.card-size-0 { /* left tall card */
+  min-height: 520px;
+  display: flex;
+  flex-direction: column;
+  padding: 2rem;
+}
+
+.card-size-1 { /* middle top - small */
+  min-height: 260px;
+}
+
+.card-size-2 { /* middle bottom - slightly taller */
+  min-height: 360px;
+}
+
+.card-size-3 { /* right top - tall (mirrors left) */
+  min-height: 480px;
+}
+
+.card-size-4 { /* right bottom - small */
+  min-height: 320px;
+}
+
+/* responsive tweaks */
+@media (max-width: 991px) {
+  .left-big-title {
+    font-size: 1.8rem;
+    left: 18px;
+    top: 12px;
+  }
+  .tall-card .card-heading { margin-top: 80px; }
+  .card-size-0 { min-height: 340px; }
+  .card-size-1 { min-height: 180px; }
+  .card-size-2 { min-height: 200px; }
+  .card-size-3 { min-height: 320px; }
+  .card-size-4 { min-height: 200px; }
+}
+
+/* Neon accent variants */
+.accent-yellow {
+  box-shadow:
+    0 0 0 1px rgba(255,220,90,0.06),
+    0 12px 36px rgba(0,0,0,0.6),
+    inset 0 0 36px rgba(255,200,60,0.02);
+    border-color: #ffd24d;
+}
+.accent-yellow .card-heading { color: #ffd24d; }
+
+.accent-pink {
+  box-shadow:
+    0 0 0 1px rgba(240,120,200,0.06),
+    0 12px 36px rgba(0,0,0,0.6),
+    inset 0 0 36px rgba(220,80,200,0.02);
+    border-color: #f18fcf;
+}
+.accent-pink .card-heading { color: #f18fcf; }
+
+.accent-green {
+  box-shadow:
+    0 0 0 1px rgba(120,255,90,0.06),
+    0 12px 36px rgba(0,0,0,0.6),
+    inset 0 0 36px rgba(120,255,90,0.02);
+    border-color: #9ff27a;
+}
+.accent-green .card-heading { color: #9ff27a; }
+
+.accent-violet {
+  box-shadow:
+    0 0 0 1px rgba(160,120,255,0.06),
+    0 12px 36px rgba(0,0,0,0.6),
+    inset 0 0 36px rgba(150,110,255,0.02);
+    border-color: #cbb7ff;
+}
+.accent-violet .card-heading { color: #cbb7ff; }
+
+.accent-red {
+  box-shadow:
+    0 0 0 1px rgba(255,90,90,0.06),
+    0 12px 36px rgba(0,0,0,0.6),
+    inset 0 0 36px rgba(255,90,90,0.02);
+    border-color: #ff8b8b;
+}
+.accent-red .card-heading { color: #ff8b8b; }
+
+.accent-default .card-heading { color: #cfcfcf; }

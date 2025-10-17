@@ -292,3 +292,5 @@ class AlertCreate(BaseModel):
     class Config:
 
         extra = "forbid"
+
+    

@@ -44,7 +44,10 @@ def parse_alert_request(alert_request: str) -> Dict[str, Any]:
         r'(\d+(?:,\d{3})*(?:\.\d+)?) or more',
         r'(\d+(?:,\d{3})*(?:\.\d+)?) or less',
         r'(\d+(?:,\d{3})*(?:\.\d+)?) or higher',
-        r'(\d+(?:,\d{3})*(?:\.\d+)?) or lower'
+        r'(\d+(?:,\d{3})*(?:\.\d+)?) or lower',
+        r'(\d+(?:,\d{3})*(?:\.\d+)?)%',  # Handle percentage values
+        r'(\d+(?:,\d{3})*(?:\.\d+)?)\s*percent',  # Handle "50 percent"
+        r'(\d+(?:,\d{3})*(?:\.\d+)?)\s*%',  # Handle "50 %"
     ]
     
     for pattern in number_patterns:
@@ -94,9 +97,26 @@ def parse_alert_request(alert_request: str) -> Dict[str, Any]:
             metric_name = match.group(1)
             break
     
+    # Convert threshold_value to float if possible
+    try:
+        threshold_value_float = float(threshold_value)
+    except (ValueError, TypeError) as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Failed to convert threshold value '{threshold_value}' to float: {e}. Using default value 0.0")
+        threshold_value_float = 0.0
+    
+    # Detect if this should be treated as a percentage based on the text
+    threshold_type = "default"
+    if any(indicator in text for indicator in ['%', 'percent', 'percentage']):
+        threshold_type = "percentage"
+    elif any(indicator in text for indicator in ['ratio', 'proportion']):
+        threshold_type = "ratio"
+    
     return {
         "condition_type": condition_type,
-        "threshold_value": threshold_value,
+        "threshold_value": threshold_value_float,
+        "threshold_type": threshold_type,
         "metric_name": metric_name,
         "operator": operator
     }
@@ -644,7 +664,900 @@ class AlertService(BaseService[AlertRequest, AlertResponse]):
         )
         
         return await self.process_request(request)
-
+    
+    async def validate_alert_condition(
+        self,
+        sql_query: str,
+        condition_type: str,
+        operator: str,
+        threshold_value: float,
+        threshold_type: str = "default",
+        metric_column: Optional[str] = None,
+        use_cache: bool = True,
+        overall_condition_logic: str = "any_met"
+    ) -> Dict[str, Any]:
+        """Validate an alert condition by executing SQL and checking threshold conditions.
+        
+        Args:
+            sql_query: SQL query to execute for validation
+            condition_type: Type of condition to validate
+            operator: Threshold operator (>, <, >=, <=, =, !=)
+            threshold_value: Threshold value to compare against
+            threshold_type: Type of threshold value interpretation
+            metric_column: Specific column to extract value from (if None, uses first numeric column)
+            use_cache: Whether to use caching for SQL execution
+            overall_condition_logic: Logic for determining overall condition status
+                - "any_met": Condition met if ANY row meets the condition (default)
+                - "all_met": Condition met if ALL rows meet the condition
+                - "majority_met": Condition met if majority of rows meet the condition
+                - "percentage_met": Condition met if specified percentage of rows meet the condition
+                
+        Returns:
+            Dictionary containing validation results
+        """
+        try:
+            # Get the pipeline container to access the SQL execution pipeline
+            from app.agents.pipelines.pipeline_container import PipelineContainer
+            pipeline_container = PipelineContainer.get_instance()
+            
+            # Get the SQL execution pipeline which uses the configured engine
+            sql_execution_pipeline = pipeline_container.get_pipeline("sql_execution")
+            if not sql_execution_pipeline:
+                return {
+                    "is_valid": False,
+                    "current_value": None,
+                    "threshold_value": None,
+                    "condition_met": None,
+                    "error_message": "SQL execution pipeline not available",
+                    "validation_timestamp": datetime.now(),
+                    "execution_time_ms": None
+                }
+            
+            # Execute the SQL query using the pipeline
+            execution_result = await sql_execution_pipeline.run(
+                sql=sql_query,
+                project_id="alert_validation",
+                configuration={"dry_run": False, "use_cache": use_cache}
+            )
+            
+            # Check if execution was successful
+            if not execution_result.get("post_process"):
+                return {
+                    "is_valid": False,
+                    "current_value": None,
+                    "threshold_value": None,
+                    "condition_met": None,
+                    "error_message": "SQL execution failed: No data returned",
+                    "validation_timestamp": datetime.now(),
+                    "execution_time_ms": None
+                }
+            
+            post_process = execution_result["post_process"]
+            
+            # Check for execution errors - the SQL execution pipeline returns data directly
+            # If there's an error, it will be in the result structure
+            if "error" in post_process:
+                error_msg = post_process.get("error", "SQL execution failed")
+                return {
+                    "is_valid": False,
+                    "current_value": None,
+                    "threshold_value": None,
+                    "condition_met": None,
+                    "error_message": f"SQL execution failed: {error_msg}",
+                    "validation_timestamp": datetime.now(),
+                    "execution_time_ms": None
+                }
+            
+            # Extract data from the result
+            data = post_process.get("data", [])
+            if not data:
+                return {
+                    "is_valid": False,
+                    "current_value": None,
+                    "threshold_value": None,
+                    "condition_met": None,
+                    "error_message": "No data returned from SQL query",
+                    "validation_timestamp": datetime.now(),
+                    "execution_time_ms": None
+                }
+            
+            # Convert threshold value to float
+            try:
+                threshold_value_float = float(threshold_value)
+            except (ValueError, TypeError):
+                return {
+                    "is_valid": False,
+                    "current_value": None,
+                    "threshold_value": None,
+                    "condition_met": None,
+                    "error_message": f"Invalid threshold value: {threshold_value}",
+                    "validation_timestamp": datetime.now(),
+                    "execution_time_ms": None
+                }
+            
+            # Process threshold value based on threshold type
+            processed_threshold_value = self._process_threshold_value(
+                threshold_value_float, 
+                threshold_type, 
+                data
+            )
+            
+            # Process all rows and check conditions
+            validation_results = []
+            condition_met_rows = []
+            condition_not_met_rows = []
+            
+            # Debug information
+            debug_info = {
+                "total_rows_processed": len(data),
+                "rows_with_numeric_values": 0,
+                "rows_skipped": 0,
+                "rows_skipped_data_type_mismatch": 0,
+                "rows_skipped_conversion_error": 0,
+                "sample_data_types": {},
+                "data_type_validation_errors": []
+            }
+            
+            for i, row in enumerate(data):
+                # Determine which column to use for validation
+                current_value = None
+                raw_value = None
+                
+                if metric_column and metric_column in row:
+                    raw_value = row[metric_column]
+                else:
+                    # Find first numeric column
+                    for key, value in row.items():
+                        if value is not None:
+                            raw_value = value
+                            break
+                
+                if raw_value is None:
+                    # Skip rows without values
+                    debug_info["rows_skipped"] += 1
+                    continue
+                
+                # Track data types for debugging
+                if i < 3:  # Only track first few rows for debugging
+                    debug_info["sample_data_types"][f"row_{i}"] = {
+                        "raw_value": raw_value,
+                        "type": type(raw_value).__name__,
+                        "metric_column": metric_column
+                    }
+                
+                # Try to convert to numeric value
+                try:
+                    # Handle different data types
+                    if isinstance(raw_value, (int, float)):
+                        current_value = float(raw_value)
+                    elif isinstance(raw_value, str):
+                        # Try to convert string to float
+                        current_value = float(raw_value)
+                    else:
+                        # Try to convert other types to float
+                        current_value = float(raw_value)
+                except (ValueError, TypeError) as e:
+                    # Skip rows that can't be converted to numeric
+                    debug_info["rows_skipped"] += 1
+                    debug_info["rows_skipped_conversion_error"] += 1
+                    debug_info["data_type_validation_errors"].append({
+                        "row_index": i,
+                        "error": f"Conversion error: {str(e)}",
+                        "raw_value": raw_value,
+                        "raw_value_type": type(raw_value).__name__,
+                        "condition_type": condition_type
+                    })
+                    continue
+                
+                if current_value is None:
+                    # Skip rows without numeric values
+                    debug_info["rows_skipped"] += 1
+                    continue
+                
+                # Track successful numeric conversion
+                debug_info["rows_with_numeric_values"] += 1
+                
+                # Validate data type compatibility before evaluation
+                try:
+                    self._validate_data_type_compatibility(
+                        condition_type=condition_type,
+                        current_value=current_value,
+                        operator=operator,
+                        threshold_value=processed_threshold_value,
+                        row_data=row
+                    )
+                except ValueError as e:
+                    # Skip rows with incompatible data types
+                    debug_info["rows_skipped"] += 1
+                    debug_info["rows_skipped_data_type_mismatch"] += 1
+                    debug_info["data_type_validation_errors"].append({
+                        "row_index": i,
+                        "error": str(e),
+                        "current_value": current_value,
+                        "current_value_type": type(current_value).__name__,
+                        "condition_type": condition_type,
+                        "operator": operator
+                    })
+                    continue
+                
+                # Evaluate the condition for this row based on condition type
+                condition_met = False
+                try:
+                    condition_met = self._evaluate_condition_by_type(
+                        condition_type=condition_type,
+                        current_value=current_value,
+                        operator=operator,
+                        threshold_value=processed_threshold_value,
+                        row_data=row
+                    )
+                except (TypeError, ValueError) as e:
+                    # Skip rows that can't be compared
+                    debug_info["rows_skipped"] += 1
+                    debug_info["data_type_validation_errors"].append({
+                        "row_index": i,
+                        "error": f"Evaluation error: {str(e)}",
+                        "current_value": current_value,
+                        "current_value_type": type(current_value).__name__,
+                        "condition_type": condition_type,
+                        "operator": operator
+                    })
+                    continue
+                
+                # Store result for this row
+                row_result = {
+                    "row_index": i,
+                    "row_data": row,
+                    "current_value": current_value,
+                    "condition_met": condition_met,
+                    "threshold_value": processed_threshold_value,
+                    "original_threshold_value": threshold_value_float,
+                    "threshold_type": threshold_type
+                }
+                validation_results.append(row_result)
+                
+                if condition_met:
+                    condition_met_rows.append(row_result)
+                else:
+                    condition_not_met_rows.append(row_result)
+            
+            if not validation_results:
+                # Provide more detailed error information
+                sample_row = data[0] if data else {}
+                available_columns = list(sample_row.keys()) if sample_row else []
+                sample_values = {k: f"{v} ({type(v).__name__})" for k, v in sample_row.items()} if sample_row else {}
+                
+                return {
+                    "is_valid": False,
+                    "current_value": None,
+                    "threshold_value": threshold_value_float,
+                    "condition_met": None,
+                    "error_message": f"No numeric values found in result. Available columns: {available_columns}. Sample values: {sample_values}. Metric column: {metric_column}. Debug info: {debug_info}",
+                    "validation_timestamp": datetime.now(),
+                    "execution_time_ms": None
+                }
+            
+            # Determine overall validation status based on configurable logic
+            overall_condition_met = self._determine_overall_condition_status(
+                condition_met_rows, 
+                condition_not_met_rows, 
+                overall_condition_logic
+            )
+            overall_is_valid = True  # The validation process itself was successful
+            
+            # Calculate summary statistics
+            total_rows = len(validation_results)
+            condition_met_count = len(condition_met_rows)
+            condition_not_met_count = len(condition_not_met_rows)
+            
+            # Get representative current value (first row's value)
+            representative_value = validation_results[0]["current_value"] if validation_results else None
+            
+            return {
+                "is_valid": overall_is_valid,
+                "current_value": representative_value,
+                "threshold_value": processed_threshold_value,
+                "original_threshold_value": threshold_value_float,
+                "threshold_type": threshold_type,
+                "condition_met": overall_condition_met,
+                "error_message": None,
+                "validation_timestamp": datetime.now(),
+                "execution_time_ms": None,
+                # Additional detailed results
+                "validation_summary": {
+                    "total_rows": total_rows,
+                    "condition_met_count": condition_met_count,
+                    "condition_not_met_count": condition_not_met_count,
+                    "condition_met_rate": (condition_met_count / total_rows * 100) if total_rows > 0 else 0
+                },
+                "condition_not_met_rows": condition_not_met_rows,
+                "condition_met_rows": condition_met_rows,
+                "all_results": validation_results,
+                # Debug information
+                "debug_info": debug_info
+            }
+            
+        except Exception as e:
+            return {
+                "is_valid": False,
+                "current_value": None,
+                "threshold_value": None,
+                "condition_met": None,
+                "error_message": f"Validation error: {str(e)}",
+                "validation_timestamp": datetime.now(),
+                "execution_time_ms": None
+            }
+    
+    async def validate_threshold_condition(
+        self,
+        sql_query: str,
+        operator: str,
+        threshold_value: float,
+        threshold_type: str = "default",
+        metric_column: Optional[str] = None,
+        use_cache: bool = True,
+        overall_condition_logic: str = "any_met"
+    ) -> Dict[str, Any]:
+        """Validate a simple threshold condition.
+        
+        Args:
+            sql_query: SQL query to execute for validation
+            operator: Threshold operator (>, <, >=, <=, =, !=)
+            threshold_value: Threshold value to compare against
+            metric_column: Specific column to extract value from (if None, uses first numeric column)
+            use_cache: Whether to use caching for SQL execution
+            
+        Returns:
+            Dictionary containing validation results
+        """
+        return await self.validate_alert_condition(
+            sql_query=sql_query,
+            condition_type="threshold_value",
+            operator=operator,
+            threshold_value=threshold_value,
+            threshold_type=threshold_type,
+            metric_column=metric_column,
+            use_cache=use_cache,
+            overall_condition_logic=overall_condition_logic
+        )
+    
+    def _evaluate_condition_by_type(
+        self,
+        condition_type: str,
+        current_value: Any,
+        operator: str,
+        threshold_value: float,
+        row_data: Dict[str, Any]
+    ) -> bool:
+        """Evaluate condition based on the condition type.
+        
+        Args:
+            condition_type: Type of condition (threshold_value, intelligent_arima, string_match, etc.)
+            current_value: Current value to evaluate
+            operator: Comparison operator
+            threshold_value: Threshold value for comparison
+            row_data: Full row data for advanced conditions
+            
+        Returns:
+            Boolean indicating if condition is met
+        """
+        if condition_type == "threshold_value":
+            return self._evaluate_threshold_condition(current_value, operator, threshold_value)
+        elif condition_type == "intelligent_arima":
+            return self._evaluate_arima_condition(current_value, operator, threshold_value, row_data)
+        elif condition_type == "string_match":
+            return self._evaluate_string_condition(current_value, operator, threshold_value, row_data)
+        elif condition_type == "threshold_change":
+            return self._evaluate_change_condition(current_value, operator, threshold_value, row_data)
+        elif condition_type == "threshold_percent_change":
+            return self._evaluate_percent_change_condition(current_value, operator, threshold_value, row_data)
+        else:
+            # Default to threshold condition for unknown types
+            return self._evaluate_threshold_condition(current_value, operator, threshold_value)
+    
+    def _evaluate_threshold_condition(
+        self,
+        current_value: float,
+        operator: str,
+        threshold_value: float
+    ) -> bool:
+        """Evaluate basic threshold conditions.
+        
+        Args:
+            current_value: Current numeric value
+            operator: Comparison operator (>, <, >=, <=, =, !=)
+            threshold_value: Threshold value for comparison
+            
+        Returns:
+            Boolean indicating if condition is met
+        """
+        if operator == ">":
+            return current_value > threshold_value
+        elif operator == "<":
+            return current_value < threshold_value
+        elif operator == ">=":
+            return current_value >= threshold_value
+        elif operator == "<=":
+            return current_value <= threshold_value
+        elif operator == "=":
+            return abs(current_value - threshold_value) < 1e-9
+        elif operator == "!=":
+            return abs(current_value - threshold_value) >= 1e-9
+        else:
+            raise ValueError(f"Unsupported operator: {operator}")
+    
+    def _evaluate_arima_condition(
+        self,
+        current_value: float,
+        operator: str,
+        threshold_value: float,
+        row_data: Dict[str, Any]
+    ) -> bool:
+        """Evaluate intelligent ARIMA-based conditions.
+        
+        Args:
+            current_value: Current value
+            operator: Comparison operator
+            threshold_value: Threshold value
+            row_data: Full row data for time series analysis
+            
+        Returns:
+            Boolean indicating if condition is met
+        """
+        # TODO: Implement ARIMA-based anomaly detection
+        # This would analyze time series patterns and detect anomalies
+        # For now, fall back to threshold condition
+        return self._evaluate_threshold_condition(current_value, operator, threshold_value)
+    
+    def _evaluate_string_condition(
+        self,
+        current_value: str,
+        operator: str,
+        threshold_value: str,
+        row_data: Dict[str, Any]
+    ) -> bool:
+        """Evaluate string matching conditions.
+        
+        Args:
+            current_value: Current string value
+            operator: String operator (contains, starts_with, ends_with, equals, regex)
+            threshold_value: String pattern to match against
+            row_data: Full row data for context
+            
+        Returns:
+            Boolean indicating if condition is met
+        """
+        if operator == "contains":
+            return threshold_value.lower() in current_value.lower()
+        elif operator == "starts_with":
+            return current_value.lower().startswith(threshold_value.lower())
+        elif operator == "ends_with":
+            return current_value.lower().endswith(threshold_value.lower())
+        elif operator == "equals":
+            return current_value.lower() == threshold_value.lower()
+        elif operator == "regex":
+            import re
+            return bool(re.search(threshold_value, current_value, re.IGNORECASE))
+        elif operator == "not_contains":
+            return threshold_value.lower() not in current_value.lower()
+        else:
+            raise ValueError(f"Unsupported string operator: {operator}")
+    
+    def _evaluate_change_condition(
+        self,
+        current_value: float,
+        operator: str,
+        threshold_value: float,
+        row_data: Dict[str, Any]
+    ) -> bool:
+        """Evaluate absolute change conditions.
+        
+        Args:
+            current_value: Current value
+            operator: Change operator (increased_by, decreased_by, changed_by)
+            threshold_value: Change threshold
+            row_data: Full row data (should contain previous_value)
+            
+        Returns:
+            Boolean indicating if condition is met
+        """
+        previous_value = row_data.get("previous_value")
+        if previous_value is None:
+            # If no previous value, can't evaluate change
+            return False
+        
+        try:
+            previous_value = float(previous_value)
+            change = current_value - previous_value
+            
+            if operator == "increased_by":
+                return change >= threshold_value
+            elif operator == "decreased_by":
+                return change <= -threshold_value
+            elif operator == "changed_by":
+                return abs(change) >= threshold_value
+            else:
+                raise ValueError(f"Unsupported change operator: {operator}")
+        except (ValueError, TypeError):
+            return False
+    
+    def _evaluate_percent_change_condition(
+        self,
+        current_value: float,
+        operator: str,
+        threshold_value: float,
+        row_data: Dict[str, Any]
+    ) -> bool:
+        """Evaluate percentage change conditions.
+        
+        Args:
+            current_value: Current value
+            operator: Change operator (increased_by_percent, decreased_by_percent, changed_by_percent)
+            threshold_value: Percentage change threshold
+            row_data: Full row data (should contain previous_value)
+            
+        Returns:
+            Boolean indicating if condition is met
+        """
+        previous_value = row_data.get("previous_value")
+        if previous_value is None or previous_value == 0:
+            # If no previous value or zero, can't evaluate percentage change
+            return False
+        
+        try:
+            previous_value = float(previous_value)
+            percent_change = ((current_value - previous_value) / previous_value) * 100
+            
+            if operator == "increased_by_percent":
+                return percent_change >= threshold_value
+            elif operator == "decreased_by_percent":
+                return percent_change <= -threshold_value
+            elif operator == "changed_by_percent":
+                return abs(percent_change) >= threshold_value
+            else:
+                raise ValueError(f"Unsupported percent change operator: {operator}")
+        except (ValueError, TypeError, ZeroDivisionError):
+            return False
+    
+    def _determine_overall_condition_status(
+        self,
+        condition_met_rows: List[Dict[str, Any]],
+        condition_not_met_rows: List[Dict[str, Any]],
+        overall_condition_logic: str
+    ) -> bool:
+        """Determine overall condition status based on configurable logic.
+        
+        Args:
+            condition_met_rows: Rows where condition was met
+            condition_not_met_rows: Rows where condition was not met
+            overall_condition_logic: Logic for determining overall status
+            
+        Returns:
+            Boolean indicating if overall condition is met
+        """
+        total_rows = len(condition_met_rows) + len(condition_not_met_rows)
+        condition_met_count = len(condition_met_rows)
+        
+        if total_rows == 0:
+            return False
+        
+        if overall_condition_logic == "any_met":
+            # Condition met if ANY row meets the condition
+            return condition_met_count > 0
+        elif overall_condition_logic == "all_met":
+            # Condition met if ALL rows meet the condition
+            return condition_met_count == total_rows
+        elif overall_condition_logic == "majority_met":
+            # Condition met if majority of rows meet the condition
+            return condition_met_count > (total_rows / 2)
+        elif overall_condition_logic == "percentage_met":
+            # Condition met if specified percentage of rows meet the condition
+            # For now, default to 50% threshold, but this could be made configurable
+            return (condition_met_count / total_rows) >= 0.5
+        else:
+            # Default to "any_met" for unknown logic
+            return condition_met_count > 0
+    
+    def _process_threshold_value(
+        self,
+        threshold_value: float,
+        threshold_type: str,
+        data: List[Dict[str, Any]]
+    ) -> float:
+        """Process threshold value based on threshold type.
+        
+        Args:
+            threshold_value: Original threshold value
+            threshold_type: Type of threshold interpretation
+            data: Data rows for context (used for percentile calculations)
+            
+        Returns:
+            Processed threshold value for comparison
+        """
+        if threshold_type == "default":
+            return threshold_value
+        elif threshold_type == "percentage":
+            # Convert percentage to decimal (divide by 100)
+            return threshold_value / 100.0
+        elif threshold_type == "ratio":
+            # Keep as is (0-1 range)
+            return threshold_value
+        elif threshold_type == "percentile":
+            # Calculate percentile from data
+            return self._calculate_percentile(threshold_value, data)
+        elif threshold_type == "multiplier":
+            # Use as multiplier factor
+            return threshold_value
+        elif threshold_type == "absolute":
+            # Use absolute value
+            return abs(threshold_value)
+        else:
+            # Default to original value for unknown types
+            return threshold_value
+    
+    def _calculate_percentile(
+        self,
+        percentile: float,
+        data: List[Dict[str, Any]]
+    ) -> float:
+        """Calculate percentile value from data.
+        
+        Args:
+            percentile: Percentile value (0-100)
+            data: Data rows to calculate percentile from
+            
+        Returns:
+            Calculated percentile value
+        """
+        if not data:
+            return 0.0
+        
+        # Extract numeric values from data
+        values = []
+        for row in data:
+            for key, value in row.items():
+                if value is not None:
+                    try:
+                        values.append(float(value))
+                    except (ValueError, TypeError):
+                        continue
+        
+        if not values:
+            return 0.0
+        
+        # Sort values
+        values.sort()
+        
+        # Calculate percentile
+        n = len(values)
+        if n == 1:
+            return values[0]
+        
+        # Calculate index
+        index = (percentile / 100.0) * (n - 1)
+        
+        # Interpolate between values
+        lower_index = int(index)
+        upper_index = min(lower_index + 1, n - 1)
+        
+        if lower_index == upper_index:
+            return values[lower_index]
+        
+        # Linear interpolation
+        weight = index - lower_index
+        return values[lower_index] * (1 - weight) + values[upper_index] * weight
+    
+    def _validate_data_type_compatibility(
+        self,
+        condition_type: str,
+        current_value: Any,
+        operator: str,
+        threshold_value: Any,
+        row_data: Dict[str, Any]
+    ) -> None:
+        """Validate that data types are compatible with the condition type.
+        
+        Args:
+            condition_type: Type of condition being evaluated
+            current_value: Current value to validate
+            operator: Operator being used
+            threshold_value: Threshold value to validate
+            row_data: Full row data for context
+            
+        Raises:
+            ValueError: If data types are incompatible with condition type
+        """
+        if condition_type == "threshold_value":
+            self._validate_threshold_data_types(current_value, threshold_value, operator)
+        elif condition_type == "intelligent_arima":
+            self._validate_arima_data_types(current_value, threshold_value, operator, row_data)
+        elif condition_type == "string_match":
+            self._validate_string_data_types(current_value, threshold_value, operator)
+        elif condition_type == "threshold_change":
+            self._validate_change_data_types(current_value, threshold_value, operator, row_data)
+        elif condition_type == "threshold_percent_change":
+            self._validate_percent_change_data_types(current_value, threshold_value, operator, row_data)
+        else:
+            # Default to threshold validation for unknown types
+            self._validate_threshold_data_types(current_value, threshold_value, operator)
+    
+    def _validate_threshold_data_types(
+        self,
+        current_value: Any,
+        threshold_value: Any,
+        operator: str
+    ) -> None:
+        """Validate data types for threshold conditions.
+        
+        Args:
+            current_value: Current value (must be numeric)
+            threshold_value: Threshold value (must be numeric)
+            operator: Operator being used
+            
+        Raises:
+            ValueError: If values are not numeric
+        """
+        # Validate current value is numeric
+        if not isinstance(current_value, (int, float)):
+            raise ValueError(f"Threshold condition requires numeric current_value, got {type(current_value).__name__}: {current_value}")
+        
+        # Validate threshold value is numeric
+        if not isinstance(threshold_value, (int, float)):
+            raise ValueError(f"Threshold condition requires numeric threshold_value, got {type(threshold_value).__name__}: {threshold_value}")
+        
+        # Validate operator is supported for numeric comparison
+        numeric_operators = {">", "<", ">=", "<=", "=", "!="}
+        if operator not in numeric_operators:
+            raise ValueError(f"Threshold condition operator '{operator}' not supported. Supported operators: {numeric_operators}")
+    
+    def _validate_arima_data_types(
+        self,
+        current_value: Any,
+        threshold_value: Any,
+        operator: str,
+        row_data: Dict[str, Any]
+    ) -> None:
+        """Validate data types for ARIMA conditions.
+        
+        Args:
+            current_value: Current value (must be numeric)
+            threshold_value: Threshold value (must be numeric)
+            operator: Operator being used
+            row_data: Row data (should contain time series data)
+            
+        Raises:
+            ValueError: If data types are incompatible
+        """
+        # Validate current value is numeric
+        if not isinstance(current_value, (int, float)):
+            raise ValueError(f"ARIMA condition requires numeric current_value, got {type(current_value).__name__}: {current_value}")
+        
+        # Validate threshold value is numeric
+        if not isinstance(threshold_value, (int, float)):
+            raise ValueError(f"ARIMA condition requires numeric threshold_value, got {type(threshold_value).__name__}: {threshold_value}")
+        
+        # Validate row data contains time series information
+        required_fields = ["timestamp", "value"]  # Adjust based on your time series structure
+        missing_fields = [field for field in required_fields if field not in row_data]
+        if missing_fields:
+            raise ValueError(f"ARIMA condition requires time series data. Missing fields: {missing_fields}")
+        
+        # Validate operator is supported for ARIMA
+        arima_operators = {"anomaly_detected", "trend_break", "seasonal_anomaly", "forecast_deviation"}
+        if operator not in arima_operators:
+            raise ValueError(f"ARIMA condition operator '{operator}' not supported. Supported operators: {arima_operators}")
+    
+    def _validate_string_data_types(
+        self,
+        current_value: Any,
+        threshold_value: Any,
+        operator: str
+    ) -> None:
+        """Validate data types for string conditions.
+        
+        Args:
+            current_value: Current value (must be string)
+            threshold_value: Threshold value (must be string)
+            operator: Operator being used
+            
+        Raises:
+            ValueError: If values are not strings
+        """
+        # Validate current value is string
+        if not isinstance(current_value, str):
+            raise ValueError(f"String condition requires string current_value, got {type(current_value).__name__}: {current_value}")
+        
+        # Validate threshold value is string
+        if not isinstance(threshold_value, str):
+            raise ValueError(f"String condition requires string threshold_value, got {type(threshold_value).__name__}: {threshold_value}")
+        
+        # Validate operator is supported for string comparison
+        string_operators = {"contains", "starts_with", "ends_with", "equals", "regex", "not_contains"}
+        if operator not in string_operators:
+            raise ValueError(f"String condition operator '{operator}' not supported. Supported operators: {string_operators}")
+    
+    def _validate_change_data_types(
+        self,
+        current_value: Any,
+        threshold_value: Any,
+        operator: str,
+        row_data: Dict[str, Any]
+    ) -> None:
+        """Validate data types for change conditions.
+        
+        Args:
+            current_value: Current value (must be numeric)
+            threshold_value: Threshold value (must be numeric)
+            operator: Operator being used
+            row_data: Row data (should contain previous_value)
+            
+        Raises:
+            ValueError: If data types are incompatible
+        """
+        # Validate current value is numeric
+        if not isinstance(current_value, (int, float)):
+            raise ValueError(f"Change condition requires numeric current_value, got {type(current_value).__name__}: {current_value}")
+        
+        # Validate threshold value is numeric
+        if not isinstance(threshold_value, (int, float)):
+            raise ValueError(f"Change condition requires numeric threshold_value, got {type(threshold_value).__name__}: {threshold_value}")
+        
+        # Validate previous value exists and is numeric
+        previous_value = row_data.get("previous_value")
+        if previous_value is None:
+            raise ValueError("Change condition requires 'previous_value' in row data")
+        
+        try:
+            float(previous_value)
+        except (ValueError, TypeError):
+            raise ValueError(f"Change condition requires numeric previous_value, got {type(previous_value).__name__}: {previous_value}")
+        
+        # Validate operator is supported for change comparison
+        change_operators = {"increased_by", "decreased_by", "changed_by"}
+        if operator not in change_operators:
+            raise ValueError(f"Change condition operator '{operator}' not supported. Supported operators: {change_operators}")
+    
+    def _validate_percent_change_data_types(
+        self,
+        current_value: Any,
+        threshold_value: Any,
+        operator: str,
+        row_data: Dict[str, Any]
+    ) -> None:
+        """Validate data types for percent change conditions.
+        
+        Args:
+            current_value: Current value (must be numeric)
+            threshold_value: Threshold value (must be numeric)
+            operator: Operator being used
+            row_data: Row data (should contain previous_value)
+            
+        Raises:
+            ValueError: If data types are incompatible
+        """
+        # Validate current value is numeric
+        if not isinstance(current_value, (int, float)):
+            raise ValueError(f"Percent change condition requires numeric current_value, got {type(current_value).__name__}: {current_value}")
+        
+        # Validate threshold value is numeric
+        if not isinstance(threshold_value, (int, float)):
+            raise ValueError(f"Percent change condition requires numeric threshold_value, got {type(threshold_value).__name__}: {threshold_value}")
+        
+        # Validate previous value exists and is numeric
+        previous_value = row_data.get("previous_value")
+        if previous_value is None:
+            raise ValueError("Percent change condition requires 'previous_value' in row data")
+        
+        try:
+            prev_val = float(previous_value)
+            if prev_val == 0:
+                raise ValueError("Percent change condition requires non-zero previous_value to avoid division by zero")
+        except (ValueError, TypeError):
+            raise ValueError(f"Percent change condition requires numeric previous_value, got {type(previous_value).__name__}: {previous_value}")
+        
+        # Validate operator is supported for percent change comparison
+        percent_change_operators = {"increased_by_percent", "decreased_by_percent", "changed_by_percent"}
+        if operator not in percent_change_operators:
+            raise ValueError(f"Percent change condition operator '{operator}' not supported. Supported operators: {percent_change_operators}")
 
 
 class AlertServiceCompatibility:

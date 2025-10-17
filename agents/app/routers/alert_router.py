@@ -24,6 +24,7 @@ from app.core.sql_validation import (
     ValidationResult, 
     AlertConditionType, 
     ThresholdOperator,
+    ThresholdType,
     LexyFeedCondition
 )
 from app.core.pandas_engine import PandasEngine
@@ -585,19 +586,30 @@ class ConditionValidationRequest(BaseModel):
     condition_type: AlertConditionType = Field(..., description="Type of condition to validate")
     operator: ThresholdOperator = Field(..., description="Threshold operator")
     threshold_value: float = Field(..., description="Threshold value to compare against")
+    threshold_type: ThresholdType = Field(default=ThresholdType.DEFAULT, description="Type of threshold value interpretation")
     metric_column: Optional[str] = Field(default=None, description="Specific column to extract value from")
     use_cache: bool = Field(default=True, description="Whether to use caching for SQL execution")
+    overall_condition_logic: str = Field(default="any_met", description="Logic for determining overall condition status")
 
 
 class ConditionValidationResponse(BaseModel):
     """Response model for condition validation"""
     is_valid: bool = Field(..., description="Whether the validation was successful")
     current_value: Optional[float] = Field(default=None, description="Current value from SQL query")
-    threshold_value: Optional[float] = Field(default=None, description="Threshold value used for comparison")
+    threshold_value: Optional[float] = Field(default=None, description="Processed threshold value used for comparison")
+    original_threshold_value: Optional[float] = Field(default=None, description="Original threshold value before processing")
+    threshold_type: Optional[str] = Field(default=None, description="Type of threshold value interpretation")
     condition_met: Optional[bool] = Field(default=None, description="Whether the condition is currently met")
     error_message: Optional[str] = Field(default=None, description="Error message if validation failed")
     validation_timestamp: datetime = Field(..., description="Timestamp when validation was performed")
     execution_time_ms: Optional[float] = Field(default=None, description="Execution time in milliseconds")
+    
+    # Additional detailed results for multi-row validation
+    validation_summary: Optional[Dict[str, Any]] = Field(default=None, description="Summary of validation results across all rows")
+    condition_not_met_rows: Optional[List[Dict[str, Any]]] = Field(default=None, description="Rows where the condition was not met")
+    condition_met_rows: Optional[List[Dict[str, Any]]] = Field(default=None, description="Rows where the condition was met")
+    all_results: Optional[List[Dict[str, Any]]] = Field(default=None, description="All validation results for each row")
+    debug_info: Optional[Dict[str, Any]] = Field(default=None, description="Debug information about data processing")
 
 
 @router.post("/validate-condition", response_model=ConditionValidationResponse)
@@ -605,39 +617,25 @@ async def validate_alert_condition(request: ConditionValidationRequest):
     """
     Validate an alert condition by executing SQL and checking threshold conditions
     
-    This endpoint uses the SQLAlertConditionValidator to validate threshold-based
-    alert conditions using the existing execute_sql methods from PandasEngine.
+    This endpoint delegates to the AlertService for validation logic.
     """
     try:
-        # Get the alert service to access the engine
+        # Get the alert service
         alert_service = get_alert_service()
         
-        # For this example, we'll create a simple PandasEngine
-        # In practice, you'd get the engine from your service configuration
-        engine = PandasEngine()
-        
-        # Create the validation service
-        validation_service = SQLValidationService(engine)
-        
-        # Validate the condition using the core service
-        result = await validation_service.validate_condition_by_type(
+        # Delegate to the service layer
+        result = await alert_service.validate_alert_condition(
             sql_query=request.sql_query,
-            condition_type=request.condition_type,
-            operator=request.operator,
+            condition_type=request.condition_type.value, # Convert Enum to string
+            operator=request.operator.value, # Convert Enum to string
             threshold_value=request.threshold_value,
+            threshold_type=request.threshold_type.value, # Convert Enum to string
             metric_column=request.metric_column,
-            use_cache=request.use_cache
+            use_cache=request.use_cache,
+            overall_condition_logic=request.overall_condition_logic
         )
         
-        return ConditionValidationResponse(
-            is_valid=result.is_valid,
-            current_value=result.current_value,
-            threshold_value=result.threshold_value,
-            condition_met=result.condition_met,
-            error_message=result.error_message,
-            validation_timestamp=result.validation_timestamp,
-            execution_time_ms=result.execution_time_ms
-        )
+        return ConditionValidationResponse(**result)
         
     except Exception as e:
         traceback.print_exc()
@@ -659,37 +657,27 @@ async def validate_threshold_condition(
     Validate a simple threshold condition
     
     This is a simplified endpoint for validating basic threshold conditions
-    without requiring a full condition object.
+    that delegates to the AlertService for validation logic.
     """
     try:
-        # Get the alert service to access the engine
+        # Get the alert service
         alert_service = get_alert_service()
         
-        # Create a simple PandasEngine (in practice, get from service config)
-        engine = PandasEngine()
+        # Convert ThresholdOperator enum to string
+        operator_str = operator.value if hasattr(operator, 'value') else str(operator)
         
-        # Create the validation service
-        validation_service = SQLValidationService(engine)
-        
-        # Validate the threshold condition
-        result = await validation_service.validate_threshold_condition(
+        # Delegate to the service layer
+        result = await alert_service.validate_threshold_condition(
             sql_query=sql_query,
-            condition_type=AlertConditionType.THRESHOLD_VALUE,
-            operator=operator,
+            operator=operator_str,
             threshold_value=threshold_value,
+            threshold_type="default", # Default threshold type for backward compatibility
             metric_column=metric_column,
-            use_cache=use_cache
+            use_cache=use_cache,
+            overall_condition_logic="any_met"
         )
         
-        return ConditionValidationResponse(
-            is_valid=result.is_valid,
-            current_value=result.current_value,
-            threshold_value=result.threshold_value,
-            condition_met=result.condition_met,
-            error_message=result.error_message,
-            validation_timestamp=result.validation_timestamp,
-            execution_time_ms=result.execution_time_ms
-        )
+        return ConditionValidationResponse(**result)
         
     except Exception as e:
         traceback.print_exc()

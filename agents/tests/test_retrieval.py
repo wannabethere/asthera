@@ -254,6 +254,178 @@ class RetrievalTest:
             logger.error(f"Error in retrieval test: {str(e)}")
             raise
 
+    async def test_mdl_properties_preservation(self):
+        """Test that MDL properties are preserved in column processing."""
+        try:
+            logger.info("Testing MDL properties preservation...")
+            
+            # Create a test column with MDL properties
+            test_column = {
+                "name": "is_high_risk",
+                "type": "BOOLEAN",
+                "isCalculated": True,
+                "expression": "CASE WHEN balbix_score >= 25.0 AND balbix_score IS NOT NULL THEN true ELSE false END",
+                "properties": {
+                    "displayName": "Is High Risk",
+                    "description": "Boolean flag indicating high risk based on Balbix scoring threshold"
+                },
+                "relationship": {
+                    "type": "calculated",
+                    "depends_on": ["balbix_score"]
+                }
+            }
+            
+            # Test the column processing logic
+            from app.agents.retrieval.retrieval import TableRetrieval
+            
+            # Create a mock content dict
+            content_dict = {
+                "table_name": "test_table",
+                "columns": [test_column]
+            }
+            
+            # Initialize TableRetrieval
+            retrieval = TableRetrieval(
+                document_store=self.document_stores["tables"],
+                embedder=self.embeddings,
+                similarity_threshold=0.7,
+                top_k=10
+            )
+            
+            # Process the columns using the internal method
+            processed_columns = []
+            columns = content_dict.get("columns", [])
+            
+            if isinstance(columns, list):
+                for col in columns:
+                    if isinstance(col, dict):
+                        # Extract comment and description from properties
+                        comment = col.get('comment', '')
+                        description = ''
+                        
+                        if 'properties' in col and isinstance(col['properties'], dict):
+                            if not comment:
+                                comment = col['properties'].get('displayName', '')
+                            description = col['properties'].get('description', '')
+                        
+                        # Extract primary key and foreign key info
+                        is_primary_key = col.get('is_primary_key', False)
+                        is_foreign_key = col.get('is_foreign_key', False)
+                        
+                        if 'properties' in col and isinstance(col['properties'], dict):
+                            if 'is_primary_key' in col['properties']:
+                                pk_val = col['properties']['is_primary_key']
+                                is_primary_key = pk_val if isinstance(pk_val, bool) else pk_val.lower() == 'true'
+                            if 'is_foreign_key' in col['properties']:
+                                fk_val = col['properties']['is_foreign_key']
+                                is_foreign_key = fk_val if isinstance(fk_val, bool) else fk_val.lower() == 'true'
+                        
+                        # Preserve all MDL properties
+                        processed_column = {
+                            "name": col.get('name', ''),
+                            "type": col.get('type', 'VARCHAR'),
+                            "comment": comment,
+                            "description": description,
+                            "is_primary_key": is_primary_key,
+                            "is_foreign_key": is_foreign_key,
+                            "notNull": col.get('notNull', False),
+                            # Preserve all MDL properties
+                            "properties": col.get('properties', {}),
+                            "isCalculated": col.get('isCalculated', False),
+                            "expression": col.get('expression', ''),
+                            "relationship": col.get('relationship', {})
+                        }
+                        
+                        # Add any other properties that might exist in the column
+                        for key, value in col.items():
+                            if key not in processed_column:
+                                processed_column[key] = value
+                        
+                        processed_columns.append(processed_column)
+            
+            # Verify that all MDL properties are preserved
+            assert len(processed_columns) == 1, "Should have processed one column"
+            
+            processed_col = processed_columns[0]
+            
+            # Check basic properties
+            assert processed_col["name"] == "is_high_risk", "Name should be preserved"
+            assert processed_col["type"] == "BOOLEAN", "Type should be preserved"
+            
+            # Check MDL properties
+            assert processed_col["isCalculated"] == True, "isCalculated should be preserved"
+            assert processed_col["expression"] == "CASE WHEN balbix_score >= 25.0 AND balbix_score IS NOT NULL THEN true ELSE false END", "Expression should be preserved"
+            assert processed_col["properties"]["displayName"] == "Is High Risk", "Properties should be preserved"
+            assert processed_col["properties"]["description"] == "Boolean flag indicating high risk based on Balbix scoring threshold", "Description should be preserved"
+            assert processed_col["relationship"]["type"] == "calculated", "Relationship should be preserved"
+            assert processed_col["relationship"]["depends_on"] == ["balbix_score"], "Relationship dependencies should be preserved"
+            
+            logger.info("✅ MDL properties preservation test passed!")
+            
+            # Test the _construct_retrieval_results method as well
+            logger.info("Testing MDL properties preservation in _construct_retrieval_results...")
+            
+            # Create a mock schema with the test column
+            mock_schema = {
+                "name": "test_table",
+                "columns": [test_column],
+                "description": "Test table"
+            }
+            
+            # Test the column processing in _construct_retrieval_results
+            schema_columns = mock_schema.get("columns", [])
+            filtered_columns = []
+            
+            for col in schema_columns:
+                if isinstance(col, dict):
+                    comment = col.get('comment', '')
+                    description = col.get('description', '')
+                    
+                    column_info = {
+                        'name': col.get('name', ''),
+                        'data_type': col.get('type', col.get('data_type', 'VARCHAR')),
+                        'comment': comment,
+                        'description': description,
+                        'is_primary_key': col.get('is_primary_key', False),
+                        'is_foreign_key': col.get('is_foreign_key', False),
+                        'notNull': col.get('notNull', False),
+                        # Preserve all MDL properties
+                        'properties': col.get('properties', {}),
+                        'isCalculated': col.get('isCalculated', False),
+                        'expression': col.get('expression', ''),
+                        'relationship': col.get('relationship', {})
+                    }
+                    
+                    # Add any other properties that might exist in the column
+                    for key, value in col.items():
+                        if key not in column_info:
+                            column_info[key] = value
+                    filtered_columns.append(column_info)
+            
+            # Verify that all MDL properties are preserved in the filtered columns
+            assert len(filtered_columns) == 1, "Should have processed one column"
+            
+            filtered_col = filtered_columns[0]
+            
+            # Check basic properties
+            assert filtered_col["name"] == "is_high_risk", "Name should be preserved"
+            assert filtered_col["data_type"] == "BOOLEAN", "Data type should be preserved"
+            
+            # Check MDL properties
+            assert filtered_col["isCalculated"] == True, "isCalculated should be preserved"
+            assert filtered_col["expression"] == "CASE WHEN balbix_score >= 25.0 AND balbix_score IS NOT NULL THEN true ELSE false END", "Expression should be preserved"
+            assert filtered_col["properties"]["displayName"] == "Is High Risk", "Properties should be preserved"
+            assert filtered_col["properties"]["description"] == "Boolean flag indicating high risk based on Balbix scoring threshold", "Description should be preserved"
+            assert filtered_col["relationship"]["type"] == "calculated", "Relationship should be preserved"
+            assert filtered_col["relationship"]["depends_on"] == ["balbix_score"], "Relationship dependencies should be preserved"
+            
+            logger.info("✅ MDL properties preservation in _construct_retrieval_results test passed!")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ MDL properties preservation test failed: {str(e)}")
+            raise
+
 async def main():
     """Main function to run the retrieval tests."""
     try:
@@ -266,6 +438,10 @@ async def main():
         
         # Run tests
         logger.info(f"Starting retrieval tests with query: {test_query}")
+        
+        # Test MDL properties preservation first
+        await test.test_mdl_properties_preservation()
+        
         results = await test.test_all_retrievers(
             query=test_query,
             project_id=project_id

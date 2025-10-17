@@ -127,7 +127,7 @@ class ReportService(BaseService):
         
         # Check permissions via ChromaDB metadata
         collection = await self._create_chroma_collection(self.collection_name)
-        result = await collection.get(ids=[str(report_id)])
+        result = collection.get(ids=[str(report_id)])
         
         if not result["ids"]:
             return None
@@ -155,7 +155,7 @@ class ReportService(BaseService):
         
         # Check update permission
         collection = await self._create_chroma_collection(self.collection_name)
-        result = await collection.get(ids=[str(report_id)])
+        result = collection.get(ids=[str(report_id)])
         metadata = result["metadatas"][0]
         
         if metadata["created_by"] != str(user_id) and not await self._check_user_permission(
@@ -211,7 +211,7 @@ class ReportService(BaseService):
         
         # Check delete permission
         collection = await self._create_chroma_collection(self.collection_name)
-        result = await collection.get(ids=[str(report_id)])
+        result = collection.get(ids=[str(report_id)])
         metadata = result["metadatas"][0]
         
         if metadata["created_by"] != str(user_id) and not await self._check_user_permission(
@@ -301,7 +301,7 @@ class ReportService(BaseService):
             where_clause["project_id"] = str(project_id)
         
         # Get all matching documents
-        all_results = await collection.get(where=where_clause) if where_clause else collection.get()
+        all_results = collection.get(where=where_clause) if where_clause else collection.get()
         
         # Filter by access permissions
         accessible_reports = []
@@ -345,7 +345,7 @@ class ReportService(BaseService):
         
         # Get report and check ownership
         collection = await self._create_chroma_collection(self.collection_name)
-        result = await collection.get(ids=[str(report_id)])
+        result = collection.get(ids=[str(report_id)])
         
         if not result["ids"]:
             raise ValueError(f"Report {report_id} not found")

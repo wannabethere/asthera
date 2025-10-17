@@ -111,46 +111,181 @@ class DashboardWorkflowService(BaseService):
         except Exception as e:
             traceback.print_exc()
 
-    # async def get_all_dashboards(self, user_id,state=None, limit=None):
-    #     stmt = select(DashboardWorkflow).options(
-    #         joinedload(DashboardWorkflow.dashboard)
-    #     ).where(
-    #         DashboardWorkflow.user_id == user_id
-    #     )
+    async def get_all_shares(self, user_id, share_type, entity_id):
+        try:
+            select_stmt = select(ShareConfiguration).join(
+                ShareConfiguration.workflow
+            ).join(
+                DashboardWorkflow.dashboard
+            ).options(
+                joinedload(ShareConfiguration.workflow).joinedload(DashboardWorkflow.dashboard)
+            ).where(
+                DashboardWorkflow.dashboard_id == entity_id
+            )
+            result = await self.db.execute(select_stmt)
+            shares = result.unique().scalars().all()
+            
+            # Organize shares by share_type
+            shares_by_type = {}
+            dashboard = None
+            dashboard_id = entity_id
+            dashboard_name = None
+            owner_id = None
+            
+            if shares:
+                # Get dashboard info from the first share (all shares belong to same dashboard)
+                owner_id = shares[0].workflow.user_id
+                dashboard = shares[0].workflow.dashboard
+                dashboard_id = dashboard.id
+                dashboard_name = dashboard.name
+                print(f"Crossed dashboard {dashboard}")
+                
+                for share in shares:
+                    share_type_key = share.share_type
+                    
+                    if share_type_key not in shares_by_type:
+                        shares_by_type[share_type_key] = []
+                    
+                    shares_by_type[share_type_key].append({
+                        "target_id": share.target_id,
+                        "permission": share.permissions['Action'],
+                        "isAuthor": False
+                    })
+            else:
+                # If no shares, we still need to fetch dashboard info to get owner_id
+                dashboard_stmt = select(Dashboard).join(
+                    Dashboard.workflows
+                ).where(
+                    Dashboard.id == entity_id
+                ).options(
+                    joinedload(Dashboard.workflows)
+                )
+                dashboard_result = await self.db.execute(dashboard_stmt)
+                dashboard = dashboard_result.unique().scalar_one_or_none()
+                
+                if dashboard:
+                    dashboard_id = dashboard.id
+                    dashboard_name = dashboard.name
+                    # Get the first workflow's user_id (assuming one workflow per dashboard)
+                    if dashboard.workflows:
+                        owner_id = dashboard.workflows[0].user_id if isinstance(dashboard.workflows, list) else dashboard.workflows.user_id
+            
+            # Add static owner row to "user" share type only if owner_id exists
+            if owner_id:
+                if "user" not in shares_by_type:
+                    shares_by_type["user"] = []
+                
+                print(f"Crossed owner_id {owner_id}")
+                
+                # Insert owner at the beginning of user shares
+                shares_by_type["user"].insert(0, {
+                    "target_id": owner_id,
+                    "permission": "Admin",
+                    "isAuthor": True
+                })
+            
+            return {
+                "dashboard_id": dashboard_id,
+                "dashboard_name": dashboard_name,
+                "shares": shares_by_type
+            }
+            
+        except Exception as e:
+            traceback.print_exc()
+            return None
+    
+    async def get_all_shares(self, user_id, share_type, entity_id):
+        try:
+            select_stmt = select(ShareConfiguration).join(
+                ShareConfiguration.workflow
+            ).join(
+                DashboardWorkflow.dashboard
+            ).options(
+                joinedload(ShareConfiguration.workflow).joinedload(DashboardWorkflow.dashboard)
+            ).where(
+                DashboardWorkflow.dashboard_id == entity_id
+            )
+            result = await self.db.execute(select_stmt)
+            shares = result.unique().scalars().all()
+            
+            print(f"Total shares fetched: {len(shares)}")
+            for s in shares:
+                print(f"Share ID: {s.id}, Share Type: {s.share_type}, Target ID: {s.target_id}")
+            
+            # Organize shares by share_type
+            shares_by_type = {}
+            dashboard = None
+            dashboard_id = entity_id
+            dashboard_name = None
+            owner_id = None
+            
+            if shares:
+                # Get dashboard info from the first share (all shares belong to same dashboard)
+                owner_id = shares[0].workflow.user_id
+                dashboard = shares[0].workflow.dashboard
+                dashboard_id = dashboard.id
+                dashboard_name = dashboard.name
+                print(f"Crossed dashboard {dashboard}")
+                
+                for share in shares:
+                    share_type_key = share.share_type
+                    print(f"Processing share_type_key: {share_type_key}")
+                    
+                    if share_type_key not in shares_by_type:
+                        shares_by_type[share_type_key] = []
+                    
+                    shares_by_type[share_type_key].append({
+                        "target_id": share.target_id,
+                        "permission": share.permissions['Action'],
+                        "isAuthor": False
+                    })
+            else:
+                # If no shares, we still need to fetch dashboard info to get owner_id
+                dashboard_stmt = select(Dashboard).join(
+                    Dashboard.workflows
+                ).where(
+                    Dashboard.id == entity_id
+                ).options(
+                    joinedload(Dashboard.workflows)
+                )
+                dashboard_result = await self.db.execute(dashboard_stmt)
+                dashboard = dashboard_result.unique().scalar_one_or_none()
+                
+                if dashboard:
+                    dashboard_id = dashboard.id
+                    dashboard_name = dashboard.name
+                    # Get the first workflow's user_id (assuming one workflow per dashboard)
+                    if dashboard.workflows:
+                        owner_id = dashboard.workflows[0].user_id if isinstance(dashboard.workflows, list) else dashboard.workflows.user_id
+            
+            # Add static owner row to "user" share type only if owner_id exists
+            print(f"Owner ID: {owner_id}")
+            print(f"Shares by type before owner insert: {shares_by_type}")
+            
+            if owner_id:
+                if "user" not in shares_by_type:
+                    shares_by_type["user"] = []
+                
+                # Insert owner at the beginning of user shares
+                shares_by_type["user"].insert(0, {
+                    "target_id": owner_id,
+                    "permission": "Admin",
+                    "isAuthor": True
+                })
+            
+            print(f"Final shares_by_type: {shares_by_type}")
+            
+            return {
+                "dashboard_id": dashboard_id,
+                "dashboard_name": dashboard_name,
+                "shares": shares_by_type
+            }
+            
+        except Exception as e:
+            traceback.print_exc()
+            return None
 
-    #     if state:
-    #         stmt = stmt.where(DashboardWorkflow.state == state)
 
-    #     if limit:
-    #         stmt = stmt.limit(limit)
-
-    #     result = await self.db.execute(stmt)
-    #     workflows = result.scalars().all()
-
-    #     dashboards = []
-    #     for workflow in workflows:
-    #         dashboard = workflow.dashboard  
-    #         if dashboard is None:
-    #             continue
-
-    #         dashboards.append({
-    #             "dashboard_id": str(dashboard.id),
-    #             "dashboard_name": dashboard.name,
-    #             "dashboard_description": dashboard.description,
-    #             "DashboardType": dashboard.DashboardType,
-    #             "content": dashboard.content,
-    #             "is_active": dashboard.is_active,
-    #             "version": dashboard.version,
-    #             "created_at": dashboard.created_at,
-    #             "updated_at": dashboard.updated_at,
-    #             "user_id": str(workflow.user_id),
-    #         })
-    #     from app.models.workspace import ProjectAccess, Project,Team
-    #     from app.models.user import User
-    #     from app.models.team import Team
-    #     select_stmt = self.db.query(User).options(joinedload(User.teams),joinedload(User.project_access),joinedload(ProjectAccess.project)).where(User.id == user_id)
-
-    #     return dashboards
 
     async def get_all_dashboards(self, user_id, state=None, limit=None):
        

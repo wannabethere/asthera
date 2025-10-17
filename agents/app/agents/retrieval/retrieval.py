@@ -450,12 +450,16 @@ class TableRetrieval:
             schema_docs = schema_docs + metrics + views
             logger.info(f"DEBUG: Combined schema_docs count: {len(schema_docs)}")
             
+            # Skip column metadata retrieval - only use table_columns from table schema
+            column_docs = []
+            
             # Construct database schemas
             try:
-                logger.info(f"DEBUG: About to call _construct_db_schemas with {len(schema_docs)} schema_docs and {len(table_docs)} table_docs")
+                logger.info(f"DEBUG: About to call _construct_db_schemas with {len(schema_docs)} schema_docs and {len(table_docs)} table_docs and {len(column_docs)} column_docs")
                 logger.info(f"DEBUG: schema_docs sample: {schema_docs[:1] if schema_docs else 'None'}")
                 logger.info(f"DEBUG: table_docs sample: {table_docs[:1] if table_docs else 'None'}")
-                db_schemas = self._construct_db_schemas(schema_docs, table_docs)
+                logger.info(f"DEBUG: column_docs sample: {column_docs[:1] if column_docs else 'None'}")
+                db_schemas = self._construct_db_schemas(schema_docs, table_docs, column_docs)
                 logger.info(f"DEBUG: _construct_db_schemas completed successfully, got {len(db_schemas)} schemas")
             except Exception as e:
                 logger.error(f"DEBUG: Error in _construct_db_schemas: {str(e)}")
@@ -504,9 +508,14 @@ class TableRetrieval:
                 print(f"=== COLUMN SELECTION RESULT ===")
                 print(f"Column selection: {column_selection}")
                 
+                # Retrieve TABLE_COLUMNS data for better column information
+                table_columns_map = await self._retrieve_table_columns(schema_docs, project_id)
+                print(f"=== TABLE COLUMNS RETRIEVED ===")
+                print(f"Table columns map: {list(table_columns_map.keys())}")
+                
                 # Construct final results with selected columns
                 result = self._construct_retrieval_results(
-                    column_selection, db_schemas, schema_docs
+                    column_selection, db_schemas, schema_docs, table_columns_map
                 )
                 print(f"=== FINAL RETRIEVAL RESULTS ===")
                 print(f"Retrieval results count: {len(result.get('retrieval_results', []))}")
@@ -717,26 +726,61 @@ class TableRetrieval:
             
             logger.info(f"DEBUG: _retrieve_table_descriptions called with project_id: {project_id}")
             
-            # Use the original approach - search only table_description collection
-            # but with the correct document type filter
-            where = {"type": {"$eq": 'TABLE_DESCRIPTION'}}
+            # Search for both TABLE_DESCRIPTION and TABLE_SCHEMA documents
+            # TABLE_SCHEMA documents have full column information with MDL properties
+            # TABLE_DESCRIPTION documents have basic table information
+            where = {"type": {"$in": ['TABLE_DESCRIPTION', 'TABLE_SCHEMA']}}
             if project_id and project_id != "default":
-                where = {"$and": [{"project_id": {"$eq": project_id}},{"type": {"$eq": "TABLE_DESCRIPTION"}}]}
+                where = {"$and": [{"project_id": {"$eq": project_id}},{"type": {"$in": ["TABLE_DESCRIPTION", "TABLE_SCHEMA"]}}]}
             
             logger.info(f"DEBUG: _retrieve_table_descriptions - where clause: {where}")
             
+            # Query both table_description and db_schema stores
+            all_results = []
+            
+            # Query table_description store
             if query:
-                results = self.table_store.semantic_search(
+                table_results = self.table_store.semantic_search(
                     query=query,
                     k=30,
                     where=where,
                 )
             else:
-                results = self.table_store.semantic_search(
+                table_results = self.table_store.semantic_search(
                     query="",
                     k=100,
                     where=where
                 )
+            
+            if table_results:
+                all_results.extend(table_results)
+                logger.info(f"DEBUG: Found {len(table_results)} results from table_description store")
+            
+            # Query db_schema store for TABLE_SCHEMA documents with full column information
+            schema_where = {"type": {"$eq": 'TABLE_SCHEMA'}}
+            if project_id and project_id != "default":
+                schema_where = {"$and": [{"project_id": {"$eq": project_id}},{"type": {"$eq": "TABLE_SCHEMA"}}]}
+            
+            if query:
+                schema_results = self.schema_store.semantic_search(
+                    query=query,
+                    k=30,
+                    where=schema_where,
+                )
+            else:
+                schema_results = self.schema_store.semantic_search(
+                    query="",
+                    k=100,
+                    where=schema_where
+                )
+            
+            if schema_results:
+                all_results.extend(schema_results)
+                logger.info(f"DEBUG: Found {len(schema_results)} results from db_schema store")
+            
+            # Skip column_metadata store queries - only use table_columns from table schema
+            
+            results = all_results
         
             if not results:
                 return []
@@ -834,6 +878,152 @@ class TableRetrieval:
         
         return results
 
+    async def _retrieve_table_columns(
+        self,
+        table_docs: List[Any],
+        project_id: Optional[str]
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """Retrieve TABLE_COLUMNS data from TABLE_SCHEMA documents for the given tables."""
+        table_names = self._extract_table_names(table_docs)
+        table_columns_map = {}
+        
+        if not table_names:
+            logger.warning("No table names found for table columns retrieval")
+            return table_columns_map
+        
+        logger.info(f"DEBUG: Retrieving TABLE_COLUMNS for tables: {table_names}")
+        
+        try:
+            # Query db_schema store for TABLE_SCHEMA documents that contain TABLE_COLUMNS data
+            where = {
+                "name": {"$in": table_names},
+                "type": {"$eq": "TABLE_SCHEMA"}
+            }
+            if project_id and project_id != "default":
+                where = {
+                    "$and": [
+                        {"project_id": {"$eq": project_id}},
+                        {"name": {"$in": table_names}},
+                        {"type": {"$eq": "TABLE_SCHEMA"}}
+                    ]
+                }
+            
+            logger.info(f"DEBUG: _retrieve_table_columns - where clause: {where}")
+            
+            # Search for TABLE_COLUMNS documents
+            schema_results = self.schema_store.semantic_search(
+                query="",
+                k=100,  # Get all schema documents for the tables
+                where=where,
+            )
+            
+            logger.info(f"DEBUG: _retrieve_table_columns - search returned {len(schema_results) if schema_results else 0} results")
+            if schema_results:
+                logger.info(f"DEBUG: _retrieve_table_columns - first result metadata: {schema_results[0].get('metadata', {})}")
+                logger.info(f"DEBUG: _retrieve_table_columns - first result content preview: {str(schema_results[0].get('content', ''))[:200]}...")
+            
+            if schema_results:
+                logger.info(f"DEBUG: Found {len(schema_results)} TABLE_SCHEMA documents")
+                
+                # Process each TABLE_SCHEMA document to extract TABLE_COLUMNS data
+                for result in schema_results:
+                    try:
+                        # Parse the payload to extract TABLE_COLUMNS data
+                        import json
+                        payload_str = result.page_content
+                        payload = json.loads(payload_str)
+                        
+                        table_name = result.metadata.get("name", "")
+                        if not table_name:
+                            continue
+                            
+                        # Check if this is a TABLE_COLUMNS document
+                        if payload.get("type") == "TABLE_COLUMNS":
+                            # Extract columns from the payload
+                            columns = payload.get("columns", [])
+                            logger.info(f"DEBUG: Found TABLE_COLUMNS document for {table_name} with {len(columns)} columns")
+                            if columns:
+                                logger.info(f"DEBUG: Sample TABLE_COLUMNS column: {columns[0]}")
+                                # Add columns to the map (merge if multiple batches exist)
+                                if table_name in table_columns_map:
+                                    table_columns_map[table_name].extend(columns)
+                                else:
+                                    table_columns_map[table_name] = columns
+                                logger.info(f"DEBUG: Extracted {len(columns)} columns for table {table_name}")
+                            else:
+                                logger.info(f"DEBUG: No columns found in payload for table {table_name}")
+                        else:
+                            logger.info(f"DEBUG: Document for {table_name} is not TABLE_COLUMNS type: {payload.get('type')}")
+                            
+                    except Exception as e:
+                        logger.warning(f"Error processing TABLE_SCHEMA document: {str(e)}")
+                        continue
+            else:
+                logger.warning("No TABLE_COLUMNS documents found")
+                # Try a broader search to see what's available
+                logger.info("DEBUG: Trying broader search to see what documents are available...")
+                broad_results = self.schema_store.semantic_search(
+                    query="",
+                    k=10,
+                    where={"project_id": {"$eq": project_id}} if project_id and project_id != "default" else None,
+                )
+                logger.info(f"DEBUG: Broad search returned {len(broad_results) if broad_results else 0} results")
+                if broad_results:
+                    for i, result in enumerate(broad_results[:3]):  # Show first 3 results
+                        logger.info(f"DEBUG: Result {i} metadata: {result.get('metadata', {})}")
+                        logger.info(f"DEBUG: Result {i} content type: {type(result.get('content', ''))}")
+                        if hasattr(result, 'page_content'):
+                            logger.info(f"DEBUG: Result {i} page_content preview: {str(result.page_content)[:200]}...")
+                        else:
+                            logger.info(f"DEBUG: Result {i} content preview: {str(result.get('content', ''))[:200]}...")
+                
+        except Exception as e:
+            logger.error(f"Error retrieving table columns: {str(e)}")
+            raise
+        
+        return table_columns_map
+
+
+
+    def _merge_columns(self, existing_columns: list, new_columns: list, table_name: str):
+        """Merge new columns with existing columns, combining information from both sources."""
+        for new_col in new_columns:
+            col_name = new_col.get('name', '')
+            if not col_name:
+                continue
+                
+            # Check if column already exists
+            existing_col = None
+            for col in existing_columns:
+                if col.get('name') == col_name:
+                    existing_col = col
+                    break
+            
+            if existing_col:
+                # Merge information, prioritizing new column for basic info and existing for MDL properties
+                merged_col = {
+                    "name": col_name,
+                    "type": new_col.get('type', existing_col.get('type', 'VARCHAR')),
+                    "comment": new_col.get('comment', existing_col.get('comment', '')),
+                    "description": new_col.get('description', existing_col.get('description', '')),
+                    "is_primary_key": new_col.get('is_primary_key', existing_col.get('is_primary_key', False)),
+                    "is_foreign_key": new_col.get('is_foreign_key', existing_col.get('is_foreign_key', False)),
+                    "notNull": new_col.get('notNull', existing_col.get('notNull', False)),
+                    # Preserve MDL properties from existing column
+                    "properties": existing_col.get('properties', new_col.get('properties', {})),
+                    "isCalculated": existing_col.get('isCalculated', new_col.get('isCalculated', False)),
+                    "expression": existing_col.get('expression', new_col.get('expression', '')),
+                    "relationship": existing_col.get('relationship', new_col.get('relationship', {}))
+                }
+                
+                # Update the existing column
+                existing_col.update(merged_col)
+                logger.debug(f"Merged column {table_name}.{col_name}")
+            else:
+                # Add new column
+                existing_columns.append(new_col)
+                logger.debug(f"Added new column {table_name}.{col_name}")
+
     def _parse_doc_content(self, doc) -> dict:
         """Safely parse the 'content' field from a document and return a dict."""
         content = doc.get('content', '')
@@ -842,13 +1032,25 @@ class TableRetrieval:
         if not content:
             logger.info("DEBUG: _parse_doc_content - no content found")
             return {}
+        
+        # Try JSON parsing first (for JSON documents)
         try:
+            import json
             content = content.strip("'").strip('"')
             logger.info(f"DEBUG: _parse_doc_content - cleaned content: {content[:200]}...")
             
-            parsed = ast.literal_eval(content)
-            logger.info(f"DEBUG: _parse_doc_content - parsed result: {parsed}")
+            parsed = json.loads(content)
+            logger.info(f"DEBUG: _parse_doc_content - JSON parsed result: {parsed}")
             return parsed
+        except json.JSONDecodeError:
+            # Fall back to ast.literal_eval for Python literals
+            try:
+                parsed = ast.literal_eval(content)
+                logger.info(f"DEBUG: _parse_doc_content - ast parsed result: {parsed}")
+                return parsed
+            except Exception as e:
+                logger.warning(f"Failed to parse content with both JSON and ast: {content[:200]}... | Error: {str(e)}")
+                return {}
         except Exception as e:
             logger.warning(f"Failed to parse content: {content[:200]}... | Error: {str(e)}")
             return {}
@@ -887,36 +1089,20 @@ class TableRetrieval:
         col_defs = []
         if not columns:
             return []
+        
+        logger.info(f"DEBUG: _build_column_defs called with {len(columns)} columns")
+        logger.info(f"DEBUG: Sample column: {columns[0] if columns else 'None'}")
             
         for i, col in enumerate(columns):
             try:
                 logger.debug(f"Processing column {i}: {col}")
                 
-                # If col['name'] is a stringified dict, parse it
-                if isinstance(col, dict) and isinstance(col.get('name'), str) and col['name'].strip().startswith("{'type': 'COLUMN'"):
-                    try:
-                        col_info = ast.literal_eval(col['name'])
-                        name = col_info.get('name', '')
-                        dtype = col_info.get('data_type', col_info.get('type', default_type))
-                        comment = col_info.get('comment', '')
-                        is_primary_key = col_info.get('is_primary_key', False)
-                        is_foreign_key = col_info.get('is_foreign_key', False)
-                        not_null = col_info.get('notNull', False)
-                        
-                        # Handle notNull constraint
-                        if not_null and dtype.upper() != 'PRIMARY KEY':
-                            dtype += ' NOT NULL'
-                            
-                        logger.debug(f"Parsed column from stringified dict: name='{name}', type='{dtype}', comment='{comment[:50] if comment else 'None'}...'")
-                    except Exception as e:
-                        logger.warning(f"Failed to parse column name as dict: {col['name']} | Error: {str(e)}")
-                        name = col.get('name', '')
-                        dtype = col.get('data_type', col.get('type', default_type))
-                        comment = col.get('comment', '')
-                elif isinstance(col, dict):
+                # Process column from table schema
+                if isinstance(col, dict):
                     name = col.get('name', '')
                     # Try both 'data_type' and 'type' for compatibility - prioritize data_type
                     dtype = col.get('data_type', col.get('type', default_type))
+                    logger.debug(f"Column {name}: dtype={dtype}, isCalculated={col.get('isCalculated', False)}, properties={col.get('properties', {})}")
                     
                     # Get comment and description from properties or direct fields
                     comment = col.get('comment', '')
@@ -934,11 +1120,26 @@ class TableRetrieval:
                         logger.info(f"DEBUG: Column {col.get('name', '')} properties in _build_column_defs: {col['properties']}")
                         logger.info(f"DEBUG: Column {col.get('name', '')}: comment='{comment[:50] if comment else 'None'}...', description='{description[:50] if description else 'None'}...'")
                     
+                    # If no comment is available, generate one from the column name
+                    if not comment:
+                        # Convert column name to a more readable format
+                        comment = name.replace('_', ' ').title()
+                        logger.info(f"DEBUG: Generated comment for column {name}: '{comment}'")
+                    
+                    # If no description is available, generate one from the column name
+                    if not description:
+                        # Generate a more descriptive description based on column name patterns
+                        description = self._generate_column_description(name)
+                        if description:
+                            logger.info(f"DEBUG: Generated description for column {name}: '{description}'")
+                    
                     # Handle notNull constraint
                     not_null = col.get('notNull', False)
                     if not_null and dtype.upper() != 'PRIMARY KEY':
                         dtype += ' NOT NULL'
                     
+                    # Log final comment and description
+                    logger.info(f"DEBUG: Final column {name}: comment='{comment[:50] if comment else 'None'}...', description='{description[:50] if description else 'None'}...'")
                     logger.debug(f"Column {i}: name='{name}', type='{dtype}', comment='{comment[:50] if comment else 'None'}...', description='{description[:50] if description else 'None'}...'")
                 else:
                     name = str(col) if col is not None else ''
@@ -957,7 +1158,7 @@ class TableRetrieval:
                     
                 col_def = f"{name} {dtype}"
                 
-                # Add comment and description in the format: -- comment -- Description
+                # Add comment and description in the format: -- comment -- description
                 comment_parts = []
                 if comment:
                     clean_comment = comment.strip().replace('\n', ' ').replace('\r', ' ')
@@ -971,14 +1172,567 @@ class TableRetrieval:
                 
                 if comment_parts:
                     col_def += f" -- {' -- '.join(comment_parts)}"
+                    logger.debug(f"Added comment for {name}: {' -- '.join(comment_parts)[:100]}...")
                 
-                logger.debug(f"Generated column definition: {col_def}")
+                logger.info(f"DEBUG: Generated column definition: {col_def}")
                 col_defs.append(col_def)
             except Exception as e:
                 logger.warning(f"Error processing column {i} ({col}): {str(e)}")
                 continue
                 
         return col_defs
+
+    def _generate_column_description(self, column_name: str) -> str:
+        """Generate a meaningful description for a column based on its name patterns."""
+        name_lower = column_name.lower()
+        
+        # Common patterns and their descriptions
+        patterns = {
+            'id': 'Unique identifier',
+            'name': 'Name or title',
+            'description': 'Detailed description or explanation',
+            'type': 'Type or category classification',
+            'status': 'Current status or state',
+            'date': 'Date value',
+            'time': 'Time value',
+            'timestamp': 'Timestamp value',
+            'created': 'Creation timestamp',
+            'updated': 'Last update timestamp',
+            'modified': 'Last modification timestamp',
+            'email': 'Email address',
+            'phone': 'Phone number',
+            'address': 'Physical or logical address',
+            'url': 'Uniform Resource Locator',
+            'ip': 'IP address',
+            'mac': 'MAC address',
+            'host': 'Hostname or host identifier',
+            'port': 'Port number',
+            'version': 'Version number or identifier',
+            'count': 'Count or quantity',
+            'total': 'Total amount or sum',
+            'amount': 'Monetary amount or value',
+            'price': 'Price or cost',
+            'cost': 'Cost or expense',
+            'rate': 'Rate or percentage',
+            'percent': 'Percentage value',
+            'score': 'Score or rating',
+            'level': 'Level or tier',
+            'category': 'Category classification',
+            'class': 'Class or type classification',
+            'group': 'Group identifier',
+            'team': 'Team identifier',
+            'user': 'User identifier or information',
+            'customer': 'Customer identifier or information',
+            'order': 'Order identifier or information',
+            'product': 'Product identifier or information',
+            'item': 'Item identifier or information',
+            'code': 'Code or identifier',
+            'key': 'Key or identifier',
+            'value': 'Value or data',
+            'data': 'Data or information',
+            'info': 'Information or details',
+            'note': 'Note or comment',
+            'comment': 'Comment or note',
+            'flag': 'Boolean flag or indicator',
+            'active': 'Active status indicator',
+            'enabled': 'Enabled status indicator',
+            'visible': 'Visibility indicator',
+            'public': 'Public visibility indicator',
+            'private': 'Private visibility indicator',
+            'secret': 'Secret or sensitive data',
+            'password': 'Password or authentication data',
+            'token': 'Authentication token',
+            'session': 'Session identifier',
+            'uuid': 'Universally unique identifier',
+            'guid': 'Globally unique identifier',
+            'hash': 'Hash value',
+            'checksum': 'Checksum or hash value',
+            'size': 'Size or dimension',
+            'length': 'Length or size',
+            'width': 'Width dimension',
+            'height': 'Height dimension',
+            'weight': 'Weight value',
+            'age': 'Age or duration',
+            'duration': 'Duration or time period',
+            'interval': 'Time interval',
+            'frequency': 'Frequency or rate',
+            'priority': 'Priority level',
+            'rank': 'Rank or position',
+            'order': 'Order or sequence',
+            'index': 'Index or position',
+            'position': 'Position or location',
+            'location': 'Location or position',
+            'address': 'Address or location',
+            'country': 'Country identifier',
+            'state': 'State or province',
+            'city': 'City identifier',
+            'zip': 'ZIP or postal code',
+            'region': 'Region identifier',
+            'zone': 'Zone identifier',
+            'area': 'Area identifier',
+            'site': 'Site identifier',
+            'building': 'Building identifier',
+            'floor': 'Floor number',
+            'room': 'Room identifier',
+            'department': 'Department identifier',
+            'division': 'Division identifier',
+            'company': 'Company identifier',
+            'organization': 'Organization identifier',
+            'project': 'Project identifier',
+            'task': 'Task identifier',
+            'job': 'Job identifier',
+            'work': 'Work identifier',
+            'process': 'Process identifier',
+            'workflow': 'Workflow identifier',
+            'step': 'Step identifier',
+            'stage': 'Stage identifier',
+            'phase': 'Phase identifier',
+            'status': 'Status or state',
+            'state': 'State or condition',
+            'condition': 'Condition or state',
+            'result': 'Result or outcome',
+            'outcome': 'Outcome or result',
+            'response': 'Response or answer',
+            'answer': 'Answer or response',
+            'solution': 'Solution or resolution',
+            'resolution': 'Resolution or solution',
+            'error': 'Error information',
+            'exception': 'Exception information',
+            'warning': 'Warning information',
+            'message': 'Message or communication',
+            'notification': 'Notification or alert',
+            'alert': 'Alert or notification',
+            'event': 'Event or occurrence',
+            'action': 'Action or operation',
+            'operation': 'Operation or action',
+            'function': 'Function or method',
+            'method': 'Method or function',
+            'procedure': 'Procedure or process',
+            'algorithm': 'Algorithm or method',
+            'formula': 'Formula or calculation',
+            'calculation': 'Calculation or computation',
+            'computation': 'Computation or calculation',
+            'metric': 'Metric or measurement',
+            'measurement': 'Measurement or metric',
+            'statistic': 'Statistic or metric',
+            'kpi': 'Key Performance Indicator',
+            'indicator': 'Indicator or metric',
+            'threshold': 'Threshold or limit',
+            'limit': 'Limit or threshold',
+            'maximum': 'Maximum value',
+            'minimum': 'Minimum value',
+            'average': 'Average value',
+            'mean': 'Mean value',
+            'median': 'Median value',
+            'mode': 'Mode value',
+            'sum': 'Sum or total',
+            'total': 'Total or sum',
+            'count': 'Count or quantity',
+            'quantity': 'Quantity or count',
+            'number': 'Number or numeric value',
+            'numeric': 'Numeric value',
+            'integer': 'Integer value',
+            'decimal': 'Decimal value',
+            'float': 'Floating point value',
+            'double': 'Double precision value',
+            'boolean': 'Boolean value',
+            'text': 'Text value',
+            'string': 'String value',
+            'char': 'Character value',
+            'varchar': 'Variable character value',
+            'json': 'JSON data',
+            'xml': 'XML data',
+            'html': 'HTML data',
+            'url': 'URL or link',
+            'link': 'Link or URL',
+            'reference': 'Reference or pointer',
+            'pointer': 'Pointer or reference',
+            'foreign': 'Foreign key reference',
+            'primary': 'Primary key identifier',
+            'unique': 'Unique identifier',
+            'index': 'Index or key',
+            'key': 'Key or identifier',
+            'identifier': 'Identifier or key',
+            'reference': 'Reference or foreign key',
+            'parent': 'Parent identifier',
+            'child': 'Child identifier',
+            'root': 'Root identifier',
+            'leaf': 'Leaf identifier',
+            'node': 'Node identifier',
+            'edge': 'Edge identifier',
+            'vertex': 'Vertex identifier',
+            'graph': 'Graph identifier',
+            'tree': 'Tree identifier',
+            'list': 'List identifier',
+            'array': 'Array identifier',
+            'vector': 'Vector identifier',
+            'matrix': 'Matrix identifier',
+            'table': 'Table identifier',
+            'view': 'View identifier',
+            'query': 'Query identifier',
+            'filter': 'Filter criteria',
+            'sort': 'Sort criteria',
+            'order': 'Order criteria',
+            'group': 'Group criteria',
+            'aggregate': 'Aggregate value',
+            'summary': 'Summary information',
+            'detail': 'Detail information',
+            'overview': 'Overview information',
+            'preview': 'Preview information',
+            'thumbnail': 'Thumbnail image',
+            'image': 'Image data',
+            'photo': 'Photo or image',
+            'picture': 'Picture or image',
+            'file': 'File data',
+            'document': 'Document data',
+            'attachment': 'Attachment data',
+            'blob': 'Binary large object',
+            'clob': 'Character large object',
+            'text': 'Text data',
+            'content': 'Content data',
+            'body': 'Body content',
+            'header': 'Header information',
+            'footer': 'Footer information',
+            'title': 'Title or heading',
+            'subject': 'Subject or topic',
+            'topic': 'Topic or subject',
+            'theme': 'Theme or style',
+            'style': 'Style or theme',
+            'format': 'Format specification',
+            'template': 'Template specification',
+            'pattern': 'Pattern specification',
+            'rule': 'Rule or constraint',
+            'constraint': 'Constraint or rule',
+            'validation': 'Validation rule',
+            'check': 'Check constraint',
+            'trigger': 'Trigger specification',
+            'event': 'Event specification',
+            'handler': 'Event handler',
+            'callback': 'Callback function',
+            'listener': 'Event listener',
+            'observer': 'Observer pattern',
+            'subscriber': 'Event subscriber',
+            'publisher': 'Event publisher',
+            'producer': 'Data producer',
+            'consumer': 'Data consumer',
+            'sender': 'Message sender',
+            'receiver': 'Message receiver',
+            'source': 'Data source',
+            'target': 'Data target',
+            'destination': 'Data destination',
+            'origin': 'Data origin',
+            'endpoint': 'Service endpoint',
+            'service': 'Service identifier',
+            'api': 'API identifier',
+            'interface': 'Interface specification',
+            'contract': 'Service contract',
+            'schema': 'Data schema',
+            'model': 'Data model',
+            'entity': 'Data entity',
+            'object': 'Data object',
+            'class': 'Class definition',
+            'type': 'Type definition',
+            'enum': 'Enumeration value',
+            'constant': 'Constant value',
+            'variable': 'Variable value',
+            'parameter': 'Parameter value',
+            'argument': 'Function argument',
+            'option': 'Configuration option',
+            'setting': 'Configuration setting',
+            'config': 'Configuration data',
+            'preference': 'User preference',
+            'choice': 'User choice',
+            'selection': 'User selection',
+            'input': 'Input data',
+            'output': 'Output data',
+            'request': 'Request data',
+            'response': 'Response data',
+            'payload': 'Data payload',
+            'body': 'Message body',
+            'header': 'Message header',
+            'metadata': 'Metadata information',
+            'info': 'Information data',
+            'details': 'Detail information',
+            'summary': 'Summary information',
+            'overview': 'Overview information',
+            'preview': 'Preview information',
+            'thumbnail': 'Thumbnail image',
+            'icon': 'Icon image',
+            'logo': 'Logo image',
+            'banner': 'Banner image',
+            'background': 'Background image',
+            'foreground': 'Foreground image',
+            'layer': 'Layer information',
+            'level': 'Level information',
+            'tier': 'Tier information',
+            'grade': 'Grade information',
+            'rating': 'Rating information',
+            'score': 'Score information',
+            'points': 'Points information',
+            'credits': 'Credits information',
+            'balance': 'Balance information',
+            'amount': 'Amount information',
+            'value': 'Value information',
+            'price': 'Price information',
+            'cost': 'Cost information',
+            'fee': 'Fee information',
+            'charge': 'Charge information',
+            'payment': 'Payment information',
+            'transaction': 'Transaction information',
+            'order': 'Order information',
+            'purchase': 'Purchase information',
+            'sale': 'Sale information',
+            'revenue': 'Revenue information',
+            'profit': 'Profit information',
+            'loss': 'Loss information',
+            'expense': 'Expense information',
+            'income': 'Income information',
+            'budget': 'Budget information',
+            'allocation': 'Allocation information',
+            'quota': 'Quota information',
+            'limit': 'Limit information',
+            'threshold': 'Threshold information',
+            'maximum': 'Maximum value',
+            'minimum': 'Minimum value',
+            'average': 'Average value',
+            'mean': 'Mean value',
+            'median': 'Median value',
+            'mode': 'Mode value',
+            'range': 'Range information',
+            'variance': 'Variance information',
+            'deviation': 'Deviation information',
+            'standard': 'Standard information',
+            'normal': 'Normal information',
+            'abnormal': 'Abnormal information',
+            'anomaly': 'Anomaly information',
+            'outlier': 'Outlier information',
+            'exception': 'Exception information',
+            'error': 'Error information',
+            'warning': 'Warning information',
+            'alert': 'Alert information',
+            'notification': 'Notification information',
+            'message': 'Message information',
+            'communication': 'Communication information',
+            'contact': 'Contact information',
+            'address': 'Address information',
+            'location': 'Location information',
+            'position': 'Position information',
+            'coordinate': 'Coordinate information',
+            'latitude': 'Latitude coordinate',
+            'longitude': 'Longitude coordinate',
+            'altitude': 'Altitude coordinate',
+            'elevation': 'Elevation coordinate',
+            'depth': 'Depth coordinate',
+            'distance': 'Distance information',
+            'length': 'Length information',
+            'width': 'Width information',
+            'height': 'Height information',
+            'size': 'Size information',
+            'dimension': 'Dimension information',
+            'area': 'Area information',
+            'volume': 'Volume information',
+            'capacity': 'Capacity information',
+            'weight': 'Weight information',
+            'mass': 'Mass information',
+            'density': 'Density information',
+            'temperature': 'Temperature information',
+            'pressure': 'Pressure information',
+            'humidity': 'Humidity information',
+            'speed': 'Speed information',
+            'velocity': 'Velocity information',
+            'acceleration': 'Acceleration information',
+            'force': 'Force information',
+            'energy': 'Energy information',
+            'power': 'Power information',
+            'current': 'Current information',
+            'voltage': 'Voltage information',
+            'resistance': 'Resistance information',
+            'frequency': 'Frequency information',
+            'wavelength': 'Wavelength information',
+            'amplitude': 'Amplitude information',
+            'phase': 'Phase information',
+            'signal': 'Signal information',
+            'noise': 'Noise information',
+            'quality': 'Quality information',
+            'performance': 'Performance information',
+            'efficiency': 'Efficiency information',
+            'effectiveness': 'Effectiveness information',
+            'productivity': 'Productivity information',
+            'throughput': 'Throughput information',
+            'latency': 'Latency information',
+            'bandwidth': 'Bandwidth information',
+            'capacity': 'Capacity information',
+            'utilization': 'Utilization information',
+            'availability': 'Availability information',
+            'reliability': 'Reliability information',
+            'durability': 'Durability information',
+            'stability': 'Stability information',
+            'consistency': 'Consistency information',
+            'accuracy': 'Accuracy information',
+            'precision': 'Precision information',
+            'recall': 'Recall information',
+            'f1': 'F1 score information',
+            'auc': 'AUC score information',
+            'roc': 'ROC curve information',
+            'confusion': 'Confusion matrix information',
+            'classification': 'Classification information',
+            'regression': 'Regression information',
+            'clustering': 'Clustering information',
+            'association': 'Association information',
+            'correlation': 'Correlation information',
+            'causation': 'Causation information',
+            'dependency': 'Dependency information',
+            'relationship': 'Relationship information',
+            'connection': 'Connection information',
+            'link': 'Link information',
+            'edge': 'Edge information',
+            'node': 'Node information',
+            'vertex': 'Vertex information',
+            'graph': 'Graph information',
+            'tree': 'Tree information',
+            'forest': 'Forest information',
+            'network': 'Network information',
+            'topology': 'Topology information',
+            'structure': 'Structure information',
+            'hierarchy': 'Hierarchy information',
+            'taxonomy': 'Taxonomy information',
+            'ontology': 'Ontology information',
+            'schema': 'Schema information',
+            'model': 'Model information',
+            'pattern': 'Pattern information',
+            'template': 'Template information',
+            'format': 'Format information',
+            'standard': 'Standard information',
+            'specification': 'Specification information',
+            'protocol': 'Protocol information',
+            'interface': 'Interface information',
+            'api': 'API information',
+            'service': 'Service information',
+            'endpoint': 'Endpoint information',
+            'resource': 'Resource information',
+            'asset': 'Asset information',
+            'entity': 'Entity information',
+            'object': 'Object information',
+            'instance': 'Instance information',
+            'record': 'Record information',
+            'row': 'Row information',
+            'column': 'Column information',
+            'field': 'Field information',
+            'attribute': 'Attribute information',
+            'property': 'Property information',
+            'feature': 'Feature information',
+            'characteristic': 'Characteristic information',
+            'trait': 'Trait information',
+            'aspect': 'Aspect information',
+            'dimension': 'Dimension information',
+            'factor': 'Factor information',
+            'element': 'Element information',
+            'component': 'Component information',
+            'part': 'Part information',
+            'piece': 'Piece information',
+            'fragment': 'Fragment information',
+            'segment': 'Segment information',
+            'section': 'Section information',
+            'chapter': 'Chapter information',
+            'page': 'Page information',
+            'line': 'Line information',
+            'word': 'Word information',
+            'character': 'Character information',
+            'byte': 'Byte information',
+            'bit': 'Bit information',
+            'nibble': 'Nibble information',
+            'octet': 'Octet information',
+            'word': 'Word information',
+            'dword': 'Double word information',
+            'qword': 'Quad word information',
+            'float': 'Float information',
+            'double': 'Double information',
+            'decimal': 'Decimal information',
+            'integer': 'Integer information',
+            'long': 'Long information',
+            'short': 'Short information',
+            'byte': 'Byte information',
+            'char': 'Char information',
+            'boolean': 'Boolean information',
+            'string': 'String information',
+            'text': 'Text information',
+            'varchar': 'Varchar information',
+            'char': 'Char information',
+            'nchar': 'NChar information',
+            'nvarchar': 'NVarchar information',
+            'text': 'Text information',
+            'ntext': 'NText information',
+            'image': 'Image information',
+            'binary': 'Binary information',
+            'varbinary': 'VarBinary information',
+            'blob': 'Blob information',
+            'clob': 'Clob information',
+            'nclob': 'NClob information',
+            'xml': 'XML information',
+            'json': 'JSON information',
+            'yaml': 'YAML information',
+            'csv': 'CSV information',
+            'tsv': 'TSV information',
+            'xlsx': 'XLSX information',
+            'pdf': 'PDF information',
+            'doc': 'DOC information',
+            'docx': 'DOCX information',
+            'ppt': 'PPT information',
+            'pptx': 'PPTX information',
+            'xls': 'XLS information',
+            'zip': 'ZIP information',
+            'rar': 'RAR information',
+            'tar': 'TAR information',
+            'gz': 'GZ information',
+            'bz2': 'BZ2 information',
+            '7z': '7Z information',
+            'iso': 'ISO information',
+            'img': 'IMG information',
+            'bin': 'BIN information',
+            'exe': 'EXE information',
+            'dll': 'DLL information',
+            'so': 'SO information',
+            'dylib': 'DYLIB information',
+            'a': 'A information',
+            'lib': 'LIB information',
+            'obj': 'OBJ information',
+            'o': 'O information',
+            'class': 'CLASS information',
+            'jar': 'JAR information',
+            'war': 'WAR information',
+            'ear': 'EAR information',
+            'sar': 'SAR information',
+            'rar': 'RAR information',
+            'zip': 'ZIP information',
+            'tar': 'TAR information',
+            'gz': 'GZ information',
+            'bz2': 'BZ2 information',
+            '7z': '7Z information',
+            'iso': 'ISO information',
+            'img': 'IMG information',
+            'bin': 'BIN information',
+            'exe': 'EXE information',
+            'dll': 'DLL information',
+            'so': 'SO information',
+            'dylib': 'DYLIB information',
+            'a': 'A information',
+            'lib': 'LIB information',
+            'obj': 'OBJ information',
+            'o': 'O information',
+            'class': 'CLASS information',
+            'jar': 'JAR information',
+            'war': 'WAR information',
+            'ear': 'EAR information',
+            'sar': 'SAR information'
+        }
+        
+        # Look for patterns in the column name
+        for pattern, description in patterns.items():
+            if pattern in name_lower:
+                return f"{description} for {column_name.replace('_', ' ').lower()}"
+        
+        # If no pattern matches, generate a generic description
+        return f"Data field for {column_name.replace('_', ' ').lower()}"
 
     def _validate_ddl_syntax(self, ddl: str) -> bool:
         """Basic validation of DDL syntax to catch obvious issues."""
@@ -1171,25 +1925,32 @@ class TableRetrieval:
             logger.error(f"Error building view DDL: {str(e)}")
             return ""
 
-    def _construct_db_schemas(self, column_docs: List[Dict], table_docs: List[Dict]) -> List[Dict]:
+    def _construct_db_schemas(self, schema_docs: List[Dict], table_docs: List[Dict], column_docs: List[Dict] = None) -> List[Dict]:
         """Construct database schemas from retrieved documents."""
         tables = {}
-        logger.info(f"Processing {len(table_docs)} table documents and {len(column_docs)} column documents")
+        if column_docs is None:
+            column_docs = []
+        logger.info(f"Processing {len(schema_docs)} schema documents, {len(table_docs)} table documents and {len(column_docs)} column documents")
         
-        # Process all documents (both table_docs and column_docs are now schema documents)
-        all_docs = table_docs + column_docs
+        # Process all documents - TABLE_COLUMNS already have all the information we need
+        all_docs = schema_docs + table_docs + column_docs
+        
+        logger.info(f"DEBUG: Processing documents: {len(schema_docs)} schema_docs, {len(table_docs)} table_docs, {len(column_docs)} column_docs")
         
         for doc in all_docs:
             content_dict = self._parse_doc_content(doc)
             logger.info(f"DEBUG: Processing schema doc: {content_dict}")
             
             # Check if this is a schema document with columns
-            if (content_dict.get('type') in ['TABLE_DESCRIPTION', 'TABLE_SCHEMA'] and 
-                content_dict.get('mdl_type') in ['TABLE_SCHEMA', 'METRIC', 'VIEW'] and 
+            if (content_dict.get('type') in ['TABLE_DESCRIPTION', 'TABLE_SCHEMA', 'TABLE_COLUMNS'] and 
+                (content_dict.get('mdl_type') in ['TABLE_SCHEMA', 'METRIC', 'VIEW'] or content_dict.get('type') == 'TABLE_COLUMNS') and 
                 'columns' in content_dict):
                 
+                # Extract table name - for TABLE_COLUMNS, it might be in different fields
+                table_name = content_dict.get('name', '') or content_dict.get('table_name', '')
+                logger.info(f"DEBUG: Processing {content_dict.get('type')} document for table {table_name}")
+                
                 logger.info(f"DEBUG: Found columns in content_dict: {content_dict.get('columns', [])[:2] if content_dict.get('columns') else 'None'}")
-                table_name = content_dict.get('name', '')
                 if not table_name:
                     continue
                     
@@ -1213,7 +1974,12 @@ class TableRetrieval:
                             "comment": "",
                             "is_primary_key": False,
                             "is_foreign_key": False,
-                            "notNull": False
+                            "notNull": False,
+                            # Default MDL properties for string columns
+                            "properties": {},
+                            "isCalculated": False,
+                            "expression": "",
+                            "relationship": {}
                         })
                 elif isinstance(columns, list):
                     # Columns are stored as list of dictionaries (from db_schema.py)
@@ -1254,15 +2020,28 @@ class TableRetrieval:
                                     fk_val = col['properties']['is_foreign_key']
                                     is_foreign_key = fk_val if isinstance(fk_val, bool) else fk_val.lower() == 'true'
                             
-                            processed_columns.append({
+                            # Preserve all MDL properties
+                            processed_column = {
                                 "name": col.get('name', ''),
                                 "type": col.get('type', 'VARCHAR'),
                                 "comment": comment,
                                 "description": description,
                                 "is_primary_key": is_primary_key,
                                 "is_foreign_key": is_foreign_key,
-                                "notNull": col.get('notNull', False)
-                            })
+                                "notNull": col.get('notNull', False),
+                                # Preserve all MDL properties
+                                "properties": col.get('properties', {}),
+                                "isCalculated": col.get('isCalculated', False),
+                                "expression": col.get('expression', ''),
+                                "relationship": col.get('relationship', {})
+                            }
+                            
+                            # Add any other properties that might exist in the column
+                            for key, value in col.items():
+                                if key not in processed_column:
+                                    processed_column[key] = value
+                            
+                            processed_columns.append(processed_column)
                         else:
                             # Handle string column names in list
                             processed_columns.append({
@@ -1271,11 +2050,16 @@ class TableRetrieval:
                                 "comment": "",
                                 "is_primary_key": False,
                                 "is_foreign_key": False,
-                                "notNull": False
+                                "notNull": False,
+                                # Default MDL properties for string columns
+                                "properties": {},
+                                "isCalculated": False,
+                                "expression": "",
+                                "relationship": {}
                             })
                 
-                # Only add table if we have processed columns or if it's a new table
-                if processed_columns or table_name not in tables:
+                # Create or update table with merged column information
+                if table_name not in tables:
                     tables[table_name] = {
                         "name": table_name,
                         "type": content_dict.get('type', 'TABLE'),
@@ -1283,13 +2067,14 @@ class TableRetrieval:
                         "columns": processed_columns,
                         "relationships": content_dict.get('relationships', [])
                     }
-                    logger.debug(f"Added table {table_name} with {len(processed_columns)} columns")
+                    logger.debug(f"Created table {table_name} with {len(processed_columns)} columns")
                 else:
                     # Update existing table with additional columns if any
                     existing_columns = tables[table_name].get('columns', [])
                     existing_columns.extend(processed_columns)
                     tables[table_name]['columns'] = existing_columns
                     logger.debug(f"Updated table {table_name} with additional {len(processed_columns)} columns")
+            
         
         # Fallback: Process column documents if no schema documents were found
         if not tables:
@@ -1573,7 +2358,8 @@ class TableRetrieval:
         self,
         column_selection: Dict,
         db_schemas: List[Dict],
-        schema_docs: List[Any]
+        schema_docs: List[Any],
+        table_columns_map: Dict[str, List[Dict[str, Any]]] = None
     ) -> Dict[str, Any]:
         """Construct final retrieval results with selected columns.
         
@@ -1612,7 +2398,17 @@ class TableRetrieval:
         enhanced_selection = self._analyze_relationships_for_column_selection(
             selected_tables, db_schemas
         )
+        logger.info(f"Original selected_tables: {selected_tables}")
         logger.info(f"Enhanced column selection with relationships: {enhanced_selection}")
+        
+        # Log the difference between original and enhanced selection
+        for table_name, original_cols in selected_tables.items():
+            enhanced_cols = enhanced_selection.get(table_name, set())
+            added_cols = enhanced_cols - original_cols
+            if added_cols:
+                logger.info(f"Table {table_name}: Added {len(added_cols)} columns from relationships: {added_cols}")
+            else:
+                logger.info(f"Table {table_name}: No additional columns added from relationships")
         
         retrieval_results = []
         has_calculated_field = False
@@ -1628,44 +2424,99 @@ class TableRetrieval:
             if not table_name or table_name not in enhanced_selection:
                 continue
                 
-            # Use the full schema columns instead of just selected ones
-            # This ensures we get all column information with proper types and descriptions
-            schema_columns = schema.get("columns", [])
+            # Use TABLE_COLUMNS data if available, otherwise fall back to schema columns
+            selected_columns = enhanced_selection.get(table_name, set())
             
-            # Convert schema columns to the format expected by _build_column_defs
-            filtered_columns = []
-            logger.info(f"DEBUG: Processing {len(schema_columns)} columns for table {table_name}")
-            for col in schema_columns:
-                if isinstance(col, dict):
-                    # The comment and description are already processed in _construct_db_schemas
-                    # Just use them directly
-                    comment = col.get('comment', '')
-                    description = col.get('description', '')
+            # Check if we have TABLE_COLUMNS data for this table
+            if table_columns_map and table_name in table_columns_map:
+                # Use TABLE_COLUMNS data which already has properly formatted comments
+                table_columns = table_columns_map[table_name]
+                logger.info(f"DEBUG: Using TABLE_COLUMNS data for {table_name} with {len(table_columns)} columns")
+                logger.info(f"DEBUG: TABLE_COLUMNS sample: {table_columns[0] if table_columns else 'None'}")
+                
+                # Filter to only selected columns
+                filtered_columns = []
+                for col in table_columns:
+                    column_name = col.get('name', '')
                     
-                    column_info = {
-                        'name': col.get('name', ''),
-                        'data_type': col.get('type', col.get('data_type', 'VARCHAR')),
-                        'comment': comment,
-                        'description': description,
-                        'is_primary_key': col.get('is_primary_key', False),
-                        'is_foreign_key': col.get('is_foreign_key', False),
-                        'notNull': col.get('notNull', False)
-                    }
-                    filtered_columns.append(column_info)
-                    logger.info(f"DEBUG: Column {col.get('name', '')}: comment='{comment[:50] if comment else 'None'}...', description='{description[:50] if description else 'None'}...'")
-                else:
-                    # Fallback for string columns
-                    filtered_columns.append({
-                        'name': str(col),
-                        'data_type': 'VARCHAR',
-                        'comment': f'Column {col}',
-                        'description': '',
-                        'is_primary_key': False,
-                        'is_foreign_key': False,
-                        'notNull': False
-                    })
+                    # Only include columns that were selected by the column selection process
+                    if column_name not in selected_columns:
+                        logger.debug(f"DEBUG: Skipping column {column_name} - not in selected columns")
+                        continue
+                    
+                    # TABLE_COLUMNS already has properly formatted comments from helper functions
+                    filtered_columns.append(col)
+                    logger.info(f"DEBUG: TABLE_COLUMNS column {column_name}: comment='{col.get('comment', '')[:50] if col.get('comment') else 'None'}...'")
+            else:
+                logger.info(f"DEBUG: No TABLE_COLUMNS data for {table_name}, using schema columns")
+                # Fallback to schema columns (existing logic)
+                schema_columns = schema.get("columns", [])
+                logger.info(f"DEBUG: Using schema columns for {table_name} with {len(schema_columns)} columns, selected: {len(selected_columns)}")
+                
+                # Convert schema columns to the format expected by _build_column_defs
+                # Only include columns that were selected by the column selection process
+                filtered_columns = []
+                for col in schema_columns:
+                    logger.info(f"DEBUG: Processing column: {col}")
+                    if isinstance(col, dict):
+                        column_name = col.get('name', '')
+                        
+                        # Only include columns that were selected by the column selection process
+                        if column_name not in selected_columns:
+                            logger.debug(f"DEBUG: Skipping column {column_name} - not in selected columns")
+                            continue
+                        
+                        # The comment and description are already processed in _construct_db_schemas
+                        # Just use them directly
+                        comment = col.get('comment', '')
+                        description = col.get('description', '')
+                        
+                        column_info = {
+                            'name': column_name,
+                            'data_type': col.get('type', col.get('data_type', 'VARCHAR')),
+                            'comment': comment,
+                            'description': description,
+                            'is_primary_key': col.get('is_primary_key', False),
+                            'is_foreign_key': col.get('is_foreign_key', False),
+                            'notNull': col.get('notNull', False),
+                            # Preserve all MDL properties
+                            'properties': col.get('properties', {}),
+                            'isCalculated': col.get('isCalculated', False),
+                            'expression': col.get('expression', ''),
+                            'relationship': col.get('relationship', {})
+                        }
+                        
+                        # Add any other properties that might exist in the column
+                        for key, value in col.items():
+                            if key not in column_info:
+                                column_info[key] = value
+                        filtered_columns.append(column_info)
+                        logger.info(f"DEBUG: Column {column_name}: comment='{comment[:50] if comment else 'None'}...', description='{description[:50] if description else 'None'}...'")
+                    else:
+                        # Fallback for string columns - only include if selected
+                        col_name = str(col)
+                        if col_name not in selected_columns:
+                            logger.debug(f"DEBUG: Skipping string column {col_name} - not in selected columns")
+                            continue
+                            
+                        filtered_columns.append({
+                            'name': col_name,
+                            'data_type': 'VARCHAR',
+                            'comment': f'Column {col}',
+                            'description': '',
+                            'is_primary_key': False,
+                            'is_foreign_key': False,
+                            'notNull': False,
+                            # Default MDL properties for string columns
+                            'properties': {},
+                            'isCalculated': False,
+                            'expression': '',
+                            'relationship': {}
+                        })
             
-            # Build DDL with full schema columns
+            # Build DDL with selected columns only (pruned for efficiency)
+            logger.info(f"DEBUG: Building DDL for table {table_name} with {len(filtered_columns)} selected columns")
+            logger.info(f"DEBUG: Sample filtered column: {filtered_columns[0] if filtered_columns else 'None'}")
             ddl = self._build_table_ddl(
                 table_name,
                 schema.get("description", ""),
@@ -1675,6 +2526,8 @@ class TableRetrieval:
             
             # Only add to results if DDL was successfully generated
             if ddl:
+                logger.info(f"DEBUG: Generated DDL for {table_name} - Length: {len(ddl)} characters")
+                logger.info(f"DEBUG: DDL preview: {ddl[:200]}...")
                 # Extract relationships from table descriptions
                 relationships = []
                 for doc in schema_docs:
@@ -1760,6 +2613,16 @@ class TableRetrieval:
                 logger.warning(f"Error processing schema document: {str(e)}")
                 continue
                 
+        # Log summary of DDL sizes
+        total_ddl_size = sum(len(result.get("table_ddl", "")) for result in retrieval_results)
+        logger.info(f"=== DDL SIZE SUMMARY ===")
+        logger.info(f"Total retrieval results: {len(retrieval_results)}")
+        logger.info(f"Total DDL size: {total_ddl_size} characters")
+        for result in retrieval_results:
+            table_name = result.get("table_name", "unknown")
+            ddl_size = len(result.get("table_ddl", ""))
+            logger.info(f"  {table_name}: {ddl_size} characters")
+        
         logger.info(f"retrieval_results in table retrieval: {retrieval_results}")
         return {
             "retrieval_results": retrieval_results,

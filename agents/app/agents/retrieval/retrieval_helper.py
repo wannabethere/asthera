@@ -190,13 +190,12 @@ class RetrievalHelper:
                     if table_ddl:
                         print(f"Result {i} - table_ddl preview: {table_ddl[:200]}...")
                     
-                    # Create enhanced DDL with column metadata
-                    enhanced_ddl = self._enhance_ddl_with_column_metadata(table_ddl, column_metadata)
-                    
+                    # Use the DDL as-is since it already contains the necessary column information
+                    # The _build_table_ddl method in retrieval.py already processes COLUMN_METADATA
                     schema_info = {
                         "table_name": table_name,
-                        "table_ddl": enhanced_ddl,  # Use enhanced DDL
-                        "column_metadata": column_metadata,  # Include column metadata
+                        "table_ddl": table_ddl,  # Use DDL directly without enhancement
+                        "column_metadata": column_metadata,  # Include column metadata for reference
                         "relationships": result.get("relationships", []),
                         "has_calculated_field": schema_result.get("has_calculated_field", False),
                         "has_metric": schema_result.get("has_metric", False)
@@ -780,58 +779,6 @@ class RetrievalHelper:
             logger.error(f"Error retrieving column metadata for table {table_name}: {e}")
             return []
 
-    def _enhance_ddl_with_column_metadata(self, table_ddl: str, column_metadata: List[Dict[str, Any]]) -> str:
-        """Enhance DDL with detailed column metadata including datatypes"""
-        if not column_metadata:
-            return table_ddl
-        
-        logger.info(f"Enhancing DDL with {len(column_metadata)} column metadata entries")
-        
-        # Create a mapping of column names to their correct data types
-        column_type_map = {}
-        for col in column_metadata:
-            col_name = col.get("column_name", "")
-            data_type = col.get("type", "")
-            if col_name and data_type and data_type != "VARCHAR":
-                column_type_map[col_name] = data_type
-                logger.debug(f"Column {col_name} -> type: {data_type}")
-        
-        logger.info(f"Found {len(column_type_map)} columns with non-VARCHAR types")
-        
-        # Update the DDL with correct data types
-        enhanced_ddl = table_ddl
-        for col_name, correct_type in column_type_map.items():
-            # Replace VARCHAR with correct data type for this column
-            # Pattern: column_name VARCHAR, -> column_name CORRECT_TYPE,
-            import re
-            pattern = rf'(\b{re.escape(col_name)}\s+)VARCHAR(\s*[,)])'
-            replacement = rf'\1{correct_type}\2'
-            enhanced_ddl = re.sub(pattern, replacement, enhanced_ddl)
-            logger.debug(f"Replaced {col_name} VARCHAR with {correct_type}")
-        
-        # Create column metadata section
-        metadata_section = "\n\n-- COLUMN METADATA WITH DATATYPES --\n"
-        for col in column_metadata:
-            col_name = col.get("column_name", "")
-            data_type = col.get("type", "")
-            description = col.get("description", "")
-            is_calculated = col.get("is_calculated", False)
-            is_primary_key = col.get("is_primary_key", False)
-            is_foreign_key = col.get("is_foreign_key", False)
-            
-            if col_name and data_type:
-                metadata_section += f"-- {col_name} ({data_type})"
-                if description:
-                    metadata_section += f": {description}"
-                if is_calculated:
-                    metadata_section += " [CALCULATED FIELD]"
-                if is_primary_key:
-                    metadata_section += " [PRIMARY KEY]"
-                if is_foreign_key:
-                    metadata_section += " [FOREIGN KEY]"
-                metadata_section += "\n"
-        
-        return enhanced_ddl + metadata_section
 
 async def main():
     """Main function to test the RetrievalHelper functionality."""

@@ -212,6 +212,12 @@ class DDLChunker:
                 "name": column["name"],
                 "data_type": column["type"],
                 "is_primary_key": column["name"] == model["primaryKey"],
+                # Preserve all MDL properties
+                "properties": column.get("properties", {}),
+                "isCalculated": column.get("isCalculated", False),
+                "expression": column.get("expression", ""),
+                "relationship": column.get("relationship", {}),
+                "notNull": column.get("notNull", False)
             }
 
         def _relationship_command(

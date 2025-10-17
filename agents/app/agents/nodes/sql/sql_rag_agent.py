@@ -721,12 +721,19 @@ Please provide your response in proper Markdown string format.
             # Create configuration object
             config = Configuration(**(configuration or {}))
             
+            # Load project-specific instructions
+            project_instructions = self._load_project_instructions(project_id)
+            logger.info(f"Loaded {len(project_instructions)} project-specific instructions for {project_id}")
+            
             # Construct instructions
             instructions = construct_instructions(
                 configuration=config,
                 has_calculated_field=any("Calculated Field" in ctx for ctx in all_contexts),
-                has_metric=any("metric" in ctx.lower() for ctx in all_contexts)
+                has_metric=any("metric" in ctx.lower() for ctx in all_contexts),
+                instructions=project_instructions
             )
+
+            logger.info(f"Generating SQL for query instructions: {instructions}")
             logger.debug(f"reasoning in generate sql internal in sql_rag_agent: {reasoning}")
             # Add reasoning if provided
             if reasoning:
@@ -746,6 +753,9 @@ Please provide your response in proper Markdown string format.
             
             print(f"=== FINAL INSTRUCTIONS TO LLM ===")
             print(f"Instructions length: {len(instructions)}")
+            print(f"Project-specific instructions loaded: {len(project_instructions)}")
+            if project_instructions:
+                print(f"Project instructions: {project_instructions[0].get('instruction', '')[:200]}...")
             print(f"Instructions preview: {instructions[:500]}...")
             print(f"=== END INSTRUCTIONS PREVIEW ===")
             
@@ -1328,6 +1338,41 @@ Please provide your response in proper Markdown string format.
         
         return "\n".join(formatted_relationships)
     
+    def _load_project_instructions(self, project_id: str) -> List[Dict]:
+        """Load project-specific instructions from project_instructions.json."""
+        try:
+            import json
+            import os
+            
+            # Path to project_instructions.json
+            instructions_path = os.path.join(
+                os.path.dirname(__file__), 
+                "..", "..", "..", "..", "..", "..", "config", 
+                "project_instructions.json"
+            )
+            
+            if not os.path.exists(instructions_path):
+                logger.warning(f"Project instructions file not found: {instructions_path}")
+                return []
+            
+            with open(instructions_path, 'r') as f:
+                project_instructions_data = json.load(f)
+            
+            # Get instructions for the specific project
+            project_instructions = project_instructions_data.get(project_id, {})
+            instructions = project_instructions.get("instructions", "")
+            
+            if instructions:
+                logger.info(f"Loaded project-specific instructions for {project_id}: {instructions}")
+                return [{"instruction": instructions}]
+            else:
+                logger.info(f"No project-specific instructions found for {project_id}")
+                return []
+                
+        except Exception as e:
+            logger.error(f"Error loading project instructions for {project_id}: {str(e)}")
+            return []
+
     def _format_relationships_for_sql_generation(self, relationships: List[Dict]) -> str:
         """Format relationships for inclusion in SQL generation prompts."""
         if not relationships:

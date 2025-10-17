@@ -3,14 +3,28 @@ from uuid import UUID
 import uuid
 import json
 from datetime import datetime, timezone
+from app.models.workspace import ProjectAccess, Project
+from app.models.user import User
+from app.models.team import Team
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, func, select
+from sqlalchemy.orm import joinedload,selectinload
+from sqlalchemy import and_, or_
 import traceback
-
+from app.models.workflowmodels import (
+    DashboardWorkflow, ThreadComponent, ShareConfiguration,
+    ScheduleConfiguration, IntegrationConfig, WorkflowVersion,
+    WorkflowState, ComponentType, ShareType, ScheduleType, IntegrationType,
+    ThreadComponentCreate, ThreadComponentUpdate, ShareConfigCreate,
+    ScheduleConfigCreate, IntegrationConfigCreate, AlertType, AlertSeverity,
+    AlertStatus, AlertThreadComponentCreate, AlertThreadComponentUpdate,ReportWorkflow
+)
+from app.models.dbmodels import Report,ReportVersion
 def utc_now():
     """Get current UTC datetime for SQLAlchemy defaults"""
     return datetime.now()
 
+# from app.routers import report_writing
 from app.services.baseservice import BaseService
 from app.models.workflowmodels import SharingPermission
 from app.services.reportservice import ReportService
@@ -179,7 +193,14 @@ class ReportWorkflowService(BaseService):
             # Update report content
             await self._update_report_content(workflow)
 
-            await self.db.commit()
+            try:
+                await self.db.commit()
+            except Exception as e:
+                print("======== Error in add_section Commit============")
+                traceback.print_exc()
+                print("===============Error ended heree =================")
+                # await self.db.rollback()
+                raise e
             return section
         except Exception as e:
             print("======== Error in add_section============")
@@ -357,162 +378,462 @@ class ReportWorkflowService(BaseService):
         """Get a specific report by ID with all details including sharing, scheduling, and integrations"""
         
         # Get report
-        stmt = select(Report).where(Report.id == report_id)
-        result = await self.db.execute(stmt)
-        report = result.scalar_one_or_none()
-        
-        if not report:
-            raise ValueError(f"Report {report_id} not found")
-        
-        # Get workflow if not provided
-        if not workflow_id:
-            stmt = select(ReportWorkflow).where(ReportWorkflow.report_id == report_id)
+        try:
+
+            stmt = select(Report).where(Report.id == report_id)
             result = await self.db.execute(stmt)
-            workflow = result.scalar_one_or_none()
-        else:
-            workflow = await self._get_report_workflow(workflow_id, user_id)
+            report = result.scalar_one_or_none()
+            
+            if not report:
+                raise ValueError(f"Report {report_id} not found")
+            
+            # Get workflow if not provided
+            if not workflow_id:
+                stmt = select(ReportWorkflow).options(
+                        joinedload(ReportWorkflow.share_configs),
+                        joinedload(ReportWorkflow.schedule_config),
+                        joinedload(ReportWorkflow.integrations),
+                        joinedload(ReportWorkflow.thread_components)
+                    ).where(ReportWorkflow.report_id == report_id)
+                result = await self.db.execute(stmt)
+                workflow = result.unique().scalar_one_or_none()
+            else:
+                workflow = await self._get_report_workflow(workflow_id, user_id)
+            
+            if not workflow:
+                raise ValueError(f"Workflow not found for report {report_id}")
+            
+            # Get sharing information from report service
+            sharing_configs = []
+            if workflow.share_configs:
+                for config in workflow.share_configs:
+                    sharing_configs.append({
+                        "id": str(config.id),
+                        "share_type": config.share_type.value,
+                        "target_id": str(config.target_id) if config.target_id else None,
+                        "target_email": getattr(config, 'target_email', None),
+                        "permission_level": config.permissions.get('permission_level', 'read') if config.permissions else 'read',
+                        "created_at": config.created_at.isoformat()
+                    })
+            print("Crossed sharing_configs")
+            
+            # Get schedule configuration from workflow metadata
+            schedule_config = None
+            if workflow.workflow_metadata and "schedule" in workflow.workflow_metadata:
+                schedule_data = workflow.workflow_metadata["schedule"]
+                schedule_config = {
+                    "schedule_type": schedule_data.get("schedule_type"),
+                    "cron_expression": schedule_data.get("cron_expression"),
+                    "timezone": schedule_data.get("timezone"),
+                    "start_date": schedule_data.get("start_date"),
+                    "end_date": schedule_data.get("end_date"),
+                    "original_timezone": schedule_data.get("original_timezone"),
+                    "recipients": schedule_data.get("recipients", []),
+                    "format": schedule_data.get("format"),
+                    "delivery_method": schedule_data.get("delivery_method")
+                }
+            
+            # Get sections
+            sections = workflow.sections or []
+            print("Crossed sections")
+            # Get data sources
+            data_sources = workflow.data_sources or []
+            
+            # Get formatting
+            formatting = workflow.formatting or {}
+            print("crossed formatter")
+            # Get alert components from ThreadComponent table
+            alert_components = []
+            print("crossed alert config")
+            # First, get alert components from ThreadComponent table
+            stmt = select(ThreadComponent).where(
+                and_(
+                    ThreadComponent.workflow_id == workflow.id,
+                    ThreadComponent.component_type == ComponentType.ALERT
+                )
+            ).order_by(ThreadComponent.sequence_order)
+            result = await self.db.execute(stmt)
+            thread_alert_components = result.scalars().all()
+            
+            for component in thread_alert_components:
+                alert_config = component.alert_config or {}
+                alert_components.append({
+                    "id": str(component.id),
+                    "question": component.question,
+                    "description": component.description,
+                    "alert_type": alert_config.get("alert_type"),
+                    "severity": alert_config.get("severity"),
+                    "alert_status": component.alert_status.value if component.alert_status else None,
+                    "trigger_count": component.trigger_count or 0,
+                    "last_triggered": component.last_triggered.isoformat() if component.last_triggered else None,
+                    "created_at": component.created_at.isoformat(),
+                    "sql_query": component.sql_query,
+                    "executive_summary": component.executive_summary,
+                    "data_overview": component.data_overview,
+                    "visualization_data": component.visualization_data,
+                    "sample_data": component.sample_data,
+                    "metadata": component.thread_metadata,
+                    "chart_schema": component.chart_schema,
+                    "reasoning": component.reasoning,
+                    "data_count": component.data_count,
+                    "validation_results": component.validation_results
+                })
+            print("crossed alert components")
+            
+            # Also include alert components from workflow metadata (for backward compatibility)
+            if workflow.workflow_metadata and "alerts" in workflow.workflow_metadata:
+                for alert in workflow.workflow_metadata["alerts"]:
+                    # Check if this alert is already included from ThreadComponent table
+                    alert_id = alert["id"]
+                    if not any(comp["id"] == alert_id for comp in alert_components):
+                        alert_components.append({
+                            "id": alert["id"],
+                            "question": alert["question"],
+                            "description": alert["description"],
+                            "alert_type": alert["alert_config"]["alert_type"],
+                            "severity": alert["alert_config"]["severity"],
+                            "alert_status": alert["alert_status"],
+                            "trigger_count": alert["trigger_count"],
+                            "last_triggered": alert["last_triggered"],
+                            "created_at": alert["created_at"],
+                            "sql_query": alert.get("sql_query")
+                        })
+            
+            # Get draft changes
+            draft_changes = workflow.workflow_metadata.get("draft_changes", {})
+            print("before return")
+            try:
+                
+                return {
+                    "report": {
+                        "id": str(report.id),
+                        "name": report.name,
+                        "description": report.description,
+                        "content": report.content,
+                        "metadata": workflow.workflow_metadata,
+                        "version": report.version,
+                        "is_active": report.is_active,
+                        "created_at": report.created_at.isoformat(),
+                        "updated_at": report.updated_at.isoformat()
+                    },
+                    "workflow": {
+                        "id": str(workflow.id),
+                        "state": workflow.state.value,
+                        "current_step": workflow.current_step,
+                        "report_template": workflow.report_template,
+                        "created_at": workflow.created_at.isoformat(),
+                        "updated_at": workflow.updated_at.isoformat(),
+                        "completed_at": workflow.completed_at.isoformat() if workflow.completed_at else None
+                    },
+                    "sharing": {
+                        "configurations": sharing_configs,
+                        "total_shared": len(sharing_configs)
+                    },
+                    "scheduling": {
+                        "configuration": schedule_config,
+                        "has_schedule": schedule_config is not None
+                    },
+                    "sections": {
+                        "list": sections,
+                        "total_sections": len(sections)
+                    },
+                    "data_sources": {
+                        "list": data_sources,
+                        "total_sources": len(data_sources)
+                    },
+                    "formatting": formatting,
+                    "components": {
+                        "alert_components": alert_components,
+                        "total_components": len(alert_components)
+                    },
+                    "draft_changes": {
+                        "has_draft_changes": draft_changes.get("has_draft_changes", False),
+                        "last_edited_at": draft_changes.get("last_edited_at"),
+                        "edited_by": draft_changes.get("edited_by"),
+                        "last_published_at": draft_changes.get("last_published_at"),
+                        "published_by": draft_changes.get("published_by")
+                    }
+                }
+            except Exception as e:
+                print("Exception occurred:", str(e))
+                print("Full traceback:")
+                traceback.print_exc()
+        except Exception as e:
+                print("Exception occurred:", str(e))
+                print("Full traceback:")
+                print("============== Exception in get_report_by_id")
+                traceback.print_exc()
+                print("============== Exception Ended in get_report_by_id")
+
+    async def get_all_reports(self, user_id, state=None, limit=None):
+       
         
-        if not workflow:
-            raise ValueError(f"Workflow not found for report {report_id}")
+        # Get user's teams and projects for shared dashboard filtering
+        user_stmt = select(User).options(
+            joinedload(User.teams),
+            joinedload(User.project_access).joinedload(ProjectAccess.project)
+        ).where(User.id == user_id)
         
-        # Get sharing information from report service
-        sharing_info = await self.report_service.get_report_sharing_info(user_id, report_id)
+        user_result = await self.db.execute(user_stmt)
+        user = user_result.unique().scalar_one_or_none()
         
-        # Get schedule configuration from workflow metadata
-        schedule_config = None
-        if workflow.workflow_metadata and "schedule" in workflow.workflow_metadata:
-            schedule_data = workflow.workflow_metadata["schedule"]
-            schedule_config = {
-                "schedule_type": schedule_data.get("schedule_type"),
-                "cron_expression": schedule_data.get("cron_expression"),
-                "timezone": schedule_data.get("timezone"),
-                "start_date": schedule_data.get("start_date"),
-                "end_date": schedule_data.get("end_date"),
-                "original_timezone": schedule_data.get("original_timezone"),
-                "recipients": schedule_data.get("recipients", []),
-                "format": schedule_data.get("format"),
-                "delivery_method": schedule_data.get("delivery_method")
-            }
+        if not user:
+            return {"my_reports": [], "shared_reports": []}
         
-        # Get sections
-        sections = workflow.sections or []
+        user_team_ids = [str(team.id) for team in user.teams] if user.teams else []
+        user_project_ids = [str(pa.project.id) for pa in user.project_access if pa.project] if user.project_access else []
+        user_email = user.email if hasattr(user, 'email') else None
+        # 1. Get owned reports
+        owned_stmt = select(ReportWorkflow).options(
+            joinedload(ReportWorkflow.report)
+        ).where(
+            ReportWorkflow.user_id == user_id
+        )
         
-        # Get data sources
-        data_sources = workflow.data_sources or []
+        if state:
+            owned_stmt = owned_stmt.where(ReportWorkflow.state == state)
         
-        # Get formatting
-        formatting = workflow.formatting or {}
+        owned_result = await self.db.execute(owned_stmt)
+        owned_workflows = owned_result.scalars().all()
+        print("after owned workflows")
+        # 2. Get shared report workflow IDs
+        share_conditions = [
+            and_(ShareConfiguration.share_type == ShareType.USER, ShareConfiguration.target_id == str(user_id)),
+        ]
         
-        # Get alert components from ThreadComponent table
-        alert_components = []
-        
-        # First, get alert components from ThreadComponent table
-        stmt = select(ThreadComponent).where(
-            and_(
-                ThreadComponent.workflow_id == workflow.id,
-                ThreadComponent.component_type == ComponentType.ALERT
+        if user_team_ids:
+            share_conditions.append(
+                and_(ShareConfiguration.share_type == ShareType.TEAM, ShareConfiguration.target_id.in_(user_team_ids))
             )
-        ).order_by(ThreadComponent.sequence_order)
-        result = await self.db.execute(stmt)
-        thread_alert_components = result.scalars().all()
         
-        for component in thread_alert_components:
-            alert_config = component.alert_config or {}
-            alert_components.append({
-                "id": str(component.id),
-                "question": component.question,
-                "description": component.description,
-                "alert_type": alert_config.get("alert_type"),
-                "severity": alert_config.get("severity"),
-                "alert_status": component.alert_status.value if component.alert_status else None,
-                "trigger_count": component.trigger_count or 0,
-                "last_triggered": component.last_triggered.isoformat() if component.last_triggered else None,
-                "created_at": component.created_at.isoformat(),
-                "sql_query": component.sql_query,
-                "executive_summary": component.executive_summary,
-                "data_overview": component.data_overview,
-                "visualization_data": component.visualization_data,
-                "sample_data": component.sample_data,
-                "metadata": component.thread_metadata,
-                "chart_schema": component.chart_schema,
-                "reasoning": component.reasoning,
-                "data_count": component.data_count,
-                "validation_results": component.validation_results
+        if user_project_ids:
+            share_conditions.append(
+                and_(ShareConfiguration.share_type == ShareType.PROJECT, ShareConfiguration.target_id.in_(user_project_ids))
+            )
+        
+        if user_email:
+            share_conditions.append(
+                and_(ShareConfiguration.share_type == ShareType.EMAIL, ShareConfiguration.target_id == user_email)
+            )
+        
+        shared_stmt = select(ShareConfiguration).options(
+            joinedload(ShareConfiguration.report_workflow).joinedload(ReportWorkflow.report)
+        ).where(
+            and_(
+                ShareConfiguration.report_workflow_id.is_not(None),  # Only report shares
+                or_(*share_conditions) if share_conditions else False
+            )
+        )
+        
+        shared_result = await self.db.execute(shared_stmt)
+        shared_configs = shared_result.unique().scalars().all()
+        print("Shared configs for owned")
+        # Filter shared workflows by state if needed and exclude owned workflows
+        owned_workflow_ids = {str(wf.id) for wf in owned_workflows}
+        shared_workflows = []
+        
+        for share_config in shared_configs:
+            workflow = share_config.workflow
+            if workflow and workflow.report and str(workflow.id) not in owned_workflow_ids:
+                if state is None or workflow.state == state:
+                    shared_workflows.append((workflow, share_config))
+        
+        # 3. Build owned reports response
+        my_reports = []
+        for workflow in owned_workflows:
+            report = workflow.report
+            if report is None:
+                continue
+                
+            my_reports.append({
+                "report_id": str(report.id),
+                "report_name": report.name,
+                "report_description": report.description,
+                "report_type": report.reportType,
+                "content": report.content,
+                "is_active": report.is_active,
+                "version": report.version,
+                "created_at": report.created_at,
+                "updated_at": report.updated_at,
+                "user_id": str(workflow.user_id),
+                "workflow_id": str(workflow.id),
+                "permissions": {"Action": "admin"}
+            })
+            print(" I am after owned reports")
+        
+        # 4. Build shared reports response with share info
+        shared_reports = []
+        
+        # Get additional info for shared_by field
+        share_user_ids = {sc.workflow.user_id for _, sc in shared_workflows if sc.workflow}
+        share_team_ids = {sc.target_id for _, sc in shared_workflows if sc.share_type == ShareType.TEAM}
+        share_project_ids = {sc.target_id for _, sc in shared_workflows if sc.share_type == ShareType.PROJECT}
+        
+        # Fetch users for shared_by info
+        users_map = {}
+        if share_user_ids:
+            users_stmt = select(User).where(User.id.in_(share_user_ids))
+            users_result = await self.db.execute(users_stmt)
+            users_map = {str(user.id): user for user in users_result.scalars().all()}
+        
+        # Fetch teams for shared_by info
+        teams_map = {}
+        if share_team_ids:
+            teams_stmt = select(Team).where(Team.id.in_([uuid.UUID(tid) for tid in share_team_ids if tid]))
+            teams_result = await self.db.execute(teams_stmt)
+            teams_map = {str(team.id): team for team in teams_result.scalars().all()}
+        
+        # Fetch projects for shared_by info
+        projects_map = {}
+        if share_project_ids:
+            projects_stmt = select(Project).where(Project.id.in_([uuid.UUID(pid) for pid in share_project_ids if pid]))
+            projects_result = await self.db.execute(projects_stmt)
+            projects_map = {str(project.id): project for project in projects_result.scalars().all()}
+        
+        for workflow, share_config in shared_workflows:
+            report = workflow.report
+            
+            # Determine shared_by based on share_type
+            shared_by = ""
+            if share_config.share_type == ShareType.USER:
+                owner_user = users_map.get(str(workflow.user_id))
+                shared_by = owner_user.name if owner_user and hasattr(owner_user, 'name') else f"User {workflow.user_id}"
+            elif share_config.share_type == ShareType.TEAM:
+                team = teams_map.get(share_config.target_id)
+                shared_by = team.name if team and hasattr(team, 'name') else f"Team {share_config.target_id}"
+            elif share_config.share_type == ShareType.PROJECT:
+                project = projects_map.get(share_config.target_id)
+                shared_by = project.name if project and hasattr(project, 'name') else f"Project {share_config.target_id}"
+            elif share_config.share_type == ShareType.EMAIL:
+                shared_by = share_config.target_id
+            
+            shared_reports.append({
+                "report_id": str(report.id),
+                "report_name": report.name,
+                "report_description": report.description,
+                "reportType": report.reportType,
+                "content": report.content,
+                "is_active": report.is_active,
+                "version": report.version,
+                "created_at": report.created_at,
+                "updated_at": report.updated_at,
+                "user_id": str(workflow.user_id),
+                "workflow_id": str(workflow.id),
+                "permissions": share_config.permissions or {},
+                "shared_by": shared_by,
+                "share_type": share_config.share_type.value if hasattr(share_config.share_type, 'value') else str(share_config.share_type),
+                "accepted": share_config.accepted
             })
         
-        # Also include alert components from workflow metadata (for backward compatibility)
-        if workflow.workflow_metadata and "alerts" in workflow.workflow_metadata:
-            for alert in workflow.workflow_metadata["alerts"]:
-                # Check if this alert is already included from ThreadComponent table
-                alert_id = alert["id"]
-                if not any(comp["id"] == alert_id for comp in alert_components):
-                    alert_components.append({
-                        "id": alert["id"],
-                        "question": alert["question"],
-                        "description": alert["description"],
-                        "alert_type": alert["alert_config"]["alert_type"],
-                        "severity": alert["alert_config"]["severity"],
-                        "alert_status": alert["alert_status"],
-                        "trigger_count": alert["trigger_count"],
-                        "last_triggered": alert["last_triggered"],
-                        "created_at": alert["created_at"],
-                        "sql_query": alert.get("sql_query")
-                    })
-        
-        # Get draft changes
-        draft_changes = workflow.workflow_metadata.get("draft_changes", {})
+        # 5. Apply limit if specified (across both sets)
+        if limit:
+            total_reports = my_reports + shared_reports
+            if len(total_reports) > limit:
+                # Prioritize owned dashboards, then shared
+                if len(my_reports) >= limit:
+                    my_reports = my_reports[:limit]
+                    shared_reports = []
+                else:
+                    remaining_limit = limit - len(my_reports)
+                    shared_reports = shared_reports[:remaining_limit]
         
         return {
-            "report": {
-                "id": str(report.id),
-                "name": report.name,
-                "description": report.description,
-                "content": report.content,
-                "metadata": report.metadata,
-                "version": report.version,
-                "is_active": report.is_active,
-                "created_at": report.created_at.isoformat(),
-                "updated_at": report.updated_at.isoformat()
-            },
-            "workflow": {
-                "id": str(workflow.id),
-                "state": workflow.state.value,
-                "current_step": workflow.current_step,
-                "report_template": workflow.report_template,
-                "created_at": workflow.created_at.isoformat(),
-                "updated_at": workflow.updated_at.isoformat(),
-                "completed_at": workflow.completed_at.isoformat() if workflow.completed_at else None
-            },
-            "sharing": {
-                "shared_with": sharing_info.get("shared_with", []),
-                "permission_level": sharing_info.get("permission_level"),
-                "total_shared": len(sharing_info.get("shared_with", []))
-            },
-            "scheduling": {
-                "configuration": schedule_config,
-                "has_schedule": schedule_config is not None
-            },
-            "sections": {
-                "list": sections,
-                "total_sections": len(sections)
-            },
-            "data_sources": {
-                "list": data_sources,
-                "total_sources": len(data_sources)
-            },
-            "formatting": formatting,
-            "components": {
-                "alert_components": alert_components,
-                "total_components": len(alert_components)
-            },
-            "draft_changes": {
-                "has_draft_changes": draft_changes.get("has_draft_changes", False),
-                "last_edited_at": draft_changes.get("last_edited_at"),
-                "edited_by": draft_changes.get("edited_by"),
-                "last_published_at": draft_changes.get("last_published_at"),
-                "published_by": draft_changes.get("published_by")
-            }
+            "my_reports": my_reports,
+            "shared_reports": shared_reports
         }
+
+    async def get_all_shares(self, user_id, share_type, entity_id):
+        try:
+            select_stmt = select(ShareConfiguration).join(
+                ShareConfiguration.report_workflow
+            ).join(
+                ReportWorkflow.report
+            ).options(
+                joinedload(ShareConfiguration.report_workflow).joinedload(ReportWorkflow.report)
+            ).where(
+                ReportWorkflow.report_id == entity_id
+            )
+            result = await self.db.execute(select_stmt)
+            shares = result.unique().scalars().all()
+            
+            print(f"Total shares fetched: {len(shares)}")
+            for s in shares:
+                print(f"Share ID: {s.id}, Share Type: {s.share_type}, Target ID: {s.target_id}")
+            
+            # Organize shares by share_type
+            shares_by_type = {}
+            report = None
+            report_id = entity_id
+            report_name = None
+            owner_id = None
+            
+            if shares:
+                # Get dashboard info from the first share (all shares belong to same dashboard)
+                owner_id = shares[0].report_workflow.user_id
+                report_writing = shares[0].report_workflow.report
+                report_id = report_writing.id
+                report_name = report_writing.name
+                print(f"Crossed report {report}")
+                
+                for share in shares:
+                    share_type_key = share.share_type
+                    print(f"Processing share_type_key: {share_type_key}")
+                    
+                    if share_type_key not in shares_by_type:
+                        shares_by_type[share_type_key] = []
+                    
+                    shares_by_type[share_type_key].append({
+                        "target_id": share.target_id,
+                        "permission": share.permissions['Action'],
+                        "isAuthor": False
+                    })
+            else:
+                # If no shares, we still need to fetch dashboard info to get owner_id
+                report_stmt = select(Report).join(
+                    ReportWorkflow.report
+                ).where(
+                    ReportWorkflow.report_id == entity_id
+                ).options(
+                    joinedload(ReportWorkflow.report)
+                )
+                report_result = await self.db.execute(report_stmt)
+                report = report_result.unique().scalar_one_or_none()
+                
+                if report:
+                    report_id = report.id
+                    report_name = report.name
+                    # Get the first workflow's user_id (assuming one workflow per dashboard)
+                    if report.report_workflows:
+                        owner_id = report.report_workflows.user_id if isinstance(report.report_workflows, list) else report.report_workflows.user_id
+            
+            # Add static owner row to "user" share type only if owner_id exists
+            print(f"Owner ID: {owner_id}")
+            print(f"Shares by type before owner insert: {shares_by_type}")
+            
+            if owner_id:
+                if "user" not in shares_by_type:
+                    shares_by_type["user"] = []
+                
+                # Insert owner at the beginning of user shares
+                shares_by_type["user"].insert(0, {
+                    "target_id": owner_id,
+                    "permission": "Admin",
+                    "isAuthor": True
+                })
+            
+            print(f"Final shares_by_type: {shares_by_type}")
+            
+            return {
+                "report_id": report_id,
+                "report_name": report_name,
+                "shares": shares_by_type
+            }
+            
+        except Exception as e:
+            traceback.print_exc()
+            return None
+
+
 
     async def publish_report(
         self,
@@ -1144,8 +1465,8 @@ class ReportWorkflowService(BaseService):
             version=new_version,
             content=content
         )
-        self.db.add(version)
-        self.db.add(report)
+        # self.db.add(version)
+        # self.db.add(report)
         report.version = new_version
 
     async def _generate_html_preview(self, report: Report, workflow: ReportWorkflow) -> str:

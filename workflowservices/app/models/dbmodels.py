@@ -132,7 +132,7 @@ class Task(Base):
     )
 
     datasets = relationship(
-        "Dataset", back_populates="task", cascade="all, delete-orphan"
+        "AlertDataset", back_populates="task", cascade="all, delete-orphan"
     )
     metrics = relationship(
         "Metric", back_populates="task", cascade="all, delete-orphan"
@@ -142,8 +142,8 @@ class Task(Base):
     )
 
 
-class Dataset(Base):
-    __tablename__ = "datasets"
+class AlertDataset(Base):
+    __tablename__ = "alert_dataset"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id"), nullable=False)
@@ -163,7 +163,7 @@ class Dataset(Base):
 
 
 class Metric(Base):
-    __tablename__ = "metrics"
+    __tablename__ = "alert_metrics"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id"), nullable=False)
@@ -298,6 +298,7 @@ class Report(Base):
     versions = relationship(
         "ReportVersion", back_populates="report", cascade="all, delete-orphan"
     )
+    report_workflows = relationship("ReportWorkflow", back_populates="report")
 
     # Indexes
     __table_args__ = (Index("idx_report_name_type", "name", "reportType"),)

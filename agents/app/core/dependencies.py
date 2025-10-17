@@ -178,6 +178,11 @@ def get_doc_store_provider():
             persistent_client=client,
             collection_name="alert_knowledge_base",
             tf_idf=True  # Enable TF-IDF for better search
+        ),
+        "column_metadata": DocumentChromaStore(
+            persistent_client=client,
+            collection_name="column_metadata",
+            tf_idf=True  # Enable TF-IDF for better search
         )
     }
     

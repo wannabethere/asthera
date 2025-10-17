@@ -20,6 +20,10 @@ class AlertConditionType(str, Enum):
     THRESHOLD_PERCENT_CHANGE = "threshold_percent_change"
     THRESHOLD_ABSOLUTE_CHANGE = "threshold_absolute_change"
     THRESHOLD_VALUE = "threshold_value"
+    STRING_MATCH = "string_match"
+    REGEX_MATCH = "regex_match"
+    ANOMALY_DETECTION = "anomaly_detection"
+    TREND_ANALYSIS = "trend_analysis"
 
 
 class ThresholdOperator(str, Enum):
@@ -30,6 +34,16 @@ class ThresholdOperator(str, Enum):
     LESS_EQUAL = "<="
     EQUALS = "="
     NOT_EQUALS = "!="
+
+
+class ThresholdType(str, Enum):
+    """Types of threshold values for condition validation"""
+    DEFAULT = "default"  # Direct value comparison
+    PERCENTAGE = "percentage"  # Threshold as percentage (multiply by 100)
+    RATIO = "ratio"  # Threshold as ratio (0-1 range)
+    PERCENTILE = "percentile"  # Threshold as percentile (0-100 range)
+    MULTIPLIER = "multiplier"  # Threshold as multiplier factor
+    ABSOLUTE = "absolute"  # Threshold as absolute value
 
 
 class ValidationResult(BaseModel):

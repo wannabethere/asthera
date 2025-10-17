@@ -604,11 +604,19 @@ class ProjectReader:
                         logger.info(f"DEBUG: Column {col.get('name', '')} properties in _build_column_defs: {col['properties']}")
                         logger.info(f"DEBUG: Column {col.get('name', '')}: comment='{comment[:50] if comment else 'None'}...', description='{description[:50] if description else 'None'}...'")
                     
+                    # If no comment is available, generate one from the column name
+                    if not comment:
+                        # Convert column name to a more readable format
+                        comment = name.replace('_', ' ').title()
+                        logger.info(f"DEBUG: Generated comment for column {name}: '{comment}'")
+                    
                     # Handle notNull constraint
                     not_null = col.get('notNull', False)
                     if not_null and dtype.upper() != 'PRIMARY KEY':
                         dtype += ' NOT NULL'
                     
+                    # Log final comment and description
+                    logger.info(f"DEBUG: Final column {name}: comment='{comment[:50] if comment else 'None'}...', description='{description[:50] if description else 'None'}...'")
                     logger.debug(f"Column {i}: name='{name}', type='{dtype}', comment='{comment[:50] if comment else 'None'}...', description='{description[:50] if description else 'None'}...'")
                 else:
                     name = str(col) if col is not None else ''
@@ -642,7 +650,7 @@ class ProjectReader:
                 if comment_parts:
                     col_def += f" -- {' -- '.join(comment_parts)}"
                 
-                logger.debug(f"Generated column definition: {col_def}")
+                logger.info(f"DEBUG: Generated column definition: {col_def}")
                 col_defs.append(col_def)
             except Exception as e:
                 logger.warning(f"Error processing column {i} ({col}): {str(e)}")
@@ -821,12 +829,42 @@ class ProjectReader:
                         print(f"  Final data_type: {column_type}")
                         print(f"  Full column object: {column}")
                     
+                    # Use the existing helper function to create properly formatted comments
+                    # This ensures consistency with the TABLE_COLUMNS format
+                    from app.indexing.utils.helper import _properties_comment
+                    
+                    # Create a column object with properties for the helper function
+                    column_for_helper = {
+                        "properties": {
+                            "displayName": display_name,
+                            "description": description
+                        }
+                    }
+                    
+                    # Use the helper function to create the comment
+                    formatted_comment = _properties_comment(column_for_helper).strip()
+                    
+                    # If the helper function doesn't generate a comment (empty properties), create a simple one
+                    if not formatted_comment or formatted_comment == "-- {}":
+                        if display_name or description:
+                            comment_parts = []
+                            if display_name:
+                                comment_parts.append(display_name)
+                            if description and description != display_name:
+                                comment_parts.append(description)
+                            formatted_comment = ' -- '.join(comment_parts)
+                        else:
+                            # Generate comment from column name as fallback
+                            formatted_comment = column_name.replace('_', ' ').title()
+                            logger.info(f"DEBUG: Generated comment for column {column_name}: '{formatted_comment}'")
+                    
                     column_metadata = {
                         "column_name": column_name,
                         "table_name": table_name,
                         "type": column_type,
                         "display_name": display_name,
                         "description": description,
+                        "comment": formatted_comment,  # Add comment field for consistency
                         "is_calculated": column.get("isCalculated", False),
                         "expression": column.get("expression", ""),
                         "is_primary_key": column.get("name", "") == model.get("primaryKey", ""),
@@ -835,7 +873,8 @@ class ProjectReader:
                         "properties": properties,
                         "not_null": column.get("notNull", False)
                     }
-                    
+                    logger.info(f"DEBUG: Column metadata: {column_metadata}")
+                    logger.info(f"DEBUG: Final comment for {column_name}: '{formatted_comment}'")
                     # Create document for storage
                     doc_content = json.dumps(column_metadata)
                     doc_metadata = {
@@ -846,6 +885,7 @@ class ProjectReader:
                         "data_type": column.get("type", "VARCHAR"),
                         "display_name": display_name,
                         "description": description[:100] if description else "",
+                        "comment": formatted_comment[:100] if formatted_comment else "",  # Add comment to metadata
                         "is_calculated": column.get("isCalculated", False),
                         "is_primary_key": column.get("name", "") == model.get("primaryKey", ""),
                         "is_foreign_key": "relationship" in column
@@ -1204,7 +1244,9 @@ async def main():
     reader = ProjectReader(base_path, persistent_client)
     
     # Test projects
-    test_projects = ["csodworkday","cornerstone_learning", "cornerstone_talent", "cornerstone","sumtotal_learn"] #, "cornerstone_talent"]
+    test_projects = ["csodworkday","cornerstone_learning", "cornerstone_talent", "cornerstone","sumtotal_learn","cve_data"] #, "cornerstone_talent"]
+
+    #test_projects = ["cve_data"]
     
     for project in test_projects:
         try:
@@ -1395,7 +1437,7 @@ async def test_delete_project():
     reader = ProjectReader(base_path, persistent_client)
     
     # Test project deletion
-    test_project_id = "sumtotal_learn_v2"  # Use the actual project_id from metadata
+    test_project_id = "cve_data"  # Use the actual project_id from metadata
     
     try:
         logger.info(f"\n{'='*50}")
@@ -1427,7 +1469,7 @@ async def test_delete_project():
 if __name__ == "__main__":
     import asyncio
     #asyncio.run(test_delete_project()) 
-    asyncio.run(main())
+    asyncio.run(main())    
     
     # Uncomment the line below to test project deletion
     # asyncio.run(test_delete_project()) 

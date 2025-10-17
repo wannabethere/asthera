@@ -94,6 +94,7 @@ class BaseService:
             )
             result = await self.db.execute(stmt)
             user_system_roles = result.scalars().all()
+            print(f"user_system_roles is {user_system_roles}")
 
             if user_system_roles:
                 return True
