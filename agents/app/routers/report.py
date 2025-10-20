@@ -130,6 +130,7 @@ class ReportResponse(BaseModel):
     report_config: Optional[Dict[str, Any]] = None
     metadata: Optional[Dict[str, Any]] = None
     workflow_metadata: Optional[Dict[str, Any]] = None
+    global_executive_summary: Optional[str] = None
     error: Optional[str] = None
 
 class ReportTemplate(BaseModel):

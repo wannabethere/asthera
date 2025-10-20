@@ -9,6 +9,7 @@ from app.core.engine import Engine
 from app.core.dependencies import get_llm
 from app.agents.pipelines.writers.conditional_formatting_generation_pipeline import ConditionalFormattingGenerationPipeline
 from app.agents.pipelines.writers.enhanced_dashboard_streaming_pipeline import EnhancedDashboardStreamingPipeline
+from app.agents.pipelines.writers.dashboard_summary_pipeline import DashboardSummaryPipeline
 
 logger = logging.getLogger("lexy-ai-service")
 
@@ -25,7 +26,8 @@ class DashboardOrchestratorPipeline(AgentPipeline):
         retrieval_helper: RetrievalHelper,
         engine: Engine,
         conditional_formatting_pipeline: Optional[ConditionalFormattingGenerationPipeline] = None,
-        enhanced_streaming_pipeline: Optional[EnhancedDashboardStreamingPipeline] = None
+        enhanced_streaming_pipeline: Optional[EnhancedDashboardStreamingPipeline] = None,
+        dashboard_summary_pipeline: Optional[DashboardSummaryPipeline] = None
     ):
         super().__init__(
             name=name,
@@ -40,7 +42,8 @@ class DashboardOrchestratorPipeline(AgentPipeline):
             "enable_conditional_formatting": True,
             "enable_streaming": True,
             "enable_validation": True,
-            "enable_metrics": True
+            "enable_metrics": True,
+            "enable_dashboard_summary": True
         }
         
         self._metrics = {}
@@ -66,6 +69,16 @@ class DashboardOrchestratorPipeline(AgentPipeline):
             )
         else:
             self._enhanced_streaming_pipeline = enhanced_streaming_pipeline
+        
+        if not dashboard_summary_pipeline:
+            from app.agents.pipelines.writers.dashboard_summary_pipeline import create_dashboard_summary_pipeline
+            self._dashboard_summary_pipeline = create_dashboard_summary_pipeline(
+                engine=engine,
+                llm=llm,
+                retrieval_helper=retrieval_helper
+            )
+        else:
+            self._dashboard_summary_pipeline = dashboard_summary_pipeline
         
         self._initialized = True
 
@@ -219,6 +232,34 @@ class DashboardOrchestratorPipeline(AgentPipeline):
                     dashboard_queries, project_id, status_callback
                 )
             
+            # Step 3: Generate overall dashboard summary and insights
+            dashboard_summary_result = None
+            if self._configuration["enable_dashboard_summary"]:
+                self._send_status_update(
+                    status_callback,
+                    "dashboard_summary_generation_started",
+                    {"project_id": project_id}
+                )
+                
+                # Extract components from dashboard result for summary generation
+                dashboard_components = self._extract_components_for_summary(
+                    dashboard_result, dashboard_queries, dashboard_context
+                )
+                
+                dashboard_summary_result = await self._dashboard_summary_pipeline.run(
+                    dashboard_components=dashboard_components,
+                    dashboard_context=dashboard_context,
+                    project_id=project_id,
+                    additional_context=additional_context,
+                    status_callback=self._create_nested_status_callback(status_callback, "dashboard_summary")
+                )
+                
+                self._send_status_update(
+                    status_callback,
+                    "dashboard_summary_generation_completed",
+                    {"project_id": project_id}
+                )
+            
             # Calculate final metrics
             end_time = datetime.now()
             total_execution_time = (end_time - start_time).total_seconds()
@@ -248,6 +289,7 @@ class DashboardOrchestratorPipeline(AgentPipeline):
                     "success": True,
                     "dashboard_results": dashboard_result.get("post_process", {}),
                     "enhanced_dashboard": enhanced_dashboard,
+                    "dashboard_summary": dashboard_summary_result.get("post_process", {}) if dashboard_summary_result else None,
                     "orchestration_metadata": {
                         "pipeline_name": self.name,
                         "pipeline_version": self.version,
@@ -256,7 +298,9 @@ class DashboardOrchestratorPipeline(AgentPipeline):
                         "end_time": end_time.isoformat(),
                         "project_id": project_id,
                         "conditional_formatting_applied": bool(enhanced_dashboard and enhanced_dashboard.get("conditional_formatting_rules")),
-                        "streaming_enabled": self._configuration["enable_streaming"]
+                        "streaming_enabled": self._configuration["enable_streaming"],
+                        "dashboard_summary_enabled": self._configuration["enable_dashboard_summary"],
+                        "dashboard_summary_generated": bool(dashboard_summary_result and dashboard_summary_result.get("post_process", {}).get("success"))
                     }
                 },
                 "metadata": {
@@ -405,6 +449,72 @@ class DashboardOrchestratorPipeline(AgentPipeline):
         self._configuration["enable_streaming"] = enabled
         logger.info(f"Streaming {'enabled' if enabled else 'disabled'}")
 
+    def enable_dashboard_summary(self, enabled: bool) -> None:
+        """Enable or disable dashboard summary generation"""
+        self._configuration["enable_dashboard_summary"] = enabled
+        logger.info(f"Dashboard summary {'enabled' if enabled else 'disabled'}")
+
+    def _extract_components_for_summary(
+        self,
+        dashboard_result: Dict[str, Any],
+        dashboard_queries: List[Dict[str, Any]],
+        dashboard_context: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """Extract components from dashboard result for summary generation"""
+        components = []
+        
+        try:
+            # Extract results from dashboard execution
+            results = dashboard_result.get("post_process", {}).get("results", {})
+            
+            for i, query_data in enumerate(dashboard_queries):
+                component = {
+                    "id": query_data.get("component_id", f"component_{i}"),
+                    "type": query_data.get("component_type", "question"),
+                    "question": query_data.get("query", ""),
+                    "executive_summary": query_data.get("executive_summary", ""),
+                    "reasoning": query_data.get("reasoning", ""),
+                    "data_count": 0,
+                    "sequence": query_data.get("sequence_order", i + 1),
+                    "chart_type": query_data.get("chart_config", {}).get("type", ""),
+                    "sample_data": {"data": [], "columns": []},
+                    "columns": [],
+                    "insights": "",
+                    "validation_success": False
+                }
+                
+                # Find matching result data
+                result_data = None
+                for query_id, query_result in results.items():
+                    # Skip if query_result is not a dictionary
+                    if not isinstance(query_result, dict):
+                        continue
+                    if query_result.get("query_index") == i or query_result.get("component_id") == query_data.get("component_id"):
+                        result_data = query_result
+                        break
+                
+                # Update component with result data
+                if result_data:
+                    component["data_count"] = result_data.get("row_count", 0)
+                    component["sample_data"] = {
+                        "data": result_data.get("data", [])[:5],  # First 5 rows
+                        "columns": result_data.get("columns", [])
+                    }
+                    component["columns"] = result_data.get("columns", [])
+                    component["validation_success"] = result_data.get("success", False)
+                    
+                    # Add insights if available
+                    if result_data.get("insights"):
+                        component["insights"] = result_data.get("insights")
+                
+                components.append(component)
+            
+            return components
+            
+        except Exception as e:
+            logger.error(f"Error extracting components for summary: {e}")
+            return []
+
 
 # Factory function for creating dashboard orchestrator pipeline
 def create_dashboard_orchestrator_pipeline(
@@ -413,6 +523,7 @@ def create_dashboard_orchestrator_pipeline(
     retrieval_helper: RetrievalHelper = None,
     conditional_formatting_pipeline: Optional[ConditionalFormattingGenerationPipeline] = None,
     enhanced_streaming_pipeline: Optional[EnhancedDashboardStreamingPipeline] = None,
+    dashboard_summary_pipeline: Optional[DashboardSummaryPipeline] = None,
     **kwargs
 ) -> DashboardOrchestratorPipeline:
     """
@@ -424,6 +535,7 @@ def create_dashboard_orchestrator_pipeline(
         retrieval_helper: Retrieval helper instance (optional, will create default if not provided)
         conditional_formatting_pipeline: Conditional formatting generation pipeline (optional)
         enhanced_streaming_pipeline: Enhanced dashboard streaming pipeline (optional)
+        dashboard_summary_pipeline: Dashboard summary generation pipeline (optional)
         **kwargs: Additional configuration options
     
     Returns:
@@ -445,5 +557,6 @@ def create_dashboard_orchestrator_pipeline(
         engine=engine,
         conditional_formatting_pipeline=conditional_formatting_pipeline,
         enhanced_streaming_pipeline=enhanced_streaming_pipeline,
+        dashboard_summary_pipeline=dashboard_summary_pipeline,
         **kwargs
     )

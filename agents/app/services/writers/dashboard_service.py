@@ -46,7 +46,8 @@ class DashboardService(BaseService):
                 "dashboard_orchestrator": self.pipeline_container.get_pipeline("dashboard_orchestrator"),
                 "conditional_formatting": self.pipeline_container.get_pipeline("conditional_formatting_generation"),
                 "dashboard_streaming": self.pipeline_container.get_pipeline("dashboard_streaming"),
-                "enhanced_dashboard": self.pipeline_container.get_pipeline("enhanced_dashboard_streaming")
+                "enhanced_dashboard": self.pipeline_container.get_pipeline("enhanced_dashboard_streaming"),
+                "dashboard_summary": self.pipeline_container.get_pipeline("dashboard_summary")
             }
             
             # Validate that required agent pipelines are available
@@ -63,7 +64,8 @@ class DashboardService(BaseService):
                 "dashboard_orchestrator": None,
                 "conditional_formatting": None,
                 "dashboard_streaming": None,
-                "enhanced_dashboard": None
+                "enhanced_dashboard": None,
+                "dashboard_summary": None
             }
         
         # Configuration cache and execution history
@@ -411,13 +413,13 @@ class DashboardService(BaseService):
             
             # Validate dashboard queries before passing to pipeline
             if not dashboard_queries or not isinstance(dashboard_queries, list) or len(dashboard_queries) == 0:
-                error_msg = f"Invalid dashboard queries: {type(dashboard_queries)}, length: {len(dashboard_queries) if isinstance(dashboard_queries, list) else 'N/A'}"
+                error_msg = f"No valid dashboard queries found. Workflow may not have completed query generation yet. Got {type(dashboard_queries)} with length: {len(dashboard_queries) if isinstance(dashboard_queries, list) else 'N/A'}"
                 logger.error(error_msg)
                 send_status_update("dashboard_processing_failed", {
                     "error": error_msg,
                     "project_id": project_id
                 })
-                raise ValueError(f"Dashboard queries must be a non-empty list. Got: {error_msg}")
+                raise ValueError(f"Dashboard queries must be a non-empty list. {error_msg}")
             
             # Delegate to dashboard orchestrator pipeline
             result = await self._agent_pipelines["dashboard_orchestrator"].run(
@@ -784,6 +786,10 @@ class DashboardService(BaseService):
                 "available": self._agent_pipelines.get("enhanced_dashboard") is not None,
                 "initialized": True
             },
+            "dashboard_summary": {
+                "available": self._agent_pipelines.get("dashboard_summary") is not None,
+                "initialized": True
+            },
             "pipeline_container": {
                 "available": self.pipeline_container is not None,
                 "pipeline_count": len(self.pipeline_container._pipelines) if self.pipeline_container else 0
@@ -851,7 +857,7 @@ class DashboardService(BaseService):
             )
             
             # Process dashboard with conditional formatting
-            result = await self.process_dashboard_with_conditional_formatting(
+            orchestration_result = await self.process_dashboard_with_conditional_formatting(
                 natural_language_query=natural_language_query,
                 dashboard_queries=dashboard_queries,
                 project_id=project_id,
@@ -861,8 +867,16 @@ class DashboardService(BaseService):
                 status_callback=status_callback
             )
             
+            # Transform orchestration result to the expected dashboard format
+            formatted_result = self._format_dashboard_output(
+                workflow_data=workflow_result,
+                orchestration_result=orchestration_result,
+                thread_components=workflow_result.get("thread_components", []),
+                project_id=project_id
+            )
+            
             # Add workflow metadata to result
-            result["workflow_metadata"] = {
+            formatted_result["workflow_metadata"] = {
                 "workflow_id": workflow_id,
                 "workflow_state": workflow_result.get("workflow_metadata", {}).get("state"),
                 "workflow_type": "dashboard_workflow",
@@ -872,7 +886,7 @@ class DashboardService(BaseService):
                 "transformed_at": workflow_result.get("transformed_at")
             }
             
-            return result
+            return formatted_result
             
         except Exception as e:
             logger.error(f"Error rendering dashboard from workflow DB: {e}")
@@ -910,7 +924,7 @@ class DashboardService(BaseService):
             status_callback: Callback for status updates
             
         Returns:
-            Complete dashboard result with workflow-driven configuration
+            Complete dashboard result with workflow-driven configuration in the expected format
         """
         try:
             # Extract workflow information
@@ -918,6 +932,23 @@ class DashboardService(BaseService):
             workflow_state = workflow_data.get("state")
             thread_components = workflow_data.get("thread_components", [])
             workflow_metadata = workflow_data.get("workflow_metadata", {})
+            
+            # TODO: Add workflow state validation in future
+            # Check if workflow is in a state that allows dashboard rendering
+            # if workflow_state in ["configuring", "pending", "initializing"]:
+            #     error_msg = f"Workflow is in '{workflow_state}' state and not ready for dashboard rendering. Please wait for the workflow to complete query generation."
+            #     logger.warning(error_msg)
+            #     self._send_status_update(
+            #         status_callback,
+            #         "workflow_dashboard_rendering_failed",
+            #         {
+            #             "error": error_msg,
+            #             "workflow_id": workflow_id,
+            #             "project_id": project_id,
+            #             "workflow_state": workflow_state
+            #         }
+            #     )
+            #     raise ValueError(error_msg)
             
             # Transform workflow data to dashboard format
             logger.info(f"Extracting queries from {len(thread_components)} thread components")
@@ -941,7 +972,7 @@ class DashboardService(BaseService):
             )
             
             # Process dashboard with conditional formatting
-            result = await self.process_dashboard_with_conditional_formatting(
+            orchestration_result = await self.process_dashboard_with_conditional_formatting(
                 natural_language_query=natural_language_query,
                 dashboard_queries=dashboard_queries,
                 project_id=project_id,
@@ -951,19 +982,15 @@ class DashboardService(BaseService):
                 status_callback=status_callback
             )
             
-            # Add workflow metadata to result
-            result["workflow_metadata"] = {
-                "workflow_id": workflow_id,
-                "workflow_state": workflow_state,
-                "workflow_type": "dashboard_workflow",
-                "workflow_source": "request_data",
-                "total_components": len(thread_components),
-                "dashboard_template": workflow_metadata.get("dashboard_template"),
-                "dashboard_layout": workflow_metadata.get("dashboard_layout"),
-                "refresh_rate": workflow_metadata.get("refresh_rate")
-            }
+            # Transform orchestration result to the expected dashboard format
+            formatted_result = self._format_dashboard_output(
+                workflow_data=workflow_data,
+                orchestration_result=orchestration_result,
+                thread_components=thread_components,
+                project_id=project_id
+            )
             
-            return result
+            return formatted_result
             
         except Exception as e:
             logger.error(f"Error rendering dashboard from workflow data: {e}")
@@ -978,6 +1005,234 @@ class DashboardService(BaseService):
             )
             raise
     
+    def _format_dashboard_output(
+        self,
+        workflow_data: Dict[str, Any],
+        orchestration_result: Dict[str, Any],
+        thread_components: List[Dict[str, Any]],
+        project_id: str
+    ) -> Dict[str, Any]:
+        """
+        Format dashboard output in the expected format that preserves original workflow data
+        and enriches it with orchestration results
+        
+        Args:
+            workflow_data: Original workflow data from request
+            orchestration_result: Result from dashboard orchestration pipeline
+            thread_components: Thread components from workflow
+            project_id: Project identifier
+            
+        Returns:
+            Formatted dashboard output in the expected structure
+        """
+        try:
+            # Extract orchestration results
+            dashboard_data = orchestration_result.get("dashboard_data", {})
+            enhanced_dashboard = orchestration_result.get("enhanced_dashboard", {})
+            results = dashboard_data.get("results", {})
+            
+            # Build formatted components by enriching original components with orchestration results
+            formatted_components = []
+            
+            for i, component in enumerate(thread_components):
+                component_id = component.get("id")
+                component_type = component.get("type", "question")
+                
+                # Find matching result from orchestration
+                result_data = None
+                for query_id, query_result in results.items():
+                    # Skip if query_result is not a dictionary
+                    if not isinstance(query_result, dict):
+                        continue
+                    if query_result.get("query_index") == i or query_result.get("component_id") == component_id:
+                        result_data = query_result
+                        break
+                
+                # Build enriched component preserving original data
+                formatted_component = {
+                    "id": component_id,
+                    "type": component_type,
+                    "chart": component.get("chart", {}),
+                    "table": component.get("table", {}),
+                    "metadata": component.get("metadata", {}),
+                    "overview": component.get("overview", {}),
+                    "question": component.get("question", ""),
+                    "sequence": component.get("sequence", i + 1),
+                    "reasoning": component.get("reasoning", ""),
+                    "sql_query": component.get("sql_query", ""),
+                    "data_count": component.get("data_count", 0),
+                    "description": component.get("description", ""),
+                    "sample_data": component.get("sample_data", {}),
+                    "chart_schema": component.get("chart_schema", {}),
+                    "configuration": component.get("configuration", {}),
+                    "data_overview": component.get("data_overview"),
+                    "is_configured": component.get("is_configured", False),
+                    "executive_summary": component.get("executive_summary", ""),
+                    "validation_results": component.get("validation_results", {}),
+                    "visualization_data": component.get("visualization_data", {})
+                }
+                
+                # Enrich with orchestration result if available
+                if result_data:
+                    # Update chart with execution info
+                    if "chart" not in formatted_component or not formatted_component["chart"]:
+                        formatted_component["chart"] = {}
+                    
+                    formatted_component["chart"]["execution_info"] = {
+                        "data_count": result_data.get("row_count", 0),
+                        "execution_config": result_data.get("execution_config", {}),
+                        "validation_success": result_data.get("success", False)
+                    }
+                    
+                    # Update with result data if available
+                    if result_data.get("data"):
+                        formatted_component["sample_data"] = {
+                            "data": result_data.get("data", []),
+                            "columns": result_data.get("columns", [])
+                        }
+                        formatted_component["data_count"] = len(result_data.get("data", []))
+                    
+                    # Update executive summary from orchestration result
+                    if result_data.get("executive_summary"):
+                        formatted_component["executive_summary"] = result_data.get("executive_summary")
+                    
+                    # Update overview with insights from orchestration
+                    if result_data.get("insights") or result_data.get("summary"):
+                        if "overview" not in formatted_component:
+                            formatted_component["overview"] = {}
+                        
+                        if result_data.get("insights"):
+                            formatted_component["overview"]["insights"] = result_data.get("insights")
+                        
+                        if result_data.get("summary"):
+                            formatted_component["overview"]["summary"] = result_data.get("summary")
+                    
+                    # Update reasoning from orchestration result
+                    if result_data.get("reasoning"):
+                        formatted_component["reasoning"] = result_data.get("reasoning")
+                    
+                    # Update data overview from orchestration result
+                    if result_data.get("data_overview"):
+                        formatted_component["data_overview"] = result_data.get("data_overview")
+                    
+                    # Update visualization data from orchestration result
+                    if result_data.get("visualization_data"):
+                        formatted_component["visualization_data"] = result_data.get("visualization_data")
+                    
+                    # Update validation results from orchestration
+                    if result_data.get("validation_results"):
+                        formatted_component["validation_results"] = result_data.get("validation_results")
+                    
+                    # Apply conditional formatting if available
+                    if enhanced_dashboard and enhanced_dashboard.get("conditional_formatting_rules"):
+                        component_formatting = enhanced_dashboard["conditional_formatting_rules"].get(str(i))
+                        if component_formatting:
+                            formatted_component["conditional_formatting"] = component_formatting
+                
+                formatted_components.append(formatted_component)
+            
+            # Build final output in expected format
+            formatted_output = {
+                "dashboard_id": workflow_data.get("dashboard_id", workflow_data.get("workflow_id")),
+                "dashboard_name": workflow_data.get("dashboard_name", "Dashboard"),
+                "dashboard_description": workflow_data.get("dashboard_description", ""),
+                "DashboardType": workflow_data.get("DashboardType", "Dynamic"),
+                "content": {
+                    "status": workflow_data.get("content", {}).get("status", "rendered"),
+                    "components": formatted_components
+                },
+                "is_active": workflow_data.get("is_active", True),
+                "version": workflow_data.get("version", "1.0"),
+                "created_at": workflow_data.get("created_at", datetime.now().isoformat()),
+                "updated_at": datetime.now().isoformat(),
+                "user_id": workflow_data.get("user_id", ""),
+                "workflow_id": workflow_data.get("workflow_id", ""),
+                "permissions": workflow_data.get("permissions", {"Action": "view"})
+            }
+            
+            # Add global insights and summaries from enhanced dashboard if available
+            if enhanced_dashboard:
+                # Add global executive summary if available
+                if enhanced_dashboard.get("global_executive_summary"):
+                    formatted_output["global_executive_summary"] = enhanced_dashboard.get("global_executive_summary")
+                
+                # Add global insights if available
+                if enhanced_dashboard.get("global_insights"):
+                    formatted_output["global_insights"] = enhanced_dashboard.get("global_insights")
+                
+                # Add dashboard-level insights to content
+                if enhanced_dashboard.get("dashboard_insights"):
+                    formatted_output["content"]["dashboard_insights"] = enhanced_dashboard.get("dashboard_insights")
+                
+                # Add performance metrics if available
+                if enhanced_dashboard.get("performance_metrics"):
+                    formatted_output["performance_metrics"] = enhanced_dashboard.get("performance_metrics")
+            
+            # Generate overall dashboard summary if not present
+            if not formatted_output.get("global_executive_summary") and formatted_components:
+                # Create a concise dashboard-level summary instead of duplicating component details
+                total_components = len(formatted_components)
+                dashboard_name = formatted_output.get("dashboard_name", "Dashboard")
+                workflow_id = formatted_output.get("workflow_id", "")
+                
+                # Extract key insights from the first component for a high-level overview
+                first_component = formatted_components[0]
+                component_question = first_component.get("question", "data analysis")
+                data_count = first_component.get("data_count", 0)
+                
+                # Create a concise global summary
+                formatted_output["global_executive_summary"] = f"**DASHBOARD OVERVIEW**\n\n**{dashboard_name}** (Workflow: {workflow_id})\n\nThis dashboard provides comprehensive analysis across {total_components} component(s), focusing on '{component_question}'. The analysis covers {data_count} data points and delivers actionable insights for organizational decision-making.\n\n**Key Focus Areas:**\n- Performance metrics and completion rates\n- Data-driven insights for strategic planning\n- Actionable recommendations for improvement"
+            
+            # Add dashboard summary results from orchestration if available
+            dashboard_summary = orchestration_result.get("post_process", {}).get("dashboard_summary")
+            if dashboard_summary and dashboard_summary.get("success"):
+                summary_data = dashboard_summary
+                
+                # Add global executive summary from dashboard summary pipeline
+                if summary_data.get("global_executive_summary"):
+                    formatted_output["global_executive_summary"] = summary_data.get("global_executive_summary")
+                
+                # Add global insights from dashboard summary pipeline
+                if summary_data.get("global_insights"):
+                    formatted_output["global_insights"] = summary_data.get("global_insights")
+                
+                # Add trend analysis if available
+                if summary_data.get("trend_analysis"):
+                    formatted_output["trend_analysis"] = summary_data.get("trend_analysis")
+                
+                # Add correlation analysis if available
+                if summary_data.get("correlation_analysis"):
+                    formatted_output["correlation_analysis"] = summary_data.get("correlation_analysis")
+                
+                # Add recommendations if available
+                if summary_data.get("recommendations"):
+                    formatted_output["recommendations"] = summary_data.get("recommendations")
+                
+                # Add dashboard insights to content
+                if summary_data.get("dashboard_insights"):
+                    formatted_output["content"]["dashboard_insights"] = summary_data.get("dashboard_insights")
+            
+            # Add orchestration metadata
+            if orchestration_result.get("metadata", {}).get("orchestration_metadata"):
+                formatted_output["orchestration_metadata"] = orchestration_result["metadata"]["orchestration_metadata"]
+            
+            # Return in the expected DashboardResponse format
+            return {
+                "success": True,
+                "dashboard_data": formatted_output,
+                "conditional_formatting": enhanced_dashboard.get("conditional_formatting_rules", {}),
+                "chart_configurations": orchestration_result.get("dashboard_data", {}).get("chart_configurations", {}),
+                "dashboard_config": orchestration_result.get("dashboard_data", {}).get("dashboard_config", {}),
+                "metadata": orchestration_result.get("metadata", {}),
+                "workflow_metadata": workflow_data.get("workflow_metadata", {}),
+                "global_executive_summary": formatted_output.get("global_executive_summary"),
+                "error": None
+            }
+            
+        except Exception as e:
+            logger.error(f"Error formatting dashboard output: {e}")
+            raise
+
     def _extract_queries_from_workflow_components(self, thread_components: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Extract dashboard queries from workflow thread components"""
         queries = []
@@ -985,7 +1240,7 @@ class DashboardService(BaseService):
         try:
             logger.info(f"Processing {len(thread_components)} thread components")
             for i, component in enumerate(thread_components):
-                component_type = component.get("component_type", "").lower()
+                component_type = component.get("type", "question").lower()
                 has_sql_query = bool(component.get("sql_query"))
                 
                 logger.info(f"Component {i}: type='{component_type}', has_sql_query={has_sql_query}")
@@ -995,21 +1250,22 @@ class DashboardService(BaseService):
                 if component.get("sql_query") and component_type in ["chart", "table", "metric", "sql_summary", "question"]:
                     logger.info(f"Processing component {i} as valid query component")
                     query_data = {
-                        "chart_schema": component.get("chart_schema", {}),
+                        "chart_schema": component.get("chart", {}).get("chart_schema", {}),
                         "sql": component.get("sql_query", ""),
                         "query": component.get("question", ""),
                         "data_description": component.get("description", ""),
                         "component_type": component_type,
-                        "sequence_order": component.get("sequence_order", 0),
+                        "component_id": component.get("id"),
+                        "sequence_order": component.get("sequence", 0),
                         "configuration": component.get("configuration", {}),
-                        "chart_config": component.get("chart_config", {}),
-                        "table_config": component.get("table_config", {}),
+                        "chart_config": component.get("chart", {}).get("chart_schema", {}),
+                        "table_config": component.get("table", {}),
                         "alert_config": component.get("alert_config", {}),
                         "executive_summary": component.get("executive_summary"),
-                        "data_overview": component.get("data_overview", {}),
+                        "data_overview": component.get("data_overview"),
                         "visualization_data": component.get("visualization_data", {}),
                         "sample_data": component.get("sample_data", {}),
-                        "thread_metadata": component.get("thread_metadata", {}),
+                        "thread_metadata": component.get("metadata", {}),
                         "reasoning": component.get("reasoning"),
                         "data_count": component.get("data_count"),
                         "validation_results": component.get("validation_results", {})
@@ -1045,11 +1301,16 @@ class DashboardService(BaseService):
                         for col in overview["columns"]:
                             available_columns.add(col.get("name", ""))
                             data_types[col.get("name", "")] = col.get("type", "string")
+                
+                # Also extract from sample_data if available
+                if component.get("sample_data", {}).get("columns"):
+                    for col in component["sample_data"]["columns"]:
+                        available_columns.add(col)
             
             # Create dashboard context
             context = {
-                "title": workflow_metadata.get("report_title", f"Dashboard from Workflow {workflow_data.get('workflow_id')}"),
-                "description": workflow_metadata.get("report_description", "Dashboard generated from workflow configuration"),
+                "title": workflow_data.get("dashboard_name", workflow_metadata.get("report_title", f"Dashboard from Workflow {workflow_data.get('workflow_id')}")),
+                "description": workflow_data.get("dashboard_description", workflow_metadata.get("report_description", "Dashboard generated from workflow configuration")),
                 "template": workflow_metadata.get("dashboard_template", "default"),
                 "layout": workflow_metadata.get("dashboard_layout", "grid"),
                 "refresh_rate": workflow_metadata.get("refresh_rate", 300),
@@ -1059,10 +1320,10 @@ class DashboardService(BaseService):
                 "workflow_state": workflow_data.get("state"),
                 "workflow_metadata": workflow_metadata,
                 "total_components": len(thread_components),
-                "charts": [comp for comp in thread_components if comp.get("component_type") in ["chart", "sql_summary"]],
-                "tables": [comp for comp in thread_components if comp.get("component_type") == "table"],
-                "metrics": [comp for comp in thread_components if comp.get("component_type") == "metric"],
-                "alerts": [comp for comp in thread_components if comp.get("component_type") == "alert"]
+                "charts": [comp for comp in thread_components if comp.get("type") in ["chart", "sql_summary", "question"]],
+                "tables": [comp for comp in thread_components if comp.get("type") == "table"],
+                "metrics": [comp for comp in thread_components if comp.get("type") == "metric"],
+                "alerts": [comp for comp in thread_components if comp.get("type") == "alert"]
             }
             
             return context
@@ -1071,8 +1332,8 @@ class DashboardService(BaseService):
             logger.error(f"Error creating dashboard context from workflow data: {e}")
             # Return basic context
             return {
-                "title": "Dashboard from Workflow",
-                "description": "Dashboard generated from workflow configuration",
+                "title": workflow_data.get("dashboard_name", "Dashboard from Workflow"),
+                "description": workflow_data.get("dashboard_description", "Dashboard generated from workflow configuration"),
                 "template": "default",
                 "layout": "grid",
                 "refresh_rate": 300,
@@ -1202,6 +1463,48 @@ class DashboardService(BaseService):
             except Exception as e:
                 logger.error(f"Error in status callback: {str(e)}")
         logger.info(f"Dashboard Service Status - {status}: {details}")
+
+    async def generate_dashboard_summary(
+        self,
+        dashboard_components: List[Dict[str, Any]],
+        dashboard_context: Dict[str, Any],
+        project_id: str,
+        additional_context: Optional[Dict[str, Any]] = None,
+        status_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None
+    ) -> Dict[str, Any]:
+        """
+        Generate overall executive summary and insights for dashboard components
+        
+        Args:
+            dashboard_components: List of dashboard components with their data and summaries
+            dashboard_context: Overall dashboard context and metadata
+            project_id: Project identifier
+            additional_context: Additional context for summary generation
+            status_callback: Callback for status updates
+            
+        Returns:
+            Dictionary containing overall executive summary and insights
+        """
+        try:
+            # Use dashboard summary pipeline from container
+            if not self._agent_pipelines["dashboard_summary"]:
+                error_msg = "Dashboard summary pipeline is not available"
+                logger.error(error_msg)
+                raise RuntimeError(error_msg)
+            
+            result = await self._agent_pipelines["dashboard_summary"].run(
+                dashboard_components=dashboard_components,
+                dashboard_context=dashboard_context,
+                project_id=project_id,
+                additional_context=additional_context,
+                status_callback=status_callback
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error generating dashboard summary: {e}")
+            raise
 
     def clear_cache(self):
         """Clear configuration and execution caches"""

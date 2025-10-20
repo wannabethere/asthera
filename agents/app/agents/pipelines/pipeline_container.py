@@ -417,6 +417,19 @@ class PipelineContainer:
             logger.warning(f"Failed to import enhanced dashboard streaming pipeline: {e}")
             self._pipelines["enhanced_dashboard_streaming"] = None
         
+        # Initialize dashboard summary pipeline
+        try:
+            from app.agents.pipelines.writers.dashboard_summary_pipeline import create_dashboard_summary_pipeline
+            self._pipelines["dashboard_summary"] = create_dashboard_summary_pipeline(
+                engine=self._engine,
+                llm=self._llm,
+                retrieval_helper=self._retrieval_helper
+            )
+            self._pipelines["dashboard_summary"]._initialized = True
+        except ImportError as e:
+            logger.warning(f"Failed to import dashboard summary pipeline: {e}")
+            self._pipelines["dashboard_summary"] = None
+        
         # Initialize dashboard orchestrator pipeline
         try:
             from app.agents.pipelines.writers.dashboard_orchestrator_pipeline import create_dashboard_orchestrator_pipeline
@@ -425,7 +438,8 @@ class PipelineContainer:
                 llm=self._llm,
                 retrieval_helper=self._retrieval_helper,
                 conditional_formatting_pipeline=self._pipelines.get("conditional_formatting_generation"),
-                enhanced_streaming_pipeline=self._pipelines.get("enhanced_dashboard_streaming")
+                enhanced_streaming_pipeline=self._pipelines.get("enhanced_dashboard_streaming"),
+                dashboard_summary_pipeline=self._pipelines.get("dashboard_summary")
             )
             self._pipelines["dashboard_orchestrator"]._initialized = True
         except ImportError as e:

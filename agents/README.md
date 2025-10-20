@@ -15,6 +15,9 @@ find . -type d -name "__MACOSX" -print0 | xargs -0 rm -rf
 
 scp -i ~/Downloads/flowharmonic.pem agents.zip  
 scp -i ~/Downloads/flowharmonic.pem agents.zip ec2-user@ec2-54-161-71-105.compute-1.amazonaws.com:~/.
+scp -i ~/Downloads/flowharmonic.pem agents.zip ec2-user@ec2-44-202-8-38.compute-1.amazonaws.com:~/.
+
+
 
 https://ec2-54-161-71-105.compute-1.amazonaws.com/dashboards/dashboard-U13E13890/staticdashboards
 

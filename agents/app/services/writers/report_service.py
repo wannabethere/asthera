@@ -769,6 +769,9 @@ class ReportService(BaseService):
             # Add chart schema information to response metadata if available
             self._add_chart_schemas_to_response(result)
             
+            # Add global executive summary to result
+            result = self._add_global_executive_summary_to_result(result, report_context)
+            
             # Send completion status
             self._send_status_update(
                 status_callback,
@@ -1754,7 +1757,10 @@ class ReportService(BaseService):
             # Add chart schema information to response metadata if available
             self._add_chart_schemas_to_response(result)
             
-            return result
+            # Format the result with global executive summary
+            formatted_result = self._format_report_output_with_global_summary(result, workflow_data, thread_components)
+            
+            return formatted_result
             
         except Exception as e:
             logger.error(f"Error rendering report from workflow data: {e}")
@@ -1996,6 +2002,117 @@ class ReportService(BaseService):
             logger.error(f"Error adding chart schemas to response: {e}")
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
+    
+    def _format_report_output_with_global_summary(
+        self,
+        result: Dict[str, Any],
+        workflow_data: Dict[str, Any],
+        thread_components: List[Any]
+    ) -> Dict[str, Any]:
+        """
+        Format report output with global executive summary
+        
+        Args:
+            result: Original report result from orchestrator pipeline
+            workflow_data: Workflow data from request
+            thread_components: Thread components from workflow
+            
+        Returns:
+            Formatted report output with global executive summary
+        """
+        try:
+            # Extract report data from result
+            post_process = result.get("post_process", {})
+            comprehensive_report = post_process.get("comprehensive_report", {})
+            report_outline = comprehensive_report.get("report_outline", {})
+            sections = report_outline.get("sections", [])
+            
+            # Generate global executive summary if not present
+            global_executive_summary = None
+            if sections:
+                # Try to extract from first section's executive summary
+                first_section = sections[0]
+                if first_section.get("executive_summary"):
+                    # Use first section's executive summary as global summary
+                    global_executive_summary = first_section.get("executive_summary")
+                elif first_section.get("content"):
+                    # Try to extract from content
+                    content = first_section.get("content", "")
+                    if isinstance(content, str) and len(content) > 50:
+                        global_executive_summary = content
+                else:
+                    # Generate a basic summary from available data
+                    total_sections = len(sections)
+                    workflow_id = workflow_data.get("workflow_id", "")
+                    report_title = workflow_data.get("workflow_metadata", {}).get("report_title", "Report")
+                    
+                    global_executive_summary = f"**REPORT OVERVIEW**\n\n**{report_title}** (Workflow: {workflow_id})\n\nThis report provides comprehensive analysis across {total_sections} section(s), delivering actionable insights for organizational decision-making.\n\n**Key Focus Areas:**\n- Data analysis and insights\n- Performance metrics and trends\n- Strategic recommendations and next steps"
+            
+            # Add global executive summary to result
+            if global_executive_summary:
+                result["global_executive_summary"] = global_executive_summary
+                logger.info("Added global executive summary to report response")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error formatting report output with global summary: {e}")
+            # Return original result if formatting fails
+            return result
+    
+    def _add_global_executive_summary_to_result(
+        self,
+        result: Dict[str, Any],
+        report_context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Add global executive summary to report result
+        
+        Args:
+            result: Report result from orchestrator pipeline
+            report_context: Report context information
+            
+        Returns:
+            Report result with global executive summary added
+        """
+        try:
+            # Extract report data from result
+            post_process = result.get("post_process", {})
+            comprehensive_report = post_process.get("comprehensive_report", {})
+            report_outline = comprehensive_report.get("report_outline", {})
+            sections = report_outline.get("sections", [])
+            
+            # Generate global executive summary if not present
+            global_executive_summary = None
+            if sections:
+                # Try to extract from first section's executive summary
+                first_section = sections[0]
+                if first_section.get("executive_summary"):
+                    # Use first section's executive summary as global summary
+                    global_executive_summary = first_section.get("executive_summary")
+                elif first_section.get("content"):
+                    # Try to extract from content
+                    content = first_section.get("content", "")
+                    if isinstance(content, str) and len(content) > 50:
+                        global_executive_summary = content
+                else:
+                    # Generate a basic summary from available data
+                    total_sections = len(sections)
+                    report_title = report_context.get("title", "Report")
+                    
+                    global_executive_summary = f"**REPORT OVERVIEW**\n\n**{report_title}**\n\nThis report provides comprehensive analysis across {total_sections} section(s), delivering actionable insights for organizational decision-making.\n\n**Key Focus Areas:**\n- Data analysis and insights\n- Performance metrics and trends\n- Strategic recommendations and next steps"
+            
+            # Add global executive summary to result
+            if global_executive_summary:
+                result["global_executive_summary"] = global_executive_summary
+                logger.info("Added global executive summary to report result")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error adding global executive summary to result: {e}")
+            # Return original result if formatting fails
+            return result
 
     def clear_cache(self):
         """Clear configuration and execution caches"""

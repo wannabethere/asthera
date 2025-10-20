@@ -180,7 +180,7 @@ class Settings(BaseSettings):
     #CHROMA_STORE_PATH: str = "./chromadb"
     # ChromaDB Settings
     CHROMA_USE_LOCAL: bool = False
-    CHROMA_HOST: str = "ec2-54-161-71-105.compute-1.amazonaws.com"
+    CHROMA_HOST: str = "ec2-44-202-8-38.compute-1.amazonaws.com"
     CHROMA_PORT: int = 8888
     CHROMA_COLLECTION_NAME: str = "default"
     CHROMA_PERSIST_DIRECTORY: str = CHROMA_STORE_PATH
