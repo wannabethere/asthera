@@ -1692,7 +1692,8 @@ class ReportService(BaseService):
                         chart_config=comp.get("chart_config"),
                         table_config=comp.get("table_config"),
                         configuration=comp.get("configuration", {}),
-                        final_result=comp.get("final_result")
+                        final_result=comp.get("final_result"),
+                        metadata=comp.get("metadata", {})  # Preserve metadata
                     )
                     converted_thread_components.append(thread_component)
                 else:
@@ -2010,7 +2011,7 @@ class ReportService(BaseService):
         thread_components: List[Any]
     ) -> Dict[str, Any]:
         """
-        Format report output with global executive summary
+        Format report output with global executive summary and component positioning
         
         Args:
             result: Original report result from orchestrator pipeline
@@ -2018,7 +2019,7 @@ class ReportService(BaseService):
             thread_components: Thread components from workflow
             
         Returns:
-            Formatted report output with global executive summary
+            Formatted report output with global executive summary and component positioning
         """
         try:
             # Extract report data from result
@@ -2026,6 +2027,44 @@ class ReportService(BaseService):
             comprehensive_report = post_process.get("comprehensive_report", {})
             report_outline = comprehensive_report.get("report_outline", {})
             sections = report_outline.get("sections", [])
+            
+            # Extract component positioning information from thread components
+            component_positions = {}
+            for component in thread_components:
+                component_metadata = None
+                component_id = component.id if hasattr(component, 'id') else component.get("id", "")
+                
+                # Check for metadata in ThreadComponentData objects
+                if hasattr(component, 'metadata') and component.metadata:
+                    component_metadata = component.metadata
+                # Check for metadata in dictionary components
+                elif isinstance(component, dict) and component.get("metadata"):
+                    component_metadata = component["metadata"]
+                
+                # Also check for thread_metadata in the component if it's a dict
+                if not component_metadata and isinstance(component, dict) and component.get("thread_metadata"):
+                    component_metadata = component["thread_metadata"]
+                
+                if component_metadata and "position" in component_metadata:
+                    component_positions[component_id] = {
+                        "position": component_metadata["position"],
+                        "ui_visibility": component_metadata.get("ui_visibility", {}),
+                        "project_id": component_metadata.get("project_id", ""),
+                        "data_description": component_metadata.get("data_description", ""),
+                        "processing_stats": component_metadata.get("processing_stats", {})
+                    }
+                    logger.info(f"Extracted positioning for report component {component_id}: {component_metadata.get('position', {})}")
+                else:
+                    logger.warning(f"No positioning metadata found for report component {component_id}. Available metadata keys: {list(component_metadata.keys()) if component_metadata else 'None'}")
+                    # Add a default position if no metadata is available
+                    component_positions[component_id] = {
+                        "position": {"x": 0, "y": 0, "width": 400, "height": 300},
+                        "ui_visibility": {"visible": True, "collapsed": False},
+                        "project_id": workflow_data.get("project_id", ""),
+                        "data_description": f"Component {component_id}",
+                        "processing_stats": {}
+                    }
+                    logger.info(f"Added default positioning for report component {component_id}")
             
             # Generate global executive summary if not present
             global_executive_summary = None
@@ -2052,6 +2091,22 @@ class ReportService(BaseService):
             if global_executive_summary:
                 result["global_executive_summary"] = global_executive_summary
                 logger.info("Added global executive summary to report response")
+            
+            # Create report configuration with component positioning
+            report_config = {
+                "template": workflow_data.get("workflow_metadata", {}).get("dashboard_template", "default"),
+                "layout": workflow_data.get("workflow_metadata", {}).get("dashboard_layout", "grid"),
+                "refresh_rate": workflow_data.get("workflow_metadata", {}).get("refresh_rate", 300),
+                "component_positions": component_positions,
+                "total_components": len(thread_components),
+                "project_id": workflow_data.get("project_id", ""),
+                "workflow_id": workflow_data.get("workflow_id", ""),
+                "created_at": datetime.now().isoformat()
+            }
+            
+            # Add report configuration to result
+            result["report_config"] = report_config
+            logger.info(f"Added report configuration with {len(component_positions)} component positions")
             
             return result
             

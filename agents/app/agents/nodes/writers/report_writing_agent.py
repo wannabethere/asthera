@@ -67,6 +67,7 @@ class ThreadComponentData:
     configuration: Optional[Dict[str, Any]] = None
     created_at: Optional[datetime] = None
     final_result: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 @dataclass

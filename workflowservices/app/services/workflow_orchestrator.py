@@ -325,7 +325,7 @@ class WorkflowOrchestrator:
                 share_type=share_type,
                 entity_id=entity_id
             )
-        elif share_type == "report":
+        elif share_type == "reports":
             return await self.report_workflow_service.get_all_shares(
                 user_id=user_id,
                 share_type=share_type,

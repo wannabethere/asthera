@@ -1033,6 +1033,7 @@ class DashboardService(BaseService):
             
             # Build formatted components by enriching original components with orchestration results
             formatted_components = []
+            component_positions = {}  # Track component positions for dashboard config
             
             for i, component in enumerate(thread_components):
                 component_id = component.get("id")
@@ -1071,6 +1072,51 @@ class DashboardService(BaseService):
                     "validation_results": component.get("validation_results", {}),
                     "visualization_data": component.get("visualization_data", {})
                 }
+                
+                # Preserve metadata from orchestration results if original metadata is empty
+                if not formatted_component["metadata"] and result_data and result_data.get("thread_metadata"):
+                    formatted_component["metadata"] = result_data.get("thread_metadata", {})
+                    logger.info(f"Restored metadata for component {component_id} from orchestration results")
+                
+                # Extract positioning information from metadata for dashboard config
+                component_metadata = formatted_component.get("metadata", {})
+                
+                # Also check if metadata was preserved in orchestration results as thread_metadata
+                if not component_metadata and result_data:
+                    component_metadata = result_data.get("thread_metadata", {})
+                    # Update the formatted component metadata as well
+                    if component_metadata:
+                        formatted_component["metadata"] = component_metadata
+                
+                # Check if component has thread_metadata in the original thread_components
+                if not component_metadata:
+                    # Look for thread_metadata in the original thread_components
+                    for thread_comp in thread_components:
+                        if thread_comp.get("id") == component_id and thread_comp.get("thread_metadata"):
+                            component_metadata = thread_comp.get("thread_metadata", {})
+                            logger.info(f"Found thread_metadata in original thread_components for component {component_id}")
+                            break
+                
+                if component_metadata and "position" in component_metadata:
+                    component_positions[component_id] = {
+                        "position": component_metadata["position"],
+                        "ui_visibility": component_metadata.get("ui_visibility", {}),
+                        "project_id": component_metadata.get("project_id", project_id),
+                        "data_description": component_metadata.get("data_description", ""),
+                        "processing_stats": component_metadata.get("processing_stats", {})
+                    }
+                    logger.info(f"Extracted positioning for component {component_id}: {component_metadata.get('position', {})}")
+                else:
+                    logger.warning(f"No positioning metadata found for component {component_id}. Available metadata keys: {list(component_metadata.keys()) if component_metadata else 'None'}")
+                    # Add a default position if no metadata is available
+                    component_positions[component_id] = {
+                        "position": {"x": 0, "y": 0, "width": 400, "height": 300},
+                        "ui_visibility": {"visible": True, "collapsed": False},
+                        "project_id": project_id,
+                        "data_description": f"Component {component_id}",
+                        "processing_stats": {}
+                    }
+                    logger.info(f"Added default positioning for component {component_id}")
                 
                 # Enrich with orchestration result if available
                 if result_data:
@@ -1216,13 +1262,25 @@ class DashboardService(BaseService):
             if orchestration_result.get("metadata", {}).get("orchestration_metadata"):
                 formatted_output["orchestration_metadata"] = orchestration_result["metadata"]["orchestration_metadata"]
             
+            # Create dashboard configuration with component positioning
+            dashboard_config = {
+                "template": workflow_data.get("workflow_metadata", {}).get("dashboard_template", "default"),
+                "layout": workflow_data.get("workflow_metadata", {}).get("dashboard_layout", "grid"),
+                "refresh_rate": workflow_data.get("workflow_metadata", {}).get("refresh_rate", 300),
+                "component_positions": component_positions,
+                "total_components": len(formatted_components),
+                "project_id": project_id,
+                "workflow_id": workflow_data.get("workflow_id", ""),
+                "created_at": datetime.now().isoformat()
+            }
+            
             # Return in the expected DashboardResponse format
             return {
                 "success": True,
                 "dashboard_data": formatted_output,
                 "conditional_formatting": enhanced_dashboard.get("conditional_formatting_rules", {}),
                 "chart_configurations": orchestration_result.get("dashboard_data", {}).get("chart_configurations", {}),
-                "dashboard_config": orchestration_result.get("dashboard_data", {}).get("dashboard_config", {}),
+                "dashboard_config": dashboard_config,
                 "metadata": orchestration_result.get("metadata", {}),
                 "workflow_metadata": workflow_data.get("workflow_metadata", {}),
                 "global_executive_summary": formatted_output.get("global_executive_summary"),
