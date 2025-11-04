@@ -1,0 +1,297 @@
+{
+  "table_name": "tbl_payments_at_cpt_level",
+  "source_file_pattern": "tbl_payments_at_cpt_level_*.csv",
+  "description": "Payments received at the CPT (Current Procedural Terminology) code level",
+  "layer": "raw",
+  "columns": [
+    {
+      "name": "payment_at_cpt_uuid",
+      "data_type": "STRING",
+      "nullable": false,
+      "description": "Unique identifier for the payment record at CPT level"
+    },
+    {
+      "name": "facility",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Facility name"
+    },
+    {
+      "name": "facility_pos",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Place of service code"
+    },
+    {
+      "name": "rendering_provider_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Rendering provider name"
+    },
+    {
+      "name": "appointment_servicing_provider",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Provider who serviced the appointment"
+    },
+    {
+      "name": "resource_provider_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Resource provider name"
+    },
+    {
+      "name": "created_by_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Name of user who created the payment record"
+    },
+    {
+      "name": "posted_by_user",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Name of user who posted the payment"
+    },
+    {
+      "name": "patient_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Patient name"
+    },
+    {
+      "name": "patient_acct_no",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Patient account number"
+    },
+    {
+      "name": "payer_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Payer name"
+    },
+    {
+      "name": "service_date",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Date of service"
+    },
+    {
+      "name": "claim_date",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Date of the claim"
+    },
+    {
+      "name": "payment_date",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Date of payment"
+    },
+    {
+      "name": "payment_check_date",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Date on payment check"
+    },
+    {
+      "name": "payment_deposit_date",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Date payment was deposited"
+    },
+    {
+      "name": "payment_eob_date",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Date of Explanation of Benefits"
+    },
+    {
+      "name": "payment_posted_date",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Date payment was posted"
+    },
+    {
+      "name": "payment_check_no",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Payment check number"
+    },
+    {
+      "name": "payment_type",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Type of payment (e.g., Check, ACH, Credit Card)"
+    },
+    {
+      "name": "payer_type",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Type of payer (Payer or Patient / Guarantor)"
+    },
+    {
+      "name": "claim_no",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Claim number"
+    },
+    {
+      "name": "cpt_code",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "CPT code"
+    },
+    {
+      "name": "cpt_description",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "CPT code description"
+    },
+    {
+      "name": "start_date_of_service",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Start date of service"
+    },
+    {
+      "name": "end_date_of_service",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "End date of service"
+    },
+    {
+      "name": "cpt_group_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "CPT group name"
+    },
+    {
+      "name": "modifier_1",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "First modifier code"
+    },
+    {
+      "name": "modifier_2",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Second modifier code"
+    },
+    {
+      "name": "modifier_3",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Third modifier code"
+    },
+    {
+      "name": "modifier_4",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Fourth modifier code"
+    },
+    {
+      "name": "icd1_code",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "First ICD diagnosis code"
+    },
+    {
+      "name": "icd1_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "First ICD diagnosis name"
+    },
+    {
+      "name": "icd2_code",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Second ICD diagnosis code"
+    },
+    {
+      "name": "icd2_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Second ICD diagnosis name"
+    },
+    {
+      "name": "icd3_code",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Third ICD diagnosis code"
+    },
+    {
+      "name": "icd3_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Third ICD diagnosis name"
+    },
+    {
+      "name": "icd4_code",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Fourth ICD diagnosis code"
+    },
+    {
+      "name": "icd4_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Fourth ICD diagnosis name"
+    },
+    {
+      "name": "payment_id",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Payment identifier"
+    },
+    {
+      "name": "payment",
+      "data_type": "DECIMAL",
+      "nullable": true,
+      "description": "Total payment amount"
+    },
+    {
+      "name": "payer_payment",
+      "data_type": "DECIMAL",
+      "nullable": true,
+      "description": "Payment amount from payer"
+    },
+    {
+      "name": "patient_payment",
+      "data_type": "DECIMAL",
+      "nullable": true,
+      "description": "Payment amount from patient"
+    },
+    {
+      "name": "contractual_adjustment",
+      "data_type": "DECIMAL",
+      "nullable": true,
+      "description": "Contractual adjustment amount"
+    },
+    {
+      "name": "payer_withheld",
+      "data_type": "DECIMAL",
+      "nullable": true,
+      "description": "Amount withheld by payer"
+    },
+    {
+      "name": "source_file",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Source file name"
+    },
+    {
+      "name": "load_ts",
+      "data_type": "TIMESTAMP",
+      "nullable": true,
+      "description": "Timestamp when the record was loaded"
+    },
+    {
+      "name": "facility_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Full facility name"
+    }
+  ]
+}
+

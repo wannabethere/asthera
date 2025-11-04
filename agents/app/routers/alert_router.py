@@ -217,12 +217,26 @@ async def create_multiple_alerts(
 ):
     """Create multiple alerts using the compatibility service."""
     try:
+        # Ensure at least one project_id is provided
+        has_project_id = request.project_id or any(alert.project_id for alert in request.alerts)
+        if not has_project_id:
+            raise HTTPException(
+                status_code=400,
+                detail="project_id is required. Provide it in the batch request or in each individual alert."
+            )
+        
         compatibility_service = get_alert_compatibility_service()
         results = []
         
         for alert in request.alerts:
             # Use provided project_id or fall back to individual alert's project_id
             project_id = request.project_id or alert.project_id
+            if not project_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Alert at index {request.alerts.index(alert)} is missing project_id"
+                )
+            
             result = await compatibility_service.process_alert_create(alert, project_id)
             
             results.append(AlertCompatibilityResponse(
@@ -239,6 +253,8 @@ async def create_multiple_alerts(
         
         return results
         
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(
@@ -253,6 +269,13 @@ async def create_feed(
 ):
     """Create a feed using the compatibility service with AlertCreate requests."""
     try:
+        # Ensure project_id is provided
+        if not request.project_id:
+            raise HTTPException(
+                status_code=400,
+                detail="project_id is required in feed creation request."
+            )
+        
         compatibility_service = get_alert_compatibility_service()
         results = []
         
@@ -280,6 +303,8 @@ async def create_feed(
         
         return results
         
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(
@@ -290,10 +315,22 @@ async def create_feed(
 
 @router.post("/service/process-request", response_model=AlertCompatibilityResponse)
 async def process_alert_request(
-    request: AlertCreate
+    request: AlertCreate,
+    project_id: Optional[str] = None
 ):
     """Process a generic alert request using the compatibility service."""
     try:
+        # Ensure project_id is provided
+        if not request.project_id and not project_id:
+            raise HTTPException(
+                status_code=400,
+                detail="project_id is required. Provide it in the AlertCreate or as a parameter."
+            )
+        
+        # Override with parameter if provided
+        if project_id:
+            request.project_id = project_id
+        
         compatibility_service = get_alert_compatibility_service()
         result = await compatibility_service.process_alert_create(request)
         
@@ -309,6 +346,8 @@ async def process_alert_request(
             }
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(
@@ -328,6 +367,13 @@ async def create_alert_compatibility(
 ):
     """Create an alert using the compatibility service (main.py integration)."""
     try:
+        # Ensure project_id is provided
+        if not alert_create.project_id and not project_id:
+            raise HTTPException(
+                status_code=400,
+                detail="project_id is required. Provide it in alert_create or as a parameter."
+            )
+        
         compatibility_service = get_alert_compatibility_service()
         result = await compatibility_service.process_alert_create(
             alert_create=alert_create,
@@ -346,6 +392,8 @@ async def create_alert_compatibility(
             }
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(
@@ -397,10 +445,22 @@ async def create_alerts_from_response(
 
 @router.post("/ask/alertbuilder/ai")
 async def ai_alert_create(
-    alert: AlertCreate
+    alert: AlertCreate,
+    project_id: Optional[str] = None
 ):
     """Main.py compatibility endpoint - exact API match."""
     try:
+        # Ensure project_id is provided
+        if not alert.project_id and not project_id:
+            raise HTTPException(
+                status_code=400,
+                detail="project_id is required. Provide it in alert or as a parameter."
+            )
+        
+        # Override with parameter if provided
+        if project_id:
+            alert.project_id = project_id
+        
         compatibility_service = get_alert_compatibility_service()
         # Process the request
         result = await compatibility_service.process_alert_create(alert)
@@ -420,6 +480,8 @@ async def ai_alert_create(
             "service_metadata": result.service_metadata
         }
         
+    except HTTPException:
+        raise
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
@@ -440,7 +502,9 @@ async def debug_request(request_data: dict):
         return {
             "status": "valid",
             "parsed_data": alert.dict(),
-            "configs_present": alert.config is not None
+            "configs_present": alert.config is not None,
+            "project_id_present": alert.project_id is not None,
+            "warning": "project_id required for execution" if not alert.project_id else "project_id provided"
         }
     except Exception as e:
         return {
@@ -546,12 +610,26 @@ async def batch_create_alerts(
 ):
     """Create multiple alerts in batch using the compatibility service."""
     try:
+        # Ensure at least one project_id is provided
+        has_project_id = request.project_id or any(alert.project_id for alert in request.alerts)
+        if not has_project_id:
+            raise HTTPException(
+                status_code=400,
+                detail="project_id is required. Provide it in the batch request or in each individual alert."
+            )
+        
         compatibility_service = get_alert_compatibility_service()
         results = []
         
         for alert in request.alerts:
             # Use provided project_id or fall back to individual alert's project_id
             project_id = request.project_id or alert.project_id
+            if not project_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Alert at index {request.alerts.index(alert)} is missing project_id"
+                )
+            
             result = await compatibility_service.process_alert_create(alert, project_id)
             
             results.append(AlertCompatibilityResponse(
@@ -568,6 +646,8 @@ async def batch_create_alerts(
         
         return results
         
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(
@@ -590,6 +670,7 @@ class ConditionValidationRequest(BaseModel):
     metric_column: Optional[str] = Field(default=None, description="Specific column to extract value from")
     use_cache: bool = Field(default=True, description="Whether to use caching for SQL execution")
     overall_condition_logic: str = Field(default="any_met", description="Logic for determining overall condition status")
+    project_id: str = Field(..., description="Project identifier for data source access")
 
 
 class ConditionValidationResponse(BaseModel):
@@ -632,7 +713,8 @@ async def validate_alert_condition(request: ConditionValidationRequest):
             threshold_type=request.threshold_type.value, # Convert Enum to string
             metric_column=request.metric_column,
             use_cache=request.use_cache,
-            overall_condition_logic=request.overall_condition_logic
+            overall_condition_logic=request.overall_condition_logic,
+            project_id=request.project_id
         )
         
         return ConditionValidationResponse(**result)
@@ -650,6 +732,7 @@ async def validate_threshold_condition(
     sql_query: str,
     operator: ThresholdOperator,
     threshold_value: float,
+    project_id: str,
     metric_column: Optional[str] = None,
     use_cache: bool = True
 ):
@@ -674,7 +757,8 @@ async def validate_threshold_condition(
             threshold_type="default", # Default threshold type for backward compatibility
             metric_column=metric_column,
             use_cache=use_cache,
-            overall_condition_logic="any_met"
+            overall_condition_logic="any_met",
+            project_id=project_id
         )
         
         return ConditionValidationResponse(**result)

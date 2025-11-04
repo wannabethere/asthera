@@ -466,7 +466,8 @@ class PipelineContainer:
                 llm=self._llm,
                 retrieval_helper=self._retrieval_helper,
                 conditional_formatting_pipeline=self._pipelines.get("conditional_formatting_generation"),
-                simple_report_pipeline=self._pipelines.get("simple_report_generation")
+                simple_report_pipeline=self._pipelines.get("simple_report_generation"),
+                report_summary_pipeline=self._pipelines.get("dashboard_summary")
             )
             self._pipelines["report_orchestrator"]._initialized = True
         except ImportError as e:

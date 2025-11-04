@@ -915,6 +915,9 @@ Please provide your response in proper Markdown string format.
             - Please donot create a new table only use the schemas provided to you in the request.
             - Columns to be adjusted must belong to the given database schema; if no such column exists, keep sql empty string
             - You can add/delete/modify columns, add/delete/modify keywords such as DISTINCT or apply aggregate functions on columns
+            - We will modify the original query by adding new columns, additional filters or adding new joins to the original query 
+            - **IMPORTANT: Please ensure to use all the columns and tables mentioned in the original query in the final answer.**
+            - **IMPORTANT: Please dont change or remove the original tables from the query.**
             
             ### FINAL ANSWER FORMAT ###
             The final answer must be a SQL query in JSON format:
@@ -1730,58 +1733,79 @@ Please provide your response in proper Markdown string format.
         return {"error": "Max attempts reached", "success": False}
     
     async def _handle_sql_generation(self, query: str, **kwargs) -> Dict[str, Any]:
-        """Handle SQL generation with RAG and self-correction"""
+        """Handle SQL generation with unified context approach"""
         project_id = kwargs.get("project_id")
         if not project_id:
             raise ValueError("project_id is required")
+        
+        # Check if unified context is already provided
+        unified_context = kwargs.get("unified_context")
+        if unified_context:
+            # Use provided unified context
+            schema_contexts = unified_context.get("schema_contexts", [])
+            relationships = unified_context.get("relationships", [])
+            reasoning = unified_context.get("reasoning", "")
+        else:
+            # Retrieve unified context once
+            print(f"=== RETRIEVING UNIFIED CONTEXT ===")
+            print(f"Query: {query}")
+            print(f"Project ID: {project_id}")
             
-        # Use the enhanced database schemas retrieval to get DDL with column metadata
-        print(f"=== CALLING ENHANCED DATABASE SCHEMAS RETRIEVAL ===")
-        print(f"Query: {query}")
-        print(f"Project ID: {project_id}")
+            # Get schema context
+            schema_result = await self.retrieval_helper.get_database_schemas(
+                project_id=project_id,
+                table_retrieval={
+                    "table_retrieval_size": 10,
+                    "table_column_retrieval_size": 100,
+                    "allow_using_db_schemas_without_pruning": False
+                },
+                query=query,
+                tables=None,
+                histories=None
+            )
+            
+            # Get SQL pairs and instructions in parallel
+            sql_pairs_result, instructions_result = await asyncio.gather(
+                self.retrieval_helper.get_sql_pairs(
+                    query=query,
+                    project_id=project_id,
+                    similarity_threshold=0.3,
+                    max_retrieval_size=3
+                ),
+                self.retrieval_helper.get_instructions(
+                    query=query,
+                    project_id=project_id,
+                    similarity_threshold=0.3,
+                    top_k=3
+                ),
+                return_exceptions=True
+            )
+            
+            # Extract schema contexts and relationships
+            schema_contexts = []
+            relationships = []
+            
+            for schema in schema_result.get("schemas", []):
+                if isinstance(schema, dict):
+                    table_ddl = schema.get("table_ddl", "")
+                    if table_ddl:
+                        schema_contexts.append(table_ddl)
+                    
+                    table_relationships = schema.get("relationships", [])
+                    if table_relationships:
+                        relationships.extend(table_relationships)
+            
+            print(f"=== UNIFIED CONTEXT RETRIEVED ===")
+            print(f"Schema contexts count: {len(schema_contexts)}")
+            print(f"Relationships count: {len(relationships)}")
+            print(f"SQL pairs count: {len(sql_pairs_result.get('sql_pairs', []) if not isinstance(sql_pairs_result, Exception) else [])}")
+            print(f"Instructions count: {len(instructions_result.get('documents', []) if not isinstance(instructions_result, Exception) else [])}")
         
-        # Use get_database_schemas to get enhanced DDL with column metadata
-        schema_result = await self.retrieval_helper.get_database_schemas(
-            project_id=project_id,
-            table_retrieval={
-                "table_retrieval_size": 10,
-                "table_column_retrieval_size": 100,
-                "allow_using_db_schemas_without_pruning": False
-            },
-            query=query,
-            tables=None,
-            histories=None
-        )
-        
-        print(f"=== ENHANCED SCHEMA RETRIEVAL RESULT ===")
-        print(f"Schema results count: {len(schema_result.get('schemas', []))}")
-        print(f"Has calculated field: {schema_result.get('has_calculated_field', False)}")
-        print(f"Has metric: {schema_result.get('has_metric', False)}")
-        
-        # Extract schema contexts and relationships from the enhanced schema results
-        schema_contexts = []
-        relationships = []
-        
-        for schema in schema_result.get("schemas", []):
-            if isinstance(schema, dict):
-                table_ddl = schema.get("table_ddl", "")
-                if table_ddl:
-                    schema_contexts.append(table_ddl)
-                    print(f"Added enhanced DDL for table {schema.get('table_name', 'unknown')}: {table_ddl[:100]}...")
-                
-                table_relationships = schema.get("relationships", [])
-                if table_relationships:
-                    relationships.extend(table_relationships)
-        
-        print(f"=== EXTRACTED SCHEMA DATA ===")
-        print(f"Schema contexts count: {len(schema_contexts)}")
-        print(f"Relationships count: {len(relationships)}")
-        
-        # Generate reasoning first
-        # Remove schema_contexts and contexts from kwargs to avoid duplicate parameter error
+        # Generate reasoning using unified context
         kwargs_copy = kwargs.copy()
         kwargs_copy.pop("schema_contexts", None)
-        kwargs_copy.pop("contexts", None)  # Also remove contexts to avoid conflict
+        kwargs_copy.pop("contexts", None)
+        kwargs_copy.pop("unified_context", None)
         
         reasoning_result = await self._reason_sql_internal(
             query, schema_contexts, kwargs.get("language", "English"), relationships=relationships, **kwargs_copy
@@ -1789,11 +1813,9 @@ Please provide your response in proper Markdown string format.
         
         reasoning = reasoning_result.get("reasoning", "")
         if hasattr(reasoning, 'content'):
-            # Extract content and remove markdown formatting
-            content = reasoning.content
-            reasoning = content
+            reasoning = reasoning.content
         
-        # Generate SQL with the reasoning using the selected schema contexts
+        # Generate SQL with the reasoning using the unified context
         sql_result = await self._generate_sql_internal(
             query, schema_contexts, reasoning, kwargs.get("configuration", {}), relationships=relationships, **kwargs_copy
         )

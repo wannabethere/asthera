@@ -1,0 +1,117 @@
+{
+  "table_name": "tbl_adjustments_at_claim_level",
+  "source_file_pattern": "tbl_adjustments_at_claim_level_*.csv",
+  "description": "Adjustments applied at the claim level",
+  "layer": "raw",
+  "columns": [
+    {
+      "name": "adjustment_at_claim_uuid",
+      "data_type": "STRING",
+      "nullable": false,
+      "description": "Unique identifier for the adjustment record at claim level"
+    },
+    {
+      "name": "facility",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Facility name where the adjustment was applied"
+    },
+    {
+      "name": "claim_date",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Date of the claim"
+    },
+    {
+      "name": "service_date",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Date of service"
+    },
+    {
+      "name": "adjustment_date",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Date when the adjustment was applied"
+    },
+    {
+      "name": "appointment_servicing_provider",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Provider who serviced the appointment"
+    },
+    {
+      "name": "facility_pos",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Place of service code"
+    },
+    {
+      "name": "patient_acct_no",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Patient account number"
+    },
+    {
+      "name": "patient_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Patient name"
+    },
+    {
+      "name": "claim_no",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Claim number"
+    },
+    {
+      "name": "adjustment_id",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Adjustment identifier"
+    },
+    {
+      "name": "adjustment_code",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Adjustment code (e.g., OA23, BD, OON, 08)"
+    },
+    {
+      "name": "adjustment_code_description",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Description of the adjustment code"
+    },
+    {
+      "name": "adjustment_group_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Group name for the adjustment"
+    },
+    {
+      "name": "writeoff_adjustment",
+      "data_type": "DECIMAL",
+      "nullable": true,
+      "description": "Amount of write-off adjustment"
+    },
+    {
+      "name": "source_file",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Source file name"
+    },
+    {
+      "name": "load_ts",
+      "data_type": "TIMESTAMP",
+      "nullable": true,
+      "description": "Timestamp when the record was loaded"
+    },
+    {
+      "name": "facility_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Full facility name"
+    }
+  ]
+}
+

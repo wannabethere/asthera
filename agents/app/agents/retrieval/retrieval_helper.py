@@ -115,7 +115,7 @@ class RetrievalHelper:
             'project_id': project_id,
             'table_retrieval': table_retrieval,
             'query': query,
-            'histories': [h.__dict__ for h in histories] if histories else None,
+            'histories': [h.__dict__ if hasattr(h, '__dict__') else h for h in histories] if histories else None,
             'tables': tables
         }, sort_keys=True, default=str).encode()).hexdigest()
         cached = await self.cache.get(cache_key)
@@ -184,11 +184,13 @@ class RetrievalHelper:
                     table_ddl = result.get("table_ddl", "")
                     column_metadata = result.get("column_metadata", [])  # Get column metadata
                     
-                    print(f"Result {i} - table_name: {table_name}, table_ddl_length: {len(table_ddl) if table_ddl else 0}")
+                    print(f"Result {i} - table_name: {table_name}")
                     print(f"Result {i} - column_metadata_count: {len(column_metadata)}")
                     
                     if table_ddl:
-                        print(f"Result {i} - table_ddl preview: {table_ddl[:200]}...")
+                        print(f"Result {i} - Full DDL:")
+                        print(f"{table_ddl}")
+                        print(f"=== END DDL for {table_name} ===")
                     
                     # Use the DDL as-is since it already contains the necessary column information
                     # The _build_table_ddl method in retrieval.py already processes COLUMN_METADATA
@@ -796,169 +798,240 @@ async def main():
         }
         test_tables = ["users", "orders", "products"]  # Example tables to test with
         
-        # Test database schema retrieval
-        logger.info(f"Testing database schema retrieval with query: {test_query}")
-        print("test_project_id: ", test_project_id)
-        print("test_table_retrieval: ", test_table_retrieval)
-        print("test_query: ", test_query)
-        print("test_tables: ", test_tables)
+        logger.info("=" * 80)
+        logger.info("STARTING RETRIEVAL HELPER TEST")
+        logger.info("=" * 80)
         
-        schema_results = await helper.get_database_schemas(
-            project_id=test_project_id,
-            table_retrieval=test_table_retrieval,
-            query=test_query,
-            tables=test_tables
-        )
-        print("schema_results: ", schema_results)
+        # Test database schema retrieval
+        logger.info(f"\n🔍 Testing database schema retrieval with query: '{test_query}'")
+        logger.info(f"Project ID: {test_project_id}")
+        logger.info(f"Table retrieval config: {test_table_retrieval}")
+        logger.info(f"Test tables: {test_tables}")
+        
+        try:
+            schema_results = await helper.get_database_schemas(
+                project_id=test_project_id,
+                table_retrieval=test_table_retrieval,
+                query=test_query,
+                tables=test_tables
+            )
+            logger.info(f"✅ Database schema retrieval completed")
+        except Exception as e:
+            logger.error(f"❌ Database schema retrieval failed: {str(e)}")
+            schema_results = {"error": str(e)}
         
         # Test SQL pairs retrieval
-        logger.info(f"\nTesting SQL pairs retrieval with query: {test_query}")
-        sql_pairs_results = await helper.get_sql_pairs(
-            query=test_query,
-            project_id=test_project_id
-        )
-        print("sql_pairs_results: ", sql_pairs_results)
+        logger.info(f"\n🔍 Testing SQL pairs retrieval with query: '{test_query}'")
+        try:
+            sql_pairs_results = await helper.get_sql_pairs(
+                query=test_query,
+                project_id=test_project_id
+            )
+            logger.info(f"✅ SQL pairs retrieval completed")
+        except Exception as e:
+            logger.error(f"❌ SQL pairs retrieval failed: {str(e)}")
+            sql_pairs_results = {"error": str(e)}
         
         # Test instructions retrieval
-        logger.info(f"\nTesting instructions retrieval with query: {test_query}")
-        instructions_results = await helper.get_instructions(
-            query=test_query,
-            project_id=test_project_id
-        )
-        print("instructions_results: ", instructions_results)
+        logger.info(f"\n🔍 Testing instructions retrieval with query: '{test_query}'")
+        try:
+            instructions_results = await helper.get_instructions(
+                query=test_query,
+                project_id=test_project_id
+            )
+            logger.info(f"✅ Instructions retrieval completed")
+        except Exception as e:
+            logger.error(f"❌ Instructions retrieval failed: {str(e)}")
+            instructions_results = {"error": str(e)}
         
         # Test historical questions retrieval
-        logger.info(f"\nTesting historical questions retrieval with query: {test_query}")
-        historical_results = await helper.get_historical_questions(
-            query=test_query,
-            project_id=test_project_id
-        )
-        print("historical_results: ", historical_results)
+        logger.info(f"\n🔍 Testing historical questions retrieval with query: '{test_query}'")
+        try:
+            historical_results = await helper.get_historical_questions(
+                query=test_query,
+                project_id=test_project_id
+            )
+            logger.info(f"✅ Historical questions retrieval completed")
+        except Exception as e:
+            logger.error(f"❌ Historical questions retrieval failed: {str(e)}")
+            historical_results = {"error": str(e)}
         
         # Test views retrieval
-        logger.info(f"\nTesting views retrieval with query: {test_query}")
-        views_results = await helper.get_views(
-            query=test_query,
-            project_id=test_project_id,
-            tables=test_tables
-        )
-        print("views_results: ", views_results)
+        logger.info(f"\n🔍 Testing views retrieval with query: '{test_query}'")
+        try:
+            views_results = await helper.get_views(
+                query=test_query,
+                project_id=test_project_id,
+                tables=test_tables
+            )
+            logger.info(f"✅ Views retrieval completed")
+        except Exception as e:
+            logger.error(f"❌ Views retrieval failed: {str(e)}")
+            views_results = {"error": str(e)}
         
         # Test metrics retrieval
-        logger.info(f"\nTesting metrics retrieval with query: {test_query}")
-        metrics_results = await helper.get_metrics(
-            query=test_query,
-            project_id=test_project_id,
-            tables=test_tables
-        )
-        print("metrics_results: ", metrics_results)
+        logger.info(f"\n🔍 Testing metrics retrieval with query: '{test_query}'")
+        try:
+            metrics_results = await helper.get_metrics(
+                query=test_query,
+                project_id=test_project_id,
+                tables=test_tables
+            )
+            logger.info(f"✅ Metrics retrieval completed")
+        except Exception as e:
+            logger.error(f"❌ Metrics retrieval failed: {str(e)}")
+            metrics_results = {"error": str(e)}
         
-        # Print results
-        logger.info("\nDatabase Schema Retrieval Results:")
+        # Test table names and schema contexts extraction
+        logger.info(f"\n🔍 Testing table names and schema contexts extraction")
+        try:
+            table_contexts_results = await helper.get_table_names_and_schema_contexts(
+                query=test_query,
+                project_id=test_project_id,
+                table_retrieval=test_table_retrieval,
+                tables=test_tables
+            )
+            logger.info(f"✅ Table names and schema contexts extraction completed")
+        except Exception as e:
+            logger.error(f"❌ Table names and schema contexts extraction failed: {str(e)}")
+            table_contexts_results = {"error": str(e)}
+        
+        # Print detailed results
+        logger.info("\n" + "=" * 80)
+        logger.info("DETAILED RESULTS")
+        logger.info("=" * 80)
+        
+        # Print database schema results
+        logger.info("\n📊 Database Schema Retrieval Results:")
         if "error" in schema_results:
-            logger.error(f"Error: {schema_results['error']}")
+            logger.error(f"❌ Error: {schema_results['error']}")
         else:
-            logger.info(f"Total schemas found: {schema_results['total_schemas']}")
-            for i, schema in enumerate(schema_results['schemas'], 1):
-                logger.info(f"\nSchema {i}:")
-                logger.info(f"Table Name: {schema['table_name']}")
+            logger.info(f"✅ Total schemas found: {schema_results.get('total_schemas', 0)}")
+            schemas = schema_results.get('schemas', [])
+            for i, schema in enumerate(schemas, 1):
+                logger.info(f"\n📋 Schema {i}:")
+                logger.info(f"   Table Name: {schema.get('table_name', 'N/A')}")
                 
                 # Extract description from table_ddl if it exists
                 table_ddl = schema.get('table_ddl', '')
                 if table_ddl and table_ddl.startswith('--'):
                     description = table_ddl.split('\n')[0].replace('--', '').strip()
                     if description:
-                        logger.info(f"Description: {description}")
+                        logger.info(f"   Description: {description}")
                 
                 # Extract columns from table_ddl
-                logger.info("Columns:")
                 if table_ddl:
-                    # Split the DDL into lines and extract column definitions
+                    logger.info("   Columns:")
                     lines = table_ddl.split('\n')
                     for line in lines:
                         if line.strip() and not line.startswith('--') and not line.startswith('CREATE'):
-                            # Clean up the column definition
                             col_def = line.strip().rstrip(',').strip()
                             if col_def:
-                                logger.info(f"  - {col_def}")
+                                logger.info(f"     - {col_def}")
                 
                 # Log additional metadata
-                logger.info(f"Has Calculated Field: {schema.get('has_calculated_field', False)}")
-                logger.info(f"Has Metric: {schema.get('has_metric', False)}")
+                logger.info(f"   Has Calculated Field: {schema.get('has_calculated_field', False)}")
+                logger.info(f"   Has Metric: {schema.get('has_metric', False)}")
                 
                 # Log if it's a view
                 if 'CREATE VIEW' in table_ddl:
-                    logger.info("Type: View")
+                    logger.info("   Type: View")
                 else:
-                    logger.info("Type: Table")
+                    logger.info("   Type: Table")
         
         # Print SQL pairs results
-        logger.info("\nSQL Pairs Retrieval Results:")
+        logger.info("\n📊 SQL Pairs Retrieval Results:")
         if "error" in sql_pairs_results:
-            logger.error(f"Error: {sql_pairs_results['error']}")
+            logger.error(f"❌ Error: {sql_pairs_results['error']}")
         else:
-            logger.info(f"Total SQL pairs found: {sql_pairs_results['total_pairs']}")
-            for i, pair in enumerate(sql_pairs_results['sql_pairs'], 1):
-                logger.info(f"\nSQL Pair {i}:")
-                logger.info(f"Question: {pair['question']}")
-                logger.info(f"SQL: {pair['sql']}")
-                if pair['instructions']:
-                    logger.info(f"Instructions: {pair['instructions']}")
-                logger.info(f"Similarity Score: {pair['score']}")
+            logger.info(f"✅ Total SQL pairs found: {sql_pairs_results.get('total_pairs', 0)}")
+            sql_pairs = sql_pairs_results.get('sql_pairs', [])
+            for i, pair in enumerate(sql_pairs, 1):
+                logger.info(f"\n💬 SQL Pair {i}:")
+                logger.info(f"   Question: {pair.get('question', 'N/A')}")
+                logger.info(f"   SQL: {pair.get('sql', 'N/A')}")
+                if pair.get('instructions'):
+                    logger.info(f"   Instructions: {pair['instructions']}")
+                logger.info(f"   Similarity Score: {pair.get('score', 0.0)}")
         
         # Print instructions results
-        logger.info("\nInstructions Retrieval Results:")
+        logger.info("\n📊 Instructions Retrieval Results:")
         if "error" in instructions_results:
-            logger.error(f"Error: {instructions_results['error']}")
+            logger.error(f"❌ Error: {instructions_results['error']}")
         else:
-            logger.info(f"Total instructions found: {instructions_results['total_instructions']}")
-            for i, instruction in enumerate(instructions_results['instructions'], 1):
-                logger.info(f"\nInstruction {i}:")
-                logger.info(f"Question: {instruction['question']}")
-                logger.info(f"Instruction: {instruction['instruction']}")
-                if instruction['instruction_id']:
-                    logger.info(f"Instruction ID: {instruction['instruction_id']}")
+            logger.info(f"✅ Total instructions found: {instructions_results.get('total_instructions', 0)}")
+            instructions = instructions_results.get('instructions', [])
+            for i, instruction in enumerate(instructions, 1):
+                logger.info(f"\n📝 Instruction {i}:")
+                logger.info(f"   Question: {instruction.get('question', 'N/A')}")
+                logger.info(f"   Instruction: {instruction.get('instruction', 'N/A')}")
+                if instruction.get('instruction_id'):
+                    logger.info(f"   Instruction ID: {instruction['instruction_id']}")
         
         # Print historical questions results
-        logger.info("\nHistorical Questions Retrieval Results:")
+        logger.info("\n📊 Historical Questions Retrieval Results:")
         if "error" in historical_results:
-            logger.error(f"Error: {historical_results['error']}")
+            logger.error(f"❌ Error: {historical_results['error']}")
         else:
-            logger.info(f"Total historical questions found: {historical_results['total_questions']}")
-            for i, question in enumerate(historical_results['historical_questions'], 1):
-                logger.info(f"\nHistorical Question {i}:")
-                logger.info(f"Question: {question['question']}")
-                if question['summary']:
-                    logger.info(f"Summary: {question['summary']}")
-                if question['statement']:
-                    logger.info(f"Statement: {question['statement']}")
-                if question['viewId']:
-                    logger.info(f"View ID: {question['viewId']}")
+            logger.info(f"✅ Total historical questions found: {historical_results.get('total_questions', 0)}")
+            historical_questions = historical_results.get('historical_questions', [])
+            for i, question in enumerate(historical_questions, 1):
+                logger.info(f"\n🕒 Historical Question {i}:")
+                logger.info(f"   Question: {question.get('question', 'N/A')}")
+                if question.get('summary'):
+                    logger.info(f"   Summary: {question['summary']}")
+                if question.get('statement'):
+                    logger.info(f"   Statement: {question['statement']}")
+                if question.get('viewId'):
+                    logger.info(f"   View ID: {question['viewId']}")
         
         # Print views results
-        logger.info("\nViews Retrieval Results:")
+        logger.info("\n📊 Views Retrieval Results:")
         if "error" in views_results:
-            logger.error(f"Error: {views_results['error']}")
+            logger.error(f"❌ Error: {views_results['error']}")
         else:
-            logger.info(f"Total views found: {views_results['total_views']}")
-            for i, view in enumerate(views_results['views'], 1):
-                logger.info(f"\nView {i}:")
-                logger.info(f"Table Name: {view['table_name']}")
-                logger.info(f"Table DDL: {view['table_ddl']}")
+            logger.info(f"✅ Total views found: {views_results.get('total_views', 0)}")
+            views = views_results.get('views', [])
+            for i, view in enumerate(views, 1):
+                logger.info(f"\n👁️ View {i}:")
+                logger.info(f"   Table Name: {view.get('table_name', 'N/A')}")
+                logger.info(f"   Table DDL: {view.get('table_ddl', 'N/A')}")
         
         # Print metrics results
-        logger.info("\nMetrics Retrieval Results:")
+        logger.info("\n📊 Metrics Retrieval Results:")
         if "error" in metrics_results:
-            logger.error(f"Error: {metrics_results['error']}")
+            logger.error(f"❌ Error: {metrics_results['error']}")
         else:
-            logger.info(f"Total metrics found: {metrics_results['total_metrics']}")
-            for i, metric in enumerate(metrics_results['metrics'], 1):
-                logger.info(f"\nMetric {i}:")
-                logger.info(f"Metric Name: {metric['metric_name']}")
-                logger.info(f"Metric Value: {metric['metric_value']}")
+            logger.info(f"✅ Total metrics found: {metrics_results.get('total_metrics', 0)}")
+            metrics = metrics_results.get('metrics', [])
+            for i, metric in enumerate(metrics, 1):
+                logger.info(f"\n📈 Metric {i}:")
+                logger.info(f"   Metric Name: {metric.get('metric_name', 'N/A')}")
+                logger.info(f"   Metric Value: {metric.get('metric_value', 'N/A')}")
+        
+        # Print table names and schema contexts results
+        logger.info("\n📊 Table Names and Schema Contexts Results:")
+        if "error" in table_contexts_results:
+            logger.error(f"❌ Error: {table_contexts_results['error']}")
+        else:
+            logger.info(f"✅ Total tables: {table_contexts_results.get('total_tables', 0)}")
+            logger.info(f"✅ Total contexts: {table_contexts_results.get('total_contexts', 0)}")
+            logger.info(f"✅ Total relationships: {table_contexts_results.get('total_relationships', 0)}")
+            logger.info(f"✅ Has Calculated Field: {table_contexts_results.get('has_calculated_field', False)}")
+            logger.info(f"✅ Has Metric: {table_contexts_results.get('has_metric', False)}")
+            
+            table_names = table_contexts_results.get('table_names', [])
+            if table_names:
+                logger.info(f"   Table Names: {', '.join(table_names)}")
+        
+        logger.info("\n" + "=" * 80)
+        logger.info("RETRIEVAL HELPER TEST COMPLETED")
+        logger.info("=" * 80)
         
     except Exception as e:
-        logger.error(f"Error in main: {str(e)}")
+        logger.error(f"❌ Critical error in main: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise
 
 

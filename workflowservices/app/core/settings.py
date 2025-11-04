@@ -25,7 +25,7 @@ class ServiceConfig:
     """Configuration for the LLM Definition Service"""
     
     # Database configuration
-    database_url: str = "postgresql+asyncpg://pixentia:FLc%26dL%40M9A5Q7wI%3B@unedadevpostgresql.postgres.database.azure.com:5432/phenom_gen_ai"
+    database_url: str = "postgresql+asyncpg://phegenaiadmin:vwm8%24S4VVpn%252J_@genaipostgresqlserver.postgres.database.azure.com:5432/phenom_gen_ai"
     
     # LLM configuration
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
@@ -104,11 +104,11 @@ class Settings(BaseSettings):
     ENGINE_DATA_SOURCES: Dict[str, Any] = {}  # Default empty data sources
     ENGINE_CONNECTION_STRING: Optional[str] = None
     ENGINE_POSTGRES_CONFIG: Dict[str, Any] = {
-        "host": "unedadevpostgresql.postgres.database.azure.com",
+        "host": "genaipostgresqlserver.postgres.database.azure.com",
         "port": 5432,
         "database": "phenom_egen_ai",
-        "user": "pixentia",
-        "password": "FLc%26dL%40M9A5Q7wI%3B",  # URL encoded version of FLc&dL@M9A5Q7wI;
+        "user": "phegenaiadmin",
+        "password": "vwm8$S4VVpn%2J_",  # URL encoded version of FLc&dL@M9A5Q7wI;
         "sslmode": "require"  # Required for Azure PostgreSQL
     }
     
@@ -168,12 +168,16 @@ class Settings(BaseSettings):
     #POSTGRES_DB: str = "genimel"
     #POSTGRES_USER: str = "postgres"
     #POSTGRES_PASSWORD: str = "postgres"
-    POSTGRES_HOST: str = "unedadevpostgresql.postgres.database.azure.com"
+    #POSTGRES_HOST: str = "unedadevpostgresql.postgres.database.azure.com"
+    #POSTGRES_PORT: int = 5432
+    #POSTGRES_USER: str = "pixentia"
+    #POSTGRES_PASSWORD: str = "FLc%26dL%40M9A5Q7wI%3B"  # URL encoded version of FLc&dL@M9A5Q7wI;
+    #POSTGRES_DB: str = "phenom_egen_ai"
+    POSTGRES_HOST: str = "genaipostgresqlserver.postgres.database.azure.com"
     POSTGRES_PORT: int = 5432
-    POSTGRES_USER: str = "pixentia"
-    POSTGRES_PASSWORD: str = "FLc%26dL%40M9A5Q7wI%3B"  # URL encoded version of FLc&dL@M9A5Q7wI;
-    POSTGRES_DB: str = "phenom_egen_ai"
-    
+    POSTGRES_DB: str = "phenom_gen_ai"
+    POSTGRES_USER: str = "phegenaiadmin"
+    POSTGRES_PASSWORD: str = "vwm8$S4VVpn%2J_"
     # Vector Store Settings
     VECTOR_STORE_PATH: str = "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/lexy/data/vector_store"
     CHROMA_STORE_PATH: str = "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/lexy/data/chroma_db"

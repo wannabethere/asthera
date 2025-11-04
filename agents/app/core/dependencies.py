@@ -32,7 +32,10 @@ def get_llm(temperature: float = 0.0, model: str = "gpt-4o-mini"):
     """Get the LLM with specified temperature and model."""
     return ChatOpenAI(
         model="gpt-4o-mini",
-        temperature=temperature
+        temperature=temperature,
+        top_p=1.0,
+        frequency_penalty=0.0,
+        presence_penalty=0.0
     )
 
 def get_chromadb_client():

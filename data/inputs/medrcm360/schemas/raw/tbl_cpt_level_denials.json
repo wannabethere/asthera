@@ -1,0 +1,57 @@
+{
+  "table_name": "tbl_cpt_level_denials",
+  "source_file_pattern": "tbl_cpt_level_denials_*.csv",
+  "description": "Denials aggregated at the CPT level by facility",
+  "layer": "raw",
+  "columns": [
+    {
+      "name": "cpt_denial_uuid",
+      "data_type": "STRING",
+      "nullable": false,
+      "description": "Unique identifier for the CPT denial record"
+    },
+    {
+      "name": "facility",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Facility name"
+    },
+    {
+      "name": "denial_amount",
+      "data_type": "DECIMAL",
+      "nullable": true,
+      "description": "Total denial amount"
+    },
+    {
+      "name": "denial_count",
+      "data_type": "INTEGER",
+      "nullable": true,
+      "description": "Number of denials"
+    },
+    {
+      "name": "total_denial_amount",
+      "data_type": "DECIMAL",
+      "nullable": true,
+      "description": "Total denial amount across all facilities"
+    },
+    {
+      "name": "source_file",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Source file name"
+    },
+    {
+      "name": "load_ts",
+      "data_type": "TIMESTAMP",
+      "nullable": true,
+      "description": "Timestamp when the record was loaded"
+    },
+    {
+      "name": "facility_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Full facility name"
+    }
+  ]
+}
+

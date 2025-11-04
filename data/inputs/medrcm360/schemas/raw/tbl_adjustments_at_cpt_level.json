@@ -1,0 +1,225 @@
+{
+  "table_name": "tbl_adjustments_at_cpt_level",
+  "source_file_pattern": "tbl_adjustments_at_cpt_level_*.csv",
+  "description": "Adjustments applied at the CPT (Current Procedural Terminology) code level",
+  "layer": "raw",
+  "columns": [
+    {
+      "name": "adjustment_at_cpt_uuid",
+      "data_type": "STRING",
+      "nullable": false,
+      "description": "Unique identifier for the adjustment record at CPT level"
+    },
+    {
+      "name": "facility",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Facility name"
+    },
+    {
+      "name": "claim_date",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Date of the claim (format: DD-MM-YYYY)"
+    },
+    {
+      "name": "service_date",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Date of service (format: DD-MM-YYYY)"
+    },
+    {
+      "name": "adjustment_date",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Date when adjustment was applied (format: DD-MM-YYYY)"
+    },
+    {
+      "name": "facility_pos",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Place of service code"
+    },
+    {
+      "name": "appointment_servicing_provider",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Provider who serviced the appointment"
+    },
+    {
+      "name": "practice_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Practice name"
+    },
+    {
+      "name": "patient_acct_no",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Patient account number"
+    },
+    {
+      "name": "patient_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Patient name"
+    },
+    {
+      "name": "claim_no",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Claim number"
+    },
+    {
+      "name": "cpt_group_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "CPT group name"
+    },
+    {
+      "name": "cpt_code",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "CPT code"
+    },
+    {
+      "name": "cpt_description",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "CPT code description"
+    },
+    {
+      "name": "start_date_of_service",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Start date of service (format: DD-MM-YYYY)"
+    },
+    {
+      "name": "end_date_of_service",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "End date of service (format: DD-MM-YYYY)"
+    },
+    {
+      "name": "modifier_1",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "First modifier code"
+    },
+    {
+      "name": "modifier_2",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Second modifier code"
+    },
+    {
+      "name": "modifier_3",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Third modifier code"
+    },
+    {
+      "name": "modifier_4",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Fourth modifier code"
+    },
+    {
+      "name": "icd1_code",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "First ICD diagnosis code"
+    },
+    {
+      "name": "icd1_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "First ICD diagnosis name"
+    },
+    {
+      "name": "icd2_code",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Second ICD diagnosis code"
+    },
+    {
+      "name": "icd2_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Second ICD diagnosis name"
+    },
+    {
+      "name": "icd3_code",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Third ICD diagnosis code"
+    },
+    {
+      "name": "icd3_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Third ICD diagnosis name"
+    },
+    {
+      "name": "icd4_code",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Fourth ICD diagnosis code"
+    },
+    {
+      "name": "icd4_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Fourth ICD diagnosis name"
+    },
+    {
+      "name": "adjustment_id",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Adjustment identifier"
+    },
+    {
+      "name": "adjustment_code",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Adjustment code"
+    },
+    {
+      "name": "adjustment_code_description",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Adjustment code description"
+    },
+    {
+      "name": "adjustment_group_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Adjustment group name"
+    },
+    {
+      "name": "writeoff_adjustment",
+      "data_type": "DECIMAL",
+      "nullable": true,
+      "description": "Write-off adjustment amount"
+    },
+    {
+      "name": "total_writeoff_adj_amount",
+      "data_type": "DECIMAL",
+      "nullable": true,
+      "description": "Total write-off adjustment amount"
+    },
+    {
+      "name": "source_file",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Source file name"
+    },
+    {
+      "name": "load_ts",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Load timestamp (format: HH:MM:SS)"
+    }
+  ]
+}
+

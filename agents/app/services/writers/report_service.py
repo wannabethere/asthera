@@ -770,7 +770,10 @@ class ReportService(BaseService):
             self._add_chart_schemas_to_response(result)
             
             # Add global executive summary to result
-            result = self._add_global_executive_summary_to_result(result, report_context)
+            if result:
+                result = self._add_global_executive_summary_to_result(result, report_context)
+            else:
+                logger.warning("No result found to add global executive summary")
             
             # Send completion status
             self._send_status_update(
@@ -1758,8 +1761,8 @@ class ReportService(BaseService):
             # Add chart schema information to response metadata if available
             self._add_chart_schemas_to_response(result)
             
-            # Format the result with global executive summary
-            formatted_result = self._format_report_output_with_global_summary(result, workflow_data, thread_components)
+            # Format the result similar to dashboard structure but for reports (point-in-time)
+            formatted_result = self._format_report_output_like_dashboard(result, workflow_data, thread_components, project_id)
             
             return formatted_result
             
@@ -2004,6 +2007,228 @@ class ReportService(BaseService):
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
     
+    def _format_report_output_like_dashboard(
+        self,
+        result: Dict[str, Any],
+        workflow_data: Dict[str, Any],
+        thread_components: List[Any],
+        project_id: str
+    ) -> Dict[str, Any]:
+        """
+        Format report output similar to dashboard structure but for point-in-time reports
+        
+        Args:
+            result: Original report result from orchestrator pipeline
+            workflow_data: Workflow data from request
+            thread_components: Thread components from workflow
+            project_id: Project identifier
+            
+        Returns:
+            Formatted report output similar to dashboard structure
+        """
+        try:
+            # Extract report data from result
+            post_process = result.get("post_process", {})
+            report_results = post_process.get("report_results", {})
+            enhanced_context = post_process.get("enhanced_context", {})
+            report_summary = post_process.get("report_summary")
+            orchestration_metadata = post_process.get("orchestration_metadata", {})
+            
+            # Generate report ID and metadata
+            report_id = f"report_{project_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            workflow_id = workflow_data.get("workflow_id", "")
+            workflow_metadata = workflow_data.get("workflow_metadata", {})
+            
+            # Build formatted components similar to dashboard structure
+            formatted_components = []
+            component_positions = {}
+            
+            # Extract query results for components
+            query_results = report_results.get("query_results", {})
+            
+            for i, component in enumerate(thread_components):
+                # Handle both ThreadComponentData objects and dictionaries
+                if hasattr(component, 'id'):
+                    # ThreadComponentData object
+                    component_id = getattr(component, 'id', f"component_{i}")
+                    component_type = getattr(component, 'component_type', "question")
+                    # Convert to dictionary for consistent processing
+                    component_dict = {
+                        "id": component_id,
+                        "component_type": component_type,
+                        "chart": getattr(component, 'chart_config', {}),
+                        "table": getattr(component, 'table_config', {}),
+                        "metadata": getattr(component, 'metadata', {}),
+                        "overview": getattr(component, 'overview', {}),
+                        "question": getattr(component, 'question', ""),
+                        "sequence_order": getattr(component, 'sequence_order', i + 1),
+                        "reasoning": getattr(component, 'reasoning', ""),
+                        "sql_query": getattr(component, 'sql_query', ""),
+                        "data_count": getattr(component, 'data_count', 0),
+                        "description": getattr(component, 'description', ""),
+                        "sample_data": getattr(component, 'sample_data', {}),
+                        "chart_schema": getattr(component, 'chart_schema', {}),
+                        "configuration": getattr(component, 'configuration', {}),
+                        "data_overview": getattr(component, 'data_overview', {}),
+                        "is_configured": getattr(component, 'is_configured', False),
+                        "executive_summary": getattr(component, 'executive_summary', ""),
+                        "validation_results": getattr(component, 'validation_results', {}),
+                        "visualization_data": getattr(component, 'visualization_data', {})
+                    }
+                else:
+                    # Dictionary
+                    component_id = component.get("id", f"component_{i}")
+                    component_type = component.get("component_type", "question")
+                    component_dict = component
+                
+                # Find matching query result
+                query_result = None
+                for query_id, result_data in query_results.items():
+                    if result_data.get("query_index") == i or result_data.get("component_id") == component_id:
+                        query_result = result_data
+                        break
+                
+                # Build component similar to dashboard structure
+                formatted_component = {
+                    "id": component_id,
+                    "type": component_type,
+                    "chart": component_dict.get("chart", {}),
+                    "table": component_dict.get("table", {}),
+                    "metadata": component_dict.get("metadata", {}),
+                    "overview": component_dict.get("overview", {}),
+                    "question": component_dict.get("question", ""),
+                    "sequence": component_dict.get("sequence_order", i + 1),
+                    "reasoning": component_dict.get("reasoning", ""),
+                    "sql_query": component_dict.get("sql_query", ""),
+                    "data_count": component_dict.get("data_count", 0),
+                    "description": component_dict.get("description", ""),
+                    "sample_data": component_dict.get("sample_data", {}),
+                    "chart_schema": component_dict.get("chart_schema", {}),
+                    "configuration": component_dict.get("configuration", {}),
+                    "data_overview": component_dict.get("data_overview"),
+                    "is_configured": component_dict.get("is_configured", False),
+                    "executive_summary": component_dict.get("executive_summary", ""),
+                    "validation_results": component_dict.get("validation_results", {}),
+                    "visualization_data": component_dict.get("visualization_data", {})
+                }
+                
+                # Add query result data if available
+                if query_result:
+                    formatted_component.update({
+                        "data_count": query_result.get("row_count", 0),
+                        "sample_data": {
+                            "data": query_result.get("data", []),
+                            "columns": query_result.get("columns", [])
+                        },
+                        "chart_schema": query_result.get("chart_schema", {}),
+                        "reasoning": query_result.get("reasoning", ""),
+                        "data_source": query_result.get("data_source", "sql_execution"),
+                        "fallback_used": query_result.get("fallback_used", False)
+                    })
+                
+                formatted_components.append(formatted_component)
+                
+                # Extract positioning information
+                component_metadata = formatted_component.get("metadata", {})
+                if component_metadata and "position" in component_metadata:
+                    component_positions[component_id] = {
+                        "position": component_metadata["position"],
+                        "ui_visibility": component_metadata.get("ui_visibility", {}),
+                        "size": component_metadata.get("size", {})
+                    }
+            
+            # Build report configuration similar to dashboard config
+            report_config = {
+                "report_id": report_id,
+                "report_name": workflow_metadata.get("report_title", f"Report from Workflow {workflow_id}"),
+                "report_description": workflow_metadata.get("report_description", "Report generated from workflow configuration"),
+                "report_type": "Point-in-Time",  # Key difference from dashboard
+                "generated_at": datetime.now().isoformat(),
+                "workflow_id": workflow_id,
+                "project_id": project_id,
+                "template": workflow_metadata.get("dashboard_template", "default"),
+                "layout": workflow_metadata.get("dashboard_layout", "grid"),
+                "refresh_rate": 0,  # Reports don't refresh
+                "component_positions": component_positions,
+                "total_components": len(formatted_components)
+            }
+            
+            # Build the main report data structure
+            report_data = {
+                "report_id": report_id,
+                "report_name": report_config["report_name"],
+                "report_description": report_config["report_description"],
+                "ReportType": "Point-in-Time",  # Key difference from dashboard
+                "content": {
+                    "status": "rendered",
+                    "components": formatted_components
+                },
+                "generated_at": report_config["generated_at"],
+                "workflow_id": workflow_id,
+                "project_id": project_id
+            }
+            
+            # Build the final response structure similar to dashboard
+            formatted_output = {
+                "success": True,
+                "report_data": report_data,  # Similar to dashboard_data
+                "enhanced_report": enhanced_context,  # Similar to enhanced_dashboard
+                "report_config": report_config,  # Similar to dashboard_config
+                "metadata": {
+                    "project_id": project_id,
+                    "workflow_id": workflow_id,
+                    "total_queries": len(query_results),
+                    "conditional_formatting_applied": bool(enhanced_context.get("conditional_formatting_rules")),
+                    "report_template": workflow_metadata.get("dashboard_template"),
+                    "timestamp": datetime.now().isoformat(),
+                    "orchestration_metadata": orchestration_metadata,
+                    "report_type": "point_in_time",
+                    "generated_at": report_config["generated_at"]
+                }
+            }
+            
+            # Add global executive summary from report summary if available
+            if report_summary:
+                # Extract the actual summary text if report_summary is a dictionary
+                if isinstance(report_summary, dict):
+                    summary_text = report_summary.get("global_executive_summary", "") or report_summary.get("summary", "") or str(report_summary)
+                else:
+                    summary_text = str(report_summary)
+                formatted_output["global_executive_summary"] = summary_text
+            else:
+                # Generate a basic executive summary for reports
+                total_components = len(formatted_components)
+                report_name = report_config["report_name"]
+                
+                formatted_output["global_executive_summary"] = f"**REPORT OVERVIEW**\n\n**{report_name}** (Workflow: {workflow_id})\n\nThis point-in-time report provides comprehensive analysis across {total_components} component(s), generated on {report_config['generated_at']}. The report delivers actionable insights based on data analysis at the time of generation.\n\n**Key Focus Areas:**\n- Performance metrics and completion rates\n- Data-driven insights for strategic planning\n- Actionable recommendations for improvement\n\n**Report Type:** Point-in-Time Analysis"
+            
+            # Add workflow metadata
+            formatted_output["workflow_metadata"] = result.get("workflow_metadata", {})
+            
+            logger.info(f"Formatted report output with {len(formatted_components)} components")
+            return formatted_output
+            
+        except Exception as e:
+            logger.error(f"Error formatting report output like dashboard: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            
+            # Return a basic structure if formatting fails
+            return {
+                "success": True,
+                "report_data": {
+                    "report_id": f"report_{project_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                    "report_name": "Report",
+                    "ReportType": "Point-in-Time",
+                    "content": {"status": "rendered", "components": []}
+                },
+                "metadata": {
+                    "project_id": project_id,
+                    "error": str(e),
+                    "report_type": "point_in_time"
+                }
+            }
+    
     def _format_report_output_with_global_summary(
         self,
         result: Dict[str, Any],
@@ -2131,6 +2356,16 @@ class ReportService(BaseService):
             Report result with global executive summary added
         """
         try:
+            # Check if result is None
+            if result is None:
+                logger.warning("Result is None, cannot add global executive summary")
+                return {}
+            
+            # Check if report_context is None
+            if report_context is None:
+                logger.warning("Report context is None, using default values")
+                report_context = {}
+            
             # Extract report data from result
             post_process = result.get("post_process", {})
             comprehensive_report = post_process.get("comprehensive_report", {})

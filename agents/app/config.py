@@ -22,8 +22,8 @@ class Settings(BaseSettings):
     across different environments and deployment scenarios.
     """
 
-    host: str = Field(default="127.0.0.1", alias="WREN_AI_SERVICE_HOST")
-    port: int = Field(default=5555, alias="WREN_AI_SERVICE_PORT")
+    host: str = Field(default="127.0.0.1", alias="LEXY_AI_SERVICE_HOST")
+    port: int = Field(default=5555, alias="LEXY_AI_SERVICE_PORT")
 
     # indexing and retrieval config
     column_indexing_batch_size: int = Field(default=50)
@@ -56,7 +56,7 @@ class Settings(BaseSettings):
 
     # user guide config
     is_oss: bool = Field(default=True)
-    doc_endpoint: str = Field(default="https://docs.getwren.ai")
+    doc_endpoint: str = Field(default="https://docs.getlexy.ai")
 
     # langfuse config
     # in order to use langfuse, we also need to set the LANGFUSE_SECRET_KEY and LANGFUSE_PUBLIC_KEY in the .env or .env.dev file

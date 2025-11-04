@@ -1,0 +1,153 @@
+{
+  "table_name": "tbl_claim_submission_report",
+  "source_file_pattern": "tbl_claim_submission_report_*.csv",
+  "description": "Report of claim submissions to payers",
+  "layer": "raw",
+  "columns": [
+    {
+      "name": "claim_submission_uuid",
+      "data_type": "STRING",
+      "nullable": false,
+      "description": "Unique identifier for the claim submission record"
+    },
+    {
+      "name": "facility",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Facility name"
+    },
+    {
+      "name": "practice_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Practice name"
+    },
+    {
+      "name": "facility_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Full facility name"
+    },
+    {
+      "name": "facility_pos",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Place of service code"
+    },
+    {
+      "name": "appointment_provider_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Appointment provider name"
+    },
+    {
+      "name": "rendering_provider_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Rendering provider name"
+    },
+    {
+      "name": "claim_no",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Claim number"
+    },
+    {
+      "name": "patient_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Patient name"
+    },
+    {
+      "name": "patient_acct_no",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Patient account number"
+    },
+    {
+      "name": "service_date",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Date of service"
+    },
+    {
+      "name": "claim_date",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Date of the claim"
+    },
+    {
+      "name": "submission_type",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Type of submission (e.g., Electronic)"
+    },
+    {
+      "name": "submission_date",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Date of submission"
+    },
+    {
+      "name": "submission_time",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Time of submission (format: HH:MM:SS)"
+    },
+    {
+      "name": "claim_first_submission_date",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "First date the claim was submitted"
+    },
+    {
+      "name": "claim_last_submission_date",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Last date the claim was submitted"
+    },
+    {
+      "name": "log_message",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Log message from submission"
+    },
+    {
+      "name": "description",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Description of submission status"
+    },
+    {
+      "name": "payer_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Payer name"
+    },
+    {
+      "name": "submission_count",
+      "data_type": "INTEGER",
+      "nullable": true,
+      "description": "Number of times the claim was submitted"
+    },
+    {
+      "name": "charges",
+      "data_type": "DECIMAL",
+      "nullable": true,
+      "description": "Total charges for the claim"
+    },
+    {
+      "name": "source_file",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Source file name"
+    },
+    {
+      "name": "load_ts",
+      "data_type": "TIMESTAMP",
+      "nullable": true,
+      "description": "Timestamp when the record was loaded"
+    }
+  ]
+}
+

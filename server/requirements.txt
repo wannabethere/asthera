@@ -1,0 +1,42 @@
+# Core dependencies
+fastapi
+uvicorn
+python-multipart
+python-dotenv
+pydantic[email]
+python-jose[cryptography]
+psycopg2-binary
+passlib==1.7.4  ## Changed to old versions
+bcrypt==4.0.1
+
+# Database
+sqlalchemy
+alembic
+
+# Testing
+pytest
+pytest-cov
+
+# AI/ML dependencies
+langchain
+langchain-anthropic
+langchain-ollama
+langchain-openai
+langchain-community
+langchain-core
+langgraph
+
+# Development tools
+ipython
+ipykernel
+pandas
+openpyxl
+matplotlib
+
+# Authentication
+okta-jwt-verifier
+
+pydantic-settings
+polars
+xlsx2csv
+websockets

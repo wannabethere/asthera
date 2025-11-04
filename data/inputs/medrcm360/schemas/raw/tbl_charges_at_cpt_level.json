@@ -1,0 +1,231 @@
+{
+  "table_name": "tbl_charges_at_cpt_level",
+  "source_file_pattern": "tbl_charges_at_cpt_level_*.csv",
+  "description": "Charges billed at the CPT (Current Procedural Terminology) code level",
+  "layer": "raw",
+  "columns": [
+    {
+      "name": "charges_at_cpt_uuid",
+      "data_type": "STRING",
+      "nullable": false,
+      "description": "Unique identifier for the charge record at CPT level"
+    },
+    {
+      "name": "facility",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Facility name"
+    },
+    {
+      "name": "facility_pos",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Place of service code"
+    },
+    {
+      "name": "appointment_servicing_provider",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Provider who serviced the appointment"
+    },
+    {
+      "name": "rendering_provider_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Rendering provider name"
+    },
+    {
+      "name": "resource_provider_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Resource provider name"
+    },
+    {
+      "name": "practice_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Practice name"
+    },
+    {
+      "name": "patient_acct_no",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Patient account number"
+    },
+    {
+      "name": "patient_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Patient name"
+    },
+    {
+      "name": "claim_no",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Claim number"
+    },
+    {
+      "name": "claim_date",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Date of the claim"
+    },
+    {
+      "name": "service_date",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Date of service"
+    },
+    {
+      "name": "primary_payer_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Primary insurance payer name"
+    },
+    {
+      "name": "cpt_group_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "CPT group name"
+    },
+    {
+      "name": "cpt_code",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "CPT code"
+    },
+    {
+      "name": "cpt_description",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "CPT code description"
+    },
+    {
+      "name": "start_date_of_service",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Start date of service"
+    },
+    {
+      "name": "end_date_of_service",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "End date of service"
+    },
+    {
+      "name": "modifier1",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "First modifier code"
+    },
+    {
+      "name": "modifier2",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Second modifier code"
+    },
+    {
+      "name": "modifier3",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Third modifier code"
+    },
+    {
+      "name": "modifier4",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Fourth modifier code"
+    },
+    {
+      "name": "icd1_code",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "First ICD diagnosis code"
+    },
+    {
+      "name": "icd1_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "First ICD diagnosis name"
+    },
+    {
+      "name": "icd2_code",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Second ICD diagnosis code"
+    },
+    {
+      "name": "icd2_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Second ICD diagnosis name"
+    },
+    {
+      "name": "icd3_code",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Third ICD diagnosis code"
+    },
+    {
+      "name": "icd3_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Third ICD diagnosis name"
+    },
+    {
+      "name": "icd4_code",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Fourth ICD diagnosis code"
+    },
+    {
+      "name": "icd4_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Fourth ICD diagnosis name"
+    },
+    {
+      "name": "billed_charge",
+      "data_type": "DECIMAL",
+      "nullable": true,
+      "description": "Total billed charge amount"
+    },
+    {
+      "name": "payer_charge",
+      "data_type": "DECIMAL",
+      "nullable": true,
+      "description": "Charge amount for payer"
+    },
+    {
+      "name": "self_charge",
+      "data_type": "DECIMAL",
+      "nullable": true,
+      "description": "Self-pay charge amount"
+    },
+    {
+      "name": "units",
+      "data_type": "INTEGER",
+      "nullable": true,
+      "description": "Number of units"
+    },
+    {
+      "name": "source_file",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Source file name"
+    },
+    {
+      "name": "load_ts",
+      "data_type": "TIMESTAMP",
+      "nullable": true,
+      "description": "Timestamp when the record was loaded"
+    },
+    {
+      "name": "facility_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Full facility name"
+    }
+  ]
+}
+

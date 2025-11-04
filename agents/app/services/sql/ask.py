@@ -187,6 +187,7 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                 "error": str(e)
             }
 
+
     async def _run_ask_pipeline_steps(
         self,
         query_id: str,
@@ -195,8 +196,8 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         request: AskRequest,
         stream_update: callable = None
     ) -> dict:
-        """Shared logic for ask pipeline steps, optionally streaming updates."""
-        logger.info(f"Starting ask pipeline steps for {query_id}")
+        """Optimized pipeline steps with unified data retrieval and shared context."""
+        logger.info(f"Starting optimized ask pipeline steps for {query_id}")
         
         # Step 3: Retrieve relevant data (currently stub)
         retrieval_result = {}
@@ -218,34 +219,23 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             query_id, user_query, histories, request, retrieval_result["data"]
         )
         reasoning_result = None
+        
         logger.info(f"SQL generation completed for {query_id}, success: {sql_result.get('success')}")
         print("sql_result in ask service", sql_result)
         # Step 5: Generate SQL data
         if stream_update:
-            await stream_update(query_id, "executing_sql", {"query": user_query})
-        sql_data = await self._generate_sql_data(
-            query_id, sql_result, request.project_id, configuration={"timeout": 60, "dry_run": False}
+            await stream_update(query_id, "generating_sql_data", {"query": user_query})
+        logger.info(f"Generating SQL data for {query_id}")
+        sql_data_result = await self._generate_sql_data(
+            query_id, sql_result, retrieval_result["data"]
         )
-
-        # Check if SQL execution was successful
-        if not sql_data.get("success", False):
-            logger.warning(f"SQL execution failed for {query_id}: {sql_data.get('error', 'Unknown error')}")
-            # Return a failed result with the SQL execution error
-            return {
-                "status": "failed",
-                "api_results": [],
-                "metadata": {
-                    "sql_data": sql_data,
-                    "error": sql_data.get("error", {"code": "SQL_EXECUTION_ERROR", "message": "SQL execution failed"})
-                }
-            }
 
         # Step 6: Generate SQL answer
         if stream_update:
-            await stream_update(query_id, "generating_answer", {"query": user_query})
+            await stream_update(query_id, "generating_sql_answer", {"query": user_query})
         logger.info(f"Generating SQL answer for {query_id}")
         answer_result = await self._generate_sql_answer(
-            query_id, sql_data, user_query, sql_result, request
+            query_id, sql_data_result, user_query, sql_result, request
         )
         logger.info(f"SQL answer generation completed for {query_id}, success: {answer_result.get('success')}")
 
@@ -268,7 +258,7 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             logger.info(f"Explanation added: {final_result.get('explanation')}")
 
         # Include sql_data and answer_result in the metadata to preserve AskResultResponse structure
-        final_result["metadata"]["sql_data"] = sql_data
+        final_result["metadata"]["sql_data"] = sql_data_result
         final_result["metadata"]["answer_result"] = answer_result
 
         logger.info(f"Returning final result for {query_id}, status: {final_result.get('status')}, api_results: {len(final_result.get('api_results', []))}")
@@ -277,6 +267,8 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         logger.info(f"Final result keys: {list(final_result.keys())}")
         logger.info(f"Final result full: {final_result}")
         return final_result
+
+
 
     async def _process_request_impl(self, request: AskRequest) -> Dict[str, Any]:
         """Implementation of request processing logic"""

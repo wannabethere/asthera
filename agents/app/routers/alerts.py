@@ -45,6 +45,7 @@ class AlertValidationRequest(BaseModel):
     """Request for validating an alert configuration"""
     sql: str
     proposed_alert: Dict[str, Any]
+    project_id: str = Field(..., description="Project identifier for data source access")
     business_context: Optional[str] = None
 
 class AlertValidationResponse(BaseModel):
@@ -60,6 +61,7 @@ class AlertPreviewRequest(BaseModel):
     """Request for alert preview/simulation"""
     sql: str
     alert_configuration: Dict[str, Any]
+    project_id: str = Field(..., description="Project identifier for data source access")
     sample_data: Optional[List[Dict[str, Any]]] = None
     time_range_days: int = 30
 
@@ -182,7 +184,7 @@ async def validate_alert_configuration(
         sql_request = SQLAlertRequest(
             sql=request.sql,
             query="Validation query",
-            project_id="validation",
+            project_id=request.project_id,
             alert_request="Validation request"
         )
         
@@ -332,6 +334,7 @@ async def generate_batch_alerts(
 @router.post("/training-completion")
 async def generate_training_completion_alert(
     sql: str,
+    project_id: str,
     completion_threshold: float = 90.0,
     expiry_threshold: float = 10.0,
     agent: SQLToAlertAgent = Depends(get_agent)
@@ -342,7 +345,7 @@ async def generate_training_completion_alert(
     request = SQLAlertAPIRequest(
         sql=sql,
         query="Training completion and status tracking",
-        project_id="training_system",
+        project_id=project_id,
         data_description="Training completion tracking data",
         alert_request=f"Alert when completion rate is below {completion_threshold}% or expiry rate exceeds {expiry_threshold}%"
     )
@@ -353,6 +356,7 @@ async def generate_training_completion_alert(
 async def generate_percentage_anomaly_alert(
     sql: str,
     metric_name: str,
+    project_id: str,
     agent: SQLToAlertAgent = Depends(get_agent)
 ) -> SQLAlertAPIResponse:
     """
@@ -361,7 +365,7 @@ async def generate_percentage_anomaly_alert(
     request = SQLAlertAPIRequest(
         sql=sql,
         query=f"Monitor {metric_name} for anomalies",
-        project_id="anomaly_detection",
+        project_id=project_id,
         data_description=f"Percentage tracking for {metric_name}",
         alert_request=f"Use ARIMA-based anomaly detection to alert on unusual patterns in {metric_name}"
     )

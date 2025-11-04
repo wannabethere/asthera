@@ -34,10 +34,19 @@ def _properties_comment(column: Dict[str, Any], **_) -> str:
     # Include all properties, filtering out empty values
     meaningful_properties = {k: v for k, v in props.items() if v}
     
+    # Add data type as a comment property
+    if "type" in column and column["type"]:
+        meaningful_properties["datatype"] = column["type"]
+    
     if not meaningful_properties:
         return ""  # Return empty string if no meaningful properties
     
-    return f"-- {orjson.dumps(meaningful_properties).decode('utf-8')}\n  "
+    # Create simple key-value comment format instead of JSON
+    comment_lines = []
+    for key, value in meaningful_properties.items():
+        comment_lines.append(f"-- {key}: {value}")
+    
+    return "\n  ".join(comment_lines) + "\n  "
 
 
 COLUMN_PREPROCESSORS = {

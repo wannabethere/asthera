@@ -1,0 +1,159 @@
+{
+  "table_name": "tbl_encounters_without_claims",
+  "source_file_pattern": "tbl_encounters_without_claims_*.csv",
+  "description": "Encounters that have not been converted to claims",
+  "layer": "raw",
+  "columns": [
+    {
+      "name": "encounter_uuid",
+      "data_type": "STRING",
+      "nullable": false,
+      "description": "Unique identifier for the encounter record"
+    },
+    {
+      "name": "facility",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Facility name"
+    },
+    {
+      "name": "appointment_date",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Appointment date (format: DD-MM-YYYY HH:MM)"
+    },
+    {
+      "name": "encounter_id",
+      "data_type": "INTEGER",
+      "nullable": true,
+      "description": "Encounter identifier"
+    },
+    {
+      "name": "appointment_facility_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Facility name for the appointment"
+    },
+    {
+      "name": "appointment_facility_pos",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Place of service code for appointment"
+    },
+    {
+      "name": "visit_type",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Type of visit (e.g., FU, NP, INJ, KET, NURSE)"
+    },
+    {
+      "name": "note_done_status",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Status of notes completion"
+    },
+    {
+      "name": "chart_lock_status",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Chart lock status (e.g., Locked, UnLocked)"
+    },
+    {
+      "name": "locked_date",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Date when chart was locked (format: DD-MM-YYYY HH:MM)"
+    },
+    {
+      "name": "patient_acct_no",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Patient account number"
+    },
+    {
+      "name": "patient_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Patient name"
+    },
+    {
+      "name": "is_televisit",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Whether this is a televisit (Yes/No)"
+    },
+    {
+      "name": "call_duration",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Duration of call/visit"
+    },
+    {
+      "name": "telehealth_connection_count",
+      "data_type": "INTEGER",
+      "nullable": true,
+      "description": "Number of telehealth connections"
+    },
+    {
+      "name": "unbilled_fee",
+      "data_type": "DECIMAL",
+      "nullable": true,
+      "description": "Unbilled fee amount"
+    },
+    {
+      "name": "lag_in_days",
+      "data_type": "INTEGER",
+      "nullable": true,
+      "description": "Number of days since appointment date"
+    },
+    {
+      "name": "lag_in_days_lock",
+      "data_type": "INTEGER",
+      "nullable": true,
+      "description": "Number of days since lock date"
+    },
+    {
+      "name": "count_encounterid",
+      "data_type": "INTEGER",
+      "nullable": true,
+      "description": "Count of encounter IDs"
+    },
+    {
+      "name": "total_unbilled_amount",
+      "data_type": "DECIMAL",
+      "nullable": true,
+      "description": "Total unbilled amount"
+    },
+    {
+      "name": "average_lag_in_days",
+      "data_type": "DECIMAL",
+      "nullable": true,
+      "description": "Average lag in days"
+    },
+    {
+      "name": "average_lag_in_days_lock",
+      "data_type": "DECIMAL",
+      "nullable": true,
+      "description": "Average lag in days since lock"
+    },
+    {
+      "name": "source_file",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Source file name"
+    },
+    {
+      "name": "load_ts",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Load timestamp (format: HH:MM:SS)"
+    },
+    {
+      "name": "facility_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Full facility name"
+    }
+  ]
+}
+

@@ -1,4 +1,3 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain_core.output_parsers import JsonOutputParser, PydanticOutputParser
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
@@ -1024,10 +1023,10 @@ async def example_usage():
     """Example usage of the SQL-to-Alert Agent"""
     
     # Method 1: Create LLM instances manually
-    sql_parser_llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.0)
-    alert_generator_llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.1)
-    critic_llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.0)
-    refiner_llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.2)
+    #sql_parser_llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.0)
+    #alert_generator_llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.1)
+    #critic_llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.0)
+    #refiner_llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.2)
     
     # Method 2: Create from external settings (recommended)
     # settings = {
@@ -1037,7 +1036,12 @@ async def example_usage():
     #     "critic_temp": 0.0,
     #     "refiner_temp": 0.2
     # }
-    # sql_parser_llm, alert_generator_llm, critic_llm, refiner_llm = create_llm_instances_from_settings(settings)
+    #sql_parser_llm, alert_generator_llm, critic_llm, refiner_llm = create_llm_instances_from_settings(settings)
+    from app.core.dependencies import get_llm
+    sql_parser_llm = get_llm(temperature=0.0)
+    alert_generator_llm = get_llm(temperature=0.1)
+    critic_llm = get_llm(temperature=0.0)
+    refiner_llm = get_llm(temperature=0.2)
     
     # Initialize agent with LLM instances
     agent = SQLToAlertAgent(

@@ -1437,7 +1437,7 @@ async def test_delete_project():
     reader = ProjectReader(base_path, persistent_client)
     
     # Test project deletion
-    test_project_id = "cve_data"  # Use the actual project_id from metadata
+    test_project_id = "cornerstone"  # Use the actual project_id from metadata
     
     try:
         logger.info(f"\n{'='*50}")
@@ -1468,7 +1468,7 @@ async def test_delete_project():
 
 if __name__ == "__main__":
     import asyncio
-    #asyncio.run(test_delete_project()) 
+    asyncio.run(test_delete_project()) 
     asyncio.run(main())    
     
     # Uncomment the line below to test project deletion

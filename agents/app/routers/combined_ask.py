@@ -274,7 +274,19 @@ async def process_combined_request(request: AskRequest, fastapi_request: Request
             sql_type = sql_result.get("type") or "TEXT_TO_SQL"
             
             # Include SQL execution data in metadata
-            metadata = sql_result.get("metadata", {})
+            metadata = sql_result.get("metadata", {}).copy()
+            
+            # Remove reasoning from metadata to avoid duplication
+            # SQL generation reasoning should only be in sql_generation_reasoning field
+            if "reasoning" in metadata:
+                del metadata["reasoning"]
+            
+            # Get question recommendation reasoning (separate from SQL reasoning)
+            sql_reasoning = sql_result.get("sql_generation_reasoning")
+            question_recommendation_reasoning = parsed_recommendations.get("reasoning", "")
+            # If question recommendation reasoning accidentally contains SQL reasoning, use empty string
+            if question_recommendation_reasoning == sql_reasoning:
+                question_recommendation_reasoning = ""
             
             # The SQL execution data should be available in the ask_result
             if hasattr(ask_result, 'metadata') and ask_result.metadata:
@@ -315,7 +327,7 @@ async def process_combined_request(request: AskRequest, fastapi_request: Request
                 invalid_sql=sql_result["invalid_sql"],
                 questions=parsed_recommendations["questions"],
                 categories=parsed_recommendations["categories"],
-                reasoning=sql_result.get("sql_generation_reasoning", ""),
+                reasoning=question_recommendation_reasoning,
                 metadata=metadata,
                 processing_time_seconds=sql_result.get("processing_time_seconds", 0.0),
                 timestamp=sql_result.get("timestamp", ""),

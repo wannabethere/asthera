@@ -297,8 +297,24 @@ Remember to self-evaluate your configurations and use tools for validation."""
             
             return result
             
+        except json.JSONDecodeError as json_error:
+            logger.error(f"JSON parsing error in conditional formatting request: {json_error}")
+            logger.error(f"JSON error details: line {json_error.lineno}, column {json_error.colno}, position {json_error.pos}")
+            return {
+                "success": False,
+                "error": f"Invalid JSON configuration: {str(json_error)}",
+                "chart_configurations": {},
+                "metadata": {
+                    "project_id": project_id,
+                    "query": query,
+                    "error": str(json_error),
+                    "error_type": "json_parse_error"
+                }
+            }
         except Exception as e:
             logger.error(f"Error processing conditional formatting request: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return {
                 "success": False,
                 "error": str(e),
@@ -344,8 +360,29 @@ Use the available tools to get examples and validate your configuration.
             configuration_json = self._extract_configuration_from_result(result["output"])
             
             if configuration_json:
-                # Convert to DashboardConfiguration object
-                config_data = json.loads(configuration_json)
+                # Clean and parse JSON configuration
+                try:
+                    # Try parsing with standard json module
+                    config_data = json.loads(configuration_json)
+                    logger.info("Successfully parsed JSON configuration")
+                except json.JSONDecodeError as json_error:
+                    logger.warning(f"Initial JSON parse failed, attempting to clean JSON: {json_error}")
+                    logger.warning(f"JSON error at line {json_error.lineno}, column {json_error.colno}, position {json_error.pos}")
+                    logger.debug(f"Problematic JSON substring: {configuration_json[max(0, json_error.pos-50):json_error.pos+50]}")
+                    
+                    # Attempt to clean the JSON string
+                    cleaned_json = self._clean_json_string(configuration_json)
+                    logger.debug(f"Cleaned JSON length: {len(cleaned_json)} (original: {len(configuration_json)})")
+                    
+                    try:
+                        config_data = json.loads(cleaned_json)
+                        logger.info("Successfully parsed JSON after cleaning")
+                    except json.JSONDecodeError as cleaned_error:
+                        logger.error(f"Failed to parse JSON even after cleaning: {cleaned_error}")
+                        logger.error(f"Cleaned JSON error at line {cleaned_error.lineno}, column {cleaned_error.colno}, position {cleaned_error.pos}")
+                        logger.error(f"Original JSON string (first 500 chars): {configuration_json[:500]}")
+                        logger.error(f"Cleaned JSON string (first 500 chars): {cleaned_json[:500]}")
+                        raise ValueError(f"Invalid JSON configuration: {str(cleaned_error)}. Original error: {str(json_error)}")
                 
                 # Convert filters
                 filters = []
@@ -421,6 +458,44 @@ Use the available tools to get examples and validate your configuration.
         except Exception as e:
             logger.error(f"Error extracting configuration: {e}")
             return None
+    
+    def _clean_json_string(self, json_str: str) -> str:
+        """Clean JSON string to fix common issues"""
+        import re
+        
+        # Remove leading/trailing whitespace
+        json_str = json_str.strip()
+        
+        # Remove JavaScript-style comments (// and /* */)
+        json_str = re.sub(r'//.*?$', '', json_str, flags=re.MULTILINE)
+        json_str = re.sub(r'/\*.*?\*/', '', json_str, flags=re.DOTALL)
+        
+        # Remove trailing commas before closing braces/brackets (more aggressive)
+        json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)
+        
+        # Fix single quotes to double quotes - handle multiple patterns
+        # Pattern 1: Property names with single quotes: 'key': value
+        json_str = re.sub(r"'([^']+)'\s*:", r'"\1":', json_str)
+        
+        # Pattern 2: String values with single quotes: key: 'value'
+        json_str = re.sub(r":\s*'([^']*)'", r': "\1"', json_str)
+        
+        # Pattern 3: Fix array values with single quotes
+        json_str = re.sub(r"\[\s*'([^']*)'\s*\]", r'["\1"]', json_str)
+        json_str = re.sub(r",\s*'([^']*)'\s*", r', "\1"', json_str)
+        
+        # Pattern 4: Fix single quotes in nested objects within arrays or objects
+        # Handle cases like: {'key': 'value'} -> {"key": "value"}
+        json_str = re.sub(r"{\s*'([^']+)'\s*:\s*'([^']*)'\s*}", r'{"\1": "\2"}', json_str)
+        
+        # Remove any control characters that might cause issues (but keep newlines, tabs, returns)
+        json_str = ''.join(char for char in json_str if ord(char) >= 32 or char in '\n\r\t')
+        
+        # Final cleanup: ensure proper spacing around colons and commas
+        json_str = re.sub(r'\s*:\s*', ': ', json_str)
+        json_str = re.sub(r'\s*,\s*', ', ', json_str)
+        
+        return json_str
 
     def get_metrics(self) -> Dict[str, Any]:
         """Get metrics for the conditional formatting agent"""

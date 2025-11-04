@@ -371,52 +371,259 @@ class SQLPipeline:
             )
     
     async def complete_sql_workflow(self, request: SQLRequest) -> Dict[str, SQLResult]:
-        """Complete SQL workflow: reasoning -> generation -> breakdown -> answer"""
+        """Complete SQL workflow with unified context: reasoning -> generation -> breakdown -> answer"""
         results = {}
         
-        # Step 1: Generate reasoning
-        logger.info("Step 1: Generating reasoning plan")
-        reasoning_result = await self.generate_reasoning(request)
+        # Step 1: Retrieve unified context once
+        logger.info("Step 1: Retrieving unified context")
+        unified_context = await self._retrieve_unified_context(request)
+        
+        if not unified_context.get("success", False):
+            return {"error": "Failed to retrieve unified context", "success": False}
+        
+        # Step 2: Generate reasoning using unified context
+        logger.info("Step 2: Generating reasoning plan with unified context")
+        reasoning_result = await self._generate_reasoning_with_context(request, unified_context["data"])
         results["reasoning"] = reasoning_result
         
         if not reasoning_result.success:
             return results
         
-        # Step 2: Generate SQL using reasoning
-        logger.info("Step 2: Generating SQL")
-        # Add reasoning to the request context
-        if reasoning_result.data and "reasoning" in reasoning_result.data:
-            enhanced_request = SQLRequest(
-                query=request.query,
-                language=request.language,
-                contexts=request.contexts,
-                sql_samples=request.sql_samples,
-                configuration=request.configuration,
-                project_id=request.project_id,
-                timeout=request.timeout
-            )
-            
-            sql_result = await self.generate_sql(enhanced_request)
-            results["generation"] = sql_result
-            
-            if not sql_result.success:
-                return results
-            
-            sql = sql_result.data.get("sql", "")
-            
-            # Step 3: Break down SQL
-            logger.info("Step 3: Breaking down SQL")
-            breakdown_result = await self.breakdown_sql(request, sql)
-            results["breakdown"] = breakdown_result
-            
-            # Step 4: Generate sample answer (if SQL data is available)
-            # Note: In a real scenario, you would execute the SQL to get actual data
-            logger.info("Step 4: Generating answer (with sample data)")
-            sample_data = {"message": "Execute SQL to get actual data"}
-            answer_result = await self.generate_answer(request, sql, sample_data)
-            results["answer"] = answer_result
+        # Step 3: Generate SQL using unified context and reasoning
+        logger.info("Step 3: Generating SQL with unified context")
+        sql_result = await self._generate_sql_with_context(request, unified_context["data"], reasoning_result.data)
+        results["generation"] = sql_result
+        
+        if not sql_result.success:
+            return results
+        
+        sql = sql_result.data.get("sql", "")
+        
+        # Step 4: Break down SQL using unified context
+        logger.info("Step 4: Breaking down SQL with unified context")
+        breakdown_result = await self._breakdown_sql_with_context(request, sql, unified_context["data"])
+        results["breakdown"] = breakdown_result
+        
+        # Step 5: Generate answer using unified context
+        logger.info("Step 5: Generating answer with unified context")
+        sample_data = {"message": "Execute SQL to get actual data"}
+        answer_result = await self._generate_answer_with_context(request, sql, sample_data, unified_context["data"])
+        results["answer"] = answer_result
         
         return results
+
+    async def _retrieve_unified_context(self, request: SQLRequest) -> Dict[str, Any]:
+        """Retrieve unified context for SQL operations"""
+        try:
+            if not request.project_id:
+                return {"success": False, "error": "project_id is required"}
+            
+            # Use RAG agent to retrieve unified context
+            if self.use_rag and self.rag_agent:
+                # Get schema context
+                schema_result = await self.rag_agent.retrieval_helper.get_database_schemas(
+                    project_id=request.project_id,
+                    table_retrieval={
+                        "table_retrieval_size": 10,
+                        "table_column_retrieval_size": 100,
+                        "allow_using_db_schemas_without_pruning": False
+                    },
+                    query=request.query
+                )
+                
+                # Get SQL pairs
+                sql_pairs_result = await self.rag_agent.retrieval_helper.get_sql_pairs(
+                    query=request.query,
+                    project_id=request.project_id,
+                    similarity_threshold=0.3,
+                    max_retrieval_size=3
+                )
+                
+                # Get instructions
+                instructions_result = await self.rag_agent.retrieval_helper.get_instructions(
+                    query=request.query,
+                    project_id=request.project_id,
+                    similarity_threshold=0.3,
+                    top_k=3
+                )
+                
+                # Extract schema contexts
+                schema_contexts = []
+                relationships = []
+                for schema in schema_result.get("schemas", []):
+                    if isinstance(schema, dict):
+                        table_ddl = schema.get("table_ddl", "")
+                        if table_ddl:
+                            schema_contexts.append(table_ddl)
+                        
+                        table_relationships = schema.get("relationships", [])
+                        if table_relationships:
+                            relationships.extend(table_relationships)
+                
+                return {
+                    "success": True,
+                    "data": {
+                        "schema_contexts": schema_contexts,
+                        "relationships": relationships,
+                        "sql_pairs": sql_pairs_result.get("sql_pairs", []),
+                        "instructions": instructions_result.get("documents", []),
+                        "table_names": [schema.get("table_name", "") for schema in schema_result.get("schemas", [])],
+                        "has_calculated_field": schema_result.get("has_calculated_field", False),
+                        "has_metric": schema_result.get("has_metric", False)
+                    }
+                }
+            else:
+                # Fallback for non-RAG mode
+                return {
+                    "success": True,
+                    "data": {
+                        "schema_contexts": request.contexts or [],
+                        "relationships": [],
+                        "sql_pairs": request.sql_samples or [],
+                        "instructions": [],
+                        "table_names": [],
+                        "has_calculated_field": False,
+                        "has_metric": False
+                    }
+                }
+        except Exception as e:
+            logger.error(f"Error retrieving unified context: {e}")
+            return {"success": False, "error": str(e)}
+
+    async def _generate_reasoning_with_context(self, request: SQLRequest, unified_context: Dict[str, Any]) -> SQLResult:
+        """Generate reasoning using unified context"""
+        try:
+            if self.use_rag and self.rag_agent:
+                result = await self.rag_agent.process_sql_request(
+                    SQLOperationType.REASONING,
+                    request.query,
+                    contexts=unified_context["schema_contexts"],
+                    language=request.language,
+                    project_id=request.project_id
+                )
+            else:
+                result = await self.sql_reasoning.run(
+                    query=request.query,
+                    contexts=unified_context["schema_contexts"],
+                    language=request.language,
+                    sql_samples=unified_context["sql_pairs"]
+                )
+            
+            return SQLResult(
+                success=result.get("success", False),
+                data=result,
+                error=result.get("error"),
+                metadata={"operation": "reasoning", "rag_enabled": self.use_rag}
+            )
+        except Exception as e:
+            logger.error(f"Error in reasoning generation: {e}")
+            return SQLResult(
+                success=False,
+                error=str(e),
+                metadata={"operation": "reasoning", "rag_enabled": self.use_rag}
+            )
+
+    async def _generate_sql_with_context(self, request: SQLRequest, unified_context: Dict[str, Any], reasoning_data: Dict[str, Any]) -> SQLResult:
+        """Generate SQL using unified context and reasoning"""
+        try:
+            if self.use_rag and self.rag_agent:
+                result = await self.rag_agent.process_sql_request(
+                    SQLOperationType.GENERATION,
+                    request.query,
+                    contexts=unified_context["schema_contexts"],
+                    language=request.language,
+                    configuration=request.configuration.__dict__ if request.configuration else {},
+                    project_id=request.project_id,
+                    timeout=request.timeout
+                )
+            else:
+                result = await self.sql_generation.run(
+                    query=request.query,
+                    contexts=unified_context["schema_contexts"],
+                    configuration=request.configuration or Configuration(),
+                    project_id=request.project_id,
+                    timeout=request.timeout
+                )
+            
+            return SQLResult(
+                success=result.get("success", False),
+                data=result,
+                error=result.get("error"),
+                metadata={"operation": "generation", "rag_enabled": self.use_rag}
+            )
+        except Exception as e:
+            logger.error(f"Error in SQL generation: {e}")
+            return SQLResult(
+                success=False,
+                error=str(e),
+                metadata={"operation": "generation", "rag_enabled": self.use_rag}
+            )
+
+    async def _breakdown_sql_with_context(self, request: SQLRequest, sql: str, unified_context: Dict[str, Any]) -> SQLResult:
+        """Break down SQL using unified context"""
+        try:
+            if self.use_rag and self.rag_agent:
+                result = await self.rag_agent.process_sql_request(
+                    SQLOperationType.BREAKDOWN,
+                    request.query,
+                    sql=sql,
+                    language=request.language,
+                    project_id=request.project_id,
+                    timeout=request.timeout
+                )
+            else:
+                result = await self.sql_breakdown.run(
+                    query=request.query,
+                    sql=sql,
+                    language=request.language
+                )
+            
+            return SQLResult(
+                success=result.get("success", False),
+                data=result,
+                error=result.get("error"),
+                metadata={"operation": "breakdown", "rag_enabled": self.use_rag}
+            )
+        except Exception as e:
+            logger.error(f"Error in SQL breakdown: {e}")
+            return SQLResult(
+                success=False,
+                error=str(e),
+                metadata={"operation": "breakdown", "rag_enabled": self.use_rag}
+            )
+
+    async def _generate_answer_with_context(self, request: SQLRequest, sql: str, sql_data: Dict, unified_context: Dict[str, Any]) -> SQLResult:
+        """Generate answer using unified context"""
+        try:
+            if self.use_rag and self.rag_agent:
+                result = await self.rag_agent.process_sql_request(
+                    SQLOperationType.ANSWER,
+                    request.query,
+                    sql=sql,
+                    sql_data=sql_data,
+                    language=request.language
+                )
+            else:
+                result = await self.sql_answer.run(
+                    query=request.query,
+                    sql=sql,
+                    sql_data=sql_data,
+                    language=request.language
+                )
+            
+            return SQLResult(
+                success=result.get("success", False),
+                data=result,
+                error=result.get("error"),
+                metadata={"operation": "answer", "rag_enabled": self.use_rag}
+            )
+        except Exception as e:
+            logger.error(f"Error in answer generation: {e}")
+            return SQLResult(
+                success=False,
+                error=str(e),
+                metadata={"operation": "answer", "rag_enabled": self.use_rag}
+            )
 
 
 class SQLPipelineFactory:

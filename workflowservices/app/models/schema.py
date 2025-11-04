@@ -293,4 +293,215 @@ class AlertCreate(BaseModel):
 
         extra = "forbid"
 
+
+class DashboardOutputFormat(BaseModel):
+    """Generic model for storing dashboard output format - independent of agents service"""
+    success: bool = Field(..., description="Whether the dashboard generation was successful")
+    dashboard_data: Optional[Dict[str, Any]] = Field(None, description="Main dashboard data")
+    conditional_formatting: Optional[Dict[str, Any]] = Field(None, description="Conditional formatting rules")
+    chart_configurations: Optional[Dict[str, Any]] = Field(None, description="Chart configuration data")
+    dashboard_config: Optional[Dict[str, Any]] = Field(None, description="Dashboard configuration")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional metadata")
+    workflow_metadata: Optional[Dict[str, Any]] = Field(None, description="Workflow-related metadata")
+    global_executive_summary: Optional[str] = Field(None, description="Global executive summary")
+    error: Optional[str] = Field(None, description="Error message if any")
+
+
+class ReportOutputFormat(BaseModel):
+    """Generic model for storing report output format - independent of agents service"""
+    success: bool = Field(..., description="Whether the report generation was successful")
+    report_data: Optional[Dict[str, Any]] = Field(None, description="Main report data")
+    enhanced_report: Optional[Dict[str, Any]] = Field(None, description="Enhanced report data")
+    report_config: Optional[Dict[str, Any]] = Field(None, description="Report configuration")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional metadata")
+    workflow_metadata: Optional[Dict[str, Any]] = Field(None, description="Workflow-related metadata")
+    global_executive_summary: Optional[str] = Field(None, description="Global executive summary")
+    error: Optional[str] = Field(None, description="Error message if any")
+
+
+class DashboardSnapshotCreate(BaseModel):
+    """Schema for creating a dashboard snapshot"""
+    dashboard_id: uuid.UUID = Field(..., description="Dashboard ID to snapshot")
+    workflow_id: Optional[uuid.UUID] = Field(None, description="Associated workflow ID if exists")
+    response_data: Optional[Dict[str, Any]] = Field(None, description="Response data that triggered the snapshot")
+    output_format: Optional[DashboardOutputFormat] = Field(None, description="Dashboard output format from agents service")
+    metadata_tags: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Additional metadata tags for filtering")
+    description: Optional[str] = Field(None, max_length=1000, description="Optional description for the snapshot")
+
+
+class ReportSnapshotCreate(BaseModel):
+    """Schema for creating a report snapshot"""
+    report_id: uuid.UUID = Field(..., description="Report ID to snapshot")
+    workflow_id: Optional[uuid.UUID] = Field(None, description="Associated workflow ID if exists")
+    response_data: Optional[Dict[str, Any]] = Field(None, description="Response data that triggered the snapshot")
+    output_format: Optional[ReportOutputFormat] = Field(None, description="Report output format from agents service")
+    metadata_tags: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Additional metadata tags for filtering")
+    description: Optional[str] = Field(None, max_length=1000, description="Optional description for the snapshot")
+
+
+class DashboardSnapshotResponse(BaseModel):
+    """Schema for dashboard snapshot response"""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    dashboard_id: uuid.UUID
+    workflow_id: Optional[uuid.UUID]
+    user_id: uuid.UUID
+    dashboard_data: Dict[str, Any]
+    thread_components_data: Optional[Dict[str, Any]]
+    response_data: Optional[Dict[str, Any]]
+    output_format: Optional[DashboardOutputFormat] = None
+    metadata_tags: Dict[str, Any]
+    snapshot_timestamp: datetime
+    created_at: datetime
+    description: Optional[str]
+
+
+class ReportSnapshotResponse(BaseModel):
+    """Schema for report snapshot response"""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    report_id: uuid.UUID
+    workflow_id: Optional[uuid.UUID]
+    user_id: uuid.UUID
+    report_data: Dict[str, Any]
+    thread_components_data: Optional[Dict[str, Any]]
+    response_data: Optional[Dict[str, Any]]
+    output_format: Optional[ReportOutputFormat] = None
+    metadata_tags: Dict[str, Any]
+    snapshot_timestamp: datetime
+    created_at: datetime
+    description: Optional[str]
+
+
+class DashboardSnapshotOutputResponse(BaseModel):
+    """Schema for dashboard snapshot response with output format"""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    dashboard_id: uuid.UUID
+    workflow_id: Optional[uuid.UUID]
+    user_id: uuid.UUID
+    dashboard_data: Dict[str, Any]
+    thread_components_data: Optional[Dict[str, Any]]
+    output_format: Optional[DashboardOutputFormat] = Field(None, description="Dashboard output format from agents service")
+    metadata_tags: Dict[str, Any]
+    snapshot_timestamp: datetime
+    created_at: datetime
+    description: Optional[str]
+
+
+class ReportSnapshotOutputResponse(BaseModel):
+    """Schema for report snapshot response with output format"""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    report_id: uuid.UUID
+    workflow_id: Optional[uuid.UUID]
+    user_id: uuid.UUID
+    report_data: Dict[str, Any]
+    thread_components_data: Optional[Dict[str, Any]]
+    output_format: Optional[ReportOutputFormat] = Field(None, description="Report output format from agents service")
+    metadata_tags: Dict[str, Any]
+    snapshot_timestamp: datetime
+    created_at: datetime
+    description: Optional[str]
+
+
+class DashboardSnapshotEventCreate(BaseModel):
+    """Schema for creating a single dashboard snapshot event"""
+    dashboard_id: uuid.UUID
+    workflow_id: Optional[uuid.UUID] = None
+    component_id: Optional[uuid.UUID] = None
+    question: Optional[str] = Field(None, max_length=1000)
+    query_text: Optional[str] = Field(None, max_length=2000)
+    sql_query: Optional[str] = Field(None, max_length=5000)
+    chart_schema: Optional[Dict[str, Any]] = None
+    data: Dict[str, Any] = Field(..., description="Chart/data as JSON")
+    summary: Optional[str] = None
+    executive_summary: Optional[str] = None
+    component_type: Optional[str] = Field(None, max_length=50)
+    sequence_order: Optional[int] = None
+    event_metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
+
+
+class DashboardSnapshotEventsCreate(BaseModel):
+    """Schema for creating multiple dashboard snapshot events at once"""
+    dashboard_id: uuid.UUID
+    workflow_id: Optional[uuid.UUID] = None
+    events: List[DashboardSnapshotEventCreate] = Field(..., min_items=1, description="List of events to create")
+    metadata_tags: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Common metadata for all events")
+
+
+class ReportSnapshotEventCreate(BaseModel):
+    """Schema for creating a single report snapshot event"""
+    report_id: uuid.UUID
+    workflow_id: Optional[uuid.UUID] = None
+    component_id: Optional[uuid.UUID] = None
+    question: Optional[str] = Field(None, max_length=1000)
+    query_text: Optional[str] = Field(None, max_length=2000)
+    sql_query: Optional[str] = Field(None, max_length=5000)
+    chart_schema: Optional[Dict[str, Any]] = None
+    data: Dict[str, Any] = Field(..., description="Chart/data as JSON")
+    summary: Optional[str] = None
+    executive_summary: Optional[str] = None
+    component_type: Optional[str] = Field(None, max_length=50)
+    sequence_order: Optional[int] = None
+    event_metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
+
+
+class ReportSnapshotEventsCreate(BaseModel):
+    """Schema for creating multiple report snapshot events at once"""
+    report_id: uuid.UUID
+    workflow_id: Optional[uuid.UUID] = None
+    events: List[ReportSnapshotEventCreate] = Field(..., min_items=1, description="List of events to create")
+    metadata_tags: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Common metadata for all events")
+
+
+class DashboardSnapshotEventResponse(BaseModel):
+    """Schema for dashboard snapshot event response"""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    dashboard_id: uuid.UUID
+    workflow_id: Optional[uuid.UUID]
+    component_id: Optional[uuid.UUID]
+    user_id: uuid.UUID
+    question: Optional[str]
+    query_text: Optional[str]
+    sql_query: Optional[str]
+    chart_schema: Optional[Dict[str, Any]]
+    data: Dict[str, Any]
+    summary: Optional[str]
+    executive_summary: Optional[str]
+    component_type: Optional[str]
+    sequence_order: Optional[int]
+    event_metadata: Dict[str, Any]
+    event_timestamp: datetime
+    created_at: datetime
+
+
+class ReportSnapshotEventResponse(BaseModel):
+    """Schema for report snapshot event response"""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    report_id: uuid.UUID
+    workflow_id: Optional[uuid.UUID]
+    component_id: Optional[uuid.UUID]
+    user_id: uuid.UUID
+    question: Optional[str]
+    query_text: Optional[str]
+    sql_query: Optional[str]
+    chart_schema: Optional[Dict[str, Any]]
+    data: Dict[str, Any]
+    summary: Optional[str]
+    executive_summary: Optional[str]
+    component_type: Optional[str]
+    sequence_order: Optional[int]
+    event_metadata: Dict[str, Any]
+    event_timestamp: datetime
+    created_at: datetime
+
     

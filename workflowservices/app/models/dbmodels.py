@@ -10,6 +10,7 @@ from sqlalchemy import (
     func,
     Index,
     Integer,
+    Text,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.postgresql import JSONB
@@ -332,3 +333,197 @@ class ReportVersion(Base):
 
     def __repr__(self):
         return f"<ReportVersion(id={self.id}, report_id={self.report_id}, version='{self.version}')>"
+
+
+class DashboardSnapshot(Base):
+    """Snapshot model for storing dashboard point-in-time data with thread components and response"""
+    __tablename__ = "dashboard_snapshots"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4)
+    dashboard_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("dashboards.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    workflow_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("dashboard_workflows.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=False, index=True)
+    
+    # Snapshot data
+    dashboard_data = Column(MutableDict.as_mutable(JSONB), nullable=False)  # Full dashboard state
+    thread_components_data = Column(MutableDict.as_mutable(JSONB), nullable=True)  # Thread components snapshot
+    response_data = Column(MutableDict.as_mutable(JSONB), nullable=True)  # Response data that triggered snapshot
+    output_format = Column(MutableDict.as_mutable(JSONB), nullable=True)  # Dashboard output format from agents service (DashboardOutputFormat)
+    
+    # Metadata tags for filtering/querying
+    metadata_tags = Column(MutableDict.as_mutable(JSONB), default={}, nullable=False)  # Additional metadata tags
+    
+    # Timestamps
+    snapshot_timestamp = Column(DateTime(timezone=True), default=func.now(), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), default=func.now(), nullable=False)
+    
+    # Optional description/note for the snapshot
+    description = Column(String(1000), nullable=True)
+    
+    # Indexes for better performance
+    __table_args__ = (
+        Index("idx_snapshot_dashboard_timestamp", "dashboard_id", "snapshot_timestamp"),
+        Index("idx_snapshot_workflow_timestamp", "workflow_id", "snapshot_timestamp"),
+        Index("idx_snapshot_user_timestamp", "user_id", "snapshot_timestamp"),
+    )
+
+    def __repr__(self):
+        return f"<DashboardSnapshot(id={self.id}, dashboard_id={self.dashboard_id}, timestamp={self.snapshot_timestamp})>"
+
+
+class ReportSnapshot(Base):
+    """Snapshot model for storing report point-in-time data with thread components and response"""
+    __tablename__ = "report_snapshots"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4)
+    report_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("reports.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    workflow_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("report_workflows.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=False, index=True)
+    
+    # Snapshot data
+    report_data = Column(MutableDict.as_mutable(JSONB), nullable=False)  # Full report state
+    thread_components_data = Column(MutableDict.as_mutable(JSONB), nullable=True)  # Thread components snapshot
+    response_data = Column(MutableDict.as_mutable(JSONB), nullable=True)  # Response data that triggered snapshot
+    output_format = Column(MutableDict.as_mutable(JSONB), nullable=True)  # Report output format from agents service (ReportOutputFormat)
+    
+    # Metadata tags for filtering/querying
+    metadata_tags = Column(MutableDict.as_mutable(JSONB), default={}, nullable=False)  # Additional metadata tags
+    
+    # Timestamps
+    snapshot_timestamp = Column(DateTime(timezone=True), default=func.now(), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), default=func.now(), nullable=False)
+    
+    # Optional description/note for the snapshot
+    description = Column(String(1000), nullable=True)
+    
+    # Indexes for better performance
+    __table_args__ = (
+        Index("idx_snapshot_report_timestamp", "report_id", "snapshot_timestamp"),
+        Index("idx_snapshot_report_workflow_timestamp", "workflow_id", "snapshot_timestamp"),
+        Index("idx_snapshot_report_user_timestamp", "user_id", "snapshot_timestamp"),
+    )
+
+    def __repr__(self):
+        return f"<ReportSnapshot(id={self.id}, report_id={self.report_id}, timestamp={self.snapshot_timestamp})>"
+
+
+class DashboardSnapshotEvent(Base):
+    """Event model for storing individual question/chart snapshots as events for change tracking and insights"""
+    __tablename__ = "dashboard_snapshot_events"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4)
+    dashboard_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("dashboards.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    workflow_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("dashboard_workflows.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    component_id = Column(UUID(as_uuid=True), nullable=True, index=True)  # Reference to thread component
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=False, index=True)
+    
+    # Event data - one row per question/chart
+    question = Column(String(1000), nullable=True, index=True)  # The question/query
+    query_text = Column(String(2000), nullable=True)  # Original query text
+    sql_query = Column(String(5000), nullable=True)  # SQL query if available
+    chart_schema = Column(MutableDict.as_mutable(JSONB), nullable=True)  # Chart schema object
+    data = Column(MutableDict.as_mutable(JSONB), nullable=False)  # Chart/data as JSON
+    summary = Column(Text, nullable=True)  # Summary separately stored
+    executive_summary = Column(Text, nullable=True)  # Executive summary if available
+    
+    # Additional context
+    component_type = Column(String(50), nullable=True, index=True)  # chart, table, metric, etc.
+    sequence_order = Column(Integer, nullable=True)  # Order in the dashboard
+    event_metadata = Column(MutableDict.as_mutable(JSONB), default={}, nullable=False)  # Additional metadata
+    
+    # Timestamps
+    event_timestamp = Column(DateTime(timezone=True), default=func.now(), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), default=func.now(), nullable=False)
+    
+    # Indexes for better performance and querying
+    __table_args__ = (
+        Index("idx_event_dashboard_timestamp", "dashboard_id", "event_timestamp"),
+        Index("idx_event_workflow_timestamp", "workflow_id", "event_timestamp"),
+        Index("idx_event_question_timestamp", "question", "event_timestamp"),
+        Index("idx_event_component_timestamp", "component_id", "event_timestamp"),
+        Index("idx_event_user_timestamp", "user_id", "event_timestamp"),
+    )
+
+    def __repr__(self):
+        return f"<DashboardSnapshotEvent(id={self.id}, dashboard_id={self.dashboard_id}, question={self.question[:50] if self.question else None}, timestamp={self.event_timestamp})>"
+
+
+class ReportSnapshotEvent(Base):
+    """Event model for storing individual question/chart snapshots as events for change tracking and insights"""
+    __tablename__ = "report_snapshot_events"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4)
+    report_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("reports.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    workflow_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("report_workflows.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    component_id = Column(UUID(as_uuid=True), nullable=True, index=True)  # Reference to thread component
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=False, index=True)
+    
+    # Event data - one row per question/chart
+    question = Column(String(1000), nullable=True, index=True)  # The question/query
+    query_text = Column(String(2000), nullable=True)  # Original query text
+    sql_query = Column(String(5000), nullable=True)  # SQL query if available
+    chart_schema = Column(MutableDict.as_mutable(JSONB), nullable=True)  # Chart schema object
+    data = Column(MutableDict.as_mutable(JSONB), nullable=False)  # Chart/data as JSON
+    summary = Column(Text, nullable=True)  # Summary separately stored
+    executive_summary = Column(Text, nullable=True)  # Executive summary if available
+    
+    # Additional context
+    component_type = Column(String(50), nullable=True, index=True)  # chart, table, metric, etc.
+    sequence_order = Column(Integer, nullable=True)  # Order in the report
+    event_metadata = Column(MutableDict.as_mutable(JSONB), default={}, nullable=False)  # Additional metadata
+    
+    # Timestamps
+    event_timestamp = Column(DateTime(timezone=True), default=func.now(), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), default=func.now(), nullable=False)
+    
+    # Indexes for better performance and querying
+    __table_args__ = (
+        Index("idx_event_report_timestamp", "report_id", "event_timestamp"),
+        Index("idx_event_report_workflow_timestamp", "workflow_id", "event_timestamp"),
+        Index("idx_event_report_question_timestamp", "question", "event_timestamp"),
+        Index("idx_event_report_component_timestamp", "component_id", "event_timestamp"),
+        Index("idx_event_report_user_timestamp", "user_id", "event_timestamp"),
+    )
+
+    def __repr__(self):
+        return f"<ReportSnapshotEvent(id={self.id}, report_id={self.report_id}, question={self.question[:50] if self.question else None}, timestamp={self.event_timestamp})>"

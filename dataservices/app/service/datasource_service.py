@@ -382,7 +382,7 @@ class DataRetriever:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_data_from_connection(self, connection_id: str, tables: List[str]) -> Dict[str, Any]:
+    async def get_data_from_connection(self, connection_id: str, tables: List[str] = None,row_limit: int = 150) -> Dict[str, Any]:
         """
         Retrieve data from specified tables across different database types
 
@@ -406,24 +406,22 @@ class DataRetriever:
         
         print("Connectionnn", connection)
         database_type = connection.data_source.database_type.lower()
-
-        # Route to appropriate database handler
         if database_type == "postgresql":
-            return await self._get_postgresql_data(connection, tables)
+            return await self._get_postgresql_data(connection, tables,row_limit)
         elif database_type == "mysql":
-            return await self._get_mysql_data(connection, tables)
+            return await self._get_mysql_data(connection, tables,row_limit)
         elif database_type == "mongodb":
-            return await self._get_mongodb_data(connection, tables)
+            return await self._get_mongodb_data(connection, tables,row_limit)
         elif database_type == "oracle":
-            return await self._get_oracle_data(connection, tables)
+            return await self._get_oracle_data(connection, tables,row_limit)
         elif database_type == "bigquery":
-            return await self._get_bigquery_data(connection, tables)
+            return await self._get_bigquery_data(connection, tables,row_limit)
         elif database_type == "snowflake":
-            return await self._get_snowflake_data(connection, tables)
+            return await self._get_snowflake_data(connection, tables,row_limit)
         else:
             raise ValueError(f"Unsupported database type: {database_type}")
 
-    async def _get_postgresql_data(self, connection, tables: List[str]) -> Dict[str, Any]:
+    async def _get_postgresql_data(self, connection, tables: List[str],row_limit: int = 150) -> Dict[str, Any]:
         """Retrieve data from PostgreSQL using asyncpg"""
         conn_details = connection.connection_details
         print('conn_details', conn_details)
@@ -437,12 +435,21 @@ class DataRetriever:
         )
 
         result = {}
+        if not tables:
+            query = """
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+                AND table_type = 'BASE TABLE';
+            """
+            tables = await db_connection.fetch(query)
+            tables = [r["table_name"] for r in tables]
 
         try:
             for table in tables:
                 try:
                     # Get table data with limit to avoid memory issues
-                    query = f"SELECT * FROM {table} LIMIT 150"
+                    query = f"SELECT * FROM {table} LIMIT {row_limit}"
                     rows = await db_connection.fetch(query)
 
                     # Convert to list of dictionaries
@@ -466,7 +473,7 @@ class DataRetriever:
 
         return result
 
-    async def _get_mysql_data(self, connection, tables: List[str]) -> Dict[str, Any]:
+    async def _get_mysql_data(self, connection, tables: List[str],row_limit: int = 150) -> Dict[str, Any]:
         """Retrieve data from MySQL using aiomysql"""
         conn_details = connection.connection_details
 
@@ -479,13 +486,19 @@ class DataRetriever:
         )
 
         result = {}
+        if not tables:
+            async with db_connection.cursor() as cursor:
+                await cursor.execute("SHOW TABLES;")
+                rows = await cursor.fetchall()
+                tables = [list(row.values())[0] for row in rows]
+
 
         try:
             async with db_connection.cursor(aiomysql.DictCursor) as cursor:
                 for table in tables:
                     try:
                         # Get table data with limit
-                        query = f"SELECT * FROM {table} LIMIT 150"
+                        query = f"SELECT * FROM {table} LIMIT {row_limit}"
                         await cursor.execute(query)
                         rows = await cursor.fetchall()
 
@@ -508,7 +521,7 @@ class DataRetriever:
 
         return result
 
-    async def _get_mongodb_data(self, connection, tables: List[str]) -> Dict[str, Any]:
+    async def _get_mongodb_data(self, connection, tables: List[str],row_limit: int = 150) -> Dict[str, Any]:
         """Retrieve data from MongoDB using motor (async pymongo)"""
         conn_details = connection.connection_details
 
@@ -529,6 +542,9 @@ class DataRetriever:
         client = motor.motor_asyncio.AsyncIOMotorClient(connection_string)
         db = client[conn_details["database"]]
         result = {}
+        if not tables:
+            tables = await db.list_collection_names()
+
 
         try:
             for collection_name in tables:
@@ -537,7 +553,7 @@ class DataRetriever:
 
                     # Get documents with limit
                     documents = []
-                    async for doc in collection.find().limit(150):
+                    async for doc in collection.find().limit(row_limit):
                         # Convert ObjectId to string for JSON serialization
                         if '_id' in doc:
                             doc['_id'] = str(doc['_id'])
@@ -567,7 +583,7 @@ class DataRetriever:
 
         return result
 
-    async def _get_oracle_data(self, connection, tables: List[str]) -> Dict[str, Any]:
+    async def _get_oracle_data(self, connection, tables: List[str],row_limit: int = 150) -> Dict[str, Any]:
         """Retrieve data from Oracle using async oracledb, fallback to cx_Oracle in thread pool"""
         conn_details = connection.connection_details
         
@@ -585,12 +601,18 @@ class DataRetriever:
             )
             
             result = {}
+            if not tables:
+                query = "SELECT table_name FROM user_tables"
+                result = await cursor.execute(query)
+                rows = await result.fetchall()
+                tables = [r[0] for r in rows]
+
             
             try:
                 for table in tables:
                     try:
                         # Get table data with limit
-                        query = f"SELECT * FROM {table} WHERE ROWNUM <= 150"
+                        query = f"SELECT * FROM {table} WHERE ROWNUM <= {row_limit}"
                         async with db_connection.cursor() as cursor:
                             await cursor.execute(query)
                             rows = await cursor.fetchall()
@@ -647,7 +669,7 @@ class DataRetriever:
                     for table in tables:
                         try:
                             # Get table data with limit
-                            query = f"SELECT * FROM {table} WHERE ROWNUM <= 150"
+                            query = f"SELECT * FROM {table} WHERE ROWNUM <= {row_limit}"
                             cursor.execute(query)
                             rows = cursor.fetchall()
 
@@ -685,7 +707,7 @@ class DataRetriever:
             loop = asyncio.get_event_loop()
             return await loop.run_in_executor(None, _sync_oracle_query)
 
-    async def _get_bigquery_data(self, connection, tables: List[str]) -> Dict[str, Any]:
+    async def _get_bigquery_data(self, connection, tables: List[str],row_limit: int = 150) -> Dict[str, Any]:
         """Retrieve data from BigQuery using google-cloud-bigquery in thread pool"""
         conn_details = connection.connection_details
 
@@ -695,6 +717,11 @@ class DataRetriever:
 
             client = bigquery.Client(project=project_id)
             result = {}
+            if not tables:
+                dataset_ref = client.dataset(conn_details["dataset"])
+                tables_iter = client.list_tables(dataset_ref)
+                tables = [t.table_id for t in tables_iter]
+
 
             for table in tables:
                 try:
@@ -702,7 +729,7 @@ class DataRetriever:
                     query = f"""
                         SELECT * 
                         FROM `{project_id}.{dataset_id}.{table}` 
-                        LIMIT 150
+                        LIMIT {row_limit}
                     """
 
                     query_job = client.query(query)
@@ -737,7 +764,7 @@ class DataRetriever:
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, _sync_bigquery_query)
 
-    async def _get_snowflake_data(self, connection, tables: List[str]) -> Dict[str, Any]:
+    async def _get_snowflake_data(self, connection, tables: List[str],row_limit: int = 150) -> Dict[str, Any]:
         """Retrieve data from Snowflake using snowflake-connector-python in thread pool"""
         conn_details = connection.connection_details
 
@@ -754,6 +781,13 @@ class DataRetriever:
             )
 
             result = {}
+            if not tables:
+                query = "SHOW TABLES;"
+                cur = db_connection.cursor()
+                cur.execute(query)
+                rows = cur.fetchall()
+                tables = [r[1] for r in rows]  
+
 
             try:
                 cursor = db_connection.cursor()
@@ -761,7 +795,7 @@ class DataRetriever:
                 for table in tables:
                     try:
                         # Get table data with limit
-                        query = f"SELECT * FROM {table} LIMIT 150"
+                        query = f"SELECT * FROM {table} LIMIT {row_limit}"
                         cursor.execute(query)
                         rows = cursor.fetchall()
 
@@ -804,7 +838,7 @@ class DatasetSampleRetriever:
         self.executor = ThreadPoolExecutor(max_workers=4)
         self.db=db
 
-    async def get_data_from_connection(self, connection_id: str, tables: List[str]) -> Dict[str, Any]:
+    async def get_data_from_connection(self, connection_id: str, tables: List[str],row_limit: int = 150) -> Dict[str, Any]:
         """
         Retrieve data from specified tables across different database types
         

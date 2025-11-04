@@ -671,6 +671,7 @@ class AlertService(BaseService[AlertRequest, AlertResponse]):
         condition_type: str,
         operator: str,
         threshold_value: float,
+        project_id: str,
         threshold_type: str = "default",
         metric_column: Optional[str] = None,
         use_cache: bool = True,
@@ -683,6 +684,7 @@ class AlertService(BaseService[AlertRequest, AlertResponse]):
             condition_type: Type of condition to validate
             operator: Threshold operator (>, <, >=, <=, =, !=)
             threshold_value: Threshold value to compare against
+            project_id: Project identifier for data source access
             threshold_type: Type of threshold value interpretation
             metric_column: Specific column to extract value from (if None, uses first numeric column)
             use_cache: Whether to use caching for SQL execution
@@ -716,7 +718,7 @@ class AlertService(BaseService[AlertRequest, AlertResponse]):
             # Execute the SQL query using the pipeline
             execution_result = await sql_execution_pipeline.run(
                 sql=sql_query,
-                project_id="alert_validation",
+                project_id=project_id,
                 configuration={"dry_run": False, "use_cache": use_cache}
             )
             
@@ -992,6 +994,7 @@ class AlertService(BaseService[AlertRequest, AlertResponse]):
         sql_query: str,
         operator: str,
         threshold_value: float,
+        project_id: str,
         threshold_type: str = "default",
         metric_column: Optional[str] = None,
         use_cache: bool = True,
@@ -1003,6 +1006,7 @@ class AlertService(BaseService[AlertRequest, AlertResponse]):
             sql_query: SQL query to execute for validation
             operator: Threshold operator (>, <, >=, <=, =, !=)
             threshold_value: Threshold value to compare against
+            project_id: Project identifier for data source access
             metric_column: Specific column to extract value from (if None, uses first numeric column)
             use_cache: Whether to use caching for SQL execution
             
@@ -1014,6 +1018,7 @@ class AlertService(BaseService[AlertRequest, AlertResponse]):
             condition_type="threshold_value",
             operator=operator,
             threshold_value=threshold_value,
+            project_id=project_id,
             threshold_type=threshold_type,
             metric_column=metric_column,
             use_cache=use_cache,

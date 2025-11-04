@@ -9,6 +9,7 @@ from app.core.engine import Engine
 from app.core.dependencies import get_llm
 from app.agents.pipelines.writers.conditional_formatting_generation_pipeline import ConditionalFormattingGenerationPipeline
 from app.agents.pipelines.writers.simple_report_generation_pipeline import SimpleReportGenerationPipeline
+from app.agents.pipelines.writers.dashboard_summary_pipeline import DashboardSummaryPipeline
 from app.agents.nodes.writers.report_writing_agent import (
     ReportWritingAgent, 
     ReportWorkflowData, 
@@ -33,7 +34,8 @@ class ReportOrchestratorPipeline(AgentPipeline):
         retrieval_helper: RetrievalHelper,
         engine: Engine,
         conditional_formatting_pipeline: Optional[ConditionalFormattingGenerationPipeline] = None,
-        simple_report_pipeline: Optional[SimpleReportGenerationPipeline] = None
+        simple_report_pipeline: Optional[SimpleReportGenerationPipeline] = None,
+        report_summary_pipeline: Optional[DashboardSummaryPipeline] = None
     ):
         super().__init__(
             name=name,
@@ -47,6 +49,7 @@ class ReportOrchestratorPipeline(AgentPipeline):
         self._configuration = {
             "enable_conditional_formatting": True,
             "enable_report_generation": True,
+            "enable_report_summary": True,
             "enable_validation": True,
             "enable_metrics": True,
             "max_report_iterations": 3,
@@ -76,6 +79,16 @@ class ReportOrchestratorPipeline(AgentPipeline):
             )
         else:
             self._simple_report_pipeline = simple_report_pipeline
+        
+        if not report_summary_pipeline:
+            from app.agents.pipelines.writers.dashboard_summary_pipeline import create_dashboard_summary_pipeline
+            self._report_summary_pipeline = create_dashboard_summary_pipeline(
+                engine=engine,
+                llm=llm,
+                retrieval_helper=retrieval_helper
+            )
+        else:
+            self._report_summary_pipeline = report_summary_pipeline
         
         # Initialize report writing agent
         self._report_writing_agent = ReportWritingAgent(llm=llm)
@@ -167,9 +180,15 @@ class ReportOrchestratorPipeline(AgentPipeline):
             enhanced_report_context = None
             
             # Step 1: Generate conditional formatting if requested
-            if (self._configuration["enable_conditional_formatting"] and 
+            # Skip if natural_language_query is None, empty, or just a placeholder
+            has_valid_conditional_formatting_query = (
                 natural_language_query and 
-                natural_language_query.strip()):
+                natural_language_query.strip() and 
+                natural_language_query.strip().lower() not in ["string", "none", "null", ""]
+            )
+            
+            if (self._configuration["enable_conditional_formatting"] and 
+                has_valid_conditional_formatting_query):
                 
                 self._send_status_update(
                     status_callback,
@@ -221,6 +240,12 @@ class ReportOrchestratorPipeline(AgentPipeline):
                         report_context, project_id
                     )
                 
+                # Add original report queries to enhanced context for fallback access
+                enhanced_report_context["original_context"] = {
+                    **enhanced_report_context.get("original_context", {}),
+                    "queries": report_queries
+                }
+                
                 report_result = await self._simple_report_pipeline.run(
                     report_queries=report_queries,
                     enhanced_context=enhanced_report_context,
@@ -238,6 +263,35 @@ class ReportOrchestratorPipeline(AgentPipeline):
                 report_result = await self._execute_basic_report(
                     report_queries, project_id, status_callback
                 )
+            
+            # Step 2.5: Generate report summary and insights (similar to dashboard)
+            report_summary_result = None
+            if self._configuration["enable_report_summary"] and report_result.get("post_process", {}).get("success"):
+                self._send_status_update(
+                    status_callback,
+                    "report_summary_generation_started",
+                    {"project_id": project_id}
+                )
+                
+                # Extract components from report result for summary generation
+                report_components = self._extract_components_for_summary(
+                    report_result, report_queries, report_context
+                )
+                
+                if report_components and self._report_summary_pipeline:
+                    report_summary_result = await self._report_summary_pipeline.run(
+                        dashboard_components=report_components,  # Reuse dashboard summary pipeline
+                        dashboard_context=report_context,  # Use report context as dashboard context
+                        project_id=project_id,
+                        additional_context=additional_context,
+                        status_callback=self._create_nested_status_callback(status_callback, "report_summary")
+                    )
+                    
+                    self._send_status_update(
+                        status_callback,
+                        "report_summary_generation_completed",
+                        {"project_id": project_id}
+                    )
             
             # Step 3: Generate comprehensive report using report writing agent (if components provided)
             comprehensive_report = None
@@ -312,6 +366,7 @@ class ReportOrchestratorPipeline(AgentPipeline):
                     "report_results": report_result.get("post_process", {}),
                     "enhanced_context": enhanced_report_context,
                     "comprehensive_report": comprehensive_report,
+                    "report_summary": report_summary_result,
                     "orchestration_metadata": {
                         "pipeline_name": self.name,
                         "pipeline_version": self.version,
@@ -321,6 +376,7 @@ class ReportOrchestratorPipeline(AgentPipeline):
                         "project_id": project_id,
                         "conditional_formatting_applied": bool(enhanced_report_context and enhanced_report_context.get("conditional_formatting_rules")),
                         "comprehensive_report_generated": bool(comprehensive_report),
+                        "report_summary_generated": bool(report_summary_result),
                         "report_generation_enabled": self._configuration["enable_report_generation"]
                     }
                 },
@@ -477,6 +533,68 @@ class ReportOrchestratorPipeline(AgentPipeline):
         self._configuration["quality_threshold"] = max(0.0, min(1.0, threshold))
         logger.info(f"Quality threshold set to: {self._configuration['quality_threshold']}")
 
+    def _extract_components_for_summary(
+        self,
+        report_result: Dict[str, Any],
+        report_queries: List[Dict[str, Any]],
+        report_context: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """Extract components from report result for summary generation, including fallback data"""
+        components = []
+        
+        try:
+            # Extract query results from report result
+            query_results = report_result.get("post_process", {}).get("query_results", {})
+            
+            for i, query_info in enumerate(report_queries):
+                query_id = query_info.get("id", f"query_{i}")
+                query_result = query_results.get(query_id, {})
+                
+                # Check if we have fallback data or successful SQL execution
+                has_data = query_result.get("success", False) and query_result.get("data")
+                is_fallback = query_result.get("fallback_used", False)
+                data_source = query_result.get("data_source", "unknown")
+                
+                # Create component data for summary generation
+                component = {
+                    "id": query_id,
+                    "type": "chart",  # Default type for summary generation
+                    "question": query_info.get("name", f"Query {i+1}"),
+                    "sql_query": query_info.get("sql", ""),
+                    "data": query_result.get("data", []),
+                    "columns": query_result.get("columns", []),
+                    "row_count": query_result.get("row_count", 0),
+                    "success": query_result.get("success", False),
+                    "execution_time": query_result.get("execution_time", 0),
+                    "error": query_result.get("error"),
+                    "chart_schema": query_result.get("chart_schema", {}),
+                    "chart_type": query_result.get("chart_type", ""),
+                    "reasoning": query_result.get("reasoning", ""),
+                    "data_source": data_source,
+                    "fallback_used": is_fallback,
+                    "metadata": {
+                        "query_index": i,
+                        "component_type": "sql_summary",
+                        "data_source": data_source,
+                        "fallback_used": is_fallback,
+                        "has_data": has_data
+                    }
+                }
+                
+                # If we have data (either from SQL or fallback), add it to components
+                if has_data:
+                    components.append(component)
+                    logger.info(f"Added component {query_id} with {len(query_result.get('data', []))} rows from {data_source}")
+                else:
+                    logger.warning(f"Skipping component {query_id} - no data available")
+            
+            logger.info(f"Extracted {len(components)} components for report summary generation")
+            return components
+            
+        except Exception as e:
+            logger.error(f"Error extracting components for summary: {e}")
+            return []
+
 
 # Factory function for creating report orchestrator pipeline
 def create_report_orchestrator_pipeline(
@@ -485,6 +603,7 @@ def create_report_orchestrator_pipeline(
     retrieval_helper: RetrievalHelper = None,
     conditional_formatting_pipeline: Optional[ConditionalFormattingGenerationPipeline] = None,
     simple_report_pipeline: Optional[SimpleReportGenerationPipeline] = None,
+    report_summary_pipeline: Optional[DashboardSummaryPipeline] = None,
     **kwargs
 ) -> ReportOrchestratorPipeline:
     """
@@ -517,5 +636,6 @@ def create_report_orchestrator_pipeline(
         engine=engine,
         conditional_formatting_pipeline=conditional_formatting_pipeline,
         simple_report_pipeline=simple_report_pipeline,
+        report_summary_pipeline=report_summary_pipeline,
         **kwargs
     )

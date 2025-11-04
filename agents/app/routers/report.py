@@ -122,12 +122,11 @@ class ReportValidationRequest(BaseModel):
     natural_language_query: Optional[str] = None
 
 class ReportResponse(BaseModel):
-    """Response model for report operations"""
+    """Response model for report operations - similar to dashboard but for point-in-time reports"""
     success: bool
-    report_data: Optional[Dict[str, Any]] = None
-    conditional_formatting: Optional[Dict[str, Any]] = None
-    orchestration_metadata: Optional[Dict[str, Any]] = None
-    report_config: Optional[Dict[str, Any]] = None
+    report_data: Optional[Dict[str, Any]] = None  # Similar to dashboard_data
+    enhanced_report: Optional[Dict[str, Any]] = None  # Similar to enhanced_dashboard
+    report_config: Optional[Dict[str, Any]] = None  # Similar to dashboard_config
     metadata: Optional[Dict[str, Any]] = None
     workflow_metadata: Optional[Dict[str, Any]] = None
     global_executive_summary: Optional[str] = None
@@ -200,16 +199,23 @@ async def generate_comprehensive_report(
             configuration=request.configuration
         )
         
+        # Extract global_executive_summary safely
+        global_summary = result.get("global_executive_summary")
+        if isinstance(global_summary, dict):
+            # If it's a dict, try to extract the summary text
+            global_summary = global_summary.get("global_executive_summary", "") or global_summary.get("summary", "") or str(global_summary)
+        elif global_summary is None:
+            global_summary = ""
+        
         return ReportResponse(
-            success=result.get("post_process", {}).get("success", False),
-            report_data=result.get("post_process"),
-            orchestration_metadata=result.get("post_process", {}).get("orchestration_metadata"),
-            metadata={
-                "project_id": request.project_id,
-                "total_queries": len(request.report_queries),
-                "report_template": request.report_template,
-                "timestamp": result.get("metadata", {}).get("timestamp")
-            }
+            success=result.get("success", False),
+            report_data=result.get("report_data"),
+            enhanced_report=result.get("enhanced_report"),
+            report_config=result.get("report_config"),
+            metadata=result.get("metadata"),
+            workflow_metadata=result.get("workflow_metadata"),
+            global_executive_summary=global_summary,
+            error=result.get("error")
         )
         
     except Exception as e:
@@ -305,16 +311,23 @@ async def render_report_from_workflow(
             business_goal=request.business_goal
         )
         
+        # Extract global_executive_summary safely
+        global_summary = result.get("global_executive_summary")
+        if isinstance(global_summary, dict):
+            # If it's a dict, try to extract the summary text
+            global_summary = global_summary.get("global_executive_summary", "") or global_summary.get("summary", "") or str(global_summary)
+        elif global_summary is None:
+            global_summary = ""
+        
         return ReportResponse(
-            success=result.get("post_process", {}).get("success", False),
-            report_data=result.get("post_process"),
-            orchestration_metadata=result.get("post_process", {}).get("orchestration_metadata"),
+            success=result.get("success", False),
+            report_data=result.get("report_data"),
+            enhanced_report=result.get("enhanced_report"),
+            report_config=result.get("report_config"),
+            metadata=result.get("metadata"),
             workflow_metadata=result.get("workflow_metadata"),
-            metadata={
-                "project_id": request.project_id,
-                "workflow_id": str(request.workflow_id),
-                "timestamp": result.get("metadata", {}).get("timestamp")
-            }
+            global_executive_summary=global_summary,
+            error=result.get("error")
         )
         
     except Exception as e:

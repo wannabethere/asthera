@@ -1,0 +1,219 @@
+{
+  "table_name": "tbl_patient_claim_status_dashboard_details",
+  "source_file_pattern": "tbl_patient_claim_status_dashboard_details_*.csv",
+  "description": "Detailed patient claim status information for dashboard reporting",
+  "layer": "raw",
+  "columns": [
+    {
+      "name": "patient_claim_dash_uuid",
+      "data_type": "STRING",
+      "nullable": false,
+      "description": "Unique identifier for the patient claim dashboard record"
+    },
+    {
+      "name": "claim_status_category",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Category of claim status (e.g., Patient)"
+    },
+    {
+      "name": "claim_status",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Detailed claim status (e.g., PAT : Patient)"
+    },
+    {
+      "name": "claim_no",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Claim number"
+    },
+    {
+      "name": "claim_date",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Date of the claim"
+    },
+    {
+      "name": "bucket",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Aging bucket (e.g., 0-30 Days, > 180 Days)"
+    },
+    {
+      "name": "service_date",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Date of service"
+    },
+    {
+      "name": "latest_transfer_date",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Latest date the claim was transferred"
+    },
+    {
+      "name": "claim_status_change_date",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Date when claim status changed"
+    },
+    {
+      "name": "modified_date",
+      "data_type": "DATE",
+      "nullable": true,
+      "description": "Date when record was last modified"
+    },
+    {
+      "name": "notes",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Notes about the claim"
+    },
+    {
+      "name": "staff_member",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Staff member who last worked on the claim"
+    },
+    {
+      "name": "patient_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Patient name"
+    },
+    {
+      "name": "patient_acct_no",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Patient account number"
+    },
+    {
+      "name": "payer_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Payer name"
+    },
+    {
+      "name": "payer_group_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Payer group name"
+    },
+    {
+      "name": "payer_class",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Payer class"
+    },
+    {
+      "name": "facility_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Facility name"
+    },
+    {
+      "name": "facility_group_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Facility group name"
+    },
+    {
+      "name": "facility_place_of_service",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Place of service code"
+    },
+    {
+      "name": "department_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Department name"
+    },
+    {
+      "name": "renderin_provider_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Rendering provider name"
+    },
+    {
+      "name": "appointment_provider_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Appointment provider name"
+    },
+    {
+      "name": "additional_provider1_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "First additional provider name"
+    },
+    {
+      "name": "additional_provider2_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Second additional provider name"
+    },
+    {
+      "name": "pay_to_billing_provider",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Provider to bill"
+    },
+    {
+      "name": "resource_provider_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Resource provider name"
+    },
+    {
+      "name": "supervising_provider_name",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Supervising provider name"
+    },
+    {
+      "name": "claim_amount",
+      "data_type": "DECIMAL",
+      "nullable": true,
+      "description": "Total claim amount"
+    },
+    {
+      "name": "collected",
+      "data_type": "DECIMAL",
+      "nullable": true,
+      "description": "Amount collected"
+    },
+    {
+      "name": "total_balance",
+      "data_type": "DECIMAL",
+      "nullable": true,
+      "description": "Total outstanding balance"
+    },
+    {
+      "name": "source_file",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Source file name"
+    },
+    {
+      "name": "load_ts",
+      "data_type": "TIMESTAMP",
+      "nullable": true,
+      "description": "Timestamp when the record was loaded"
+    },
+    {
+      "name": "age",
+      "data_type": "INTEGER",
+      "nullable": true,
+      "description": "Age of the claim in days"
+    },
+    {
+      "name": "aging",
+      "data_type": "STRING",
+      "nullable": true,
+      "description": "Aging bucket code (e.g., B1, B2, B7)"
+    }
+  ]
+}
+

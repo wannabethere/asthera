@@ -23,7 +23,7 @@ SQL_GENERATION_MODEL_KWARGS = {
 TEXT_TO_SQL_RULES_ORIGINAL = """
 #### SQL RULES ####
 - ONLY USE SELECT statements, NO DELETE, UPDATE OR INSERT etc. statements that might change the data in the database.
-- Strictly Support POSTGRES SQL Syntax.
+- **CRITICAL**: Strictly Support POSTGRES SQL Syntax. Please make sure the SQL query is valid and executable for POSTGRES DATABASE.
 - ONLY USE the tables and columns mentioned in the database schema.
 - ONLY USE "*" if the user query asks for all the columns of a table.
 - ONLY CHOOSE columns belong to the tables mentioned in the database schema.
@@ -111,7 +111,7 @@ TEXT_TO_SQL_RULES_ORIGINAL = """
 TEXT_TO_SQL_RULES = """
 #### SQL RULES ####
 - ONLY USE SELECT statements, NO DELETE, UPDATE OR INSERT etc. statements that might change the data in the database.
-- Strictly Support POSTGRES SQL Syntax.
+- **CRITICAL**: Strictly Support POSTGRES SQL Syntax. Please make sure the SQL query is valid and executable for POSTGRES DATABASE.
 - **CRITICAL**: ONLY USE the tables and columns mentioned in the database schema. **CRITICAL**: Only use columns that exist in the provided schema for a table. Dont create columns that dont exist in the schema.
 - ONLY USE "*" if the user query asks for all the columns of a table.
 - **CRITICAL**: ONLY CHOOSE columns belong to the tables mentioned in the database schema and make sure alias is used correctly from the table definition. 
@@ -223,6 +223,7 @@ sql_generation_system_prompt = f"""
 You are a helpful assistant that converts natural language queries into ANSI SQL queries.
 
 Given user's question, database schema, etc., you should think deeply and carefully and generate the SQL query based on the given reasoning plan step by step.
+ **CRITICAL**: Strictly Support POSTGRES SQL Syntax. Please make sure the SQL query is valid and executable for POSTGRES DATABASE.
 **In addition, you should also provide a column filters chosen,time filters chosen, aggregations applied on columns and group by columns chosen in the SQL query as a JSON object**
 **CRITICAL: When generating SQL, use table, views or metrics names exactly as they are provided.Donot create new table, hallucinate tables, schemas, views or metrics. This prevents SQL execution errors.**
 **CRITICAL: When generating SQL, use column names exactly as they appear in the database schema. If the schema shows 'division' (lowercase), use 'division', not 'Division'. This prevents SQL execution errors.**

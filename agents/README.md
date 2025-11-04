@@ -4,6 +4,9 @@ https://deepwiki.com/search/find-all-files-where-streaming_cf6cacfb-6b54-4dc9-b5
 https://deepwiki.com/onyx-dot-app/onyx
 nohup uvicorn app.main:app --reload --host 0.0.0.0 --port 8020 --workers 4 > uvicorn.log 2>&1 & echo $! > run.pid
 
+sudo dnf install -y python3.11 python3.11-pip
+
+
 nohup uvicorn main:app --reload --host 0.0.0.0 --port 8025 --workers 4 > uvicorn.log 2>&1 &
 nohup uvicorn app.main:app --reload --host 0.0.0.0 --port 8025 --workers 4 > uvicorn.log 2>&1 & echo $! > run.pid
 docker run -d -v  ./structured-data:/data -p 8888:8000 chromadb/chroma:0.6.3
@@ -15,7 +18,9 @@ find . -type d -name "__MACOSX" -print0 | xargs -0 rm -rf
 
 scp -i ~/Downloads/flowharmonic.pem agents.zip  
 scp -i ~/Downloads/flowharmonic.pem agents.zip ec2-user@ec2-54-161-71-105.compute-1.amazonaws.com:~/.
+scp -i  files ec2-user@ec2-44-202-8-38.compute-1.amazonaws.com:~/.
 scp -i ~/Downloads/flowharmonic.pem agents.zip ec2-user@ec2-44-202-8-38.compute-1.amazonaws.com:~/.
+scp -i ~/Download       ec2-user@ec2-18-204-196-65.compute-1.amazonaws.com:~/.
 
 
 
@@ -27,6 +32,11 @@ sudo yum install postgresql-devel python3-devel gcc
 nohup uvicorn app.main:app --reload --host 0.0.0.0 --port 8035 --workers 4 > dataservices.log 2>&1 & echo $! > run.pid
 
 nohup uvicorn app.main:app --reload --host 0.0.0.0 --port 8045 --workers 4 > workflowservices.log 2>&1 & echo $! > run.pid
+
+nohup uvicorn app.main:app --reload --host 0.0.0.0 --port 8005 --workers 4 > server.log 2>&1 & echo $! > run.pid
+
+nohup sh -c 'HOST=0.0.0.0 PORT=9001 npm start' > app.log 2>&1 & echo $! > run.pid
+
 
 https://github.com/llm-d/llm-d
 

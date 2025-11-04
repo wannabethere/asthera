@@ -806,6 +806,27 @@ async def api_get_sharing_permissions(
             detail=f"Failed to get sharing permissions: {str(e)}"
         )
 
+
+@router.get("getAllTables/data")
+async def getAllTablesData(
+    connection_id:str,
+    session_id: str = Depends(get_session_id),
+    user_id: str = Depends(get_user_id),
+    db: AsyncSession = Depends(get_async_db_session)
+    
+):
+    try:
+        res = DataRetriever(db)
+        return await res.get_data_from_connection(connection_id,row_limit=50)        
+    except Exception as e:
+        logger.error(f"Error fetching all tables data: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch all tables data: {str(e)}"
+        )
+
+
 @router.post("/{domain_id}/refresh-permissions")
 async def api_refresh_sharing_permissions(
     domain_id: str,
