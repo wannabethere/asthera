@@ -9,7 +9,7 @@ import sqlite3
 import tempfile
 import os
 import hashlib
-from .engine import Engine, clean_generation_result, add_quotes, remove_limit_statement
+from .engine import Engine, clean_generation_result, add_quotes, remove_limit_statement, extract_limit_value, get_total_count_for_batching
 from app.settings import EngineType
 from app.utils.cache import Cache, InMemoryCache
 from app.settings import get_settings
@@ -352,13 +352,26 @@ class PandasEngine(Engine):
                     "columns": []
                 }
             
-            # Check if SQL already has LIMIT clause (for pagination)
-            sql_upper = quoted_sql.upper()
-            has_limit_or_offset = 'LIMIT' in sql_upper or 'OFFSET' in sql_upper
+            # Extract limit from SQL if present
+            sql_limit = extract_limit_value(quoted_sql)
             
-            # Only apply additional limit if no LIMIT/OFFSET is present in the SQL
-            if not has_limit_or_offset and limit is not None:
-                result_df = result_df.iloc[:limit]
+            # Apply limit to result DataFrame
+            # Priority: 1) SQL LIMIT (if present), 2) limit parameter, 3) no limit
+            effective_limit = None
+            if sql_limit is not None:
+                effective_limit = sql_limit
+                logger.info(f"Using LIMIT {effective_limit} from SQL query")
+            elif limit is not None:
+                effective_limit = limit
+                logger.info(f"Using LIMIT {effective_limit} from parameter")
+            
+            # Apply the effective limit to the result DataFrame
+            if effective_limit is not None and effective_limit > 0:
+                if len(result_df) > effective_limit:
+                    logger.info(f"Trimming result from {len(result_df)} rows to {effective_limit} rows")
+                    result_df = result_df.iloc[:effective_limit]
+                else:
+                    logger.info(f"Result has {len(result_df)} rows, which is within limit {effective_limit}")
             
             # Format and return result
             return True, convert_to_json_serializable(result_df)
@@ -425,17 +438,28 @@ class PandasEngine(Engine):
             # Check if SQL already has LIMIT clause (for pagination)
             sql_upper = sql.upper()
             has_limit = 'LIMIT' in sql_upper
+            extracted_limit = None
             
             # Handle LIMIT clause properly
-            if limit is not None:
-                # If a specific limit is provided, remove any existing LIMIT and add the new one
-                if has_limit:
-                    sql = remove_limit_statement(sql)
-                sql = f"{sql} LIMIT {limit}"
-            elif not has_limit:
-                # Only add default limit if no LIMIT clause is present and no specific limit is provided
-                limit = 1000
-                sql = f"{sql} LIMIT {limit}"
+            # If query already has LIMIT, extract it and use it
+            # Only add LIMIT if query doesn't have one (for optimization)
+            if has_limit:
+                # Query already has LIMIT, extract it to ensure we respect it
+                extracted_limit = extract_limit_value(sql)
+                if extracted_limit is not None:
+                    logger.info(f"Found LIMIT {extracted_limit} in SQL, preserving it")
+                    # Use the extracted limit as the limit parameter
+                    limit = extracted_limit
+                # Don't modify the SQL - preserve it as-is
+            else:
+                # Query doesn't have LIMIT, add one for optimization
+                if limit is not None:
+                    # Use provided limit parameter
+                    sql = f"{sql} LIMIT {limit}"
+                else:
+                    # Use default limit
+                    limit = 1000
+                    sql = f"{sql} LIMIT {limit}"
             
             # Disable caching for SQL execution to prevent empty results
             # Check cache if enabled
@@ -450,7 +474,7 @@ class PandasEngine(Engine):
                     logger.info(f"Cache miss for query: {sql[:100]}...")
             
             # Execute SQL in thread pool to avoid blocking
-            logger.info(f"About to execute SQL in thread pool: {sql[:100]}...")
+            logger.info(f"About to execute SQL in thread pool: {sql[:100]}... (limit: {limit})")
             loop = asyncio.get_event_loop()
             success, result = await loop.run_in_executor(
                 self.executor, 
@@ -633,20 +657,20 @@ class PandasEngine(Engine):
                 else:
                     logger.info(f"Cache miss for batch query: {sql[:100]}...")
 
-            # First, get total count
-            count_sql = f"SELECT COUNT(*) as total_count FROM ({sql}) as count_query"
-            success, count_result = await self.execute_sql(
-                count_sql,
-                session,
-                dry_run=False,
+            # Get total count intelligently (uses LIMIT if present, otherwise COUNT query)
+            success, total_count, error = await get_total_count_for_batching(
+                sql=sql,
+                engine=self,
+                session=session,
                 use_cache=use_cache,
                 **kwargs
             )
             
-            if not success or not count_result.get("data"):
-                return False, {"error": "Failed to get total count", "data": [], "columns": []}
+            if not success:
+                return False, {"error": error or "Failed to get total count", "data": [], "columns": []}
             
-            total_count = int(count_result["data"][0]["total_count"])
+            # Extract original_limit for later use in batch processing
+            original_limit = extract_limit_value(sql)
             
             # Calculate number of batches
             num_batches = (total_count + int(batch_size) - 1) // int(batch_size)    
@@ -664,8 +688,25 @@ class PandasEngine(Engine):
                 
                 offset = batch_num * batch_size
                 # Remove existing LIMIT clause before adding pagination
+                # But respect the original limit by adjusting batch_size if needed
                 sql_without_limit = remove_limit_statement(sql)
-                batch_sql = f"{sql_without_limit} LIMIT {batch_size} OFFSET {offset}"
+                
+                # If we have an original limit, ensure we don't exceed it
+                effective_batch_size = batch_size
+                if original_limit is not None:
+                    remaining_rows = original_limit - offset
+                    if remaining_rows <= 0:
+                        # No more rows to fetch
+                        return False, {
+                            "error": f"Batch {batch_num} exceeds original LIMIT {original_limit}",
+                            "data": [],
+                            "columns": []
+                        }
+                    effective_batch_size = min(batch_size, remaining_rows)
+                    logger.info(f"Batch {batch_num}: original_limit={original_limit}, offset={offset}, remaining_rows={remaining_rows}, effective_batch_size={effective_batch_size}")
+                
+                batch_sql = f"{sql_without_limit} LIMIT {effective_batch_size} OFFSET {offset}"
+                logger.info(f"Executing batch SQL (batch {batch_num}): {batch_sql[:200]}...")
                 
                 success, batch_result = await self.execute_sql(
                     batch_sql,
@@ -682,10 +723,31 @@ class PandasEngine(Engine):
                         "columns": []
                     }
                 
+                # Get the actual data and ensure it doesn't exceed the expected limit
+                batch_data = batch_result.get("data", [])
+                actual_rows = len(batch_data)
+                expected_max = effective_batch_size if original_limit is not None else batch_size
+                
+                logger.info(f"Batch {batch_num} returned {actual_rows} rows (expected max {expected_max})")
+                
+                # If we have an original limit and got more rows than expected, trim to the limit
+                if original_limit is not None and actual_rows > expected_max:
+                    logger.warning(f"Batch {batch_num} returned {actual_rows} rows but expected max {expected_max}, trimming to {expected_max}")
+                    batch_data = batch_data[:expected_max]
+                    actual_rows = len(batch_data)
+                
+                # Also ensure total rows don't exceed original_limit across all batches
+                if original_limit is not None:
+                    max_allowed = original_limit - offset
+                    if actual_rows > max_allowed:
+                        logger.warning(f"Batch {batch_num} rows ({actual_rows}) exceed remaining limit ({max_allowed}), trimming")
+                        batch_data = batch_data[:max_allowed]
+                        actual_rows = len(batch_data)
+                
                 result = {
-                    "data": batch_result.get("data", []),
+                    "data": batch_data,
                     "columns": batch_result.get("columns", []),
-                    "row_count": len(batch_result.get("data", [])),
+                    "row_count": actual_rows,
                     "batch_info": {
                         "batch_num": batch_num,
                         "batch_size": batch_size,
@@ -719,7 +781,19 @@ class PandasEngine(Engine):
             
             for current_batch in range(num_batches):
                 offset = current_batch * batch_size
-                batch_sql = f"{sql_without_limit} LIMIT {batch_size} OFFSET {offset}"
+                
+                # If we have an original limit, ensure we don't exceed it
+                effective_batch_size = batch_size
+                if original_limit is not None:
+                    remaining_rows = original_limit - offset
+                    if remaining_rows <= 0:
+                        # No more rows to fetch, break early
+                        break
+                    effective_batch_size = min(batch_size, remaining_rows)
+                    logger.info(f"Batch {current_batch}: original_limit={original_limit}, offset={offset}, remaining_rows={remaining_rows}, effective_batch_size={effective_batch_size}")
+                
+                batch_sql = f"{sql_without_limit} LIMIT {effective_batch_size} OFFSET {offset}"
+                logger.info(f"Executing batch SQL (batch {current_batch}): {batch_sql[:200]}...")
                 
                 success, batch_result = await self.execute_sql(
                     batch_sql,
@@ -736,16 +810,47 @@ class PandasEngine(Engine):
                         "columns": columns
                     }
                 
+                batch_data = batch_result.get("data", [])
+                actual_rows = len(batch_data)
+                expected_max = effective_batch_size if original_limit is not None else batch_size
+                
+                logger.info(f"Batch {current_batch} returned {actual_rows} rows (expected max {expected_max})")
+                
+                # If we have an original limit and got more rows than expected, trim to the limit
+                if original_limit is not None and actual_rows > expected_max:
+                    logger.warning(f"Batch {current_batch} returned {actual_rows} rows but expected max {expected_max}, trimming to {expected_max}")
+                    batch_data = batch_data[:expected_max]
+                    actual_rows = len(batch_data)
+                
+                # Also ensure total rows don't exceed original_limit across all batches
+                if original_limit is not None:
+                    max_allowed = original_limit - offset
+                    if actual_rows > max_allowed:
+                        logger.warning(f"Batch {current_batch} rows ({actual_rows}) exceed remaining limit ({max_allowed}), trimming")
+                        batch_data = batch_data[:max_allowed]
+                        actual_rows = len(batch_data)
+                
                 # Store columns from first batch
                 if columns is None and batch_result.get("columns"):
                     columns = batch_result["columns"]
                 
                 # Append batch data
-                if batch_result.get("data"):
-                    all_data.extend(batch_result["data"])
+                if batch_data:
+                    all_data.extend(batch_data)
+                
+                # If we've reached the original limit, stop processing more batches
+                if original_limit is not None and len(all_data) >= original_limit:
+                    logger.info(f"Reached original_limit {original_limit}, stopping batch processing at {len(all_data)} rows")
+                    all_data = all_data[:original_limit]
+                    break
                 
                 # Log progress
                 logger.info(f"Processed batch {current_batch + 1}/{num_batches} ({len(all_data)}/{total_count} rows)")
+            
+            # Final safeguard: ensure we don't exceed original_limit
+            if original_limit is not None and len(all_data) > original_limit:
+                logger.warning(f"Final result has {len(all_data)} rows but original_limit is {original_limit}, trimming to {original_limit}")
+                all_data = all_data[:original_limit]
             
             result = {
                 "data": all_data,

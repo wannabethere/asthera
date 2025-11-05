@@ -60,7 +60,8 @@ class ReportService(BaseService):
             self.pipeline_container = PipelineContainer.initialize()
             self._agent_pipelines = {
                 "conditional_formatting": self.pipeline_container.get_pipeline("conditional_formatting_generation"),
-                "simple_report": self.pipeline_container.get_pipeline("simple_report_generation")
+                "simple_report": self.pipeline_container.get_pipeline("simple_report_generation"),
+                "sql_refresh": self.pipeline_container.get_pipeline("sql_refresh")
             }
             
             # Validate that required agent pipelines are available
@@ -74,7 +75,8 @@ class ReportService(BaseService):
             logger.error(f"Error initializing report agent pipelines: {e}")
             self._agent_pipelines = {
                 "conditional_formatting": None,
-                "simple_report": None
+                "simple_report": None,
+                "sql_refresh": None
             }
         
         # Configuration cache and execution history
@@ -1185,6 +1187,103 @@ class ReportService(BaseService):
         
         return nested_callback
     
+    async def _refresh_sql_queries(
+        self,
+        report_queries: List[Dict[str, Any]],
+        project_id: str,
+        status_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Refresh SQL queries with current date/time parameters
+        
+        Args:
+            report_queries: List of report query dictionaries
+            project_id: Project identifier
+            status_callback: Optional callback for status updates
+            
+        Returns:
+            List of refreshed report queries
+        """
+        if not self._agent_pipelines.get("sql_refresh"):
+            logger.warning("SQL refresh pipeline not available, skipping query refresh")
+            return report_queries
+        
+        refreshed_queries = []
+        
+        try:
+            self._send_status_update(
+                status_callback,
+                "sql_refresh_started",
+                {
+                    "project_id": project_id,
+                    "total_queries": len(report_queries)
+                }
+            )
+            
+            for i, query_data in enumerate(report_queries):
+                sql = query_data.get("sql", "")
+                original_question = query_data.get("query", "")
+                existing_reasoning = query_data.get("reasoning", "")
+                
+                if not sql or not sql.strip():
+                    logger.warning(f"Query {i} has no SQL, skipping refresh")
+                    refreshed_queries.append(query_data)
+                    continue
+                
+                try:
+                    # Refresh the SQL query with existing reasoning
+                    refresh_result = await self._agent_pipelines["sql_refresh"].run(
+                        sql_query=sql,
+                        original_question=original_question,
+                        project_id=project_id,
+                        existing_reasoning=existing_reasoning,
+                        status_callback=self._create_nested_status_callback(
+                            status_callback, f"sql_refresh_query_{i}"
+                        )
+                    )
+                    
+                    if refresh_result.get("success") and refresh_result.get("refreshed_sql"):
+                        # Update the query with refreshed SQL
+                        updated_query = query_data.copy()
+                        updated_query["sql"] = refresh_result["refreshed_sql"]
+                        updated_query["original_sql"] = sql  # Keep original for reference
+                        updated_query["refresh_metadata"] = refresh_result.get("metadata", {})
+                        refreshed_queries.append(updated_query)
+                        logger.info(f"Refreshed SQL query {i} successfully")
+                    else:
+                        logger.warning(f"SQL refresh failed for query {i}, using original")
+                        refreshed_queries.append(query_data)
+                        
+                except Exception as e:
+                    logger.error(f"Error refreshing SQL query {i}: {e}")
+                    # Use original query on error
+                    refreshed_queries.append(query_data)
+            
+            self._send_status_update(
+                status_callback,
+                "sql_refresh_completed",
+                {
+                    "project_id": project_id,
+                    "total_queries": len(report_queries),
+                    "refreshed_queries": len([q for q in refreshed_queries if "refresh_metadata" in q])
+                }
+            )
+            
+            return refreshed_queries
+            
+        except Exception as e:
+            logger.error(f"Error in SQL refresh process: {e}")
+            self._send_status_update(
+                status_callback,
+                "sql_refresh_failed",
+                {
+                    "project_id": project_id,
+                    "error": str(e)
+                }
+            )
+            # Return original queries on error
+            return report_queries
+    
     def _send_status_update(
         self,
         status_callback: Optional[Callable],
@@ -1674,6 +1773,14 @@ class ReportService(BaseService):
             
             # Transform workflow data to report format
             report_queries = self._extract_queries_from_workflow_components(thread_components)
+            
+            # Refresh SQL queries with current date/time
+            report_queries = await self._refresh_sql_queries(
+                report_queries=report_queries,
+                project_id=project_id,
+                status_callback=status_callback
+            )
+            
             report_context = self._create_report_context_from_workflow_data(workflow_data)
             
             # Determine writer actor and business goal

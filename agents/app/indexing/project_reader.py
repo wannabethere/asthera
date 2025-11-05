@@ -1244,7 +1244,7 @@ async def main():
     reader = ProjectReader(base_path, persistent_client)
     
     # Test projects
-    test_projects = ["cornerstone"]#["csodworkday","cornerstone_learning", "cornerstone_talent", "cornerstone","sumtotal_learn","cve_data"] #, "cornerstone_talent"]
+    test_projects = ["csodworkday","cornerstone_learning", "cornerstone_talent", "cornerstone","sumtotal_learn","cve_data"] #, "cornerstone_talent"]
 
     #test_projects = ["cve_data"]
     
@@ -1436,35 +1436,37 @@ async def test_delete_project():
     # Initialize reader
     reader = ProjectReader(base_path, persistent_client)
     
+    test_projects = ["csodworkday","cornerstone_learning", "cornerstone_talent", "cornerstone","sumtotal_learn_v3","cve_data"] #, "cornerstone_talent"]
     # Test project deletion
-    test_project_id = "cornerstone"  # Use the actual project_id from metadata
-    
-    try:
-        logger.info(f"\n{'='*50}")
-        logger.info(f"Testing project deletion for: {test_project_id}")
-        logger.info(f"{'='*50}")
+    for project in test_projects:
+        test_project_id = project  # Use the actual project_id from metadata
         
-        # Delete the project
-        deletion_result = await reader.delete_project(test_project_id)
-        
-        # Print deletion results
-        logger.info(f"\nDeletion Results for project {test_project_id}:")
-        logger.info(f"Total documents deleted: {deletion_result.get('total_documents_deleted', 0)}")
-        logger.info(f"Components processed: {len(deletion_result.get('components_deleted', {}))}")
-        
-        logger.info("\nComponent deletion results:")
-        for component, result in deletion_result.get('components_deleted', {}).items():
-            logger.info(f"  {component}: {result}")
-        
-        if deletion_result.get('errors'):
-            logger.info(f"\nErrors encountered: {len(deletion_result['errors'])}")
-            for error in deletion_result['errors']:
-                logger.error(f"  {error}")
-        else:
-            logger.info("\nNo errors encountered during deletion")
+        try:
+            logger.info(f"\n{'='*50}")
+            logger.info(f"Testing project deletion for: {test_project_id}")
+            logger.info(f"{'='*50}")
             
-    except Exception as e:
-        logger.error(f"Error during project deletion test: {str(e)}")
+            # Delete the project
+            deletion_result = await reader.delete_project(test_project_id)
+            
+            # Print deletion results
+            logger.info(f"\nDeletion Results for project {test_project_id}:")
+            logger.info(f"Total documents deleted: {deletion_result.get('total_documents_deleted', 0)}")
+            logger.info(f"Components processed: {len(deletion_result.get('components_deleted', {}))}")
+            
+            logger.info("\nComponent deletion results:")
+            for component, result in deletion_result.get('components_deleted', {}).items():
+                logger.info(f"  {component}: {result}")
+            
+            if deletion_result.get('errors'):
+                logger.info(f"\nErrors encountered: {len(deletion_result['errors'])}")
+                for error in deletion_result['errors']:
+                    logger.error(f"  {error}")
+            else:
+                logger.info("\nNo errors encountered during deletion")
+                
+        except Exception as e:
+            logger.error(f"Error during project deletion test: {str(e)}")
 
 if __name__ == "__main__":
     import asyncio

@@ -44,6 +44,7 @@ class SQLOperationType(Enum):
     EXPANSION = "expansion"
     CORRECTION = "correction"
     REGENERATION = "regeneration"
+    REFRESH = "refresh"
     REASONING = "reasoning"
     ANSWER = "answer"
     QUESTION = "question"
@@ -104,6 +105,7 @@ class SQLRAGAgent:
             self._create_sql_answer_tool(),
             self._create_sql_question_tool(),
             self._create_sql_summary_tool(),
+            self._create_sql_refresh_tool(),
             self._create_schema_retrieval_tool(),
             self._create_sample_retrieval_tool(),
         ]
@@ -236,6 +238,38 @@ Please answer the user's question in concise and clear manner in Markdown format
 
 ### OUTPUT FORMAT ###
 Please provide your response in proper Markdown string format.
+""",
+            
+            SQLOperationType.REFRESH.value: f"""
+You are a helpful assistant that refreshes existing SQL queries to use current values instead of the original dynamic parameters.
+The query structure, logic, tables, columns, and joins should remain exactly the same.
+**ONLY update dynamic parameters** that need to be recalculated based on the current state, such as:
+- Date/time parameters: Date ranges (e.g., "last 3 months", "last quarter", "this year"), relative time expressions (e.g., "CURRENT_DATE - INTERVAL '3 months'"), hard-coded dates that should be relative to today, time-based filters in WHERE clauses
+- Current state functions: CURRENT_DATE, CURRENT_TIMESTAMP, CURRENT_TIME, NOW(), functions that depend on the current execution time
+- Relative calculations: Expressions that calculate relative to "today" or "now" (e.g., "this week", "last month", "YTD")
+- Window functions: Any window functions or calculations that use CURRENT_DATE or similar time-based functions
+- Dynamic filters: Filters that depend on the current state or time (e.g., "active records", "recent data", "last N days")
+
+**DO NOT update**:
+- Static values, constants, or hard-coded non-time values
+- Business logic, calculations, or aggregations
+- Table names, column names, or joins
+- Non-dynamic filters or conditions
+
+{TEXT_TO_SQL_RULES}
+
+### REFRESH REQUIREMENTS ###
+1. **PRESERVE QUERY STRUCTURE**: Keep all SELECT columns, JOINs, GROUP BY, ORDER BY, and CTEs exactly as they are
+2. **UPDATE DYNAMIC PARAMETERS**: Only change dynamic values (primarily time-based, but also other current-state functions) to reflect the current date/time or current state
+3. **MAINTAIN LOGIC**: Keep all business logic, aggregations, and filters unchanged
+4. **USE CURRENT FUNCTIONS**: Use CURRENT_DATE, CURRENT_TIMESTAMP, NOW(), or calculated values based on the current state
+5. **PRESERVE STATIC VALUES**: Keep all non-dynamic values, constants, and static parameters unchanged
+
+### FINAL ANSWER FORMAT ###
+The final answer must be a ANSI SQL query in JSON format:
+{{
+    "sql": <REFRESHED_SQL_QUERY_STRING>
+}}
 """,
         }
     
@@ -418,6 +452,29 @@ Please provide your response in proper Markdown string format.
             func=summarize_sql_func
         )
     
+    def _create_sql_refresh_tool(self) -> Tool:
+        """Create SQL refresh tool"""
+        def refresh_sql_func(input_json: str) -> str:
+            try:
+                input_data = orjson.loads(input_json)
+                sql = input_data.get("sql", "")
+                query = input_data.get("query", "")
+                project_id = input_data.get("project_id", "")
+                
+                result = asyncio.run(self._refresh_sql_internal(
+                    sql, query, project_id, **input_data
+                ))
+                return orjson.dumps(result).decode()
+            except Exception as e:
+                logger.error(f"Error in SQL refresh tool: {e}")
+                return orjson.dumps({"error": str(e)}).decode()
+        
+        return Tool(
+            name="sql_refresher",
+            description="Refreshes SQL queries with current date/time parameters. Input should be JSON with 'sql', 'query', and 'project_id' fields.",
+            func=refresh_sql_func
+        )
+    
     def _create_schema_retrieval_tool(self) -> Tool:
         """Create schema retrieval tool"""
         def retrieve_schema_func(query: str, project_id: str) -> str:
@@ -513,18 +570,23 @@ Please provide your response in proper Markdown string format.
     def _extract_sql_from_content(self, content: str) -> Dict[str, Any]:
         """Extract SQL query and parsed entities from content that may contain explanations"""
         try:
+            logger.debug(f"Extracting SQL from content (length: {len(content)} chars)")
+            logger.debug(f"Content preview (first 500 chars): {content[:500]}")
+            
             # First try to parse the entire content as JSON
             try:
                 json_data = json.loads(content)
                 if isinstance(json_data, dict):
+                    logger.debug("Successfully parsed entire content as JSON")
                     # Clean SQL by removing unnecessary newlines and normalizing whitespace
                     sql = self._clean_sql_query(json_data.get("sql", ""))
+                    logger.info(f"Extracted SQL from JSON (length: {len(sql)} chars)")
                     return {
                         "sql": sql,
                         "parsed_entities": json_data.get("parsed_entities", {})
                     }
-            except json.JSONDecodeError:
-                pass
+            except json.JSONDecodeError as e:
+                logger.debug(f"Failed to parse entire content as JSON: {e}")
 
             # If that fails, try to find JSON object in the content
             import re
@@ -532,21 +594,26 @@ Please provide your response in proper Markdown string format.
             if json_match:
                 try:
                     json_str = json_match.group(0)
+                    logger.debug(f"Found JSON-like pattern in content (length: {len(json_str)} chars)")
                     json_data = json.loads(json_str)
                     if isinstance(json_data, dict):
+                        logger.debug("Successfully parsed JSON pattern from content")
                         # Clean SQL by removing unnecessary newlines and normalizing whitespace
                         sql = self._clean_sql_query(json_data.get("sql", ""))
+                        logger.info(f"Extracted SQL from JSON pattern (length: {len(sql)} chars)")
                         return {
                             "sql": sql,
                             "parsed_entities": json_data.get("parsed_entities", {})
                         }
-                except json.JSONDecodeError:
-                    pass
+                except json.JSONDecodeError as e:
+                    logger.debug(f"Failed to parse JSON pattern: {e}")
             
             # If no valid JSON found, look for SQL code block
             sql_match = re.search(r'```sql\n(.*?)\n```', content, re.DOTALL)
             if sql_match:
+                logger.debug("Found SQL code block (```sql```)")
                 sql = self._clean_sql_query(sql_match.group(1))
+                logger.info(f"Extracted SQL from code block (length: {len(sql)} chars)")
                 return {
                     "sql": sql,
                     "parsed_entities": {}
@@ -555,7 +622,9 @@ Please provide your response in proper Markdown string format.
             # If no code block, look for SQL statement
             sql_match = re.search(r'SELECT.*?;', content, re.DOTALL | re.IGNORECASE)
             if sql_match:
+                logger.debug("Found SQL statement (SELECT pattern)")
                 sql = self._clean_sql_query(sql_match.group(0))
+                logger.info(f"Extracted SQL from SELECT pattern (length: {len(sql)} chars)")
                 return {
                     "sql": sql,
                     "parsed_entities": {}
@@ -564,14 +633,19 @@ Please provide your response in proper Markdown string format.
             # If still no match, try to find any SQL-like content
             sql_match = re.search(r'(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP).*?;', content, re.DOTALL | re.IGNORECASE)
             if sql_match:
+                logger.debug("Found SQL-like content (generic SQL pattern)")
                 sql = self._clean_sql_query(sql_match.group(0))
+                logger.info(f"Extracted SQL from generic pattern (length: {len(sql)} chars)")
                 return {
                     "sql": sql,
                     "parsed_entities": {}
                 }
             
             # If no SQL found, return empty dict
-            logger.warning(f"No SQL found in content: {content}")
+            logger.warning(f"No SQL found in content after trying all extraction methods")
+            logger.warning(f"Content length: {len(content)}")
+            logger.warning(f"Content (first 1000 chars): {content[:1000]}")
+            logger.warning(f"Content (last 500 chars): {content[-500:] if len(content) > 500 else content}")
             return {
                 "sql": "",
                 "parsed_entities": {}
@@ -579,6 +653,8 @@ Please provide your response in proper Markdown string format.
             
         except Exception as e:
             logger.error(f"Error extracting SQL from content: {e}")
+            logger.error(f"Content that caused error (first 1000 chars): {content[:1000] if content else 'None'}")
+            logger.exception(f"Exception details:")
             return {
                 "sql": "",
                 "parsed_entities": {}
@@ -779,35 +855,72 @@ Please provide your response in proper Markdown string format.
                 },
                 **SQL_GENERATION_MODEL_KWARGS
             )
-            logger.info(f"result in generate sql internal for token input size: {result}")
+            logger.info(f"LLM response received in generate_sql_internal - result type: {type(result)}")
+            
             # Extract SQL from the result
             parsed_entities = {}
             if hasattr(result, 'content'):
+                # Log the full LLM response content
+                logger.info(f"LLM response content (first 1000 chars): {str(result.content)[:1000]}")
+                logger.info(f"LLM response content length: {len(str(result.content))}")
+                
+                # Log additional attributes if available
+                if hasattr(result, 'response_metadata'):
+                    logger.info(f"LLM response metadata: {result.response_metadata}")
+                if hasattr(result, 'usage_metadata'):
+                    logger.info(f"LLM usage metadata: {result.usage_metadata}")
+                
                 extracted_data = self._extract_sql_from_content(result.content)
                 
                 sql_content = extracted_data["sql"]
                 parsed_entities = extracted_data["parsed_entities"]
                 
+                logger.info(f"Extracted SQL content length: {len(sql_content) if sql_content else 0}")
+                logger.info(f"Extracted SQL content (first 500 chars): {sql_content[:500] if sql_content else 'EMPTY'}")
+                logger.info(f"Extracted parsed_entities: {parsed_entities}")
+                
                 if not sql_content:
+                    logger.error(f"SQL generation failed - No valid SQL found in LLM response")
+                    logger.error(f"Full LLM response content: {result.content}")
+                    logger.error(f"Extracted data: {extracted_data}")
+                    logger.error(f"Query: {query}")
+                    logger.error(f"Project ID: {project_id}")
                     return {
                         "valid_generation_results": [],
                         "invalid_generation_results": [{
                             "sql": "",
                             "type": "GENERATION_ERROR",
-                            "error": "No valid SQL found in LLM response"
+                            "error": "No valid SQL found in LLM response",
+                            "llm_response": str(result.content)[:2000] if hasattr(result, 'content') else str(result)[:2000]
                         }]
                     }
-                
-                # Format as JSON for post-processor
-                sql_json = {
-                    "sql": sql_content,
-                    "parsed_entities": parsed_entities
+            else:
+                logger.error(f"SQL generation failed - LLM result has no 'content' attribute")
+                logger.error(f"LLM result type: {type(result)}")
+                logger.error(f"LLM result attributes: {dir(result)}")
+                logger.error(f"LLM result string representation: {str(result)[:2000]}")
+                return {
+                    "valid_generation_results": [],
+                    "invalid_generation_results": [{
+                        "sql": "",
+                        "type": "GENERATION_ERROR",
+                        "error": "LLM result has no 'content' attribute",
+                        "llm_response": str(result)[:2000]
+                    }]
                 }
-                result = json.dumps(sql_json)
+            
+            # Format as JSON for post-processor
+            sql_json = {
+                "sql": sql_content,
+                "parsed_entities": parsed_entities
+            }
+            result = json.dumps(sql_json)
             
             
             # Post-process the result
             try:
+                logger.info(f"Post-processing SQL for query: {query}")
+                logger.info(f"SQL content being post-processed: {sql_content[:500] if sql_content else 'EMPTY'}")
                 
                 post_processed_result = await self.gen_processor.run(
                     [result],
@@ -815,9 +928,8 @@ Please provide your response in proper Markdown string format.
                     project_id=kwargs.get("project_id")
                 )
                 
-                print("post_processed_result in generate sql internal", parsed_entities)
-               
-                
+                logger.info(f"Post-processing completed successfully")
+                logger.debug(f"Post-processed result: {post_processed_result}")
                 
                 return {
                     "valid_generation_results": [{
@@ -829,7 +941,11 @@ Please provide your response in proper Markdown string format.
                     "invalid_generation_results": []
                 }
             except Exception as e:
-                logger.error(f"Error in post-processing: {e}")
+                logger.error(f"Error in post-processing SQL: {e}")
+                logger.error(f"SQL that failed post-processing: {sql_content}")
+                logger.error(f"Query: {query}")
+                logger.error(f"Project ID: {project_id}")
+                logger.exception(f"Post-processing exception details:")
                 # Attempt SQL correction when post-processing fails
                 correction_result = await self._handle_post_processing_error_with_correction(
                     query=query,
@@ -1283,7 +1399,18 @@ Please provide your response in proper Markdown string format.
                    - Tables marked as "metric" in the schema
                    - Base objects, dimensions, and measures
                    - Use metric tables for complex aggregations when available
-                
+                5. COUNT RELATED QUERIES: if the user's question is related to "How many", "How much", "How long", "How big", "How small", "How fast", "How slow", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", then 
+                     you make sure the reasoning plan generates a single number as the answer.
+                6. SUM RELATED QUERIES: if the user's question is related to "How much", "How long", "How big", "How small", "How fast", "How slow", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", then 
+                     you make sure the reasoning plan generates a single number as the answer.
+                7. AVG RELATED QUERIES: if the user's question is related to "How much", "How long", "How big", "How small", "How fast", "How slow", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", then 
+                     you make sure the reasoning plan generates a single number as the answer.
+                8. MIN RELATED QUERIES: if the user's question is related to "How much", "How long", "How big", "How small", "How fast", "How slow", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", then 
+                     you make sure the reasoning plan generates a single number as the answer.
+                9. MAX RELATED QUERIES: if the user's question is related to "How much", "How long", "How big", "How small", "How fast", "How slow", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", then 
+                     you make sure the reasoning plan generates a single number as the answer.
+                10. COUNT DISTINCT RELATED QUERIES: if the user's question is related to "How many", "How much", "How long", "How big", "How small", "How fast", "How slow", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", then 
+                     you make sure the reasoning plan generates a single number as the answer.
                 Let's think step by step. Consider the relationships between tables when analyzing the query and planning the SQL generation.
                 """
             )
@@ -1629,6 +1756,224 @@ Please provide your response in proper Markdown string format.
             logger.error(f"Error in internal SQL question: {e}")
             return {"questions": [], "success": False, "error": str(e)}
     
+    async def _refresh_sql_internal(
+        self,
+        sql: str,
+        original_question: str,
+        project_id: str,
+        existing_reasoning: str = "",
+        **kwargs
+    ) -> Dict[str, Any]:
+        """Internal SQL refresh logic - refreshes SQL with current date/time"""
+        try:
+            # Retrieve schema contexts
+            schema_result = await self.retrieval_helper.get_database_schemas(
+                project_id=project_id,
+                table_retrieval={
+                    "table_retrieval_size": 10,
+                    "table_column_retrieval_size": 100,
+                    "allow_using_db_schemas_without_pruning": False
+                },
+                query=original_question,
+                tables=None,
+                histories=None
+            )
+            
+            schema_contexts = []
+            for schema in schema_result.get("schemas", []):
+                if isinstance(schema, dict):
+                    table_ddl = schema.get("table_ddl", "")
+                    if table_ddl:
+                        schema_contexts.append(table_ddl)
+            
+            # Retrieve metadata
+            metadata = await self._retrieve_and_cache_metadata(
+                query=original_question,
+                project_id=project_id
+            )
+            
+            sql_pairs = metadata.get("sql_pairs", [])
+            instructions = metadata.get("instructions", [])
+            
+            # Get current time for context
+            config = Configuration(**kwargs.get("configuration", {}))
+            current_time = config.show_current_time()
+            current_date = datetime.now().strftime("%Y-%m-%d")
+            
+            # Combine all contexts
+            all_contexts = list(schema_contexts)
+            all_contexts.extend(instructions)
+            
+            if sql_pairs:
+                for pair in sql_pairs:
+                    if isinstance(pair, dict):
+                        all_contexts.append(
+                            f"Question: {pair.get('question', '')}\nSQL: {pair.get('sql', '')}"
+                        )
+            
+            # Load project-specific instructions
+            project_instructions = self._load_project_instructions(project_id)
+            
+            # Construct instructions
+            base_instructions = construct_instructions(
+                configuration=config,
+                has_calculated_field=any("Calculated Field" in ctx for ctx in all_contexts),
+                has_metric=any("metric" in ctx.lower() for ctx in all_contexts),
+                instructions=project_instructions
+            )
+            
+            # Build refresh prompt with existing reasoning
+            reasoning_section = ""
+            if existing_reasoning and existing_reasoning.strip():
+                reasoning_section = f"""
+### EXISTING REASONING PLAN ###
+The following reasoning was used when the original SQL query was generated. Use this reasoning to understand the query intent and maintain the same logic while refreshing time parameters:
+
+{existing_reasoning}
+
+**IMPORTANT**: The reasoning explains why the query was structured this way. When refreshing, maintain this same reasoning and logic, only updating the time-based parameters.
+"""
+            
+            refresh_instructions = f"""
+{base_instructions}
+
+### SQL REFRESH TASK ###
+You are tasked with refreshing an existing SQL query to use current values instead of the original dynamic parameters.
+The query structure, logic, tables, columns, and joins should remain exactly the same.
+**ONLY update dynamic parameters** that need to be recalculated based on the current state:
+
+**Primary focus - Time-based parameters:**
+- Date ranges (e.g., "last 3 months", "last quarter", "this year")
+- Relative time expressions (e.g., "CURRENT_DATE - INTERVAL '3 months'")
+- Hard-coded dates that should be relative to today
+- Time-based filters in WHERE clauses
+- Window functions using CURRENT_DATE or similar
+
+**Other dynamic parameters:**
+- Current state functions: CURRENT_DATE, CURRENT_TIMESTAMP, CURRENT_TIME, NOW()
+- Relative calculations: "this week", "last month", "YTD", "today", "now"
+- Dynamic filters based on current state (e.g., "active records", "recent data")
+- Functions that depend on the current execution context
+
+**DO NOT update:**
+- Static values, constants, or hard-coded non-time values
+- Business logic, calculations, aggregations (unless they use dynamic parameters)
+- Table names, column names, joins, or query structure
+- Non-dynamic filters or conditions
+
+{reasoning_section}
+
+### REFRESH REQUIREMENTS ###
+1. **PRESERVE QUERY STRUCTURE**: Keep all SELECT columns, JOINs, GROUP BY, ORDER BY, and CTEs exactly as they are
+2. **UPDATE DYNAMIC PARAMETERS**: Only change dynamic values (primarily time-based, but also other current-state functions) to reflect the current date/time or current state
+3. **MAINTAIN LOGIC**: Keep all business logic, aggregations, and filters unchanged based on the existing reasoning
+4. **USE CURRENT FUNCTIONS**: Use CURRENT_DATE, CURRENT_TIMESTAMP, NOW(), or calculated values based on the current state
+5. **FOLLOW EXISTING REASONING**: If reasoning is provided, ensure the refreshed query maintains the same logical approach and intent
+6. **PRESERVE STATIC VALUES**: Keep all non-dynamic values, constants, and static parameters unchanged
+
+### ORIGINAL SQL QUERY ###
+```sql
+{sql}
+```
+
+### DATABASE SCHEMA ###
+{chr(10).join(all_contexts)}
+
+### CURRENT TIME CONTEXT ###
+Current Time: {current_time}
+Current Date: {current_date}
+
+### TASK ###
+Generate the refreshed SQL query that:
+1. Uses the same tables, columns, and joins as the original query
+2. Updates only the dynamic parameters (primarily time-based) to reflect the current date/time ({current_date}) or current state
+3. Maintains the exact same query structure and business logic as described in the reasoning (if provided)
+4. Uses CURRENT_DATE, CURRENT_TIMESTAMP, NOW(), or date/state calculations relative to the current execution context
+5. Preserves the intent and approach from the original reasoning plan
+6. Keeps all static values, constants, and non-dynamic parameters exactly as they were
+
+### OUTPUT FORMAT ###
+Your response must be ONLY a valid JSON object with this exact structure:
+{{
+    "sql": "<refreshed_sql_query>",
+    "parsed_entities": {{
+        "column_filters": [],
+        "time_filters": [],
+        "aggregations": [],
+        "group_by_columns": []
+    }}
+}}
+
+**CRITICAL**: Respond with ONLY the JSON object, no explanations, no markdown formatting, no additional text.
+"""
+            
+            # Generate refreshed SQL
+            messages = [
+                SystemMessage(content=self.system_prompts[SQLOperationType.REFRESH.value]),
+                HumanMessage(content=refresh_instructions)
+            ]
+            
+            prompt = ChatPromptTemplate.from_messages(messages)
+            chain = prompt | self.llm
+            
+            result = await chain.ainvoke(
+                {
+                    "system_prompt": self.system_prompts[SQLOperationType.REFRESH.value],
+                    "user_prompt": refresh_instructions
+                },
+                **SQL_GENERATION_MODEL_KWARGS
+            )
+            
+            # Extract SQL from result
+            refreshed_sql = None
+            parsed_entities = {}
+            
+            if hasattr(result, 'content'):
+                extracted_data = self._extract_sql_from_content(result.content)
+                refreshed_sql = extracted_data["sql"]
+                parsed_entities = extracted_data["parsed_entities"]
+            
+            if not refreshed_sql:
+                raise ValueError("Failed to extract refreshed SQL from LLM response")
+            
+            # Post-process the SQL
+            try:
+                post_processed_result = await self.gen_processor.run(
+                    [json.dumps({"sql": refreshed_sql, "parsed_entities": parsed_entities})],
+                    timeout=kwargs.get("timeout", 30.0),
+                    project_id=project_id
+                )
+                
+                # Extract validated SQL from post-processor
+                if post_processed_result and len(post_processed_result) > 0:
+                    validated_result = json.loads(post_processed_result[0])
+                    refreshed_sql = validated_result.get("sql", refreshed_sql)
+            except Exception as e:
+                logger.warning(f"Post-processing failed, using extracted SQL: {e}")
+            
+            return {
+                "success": True,
+                "original_sql": sql,
+                "refreshed_sql": refreshed_sql,
+                "original_question": original_question,
+                "current_date": current_date,
+                "current_time": current_time,
+                "parsed_entities": parsed_entities,
+                "metadata": {
+                    "project_id": project_id,
+                    "refresh_timestamp": datetime.now().isoformat()
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error refreshing SQL query: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "original_sql": sql,
+                "original_question": original_question
+            }
+    
     async def _summarize_sql_internal(self, query: str, sqls: List[str], language: str) -> Dict[str, Any]:
         """Internal SQL summary logic"""
         try:
@@ -1721,6 +2066,8 @@ Please provide your response in proper Markdown string format.
                     return await self._handle_sql_question(query, **kwargs)
                 elif operation == SQLOperationType.SUMMARY:
                     return await self._handle_sql_summary(query, **kwargs)
+                elif operation == SQLOperationType.REFRESH:
+                    return await self._handle_sql_refresh(query, **kwargs)
                 else:
                     return {"error": f"Unknown operation: {operation.value}", "success": False}
                     
@@ -2060,6 +2407,26 @@ Please provide your response in proper Markdown string format.
             summary_result["summaries"] = summaries
             
         return summary_result
+    
+    async def _handle_sql_refresh(self, query: str, **kwargs) -> Dict[str, Any]:
+        """Handle SQL refresh operation"""
+        sql = kwargs.get("sql", "")
+        original_question = kwargs.get("original_question", query)
+        project_id = kwargs.get("project_id")
+        existing_reasoning = kwargs.get("existing_reasoning", "")
+        
+        if not sql:
+            raise ValueError("SQL query is required for refresh operation")
+        if not project_id:
+            raise ValueError("project_id is required for refresh operation")
+        
+        return await self._refresh_sql_internal(
+            sql=sql,
+            original_question=original_question,
+            project_id=project_id,
+            existing_reasoning=existing_reasoning,
+            **kwargs
+        )
 
     async def _retrieve_and_cache_metadata(
         self,

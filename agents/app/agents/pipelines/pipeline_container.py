@@ -500,6 +500,24 @@ class PipelineContainer:
         except ImportError as e:
             logger.warning(f"Failed to import feed management pipeline: {e}")
             self._pipelines["feed_management"] = None
+        
+        # Initialize SQL refresh pipeline
+        try:
+            from app.agents.pipelines.sql_refresh_pipeline import create_sql_refresh_pipeline
+            self._pipelines["sql_refresh"] = create_sql_refresh_pipeline(
+                engine=self._engine,
+                llm=self._llm,
+                retrieval_helper=self._retrieval_helper,
+                sql_rag_agent=self._sql_rag_agent
+            )
+            self._pipelines["sql_refresh"]._initialized = True
+            logger.info("SQL refresh pipeline initialized successfully")
+        except ImportError as e:
+            logger.warning(f"Failed to import SQL refresh pipeline: {e}")
+            self._pipelines["sql_refresh"] = None
+        except Exception as e:
+            logger.error(f"Error initializing SQL refresh pipeline: {e}")
+            self._pipelines["sql_refresh"] = None
     
     @classmethod
     def get_instance(cls) -> 'PipelineContainer':

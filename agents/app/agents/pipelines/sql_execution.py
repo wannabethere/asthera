@@ -4,7 +4,7 @@ import aiohttp
 from app.agents.pipelines.base import AgentPipeline
 from app.agents.retrieval.retrieval_helper import RetrievalHelper
 from langchain_openai import ChatOpenAI
-from app.core.engine import Engine
+from app.core.engine import Engine, extract_limit_value, get_total_count_for_batching
 from app.core.provider import DocumentStoreProvider
 from app.agents.nodes.sql.user_guide_assistance import UserGuideAssistance
 from app.agents.nodes.sql.question_recommendation import QuestionRecommendation
@@ -1050,19 +1050,21 @@ class DataSummarizationPipeline(AgentPipeline):
             self._batch_data.clear()
             
             async with aiohttp.ClientSession() as session:
-                # First get total count to determine number of batches
-                count_sql = f"SELECT COUNT(*) as total_count FROM ({sql}) as count_query"
-                success, count_result = await self._engine.execute_sql(
-                    count_sql,
-                    session,
-                    dry_run=False,
+                # Get total count intelligently (uses LIMIT if present, otherwise COUNT query)
+                success, total_count, error = await get_total_count_for_batching(
+                    sql=sql,
+                    engine=self._engine,
+                    session=session,
                     **kwargs
                 )
-                print(f"Count result in data summarization pipeline: {count_result}")
-                if not success or not count_result.get("data"):
-                    raise Exception("Failed to get total count for batch processing")
-
-                total_count = int(count_result["data"][0]["total_count"])
+                
+                if not success:
+                    raise Exception(error or "Failed to get total count for batch processing")
+                
+                # Extract original_limit for later use in batch processing
+                original_limit = extract_limit_value(sql)
+                logger.info(f"Total count for batch processing: {total_count} (original_limit: {original_limit})")
+                
                 batch_size = int(self._configuration["batch_size"]) or 2000
                 total_batches = (total_count + batch_size - 1) // batch_size
                 print(f"Total batches: {total_batches}")
@@ -1076,7 +1078,13 @@ class DataSummarizationPipeline(AgentPipeline):
                 })
                 
                 # Process all batches
+                total_rows_processed = 0
                 for current_batch in range(total_batches):
+                    # If we have an original limit and have already processed enough rows, stop early
+                    if original_limit is not None and total_rows_processed >= original_limit:
+                        logger.info(f"Reached original_limit {original_limit}, stopping batch processing at {total_rows_processed} rows")
+                        break
+                    
                     # Execute SQL using engine with batch processing
                     
                     success, result = await self._engine.execute_sql_in_batches(
@@ -1098,6 +1106,17 @@ class DataSummarizationPipeline(AgentPipeline):
                     # Process current batch
                     if result.get("data"):
                         batch_df = pd.DataFrame(result["data"])
+                        
+                        # Track total rows processed
+                        batch_rows = len(batch_df)
+                        total_rows_processed += batch_rows
+                        
+                        # If we have an original limit and this batch would exceed it, trim the batch
+                        if original_limit is not None and total_rows_processed > original_limit:
+                            excess = total_rows_processed - original_limit
+                            logger.warning(f"Batch {current_batch + 1} would exceed original_limit {original_limit}, trimming {excess} rows")
+                            batch_df = batch_df.iloc[:batch_rows - excess]
+                            total_rows_processed = original_limit
                         
                         # Send status update for summarization begin
                         send_status_update("summarization_begin", {
@@ -1135,9 +1154,10 @@ class DataSummarizationPipeline(AgentPipeline):
 
                         # If this is the last batch, combine all summaries
                         if is_last_batch or current_batch == total_batches - 1:
-                            # Get all batch summaries in order
-                            batch_summaries = [self._batch_summaries[i] for i in range(total_batches)]
-                            print(f"Batch summaries: {batch_summaries} {total_batches} {data_description}")
+                            # Get all batch summaries in order (only for batches that were actually processed)
+                            actual_batches_processed = len(self._batch_summaries)
+                            batch_summaries = [self._batch_summaries[i] for i in range(actual_batches_processed)]
+                            print(f"Batch summaries: {batch_summaries} {actual_batches_processed} (out of {total_batches} total) {data_description}")
                             
                             # Extract just the summary text for combining
                             summary_texts = []
@@ -1303,8 +1323,120 @@ class DataSummarizationPipeline(AgentPipeline):
                             return post_process_result
                         else:
                             continue
-                            
                 
+                # Fallback: If summaries weren't combined during the loop (e.g., due to early break),
+                # combine them now
+                if len(self._batch_summaries) > 0:
+                    # Get all batch summaries in order (only for batches that were actually processed)
+                    actual_batches_processed = len(self._batch_summaries)
+                    batch_summaries = [self._batch_summaries[i] for i in range(actual_batches_processed)]
+                    logger.info(f"Combining {actual_batches_processed} batch summaries after loop completion")
+                    print(f"Batch summaries (fallback): {batch_summaries} {actual_batches_processed} {data_description}")
+                    
+                    # Extract just the summary text for combining
+                    summary_texts = []
+                    total_tokens = 0
+                    total_cost = 0.0
+                    total_rows = 0
+                    
+                    for summary in batch_summaries:
+                        if isinstance(summary, str):
+                            summary_texts.append(summary)
+                            total_tokens += 0
+                            total_cost += 0.0
+                            total_rows += 0
+                        elif isinstance(summary, dict):
+                            summary_texts.append(summary.get("executive_summary", str(summary)))
+                            total_tokens += summary.get("metadata", {}).get("total_tokens", 0)
+                            total_cost += summary.get("metadata", {}).get("estimated_cost", 0.0)
+                            total_rows += len(summary.get("data", []))
+                        else:
+                            summary_texts.append(str(summary))
+                    
+                    # Combine all batch summaries
+                    combined_summary = self._summarizer._combine_summaries(
+                        summary_texts,
+                        data_description,
+                        is_final=True
+                    )
+                    print(f"Combined summary (fallback): {combined_summary}")
+                    
+                    # Prepare final result
+                    final_result = {
+                        "executive_summary": combined_summary,
+                        "data_overview": {
+                            "total_rows": total_rows,
+                            "total_batches": total_batches,
+                            "batches_processed": actual_batches_processed
+                        },
+                        "metadata": {
+                            "total_tokens": total_tokens,
+                            "estimated_cost": total_cost,
+                            "timestamp": datetime.now().isoformat()
+                        }
+                    }
+                    
+                    # Generate chart if enabled (use last batch data if available)
+                    chart_result = None
+                    if self._configuration.get("enable_chart_generation", True) and len(self._batch_data) > 0:
+                        try:
+                            # Use the last batch for chart generation
+                            last_batch_idx = max(self._batch_data.keys())
+                            chart_batch_df = self._batch_data[last_batch_idx]
+                            
+                            if chart_batch_df is not None:
+                                chart_language = self._configuration.get("chart_language", "English")
+                                provided_chart_schema = kwargs.get("chart_schema")
+                                existing_chart_schema = kwargs.get("existing_chart_schema")
+                                chart_result = await self._generate_chart_for_batch(
+                                    batch_df=chart_batch_df,
+                                    query=query,
+                                    sql=sql,
+                                    data_description=data_description_str,
+                                    language=chart_language,
+                                    chart_schema=provided_chart_schema,
+                                    existing_chart_schema=existing_chart_schema
+                                )
+                                
+                                if chart_result and chart_result.get("success"):
+                                    chart_data = chart_result.get("chart_data", {})
+                                    visualization = {
+                                        "chart_schema": chart_data.get("chart_schema", {}),
+                                        "chart_type": chart_data.get("chart_type", ""),
+                                        "reasoning": chart_data.get("reasoning", ""),
+                                        "data_sample": chart_result.get("data_sample", {}),
+                                        "batch_used": last_batch_idx,
+                                        "format": chart_data.get("format", self._configuration.get("chart_format", "vega_lite"))
+                                    }
+                                    final_result["visualization"] = visualization
+                        except Exception as e:
+                            logger.error(f"Error generating chart in fallback: {str(e)}")
+                    
+                    # Update metrics
+                    self._metrics.update({
+                        "last_project_id": project_id,
+                        "rows_processed": total_rows,
+                        "success": True,
+                        "total_tokens": total_tokens,
+                        "estimated_cost": total_cost,
+                        "batches_processed": actual_batches_processed,
+                        "chart_generated": chart_result.get("success", False) if chart_result else False
+                    })
+                    
+                    post_process_result = {
+                        "post_process": {
+                            "executive_summary": final_result["executive_summary"],
+                            "data_overview": final_result["data_overview"],
+                            "visualization": final_result.get("visualization", {})
+                        },
+                        "metadata": {
+                            "project_id": project_id,
+                            "data_description": data_description_str,
+                            "processing_stats": final_result["metadata"]
+                        }
+                    }
+                    print("final_result for data summarization pipeline (fallback)", post_process_result)
+                    return post_process_result
 
         except Exception as e:
             logger.error(f"Error in data summarization pipeline: {str(e)}")

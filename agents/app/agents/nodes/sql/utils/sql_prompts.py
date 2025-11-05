@@ -138,6 +138,11 @@ TEXT_TO_SQL_RULES = """
     - example 1: CAST(properties_closedate AS TIMESTAMP WITH TIME ZONE)
     - example 2: CAST('2024-11-09 00:00:00' AS TIMESTAMP WITH TIME ZONE)
     - example 3: CAST(DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') AS TIMESTAMP WITH TIME ZONE)
+- ALWAYS USE the relative time expressions in the SQL query for date range related queries
+    - example 5 for last month: CURRENT_DATE - INTERVAL '1 month' 
+    - example 6 for last quarter: CURRENT_DATE - INTERVAL '3 months'
+    - example 7 for last year: CURRENT_DATE - INTERVAL '1 year'
+    - example 8 for last 30 days: CURRENT_DATE - INTERVAL '30 days'
 - If the user asks for a specific date, please give the date range in SQL query
     - example: "What is the total revenue for the month of 2024-11-01?"
     - answer: "SELECT SUM(r.PriceSum) FROM Revenue r WHERE CAST(r.PurchaseTimestamp AS TIMESTAMP WITH TIME ZONE) >= CAST('2024-11-01 00:00:00' AS TIMESTAMP WITH TIME ZONE) AND CAST(r.PurchaseTimestamp AS TIMESTAMP WITH TIME ZONE) < CAST('2024-11-02 00:00:00' AS TIMESTAMP WITH TIME ZONE)"

@@ -92,6 +92,86 @@ def remove_limit_statement(sql: str) -> str:
     return modified_sql
 
 
+def extract_limit_value(sql: str) -> Optional[int]:
+    """
+    Extract the LIMIT value from a SQL query if present.
+    
+    Args:
+        sql: SQL query string
+        
+    Returns:
+        The LIMIT value as an integer, or None if no LIMIT clause is found
+    """
+    # Pattern to match LIMIT followed by a number at the end of the query
+    pattern = r"LIMIT\s+(\d+)(\s*;?\s*--.*|\s*;?\s*)$"
+    match = re.search(pattern, sql, flags=re.IGNORECASE)
+    if match:
+        try:
+            return int(match.group(1))
+        except (ValueError, IndexError):
+            return None
+    return None
+
+
+async def get_total_count_for_batching(
+    sql: str,
+    engine: "Engine",
+    session: aiohttp.ClientSession,
+    **kwargs
+) -> Tuple[bool, Optional[int], Optional[str]]:
+    """
+    Get total count for batch processing, intelligently using LIMIT if present
+    or falling back to COUNT query only if needed.
+    
+    This function avoids unnecessary COUNT queries when a LIMIT clause is present
+    in the SQL, which improves performance and reduces database calls.
+    
+    Args:
+        sql: SQL query string
+        engine: Engine instance to execute queries
+        session: aiohttp ClientSession for async operations
+        **kwargs: Additional arguments to pass to engine.execute_sql
+        
+    Returns:
+        Tuple of (success: bool, total_count: Optional[int], error: Optional[str])
+        - success: True if total_count was successfully determined
+        - total_count: The total count (from LIMIT or COUNT query), or None if failed
+        - error: Error message if failed, None otherwise
+    """
+    # First, check if SQL has an existing LIMIT clause
+    original_limit = extract_limit_value(sql)
+    
+    if original_limit is not None:
+        # Use the original limit as total_count directly
+        # This avoids an unnecessary COUNT query
+        logger.info(f"Found existing LIMIT clause in query: {original_limit}, using as total_count")
+        return True, original_limit, None
+    
+    # No LIMIT found, need to run COUNT query
+    try:
+        count_sql = f"SELECT COUNT(*) as total_count FROM ({sql}) as count_query"
+        success, count_result = await engine.execute_sql(
+            count_sql,
+            session,
+            dry_run=False,
+            **kwargs
+        )
+        
+        if not success or not count_result.get("data"):
+            error_msg = "Failed to get total count from COUNT query"
+            logger.error(error_msg)
+            return False, None, error_msg
+        
+        total_count = int(count_result["data"][0]["total_count"])
+        logger.info(f"Count query returned total_count: {total_count}")
+        return True, total_count, None
+        
+    except Exception as e:
+        error_msg = f"Error executing COUNT query: {str(e)}"
+        logger.exception(error_msg)
+        return False, None, error_msg
+
+
 def add_quotes(sql: str) -> Tuple[str, str]:
     try:
         # Clean the SQL first to remove any wrapping text

@@ -917,15 +917,25 @@ class ChartExecutor:
     ) -> List[Dict[str, Any]]:
         """Fetch data from database with pagination support"""
         try:
+            # Check if SQL already has LIMIT clause - preserve it if present
+            from app.core.engine import extract_limit_value
+            original_limit = extract_limit_value(sql_query)
+            
             # Modify SQL for pagination if enabled
             if config.enable_pagination and config.max_rows:
-                # Add LIMIT clause
-                if "LIMIT" not in sql_query.upper():
+                # Only add LIMIT if SQL doesn't already have one
+                if original_limit is None:
+                    # No LIMIT in SQL, add one based on max_rows
                     sql_query += f" LIMIT {config.max_rows}"
-                elif config.page_size:
-                    # Replace existing LIMIT with our max_rows
-                    import re
-                    sql_query = re.sub(r'LIMIT\s+\d+', f'LIMIT {config.max_rows}', sql_query, flags=re.IGNORECASE)
+                    effective_limit = config.max_rows
+                    logger.info(f"No LIMIT in SQL, adding LIMIT {config.max_rows}")
+                else:
+                    # SQL already has LIMIT, preserve it (don't replace)
+                    effective_limit = original_limit
+                    logger.info(f"SQL already has LIMIT {original_limit}, preserving it (not replacing with max_rows {config.max_rows})")
+            else:
+                # Pagination not enabled, use original limit if present
+                effective_limit = original_limit
             
             # Add sorting if specified
             if config.sort_by and "ORDER BY" not in sql_query.upper():
@@ -936,11 +946,14 @@ class ChartExecutor:
             # Always use execute_sql method since PandasEngine is a wrapper around other engines
             import aiohttp
             async with aiohttp.ClientSession() as session:
+                # Don't pass limit parameter if SQL already has LIMIT - let the SQL LIMIT be respected
+                # Only pass limit if we added it ourselves or if no LIMIT in SQL
+                limit_param = None if original_limit is not None else effective_limit
                 success, result = await engine.execute_sql(
                     sql_query,
                     session,
                     dry_run=False,
-                    limit=config.max_rows
+                    limit=limit_param
                 )
                 
                 if success and result and "data" in result:
