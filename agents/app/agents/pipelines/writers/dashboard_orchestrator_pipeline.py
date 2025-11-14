@@ -7,7 +7,7 @@ from app.agents.pipelines.base import AgentPipeline
 from app.agents.retrieval.retrieval_helper import RetrievalHelper
 from app.core.engine import Engine
 from app.core.dependencies import get_llm
-from app.agents.pipelines.writers.conditional_formatting_generation_pipeline import ConditionalFormattingGenerationPipeline
+from app.agents.pipelines.writers.conditional_formatting_pipeline import ConditionalFormattingPipeline
 from app.agents.pipelines.writers.enhanced_dashboard_streaming_pipeline import EnhancedDashboardStreamingPipeline
 from app.agents.pipelines.writers.dashboard_summary_pipeline import DashboardSummaryPipeline
 
@@ -25,7 +25,7 @@ class DashboardOrchestratorPipeline(AgentPipeline):
         llm: Any,
         retrieval_helper: RetrievalHelper,
         engine: Engine,
-        conditional_formatting_pipeline: Optional[ConditionalFormattingGenerationPipeline] = None,
+        conditional_formatting_pipeline: Optional[ConditionalFormattingPipeline] = None,
         enhanced_streaming_pipeline: Optional[EnhancedDashboardStreamingPipeline] = None,
         dashboard_summary_pipeline: Optional[DashboardSummaryPipeline] = None
     ):
@@ -51,8 +51,8 @@ class DashboardOrchestratorPipeline(AgentPipeline):
         
         # Initialize pipelines if not provided
         if not conditional_formatting_pipeline:
-            from app.agents.pipelines.writers.conditional_formatting_generation_pipeline import create_conditional_formatting_generation_pipeline
-            self._conditional_formatting_pipeline = create_conditional_formatting_generation_pipeline(
+            from app.agents.pipelines.writers.conditional_formatting_pipeline import create_conditional_formatting_pipeline
+            self._conditional_formatting_pipeline = create_conditional_formatting_pipeline(
                 engine=engine,
                 llm=llm,
                 retrieval_helper=retrieval_helper
@@ -179,8 +179,14 @@ class DashboardOrchestratorPipeline(AgentPipeline):
                     status_callback=self._create_nested_status_callback(status_callback, "conditional_formatting")
                 )
                 
-                if conditional_formatting_result.get("post_process", {}).get("success"):
-                    enhanced_dashboard = conditional_formatting_result.get("post_process", {}).get("enhanced_dashboard")
+                # New pipeline returns result directly, not in post_process
+                if conditional_formatting_result.get("success"):
+                    # Create enhanced dashboard structure from new pipeline result
+                    enhanced_dashboard = self._create_enhanced_dashboard_from_result(
+                        conditional_formatting_result,
+                        dashboard_context,
+                        project_id
+                    )
                     
                     self._send_status_update(
                         status_callback,
@@ -196,7 +202,7 @@ class DashboardOrchestratorPipeline(AgentPipeline):
                         "conditional_formatting_generation_failed",
                         {
                             "project_id": project_id,
-                            "error": conditional_formatting_result.get("post_process", {}).get("error")
+                            "error": conditional_formatting_result.get("error", "Unknown error")
                         }
                     )
             
@@ -333,6 +339,66 @@ class DashboardOrchestratorPipeline(AgentPipeline):
             })
             
             raise
+
+    def _create_enhanced_dashboard_from_result(
+        self,
+        conditional_formatting_result: Dict[str, Any],
+        dashboard_context: Dict[str, Any],
+        project_id: str
+    ) -> Dict[str, Any]:
+        """Create enhanced dashboard structure from conditional formatting pipeline result"""
+        chart_configurations = conditional_formatting_result.get("chart_configurations", {})
+        sql_expansions = conditional_formatting_result.get("sql_expansions", {})
+        time_filters = conditional_formatting_result.get("time_filters")
+        
+        enhanced_dashboard = {
+            "project_id": project_id,
+            "generated_at": datetime.now().isoformat(),
+            "original_context": dashboard_context,
+            "conditional_formatting_rules": chart_configurations,
+            "execution_instructions": {}
+        }
+        
+        # Generate execution instructions for each chart
+        for chart_id, config in chart_configurations.items():
+            chart_instructions = {
+                "chart_id": chart_id,
+                "sql_expansions": [],
+                "chart_adjustments": [],
+                "conditional_formats": []
+            }
+            
+            # Extract SQL expansion instructions
+            if "sql_expansion" in config:
+                sql_expansion = config["sql_expansion"]
+                if "where_conditions" in sql_expansion:
+                    chart_instructions["sql_expansions"].append({
+                        "type": "where_conditions",
+                        "conditions": sql_expansion["where_conditions"]
+                    })
+                
+                if "time_filters" in sql_expansion:
+                    chart_instructions["sql_expansions"].append({
+                        "type": "time_filters",
+                        "filters": sql_expansion["time_filters"]
+                    })
+                
+                if "expanded_sql" in sql_expansion:
+                    chart_instructions["sql_expansions"].append({
+                        "type": "expanded_sql",
+                        "sql": sql_expansion["expanded_sql"]
+                    })
+            
+            # Extract chart adjustment instructions
+            if "chart_adjustment" in config:
+                chart_instructions["chart_adjustments"].append({
+                    "type": "chart_adjustment",
+                    "config": config["chart_adjustment"]
+                })
+            
+            enhanced_dashboard["execution_instructions"][chart_id] = chart_instructions
+        
+        return enhanced_dashboard
 
     def _create_basic_enhanced_dashboard(
         self,
@@ -521,7 +587,7 @@ def create_dashboard_orchestrator_pipeline(
     engine: Engine,
     llm: Any = None,
     retrieval_helper: RetrievalHelper = None,
-    conditional_formatting_pipeline: Optional[ConditionalFormattingGenerationPipeline] = None,
+    conditional_formatting_pipeline: Optional[ConditionalFormattingPipeline] = None,
     enhanced_streaming_pipeline: Optional[EnhancedDashboardStreamingPipeline] = None,
     dashboard_summary_pipeline: Optional[DashboardSummaryPipeline] = None,
     **kwargs

@@ -78,6 +78,23 @@ class PlotlyChartGenerationAgent:
             "chart_config": <PLOTLY_CHART_JSON_CONFIGURATION>
         }}
         
+        ### DATA SIZE CONSIDERATIONS ###
+        
+        IMPORTANT: Before selecting a chart type, check the data size (number of rows in the sample data):
+        - If the data has MORE than 5 rows, you MUST NOT recommend KPI charts (also known as metric cards, gauge charts, indicator charts, or single-value visualizations)
+        - KPI charts are only suitable for datasets with 5 or fewer rows, as they display individual metrics that cannot effectively render when there are many data points
+        - For datasets with more than 5 rows, choose from other appropriate chart types such as:
+          * Line charts for trends over time
+          * Bar charts for categorical comparisons
+          * Pie charts for part-to-whole relationships
+          * Area charts for cumulative trends
+          * Scatter plots for correlations
+          * Histograms for distributions
+          * Heatmaps for multi-dimensional data
+          * And other suitable visualization types based on the data structure
+        
+        Always count the rows in the sample data before making your chart type recommendation.
+        
         ### IMPORTANT NOTES ###
         
         - Ensure all field names in traces exist in the actual data columns
@@ -241,6 +258,336 @@ class PlotlyChartGenerationPipeline:
         self.agent = PlotlyChartGenerationAgent(llm, **kwargs)
         self.exporter = PlotlyChartExporter()
     
+    async def _process_kpi_chart(
+        self,
+        data: Dict[str, Any],
+        chart_config: Dict[str, Any],
+        query: str,
+        language: str = "English"
+    ) -> Dict[str, Any]:
+        """Process KPI chart generation using LLM
+        
+        Args:
+            data: Data dictionary with columns and data
+            chart_config: Initial chart config from LLM
+            query: Natural language query
+            language: Language for the chart
+            
+        Returns:
+            Updated chart config with KPI-specific configuration
+        """
+        try:
+            columns = data.get("columns", [])
+            data_rows = data.get("data", [])
+            
+            if not data_rows or len(data_rows) == 0:
+                logger.warning("No data available for KPI chart")
+                return chart_config
+            
+            # Preprocess data for KPI generation
+            preprocessed_data = self.agent.data_preprocessor.run(data)
+            
+            # Generate KPI chart using LLM
+            kpi_config = await self._generate_kpi_chart_with_llm(
+                query=query,
+                columns=columns,
+                sample_data=preprocessed_data["sample_data"],
+                sample_column_values=preprocessed_data["sample_column_values"],
+                column_metadata=preprocessed_data.get("column_metadata", {}),
+                language=language,
+                existing_config=chart_config
+            )
+            
+            # Merge with existing config, preserving any customizations
+            if kpi_config:
+                # Preserve title from original config if it exists
+                if "layout" in chart_config and "title" in chart_config.get("layout", {}):
+                    if "layout" not in kpi_config:
+                        kpi_config["layout"] = {}
+                    kpi_config["layout"]["title"] = chart_config["layout"]["title"]
+                
+                # Update the chart config
+                chart_config.update(kpi_config)
+                logger.info("Generated KPI chart config using LLM")
+            
+            return chart_config
+            
+        except Exception as e:
+            logger.error(f"Error processing KPI chart: {e}")
+            return chart_config
+    
+    async def _generate_kpi_chart_with_llm(
+        self,
+        query: str,
+        columns: List[str],
+        sample_data: Dict[str, Any],
+        sample_column_values: Dict[str, Any],
+        column_metadata: Dict[str, Any],
+        language: str,
+        existing_config: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Generate KPI chart config using LLM with specialized KPI prompt for Plotly"""
+        try:
+            kpi_system_prompt = f"""
+            ### TASK ###
+            
+            You are an expert at creating KPI (Key Performance Indicator) charts using Plotly! Given the user's question, data columns, sample data, and sample column values, you need to generate a specialized KPI chart configuration.
+            
+            KPI charts are single-value visualizations that display important metrics. There are four main types of KPI charts:
+            
+            ### 1. COUNTER KPI ###
+            Purpose: Displays a single numeric count or total value.
+            
+            Plotly Config Structure:
+            {{
+                "data": [{{
+                    "type": "indicator",
+                    "mode": "number",
+                    "value": <NUMERIC_VALUE>,
+                    "number": {{
+                        "font": {{ "size": 48, "color": "#2563eb" }},
+                        "valueformat": ","
+                    }},
+                    "title": {{ "text": "<TITLE>", "font": {{ "size": 20 }} }}
+                }}],
+                "layout": {{
+                    "title": {{ "text": "<TITLE>" }},
+                    "paper_bgcolor": "white",
+                    "plot_bgcolor": "white"
+                }},
+                "kpi_metadata": {{
+                    "chart_type": "metric_kpi",
+                    "chart_subtype": "counter",
+                    "format": ",",
+                    "color_scheme": "#2563eb",
+                    "description": "Displays a single numeric count or total value"
+                }}
+            }}
+            
+            ### 2. PERCENTAGE KPI ###
+            Purpose: Displays a metric as a percentage (0–1 scaled value).
+            
+            Plotly Config Structure:
+            {{
+                "data": [{{
+                    "type": "indicator",
+                    "mode": "number",
+                    "value": <0_TO_1_VALUE>,
+                    "number": {{
+                        "font": {{ "size": 48, "color": "#10b981" }},
+                        "valueformat": ".0%"
+                    }},
+                    "title": {{ "text": "<TITLE>", "font": {{ "size": 20 }} }}
+                }}],
+                "layout": {{
+                    "title": {{ "text": "<TITLE>" }},
+                    "paper_bgcolor": "white",
+                    "plot_bgcolor": "white"
+                }},
+                "kpi_metadata": {{
+                    "chart_type": "metric_kpi",
+                    "chart_subtype": "percentage",
+                    "format": ".0%",
+                    "color_scheme": "#10b981",
+                    "description": "Displays a metric as a percentage (0–1 scaled value)"
+                }}
+            }}
+            
+            ### 3. SCORE KPI ###
+            Purpose: Displays a score (0–100) with color thresholds for high, medium, and low values.
+            
+            Plotly Config Structure:
+            {{
+                "data": [{{
+                    "type": "indicator",
+                    "mode": "number+delta",
+                    "value": <0_TO_100_VALUE>,
+                    "number": {{
+                        "font": {{ 
+                            "size": 48,
+                            "color": "<COLOR_BASED_ON_VALUE>"
+                        }},
+                        "valueformat": ".0f"
+                    }},
+                    "title": {{ "text": "<TITLE>", "font": {{ "size": 20 }} }},
+                    "delta": {{
+                        "reference": 50,
+                        "position": "top"
+                    }}
+                }}],
+                "layout": {{
+                    "title": {{ "text": "<TITLE>" }},
+                    "paper_bgcolor": "white",
+                    "plot_bgcolor": "white"
+                }},
+                "kpi_metadata": {{
+                    "chart_type": "metric_kpi",
+                    "chart_subtype": "score",
+                    "format": ".0f",
+                    "color_scheme": {{
+                        "high": "#16a34a",
+                        "medium": "#f59e0b",
+                        "low": "#ef4444"
+                    }},
+                    "description": "Displays a score (0–100) with color thresholds"
+                }}
+            }}
+            
+            ### 4. COMPARISON KPI ###
+            Purpose: Shows current value with percentage increase or decrease compared to a previous value.
+            
+            Plotly Config Structure:
+            {{
+                "data": [{{
+                    "type": "indicator",
+                    "mode": "number+delta",
+                    "value": <CURRENT_VALUE>,
+                    "delta": {{
+                        "reference": <PREVIOUS_VALUE>,
+                        "position": "top",
+                        "valueformat": ".1%",
+                        "increasing": {{ "color": "#16a34a" }},
+                        "decreasing": {{ "color": "#ef4444" }}
+                    }},
+                    "number": {{
+                        "font": {{ 
+                            "size": 48,
+                            "color": "#2563eb"
+                        }},
+                        "valueformat": ","
+                    }},
+                    "title": {{ "text": "<TITLE>", "font": {{ "size": 20 }} }}
+                }}],
+                "layout": {{
+                    "title": {{ "text": "<TITLE> vs Previous" }},
+                    "paper_bgcolor": "white",
+                    "plot_bgcolor": "white"
+                }},
+                "kpi_metadata": {{
+                    "chart_type": "comparison_kpi",
+                    "chart_subtype": "current_vs_percentage",
+                    "columns": ["current", "previous", "percentage_change"],
+                    "comparison_logic": {{
+                        "positive": "current > previous",
+                        "negative": "current < previous",
+                        "neutral": "current == previous"
+                    }},
+                    "format": "+.1%",
+                    "positive_color": "#16a34a",
+                    "negative_color": "#ef4444",
+                    "description": "Shows current value with percentage increase or decrease compared to a previous value"
+                }}
+            }}
+            
+            ### DECISION CRITERIA ###
+            
+            Choose the appropriate KPI subtype based on:
+            
+            1. **Counter KPI**: Use when displaying a single count, total, sum, or aggregate value. The value can be any positive number.
+            
+            2. **Percentage KPI**: Use when:
+               - Column names contain words like "percent", "rate", "ratio", "completion"
+               - The value is between 0 and 1 (or can be normalized to 0-1)
+               - The query mentions percentages, rates, or ratios
+            
+            3. **Score KPI**: Use when:
+               - The query mentions "score", "rating", "satisfaction", "performance", "quality"
+               - The value is typically between 0 and 100
+               - You want to show performance with color-coded thresholds
+            
+            4. **Comparison KPI**: Use when:
+               - There are two numeric columns (current vs previous, this month vs last month, etc.)
+               - Column names contain "current", "previous", "prior", "last"
+               - The query mentions comparison, change, increase, decrease, growth, vs, versus
+               - You want to show both the current value and the percentage change
+            
+            ### OUTPUT FORMAT ###
+            
+            You MUST respond with ONLY a valid JSON object containing the complete Plotly KPI chart configuration. Do NOT include:
+            - Any text before the JSON
+            - Any text after the JSON
+            - Markdown formatting
+            - Code blocks
+            - Explanations outside the JSON
+            
+            Your response should be a single JSON object starting with {{ and ending with }}.
+            
+            ### IMPORTANT NOTES ###
+            
+            - Extract the actual values from the sample data
+            - Use appropriate field names from the columns
+            - Ensure all numeric values are properly formatted
+            - For percentage KPI, normalize values > 1 by dividing by 100
+            - For comparison KPI, identify current and previous columns intelligently
+            - Use Plotly's indicator chart type for KPI visualizations
+            - Use the query to determine an appropriate title
+            - Preserve any existing title from the existing_config if provided
+            """
+            
+            kpi_user_prompt = f"""
+            ### INPUT ###
+            Question: {query}
+            Columns: {json.dumps(columns)}
+            Sample Data: {json.dumps(sample_data)}
+            Sample Column Values: {json.dumps(sample_column_values)}
+            Column Metadata: {json.dumps(column_metadata)}
+            Language: {language}
+            Existing Config: {json.dumps(existing_config) if existing_config else "None"}
+            
+            Please analyze the data and generate the most appropriate Plotly KPI chart configuration based on the question and data structure.
+            """
+            
+            # Generate KPI config using LLM
+            generation_prompt = PromptTemplate(
+                input_variables=["system_prompt", "user_prompt"],
+                template="{{system_prompt}}\n\n{{user_prompt}}"
+            )
+            
+            chain = LLMChain(llm=self.agent.llm, prompt=generation_prompt)
+            
+            result = await chain.arun(
+                system_prompt=kpi_system_prompt,
+                user_prompt=kpi_user_prompt
+            )
+            
+            # Extract content from the response
+            if hasattr(result, 'content'):
+                result_str = result.content
+            else:
+                result_str = str(result)
+            
+            logger.info(f"Raw LLM KPI response (Plotly): {result_str}")
+            
+            # Parse JSON response
+            try:
+                parsed = orjson.loads(result_str)
+                logger.info(f"Successfully parsed KPI JSON directly: {parsed}")
+                return parsed
+            except orjson.JSONDecodeError:
+                import re
+                json_patterns = [
+                    r'```json\s*(\{{.*?\}})\s*```',
+                    r'```\s*(\{{.*?\}})\s*```',
+                    r'(\{{.*?\}})',
+                ]
+                
+                for pattern in json_patterns:
+                    json_matches = re.findall(pattern, result_str, re.DOTALL)
+                    for match in json_matches:
+                        try:
+                            parsed = orjson.loads(match)
+                            logger.info(f"Successfully parsed KPI JSON from pattern: {parsed}")
+                            return parsed
+                        except orjson.JSONDecodeError:
+                            continue
+                
+                logger.warning("Failed to parse JSON from LLM KPI response")
+                return {}
+            
+        except Exception as e:
+            logger.error(f"Error generating KPI chart with LLM: {e}")
+            return {}
+    
     async def run(
         self,
         query: str,
@@ -274,6 +621,43 @@ class PlotlyChartGenerationPipeline:
                 remove_data_from_chart_config=remove_data_from_chart_config,
                 existing_chart_schema=existing_chart_schema
             )
+            
+            # Check if chart type is KPI and process accordingly
+            chart_type = result.get("chart_type", "").lower()
+            chart_config = result.get("chart_config", {})
+            
+            # Check for KPI chart indicators
+            is_kpi_chart = (
+                "kpi" in chart_type or
+                "metric" in chart_type or
+                "counter" in chart_type or
+                "gauge" in chart_type or
+                "indicator" in chart_type or
+                chart_config.get("kpi_metadata") is not None or
+                (isinstance(chart_config.get("data"), list) and
+                 len(chart_config.get("data", [])) > 0 and
+                 chart_config.get("data", [{}])[0].get("type") == "indicator" and
+                 len(data.get("data", [])) <= 5)
+            )
+            
+            if is_kpi_chart and chart_config:
+                logger.info("Detected KPI chart, processing with KPI-specific logic...")
+                # Process KPI chart with specialized logic using LLM
+                processed_config = await self._process_kpi_chart(
+                    data=data,
+                    chart_config=chart_config,
+                    query=query,
+                    language=language
+                )
+                result["chart_config"] = processed_config
+                # Update chart type to reflect KPI subtype if available
+                if "kpi_metadata" in processed_config:
+                    kpi_metadata = processed_config.get("kpi_metadata", {})
+                    chart_subtype = kpi_metadata.get("chart_subtype", "")
+                    if chart_subtype:
+                        result["chart_type"] = f"kpi_{chart_subtype}"
+                    else:
+                        result["chart_type"] = "kpi"
             
             # Add export functionality if requested
             if export_format and result.get("success", False):

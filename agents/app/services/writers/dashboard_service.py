@@ -44,7 +44,7 @@ class DashboardService(BaseService):
         try:
             self._agent_pipelines = {
                 "dashboard_orchestrator": self.pipeline_container.get_pipeline("dashboard_orchestrator"),
-                "conditional_formatting": self.pipeline_container.get_pipeline("conditional_formatting_generation"),
+                "conditional_formatting": self.pipeline_container.get_pipeline("conditional_formatting_generation"),  # Uses ConditionalFormattingPipeline
                 "dashboard_streaming": self.pipeline_container.get_pipeline("dashboard_streaming"),
                 "enhanced_dashboard": self.pipeline_container.get_pipeline("enhanced_dashboard_streaming"),
                 "dashboard_summary": self.pipeline_container.get_pipeline("dashboard_summary"),
@@ -547,41 +547,121 @@ class DashboardService(BaseService):
         dashboard_context: Dict[str, Any],
         project_id: str,
         additional_context: Optional[Dict[str, Any]] = None,
-        time_filters: Optional[Dict[str, Any]] = None
+        time_filters: Optional[Dict[str, Any]] = None,
+        status_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None
     ) -> Dict[str, Any]:
         """
-        Process only conditional formatting without executing dashboard using agent pipelines
+        Process only conditional formatting without executing dashboard using ConditionalFormattingPipeline
+        
+        This method uses the standalone ConditionalFormattingPipeline which processes
+        conditional formatting requests independently from dashboard flows.
         
         Args:
             natural_language_query: Natural language query for conditional formatting
-            dashboard_context: Context about dashboard charts and columns
+            dashboard_context: Context about dashboard charts and columns (supports both charts and thread_components)
             project_id: Project identifier
             additional_context: Additional context for formatting
             time_filters: Time-based filters
+            status_callback: Optional callback for status updates
             
         Returns:
-            Conditional formatting configuration result
+            Conditional formatting configuration result in standard format with post_process structure
         """
         try:
-            # Use conditional formatting pipeline directly
+            # Use conditional formatting pipeline from container
             if not self._agent_pipelines["conditional_formatting"]:
                 error_msg = "Conditional formatting pipeline is not available"
                 logger.error(error_msg)
                 raise RuntimeError(error_msg)
             
+            # Normalize dashboard_context to handle thread_components structure
+            normalized_context = self._normalize_dashboard_context_for_conditional_formatting(dashboard_context)
+            
+            # Call the ConditionalFormattingPipeline
             result = await self._agent_pipelines["conditional_formatting"].run(
                 natural_language_query=natural_language_query,
-                dashboard_context=dashboard_context,
+                dashboard_context=normalized_context,
                 project_id=project_id,
                 additional_context=additional_context,
-                time_filters=time_filters
+                time_filters=time_filters,
+                status_callback=status_callback
             )
             
-            return result
+            # Format result to match expected service response structure
+            # ConditionalFormattingPipeline returns result directly, not in post_process
+            configuration = result.get("configuration")
+            
+            # Helper function to convert Enum values to strings recursively
+            def convert_enums_to_strings(obj):
+                """Recursively convert Enum values to their string values"""
+                from enum import Enum
+                if isinstance(obj, Enum):
+                    return obj.value
+                elif isinstance(obj, dict):
+                    return {k: convert_enums_to_strings(v) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [convert_enums_to_strings(item) for item in obj]
+                else:
+                    return obj
+            
+            # Convert DashboardConfiguration object to dict if needed
+            configuration_dict = None
+            if configuration:
+                if isinstance(configuration, dict):
+                    configuration_dict = convert_enums_to_strings(configuration)
+                else:
+                    # It's a dataclass or object, convert to dict
+                    from dataclasses import asdict, is_dataclass
+                    if is_dataclass(configuration):
+                        # Use asdict which handles nested dataclasses
+                        configuration_dict = asdict(configuration)
+                        # Convert all Enum values to strings recursively
+                        configuration_dict = convert_enums_to_strings(configuration_dict)
+                    else:
+                        logger.warning(f"Unexpected configuration type: {type(configuration)}")
+                        configuration_dict = None
+            
+            formatted_result = {
+                "post_process": {
+                    "success": result.get("success", False),
+                    "configuration": configuration_dict,
+                    "chart_configurations": result.get("chart_configurations", {}),
+                    "sql_expansions": result.get("sql_expansions", {}),
+                    "time_filters": result.get("time_filters"),
+                    "metadata": result.get("metadata", {})
+                },
+                "metadata": {
+                    "pipeline_name": "conditional_formatting_pipeline",
+                    "execution_timestamp": result.get("metadata", {}).get("generated_at", datetime.now().isoformat()),
+                    "project_id": project_id,
+                    "natural_language_query": natural_language_query
+                }
+            }
+            
+            # Add error if present
+            if not result.get("success", False):
+                formatted_result["post_process"]["error"] = result.get("error", "Unknown error")
+            
+            return formatted_result
             
         except Exception as e:
             logger.error(f"Error in conditional formatting only: {e}")
-            raise
+            # Return error in expected format
+            return {
+                "post_process": {
+                    "success": False,
+                    "error": str(e),
+                    "chart_configurations": {},
+                    "sql_expansions": {},
+                    "time_filters": None
+                },
+                "metadata": {
+                    "pipeline_name": "conditional_formatting_pipeline",
+                    "execution_timestamp": datetime.now().isoformat(),
+                    "project_id": project_id,
+                    "error": str(e)
+                }
+            }
     
     async def validate_dashboard_configuration(
         self,
@@ -1669,6 +1749,72 @@ class DashboardService(BaseService):
         except Exception as e:
             logger.error(f"Error generating dashboard summary: {e}")
             raise
+
+    def _normalize_dashboard_context_for_conditional_formatting(
+        self,
+        dashboard_context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Normalize dashboard_context to handle both charts and thread_components structures.
+        
+        If thread_components are provided, convert them to charts format for the pipeline.
+        This allows the conditional formatting API to work with the thread_components structure
+        while maintaining compatibility with the existing charts structure.
+        
+        Args:
+            dashboard_context: Dashboard context that may contain charts or thread_components
+            
+        Returns:
+            Normalized dashboard context with charts array populated
+        """
+        normalized_context = dashboard_context.copy()
+        
+        # Check if thread_components are provided
+        thread_components = normalized_context.get("thread_components", [])
+        
+        if thread_components and not normalized_context.get("charts"):
+            # Convert thread_components to charts format
+            charts = []
+            
+            for component in thread_components:
+                component_id = component.get("id") or component.get("component_id")
+                component_type = component.get("component_type", "question")
+                
+                # Only process components that have SQL queries (charts, tables, questions)
+                if component.get("sql_query") and component_type in ["chart", "table", "metric", "sql_summary", "question"]:
+                    chart_info = {
+                        "chart_id": str(component_id) if component_id else f"chart_{len(charts)}",
+                        "id": str(component_id) if component_id else f"chart_{len(charts)}",
+                        "component_id": str(component_id) if component_id else None,
+                        "type": component_type,
+                        "query": component.get("question", ""),
+                        "sql": component.get("sql_query", ""),
+                        "columns": component.get("sample_data", {}).get("columns", []),
+                        "chart_schema": component.get("chart_schema") or component.get("chart_config", {}).get("chart_schema", {}),
+                        "data_description": component.get("description", ""),
+                        "sequence_order": component.get("sequence_order", len(charts)),
+                        "component_type": component_type
+                    }
+                    
+                    # Add chart_config if available
+                    if component.get("chart_config"):
+                        chart_info["chart_config"] = component.get("chart_config")
+                    
+                    # Add sample_data if available
+                    if component.get("sample_data"):
+                        chart_info["sample_data"] = component.get("sample_data")
+                    
+                    charts.append(chart_info)
+            
+            # Update normalized context with charts
+            normalized_context["charts"] = charts
+            
+            # Also preserve thread_components for reference
+            normalized_context["thread_components"] = thread_components
+            
+            logger.info(f"Converted {len(thread_components)} thread_components to {len(charts)} charts for conditional formatting")
+        
+        return normalized_context
 
     def clear_cache(self):
         """Clear configuration and execution caches"""

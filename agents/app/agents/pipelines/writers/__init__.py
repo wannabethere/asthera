@@ -19,9 +19,10 @@ from .dashboard_orchestrator_pipeline import (
     create_dashboard_orchestrator_pipeline
 )
 
-from .conditional_formatting_generation_pipeline import (
-    ConditionalFormattingGenerationPipeline,
-    create_conditional_formatting_generation_pipeline
+from .conditional_formatting_pipeline import (
+    ConditionalFormattingPipeline,
+    ConditionalFormattingPipelineAdapter,
+    create_conditional_formatting_pipeline
 )
 
 from .alert_orchestrator_pipeline import (
@@ -54,9 +55,10 @@ __all__ = [
     "DashboardOrchestratorPipeline",
     "create_dashboard_orchestrator_pipeline",
     
-    # Conditional Formatting Generation Pipeline
-    "ConditionalFormattingGenerationPipeline",
-    "create_conditional_formatting_generation_pipeline",
+    # Conditional Formatting Pipeline
+    "ConditionalFormattingPipeline",
+    "ConditionalFormattingPipelineAdapter",
+    "create_conditional_formatting_pipeline",
     
     # Alert Orchestrator Pipeline
     "AlertOrchestratorPipeline",

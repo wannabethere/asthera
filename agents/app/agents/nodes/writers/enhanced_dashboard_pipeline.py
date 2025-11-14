@@ -61,11 +61,23 @@ class EnhancedDashboardPipeline(AgentPipeline):
         self._metrics = {}
         self._engine = engine
         
-        # Initialize conditional formatting service (simplified)
+        # Initialize conditional formatting service (simple interface, not full pipeline)
+        # 
+        # IMPORTANT: Conditional formatting flows are kept separate from dashboard flows
+        # to allow independent enhancement and evolution.
+        # 
+        # To use the full ConditionalFormattingPipeline with SQL expansion:
+        #   from app.agents.pipelines.writers.conditional_formatting_pipeline import (
+        #       create_conditional_formatting_pipeline, ConditionalFormattingPipelineAdapter
+        #   )
+        #   pipeline = create_conditional_formatting_pipeline(engine, llm, retrieval_helper)
+        #   conditional_formatting_service = ConditionalFormattingPipelineAdapter(pipeline)
+        #   Then pass it as conditional_formatting_service parameter
+        #
         if conditional_formatting_service:
             self._conditional_formatting_service = conditional_formatting_service
         else:
-            # Create a simple placeholder service
+            # Create a simple placeholder service that can be replaced with full pipeline if needed
             self._conditional_formatting_service = self._create_simple_conditional_formatting_service()
         
         # Initialize SQL execution pipeline
@@ -105,15 +117,17 @@ class EnhancedDashboardPipeline(AgentPipeline):
                 logger.info(f"Processing conditional formatting request: {query}")
                 
                 # Return a basic configuration structure
+                # Note: For full conditional formatting with SQL expansion,
+                # use ConditionalFormattingPipeline separately
                 return {
                     "success": True,
                     "chart_configurations": {},
-                    "message": "Conditional formatting processing not fully implemented"
+                    "message": "Conditional formatting processing - use ConditionalFormattingPipeline for full processing"
                 }
             
-            def get_configuration_history(self) -> List[Dict[str, Any]]:
-                """Return empty configuration history"""
-                return []
+            def get_metrics(self) -> Dict[str, Any]:
+                """Return empty metrics"""
+                return {}
         
         return SimpleConditionalFormattingService()
 
@@ -219,6 +233,8 @@ class EnhancedDashboardPipeline(AgentPipeline):
                 )
                 
                 try:
+                    # Use the conditional formatting service interface
+                    # This keeps the flows separate - ConditionalFormattingPipeline can be used independently
                     conditional_formatting_result = await self._conditional_formatting_service.process_conditional_formatting_request(
                         query=natural_language_query,
                         dashboard_context=dashboard_context,
@@ -826,7 +842,7 @@ class EnhancedDashboardPipeline(AgentPipeline):
             "pipeline_metrics": self._metrics.copy(),
             "configuration": self._configuration.copy(),
             "sql_execution_pipeline_metrics": self._sql_execution_pipeline.get_metrics() if hasattr(self._sql_execution_pipeline, 'get_metrics') else {},
-            "conditional_formatting_metrics": self._conditional_formatting_service.get_configuration_history() if hasattr(self._conditional_formatting_service, 'get_configuration_history') else [],
+            "conditional_formatting_metrics": self._conditional_formatting_service.get_metrics() if hasattr(self._conditional_formatting_service, 'get_metrics') else {},
             "timestamp": datetime.now().isoformat()
         }
 

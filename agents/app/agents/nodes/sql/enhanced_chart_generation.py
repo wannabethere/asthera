@@ -19,6 +19,7 @@ from app.agents.nodes.sql.utils.enhanced_chart_generation import (
     create_enhanced_chart_data_preprocessor_tool,
     create_enhanced_chart_postprocessor_tool
 )
+from app.agents.nodes.sql.chart_generation import VegaLiteChartGenerationPipeline
 from app.settings import get_settings
 from app.core.provider import DocumentStoreProvider
 from app.agents.nodes.sql.utils.chart_models import EnhancedChartGenerationResults
@@ -117,17 +118,6 @@ class EnhancedVegaLiteChartGenerationAgent:
                 "mark": {{"type": "text"}},
                 "encoding": {{
                     "text": {{"field": "count", "type": "quantitative"}}
-                }},
-                "kpi_metadata": {{
-                    "chart_type": "kpi",
-                    "is_dummy": true,
-                    "description": "KPI chart - templates will be created elsewhere",
-                    "kpi_data": {{
-                        "metrics": ["Late Completions"],
-                        "values": [9109],
-                        "targets": [],
-                        "units": ["trainings"]
-                    }}
                 }}
             }},
             "enhanced_metadata": {{
@@ -187,17 +177,6 @@ class EnhancedVegaLiteChartGenerationAgent:
                 "encoding": {{
                     "text": {{"field": "Value", "type": "quantitative"}},
                     "color": {{"field": "Metric", "type": "nominal"}}
-                }},
-                "kpi_metadata": {{
-                    "chart_type": "kpi",
-                    "is_dummy": true,
-                    "description": "KPI chart - templates will be created elsewhere",
-                    "kpi_data": {{
-                        "metrics": ["Total Sales", "Conversion Rate"],
-                        "values": [1500000, 0.15],
-                        "targets": [2000000, 0.20],
-                        "units": ["USD", "%"]
-                    }}
                 }}
             }},
             "enhanced_metadata": {{
@@ -217,17 +196,6 @@ class EnhancedVegaLiteChartGenerationAgent:
                 "encoding": {{
                     "text": {{"field": "Compliance_Rate", "type": "quantitative"}},
                     "color": {{"field": "Division", "type": "nominal"}}
-                }},
-                "kpi_metadata": {{
-                    "chart_type": "kpi",
-                    "is_dummy": true,
-                    "description": "KPI chart - templates will be created elsewhere",
-                    "kpi_data": {{
-                        "metrics": ["Compliance Rate"],
-                        "values": [0.0],
-                        "targets": [],
-                        "units": ["%"]
-                    }}
                 }}
             }},
             "enhanced_metadata": {{
@@ -427,39 +395,25 @@ class EnhancedVegaLiteChartGenerationAgent:
                 logger.info("FALLBACK: LLM thinks data is empty but we have data - forcing KPI chart")
                 all_zero_values = True  # Treat as zero values case
             
+            # NOTE: We no longer create dummy KPIs here. Instead, we let the pipeline
+            # detect KPIs and route them to the proper KPI processing logic.
+            # If LLM returned empty but we have data, we'll let the pipeline handle it
+            # as a KPI chart through the proper processing flow.
             if ((is_single_value or all_zero_values or has_data_but_llm_empty) and llm_returned_empty):
-                
-                if all_zero_values:
-                    logger.info("FALLBACK: Forcing KPI chart generation for zero values")
-                    reasoning = "A KPI chart is generated to display the compliance rates, even though all values are zero, as this represents important business information that indicates no compliance across all managers and divisions."
-                else:
-                    logger.info("FALLBACK: Forcing KPI chart generation for single value")
-                    reasoning = "A KPI chart is generated to display the single count value as a key performance indicator"
-                
-                # Create a KPI chart manually
-                kpi_data = self._extract_kpi_data_from_single_value(preprocessed_data["sample_data"][0])
-                
-                final_result = {
-                    "chart_schema": {
+                logger.info("FALLBACK: LLM returned empty but we have data - will be handled by KPI processing in pipeline")
+                # Don't create dummy KPI here - let the pipeline detect and process it properly
+                # Just ensure chart_type is set to "kpi" so it gets detected
+                if not final_result.get("chart_type"):
+                    final_result["chart_type"] = "kpi"
+                if not final_result.get("chart_schema"):
+                    final_result["chart_schema"] = {
                         "title": "Key Performance Indicator",
-                        "mark": {"type": "text"},
-                        "encoding": {
-                            "text": {"field": "value", "type": "quantitative"}
-                        },
-                        "kpi_metadata": {
-                            "chart_type": "kpi",
-                            "is_dummy": True,
-                            "description": "KPI chart - templates will be created elsewhere",
-                            "kpi_data": kpi_data,
-                            "vega_lite_compatible": False,
-                            "requires_custom_template": True
-                        }
-                    },
-                    "reasoning": reasoning,
-                    "chart_type": "kpi",
-                    "success": True,
-                    "error": None
-                }
+                        "mark": {"type": "text"}
+                    }
+                if all_zero_values:
+                    final_result["reasoning"] = "A KPI chart is generated to display the compliance rates, even though all values are zero, as this represents important business information that indicates no compliance across all managers and divisions."
+                else:
+                    final_result["reasoning"] = "A KPI chart is generated to display the single count value as a key performance indicator"
             
             # Add enhanced metadata if not present
             if "enhanced_metadata" not in final_result:
@@ -665,6 +619,8 @@ class EnhancedVegaLiteChartGenerationPipeline:
     def __init__(self, vega_schema: Optional[Dict[str, Any]] = None, **kwargs):
         self.agent = EnhancedVegaLiteChartGenerationAgent(vega_schema, **kwargs)
         self.vega_schema = vega_schema or self._load_default_vega_schema()
+        # Create a KPI processing pipeline instance for proper KPI handling
+        self.kpi_processor = VegaLiteChartGenerationPipeline(vega_schema=vega_schema, **kwargs)
         self._initialized = True
     
     def _load_default_vega_schema(self) -> Dict[str, Any]:
@@ -716,6 +672,124 @@ class EnhancedVegaLiteChartGenerationPipeline:
                 remove_data_from_chart_schema=remove_data_from_chart_schema,
                 existing_chart_schema=existing_chart_schema
             )
+            
+            # Check if chart type is KPI and process accordingly using the proper KPI logic
+            chart_type = result.get("chart_type", "").lower()
+            chart_schema = result.get("chart_schema", {})
+            
+            # Early detection: Check data structure for comparison KPI patterns
+            columns = data.get("columns", [])
+            data_rows = data.get("data", [])
+            
+            # Log for debugging
+            logger.info(f"Enhanced pipeline: Checking for KPI chart. chart_type={chart_type}, chart_schema keys={list(chart_schema.keys()) if chart_schema else 'empty'}, data_rows={len(data_rows)}, columns={len(columns)}")
+            
+            # Check for comparison KPI patterns in column names
+            has_comparison_patterns = False
+            if columns:
+                col_names_lower = [col.lower() if isinstance(col, str) else str(col).lower() for col in columns]
+                has_current = any(any(kw in col for kw in ["this_year", "current", "this_month", "completed_this", "learners_this"]) for col in col_names_lower)
+                has_previous = any(any(kw in col for kw in ["last_year", "previous", "last_month", "prior", "completed_last", "learners_last"]) for col in col_names_lower)
+                has_percentage_change = any("percentage_change" in col or "percent_change" in col for col in col_names_lower)
+                has_comparison_patterns = (has_current and has_previous) or has_percentage_change
+                logger.info(f"Enhanced pipeline: Comparison pattern detection - has_current={has_current}, has_previous={has_previous}, has_percentage_change={has_percentage_change}, has_comparison_patterns={has_comparison_patterns}")
+            
+            # Check for KPI chart indicators
+            kpi_metadata = chart_schema.get("kpi_metadata", {}) if chart_schema else {}
+            has_kpi_metadata = kpi_metadata is not None and kpi_metadata != {}
+            is_dummy_kpi = kpi_metadata.get("is_dummy", False) if isinstance(kpi_metadata, dict) else False
+            
+            # Check mark type
+            mark_type = ""
+            if chart_schema and isinstance(chart_schema.get("mark"), dict):
+                mark_type = chart_schema.get("mark", {}).get("type", "")
+            
+            # Detect KPI charts - including dummy ones that need to be replaced
+            # IMPORTANT: Also check if chart_type is "kpi" even if chart_schema is minimal
+            is_kpi_chart = (
+                "kpi" in chart_type or
+                "metric" in chart_type or
+                "counter" in chart_type or
+                "gauge" in chart_type or
+                has_kpi_metadata or  # Process even if is_dummy is true
+                has_comparison_patterns or  # Early detection for comparison KPIs
+                (mark_type == "text" and len(data_rows) <= 5) or
+                (len(data_rows) == 1 and len(columns) <= 3)  # Single row with few columns likely a KPI
+            )
+            
+            logger.info(f"Enhanced pipeline: KPI detection result - is_kpi_chart={is_kpi_chart}, chart_type={chart_type}, has_comparison_patterns={has_comparison_patterns}, mark_type={mark_type}, data_rows={len(data_rows)}, columns={len(columns)}")
+            
+            # CRITICAL: Process KPI even if chart_schema is minimal - we'll generate it properly
+            if is_kpi_chart:
+                # If chart_schema is empty or minimal, create a basic one
+                if not chart_schema or not chart_schema.get("mark"):
+                    logger.info("Enhanced pipeline: Chart schema is minimal/empty, creating basic KPI schema structure")
+                    chart_schema = {
+                        "title": result.get("chart_schema", {}).get("title", "") or "Key Performance Indicator",
+                        "mark": {"type": "text"}
+                    }
+                logger.info(f"Enhanced pipeline: Detected KPI chart, processing with proper KPI logic... (chart_type={chart_type}, has_kpi_metadata={has_kpi_metadata}, is_dummy={is_dummy_kpi}, has_comparison_patterns={has_comparison_patterns})")
+                
+                # If this is a dummy KPI, we MUST replace it with a proper KPI schema
+                if is_dummy_kpi:
+                    logger.warning(f"Enhanced pipeline: Detected dummy KPI schema - replacing with proper KPI generation. Original schema had is_dummy={is_dummy_kpi}")
+                    # Clear the dummy schema and let _process_kpi_chart generate a new one
+                    # Keep only essential fields that might be useful
+                    chart_schema = {
+                        "title": chart_schema.get("title", ""),
+                        "mark": {"type": "text"}  # Minimal schema to indicate KPI
+                    }
+                
+                # Process KPI chart with specialized logic using the proper KPI processor
+                # This will always generate a proper, functional KPI schema
+                processed_schema = await self.kpi_processor._process_kpi_chart(
+                    data=data,
+                    chart_schema=chart_schema,
+                    query=query,
+                    language=language
+                )
+                
+                # CRITICAL: Always ensure dummy flags are removed and schema is valid
+                if "kpi_metadata" in processed_schema:
+                    kpi_meta = processed_schema["kpi_metadata"]
+                    # Remove all dummy-related flags
+                    kpi_meta.pop("is_dummy", None)
+                    kpi_meta.pop("requires_custom_template", None)
+                    # Ensure it's marked as compatible
+                    kpi_meta["vega_lite_compatible"] = True
+                    # Remove any dummy kpi_data structure if present
+                    if "kpi_data" in kpi_meta and isinstance(kpi_meta["kpi_data"], dict):
+                        # Only keep kpi_data if it has actual useful data
+                        kpi_data = kpi_meta["kpi_data"]
+                        if not kpi_data.get("metrics") and not kpi_data.get("values"):
+                            kpi_meta.pop("kpi_data", None)
+                    processed_schema["kpi_metadata"] = kpi_meta
+                
+                # Final validation: ensure the schema is not a dummy
+                if processed_schema.get("kpi_metadata", {}).get("is_dummy"):
+                    logger.error("ERROR: Enhanced pipeline - Processed schema still has is_dummy=true - this should never happen!")
+                    # Force remove it
+                    processed_schema["kpi_metadata"].pop("is_dummy", None)
+                    processed_schema["kpi_metadata"]["vega_lite_compatible"] = True
+                
+                result["chart_schema"] = processed_schema
+                
+                # Update chart type to reflect KPI subtype if available
+                if "kpi_metadata" in processed_schema:
+                    kpi_metadata = processed_schema.get("kpi_metadata", {})
+                    chart_subtype = kpi_metadata.get("chart_subtype", "")
+                    if chart_subtype:
+                        result["chart_type"] = f"kpi_{chart_subtype}"
+                    else:
+                        result["chart_type"] = "kpi"
+                
+                logger.info(f"Enhanced pipeline: KPI chart processed. Final kpi_metadata: {processed_schema.get('kpi_metadata', {})}")
+                logger.info(f"Enhanced pipeline: Final processed schema keys: {list(processed_schema.keys())}")
+                logger.info(f"Enhanced pipeline: Final processed schema has encoding: {'encoding' in processed_schema}")
+                logger.info(f"Enhanced pipeline: Final processed schema has transform: {'transform' in processed_schema}")
+            else:
+                logger.info(f"Enhanced pipeline: Chart not detected as KPI. is_kpi_chart={is_kpi_chart}, chart_schema exists={bool(chart_schema)}")
+                logger.info(f"Enhanced pipeline: Chart type: {chart_type}, Has KPI metadata: {has_kpi_metadata}, Has comparison patterns: {has_comparison_patterns}, Mark type: {mark_type}, Data rows: {len(data_rows)}, Columns: {len(columns)}")
             
             logger.info(f"Enhanced chart generation pipeline result: {result}")
             return result

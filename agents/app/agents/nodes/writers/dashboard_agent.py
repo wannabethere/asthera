@@ -92,8 +92,9 @@ class ConditionalFormattingAgent:
             tools=self.tools,
             memory=self.memory,
             verbose=True,
-            max_iterations=5,
-            early_stopping_method="generate"
+            max_iterations=3,  # Reduced to prevent long execution times
+            handle_parsing_errors=True,
+            return_intermediate_steps=False  # Don't return intermediate steps to reduce overhead
         )
     
     def _create_tools(self) -> List[BaseTool]:
@@ -160,12 +161,44 @@ class ConditionalFormattingAgent:
                         if field not in config:
                             return f"Missing required field: {field}"
                     
-                    # Validate filters
+                    # Validate filters - different filter types have different required fields
                     for filter_obj in config.get("filters", []):
-                        if "column_name" not in filter_obj or "operator" not in filter_obj:
-                            return "Invalid filter configuration"
+                        filter_type = filter_obj.get("filter_type", "")
+                        
+                        if filter_type == "time_filter":
+                            # Time filters require start_date/end_date or period, not column_name/operator
+                            if not any(key in filter_obj for key in ["start_date", "end_date", "period"]):
+                                return "Invalid time_filter configuration: missing start_date, end_date, or period"
+                        elif filter_type == "column_filter":
+                            # Column filters require column_name and operator
+                            if "column_name" not in filter_obj or "operator" not in filter_obj:
+                                return "Invalid column_filter configuration: missing column_name or operator"
+                        elif filter_type == "conditional_format":
+                            # Conditional format filters require column_name and operator
+                            if "column_name" not in filter_obj or "operator" not in filter_obj:
+                                return "Invalid conditional_format configuration: missing column_name or operator"
+                        else:
+                            # For other filter types, check for basic structure
+                            if "filter_id" not in filter_obj or "filter_type" not in filter_obj:
+                                return f"Invalid {filter_type} configuration: missing filter_id or filter_type"
+                    
+                    # Validate conditional_formats
+                    for format_obj in config.get("conditional_formats", []):
+                        required_format_fields = ["format_id", "chart_id", "condition", "formatting_rules"]
+                        for field in required_format_fields:
+                            if field not in format_obj:
+                                return f"Invalid conditional_format: missing {field}"
+                        
+                        # Validate condition within conditional_format
+                        condition = format_obj.get("condition", {})
+                        if not isinstance(condition, dict):
+                            return "Invalid conditional_format: condition must be an object"
+                        if "column_name" not in condition or "operator" not in condition:
+                            return "Invalid conditional_format condition: missing column_name or operator"
                     
                     return "Configuration is valid"
+                except json.JSONDecodeError as e:
+                    return f"Validation error: Invalid JSON - {e}"
                 except Exception as e:
                     return f"Validation error: {e}"
             
@@ -183,9 +216,11 @@ class ConditionalFormattingAgent:
 Your task is to:
 1. Understand natural language queries about conditional formatting and control filters
 2. Translate them into structured configuration objects
-3. Use historical examples and similar configurations for reference
+3. Use historical examples and similar configurations for reference (but DO NOT return the examples directly - use them as inspiration)
 4. Generate appropriate SQL expansion and chart adjustment configurations
 5. Self-evaluate your configurations for accuracy and completeness
+
+IMPORTANT: When you retrieve examples using tools, use them as reference only. DO NOT return the example data directly. You must generate a NEW configuration based on the user's query, using the examples as guidance.
 
 Key concepts:
 - Control Filters: Filter data based on conditions (equals, greater than, contains, etc.)
@@ -199,11 +234,11 @@ Available filter operators: equals, not_equals, greater_than, less_than, greater
 Available filter types: column_filter, time_filter, conditional_format, aggregation_filter, custom_filter
 
 Always use the available tools to:
-- Get examples of similar filter types
-- Retrieve historical configurations
+- Get examples of similar filter types (for reference only - do not return them)
+- Retrieve historical configurations (for reference only - do not return them)
 - Validate your generated configurations
 
-Generate configurations in this format:
+You MUST generate a NEW configuration in this format (do not return example data):
 ```json
 {{
     "dashboard_id": "dashboard_123",
@@ -243,7 +278,11 @@ Generate configurations in this format:
 }}
 ```
 
-Remember to self-evaluate your configurations and use tools for validation."""
+Remember to:
+1. Self-evaluate your configurations and use tools for validation
+2. Generate a NEW configuration based on the user's query
+3. DO NOT return the example data from tools - use it only as reference
+4. Always output the configuration in the JSON format shown above, wrapped in ```json code blocks"""
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_prompt),
@@ -353,8 +392,29 @@ Use the available tools to get examples and validate your configuration.
                 "chat_history": self.memory.chat_memory.messages
             }
             
-            # Run the agent
-            result = await self.agent_executor.ainvoke(input_data)
+            # Run the agent with timeout to prevent hanging
+            import asyncio
+            logger.info("Starting conditional formatting agent execution...")
+            start_time = asyncio.get_event_loop().time()
+            
+            try:
+                result = await asyncio.wait_for(
+                    self.agent_executor.ainvoke(input_data),
+                    timeout=90.0  # 90 second timeout for agent execution
+                )
+                end_time = asyncio.get_event_loop().time()
+                execution_time = end_time - start_time
+                logger.info(f"Agent executor completed in {execution_time:.2f} seconds")
+            except asyncio.TimeoutError:
+                end_time = asyncio.get_event_loop().time()
+                execution_time = end_time - start_time
+                logger.error(f"Agent executor timed out after {execution_time:.2f} seconds (timeout: 90s)")
+                raise ValueError("Conditional formatting agent execution timed out. The request may be too complex or the agent is stuck in a loop. Please try simplifying your query.")
+            except Exception as e:
+                end_time = asyncio.get_event_loop().time()
+                execution_time = end_time - start_time
+                logger.error(f"Agent executor error after {execution_time:.2f} seconds: {e}")
+                raise
             
             # Parse the result
             configuration_json = self._extract_configuration_from_result(result["output"])
@@ -384,19 +444,39 @@ Use the available tools to get examples and validate your configuration.
                         logger.error(f"Cleaned JSON string (first 500 chars): {cleaned_json[:500]}")
                         raise ValueError(f"Invalid JSON configuration: {str(cleaned_error)}. Original error: {str(json_error)}")
                 
-                # Convert filters
+                # Convert filters - separate time filters from other filters
                 filters = []
+                time_filters_dict = {}
+                
                 for filter_data in config_data.get("filters", []):
-                    filter_obj = ControlFilter(
-                        filter_id=filter_data["filter_id"],
-                        filter_type=FilterType(filter_data["filter_type"]),
-                        column_name=filter_data["column_name"],
-                        operator=FilterOperator(filter_data["operator"]),
-                        value=filter_data["value"],
-                        condition=filter_data.get("condition"),
-                        description=filter_data.get("description")
-                    )
-                    filters.append(filter_obj)
+                    filter_type = filter_data.get("filter_type", "")
+                    
+                    if filter_type == "time_filter":
+                        # Time filters go into time_filters dict, not filters list
+                        time_filters_dict.update({
+                            "start_date": filter_data.get("start_date"),
+                            "end_date": filter_data.get("end_date"),
+                            "period": filter_data.get("period"),
+                            "description": filter_data.get("description")
+                        })
+                        # Remove None values
+                        time_filters_dict = {k: v for k, v in time_filters_dict.items() if v is not None}
+                    else:
+                        # Other filter types require column_name and operator
+                        if "column_name" not in filter_data or "operator" not in filter_data:
+                            logger.warning(f"Skipping filter {filter_data.get('filter_id')} - missing column_name or operator")
+                            continue
+                        
+                        filter_obj = ControlFilter(
+                            filter_id=filter_data["filter_id"],
+                            filter_type=FilterType(filter_type),
+                            column_name=filter_data["column_name"],
+                            operator=FilterOperator(filter_data["operator"]),
+                            value=filter_data.get("value"),
+                            condition=filter_data.get("condition"),
+                            description=filter_data.get("description")
+                        )
+                        filters.append(filter_obj)
                 
                 # Convert conditional formats
                 conditional_formats = []
@@ -421,11 +501,16 @@ Use the available tools to get examples and validate your configuration.
                     )
                     conditional_formats.append(conditional_format)
                 
+                # Merge time_filters from filters list and time_filters field
+                final_time_filters = config_data.get("time_filters", {})
+                if time_filters_dict:
+                    final_time_filters.update(time_filters_dict)
+                
                 return DashboardConfiguration(
                     dashboard_id=config_data["dashboard_id"],
                     filters=filters,
                     conditional_formats=conditional_formats,
-                    time_filters=config_data.get("time_filters"),
+                    time_filters=final_time_filters if final_time_filters else None,
                     global_context=additional_context,
                     actions=config_data.get("actions")
                 )
@@ -437,26 +522,226 @@ Use the available tools to get examples and validate your configuration.
             raise
     
     def _extract_configuration_from_result(self, result: str) -> Optional[str]:
-        """Extract JSON configuration from agent result"""
+        """Extract JSON configuration from agent result, handling tool invocations and various formats"""
         try:
-            # Look for JSON in code blocks
             import re
+            import json as json_module
+            
+            # First, try to find JSON in code blocks (most reliable - agent's final output)
             json_pattern = r'```json\s*(.*?)\s*```'
             match = re.search(json_pattern, result, re.DOTALL)
             
             if match:
-                return match.group(1)
+                json_str = match.group(1).strip()
+                # Try to validate it's valid JSON by parsing
+                try:
+                    parsed = json_module.loads(json_str)
+                    if isinstance(parsed, dict) and "dashboard_id" in parsed:
+                        logger.info("Extracted JSON from code block")
+                        return json_str
+                except json_module.JSONDecodeError as e:
+                    # If parsing fails, try to extract just the JSON object
+                    logger.warning(f"JSON found in code block but failed to parse: {e}, trying to extract valid JSON")
+                    # Try to find the first complete JSON object
+                    start_idx = json_str.find('{')
+                    if start_idx != -1:
+                        brace_count = 0
+                        end_idx = start_idx
+                        for i in range(start_idx, len(json_str)):
+                            if json_str[i] == '{':
+                                brace_count += 1
+                            elif json_str[i] == '}':
+                                brace_count -= 1
+                                if brace_count == 0:
+                                    end_idx = i + 1
+                                    break
+                        
+                        if end_idx > start_idx:
+                            extracted_json = json_str[start_idx:end_idx].strip()
+                            try:
+                                parsed = json_module.loads(extracted_json)
+                                if isinstance(parsed, dict) and "dashboard_id" in parsed:
+                                    logger.info("Extracted JSON from code block after cleaning")
+                                    return extracted_json
+                            except json_module.JSONDecodeError:
+                                pass
+                    # If still fails, continue to try other extraction methods
+                    pass
             
-            # Look for JSON objects directly
-            json_pattern = r'\{.*\}'
-            match = re.search(json_pattern, result, re.DOTALL)
+            # Third, try to find JSON objects directly (handle cases without code blocks)
+            # Use balanced brace matching to find complete JSON objects
+            start_idx = result.find('{')
+            if start_idx != -1:
+                brace_count = 0
+                end_idx = start_idx
+                in_string = False
+                escape_next = False
+                
+                for i in range(start_idx, len(result)):
+                    char = result[i]
+                    
+                    if escape_next:
+                        escape_next = False
+                        continue
+                    
+                    if char == '\\':
+                        escape_next = True
+                        continue
+                    
+                    if char == '"' and not escape_next:
+                        in_string = not in_string
+                        continue
+                    
+                    if not in_string:
+                        if char == '{':
+                            brace_count += 1
+                        elif char == '}':
+                            brace_count -= 1
+                            if brace_count == 0:
+                                end_idx = i + 1
+                                break
+                
+                if end_idx > start_idx:
+                    json_str = result[start_idx:end_idx].strip()
+                    try:
+                        parsed = json_module.loads(json_str)
+                        if isinstance(parsed, dict) and "dashboard_id" in parsed:
+                            logger.info("Extracted JSON using balanced brace matching")
+                            return json_str
+                    except json_module.JSONDecodeError as e:
+                        # Try cleaning the JSON
+                        cleaned_json = self._clean_json_string(json_str)
+                        try:
+                            parsed = json_module.loads(cleaned_json)
+                            if isinstance(parsed, dict) and "dashboard_id" in parsed:
+                                logger.info("Extracted JSON after cleaning")
+                                return cleaned_json
+                        except json_module.JSONDecodeError:
+                            logger.warning(f"Failed to parse JSON even after cleaning: {e}")
             
-            if match:
-                return match.group(0)
+            # Fourth, try to find JSON after "Finished chain" or similar markers
+            # Sometimes the agent output has the JSON after tool invocations
+            finished_markers = [
+                "Configuration is valid",
+                "Here is the final conditional formatting configuration",
+                "Here is the final",
+                "Finished chain",
+                "> Finished"
+            ]
+            for marker in finished_markers:
+                marker_idx = result.find(marker)
+                if marker_idx != -1:
+                    # Look for JSON after this marker (skip any text after the marker)
+                    remaining = result[marker_idx + len(marker):]
+                    # Skip any text until we find a JSON object start
+                    start_idx = remaining.find('{')
+                    # Also try to find JSON in code blocks after the marker
+                    code_block_match = re.search(r'```json\s*(.*?)\s*```', remaining, re.DOTALL)
+                    if code_block_match:
+                        json_str = code_block_match.group(1).strip()
+                        try:
+                            parsed = json_module.loads(json_str)
+                            if isinstance(parsed, dict) and "dashboard_id" in parsed:
+                                logger.info(f"Extracted JSON from code block after marker '{marker}'")
+                                return json_str
+                        except json_module.JSONDecodeError:
+                            pass
+                    
+                    if start_idx != -1:
+                        brace_count = 0
+                        end_idx = start_idx
+                        in_string = False
+                        escape_next = False
+                        
+                        for i in range(start_idx, len(remaining)):
+                            char = remaining[i]
+                            
+                            if escape_next:
+                                escape_next = False
+                                continue
+                            
+                            if char == '\\':
+                                escape_next = True
+                                continue
+                            
+                            if char == '"' and not escape_next:
+                                in_string = not in_string
+                                continue
+                            
+                            if not in_string:
+                                if char == '{':
+                                    brace_count += 1
+                                elif char == '}':
+                                    brace_count -= 1
+                                    if brace_count == 0:
+                                        end_idx = i + 1
+                                        break
+                        
+                        if end_idx > start_idx:
+                            json_str = remaining[start_idx:end_idx].strip()
+                            try:
+                                parsed = json_module.loads(json_str)
+                                if isinstance(parsed, dict) and "dashboard_id" in parsed:
+                                    logger.info(f"Extracted JSON after marker '{marker}'")
+                                    return json_str
+                            except json_module.JSONDecodeError:
+                                # Try cleaning
+                                cleaned_json = self._clean_json_string(json_str)
+                                try:
+                                    parsed = json_module.loads(cleaned_json)
+                                    if isinstance(parsed, dict) and "dashboard_id" in parsed:
+                                        logger.info(f"Extracted JSON after marker '{marker}' and cleaning")
+                                        return cleaned_json
+                                except json_module.JSONDecodeError:
+                                    pass
+            
+            # Fifth, try to extract JSON from tool invocation results (fallback)
+            # Look for patterns like: Invoking: `validate_configuration` with `{'config_json': '...'}`
+            # Handle both single and double quotes, and escaped quotes
+            tool_invocation_patterns = [
+                r"config_json['\"]:\s*['\"](.*?)['\"]",  # Simple pattern
+                r"config_json['\"]:\s*['\"]((?:[^'\"\\]|\\.)*)['\"]",  # Pattern with escaped quotes
+                r"'config_json':\s*'((?:[^'\\]|\\.)*)'",  # Single quotes with escapes
+                r'"config_json":\s*"((?:[^"\\]|\\.)*)"',  # Double quotes with escapes
+            ]
+            
+            for pattern in tool_invocation_patterns:
+                tool_match = re.search(pattern, result, re.DOTALL)
+                if tool_match:
+                    json_str = tool_match.group(1)
+                    # Unescape the JSON string (handle escaped quotes and newlines)
+                    json_str = json_str.replace('\\"', '"').replace("\\'", "'").replace('\\n', '\n').replace('\\t', '\t')
+                    try:
+                        parsed = json_module.loads(json_str)
+                        if isinstance(parsed, dict) and "dashboard_id" in parsed:
+                            logger.info("Extracted JSON from tool invocation")
+                            return json_str
+                    except json_module.JSONDecodeError as e:
+                        # Try cleaning the JSON
+                        cleaned_json = self._clean_json_string(json_str)
+                        try:
+                            parsed = json_module.loads(cleaned_json)
+                            if isinstance(parsed, dict) and "dashboard_id" in parsed:
+                                logger.info("Extracted JSON from tool invocation after cleaning")
+                                return cleaned_json
+                        except json_module.JSONDecodeError:
+                            logger.debug(f"JSON from tool invocation failed to parse even after cleaning: {e}")
+                            continue
+            
+            logger.warning("Could not extract valid JSON configuration from agent response")
+            logger.warning(f"Full agent response (first 2000 chars): {result[:2000]}")
+            logger.warning(f"Full agent response (last 1000 chars): {result[-1000:] if len(result) > 1000 else result}")
+            
+            # Try to detect if agent returned example data instead of configuration
+            if '"instruction"' in result or '"instruction_id"' in result:
+                logger.error("Agent appears to have returned example/instruction data instead of generating a configuration. This suggests the agent is confused about its task.")
             
             return None
         except Exception as e:
             logger.error(f"Error extracting configuration: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            logger.debug(f"Response that caused error (first 1000 chars): {result[:1000] if result else 'None'}")
             return None
     
     def _clean_json_string(self, json_str: str) -> str:

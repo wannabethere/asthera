@@ -78,6 +78,25 @@ class TableauChartGenerationAgent:
             "chart_config": <TABLEAU_VISUALIZATION_JSON_CONFIGURATION>
         }}
         
+        ### DATA SIZE CONSIDERATIONS ###
+        
+        IMPORTANT: Before selecting a chart type, check the data size (number of rows in the sample data):
+        - If the data has MORE than 5 rows, you MUST NOT recommend KPI charts (also known as KPI cards, text tables with single values, gauge charts, or single-value visualizations)
+        - KPI charts are only suitable for datasets with 5 or fewer rows, as they display individual metrics that cannot effectively render when there are many data points
+        - For datasets with more than 5 rows, choose from other appropriate chart types such as:
+          * Line charts for trends over time
+          * Bar charts for categorical comparisons
+          * Pie charts or treemaps for part-to-whole relationships
+          * Area charts for cumulative trends
+          * Scatter plots for correlations
+          * Histograms or box plots for distributions
+          * Heatmaps for multi-dimensional data
+          * Map visualizations for geographical data
+          * Dual-axis or combined charts for multiple metrics
+          * And other suitable visualization types based on the data structure
+        
+        Always count the rows in the sample data before making your chart type recommendation.
+        
         ### IMPORTANT NOTES ###
         
         - Ensure all field names in the configuration exist in the actual data columns
@@ -246,6 +265,201 @@ class TableauChartGenerationPipeline:
         self.agent = TableauChartGenerationAgent(llm, **kwargs)
         self.exporter = TableauChartExporter()
     
+    async def _process_kpi_chart(
+        self,
+        data: Dict[str, Any],
+        chart_config: Dict[str, Any],
+        query: str,
+        language: str = "English"
+    ) -> Dict[str, Any]:
+        """Process KPI chart generation using LLM"""
+        try:
+            columns = data.get("columns", [])
+            data_rows = data.get("data", [])
+            
+            if not data_rows or len(data_rows) == 0:
+                logger.warning("No data available for KPI chart")
+                return chart_config
+            
+            preprocessed_data = self.agent.data_preprocessor.run(data)
+            
+            kpi_config = await self._generate_kpi_chart_with_llm(
+                query=query,
+                columns=columns,
+                sample_data=preprocessed_data["sample_data"],
+                sample_column_values=preprocessed_data["sample_column_values"],
+                column_metadata=preprocessed_data.get("column_metadata", {}),
+                language=language,
+                existing_config=chart_config
+            )
+            
+            if kpi_config:
+                chart_config.update(kpi_config)
+                logger.info("Generated KPI chart config using LLM")
+            
+            return chart_config
+            
+        except Exception as e:
+            logger.error(f"Error processing KPI chart: {e}")
+            return chart_config
+    
+    async def _generate_kpi_chart_with_llm(
+        self,
+        query: str,
+        columns: List[str],
+        sample_data: Dict[str, Any],
+        sample_column_values: Dict[str, Any],
+        column_metadata: Dict[str, Any],
+        language: str,
+        existing_config: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Generate KPI chart config using LLM for Tableau"""
+        try:
+            kpi_system_prompt = f"""
+            ### TASK ###
+            
+            You are an expert at creating KPI (Key Performance Indicator) charts using Tableau! Generate a specialized KPI chart configuration.
+            
+            Tableau KPI charts use text marks or custom calculations. There are four main types:
+            
+            ### 1. COUNTER KPI ###
+            {{
+                "chart_type": "kpi",
+                "rows": [],
+                "columns": [],
+                "marks": {{
+                    "type": "text",
+                    "text": "<AGGREGATE_FUNCTION>(<FIELD_NAME>)",
+                    "format": "number"
+                }},
+                "title": "<TITLE>",
+                "kpi_metadata": {{
+                    "chart_type": "metric_kpi",
+                    "chart_subtype": "counter",
+                    "format": ",",
+                    "color_scheme": "#2563eb"
+                }}
+            }}
+            
+            ### 2. PERCENTAGE KPI ###
+            {{
+                "chart_type": "kpi",
+                "rows": [],
+                "columns": [],
+                "marks": {{
+                    "type": "text",
+                    "text": "<AGGREGATE_FUNCTION>(<FIELD_NAME>)",
+                    "format": "percentage"
+                }},
+                "title": "<TITLE>",
+                "kpi_metadata": {{
+                    "chart_type": "metric_kpi",
+                    "chart_subtype": "percentage",
+                    "format": "percentage",
+                    "color_scheme": "#10b981"
+                }}
+            }}
+            
+            ### 3. SCORE KPI ###
+            {{
+                "chart_type": "kpi",
+                "rows": [],
+                "columns": [],
+                "marks": {{
+                    "type": "text",
+                    "text": "<AGGREGATE_FUNCTION>(<FIELD_NAME>)",
+                    "format": "number",
+                    "color": {{
+                        "calculation": "IF <FIELD_NAME> >= 80 THEN '#16a34a' ELSEIF <FIELD_NAME> >= 50 THEN '#f59e0b' ELSE '#ef4444' END"
+                    }}
+                }},
+                "title": "<TITLE>",
+                "kpi_metadata": {{
+                    "chart_type": "metric_kpi",
+                    "chart_subtype": "score",
+                    "format": ".0f",
+                    "color_scheme": {{
+                        "high": "#16a34a",
+                        "medium": "#f59e0b",
+                        "low": "#ef4444"
+                    }}
+                }}
+            }}
+            
+            ### 4. COMPARISON KPI ###
+            {{
+                "chart_type": "kpi",
+                "rows": [],
+                "columns": [],
+                "marks": {{
+                    "type": "text",
+                    "text": "<AGGREGATE_FUNCTION>(<CURRENT_FIELD>) + ' (' + STR((<AGGREGATE_FUNCTION>(<CURRENT_FIELD>) - <AGGREGATE_FUNCTION>(<PREVIOUS_FIELD>)) / <AGGREGATE_FUNCTION>(<PREVIOUS_FIELD>)) + '%)'",
+                    "format": "number",
+                    "color": {{
+                        "calculation": "IF (<AGGREGATE_FUNCTION>(<CURRENT_FIELD>) > <AGGREGATE_FUNCTION>(<PREVIOUS_FIELD>)) THEN '#16a34a' ELSE '#ef4444' END"
+                    }}
+                }},
+                "title": "<TITLE>",
+                "kpi_metadata": {{
+                    "chart_type": "comparison_kpi",
+                    "chart_subtype": "current_vs_percentage",
+                    "format": "+.1%",
+                    "positive_color": "#16a34a",
+                    "negative_color": "#ef4444"
+                }}
+            }}
+            
+            Choose the appropriate KPI subtype based on data structure and query intent.
+            Respond with ONLY valid JSON.
+            """
+            
+            kpi_user_prompt = f"""
+            Question: {query}
+            Columns: {json.dumps(columns)}
+            Sample Data: {json.dumps(sample_data)}
+            Sample Column Values: {json.dumps(sample_column_values)}
+            Column Metadata: {json.dumps(column_metadata)}
+            Language: {language}
+            Existing Config: {json.dumps(existing_config) if existing_config else "None"}
+            
+            Generate the most appropriate Tableau KPI chart configuration.
+            """
+            
+            generation_prompt = PromptTemplate(
+                input_variables=["system_prompt", "user_prompt"],
+                template="{{system_prompt}}\n\n{{user_prompt}}"
+            )
+            
+            chain = (
+                {"system_prompt": lambda x: kpi_system_prompt, "user_prompt": lambda x: kpi_user_prompt}
+                | generation_prompt
+                | self.agent.llm
+            )
+            
+            result = await chain.ainvoke("")
+            
+            if hasattr(result, 'content'):
+                result_str = result.content
+            else:
+                result_str = str(result)
+            
+            try:
+                parsed = orjson.loads(result_str)
+                return parsed
+            except orjson.JSONDecodeError:
+                import re
+                json_match = re.search(r'\{.*\}', result_str, re.DOTALL)
+                if json_match:
+                    try:
+                        return orjson.loads(json_match.group(0))
+                    except orjson.JSONDecodeError:
+                        pass
+                return {}
+            
+        except Exception as e:
+            logger.error(f"Error generating KPI chart with LLM: {e}")
+            return {}
+    
     async def run(
         self,
         query: str,
@@ -279,6 +493,36 @@ class TableauChartGenerationPipeline:
                 remove_data_from_chart_config=remove_data_from_chart_config,
                 existing_chart_schema=existing_chart_schema
             )
+            
+            # Check if chart type is KPI and process accordingly
+            chart_type = result.get("chart_type", "").lower()
+            chart_config = result.get("chart_config", {})
+            
+            is_kpi_chart = (
+                "kpi" in chart_type or
+                "metric" in chart_type or
+                "counter" in chart_type or
+                chart_config.get("kpi_metadata") is not None or
+                chart_config.get("chart_type") == "kpi" or
+                len(data.get("data", [])) <= 5
+            )
+            
+            if is_kpi_chart and chart_config:
+                logger.info("Detected KPI chart, processing with KPI-specific logic...")
+                processed_config = await self._process_kpi_chart(
+                    data=data,
+                    chart_config=chart_config,
+                    query=query,
+                    language=language
+                )
+                result["chart_config"] = processed_config
+                if "kpi_metadata" in processed_config:
+                    kpi_metadata = processed_config.get("kpi_metadata", {})
+                    chart_subtype = kpi_metadata.get("chart_subtype", "")
+                    if chart_subtype:
+                        result["chart_type"] = f"kpi_{chart_subtype}"
+                    else:
+                        result["chart_type"] = "kpi"
             
             # Add export functionality if requested
             if export_format and result.get("success", False):

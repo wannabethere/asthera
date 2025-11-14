@@ -388,8 +388,8 @@ class PipelineContainer:
             self._pipelines["dashboard_streaming"] = None
         
         try:
-            from app.agents.pipelines.writers.conditional_formatting_generation_pipeline import create_conditional_formatting_generation_pipeline
-            self._pipelines["conditional_formatting_generation"] = create_conditional_formatting_generation_pipeline(
+            from app.agents.pipelines.writers.conditional_formatting_pipeline import create_conditional_formatting_pipeline
+            self._pipelines["conditional_formatting_generation"] = create_conditional_formatting_pipeline(
                 engine=self._engine,
                 llm=self._llm,
                 retrieval_helper=self._retrieval_helper,

@@ -32,6 +32,7 @@ class DashboardContext(BaseModel):
     alert_config: Optional[Dict[str, Any]] = Field(default_factory=dict)
     performance_config: Optional[Dict[str, Any]] = Field(default_factory=dict)
     charts: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
+    thread_components: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
     available_columns: Optional[List[str]] = Field(default_factory=list)
     data_types: Optional[Dict[str, str]] = Field(default_factory=dict)
 
@@ -350,6 +351,16 @@ async def generate_conditional_formatting_only(
     
     This endpoint processes natural language queries to create
     conditional formatting configurations for dashboard charts.
+    
+    Uses the ConditionalFormattingPipeline through DashboardService
+    to process conditional formatting requests independently.
+    
+    The dashboard_context supports both:
+    - charts: Array of chart objects (legacy format)
+    - thread_components: Array of thread component objects (preferred format)
+    
+    If thread_components are provided, they will be automatically converted
+    to charts format for processing while preserving the original structure.
     """
     try:
         service = get_dashboard_service()
@@ -357,7 +368,8 @@ async def generate_conditional_formatting_only(
         # Convert to dict format
         context_dict = request.dashboard_context.dict()
         
-        # Process conditional formatting only
+        # Process conditional formatting only through service layer
+        # Service handles ConditionalFormattingPipeline internally
         result = await service.process_conditional_formatting_only(
             natural_language_query=request.natural_language_query,
             dashboard_context=context_dict,
@@ -366,14 +378,22 @@ async def generate_conditional_formatting_only(
             time_filters=request.time_filters
         )
         
+        # Extract data from service response (already formatted with post_process structure)
+        post_process = result.get("post_process", {})
+        metadata = result.get("metadata", {})
+        
         return DashboardResponse(
-            success=result.get("post_process", {}).get("success", False),
-            conditional_formatting=result.get("post_process"),
+            success=post_process.get("success", False),
+            conditional_formatting=post_process,
+            chart_configurations=post_process.get("chart_configurations", {}),
+            dashboard_config=post_process.get("configuration"),
             metadata={
                 "project_id": request.project_id,
                 "natural_language_query": request.natural_language_query,
-                "timestamp": result.get("metadata", {}).get("timestamp")
-            }
+                "timestamp": metadata.get("execution_timestamp"),
+                "pipeline_name": metadata.get("pipeline_name", "conditional_formatting_pipeline")
+            },
+            error=post_process.get("error")
         )
         
     except Exception as e:
