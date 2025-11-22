@@ -123,7 +123,7 @@ class Settings(BaseSettings):
     SQLITE_USE_MEMORY: bool = False  # Whether to use in-memory SQLite database
     
     # API Keys and Security
-    OPENAI_API_KEY: str = "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"
+    OPENAI_API_KEY: str = "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"
     
     # API Configuration
     API_HOST: str = "0.0.0.0"
@@ -191,7 +191,7 @@ class Settings(BaseSettings):
     #host='ec2-54-161-71-105.compute-1.amazonaws.com', port=8888
     # ChromaDB Settings
     CHROMA_USE_LOCAL: bool = False
-    CHROMA_HOST: str = "ec2-44-202-8-38.compute-1.amazonaws.com"
+    CHROMA_HOST: str = "100.26.125.159"
     CHROMA_PORT: int = 8888
     CHROMA_COLLECTION_NAME: str = "default"
     CHROMA_PERSIST_DIRECTORY: str = "chroma_db"

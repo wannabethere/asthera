@@ -1,0 +1,213 @@
+{
+  "catalog": "medrcm360",
+  "schema": "public",
+  "models": [
+    {
+      "name": "claim_submission_report",
+      "description": "Patient claim submission tracking and reporting. This table tracks when claims were submitted to payers, submission types (electronic/paper), submission dates, and submission counts for each claim.",
+      "tableReference": {
+        "table": "tbl_claim_submission_report_202510232110"
+      },
+      "columns": [
+        {
+          "name": "claim_submission_uuid",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Claim Submission UUID",
+            "description": "Unique identifier for the claim submission record"
+          }
+        },
+        {
+          "name": "facility",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Facility",
+            "description": "Name of the healthcare facility where the service was provided"
+          }
+        },
+        {
+          "name": "practice_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Practice Name",
+            "description": "Name of the medical practice"
+          }
+        },
+        {
+          "name": "facility_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Facility Name",
+            "description": "Full name of the facility"
+          }
+        },
+        {
+          "name": "facility_pos",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Facility Place of Service",
+            "description": "Place of service code indicating where the service was provided"
+          }
+        },
+        {
+          "name": "appointment_provider_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Appointment Provider Name",
+            "description": "Name of the healthcare provider for the appointment"
+          }
+        },
+        {
+          "name": "rendering_provider_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Rendering Provider Name",
+            "description": "Name of the healthcare provider who rendered the service"
+          }
+        },
+        {
+          "name": "claim_no",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Claim Number",
+            "description": "Unique identifier for the claim"
+          }
+        },
+        {
+          "name": "patient_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Patient Name",
+            "description": "Full name of the patient"
+          }
+        },
+        {
+          "name": "patient_acct_no",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Patient Account Number",
+            "description": "Unique account number assigned to the patient"
+          }
+        },
+        {
+          "name": "service_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Service Date",
+            "description": "Date when the medical service was provided to the patient"
+          }
+        },
+        {
+          "name": "claim_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Claim Date",
+            "description": "Date when the claim was created or submitted"
+          }
+        },
+        {
+          "name": "submission_type",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Submission Type",
+            "description": "Type of claim submission (e.g., Electronic, Paper)"
+          }
+        },
+        {
+          "name": "submission_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Submission Date",
+            "description": "Date when the claim was submitted to the payer"
+          }
+        },
+        {
+          "name": "submission_time",
+          "type": "TIME",
+          "properties": {
+            "displayName": "Submission Time",
+            "description": "Time when the claim was submitted to the payer"
+          }
+        },
+        {
+          "name": "claim_first_submission_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Claim First Submission Date",
+            "description": "Date of the first submission of this claim to the payer"
+          }
+        },
+        {
+          "name": "claim_last_submission_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Claim Last Submission Date",
+            "description": "Date of the most recent submission of this claim to the payer"
+          }
+        },
+        {
+          "name": "log_message",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Log Message",
+            "description": "Log message or status message from the submission process"
+          }
+        },
+        {
+          "name": "description",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Description",
+            "description": "Description of the submission status or action"
+          }
+        },
+        {
+          "name": "payer_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Payer Name",
+            "description": "Name of the insurance payer to whom the claim was submitted"
+          }
+        },
+        {
+          "name": "submission_count",
+          "type": "INTEGER",
+          "properties": {
+            "displayName": "Submission Count",
+            "description": "Number of times this claim has been submitted to the payer"
+          }
+        },
+        {
+          "name": "charges",
+          "type": "DECIMAL",
+          "properties": {
+            "displayName": "Charges",
+            "description": "Total charges amount for the claim"
+          }
+        },
+        {
+          "name": "source_file",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Source File",
+            "description": "Source file from which the data was imported"
+          }
+        },
+        {
+          "name": "load_ts",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Load Timestamp",
+            "description": "Timestamp when the record was loaded into the system"
+          }
+        }
+      ],
+      "primaryKey": "claim_submission_uuid",
+      "properties": {
+        "displayName": "Claim Submission Report",
+        "description": "Tracking and reporting of patient claim submissions to payers"
+      }
+    }
+  ]
+}
+

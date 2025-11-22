@@ -1,0 +1,200 @@
+version: 2
+
+models:
+  - name: learner_engagement_summary
+    description: This mart contains a summary of learner engagement metrics, including total courses enrolled, average course duration, and total courses completed per user.
+    columns:
+      - name: user_id
+        description: Unique identifier for each user.
+        tests:
+          - not_null
+          - unique
+      - name: registration_date
+        description: The date when the user registered.
+        tests:
+          - not_null
+      - name: total_courses_enrolled
+        description: Total number of courses that a user is enrolled in.
+        tests:
+          - not_null
+      - name: average_course_duration
+        description: Average duration of courses that a user is enrolled in.
+        tests:
+          - not_null
+      - name: total_courses_completed
+        description: Total number of courses that a user has completed.
+        tests:
+          - not_null
+
+  - name: course_performance_summary
+    description: This mart contains performance metrics for each course, including total enrollments, total completions, and average completion time.
+    columns:
+      - name: course_id
+        description: Unique identifier for each course.
+        tests:
+          - not_null
+          - unique
+      - name: title
+        description: Title of the course.
+        tests:
+          - not_null
+      - name: total_enrollments
+        description: Total number of enrollments for each course.
+        tests:
+          - not_null
+      - name: total_completions
+        description: Total number of completions for each course.
+        tests:
+          - not_null
+      - name: average_completion_time
+        description: Average time taken to complete the course, excluding zero values.
+        tests:
+          - not_null
+
+  - name: user_acquisition_retention_analysis
+    description: This mart contains metrics related to user acquisition and retention, including the number of courses enrolled and the number of days since registration.
+    columns:
+      - name: user_id
+        description: Unique identifier for each user.
+        tests:
+          - not_null
+          - unique
+      - name: total_courses_enrolled
+        description: Total number of courses enrolled by the user, handling NULLs.
+        tests:
+          - not_null
+      - name: enrollment_days
+        description: Count of distinct days on which the user enrolled in courses.
+        tests:
+          - not_null
+      - name: days_since_registration
+        description: Number of days since the user registered, defaulting to 0 if registration date is NULL.
+        tests:
+          - not_null
+
+  - name: course_performance_metrics
+    description: This mart contains metrics related to course performance, including total enrollments, average completion rates, and total duration of courses.
+    columns:
+      - name: course_id
+        description: Unique identifier for each course.
+        tests:
+          - not_null
+          - unique
+      - name: title
+        description: Title of the course.
+        tests:
+          - not_null
+      - name: description
+        description: Description of the course content.
+        tests:
+          - not_null
+      - name: total_enrollments
+        description: Total number of enrollments for each course.
+        tests:
+          - not_null
+      - name: average_completion_rate
+        description: Average completion rate of the course, handling NULL and avoiding division by zero.
+        tests:
+          - not_null
+      - name: total_duration
+        description: Total duration of all enrollments for the course, handling NULL values.
+        tests:
+          - not_null
+
+  - name: user_engagement_metrics
+    description: This mart contains metrics related to user engagement, including total courses enrolled, average completion rates, and total time spent by users.
+    columns:
+      - name: user_id
+        description: Unique identifier for each user.
+        tests:
+          - not_null
+          - unique
+      - name: total_courses_enrolled
+        description: Total number of courses that a user is enrolled in.
+        tests:
+          - not_null
+      - name: average_completion_rate
+        description: Average completion rate of courses for a user, handling NULL and avoiding division by zero.
+        tests:
+          - not_null
+      - name: total_time_spent
+        description: Total time spent by a user on all enrolled courses, handling NULL values.
+        tests:
+          - not_null
+
+  - name: enrollment_trends
+    description: This mart contains trends in enrollments over time, including total enrollments and the number of courses offered on each date.
+    columns:
+      - name: enrollment_date
+        description: The date of enrollment, truncated to the day for grouping.
+        tests:
+          - not_null
+      - name: total_enrollments
+        description: The total number of enrollments on a given date.
+        tests:
+          - not_null
+      - name: total_courses_offered
+        description: The total number of distinct courses offered on a given date.
+        tests:
+          - not_null
+
+  - name: instructor_engagement_summary
+    description: This mart contains a summary of instructor engagement metrics, including total courses enrolled, average course duration, and total courses completed by each user.
+    columns:
+      - name: user_id
+        description: Unique identifier for each user.
+        tests:
+          - not_null
+          - unique
+      - name: user_name
+        description: Name of the user.
+        tests:
+          - not_null
+      - name: total_courses_enrolled
+        description: Total number of courses that each user is enrolled in.
+        tests:
+          - not_null
+      - name: avg_course_duration
+        description: Average duration of courses that each user is enrolled in.
+        tests:
+          - not_null
+      - name: total_courses_completed
+        description: Total number of courses completed by each user.
+        tests:
+          - not_null
+
+  - name: user_acquisition_retention_summary
+    description: This mart contains a summary of user acquisition and retention metrics, including total courses enrolled and the number of days users have engaged with courses.
+    columns:
+      - name: user_id
+        description: Unique identifier for each user.
+        tests:
+          - not_null
+          - unique
+      - name: user_name
+        description: Name of the user.
+        tests:
+          - not_null
+      - name: total_courses_enrolled
+        description: Total number of courses that users have enrolled in.
+        tests:
+          - not_null
+      - name: enrollment_days
+        description: Number of distinct days users have engaged with courses.
+        tests:
+          - not_null
+      - name: total_courses_completed
+        description: Total number of courses that users have completed.
+        tests:
+          - not_null
+
+metrics:
+  - name: days_since_registration
+    formula: COALESCE(DATE_PART('day', CURRENT_DATE - u.registration_date), 0)
+    description: Number of days since the user registered, defaulting to 0 if registration date is NULL.
+    mart_name: user_acquisition_retention_analysis
+
+  - name: completion_rate
+    formula: COALESCE(AVG(CASE WHEN e.completed = TRUE THEN 1.0 ELSE 0.0 END), 0)
+    description: Average completion rate of the course, calculated as the ratio of completed enrollments to total enrollments.
+    mart_name: course_performance_summary

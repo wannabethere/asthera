@@ -1,0 +1,285 @@
+version: 2
+
+models:
+  - name: attack_surface_summary_by_os_software
+    description: This mart contains a summary of the attack surface categorized by operating system, software stack, business unit, and environment.
+    columns:
+      - name: business_unit
+        description: The business unit responsible for the assets.
+        tests:
+          - not_null
+      - name: environment
+        description: The environment in which the assets are deployed (e.g., production, staging).
+        tests:
+          - not_null
+      - name: os
+        description: The operating system of the assets.
+        tests:
+          - not_null
+      - name: software_stack
+        description: The software stack associated with the assets.
+        tests:
+          - not_null
+      - name: total_assets
+        description: The total number of distinct assets.
+        tests:
+          - not_null
+      - name: total_vulnerabilities
+        description: The total number of distinct vulnerabilities associated with the assets.
+        tests:
+          - not_null
+      - name: total_misconfigurations
+        description: The total number of distinct misconfigurations associated with the assets.
+        tests:
+          - not_null
+      - name: total_exposures
+        description: The total number of distinct exposures associated with the assets.
+        tests:
+          - not_null
+      - name: last_updated
+        description: Timestamp of the last update.
+        tests:
+          - not_null
+
+  - name: software_asset_management_summary
+    description: This mart provides a summary of software assets, including their usage and associated vulnerabilities and misconfigurations.
+    columns:
+      - name: software_name
+        description: The name of the software asset.
+        tests:
+          - not_null
+      - name: version
+        description: The version of the software asset.
+        tests:
+          - not_null
+      - name: total_devices
+        description: The total number of devices using the software asset.
+        tests:
+          - not_null
+      - name: total_vulnerabilities
+        description: The total number of vulnerabilities associated with the software asset.
+        tests:
+          - not_null
+      - name: total_misconfigurations
+        description: The total number of misconfigurations associated with the software asset.
+        tests:
+          - not_null
+      - name: business_unit
+        description: The business unit associated with the software asset.
+      - name: environment
+        description: The environment in which the software asset is deployed (e.g., production, development).
+      - name: last_updated
+        description: Timestamp of the last update.
+
+  - name: external_exposure_risk_summary
+    description: This mart summarizes external exposure risks categorized by risk type, including the total number of exposures and their potential impact.
+    columns:
+      - name: risk_category
+        description: The category of the risk associated with external exposures.
+        tests:
+          - not_null
+      - name: total_exposures
+        description: The total number of distinct exposures recorded.
+        tests:
+          - not_null
+      - name: total_potential_impact
+        description: The total potential impact value of all exposures.
+        tests:
+          - not_null
+      - name: os_software_stack
+        description: The operating system and software stack associated with the exposure.
+      - name: business_unit
+        description: The business unit responsible for the exposure.
+      - name: environment
+        description: The environment in which the exposure exists (e.g., production, staging).
+      - name: created_at
+        description: Timestamp when the record was created.
+      - name: updated_at
+        description: Timestamp when the record was last updated.
+
+  - name: asset_management_trend_analysis
+    description: This mart contains a 12-month trend analysis of asset management, including risk scores, vulnerabilities, misconfigurations, and exposures related to each asset.
+    columns:
+      - name: asset_id
+        description: Unique identifier for each asset.
+        tests:
+          - not_null
+      - name: asset_type
+        description: Type of the asset (e.g., server, application, etc.).
+        tests:
+          - not_null
+      - name: acquisition_date
+        description: Date when the asset was acquired.
+        tests:
+          - not_null
+      - name: depreciation_value
+        description: Value of the asset after accounting for depreciation.
+        tests:
+          - not_null
+      - name: total_risk_score
+        description: Total risk score calculated for each asset based on associated vulnerabilities.
+        tests:
+          - not_null
+      - name: total_vulnerabilities
+        description: Total number of distinct vulnerabilities associated with the asset.
+        tests:
+          - not_null
+      - name: total_misconfigurations
+        description: Total number of distinct misconfigurations associated with the asset.
+        tests:
+          - not_null
+      - name: total_external_exposures
+        description: Total number of distinct external exposures associated with the asset.
+        tests:
+          - not_null
+      - name: total_identity_exposures
+        description: Total number of distinct identity exposures associated with the asset.
+        tests:
+          - not_null
+      - name: month
+        description: Month for which the trend analysis is performed.
+        tests:
+          - not_null
+      - name: risk_breach_likelihood
+        description: Likelihood of a risk breach calculated as the total risk score divided by the total number of vulnerabilities.
+      - name: risk_breach_score
+        description: Calculated risk breach score based on the total risk score, scaled by a factor of 0.1.
+
+  - name: software_asset_management_trend_analysis
+    description: This mart contains a 12-month trend analysis of software asset management, including device counts, misconfigurations, and external exposures related to each software application.
+    columns:
+      - name: software_id
+        description: Unique identifier for each software application.
+        tests:
+          - not_null
+      - name: software_name
+        description: Name of the software application.
+        tests:
+          - not_null
+      - name: license_type
+        description: Type of license associated with the software application.
+        tests:
+          - not_null
+      - name: total_devices
+        description: Total number of distinct devices associated with the software application.
+        tests:
+          - not_null
+      - name: total_misconfigurations
+        description: Total number of misconfigurations related to the software application.
+        tests:
+          - not_null
+      - name: total_external_exposures
+        description: Total number of distinct external exposures related to the software application.
+        tests:
+          - not_null
+      - name: month
+        description: The month for which the data is recorded, used for trend analysis.
+        tests:
+          - not_null
+      - name: breach_risk_score
+        description: Calculated score indicating the risk of a breach based on misconfigurations and external exposures.
+
+  - name: asset_exposure_summary
+    description: This mart contains aggregated exposure scores for each asset, including vulnerabilities, misconfigurations, and external risks.
+    columns:
+      - name: asset_id
+        description: Unique identifier for each asset.
+        tests:
+          - not_null
+      - name: asset_name
+        description: Name of the asset.
+        tests:
+          - not_null
+      - name: total_vulnerability_score
+        description: Total score representing the vulnerabilities associated with the asset.
+        tests:
+          - not_null
+      - name: vulnerability_count
+        description: Count of distinct vulnerabilities associated with the asset.
+        tests:
+          - not_null
+      - name: total_misconfigurations
+        description: Total number of misconfigurations associated with the asset.
+        tests:
+          - not_null
+      - name: total_external_exposure
+        description: Total score representing the external exposure risks associated with the asset.
+        tests:
+          - not_null
+      - name: exposure_score
+        description: Calculated score representing the overall exposure of the asset based on vulnerabilities, misconfigurations, and external risks.
+
+  - name: identity_exposure_summary
+    description: This mart contains aggregated data on identity exposure incidents, including total incidents and average severity levels.
+    columns:
+      - name: identity_id
+        description: Unique identifier for each identity.
+        tests:
+          - not_null
+      - name: total_exposure_incidents
+        description: Total number of exposure incidents associated with an identity.
+        tests:
+          - not_null
+      - name: average_severity
+        description: Average severity level of exposure incidents associated with an identity.
+        tests:
+          - not_null
+      - name: last_updated
+        description: Timestamp of the last update.
+
+  - name: software_asset_usage_summary
+    description: This mart contains aggregated usage data for software assets, including the number of devices using each software and total usage hours.
+    columns:
+      - name: software_id
+        description: Unique identifier for each software asset.
+        tests:
+          - not_null
+      - name: software_name
+        description: Name of the software asset.
+        tests:
+          - not_null
+      - name: total_devices_used
+        description: Total number of distinct devices using the software.
+        tests:
+          - not_null
+      - name: total_usage_hours
+        description: Total hours of usage for the software.
+        tests:
+          - not_null
+      - name: exposure_score
+        description: Calculated score representing the exposure of the software based on usage.
+      - name: created_at
+        description: Timestamp when the record was created.
+      - name: updated_at
+        description: Timestamp when the record was last updated.
+
+metrics:
+  - name: risk_breach_likelihood
+    formula: total_risk_score / NULLIF(total_vulnerabilities, 0)
+    description: Likelihood of a risk breach calculated as the total risk score divided by the total number of vulnerabilities.
+    model: asset_management_trend_analysis
+
+  - name: risk_breach_score
+    formula: total_risk_score * 0.1
+    description: Calculated risk breach score based on the total risk score, scaled by a factor of 0.1.
+    model: asset_management_trend_analysis
+
+  - name: breach_risk_score
+    formula: CASE WHEN total_misconfigurations > 10 THEN 1.0 WHEN total_external_exposures > 5 THEN 0.75 ELSE 0.5 END
+    description: Calculated score indicating the risk of a breach based on misconfigurations and external exposures.
+    model: software_asset_management_trend_analysis
+
+  - name: likelihood_score
+    formula: CASE WHEN total_devices > 100 THEN 0.9 WHEN total_devices BETWEEN 50 AND 100 THEN 0.7 ELSE 0.3 END
+    description: Calculated score indicating the likelihood of an incident based on the number of devices.
+    model: software_asset_management_trend_analysis
+
+  - name: exposure_score
+    formula: total_vulnerability_score + total_misconfigurations + total_external_exposure
+    description: Calculated score representing the overall exposure of the asset based on vulnerabilities, misconfigurations, and external risks.
+    model: asset_exposure_summary
+
+  - name: exposure_score
+    formula: CASE WHEN total_usage_hours > 0 THEN total_devices_used / total_usage_hours ELSE 0 END
+    description: Calculated score representing the exposure of the software based on usage.
+    model: software_asset_usage_summary

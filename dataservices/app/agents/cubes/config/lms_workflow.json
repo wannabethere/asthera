@@ -1,0 +1,90 @@
+{
+  "workflow_name": "lms_analytics",
+  "description": "Learning management system analytics",
+  "raw_schemas": [
+    {
+      "table_name": "users",
+      "table_ddl": "\nCREATE TABLE users (\n  user_id BIGINT NOT NULL,\n  username VARCHAR,\n  email VARCHAR,\n  user_type VARCHAR,  -- learner, instructor, admin\n  created_at TIMESTAMP,\n  last_login TIMESTAMP,\n  is_active BOOLEAN\n);",
+      "relationships": [],
+      "layer": "raw"
+    },
+    {
+      "table_name": "courses",
+      "table_ddl": "\nCREATE TABLE courses (\n  course_id BIGINT NOT NULL,\n  course_name VARCHAR,\n  course_code VARCHAR,\n  instructor_id BIGINT,\n  category VARCHAR,\n  duration_hours INTEGER,\n  difficulty_level VARCHAR,\n  created_at TIMESTAMP\n);",
+      "relationships": [],
+      "layer": "raw"
+    },
+    {
+      "table_name": "enrollments",
+      "table_ddl": "\nCREATE TABLE enrollments (\n  enrollment_id BIGINT NOT NULL,\n  user_id BIGINT,\n  course_id BIGINT,\n  enrolled_at TIMESTAMP,\n  completed_at TIMESTAMP,\n  status VARCHAR,  -- enrolled, in_progress, completed, dropped\n  progress_percent DECIMAL(5,2),\n  final_grade DECIMAL(5,2)\n);",
+      "relationships": [],
+      "layer": "raw"
+    }
+  ],
+  "lod_configurations": [
+    {
+      "table_name": "enrollments",
+      "lod_type": "FIXED",
+      "dimensions": [
+        "user_id",
+        "course_id"
+      ],
+      "description": "One enrollment per user per course"
+    }
+  ],
+  "relationship_mappings": [
+    {
+      "child_table": "enrollments",
+      "parent_table": "users",
+      "join_type": "MANY_TO_ONE",
+      "join_condition": "enrollments.user_id = users.user_id",
+      "layer": "silver"
+    },
+    {
+      "child_table": "enrollments",
+      "parent_table": "courses",
+      "join_type": "MANY_TO_ONE",
+      "join_condition": "enrollments.course_id = courses.course_id",
+      "layer": "silver"
+    }
+  ],
+  "user_query": "\n    Create a learning analytics platform with:\n    \n    1. Learner Metrics:\n       - Active learners count\n       - Enrollment trends\n       - Completion rates\n       - Average progress across courses\n       - Time to completion\n    \n    2. Course Performance:\n       - Enrollment by course\n       - Completion rates by course\n       - Average grades\n       - Course popularity trends\n       - Dropout analysis\n    \n    3. Instructor Analytics:\n       - Courses taught\n       - Student success rates\n       - Average student grades\n    \n    4. Time-Series Analysis:\n       - Daily active users\n       - Weekly enrollment trends\n       - Monthly completion rates\n       - Quarter-over-quarter growth\n    \n    Optimize for real-time dashboard updates.\n    ",
+  "data_mart_goals": [
+    "Create learner engagement analytics dashboard",
+    "Build course performance metrics data mart",
+    "Generate instructor analytics summary"
+  ],
+  "expected_outputs": {
+    "raw_cubes": [
+      "raw_users",
+      "raw_courses",
+      "raw_enrollments"
+    ],
+    "silver_cubes": [
+      "silver_users",
+      "silver_courses",
+      "silver_enrollments_complete"
+    ],
+    "gold_cubes": [
+      "gold_learner_metrics",
+      "gold_course_performance",
+      "gold_instructor_analytics",
+      "gold_engagement_trends"
+    ],
+    "views": [
+      "learning_analytics_overview",
+      "course_insights",
+      "learner_journey"
+    ]
+  },
+  "generate_gold": true,
+  "target_sql_dialect": "postgresql",
+  "metric_questions": [
+    "Can you give total learners who consumed more than one activity this year compared to last year? What is their percentage change in comparison?",
+    "What is the enrollment completion rate by course? Show me the trend over the last 6 months.",
+    "How many active learners do we have? Show me the breakdown by user type and the daily trend.",
+    "What is the average time to completion for each course? Compare this year vs last year.",
+    "What percentage of students completed courses taught by each instructor? Show quarterly trends.",
+    "What is the average progress percentage across all enrollments? Break it down by course and enrollment status."
+  ]
+}

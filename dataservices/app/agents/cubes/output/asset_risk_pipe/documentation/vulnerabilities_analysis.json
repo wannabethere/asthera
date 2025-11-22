@@ -1,0 +1,123 @@
+{
+  "table_name": "vulnerabilities",
+  "description": "Vulnerability data per asset",
+  "columns": [
+    {
+      "name": "asset_id",
+      "data_type": "STRING",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": true,
+      "description": "Unique identifier for the asset associated with the vulnerability.",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "cve_id",
+      "data_type": "STRING",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Common Vulnerabilities and Exposures identifier for the vulnerability.",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "cvss_score",
+      "data_type": "NUMERIC",
+      "is_dimension": false,
+      "is_measure": true,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "CVSS score representing the severity of the vulnerability.",
+      "suggested_cube_type": "measure",
+      "aggregation_type": "avg"
+    },
+    {
+      "name": "epss_score",
+      "data_type": "NUMERIC",
+      "is_dimension": false,
+      "is_measure": true,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "EPS score indicating the likelihood of exploitation.",
+      "suggested_cube_type": "measure",
+      "aggregation_type": "avg"
+    },
+    {
+      "name": "is_kev",
+      "data_type": "BOOLEAN",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Indicates if the vulnerability is a Known Exploited Vulnerability (KEV).",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "is_internet_facing",
+      "data_type": "BOOLEAN",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Indicates if the asset is internet-facing.",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "discovered_at",
+      "data_type": "TIMESTAMP",
+      "is_dimension": false,
+      "is_measure": false,
+      "is_temporal": true,
+      "is_identifier": false,
+      "description": "Timestamp when the vulnerability was discovered.",
+      "suggested_cube_type": "time_dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "updated_at",
+      "data_type": "TIMESTAMP",
+      "is_dimension": false,
+      "is_measure": false,
+      "is_temporal": true,
+      "is_identifier": false,
+      "description": "Timestamp when the vulnerability record was last updated.",
+      "suggested_cube_type": "time_dimension",
+      "aggregation_type": "none"
+    }
+  ],
+  "primary_keys": [
+    "asset_id",
+    "cve_id"
+  ],
+  "foreign_keys": [
+    {
+      "column": "asset_id",
+      "references_table": "assets",
+      "references_column": "asset_id"
+    }
+  ],
+  "potential_joins": [
+    {
+      "target_table": "assets",
+      "join_type": "many_to_one",
+      "condition": "vulnerabilities.asset_id = assets.asset_id"
+    }
+  ],
+  "grain": "Each row represents a unique vulnerability associated with a specific asset.",
+  "data_quality_concerns": [
+    "asset_id and cve_id are not nullable but should be checked for uniqueness.",
+    "cvss_score and epss_score may contain null values which could affect aggregations.",
+    "Boolean fields may have inconsistent values if not properly validated."
+  ],
+  "recommended_transformations": [
+    "Ensure cvss_score and epss_score are validated to avoid nulls where applicable.",
+    "Consider creating a derived column for the age of the vulnerability based on discovered_at.",
+    "Implement checks to ensure asset_id and cve_id combinations are unique."
+  ]
+}

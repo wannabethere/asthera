@@ -1,0 +1,254 @@
+{
+  "metrics": [
+    {
+      "name": "days_since_registration",
+      "formula": "COALESCE(DATE_PART('day', CURRENT_DATE - u.registration_date), 0)",
+      "description": "Number of days since the user registered, defaulting to 0 if registration date is NULL.",
+      "mart_name": "user_acquisition_retention_analysis"
+    },
+    {
+      "name": "completion_rate",
+      "formula": "COALESCE(AVG(CASE WHEN e.completed = TRUE THEN 1.0 ELSE 0.0 END), 0)",
+      "description": "Average completion rate of the course, calculated as the ratio of completed enrollments to total enrollments.",
+      "mart_name": "course_performance_summary"
+    }
+  ],
+  "dimensions": [
+    {
+      "name": "user_id",
+      "type": "string",
+      "description": "Unique identifier for each user.",
+      "mart_name": "learner_engagement_summary"
+    },
+    {
+      "name": "registration_date",
+      "type": "date",
+      "description": "The date when the user registered.",
+      "mart_name": "learner_engagement_summary"
+    },
+    {
+      "name": "course_id",
+      "type": "string",
+      "description": "Unique identifier for each course.",
+      "mart_name": "course_performance_summary"
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "description": "Title of the course.",
+      "mart_name": "course_performance_summary"
+    },
+    {
+      "name": "user_id",
+      "type": "string",
+      "description": "Unique identifier for each user.",
+      "mart_name": "user_acquisition_retention_analysis"
+    },
+    {
+      "name": "course_id",
+      "type": "string",
+      "description": "Unique identifier for each course.",
+      "mart_name": "course_performance_metrics"
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "description": "Title of the course.",
+      "mart_name": "course_performance_metrics"
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "description": "Description of the course content.",
+      "mart_name": "course_performance_metrics"
+    },
+    {
+      "name": "user_id",
+      "type": "string",
+      "description": "Unique identifier for each user.",
+      "mart_name": "user_engagement_metrics"
+    },
+    {
+      "name": "enrollment_date",
+      "type": "date",
+      "description": "The date of enrollment, truncated to the day for grouping.",
+      "mart_name": "enrollment_trends"
+    },
+    {
+      "name": "user_id",
+      "type": "string",
+      "description": "Unique identifier for each user.",
+      "mart_name": "instructor_engagement_summary"
+    },
+    {
+      "name": "user_name",
+      "type": "string",
+      "description": "Name of the user.",
+      "mart_name": "instructor_engagement_summary"
+    },
+    {
+      "name": "course_id",
+      "type": "string",
+      "description": "Unique identifier for each course.",
+      "mart_name": "course_performance_summary"
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "description": "Title of the course.",
+      "mart_name": "course_performance_summary"
+    },
+    {
+      "name": "user_id",
+      "type": "string",
+      "description": "Unique identifier for each user.",
+      "mart_name": "user_acquisition_retention_summary"
+    },
+    {
+      "name": "user_name",
+      "type": "string",
+      "description": "Name of the user.",
+      "mart_name": "user_acquisition_retention_summary"
+    }
+  ],
+  "measures": [
+    {
+      "name": "total_courses_enrolled",
+      "type": "count",
+      "description": "Total number of courses that a user is enrolled in.",
+      "mart_name": "learner_engagement_summary"
+    },
+    {
+      "name": "average_course_duration",
+      "type": "avg",
+      "description": "Average duration of courses that a user is enrolled in.",
+      "mart_name": "learner_engagement_summary"
+    },
+    {
+      "name": "total_courses_completed",
+      "type": "sum",
+      "description": "Total number of courses that a user has completed.",
+      "mart_name": "learner_engagement_summary"
+    },
+    {
+      "name": "total_enrollments",
+      "type": "count",
+      "description": "Total number of enrollments for each course.",
+      "mart_name": "course_performance_summary"
+    },
+    {
+      "name": "total_completions",
+      "type": "sum",
+      "description": "Total number of completions for each course.",
+      "mart_name": "course_performance_summary"
+    },
+    {
+      "name": "average_completion_time",
+      "type": "avg",
+      "description": "Average time taken to complete the course, excluding zero values.",
+      "mart_name": "course_performance_summary"
+    },
+    {
+      "name": "total_courses_enrolled",
+      "type": "count",
+      "description": "Total number of courses enrolled by the user, handling NULLs.",
+      "mart_name": "user_acquisition_retention_analysis"
+    },
+    {
+      "name": "enrollment_days",
+      "type": "count",
+      "description": "Count of distinct days on which the user enrolled in courses.",
+      "mart_name": "user_acquisition_retention_analysis"
+    },
+    {
+      "name": "total_enrollments",
+      "type": "count",
+      "description": "Total number of enrollments for each course.",
+      "mart_name": "course_performance_metrics"
+    },
+    {
+      "name": "average_completion_rate",
+      "type": "avg",
+      "description": "Average completion rate of the course, handling NULL and avoiding division by zero.",
+      "mart_name": "course_performance_metrics"
+    },
+    {
+      "name": "total_duration",
+      "type": "sum",
+      "description": "Total duration of all enrollments for the course, handling NULL values.",
+      "mart_name": "course_performance_metrics"
+    },
+    {
+      "name": "total_courses_enrolled",
+      "type": "count",
+      "description": "Total number of courses that a user is enrolled in.",
+      "mart_name": "user_engagement_metrics"
+    },
+    {
+      "name": "average_completion_rate",
+      "type": "avg",
+      "description": "Average completion rate of courses for a user, handling NULL and avoiding division by zero.",
+      "mart_name": "user_engagement_metrics"
+    },
+    {
+      "name": "total_time_spent",
+      "type": "sum",
+      "description": "Total time spent by a user on all enrolled courses, handling NULL values.",
+      "mart_name": "user_engagement_metrics"
+    },
+    {
+      "name": "total_enrollments",
+      "type": "count",
+      "description": "The total number of enrollments on a given date.",
+      "mart_name": "enrollment_trends"
+    },
+    {
+      "name": "total_courses_offered",
+      "type": "count",
+      "description": "The total number of distinct courses offered on a given date.",
+      "mart_name": "enrollment_trends"
+    },
+    {
+      "name": "total_courses_enrolled",
+      "type": "count",
+      "description": "Total number of courses that each user is enrolled in.",
+      "mart_name": "instructor_engagement_summary"
+    },
+    {
+      "name": "avg_course_duration",
+      "type": "avg",
+      "description": "Average duration of courses that each user is enrolled in.",
+      "mart_name": "instructor_engagement_summary"
+    },
+    {
+      "name": "total_courses_completed",
+      "type": "sum",
+      "description": "Total number of courses completed by each user.",
+      "mart_name": "instructor_engagement_summary"
+    },
+    {
+      "name": "total_enrollments",
+      "type": "count",
+      "description": "Total number of enrollments for each course.",
+      "mart_name": "course_performance_summary"
+    },
+    {
+      "name": "total_courses_enrolled",
+      "type": "count",
+      "description": "Total number of courses that users have enrolled in.",
+      "mart_name": "user_acquisition_retention_summary"
+    },
+    {
+      "name": "enrollment_days",
+      "type": "count",
+      "description": "Number of distinct days users have engaged with courses.",
+      "mart_name": "user_acquisition_retention_summary"
+    },
+    {
+      "name": "total_courses_completed",
+      "type": "sum",
+      "description": "Total number of courses that users have completed.",
+      "mart_name": "user_acquisition_retention_summary"
+    }
+  ]
+}

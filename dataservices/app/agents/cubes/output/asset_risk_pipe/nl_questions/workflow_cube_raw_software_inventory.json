@@ -1,0 +1,126 @@
+{
+  "question_id": "cube_raw_software_inventory",
+  "question": "Build a Cube.js cube definition for the raw layer table 'software_inventory' (cube name: 'raw_software_inventory').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- software_name\n- version\n- is_eol\n- is_unsupported\n- discovered_at\n- updated_at\n\nMeasures:\n- count\n\nRelationships to other tables: software_inventory\n\nSteps to build:\n- 1. Define dimensions: asset_id, software_name, version, is_eol, is_unsupported\n- 2. Define measures: count\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+  "context": {
+    "layer": "raw",
+    "table_name": "software_inventory",
+    "cube_name": "raw_software_inventory",
+    "description": "Raw layer cube for raw_software_inventory",
+    "table_metadata": {
+      "table_name": "software_inventory",
+      "description": ""
+    }
+  },
+  "expected_output_type": "cube",
+  "steps": [
+    "1. Define dimensions: asset_id, software_name, version, is_eol, is_unsupported",
+    "2. Define measures: count",
+    "3. Configure pre-aggregations for performance",
+    "4. Set up joins with related tables"
+  ],
+  "metadata": {
+    "dimension_count": 7,
+    "measure_count": 1,
+    "generated_at": "2025-11-20T11:47:30.506077"
+  },
+  "dependencies": [],
+  "layer": "raw",
+  "table_name": "software_inventory",
+  "cube_name": "raw_software_inventory",
+  "dimensions": [
+    {
+      "name": "asset_id",
+      "sql": "${raw_software_inventory}.asset_id",
+      "type": "number",
+      "title": "Asset Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": true
+    },
+    {
+      "name": "software_name",
+      "sql": "${raw_software_inventory}.software_name",
+      "type": "string",
+      "title": "Software Name",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "version",
+      "sql": "${raw_software_inventory}.version",
+      "type": "string",
+      "title": "Version",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "is_eol",
+      "sql": "${raw_software_inventory}.is_eol",
+      "type": "string",
+      "title": "Is Eol",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "is_unsupported",
+      "sql": "${raw_software_inventory}.is_unsupported",
+      "type": "string",
+      "title": "Is Unsupported",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "discovered_at",
+      "sql": "${raw_software_inventory}.discovered_at",
+      "type": "time",
+      "title": "Discovered At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "updated_at",
+      "sql": "${raw_software_inventory}.updated_at",
+      "type": "time",
+      "title": "Updated At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    }
+  ],
+  "measures": [
+    {
+      "name": "count",
+      "sql": "1",
+      "type": "count",
+      "title": "Count",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": [
+        "asset_id"
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "child_table": "software_inventory",
+      "parent_table": "assets",
+      "join_type": "MANY_TO_ONE",
+      "join_condition": "software_inventory.asset_id = assets.asset_id",
+      "layer": "silver"
+    }
+  ]
+}

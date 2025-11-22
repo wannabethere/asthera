@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_average_progress_percentage_by_course",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_average_progress_percentage_by_course",
+  "target_model": "gold_gold_average_progress_percentage_by_course",
+  "steps": [
+    {
+      "step_name": "Metric: average_progress_percentage_by_course",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_average_progress_percentage_by_course (course, average_progress_percentage)\nSELECT \n    course,\n    COALESCE(SUM(progress_percentage) / NULLIF(COUNT(*), 0), 0) AS average_progress_percentage\nFROM \n    enrollments\nWHERE \n    progress_percentage IS NOT NULL  -- Only include valid progress percentages\nGROUP BY \n    course;",
+      "description": "The average progress percentage of enrollments, broken down by course.",
+      "input_tables": [
+        "enrollments"
+      ],
+      "output_table": "gold_average_progress_percentage_by_course",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_average_progress_percentage_by_course from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "name": "silver_vulnerabilities",
+  "sql": "SELECT * FROM silver_vulnerabilities",
+  "title": "Silver Vulnerabilities",
+  "description": "Silver layer cube for silver_vulnerabilities",
+  "dimensions": [
+    {
+      "name": "asset_id",
+      "sql": "${silver_vulnerabilities}.asset_id",
+      "type": "number",
+      "title": "Asset Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": true
+    },
+    {
+      "name": "cve_id",
+      "sql": "${silver_vulnerabilities}.cve_id",
+      "type": "string",
+      "title": "Cve Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "is_kev",
+      "sql": "${silver_vulnerabilities}.is_kev",
+      "type": "string",
+      "title": "Is Kev",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "is_internet_facing",
+      "sql": "${silver_vulnerabilities}.is_internet_facing",
+      "type": "string",
+      "title": "Is Internet Facing",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "discovered_at",
+      "sql": "${silver_vulnerabilities}.discovered_at",
+      "type": "time",
+      "title": "Discovered At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "updated_at",
+      "sql": "${silver_vulnerabilities}.updated_at",
+      "type": "time",
+      "title": "Updated At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    }
+  ],
+  "measures": [
+    {
+      "name": "count",
+      "sql": "1",
+      "type": "count",
+      "title": "Count",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": [
+        "asset_id"
+      ]
+    },
+    {
+      "name": "cvss_score",
+      "sql": "${silver_vulnerabilities}.cvss_score",
+      "type": "sum",
+      "title": "Cvss Score",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": null
+    },
+    {
+      "name": "epss_score",
+      "sql": "${silver_vulnerabilities}.epss_score",
+      "type": "sum",
+      "title": "Epss Score",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": null
+    }
+  ],
+  "joins": [],
+  "preAggregations": [],
+  "segments": []
+}

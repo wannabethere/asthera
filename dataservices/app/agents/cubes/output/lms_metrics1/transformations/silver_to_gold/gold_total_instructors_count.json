@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_total_instructors_count",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_total_instructors_count",
+  "target_model": "gold_gold_total_instructors_count",
+  "steps": [
+    {
+      "step_name": "Metric: total_instructors_count",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_total_instructors_count (total_instructors_count)\nSELECT COUNT(*) AS total_instructors_count\nFROM instructors\nWHERE \"active\" = TRUE;",
+      "description": "Total number of instructors in the system",
+      "input_tables": [
+        "instructors"
+      ],
+      "output_table": "gold_total_instructors_count",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_total_instructors_count from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

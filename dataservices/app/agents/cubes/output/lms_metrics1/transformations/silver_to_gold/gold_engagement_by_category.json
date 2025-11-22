@@ -1,0 +1,26 @@
+{
+  "name": "silver_to_gold_gold_engagement_by_category",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_engagement_by_category",
+  "target_model": "gold_gold_engagement_by_category",
+  "steps": [
+    {
+      "step_name": "Metric: engagement_by_category",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_engagement_by_category (course_category, engagement_count, month)\nSELECT \n    cc.\"category_name\" AS course_category,\n    COUNT(le.\"engagement_id\") AS engagement_count,\n    DATE_TRUNC('month', le.\"engagement_timestamp\") AS month\nFROM \n    learner_engagement le\nJOIN \n    course_categories cc ON le.\"course_id\" = cc.\"course_id\"\nWHERE \n    cc.\"is_active\" = TRUE  -- Only include active courses\nGROUP BY \n    cc.\"category_name\", DATE_TRUNC('month', le.\"engagement_timestamp\")\nORDER BY \n    month, course_category;",
+      "description": "Engagement metrics segmented by course category",
+      "input_tables": [
+        "learner_engagement",
+        "course_categories"
+      ],
+      "output_table": "gold_engagement_by_category",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_engagement_by_category from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

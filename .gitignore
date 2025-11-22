@@ -18,7 +18,8 @@ lexy
 sql_helper/
 analysis_results/
 data/cvedata/data/
-
+.DS_Store
+cubes/output/
 logs
 *.log
 npm-debug.log*

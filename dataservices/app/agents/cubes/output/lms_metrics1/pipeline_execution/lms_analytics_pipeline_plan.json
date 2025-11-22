@@ -1,0 +1,6 @@
+{
+  "trino_materialized_views": [],
+  "spark_transformations": [],
+  "python_transformations": [],
+  "execution_order": []
+}

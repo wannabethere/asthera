@@ -1,0 +1,64 @@
+{
+  "goal": "Build course performance metrics data mart",
+  "marts": [
+    {
+      "mart_name": "course_performance_metrics",
+      "sql": "CREATE TABLE course_performance_metrics AS SELECT c.course_id, c.title, c.description, COUNT(e.user_id) AS total_enrollments, AVG(e.completion_rate) AS average_completion_rate, SUM(e.duration) AS total_duration FROM courses c LEFT JOIN enrollments e ON c.course_id = e.course_id GROUP BY c.course_id, c.title, c.description;",
+      "description": "This mart contains metrics related to course performance, including total enrollments, average completion rates, and total duration of courses.",
+      "natural_language_question": "What are the performance metrics for each course, including total enrollments and average completion rates?",
+      "source_tables": [
+        "courses",
+        "enrollments"
+      ],
+      "target_columns": [
+        "course_id",
+        "title",
+        "description",
+        "total_enrollments",
+        "average_completion_rate",
+        "total_duration"
+      ],
+      "business_value": "This mart provides insights into course performance, enabling the organization to optimize course offerings and enhance learner engagement and satisfaction.",
+      "grain": "One row per course.",
+      "associated_metrics": []
+    },
+    {
+      "mart_name": "user_engagement_metrics",
+      "sql": "CREATE TABLE user_engagement_metrics AS SELECT u.user_id, COUNT(e.course_id) AS total_courses_enrolled, AVG(e.completion_rate) AS average_completion_rate, SUM(e.duration) AS total_time_spent FROM users u LEFT JOIN enrollments e ON u.user_id = e.user_id GROUP BY u.user_id;",
+      "description": "This mart contains metrics related to user engagement, including total courses enrolled, average completion rates, and total time spent by users.",
+      "natural_language_question": "How engaged are users based on their course enrollments and completion rates?",
+      "source_tables": [
+        "users",
+        "enrollments"
+      ],
+      "target_columns": [
+        "user_id",
+        "total_courses_enrolled",
+        "average_completion_rate",
+        "total_time_spent"
+      ],
+      "business_value": "This mart helps in understanding user engagement levels, which can inform retention strategies and enhance the overall user experience.",
+      "grain": "One row per user.",
+      "associated_metrics": []
+    },
+    {
+      "mart_name": "enrollment_trends",
+      "sql": "CREATE TABLE enrollment_trends AS SELECT DATE(e.enrollment_date) AS enrollment_date, COUNT(e.user_id) AS total_enrollments, COUNT(DISTINCT e.course_id) AS total_courses_offered FROM enrollments e GROUP BY DATE(e.enrollment_date) ORDER BY enrollment_date;",
+      "description": "This mart contains trends in enrollments over time, including total enrollments and the number of courses offered on each date.",
+      "natural_language_question": "What are the trends in course enrollments over time?",
+      "source_tables": [
+        "enrollments"
+      ],
+      "target_columns": [
+        "enrollment_date",
+        "total_enrollments",
+        "total_courses_offered"
+      ],
+      "business_value": "This mart provides insights into enrollment trends, enabling the organization to forecast future enrollment numbers and optimize marketing strategies.",
+      "grain": "One row per enrollment date.",
+      "associated_metrics": []
+    }
+  ],
+  "reasoning": "Planned data mart for goal: \"Build course performance metrics data mart\"\n\nSelected 3 relevant silver tables: users, courses, enrollments\n\nGenerated 3 data mart(s):\n\n1. course_performance_metrics: This mart contains metrics related to course performance, including total enrollments, average completion rates, and total duration of courses.\n   - Answers: What are the performance metrics for each course, including total enrollments and average completion rates?\n   - Grain: One row per course.\n\n2. user_engagement_metrics: This mart contains metrics related to user engagement, including total courses enrolled, average completion rates, and total time spent by users.\n   - Answers: How engaged are users based on their course enrollments and completion rates?\n   - Grain: One row per user.\n\n3. enrollment_trends: This mart contains trends in enrollments over time, including total enrollments and the number of courses offered on each date.\n   - Answers: What are the trends in course enrollments over time?\n   - Grain: One row per enrollment date.\n",
+  "complexity": "medium"
+}

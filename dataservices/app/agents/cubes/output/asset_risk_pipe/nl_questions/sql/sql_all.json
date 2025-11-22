@@ -1,0 +1,802 @@
+[
+  {
+    "question_id": "sql_data_mart_attack_surface_summary_by_os_software",
+    "question": "Generate SQL to create a data mart 'attack_surface_summary_by_os_software' from: assets, vulnerabilities, misconfigurations, external_exposure.\n\nBusiness Requirements:\n- \n- This mart contains a summary of the attack surface categorized by operating system, software stack, business unit, and environment.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "attack_surface_summary_by_os_software",
+      "source_tables": [
+        "assets",
+        "vulnerabilities",
+        "misconfigurations",
+        "external_exposure"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains a summary of the attack surface categorized by operating system, software stack, business unit, and environment."
+      ],
+      "existing_sql": "CREATE TABLE attack_surface_summary_by_os_software (\n    business_unit VARCHAR(100) NOT NULL,\n    environment VARCHAR(50) NOT NULL,\n    os VARCHAR(50) NOT NULL,\n    software_stack VARCHAR(100) NOT NULL,\n    total_assets INT NOT NULL DEFAULT 0,\n    total_vulnerabilities INT NOT NULL DEFAULT 0,\n    total_misconfigurations INT NOT NULL DEFAULT 0,\n    total_exposures INT NOT NULL DEFAULT 0,\n    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    PRIMARY KEY (business_unit, environment, os, softwar"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507254",
+      "source_table_count": 4
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "attack_surface_summary_by_os_software",
+    "source_tables": [
+      "assets",
+      "vulnerabilities",
+      "misconfigurations",
+      "external_exposure"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains a summary of the attack surface categorized by operating system, software stack, business unit, and environment."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_software_asset_management_summary",
+    "question": "Generate SQL to create a data mart 'software_asset_management_summary' from: software_inventory, vulnerabilities, misconfigurations.\n\nBusiness Requirements:\n- \n- This mart provides a summary of software assets, including their usage and associated vulnerabilities and misconfigurations.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "software_asset_management_summary",
+      "source_tables": [
+        "software_inventory",
+        "vulnerabilities",
+        "misconfigurations"
+      ],
+      "business_requirements": [
+        "",
+        "This mart provides a summary of software assets, including their usage and associated vulnerabilities and misconfigurations."
+      ],
+      "existing_sql": "CREATE TABLE software_asset_management_summary (\n    software_name VARCHAR(255) NOT NULL,\n    version VARCHAR(50) NOT NULL,\n    total_devices INT NOT NULL DEFAULT 0,\n    total_vulnerabilities INT NOT NULL DEFAULT 0,\n    total_misconfigurations INT NOT NULL DEFAULT 0,\n    business_unit VARCHAR(100),\n    environment VARCHAR(50),\n    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    PRIMARY KEY (software_name, version),\n    CONSTRAINT chk_total_devices CHECK (total_devices >= 0),\n    CONSTRAINT"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507281",
+      "source_table_count": 3
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "software_asset_management_summary",
+    "source_tables": [
+      "software_inventory",
+      "vulnerabilities",
+      "misconfigurations"
+    ],
+    "business_requirements": [
+      "",
+      "This mart provides a summary of software assets, including their usage and associated vulnerabilities and misconfigurations."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_external_exposure_risk_summary",
+    "question": "Generate SQL to create a data mart 'external_exposure_risk_summary' from: external_exposure.\n\nBusiness Requirements:\n- \n- This mart summarizes external exposure risks categorized by risk type, including the total number of exposures and their potential impact.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "external_exposure_risk_summary",
+      "source_tables": [
+        "external_exposure"
+      ],
+      "business_requirements": [
+        "",
+        "This mart summarizes external exposure risks categorized by risk type, including the total number of exposures and their potential impact."
+      ],
+      "existing_sql": "CREATE TABLE external_exposure_risk_summary (\n    risk_category VARCHAR(255) NOT NULL,\n    total_exposures INT NOT NULL,\n    total_potential_impact DECIMAL(18, 2) NOT NULL,\n    os_software_stack VARCHAR(255),\n    business_unit VARCHAR(255),\n    environment VARCHAR(50),\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n    PRIMARY KEY (risk_category, os_software_stack, business_unit, environment),\n    CONSTRAINT chk"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507295",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "external_exposure_risk_summary",
+    "source_tables": [
+      "external_exposure"
+    ],
+    "business_requirements": [
+      "",
+      "This mart summarizes external exposure risks categorized by risk type, including the total number of exposures and their potential impact."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_asset_management_trend_analysis",
+    "question": "Generate SQL to create a data mart 'asset_management_trend_analysis' from: assets, vulnerabilities, misconfigurations, external_exposure, identity_exposure.\n\nBusiness Requirements:\n- \n- This mart contains a 12-month trend analysis of asset management, including risk scores, vulnerabilities, misconfigurations, and exposures related to each asset.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "asset_management_trend_analysis",
+      "source_tables": [
+        "assets",
+        "vulnerabilities",
+        "misconfigurations",
+        "external_exposure",
+        "identity_exposure"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains a 12-month trend analysis of asset management, including risk scores, vulnerabilities, misconfigurations, and exposures related to each asset."
+      ],
+      "existing_sql": "CREATE TABLE asset_management_trend_analysis (\n    asset_id INT NOT NULL,\n    asset_type VARCHAR(50) NOT NULL,\n    acquisition_date DATE NOT NULL,\n    depreciation_value DECIMAL(10, 2) NOT NULL,\n    total_risk_score DECIMAL(10, 2) NOT NULL,\n    total_vulnerabilities INT NOT NULL,\n    total_misconfigurations INT NOT NULL,\n    total_external_exposures INT NOT NULL,\n    total_identity_exposures INT NOT NULL,\n    month DATE NOT NULL,\n    risk_breach_likelihood DECIMAL(5, 4) GENERATED ALWAYS AS (tota"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507307",
+      "source_table_count": 5
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "asset_management_trend_analysis",
+    "source_tables": [
+      "assets",
+      "vulnerabilities",
+      "misconfigurations",
+      "external_exposure",
+      "identity_exposure"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains a 12-month trend analysis of asset management, including risk scores, vulnerabilities, misconfigurations, and exposures related to each asset."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_software_asset_management_trend_analysis",
+    "question": "Generate SQL to create a data mart 'software_asset_management_trend_analysis' from: software_inventory, misconfigurations, external_exposure.\n\nBusiness Requirements:\n- \n- This mart contains a 12-month trend analysis of software asset management, including device counts, misconfigurations, and external exposures related to each software application.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "software_asset_management_trend_analysis",
+      "source_tables": [
+        "software_inventory",
+        "misconfigurations",
+        "external_exposure"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains a 12-month trend analysis of software asset management, including device counts, misconfigurations, and external exposures related to each software application."
+      ],
+      "existing_sql": "CREATE TABLE software_asset_management_trend_analysis (\n    software_id INT NOT NULL,\n    software_name VARCHAR(255) NOT NULL,\n    license_type VARCHAR(50) NOT NULL,\n    total_devices INT NOT NULL DEFAULT 0,\n    total_misconfigurations INT NOT NULL DEFAULT 0,\n    total_external_exposures INT NOT NULL DEFAULT 0,\n    month DATE NOT NULL,\n    breach_risk_score DECIMAL(5, 2) GENERATED ALWAYS AS (\n        CASE \n            WHEN total_misconfigurations > 10 THEN 1.0\n            WHEN total_external_exp"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507317",
+      "source_table_count": 3
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "software_asset_management_trend_analysis",
+    "source_tables": [
+      "software_inventory",
+      "misconfigurations",
+      "external_exposure"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains a 12-month trend analysis of software asset management, including device counts, misconfigurations, and external exposures related to each software application."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_asset_exposure_summary",
+    "question": "Generate SQL to create a data mart 'asset_exposure_summary' from: assets, vulnerabilities, misconfigurations, external_exposure.\n\nBusiness Requirements:\n- \n- This mart contains aggregated exposure scores for each asset, including vulnerabilities, misconfigurations, and external risks.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "asset_exposure_summary",
+      "source_tables": [
+        "assets",
+        "vulnerabilities",
+        "misconfigurations",
+        "external_exposure"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains aggregated exposure scores for each asset, including vulnerabilities, misconfigurations, and external risks."
+      ],
+      "existing_sql": "CREATE TABLE asset_exposure_summary (\n    asset_id INT NOT NULL,\n    asset_name VARCHAR(255) NOT NULL,\n    total_vulnerability_score DECIMAL(10, 2) DEFAULT 0.00,\n    vulnerability_count INT DEFAULT 0,\n    total_misconfigurations INT DEFAULT 0,\n    total_external_exposure DECIMAL(10, 2) DEFAULT 0.00,\n    exposure_score DECIMAL(10, 2) AS (total_vulnerability_score + total_misconfigurations + total_external_exposure) STORED,\n    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    CONSTRAINT pk_as"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507327",
+      "source_table_count": 4
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "asset_exposure_summary",
+    "source_tables": [
+      "assets",
+      "vulnerabilities",
+      "misconfigurations",
+      "external_exposure"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains aggregated exposure scores for each asset, including vulnerabilities, misconfigurations, and external risks."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_identity_exposure_summary",
+    "question": "Generate SQL to create a data mart 'identity_exposure_summary' from: identity_exposure.\n\nBusiness Requirements:\n- \n- This mart contains aggregated data on identity exposure incidents, including total incidents and average severity levels.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "identity_exposure_summary",
+      "source_tables": [
+        "identity_exposure"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains aggregated data on identity exposure incidents, including total incidents and average severity levels."
+      ],
+      "existing_sql": "CREATE TABLE identity_exposure_summary (\n    identity_id UUID NOT NULL,\n    total_exposure_incidents INT NOT NULL CHECK (total_exposure_incidents >= 0),\n    average_severity DECIMAL(3, 2) CHECK (average_severity >= 0 AND average_severity <= 10),\n    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    PRIMARY KEY (identity_id)\n);\n\nCREATE INDEX idx_identity_exposure ON identity_exposure_summary (identity_id);\nCREATE INDEX idx_last_updated ON identity_exposure_summary (last_updated);\n\nINSERT INTO"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507336",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "identity_exposure_summary",
+    "source_tables": [
+      "identity_exposure"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains aggregated data on identity exposure incidents, including total incidents and average severity levels."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_software_asset_usage_summary",
+    "question": "Generate SQL to create a data mart 'software_asset_usage_summary' from: software_inventory.\n\nBusiness Requirements:\n- \n- This mart contains aggregated usage data for software assets, including the number of devices using each software and total usage hours.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "software_asset_usage_summary",
+      "source_tables": [
+        "software_inventory"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains aggregated usage data for software assets, including the number of devices using each software and total usage hours."
+      ],
+      "existing_sql": "CREATE TABLE software_asset_usage_summary (\n    software_id INT NOT NULL,\n    software_name VARCHAR(255) NOT NULL,\n    total_devices_used INT NOT NULL,\n    total_usage_hours DECIMAL(10, 2) NOT NULL,\n    exposure_score DECIMAL(10, 2) GENERATED ALWAYS AS (CASE WHEN total_usage_hours > 0 THEN total_devices_used / total_usage_hours ELSE 0 END) STORED,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n    PRIMARY KEY (s"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507352",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "software_asset_usage_summary",
+    "source_tables": [
+      "software_inventory"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains aggregated usage data for software assets, including the number of devices using each software and total usage hours."
+    ]
+  },
+  {
+    "question_id": "sql_transformation_silver_assets",
+    "question": "Generate SQL transformation code to create 'silver_assets' from: assets.\n\nBusiness Requirements:\n- Transform assets from raw to silver\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "silver_assets",
+      "source_tables": [
+        "assets"
+      ],
+      "business_requirements": [
+        "Transform assets from raw to silver",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507372",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "silver_assets",
+    "source_tables": [
+      "assets"
+    ],
+    "business_requirements": [
+      "Transform assets from raw to silver",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_silver_vulnerabilities",
+    "question": "Generate SQL transformation code to create 'silver_vulnerabilities' from: vulnerabilities.\n\nBusiness Requirements:\n- Transform vulnerabilities from raw to silver\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "silver_vulnerabilities",
+      "source_tables": [
+        "vulnerabilities"
+      ],
+      "business_requirements": [
+        "Transform vulnerabilities from raw to silver",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507387",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "silver_vulnerabilities",
+    "source_tables": [
+      "vulnerabilities"
+    ],
+    "business_requirements": [
+      "Transform vulnerabilities from raw to silver",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_silver_misconfigurations",
+    "question": "Generate SQL transformation code to create 'silver_misconfigurations' from: misconfigurations.\n\nBusiness Requirements:\n- Transform misconfigurations from raw to silver\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "silver_misconfigurations",
+      "source_tables": [
+        "misconfigurations"
+      ],
+      "business_requirements": [
+        "Transform misconfigurations from raw to silver",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507400",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "silver_misconfigurations",
+    "source_tables": [
+      "misconfigurations"
+    ],
+    "business_requirements": [
+      "Transform misconfigurations from raw to silver",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_silver_external_exposure",
+    "question": "Generate SQL transformation code to create 'silver_external_exposure' from: external_exposure.\n\nBusiness Requirements:\n- Transform external_exposure from raw to silver\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "silver_external_exposure",
+      "source_tables": [
+        "external_exposure"
+      ],
+      "business_requirements": [
+        "Transform external_exposure from raw to silver",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507409",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "silver_external_exposure",
+    "source_tables": [
+      "external_exposure"
+    ],
+    "business_requirements": [
+      "Transform external_exposure from raw to silver",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_silver_identity_exposure",
+    "question": "Generate SQL transformation code to create 'silver_identity_exposure' from: identity_exposure.\n\nBusiness Requirements:\n- Transform identity_exposure from raw to silver\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "silver_identity_exposure",
+      "source_tables": [
+        "identity_exposure"
+      ],
+      "business_requirements": [
+        "Transform identity_exposure from raw to silver",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507418",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "silver_identity_exposure",
+    "source_tables": [
+      "identity_exposure"
+    ],
+    "business_requirements": [
+      "Transform identity_exposure from raw to silver",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_silver_software_inventory",
+    "question": "Generate SQL transformation code to create 'silver_software_inventory' from: software_inventory.\n\nBusiness Requirements:\n- Transform software_inventory from raw to silver\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "silver_software_inventory",
+      "source_tables": [
+        "software_inventory"
+      ],
+      "business_requirements": [
+        "Transform software_inventory from raw to silver",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507426",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "silver_software_inventory",
+    "source_tables": [
+      "software_inventory"
+    ],
+    "business_requirements": [
+      "Transform software_inventory from raw to silver",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_gold_assets",
+    "question": "Generate SQL transformation code to create 'gold_assets' from: assets.\n\nBusiness Requirements:\n- Transform assets from silver to gold\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "gold_assets",
+      "source_tables": [
+        "assets"
+      ],
+      "business_requirements": [
+        "Transform assets from silver to gold",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507436",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "gold_assets",
+    "source_tables": [
+      "assets"
+    ],
+    "business_requirements": [
+      "Transform assets from silver to gold",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_gold_vulnerabilities",
+    "question": "Generate SQL transformation code to create 'gold_vulnerabilities' from: vulnerabilities.\n\nBusiness Requirements:\n- Transform vulnerabilities from silver to gold\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "gold_vulnerabilities",
+      "source_tables": [
+        "vulnerabilities"
+      ],
+      "business_requirements": [
+        "Transform vulnerabilities from silver to gold",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507447",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "gold_vulnerabilities",
+    "source_tables": [
+      "vulnerabilities"
+    ],
+    "business_requirements": [
+      "Transform vulnerabilities from silver to gold",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_gold_misconfigurations",
+    "question": "Generate SQL transformation code to create 'gold_misconfigurations' from: misconfigurations.\n\nBusiness Requirements:\n- Transform misconfigurations from silver to gold\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "gold_misconfigurations",
+      "source_tables": [
+        "misconfigurations"
+      ],
+      "business_requirements": [
+        "Transform misconfigurations from silver to gold",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507459",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "gold_misconfigurations",
+    "source_tables": [
+      "misconfigurations"
+    ],
+    "business_requirements": [
+      "Transform misconfigurations from silver to gold",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_gold_external_exposure",
+    "question": "Generate SQL transformation code to create 'gold_external_exposure' from: external_exposure.\n\nBusiness Requirements:\n- Transform external_exposure from silver to gold\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "gold_external_exposure",
+      "source_tables": [
+        "external_exposure"
+      ],
+      "business_requirements": [
+        "Transform external_exposure from silver to gold",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507470",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "gold_external_exposure",
+    "source_tables": [
+      "external_exposure"
+    ],
+    "business_requirements": [
+      "Transform external_exposure from silver to gold",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_gold_identity_exposure",
+    "question": "Generate SQL transformation code to create 'gold_identity_exposure' from: identity_exposure.\n\nBusiness Requirements:\n- Transform identity_exposure from silver to gold\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "gold_identity_exposure",
+      "source_tables": [
+        "identity_exposure"
+      ],
+      "business_requirements": [
+        "Transform identity_exposure from silver to gold",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507478",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "gold_identity_exposure",
+    "source_tables": [
+      "identity_exposure"
+    ],
+    "business_requirements": [
+      "Transform identity_exposure from silver to gold",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_gold_software_inventory",
+    "question": "Generate SQL transformation code to create 'gold_software_inventory' from: software_inventory.\n\nBusiness Requirements:\n- Transform software_inventory from silver to gold\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "gold_software_inventory",
+      "source_tables": [
+        "software_inventory"
+      ],
+      "business_requirements": [
+        "Transform software_inventory from silver to gold",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507487",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "gold_software_inventory",
+    "source_tables": [
+      "software_inventory"
+    ],
+    "business_requirements": [
+      "Transform software_inventory from silver to gold",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  }
+]

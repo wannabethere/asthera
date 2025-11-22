@@ -1,0 +1,323 @@
+version: 2
+
+models:
+  - name: attack_surface_index
+    description: |
+      Attack Surface Index (ASI) per asset. Combines all exposure components 
+      (external, vulnerability, misconfiguration, identity, software) into a 
+      single 0-100 score. Higher scores indicate greater attack surface exposure.
+    columns:
+      - name: asset_id
+        description: Unique asset identifier
+        tests:
+          - unique
+          - not_null
+      - name: hostname
+        description: Asset hostname
+      - name: business_unit
+        description: Business unit owning the asset
+      - name: env
+        description: Environment (prod/non-prod)
+      - name: criticality
+        description: Asset criticality score (1-100)
+      - name: external_exposure_score
+        description: External exposure component (0-30 points)
+      - name: vulnerability_exposure_score
+        description: Vulnerability exposure component (0-25 points)
+      - name: misconfiguration_exposure_score
+        description: Misconfiguration exposure component (0-20 points)
+      - name: identity_exposure_score
+        description: Identity exposure component (0-15 points)
+      - name: software_exposure_score
+        description: Software exposure component (0-10 points)
+      - name: attack_surface_index
+        description: |
+          Total Attack Surface Index (0-100). Composite score combining all 
+          exposure components. Higher values indicate greater risk.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['>= 0', '<= 100']
+      - name: risk_weighted_asi
+        description: |
+          Risk-weighted ASI (ASI × criticality / 100). Accounts for asset 
+          criticality in risk assessment.
+      - name: calculated_at
+        description: Timestamp when ASI was calculated
+
+  - name: attack_surface_by_bu
+    description: |
+      Attack Surface Index aggregated by business unit. Enables dashboard 
+      visualizations showing top business units by exposure and risk contribution.
+    columns:
+      - name: business_unit
+        description: Business unit name
+        tests:
+          - unique
+          - not_null
+      - name: total_assets
+        description: Total number of assets in business unit
+      - name: avg_asi
+        description: Average Attack Surface Index for business unit
+      - name: max_asi
+        description: Maximum ASI in business unit
+      - name: min_asi
+        description: Minimum ASI in business unit
+      - name: median_asi
+        description: Median ASI in business unit
+      - name: p75_asi
+        description: 75th percentile ASI
+      - name: p95_asi
+        description: 95th percentile ASI
+      - name: avg_external_exposure
+        description: Average external exposure score
+      - name: avg_vulnerability_exposure
+        description: Average vulnerability exposure score
+      - name: avg_misconfiguration_exposure
+        description: Average misconfiguration exposure score
+      - name: avg_identity_exposure
+        description: Average identity exposure score
+      - name: avg_software_exposure
+        description: Average software exposure score
+      - name: avg_risk_weighted_asi
+        description: Average risk-weighted ASI
+      - name: total_risk_exposure
+        description: Sum of risk-weighted ASI (total risk exposure)
+      - name: high_risk_assets
+        description: Count of assets with ASI >= 70
+      - name: medium_risk_assets
+        description: Count of assets with ASI 50-69
+      - name: low_risk_assets
+        description: Count of assets with ASI < 50
+      - name: avg_criticality
+        description: Average asset criticality
+      - name: critical_assets
+        description: Count of assets with criticality >= 80
+      - name: calculated_at
+        description: Timestamp when aggregation was calculated
+
+  - name: attack_surface_by_env_os
+    description: |
+      Attack Surface Index by environment and OS/software stack. Enables 
+      drill-downs by environment (prod/non-prod) and operating system category.
+    columns:
+      - name: env
+        description: Environment (prod/non-prod)
+      - name: os_category
+        description: Operating system category (Windows, Linux, macOS, etc.)
+      - name: asset_count
+        description: Number of assets in this env/OS combination
+      - name: avg_asi
+        description: Average ASI for this combination
+      - name: max_asi
+        description: Maximum ASI
+      - name: median_asi
+        description: Median ASI
+      - name: avg_external_exposure
+        description: Average external exposure
+      - name: avg_vulnerability_exposure
+        description: Average vulnerability exposure
+      - name: avg_misconfiguration_exposure
+        description: Average misconfiguration exposure
+      - name: avg_identity_exposure
+        description: Average identity exposure
+      - name: avg_software_exposure
+        description: Average software exposure
+      - name: high_risk_count
+        description: Count of high-risk assets (ASI >= 70)
+      - name: medium_risk_count
+        description: Count of medium-risk assets (ASI 50-69)
+      - name: low_risk_count
+        description: Count of low-risk assets (ASI < 50)
+      - name: avg_eol_software_count
+        description: Average count of end-of-life software
+      - name: avg_unsupported_software_count
+        description: Average count of unsupported software
+      - name: total_risk_exposure
+        description: Total risk-weighted ASI
+      - name: risk_contribution_pct_env
+        description: Risk contribution percentage within environment
+      - name: risk_contribution_pct_os
+        description: Risk contribution percentage within OS category
+      - name: calculated_at
+        description: Timestamp when aggregation was calculated
+
+  - name: exploitability_likelihood
+    description: |
+      Exploitability likelihood per asset. Computes probability of exploitation 
+      based on EPSS, CVSS, KEV status, and exposure factors.
+    columns:
+      - name: asset_id
+        description: Unique asset identifier
+        tests:
+          - unique
+          - not_null
+      - name: business_unit
+        description: Business unit
+      - name: env
+        description: Environment
+      - name: criticality
+        description: Asset criticality
+      - name: vulnerability_count
+        description: Total number of vulnerabilities
+      - name: kev_count
+        description: Count of Known Exploited Vulnerabilities (KEV)
+      - name: high_likelihood_vuln_count
+        description: Count of vulnerabilities with likelihood > 0.5
+      - name: avg_vuln_likelihood
+        description: Average vulnerability likelihood
+      - name: max_vuln_likelihood
+        description: Maximum vulnerability likelihood
+      - name: asset_exploitability_likelihood
+        description: |
+          Overall asset exploitability likelihood (0-1 scale). Higher values 
+          indicate greater probability of exploitation.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['>= 0', '<= 1']
+      - name: risk_weighted_likelihood
+        description: Likelihood weighted by asset criticality
+      - name: likelihood_category
+        description: Likelihood category (Very High, High, Medium, Low, Very Low)
+      - name: last_vuln_discovered
+        description: Date of most recent vulnerability discovery
+      - name: last_updated
+        description: Last update timestamp
+      - name: calculated_at
+        description: Timestamp when likelihood was calculated
+
+  - name: exposure_trends_monthly
+    description: |
+      Monthly snapshots of exposure metrics for 12-month trend analysis. 
+      Supports time-series visualizations for likelihood and breach risk trends.
+    columns:
+      - name: snapshot_month
+        description: Month of snapshot (YYYY-MM-01)
+      - name: business_unit
+        description: Business unit
+      - name: env
+        description: Environment
+      - name: asset_count
+        description: Asset count for this month
+      - name: avg_asi
+        description: Average ASI for the month
+      - name: max_asi
+        description: Maximum ASI
+      - name: median_asi
+        description: Median ASI
+      - name: p95_asi
+        description: 95th percentile ASI
+      - name: high_risk_assets
+        description: Count of high-risk assets
+      - name: medium_risk_assets
+        description: Count of medium-risk assets
+      - name: low_risk_assets
+        description: Count of low-risk assets
+      - name: avg_external_exposure
+        description: Average external exposure
+      - name: avg_vulnerability_exposure
+        description: Average vulnerability exposure
+      - name: avg_misconfiguration_exposure
+        description: Average misconfiguration exposure
+      - name: avg_identity_exposure
+        description: Average identity exposure
+      - name: avg_software_exposure
+        description: Average software exposure
+      - name: total_risk_exposure
+        description: Total risk-weighted ASI
+      - name: avg_likelihood
+        description: Average exploitability likelihood
+      - name: very_high_likelihood_assets
+        description: Count of assets with likelihood >= 0.7
+      - name: high_likelihood_assets
+        description: Count of assets with likelihood 0.5-0.7
+      - name: high_breach_risk_assets
+        description: |
+          Count of assets with high ASI (>=70) AND high likelihood (>=0.5). 
+          Indicates highest breach risk.
+      - name: prev_month_avg_asi
+        description: Previous month's average ASI (for trend calculation)
+      - name: asi_change
+        description: Change in ASI from previous month
+      - name: prev_month_breach_risk
+        description: Previous month's breach risk count
+      - name: breach_risk_change
+        description: Change in breach risk count from previous month
+      - name: calculated_at
+        description: Timestamp when trend was calculated
+
+metrics:
+  - name: total_attack_surface_index
+    description: Sum of all asset ASI scores
+    label: Total Attack Surface Index
+    model: ref('attack_surface_index')
+    calculation_method: sum
+    expression: attack_surface_index
+    timestamp: calculated_at
+    time_grains: [day, week, month, quarter, year]
+    dimensions:
+      - business_unit
+      - env
+
+  - name: avg_attack_surface_index
+    description: Average ASI across all assets
+    label: Average Attack Surface Index
+    model: ref('attack_surface_index')
+    calculation_method: average
+    expression: attack_surface_index
+    timestamp: calculated_at
+    time_grains: [day, week, month, quarter, year]
+    dimensions:
+      - business_unit
+      - env
+
+  - name: high_risk_asset_count
+    description: Count of assets with ASI >= 70
+    label: High Risk Assets
+    model: ref('attack_surface_index')
+    calculation_method: count
+    expression: |
+      CASE WHEN attack_surface_index >= 70 THEN 1 ELSE 0 END
+    timestamp: calculated_at
+    time_grains: [day, week, month, quarter, year]
+    dimensions:
+      - business_unit
+      - env
+
+  - name: total_exploitability_likelihood
+    description: Sum of asset exploitability likelihoods
+    label: Total Exploitability Likelihood
+    model: ref('exploitability_likelihood')
+    calculation_method: sum
+    expression: asset_exploitability_likelihood
+    timestamp: calculated_at
+    time_grains: [day, week, month, quarter, year]
+    dimensions:
+      - business_unit
+      - env
+
+  - name: avg_exploitability_likelihood
+    description: Average exploitability likelihood
+    label: Average Exploitability Likelihood
+    model: ref('exploitability_likelihood')
+    calculation_method: average
+    expression: asset_exploitability_likelihood
+    timestamp: calculated_at
+    time_grains: [day, week, month, quarter, year]
+    dimensions:
+      - business_unit
+      - env
+
+  - name: high_breach_risk_count
+    description: Count of assets with high ASI and high likelihood
+    label: High Breach Risk Assets
+    model: ref('exposure_trends_monthly')
+    calculation_method: sum
+    expression: high_breach_risk_assets
+    timestamp: snapshot_month
+    time_grains: [month, quarter, year]
+    dimensions:
+      - business_unit
+      - env
+

@@ -25,18 +25,55 @@ def get_session_manager() -> SessionManager:
 def get_llm(temperature: float = 0.0, model: str = "gpt-4o-mini"):
     """Get LLM instance for AI operations"""
     from app.core.settings import get_settings
+    import os
+    import logging
+    
+    logger = logging.getLogger(__name__)
     
     settings = get_settings()
     api_key = settings.OPENAI_API_KEY
     
     if not api_key:
-        raise ValueError("OPENAI_API_KEY is not configured in settings")
+        # Try to get from environment variable as fallback
+        api_key = os.getenv("OPENAI_API_KEY")
     
-    return ChatOpenAI(
-        model=model,
-        temperature=temperature,
-        api_key=api_key
-    )
+    if not api_key:
+        error_msg = (
+            "OPENAI_API_KEY is not configured in settings or environment variables. "
+            "Please set OPENAI_API_KEY in your settings or environment variables."
+        )
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+    
+    # Validate API key format (basic check - should start with 'sk-')
+    if not api_key.startswith('sk-'):
+        logger.warning(f"API key does not start with 'sk-' - may be invalid. Key starts with: {api_key[:5]}...")
+    
+    # Set as environment variable for LangChain to pick up
+    # This ensures compatibility with all LangChain components
+    os.environ["OPENAI_API_KEY"] = api_key
+    
+    try:
+        llm = ChatOpenAI(
+            model=model,
+            temperature=temperature,
+            openai_api_key=api_key
+        )
+        # Log API key info (first 10 chars only for security)
+        api_key_preview = api_key[:10] + "..." if len(api_key) > 10 else api_key
+        logger.info(f"LLM initialized with model: {model}, temperature: {temperature}, API key: {api_key_preview}")
+        return llm
+    except Exception as e:
+        error_msg = (
+            f"Failed to initialize LLM: {str(e)}\n"
+            "This may be due to:\n"
+            "1. Invalid or expired API key\n"
+            "2. API key does not have access to the required organization\n"
+            "3. Network connectivity issues\n"
+            f"Please verify your OPENAI_API_KEY in settings. Key starts with: {api_key[:10]}..."
+        )
+        logger.error(error_msg)
+        raise ValueError(error_msg) from e
 
 
 async def get_async_db_session():
@@ -189,3 +226,78 @@ def get_instructions_processor() -> Instructions:
         document_store=doc_store,
         embedder=embeddings
     )
+
+
+# Global cache for document store provider
+_doc_store_provider_cache = None
+
+def get_doc_store_provider():
+    """Get the document store provider with all SQL-related stores with caching."""
+    global _doc_store_provider_cache
+    
+    if _doc_store_provider_cache is not None:
+        return _doc_store_provider_cache
+    
+    from app.core.provider import DocumentStoreProvider
+    
+    chroma_client = get_chromadb_client()
+    
+    # Create document stores for SQL-related collections
+    sql_stores = {
+        "db_schema": DocumentChromaStore(
+            client=chroma_client,
+            collection_name="db_schema"
+        ),
+        "sql_pairs": DocumentChromaStore(
+            client=chroma_client,
+            collection_name="sql_pairs"
+        ),
+        "instructions": DocumentChromaStore(
+            client=chroma_client,
+            collection_name="instructions"
+        ),
+        "historical_question": DocumentChromaStore(
+            client=chroma_client,
+            collection_name="historical_question"
+        ),
+        "table_description": DocumentChromaStore(
+            client=chroma_client,
+            collection_name="table_descriptions"
+        ),
+        "project_meta": DocumentChromaStore(
+            client=chroma_client,
+            collection_name="project_meta"
+        ),
+        "document_insights": DocumentChromaStore(
+            client=chroma_client,
+            collection_name="document_insights"
+        ),
+        "document_planning": DocumentChromaStore(
+            client=chroma_client,   
+            collection_name="document_planning"
+        ),
+        "alert_knowledge_base": DocumentChromaStore(
+            client=chroma_client,
+            collection_name="alert_knowledge_base"
+        ),
+        "column_metadata": DocumentChromaStore(
+            client=chroma_client,
+            collection_name="column_metadata"
+        ),
+        # Silver table stores for data mart planning
+        "silver_table_descriptions": DocumentChromaStore(
+            client=chroma_client,
+            collection_name="silver_table_descriptions"
+        ),
+        "silver_db_schema": DocumentChromaStore(
+            client=chroma_client,
+            collection_name="silver_db_schema"
+        )
+    }
+    
+    _doc_store_provider_cache = DocumentStoreProvider(
+        stores=sql_stores,
+        default_store="table_description"
+    )
+    
+    return _doc_store_provider_cache

@@ -1,0 +1,96 @@
+{
+  "name": "gold_users",
+  "sql": "SELECT * FROM gold_users",
+  "title": "Gold Users",
+  "description": "Gold layer cube for gold_users",
+  "dimensions": [
+    {
+      "name": "user_id",
+      "sql": "${gold_users}.user_id",
+      "type": "number",
+      "title": "User Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": true
+    },
+    {
+      "name": "username",
+      "sql": "${gold_users}.username",
+      "type": "string",
+      "title": "Username",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "email",
+      "sql": "${gold_users}.email",
+      "type": "string",
+      "title": "Email",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "user_type",
+      "sql": "${gold_users}.user_type",
+      "type": "string",
+      "title": "User Type",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "created_at",
+      "sql": "${gold_users}.created_at",
+      "type": "time",
+      "title": "Created At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "last_login",
+      "sql": "${gold_users}.last_login",
+      "type": "time",
+      "title": "Last Login",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "is_active",
+      "sql": "${gold_users}.is_active",
+      "type": "string",
+      "title": "Is Active",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    }
+  ],
+  "measures": [
+    {
+      "name": "count",
+      "sql": "1",
+      "type": "count",
+      "title": "Count",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": [
+        "user_id"
+      ]
+    }
+  ],
+  "joins": [],
+  "preAggregations": [],
+  "segments": []
+}

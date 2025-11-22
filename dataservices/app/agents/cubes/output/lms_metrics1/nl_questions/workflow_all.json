@@ -1,0 +1,1822 @@
+[
+  {
+    "question_id": "cube_raw_users",
+    "question": "Build a Cube.js cube definition for the raw layer table 'users' (cube name: 'raw_users').\n\nThe cube should include:\n\nDimensions:\n- user_id\n- username\n- email\n- user_type\n- created_at\n- last_login\n- is_active\n\nMeasures:\n- count\n\nRelationships to other tables: enrollments\n\nSteps to build:\n- 1. Define dimensions: user_id, username, email, user_type, created_at\n- 2. Define measures: count\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "raw",
+      "table_name": "users",
+      "cube_name": "raw_users",
+      "description": "Raw layer cube for raw_users",
+      "table_metadata": {
+        "table_name": "users",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: user_id, username, email, user_type, created_at",
+      "2. Define measures: count",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 7,
+      "measure_count": 1,
+      "generated_at": "2025-11-21T13:44:47.240571"
+    },
+    "dependencies": [],
+    "layer": "raw",
+    "table_name": "users",
+    "cube_name": "raw_users",
+    "dimensions": [
+      {
+        "name": "user_id",
+        "sql": "${raw_users}.user_id",
+        "type": "number",
+        "title": "User Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "username",
+        "sql": "${raw_users}.username",
+        "type": "string",
+        "title": "Username",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "email",
+        "sql": "${raw_users}.email",
+        "type": "string",
+        "title": "Email",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "user_type",
+        "sql": "${raw_users}.user_type",
+        "type": "string",
+        "title": "User Type",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "created_at",
+        "sql": "${raw_users}.created_at",
+        "type": "time",
+        "title": "Created At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "last_login",
+        "sql": "${raw_users}.last_login",
+        "type": "time",
+        "title": "Last Login",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "is_active",
+        "sql": "${raw_users}.is_active",
+        "type": "string",
+        "title": "Is Active",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "user_id"
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "enrollments",
+        "parent_table": "users",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "enrollments.user_id = users.user_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_raw_courses",
+    "question": "Build a Cube.js cube definition for the raw layer table 'courses' (cube name: 'raw_courses').\n\nThe cube should include:\n\nDimensions:\n- course_id\n- course_name\n- course_code\n- instructor_id\n- category\n- difficulty_level\n- created_at\n\nMeasures:\n- count\n- duration_hours\n\nRelationships to other tables: enrollments\n\nSteps to build:\n- 1. Define dimensions: course_id, course_name, course_code, instructor_id, category\n- 2. Define measures: count, duration_hours\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "raw",
+      "table_name": "courses",
+      "cube_name": "raw_courses",
+      "description": "Raw layer cube for raw_courses",
+      "table_metadata": {
+        "table_name": "courses",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: course_id, course_name, course_code, instructor_id, category",
+      "2. Define measures: count, duration_hours",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 7,
+      "measure_count": 2,
+      "generated_at": "2025-11-21T13:44:47.240856"
+    },
+    "dependencies": [],
+    "layer": "raw",
+    "table_name": "courses",
+    "cube_name": "raw_courses",
+    "dimensions": [
+      {
+        "name": "course_id",
+        "sql": "${raw_courses}.course_id",
+        "type": "number",
+        "title": "Course Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "course_name",
+        "sql": "${raw_courses}.course_name",
+        "type": "string",
+        "title": "Course Name",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "course_code",
+        "sql": "${raw_courses}.course_code",
+        "type": "string",
+        "title": "Course Code",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "instructor_id",
+        "sql": "${raw_courses}.instructor_id",
+        "type": "string",
+        "title": "Instructor Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "category",
+        "sql": "${raw_courses}.category",
+        "type": "string",
+        "title": "Category",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "difficulty_level",
+        "sql": "${raw_courses}.difficulty_level",
+        "type": "string",
+        "title": "Difficulty Level",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "created_at",
+        "sql": "${raw_courses}.created_at",
+        "type": "time",
+        "title": "Created At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "course_id"
+        ]
+      },
+      {
+        "name": "duration_hours",
+        "sql": "${raw_courses}.duration_hours",
+        "type": "sum",
+        "title": "Duration Hours",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "enrollments",
+        "parent_table": "courses",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "enrollments.course_id = courses.course_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_raw_enrollments",
+    "question": "Build a Cube.js cube definition for the raw layer table 'enrollments' (cube name: 'raw_enrollments').\n\nThe cube should include:\n\nDimensions:\n- enrollment_id\n- user_id\n- course_id\n- enrolled_at\n- completed_at\n- status\n\nMeasures:\n- count\n- progress_percent\n- final_grade\n\nRelationships to other tables: enrollments, enrollments\n\nSteps to build:\n- 1. Define dimensions: enrollment_id, user_id, course_id, enrolled_at, completed_at\n- 2. Define measures: count, progress_percent, final_grade\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "raw",
+      "table_name": "enrollments",
+      "cube_name": "raw_enrollments",
+      "description": "Raw layer cube for raw_enrollments",
+      "table_metadata": {
+        "table_name": "enrollments",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: enrollment_id, user_id, course_id, enrolled_at, completed_at",
+      "2. Define measures: count, progress_percent, final_grade",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 6,
+      "measure_count": 3,
+      "generated_at": "2025-11-21T13:44:47.241057"
+    },
+    "dependencies": [],
+    "layer": "raw",
+    "table_name": "enrollments",
+    "cube_name": "raw_enrollments",
+    "dimensions": [
+      {
+        "name": "enrollment_id",
+        "sql": "${raw_enrollments}.enrollment_id",
+        "type": "number",
+        "title": "Enrollment Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "user_id",
+        "sql": "${raw_enrollments}.user_id",
+        "type": "string",
+        "title": "User Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "course_id",
+        "sql": "${raw_enrollments}.course_id",
+        "type": "string",
+        "title": "Course Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "enrolled_at",
+        "sql": "${raw_enrollments}.enrolled_at",
+        "type": "time",
+        "title": "Enrolled At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "completed_at",
+        "sql": "${raw_enrollments}.completed_at",
+        "type": "time",
+        "title": "Completed At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "status",
+        "sql": "${raw_enrollments}.status",
+        "type": "string",
+        "title": "Status",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "enrollment_id"
+        ]
+      },
+      {
+        "name": "progress_percent",
+        "sql": "${raw_enrollments}.progress_percent",
+        "type": "sum",
+        "title": "Progress Percent",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      },
+      {
+        "name": "final_grade",
+        "sql": "${raw_enrollments}.final_grade",
+        "type": "sum",
+        "title": "Final Grade",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "enrollments",
+        "parent_table": "users",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "enrollments.user_id = users.user_id",
+        "layer": "silver"
+      },
+      {
+        "child_table": "enrollments",
+        "parent_table": "courses",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "enrollments.course_id = courses.course_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_silver_users",
+    "question": "Build a Cube.js cube definition for the silver layer table 'users' (cube name: 'silver_users').\n\nThe cube should include:\n\nDimensions:\n- user_id\n- username\n- email\n- user_type\n- created_at\n- last_login\n- is_active\n\nMeasures:\n- count\n\nRelationships to other tables: enrollments\n\nSteps to build:\n- 1. Define dimensions: user_id, username, email, user_type, created_at\n- 2. Define measures: count\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "silver",
+      "table_name": "users",
+      "cube_name": "silver_users",
+      "description": "Silver layer cube for silver_users",
+      "table_metadata": {
+        "table_name": "users",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: user_id, username, email, user_type, created_at",
+      "2. Define measures: count",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 7,
+      "measure_count": 1,
+      "generated_at": "2025-11-21T13:44:47.241230"
+    },
+    "dependencies": [],
+    "layer": "silver",
+    "table_name": "users",
+    "cube_name": "silver_users",
+    "dimensions": [
+      {
+        "name": "user_id",
+        "sql": "${silver_users}.user_id",
+        "type": "number",
+        "title": "User Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "username",
+        "sql": "${silver_users}.username",
+        "type": "string",
+        "title": "Username",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "email",
+        "sql": "${silver_users}.email",
+        "type": "string",
+        "title": "Email",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "user_type",
+        "sql": "${silver_users}.user_type",
+        "type": "string",
+        "title": "User Type",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "created_at",
+        "sql": "${silver_users}.created_at",
+        "type": "time",
+        "title": "Created At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "last_login",
+        "sql": "${silver_users}.last_login",
+        "type": "time",
+        "title": "Last Login",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "is_active",
+        "sql": "${silver_users}.is_active",
+        "type": "string",
+        "title": "Is Active",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "user_id"
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "enrollments",
+        "parent_table": "users",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "enrollments.user_id = users.user_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_silver_courses",
+    "question": "Build a Cube.js cube definition for the silver layer table 'courses' (cube name: 'silver_courses').\n\nThe cube should include:\n\nDimensions:\n- course_id\n- course_name\n- course_code\n- instructor_id\n- category\n- difficulty_level\n- created_at\n\nMeasures:\n- count\n- duration_hours\n\nRelationships to other tables: enrollments\n\nSteps to build:\n- 1. Define dimensions: course_id, course_name, course_code, instructor_id, category\n- 2. Define measures: count, duration_hours\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "silver",
+      "table_name": "courses",
+      "cube_name": "silver_courses",
+      "description": "Silver layer cube for silver_courses",
+      "table_metadata": {
+        "table_name": "courses",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: course_id, course_name, course_code, instructor_id, category",
+      "2. Define measures: count, duration_hours",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 7,
+      "measure_count": 2,
+      "generated_at": "2025-11-21T13:44:47.241346"
+    },
+    "dependencies": [],
+    "layer": "silver",
+    "table_name": "courses",
+    "cube_name": "silver_courses",
+    "dimensions": [
+      {
+        "name": "course_id",
+        "sql": "${silver_courses}.course_id",
+        "type": "number",
+        "title": "Course Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "course_name",
+        "sql": "${silver_courses}.course_name",
+        "type": "string",
+        "title": "Course Name",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "course_code",
+        "sql": "${silver_courses}.course_code",
+        "type": "string",
+        "title": "Course Code",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "instructor_id",
+        "sql": "${silver_courses}.instructor_id",
+        "type": "string",
+        "title": "Instructor Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "category",
+        "sql": "${silver_courses}.category",
+        "type": "string",
+        "title": "Category",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "difficulty_level",
+        "sql": "${silver_courses}.difficulty_level",
+        "type": "string",
+        "title": "Difficulty Level",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "created_at",
+        "sql": "${silver_courses}.created_at",
+        "type": "time",
+        "title": "Created At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "course_id"
+        ]
+      },
+      {
+        "name": "duration_hours",
+        "sql": "${silver_courses}.duration_hours",
+        "type": "sum",
+        "title": "Duration Hours",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "enrollments",
+        "parent_table": "courses",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "enrollments.course_id = courses.course_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_silver_enrollments",
+    "question": "Build a Cube.js cube definition for the silver layer table 'enrollments' (cube name: 'silver_enrollments').\n\nThe cube should include:\n\nDimensions:\n- enrollment_id\n- user_id\n- course_id\n- enrolled_at\n- completed_at\n- status\n\nMeasures:\n- count\n- progress_percent\n- final_grade\n\nRelationships to other tables: enrollments, enrollments\n\nSteps to build:\n- 1. Define dimensions: enrollment_id, user_id, course_id, enrolled_at, completed_at\n- 2. Define measures: count, progress_percent, final_grade\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "silver",
+      "table_name": "enrollments",
+      "cube_name": "silver_enrollments",
+      "description": "Silver layer cube for silver_enrollments",
+      "table_metadata": {
+        "table_name": "enrollments",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: enrollment_id, user_id, course_id, enrolled_at, completed_at",
+      "2. Define measures: count, progress_percent, final_grade",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 6,
+      "measure_count": 3,
+      "generated_at": "2025-11-21T13:44:47.241521"
+    },
+    "dependencies": [],
+    "layer": "silver",
+    "table_name": "enrollments",
+    "cube_name": "silver_enrollments",
+    "dimensions": [
+      {
+        "name": "enrollment_id",
+        "sql": "${silver_enrollments}.enrollment_id",
+        "type": "number",
+        "title": "Enrollment Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "user_id",
+        "sql": "${silver_enrollments}.user_id",
+        "type": "string",
+        "title": "User Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "course_id",
+        "sql": "${silver_enrollments}.course_id",
+        "type": "string",
+        "title": "Course Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "enrolled_at",
+        "sql": "${silver_enrollments}.enrolled_at",
+        "type": "time",
+        "title": "Enrolled At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "completed_at",
+        "sql": "${silver_enrollments}.completed_at",
+        "type": "time",
+        "title": "Completed At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "status",
+        "sql": "${silver_enrollments}.status",
+        "type": "string",
+        "title": "Status",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "enrollment_id"
+        ]
+      },
+      {
+        "name": "progress_percent",
+        "sql": "${silver_enrollments}.progress_percent",
+        "type": "sum",
+        "title": "Progress Percent",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      },
+      {
+        "name": "final_grade",
+        "sql": "${silver_enrollments}.final_grade",
+        "type": "sum",
+        "title": "Final Grade",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "enrollments",
+        "parent_table": "users",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "enrollments.user_id = users.user_id",
+        "layer": "silver"
+      },
+      {
+        "child_table": "enrollments",
+        "parent_table": "courses",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "enrollments.course_id = courses.course_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_gold_users",
+    "question": "Build a Cube.js cube definition for the gold layer table 'users' (cube name: 'gold_users').\n\nThe cube should include:\n\nDimensions:\n- user_id\n- username\n- email\n- user_type\n- created_at\n- last_login\n- is_active\n\nMeasures:\n- count\n\nRelationships to other tables: enrollments\n\nSteps to build:\n- 1. Define dimensions: user_id, username, email, user_type, created_at\n- 2. Define measures: count\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "gold",
+      "table_name": "users",
+      "cube_name": "gold_users",
+      "description": "Gold layer cube for gold_users",
+      "table_metadata": {
+        "table_name": "users",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: user_id, username, email, user_type, created_at",
+      "2. Define measures: count",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 7,
+      "measure_count": 1,
+      "generated_at": "2025-11-21T13:44:47.241857"
+    },
+    "dependencies": [],
+    "layer": "gold",
+    "table_name": "users",
+    "cube_name": "gold_users",
+    "dimensions": [
+      {
+        "name": "user_id",
+        "sql": "${gold_users}.user_id",
+        "type": "number",
+        "title": "User Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "username",
+        "sql": "${gold_users}.username",
+        "type": "string",
+        "title": "Username",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "email",
+        "sql": "${gold_users}.email",
+        "type": "string",
+        "title": "Email",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "user_type",
+        "sql": "${gold_users}.user_type",
+        "type": "string",
+        "title": "User Type",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "created_at",
+        "sql": "${gold_users}.created_at",
+        "type": "time",
+        "title": "Created At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "last_login",
+        "sql": "${gold_users}.last_login",
+        "type": "time",
+        "title": "Last Login",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "is_active",
+        "sql": "${gold_users}.is_active",
+        "type": "string",
+        "title": "Is Active",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "user_id"
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "enrollments",
+        "parent_table": "users",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "enrollments.user_id = users.user_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_gold_courses",
+    "question": "Build a Cube.js cube definition for the gold layer table 'courses' (cube name: 'gold_courses').\n\nThe cube should include:\n\nDimensions:\n- course_id\n- course_name\n- course_code\n- instructor_id\n- category\n- difficulty_level\n- created_at\n\nMeasures:\n- count\n- duration_hours\n\nRelationships to other tables: enrollments\n\nSteps to build:\n- 1. Define dimensions: course_id, course_name, course_code, instructor_id, category\n- 2. Define measures: count, duration_hours\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "gold",
+      "table_name": "courses",
+      "cube_name": "gold_courses",
+      "description": "Gold layer cube for gold_courses",
+      "table_metadata": {
+        "table_name": "courses",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: course_id, course_name, course_code, instructor_id, category",
+      "2. Define measures: count, duration_hours",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 7,
+      "measure_count": 2,
+      "generated_at": "2025-11-21T13:44:47.241968"
+    },
+    "dependencies": [],
+    "layer": "gold",
+    "table_name": "courses",
+    "cube_name": "gold_courses",
+    "dimensions": [
+      {
+        "name": "course_id",
+        "sql": "${gold_courses}.course_id",
+        "type": "number",
+        "title": "Course Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "course_name",
+        "sql": "${gold_courses}.course_name",
+        "type": "string",
+        "title": "Course Name",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "course_code",
+        "sql": "${gold_courses}.course_code",
+        "type": "string",
+        "title": "Course Code",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "instructor_id",
+        "sql": "${gold_courses}.instructor_id",
+        "type": "string",
+        "title": "Instructor Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "category",
+        "sql": "${gold_courses}.category",
+        "type": "string",
+        "title": "Category",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "difficulty_level",
+        "sql": "${gold_courses}.difficulty_level",
+        "type": "string",
+        "title": "Difficulty Level",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "created_at",
+        "sql": "${gold_courses}.created_at",
+        "type": "time",
+        "title": "Created At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "course_id"
+        ]
+      },
+      {
+        "name": "duration_hours",
+        "sql": "${gold_courses}.duration_hours",
+        "type": "sum",
+        "title": "Duration Hours",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "enrollments",
+        "parent_table": "courses",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "enrollments.course_id = courses.course_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_gold_enrollments",
+    "question": "Build a Cube.js cube definition for the gold layer table 'enrollments' (cube name: 'gold_enrollments').\n\nThe cube should include:\n\nDimensions:\n- enrollment_id\n- user_id\n- course_id\n- enrolled_at\n- completed_at\n- status\n\nMeasures:\n- count\n- progress_percent\n- final_grade\n\nRelationships to other tables: enrollments, enrollments\n\nSteps to build:\n- 1. Define dimensions: enrollment_id, user_id, course_id, enrolled_at, completed_at\n- 2. Define measures: count, progress_percent, final_grade\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "gold",
+      "table_name": "enrollments",
+      "cube_name": "gold_enrollments",
+      "description": "Gold layer cube for gold_enrollments",
+      "table_metadata": {
+        "table_name": "enrollments",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: enrollment_id, user_id, course_id, enrolled_at, completed_at",
+      "2. Define measures: count, progress_percent, final_grade",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 6,
+      "measure_count": 3,
+      "generated_at": "2025-11-21T13:44:47.242292"
+    },
+    "dependencies": [],
+    "layer": "gold",
+    "table_name": "enrollments",
+    "cube_name": "gold_enrollments",
+    "dimensions": [
+      {
+        "name": "enrollment_id",
+        "sql": "${gold_enrollments}.enrollment_id",
+        "type": "number",
+        "title": "Enrollment Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "user_id",
+        "sql": "${gold_enrollments}.user_id",
+        "type": "string",
+        "title": "User Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "course_id",
+        "sql": "${gold_enrollments}.course_id",
+        "type": "string",
+        "title": "Course Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "enrolled_at",
+        "sql": "${gold_enrollments}.enrolled_at",
+        "type": "time",
+        "title": "Enrolled At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "completed_at",
+        "sql": "${gold_enrollments}.completed_at",
+        "type": "time",
+        "title": "Completed At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "status",
+        "sql": "${gold_enrollments}.status",
+        "type": "string",
+        "title": "Status",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "enrollment_id"
+        ]
+      },
+      {
+        "name": "progress_percent",
+        "sql": "${gold_enrollments}.progress_percent",
+        "type": "sum",
+        "title": "Progress Percent",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      },
+      {
+        "name": "final_grade",
+        "sql": "${gold_enrollments}.final_grade",
+        "type": "sum",
+        "title": "Final Grade",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "enrollments",
+        "parent_table": "users",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "enrollments.user_id = users.user_id",
+        "layer": "silver"
+      },
+      {
+        "child_table": "enrollments",
+        "parent_table": "courses",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "enrollments.course_id = courses.course_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_learner_engagement_summary",
+    "question": "Generate SQL to create a data mart 'learner_engagement_summary' from: users, enrollments, courses.\n\nBusiness Requirements:\n- \n- This mart contains a summary of learner engagement metrics, including total courses enrolled, average course duration, and total courses completed per user.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "learner_engagement_summary",
+      "source_tables": [
+        "users",
+        "enrollments",
+        "courses"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains a summary of learner engagement metrics, including total courses enrolled, average course duration, and total courses completed per user."
+      ],
+      "existing_sql": "CREATE TABLE learner_engagement_summary AS \nSELECT \n    u.user_id, \n    u.registration_date, \n    COUNT(e.course_id) AS total_courses_enrolled, \n    COALESCE(AVG(c.duration), 0) AS average_course_duration,  -- Handle NULL for average duration\n    SUM(CASE WHEN e.completed = TRUE THEN 1 ELSE 0 END) AS total_courses_completed \nFROM \n    users u \nLEFT JOIN \n    enrollments e ON u.user_id = e.user_id \nLEFT JOIN \n    courses c ON e.course_id = c.course_id \nGROUP BY \n    u.user_id, \n    u.registration"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-21T13:44:47.242345",
+      "source_table_count": 3
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "learner_engagement_summary",
+    "source_tables": [
+      "users",
+      "enrollments",
+      "courses"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains a summary of learner engagement metrics, including total courses enrolled, average course duration, and total courses completed per user."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_course_performance_summary",
+    "question": "Generate SQL to create a data mart 'course_performance_summary' from: courses, enrollments.\n\nBusiness Requirements:\n- \n- This mart contains performance metrics for each course, including total enrollments, total completions, and average completion time.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "course_performance_summary",
+      "source_tables": [
+        "courses",
+        "enrollments"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains performance metrics for each course, including total enrollments, total completions, and average completion time."
+      ],
+      "existing_sql": "CREATE TABLE course_performance_summary AS \nSELECT \n    c.course_id, \n    c.title, \n    COUNT(e.user_id) AS total_enrollments, \n    SUM(CASE WHEN e.completed = TRUE THEN 1 ELSE 0 END) AS total_completions, \n    AVG(NULLIF(e.completion_time, 0)) AS average_completion_time -- Handle division by zero for average calculation\nFROM \n    courses c \nLEFT JOIN \n    enrollments e ON c.course_id = e.course_id \nGROUP BY \n    c.course_id, c.title; \n\n-- Indexes can be added on course_id in both tables for per"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-21T13:44:47.242368",
+      "source_table_count": 2
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "course_performance_summary",
+    "source_tables": [
+      "courses",
+      "enrollments"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains performance metrics for each course, including total enrollments, total completions, and average completion time."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_user_acquisition_retention_analysis",
+    "question": "Generate SQL to create a data mart 'user_acquisition_retention_analysis' from: users, enrollments.\n\nBusiness Requirements:\n- \n- This mart contains metrics related to user acquisition and retention, including the number of courses enrolled and the number of days since registration.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "user_acquisition_retention_analysis",
+      "source_tables": [
+        "users",
+        "enrollments"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains metrics related to user acquisition and retention, including the number of courses enrolled and the number of days since registration."
+      ],
+      "existing_sql": "CREATE TABLE user_acquisition_retention_analysis AS \nSELECT \n    u.user_id, \n    COUNT(COALESCE(e.course_id, NULL)) AS total_courses_enrolled,  -- Count of courses enrolled, handling NULLs\n    COUNT(DISTINCT DATE_TRUNC('day', e.enrollment_date)) AS enrollment_days,  -- Count of distinct enrollment days\n    COALESCE(DATE_PART('day', CURRENT_DATE - u.registration_date), 0) AS days_since_registration  -- Days since registration, default to 0 if NULL\nFROM \n    users u \nLEFT JOIN \n    enrollments e O"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-21T13:44:47.242382",
+      "source_table_count": 2
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "user_acquisition_retention_analysis",
+    "source_tables": [
+      "users",
+      "enrollments"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains metrics related to user acquisition and retention, including the number of courses enrolled and the number of days since registration."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_course_performance_metrics",
+    "question": "Generate SQL to create a data mart 'course_performance_metrics' from: courses, enrollments.\n\nBusiness Requirements:\n- \n- This mart contains metrics related to course performance, including total enrollments, average completion rates, and total duration of courses.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "course_performance_metrics",
+      "source_tables": [
+        "courses",
+        "enrollments"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains metrics related to course performance, including total enrollments, average completion rates, and total duration of courses."
+      ],
+      "existing_sql": "CREATE TABLE course_performance_metrics AS \nSELECT \n    c.course_id, \n    c.title, \n    c.description, \n    COUNT(e.user_id) AS total_enrollments, \n    COALESCE(AVG(NULLIF(e.completion_rate, 0)), 0) AS average_completion_rate,  -- Handle NULL and avoid division by zero\n    COALESCE(SUM(e.duration), 0) AS total_duration  -- Handle NULL for total duration\nFROM \n    courses c \nLEFT JOIN \n    enrollments e ON c.course_id = e.course_id \nGROUP BY \n    c.course_id, c.title, c.description; \n\n-- Index su"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-21T13:44:47.242457",
+      "source_table_count": 2
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "course_performance_metrics",
+    "source_tables": [
+      "courses",
+      "enrollments"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains metrics related to course performance, including total enrollments, average completion rates, and total duration of courses."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_user_engagement_metrics",
+    "question": "Generate SQL to create a data mart 'user_engagement_metrics' from: users, enrollments.\n\nBusiness Requirements:\n- \n- This mart contains metrics related to user engagement, including total courses enrolled, average completion rates, and total time spent by users.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "user_engagement_metrics",
+      "source_tables": [
+        "users",
+        "enrollments"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains metrics related to user engagement, including total courses enrolled, average completion rates, and total time spent by users."
+      ],
+      "existing_sql": "CREATE TABLE user_engagement_metrics AS \nSELECT \n    u.user_id, \n    COUNT(e.course_id) AS total_courses_enrolled, \n    COALESCE(AVG(NULLIF(e.completion_rate, 0)), 0) AS average_completion_rate,  -- Handle NULL and avoid division by zero\n    COALESCE(SUM(e.duration), 0) AS total_time_spent  -- Handle NULL for total time spent\nFROM \n    users u \nLEFT JOIN \n    enrollments e ON u.user_id = e.user_id \nGROUP BY \n    u.user_id; \n\n-- Indexes can be added on user_id in both users and enrollments tables"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-21T13:44:47.242485",
+      "source_table_count": 2
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "user_engagement_metrics",
+    "source_tables": [
+      "users",
+      "enrollments"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains metrics related to user engagement, including total courses enrolled, average completion rates, and total time spent by users."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_enrollment_trends",
+    "question": "Generate SQL to create a data mart 'enrollment_trends' from: enrollments.\n\nBusiness Requirements:\n- \n- This mart contains trends in enrollments over time, including total enrollments and the number of courses offered on each date.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "enrollment_trends",
+      "source_tables": [
+        "enrollments"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains trends in enrollments over time, including total enrollments and the number of courses offered on each date."
+      ],
+      "existing_sql": "CREATE TABLE enrollment_trends AS \nSELECT \n    DATE_TRUNC('day', e.enrollment_date) AS enrollment_date,  -- Truncate to day for grouping\n    COUNT(e.user_id) AS total_enrollments,  -- Count total enrollments\n    COUNT(DISTINCT e.course_id) AS total_courses_offered  -- Count distinct courses offered\nFROM \n    enrollments e\nGROUP BY \n    DATE_TRUNC('day', e.enrollment_date)  -- Group by truncated date\nORDER BY \n    enrollment_date;  -- Order by enrollment date\n\n-- Indexes can be added on enrollmen"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-21T13:44:47.242499",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "enrollment_trends",
+    "source_tables": [
+      "enrollments"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains trends in enrollments over time, including total enrollments and the number of courses offered on each date."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_instructor_engagement_summary",
+    "question": "Generate SQL to create a data mart 'instructor_engagement_summary' from: users, enrollments, courses.\n\nBusiness Requirements:\n- \n- This mart contains a summary of instructor engagement metrics, including total courses enrolled, average course duration, and total courses completed by each user.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "instructor_engagement_summary",
+      "source_tables": [
+        "users",
+        "enrollments",
+        "courses"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains a summary of instructor engagement metrics, including total courses enrolled, average course duration, and total courses completed by each user."
+      ],
+      "existing_sql": "CREATE TABLE instructor_engagement_summary AS \nSELECT \n    u.user_id, \n    u.name AS user_name, \n    COUNT(e.course_id) AS total_courses_enrolled, \n    COALESCE(AVG(c.duration), 0) AS avg_course_duration,  -- Handle NULL for average duration\n    SUM(CASE WHEN e.completed = TRUE THEN 1 ELSE 0 END) AS total_courses_completed \nFROM \n    users u \nJOIN \n    enrollments e ON u.user_id = e.user_id \nJOIN \n    courses c ON e.course_id = c.course_id \nGROUP BY \n    u.user_id, u.name; \n\n-- Index suggestions"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-21T13:44:47.242510",
+      "source_table_count": 3
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "instructor_engagement_summary",
+    "source_tables": [
+      "users",
+      "enrollments",
+      "courses"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains a summary of instructor engagement metrics, including total courses enrolled, average course duration, and total courses completed by each user."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_course_performance_summary",
+    "question": "Generate SQL to create a data mart 'course_performance_summary' from: courses, enrollments.\n\nBusiness Requirements:\n- \n- This mart contains a summary of course performance metrics, including total enrollments and completion rates for each course.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "course_performance_summary",
+      "source_tables": [
+        "courses",
+        "enrollments"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains a summary of course performance metrics, including total enrollments and completion rates for each course."
+      ],
+      "existing_sql": "CREATE TABLE course_performance_summary AS \nSELECT \n    c.course_id, \n    c.title, \n    COUNT(e.user_id) AS total_enrollments, \n    COALESCE(AVG(CASE WHEN e.completed = TRUE THEN 1.0 ELSE 0.0 END), 0) AS completion_rate -- Handle NULL case for completion rate\nFROM \n    courses c \nLEFT JOIN \n    enrollments e ON c.course_id = e.course_id \nGROUP BY \n    c.course_id, c.title; \n\n-- Indexes can be added on course_id in both tables for performance optimization\n-- CREATE INDEX idx_courses_course_id ON "
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-21T13:44:47.242531",
+      "source_table_count": 2
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "course_performance_summary",
+    "source_tables": [
+      "courses",
+      "enrollments"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains a summary of course performance metrics, including total enrollments and completion rates for each course."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_user_acquisition_retention_summary",
+    "question": "Generate SQL to create a data mart 'user_acquisition_retention_summary' from: users, enrollments.\n\nBusiness Requirements:\n- \n- This mart contains a summary of user acquisition and retention metrics, including total courses enrolled and the number of days users have engaged with courses.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "user_acquisition_retention_summary",
+      "source_tables": [
+        "users",
+        "enrollments"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains a summary of user acquisition and retention metrics, including total courses enrolled and the number of days users have engaged with courses."
+      ],
+      "existing_sql": "CREATE TABLE user_acquisition_retention_summary AS \nSELECT \n    u.user_id, \n    u.name AS user_name, \n    COUNT(e.course_id) AS total_courses_enrolled, \n    COUNT(DISTINCT DATE_TRUNC('day', e.enrollment_date)) AS enrollment_days, \n    SUM(CASE WHEN e.completed = TRUE THEN 1 ELSE 0 END) AS total_courses_completed \nFROM \n    users u \nLEFT JOIN \n    enrollments e ON u.user_id = e.user_id \nGROUP BY \n    u.user_id, u.name; \n\n-- Indexes can be added on user_id in users and enrollments for performance "
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-21T13:44:47.242544",
+      "source_table_count": 2
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "user_acquisition_retention_summary",
+    "source_tables": [
+      "users",
+      "enrollments"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains a summary of user acquisition and retention metrics, including total courses enrolled and the number of days users have engaged with courses."
+    ]
+  },
+  {
+    "question_id": "sql_transformation_silver_users",
+    "question": "Generate SQL transformation code to create 'silver_users' from: users.\n\nBusiness Requirements:\n- Transform users from raw to silver\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "silver_users",
+      "source_tables": [
+        "users"
+      ],
+      "business_requirements": [
+        "Transform users from raw to silver",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-21T13:44:47.242562",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "silver_users",
+    "source_tables": [
+      "users"
+    ],
+    "business_requirements": [
+      "Transform users from raw to silver",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_silver_courses",
+    "question": "Generate SQL transformation code to create 'silver_courses' from: courses.\n\nBusiness Requirements:\n- Transform courses from raw to silver\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "silver_courses",
+      "source_tables": [
+        "courses"
+      ],
+      "business_requirements": [
+        "Transform courses from raw to silver",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-21T13:44:47.242574",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "silver_courses",
+    "source_tables": [
+      "courses"
+    ],
+    "business_requirements": [
+      "Transform courses from raw to silver",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_silver_enrollments",
+    "question": "Generate SQL transformation code to create 'silver_enrollments' from: enrollments.\n\nBusiness Requirements:\n- Transform enrollments from raw to silver\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "silver_enrollments",
+      "source_tables": [
+        "enrollments"
+      ],
+      "business_requirements": [
+        "Transform enrollments from raw to silver",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-21T13:44:47.242585",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "silver_enrollments",
+    "source_tables": [
+      "enrollments"
+    ],
+    "business_requirements": [
+      "Transform enrollments from raw to silver",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_gold_users",
+    "question": "Generate SQL transformation code to create 'gold_users' from: users.\n\nBusiness Requirements:\n- Transform users from silver to gold\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "gold_users",
+      "source_tables": [
+        "users"
+      ],
+      "business_requirements": [
+        "Transform users from silver to gold",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-21T13:44:47.242595",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "gold_users",
+    "source_tables": [
+      "users"
+    ],
+    "business_requirements": [
+      "Transform users from silver to gold",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_gold_courses",
+    "question": "Generate SQL transformation code to create 'gold_courses' from: courses.\n\nBusiness Requirements:\n- Transform courses from silver to gold\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "gold_courses",
+      "source_tables": [
+        "courses"
+      ],
+      "business_requirements": [
+        "Transform courses from silver to gold",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-21T13:44:47.242604",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "gold_courses",
+    "source_tables": [
+      "courses"
+    ],
+    "business_requirements": [
+      "Transform courses from silver to gold",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_gold_enrollments",
+    "question": "Generate SQL transformation code to create 'gold_enrollments' from: enrollments.\n\nBusiness Requirements:\n- Transform enrollments from silver to gold\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "gold_enrollments",
+      "source_tables": [
+        "enrollments"
+      ],
+      "business_requirements": [
+        "Transform enrollments from silver to gold",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-21T13:44:47.242613",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "gold_enrollments",
+    "source_tables": [
+      "enrollments"
+    ],
+    "business_requirements": [
+      "Transform enrollments from silver to gold",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  }
+]

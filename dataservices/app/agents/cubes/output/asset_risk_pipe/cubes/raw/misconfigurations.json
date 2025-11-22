@@ -1,0 +1,7 @@
+{
+  "name": "misconfigurations",
+  "description": "Raw layer cube for misconfigurations",
+  "dimensions": [],
+  "measures": [],
+  "preAggregations": []
+}

@@ -1,0 +1,27 @@
+{
+  "name": "silver_to_gold_gold_total_students_enrolled",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_total_students_enrolled",
+  "target_model": "gold_gold_total_students_enrolled",
+  "steps": [
+    {
+      "step_name": "Metric: total_students_enrolled",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_total_students_enrolled (instructor_id, total_students_enrolled)\nSELECT \n    c.instructor_id,\n    COUNT(DISTINCT s.student_id) AS total_students_enrolled\nFROM \n    courses c\nLEFT JOIN \n    students s ON s.course_id = c.course_id\nGROUP BY \n    c.instructor_id;",
+      "description": "Count of total students enrolled in courses taught by each instructor",
+      "input_tables": [
+        "courses",
+        "students",
+        "instructors"
+      ],
+      "output_table": "gold_total_students_enrolled",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_total_students_enrolled from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

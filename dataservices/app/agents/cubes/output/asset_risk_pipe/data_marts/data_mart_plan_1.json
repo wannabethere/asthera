@@ -1,0 +1,6 @@
+{
+  "goal": "Create Attack Surface Index (ASI) datamart by business unit with top 5 rankings",
+  "marts": [],
+  "reasoning": "No relevant silver tables found for this goal",
+  "complexity": "low"
+}

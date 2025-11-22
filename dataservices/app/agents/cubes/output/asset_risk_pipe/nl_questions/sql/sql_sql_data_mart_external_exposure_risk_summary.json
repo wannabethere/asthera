@@ -1,0 +1,38 @@
+{
+  "question_id": "sql_data_mart_external_exposure_risk_summary",
+  "question": "Generate SQL to create a data mart 'external_exposure_risk_summary' from: external_exposure.\n\nBusiness Requirements:\n- \n- This mart summarizes external exposure risks categorized by risk type, including the total number of exposures and their potential impact.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+  "context": {
+    "sql_type": "data_mart",
+    "target_object": "external_exposure_risk_summary",
+    "source_tables": [
+      "external_exposure"
+    ],
+    "business_requirements": [
+      "",
+      "This mart summarizes external exposure risks categorized by risk type, including the total number of exposures and their potential impact."
+    ],
+    "existing_sql": "CREATE TABLE external_exposure_risk_summary (\n    risk_category VARCHAR(255) NOT NULL,\n    total_exposures INT NOT NULL,\n    total_potential_impact DECIMAL(18, 2) NOT NULL,\n    os_software_stack VARCHAR(255),\n    business_unit VARCHAR(255),\n    environment VARCHAR(50),\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n    PRIMARY KEY (risk_category, os_software_stack, business_unit, environment),\n    CONSTRAINT chk"
+  },
+  "expected_output_type": "sql",
+  "steps": [
+    "1. Analyze source tables and requirements",
+    "2. Design table/view structure",
+    "3. Write SQL CREATE statement",
+    "4. Add indexes and constraints",
+    "5. Validate SQL syntax and logic"
+  ],
+  "metadata": {
+    "generated_at": "2025-11-20T11:47:30.507295",
+    "source_table_count": 1
+  },
+  "dependencies": [],
+  "sql_type": "data_mart",
+  "target_object": "external_exposure_risk_summary",
+  "source_tables": [
+    "external_exposure"
+  ],
+  "business_requirements": [
+    "",
+    "This mart summarizes external exposure risks categorized by risk type, including the total number of exposures and their potential impact."
+  ]
+}

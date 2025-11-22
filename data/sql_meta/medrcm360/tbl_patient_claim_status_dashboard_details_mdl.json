@@ -1,0 +1,301 @@
+{
+  "catalog": "medrcm360",
+  "schema": "public",
+  "models": [
+    {
+      "name": "patient_claim_status_dashboard_details",
+      "description": "Patient claim status dashboard details showing claims that are billed to patients. This table tracks claim status, aging buckets, claim amounts, collections, balances, and detailed notes for patient-responsible claims.",
+      "tableReference": {
+        "table": "tbl_patient_claim_status_dashboard_details_202510232111"
+      },
+      "columns": [
+        {
+          "name": "patient_claim_dash_uuid",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Patient Claim Dashboard UUID",
+            "description": "Unique identifier for the patient claim dashboard record"
+          }
+        },
+        {
+          "name": "claim_status_category",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Claim Status Category",
+            "description": "Category of claim status (e.g., Patient, Payer)"
+          }
+        },
+        {
+          "name": "claim_status",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Claim Status",
+            "description": "Current status of the claim (e.g., PAT: Patient, PEN: Pending, INA: Insurance Accepted)"
+          }
+        },
+        {
+          "name": "claim_no",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Claim Number",
+            "description": "Unique identifier for the claim"
+          }
+        },
+        {
+          "name": "claim_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Claim Date",
+            "description": "Date when the claim was created or submitted"
+          }
+        },
+        {
+          "name": "bucket",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Aging Bucket",
+            "description": "Aging bucket category (e.g., 0-30 Days, 31-60 Days, > 180 Days)"
+          }
+        },
+        {
+          "name": "service_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Service Date",
+            "description": "Date when the medical service was provided to the patient"
+          }
+        },
+        {
+          "name": "latest_transfer_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Latest Transfer Date",
+            "description": "Most recent date when the claim was transferred or status changed"
+          }
+        },
+        {
+          "name": "claim_status_change_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Claim Status Change Date",
+            "description": "Date when the claim status was last changed"
+          }
+        },
+        {
+          "name": "modified_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Modified Date",
+            "description": "Date when the record was last modified"
+          }
+        },
+        {
+          "name": "notes",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Notes",
+            "description": "Detailed notes about the claim status, actions taken, and communications"
+          }
+        },
+        {
+          "name": "staff_member",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Staff Member",
+            "description": "Name of the staff member who last worked on or updated the claim"
+          }
+        },
+        {
+          "name": "patient_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Patient Name",
+            "description": "Full name of the patient"
+          }
+        },
+        {
+          "name": "patient_acct_no",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Patient Account Number",
+            "description": "Unique account number assigned to the patient"
+          }
+        },
+        {
+          "name": "payer_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Payer Name",
+            "description": "Name of the insurance payer or Patient if billed to patient"
+          }
+        },
+        {
+          "name": "payer_group_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Payer Group Name",
+            "description": "Group or category name for the payer"
+          }
+        },
+        {
+          "name": "payer_class",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Payer Class",
+            "description": "Classification of the payer (e.g., Patient, Unknown)"
+          }
+        },
+        {
+          "name": "facility_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Facility Name",
+            "description": "Name of the healthcare facility"
+          }
+        },
+        {
+          "name": "facility_group_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Facility Group Name",
+            "description": "Group or category name for the facility"
+          }
+        },
+        {
+          "name": "facility_place_of_service",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Facility Place of Service",
+            "description": "Place of service code indicating where the service was provided"
+          }
+        },
+        {
+          "name": "department_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Department Name",
+            "description": "Name of the department where the service was provided"
+          }
+        },
+        {
+          "name": "renderin_provider_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Rendering Provider Name",
+            "description": "Name of the healthcare provider who rendered the service"
+          }
+        },
+        {
+          "name": "appointment_provider_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Appointment Provider Name",
+            "description": "Name of the healthcare provider for the appointment"
+          }
+        },
+        {
+          "name": "additional_provider1_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Additional Provider 1 Name",
+            "description": "Name of the first additional provider"
+          }
+        },
+        {
+          "name": "additional_provider2_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Additional Provider 2 Name",
+            "description": "Name of the second additional provider"
+          }
+        },
+        {
+          "name": "pay_to_billing_provider",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Pay to Billing Provider",
+            "description": "Name of the provider to whom payment should be made"
+          }
+        },
+        {
+          "name": "resource_provider_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Resource Provider Name",
+            "description": "Name of the resource provider associated with the service"
+          }
+        },
+        {
+          "name": "supervising_provider_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Supervising Provider Name",
+            "description": "Name of the supervising provider"
+          }
+        },
+        {
+          "name": "claim_amount",
+          "type": "DECIMAL",
+          "properties": {
+            "displayName": "Claim Amount",
+            "description": "Total amount of the claim"
+          }
+        },
+        {
+          "name": "collected",
+          "type": "DECIMAL",
+          "properties": {
+            "displayName": "Collected Amount",
+            "description": "Amount that has been collected from the patient"
+          }
+        },
+        {
+          "name": "total_balance",
+          "type": "DECIMAL",
+          "properties": {
+            "displayName": "Total Balance",
+            "description": "Remaining balance owed by the patient"
+          }
+        },
+        {
+          "name": "source_file",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Source File",
+            "description": "Source file from which the data was imported"
+          }
+        },
+        {
+          "name": "load_ts",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Load Timestamp",
+            "description": "Timestamp when the record was loaded into the system"
+          }
+        },
+        {
+          "name": "age",
+          "type": "INTEGER",
+          "properties": {
+            "displayName": "Age in Days",
+            "description": "Age of the claim in days from service date to current date"
+          }
+        },
+        {
+          "name": "aging",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Aging Code",
+            "description": "Aging code identifier (e.g., B1, B2, B3, B7 for different aging buckets)"
+          }
+        }
+      ],
+      "primaryKey": "patient_claim_dash_uuid",
+      "properties": {
+        "displayName": "Patient Claim Status Dashboard Details",
+        "description": "Detailed patient claim status information for claims billed to patients"
+      }
+    }
+  ]
+}
+

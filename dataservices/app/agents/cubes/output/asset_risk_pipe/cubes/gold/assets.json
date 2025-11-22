@@ -1,0 +1,97 @@
+{
+  "name": "gold_assets",
+  "sql": "SELECT * FROM gold_assets",
+  "title": "Gold Assets",
+  "description": "Gold layer cube for gold_assets",
+  "dimensions": [
+    {
+      "name": "asset_id",
+      "sql": "${gold_assets}.asset_id",
+      "type": "number",
+      "title": "Asset Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": true
+    },
+    {
+      "name": "hostname",
+      "sql": "${gold_assets}.hostname",
+      "type": "string",
+      "title": "Hostname",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "business_unit",
+      "sql": "${gold_assets}.business_unit",
+      "type": "string",
+      "title": "Business Unit",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "env",
+      "sql": "${gold_assets}.env",
+      "type": "string",
+      "title": "Env",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "created_at",
+      "sql": "${gold_assets}.created_at",
+      "type": "time",
+      "title": "Created At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "updated_at",
+      "sql": "${gold_assets}.updated_at",
+      "type": "time",
+      "title": "Updated At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    }
+  ],
+  "measures": [
+    {
+      "name": "count",
+      "sql": "1",
+      "type": "count",
+      "title": "Count",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": [
+        "asset_id"
+      ]
+    },
+    {
+      "name": "criticality",
+      "sql": "${gold_assets}.criticality",
+      "type": "sum",
+      "title": "Criticality",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": null
+    }
+  ],
+  "joins": [],
+  "preAggregations": [],
+  "segments": []
+}

@@ -1,0 +1,145 @@
+{
+  "question_id": "cube_raw_enrollments",
+  "question": "Build a Cube.js cube definition for the raw layer table 'enrollments' (cube name: 'raw_enrollments').\n\nThe cube should include:\n\nDimensions:\n- enrollment_id\n- user_id\n- course_id\n- enrolled_at\n- completed_at\n- status\n\nMeasures:\n- count\n- progress_percent\n- final_grade\n\nRelationships to other tables: enrollments, enrollments\n\nSteps to build:\n- 1. Define dimensions: enrollment_id, user_id, course_id, enrolled_at, completed_at\n- 2. Define measures: count, progress_percent, final_grade\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+  "context": {
+    "layer": "raw",
+    "table_name": "enrollments",
+    "cube_name": "raw_enrollments",
+    "description": "Raw layer cube for raw_enrollments",
+    "table_metadata": {
+      "table_name": "enrollments",
+      "description": ""
+    }
+  },
+  "expected_output_type": "cube",
+  "steps": [
+    "1. Define dimensions: enrollment_id, user_id, course_id, enrolled_at, completed_at",
+    "2. Define measures: count, progress_percent, final_grade",
+    "3. Configure pre-aggregations for performance",
+    "4. Set up joins with related tables"
+  ],
+  "metadata": {
+    "dimension_count": 6,
+    "measure_count": 3,
+    "generated_at": "2025-11-21T13:44:47.241057"
+  },
+  "dependencies": [],
+  "layer": "raw",
+  "table_name": "enrollments",
+  "cube_name": "raw_enrollments",
+  "dimensions": [
+    {
+      "name": "enrollment_id",
+      "sql": "${raw_enrollments}.enrollment_id",
+      "type": "number",
+      "title": "Enrollment Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": true
+    },
+    {
+      "name": "user_id",
+      "sql": "${raw_enrollments}.user_id",
+      "type": "string",
+      "title": "User Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "course_id",
+      "sql": "${raw_enrollments}.course_id",
+      "type": "string",
+      "title": "Course Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "enrolled_at",
+      "sql": "${raw_enrollments}.enrolled_at",
+      "type": "time",
+      "title": "Enrolled At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "completed_at",
+      "sql": "${raw_enrollments}.completed_at",
+      "type": "time",
+      "title": "Completed At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "status",
+      "sql": "${raw_enrollments}.status",
+      "type": "string",
+      "title": "Status",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    }
+  ],
+  "measures": [
+    {
+      "name": "count",
+      "sql": "1",
+      "type": "count",
+      "title": "Count",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": [
+        "enrollment_id"
+      ]
+    },
+    {
+      "name": "progress_percent",
+      "sql": "${raw_enrollments}.progress_percent",
+      "type": "sum",
+      "title": "Progress Percent",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": null
+    },
+    {
+      "name": "final_grade",
+      "sql": "${raw_enrollments}.final_grade",
+      "type": "sum",
+      "title": "Final Grade",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": null
+    }
+  ],
+  "relationships": [
+    {
+      "child_table": "enrollments",
+      "parent_table": "users",
+      "join_type": "MANY_TO_ONE",
+      "join_condition": "enrollments.user_id = users.user_id",
+      "layer": "silver"
+    },
+    {
+      "child_table": "enrollments",
+      "parent_table": "courses",
+      "join_type": "MANY_TO_ONE",
+      "join_condition": "enrollments.course_id = courses.course_id",
+      "layer": "silver"
+    }
+  ]
+}

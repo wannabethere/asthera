@@ -1,0 +1,110 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "title": "High Breach Risk Assets Trend - 12 Months",
+  "description": "Time-series area chart showing count of high breach risk assets (high ASI + high likelihood) over 12 months. Includes trend indicators.",
+  "width": 900,
+  "height": 400,
+  "data": {
+    "name": "exposure_trends_monthly"
+  },
+  "transform": [
+    {
+      "filter": "datum.snapshot_month >= date('2023-01-01')"
+    },
+    {
+      "calculate": "toDate(datum.snapshot_month)",
+      "as": "month_date"
+    },
+    {
+      "calculate": "datum.high_breach_risk_assets",
+      "as": "breach_risk_count"
+    }
+  ],
+  "layer": [
+    {
+      "mark": {
+        "type": "area",
+        "interpolate": "monotone",
+        "opacity": 0.6
+      },
+      "encoding": {
+        "x": {
+          "field": "month_date",
+          "type": "temporal",
+          "title": "Month",
+          "axis": {
+            "format": "%b %Y",
+            "labelAngle": -45
+          }
+        },
+        "y": {
+          "field": "breach_risk_count",
+          "type": "quantitative",
+          "title": "High Breach Risk Assets",
+          "axis": {
+            "title": "Asset Count"
+          }
+        },
+        "color": {
+          "field": "business_unit",
+          "type": "nominal",
+          "title": "Business Unit",
+          "scale": {
+            "scheme": "reds"
+          },
+          "legend": {
+            "orient": "right"
+          }
+        },
+        "tooltip": [
+          {"field": "month_date", "type": "temporal", "title": "Month", "format": "%B %Y"},
+          {"field": "business_unit", "type": "nominal", "title": "Business Unit"},
+          {"field": "env", "type": "nominal", "title": "Environment"},
+          {"field": "breach_risk_count", "type": "quantitative", "title": "High Breach Risk Assets"},
+          {"field": "breach_risk_change", "type": "quantitative", "title": "Change from Previous Month", "format": "+d"}
+        ]
+      }
+    },
+    {
+      "mark": {
+        "type": "line",
+        "point": true,
+        "strokeWidth": 2,
+        "color": "#E74C3C"
+      },
+      "encoding": {
+        "x": {"field": "month_date", "type": "temporal"},
+        "y": {"field": "breach_risk_count", "type": "quantitative"},
+        "color": {"value": "#E74C3C"}
+      }
+    },
+    {
+      "mark": {
+        "type": "rule",
+        "strokeDash": [5, 5],
+        "opacity": 0.5
+      },
+      "encoding": {
+        "x": {"field": "month_date", "type": "temporal"},
+        "y": {
+          "field": "breach_risk_change",
+          "type": "quantitative",
+          "title": "Change"
+        },
+        "color": {
+          "condition": {
+            "test": "datum.breach_risk_change > 0",
+            "value": "#E74C3C"
+          },
+          "value": "#27AE60"
+        }
+      }
+    }
+  ],
+  "config": {
+    "view": {
+      "stroke": "transparent"
+    }
+  }
+}
+

@@ -726,6 +726,50 @@ class VegaLiteChartGenerationPipeline:
                                     logger.info("Final fix: Updated encoding.color for single value with percentage")
                                 
                                 chart_schema["encoding"] = encoding
+                        elif has_percentage_change_col and len(numeric_cols) == 0:
+                            # ONLY percentage_change exists (no other value column) - show just the percentage
+                            encoding = chart_schema.get("encoding", {})
+                            
+                            # Find the percentage_change column
+                            percentage_change_col_name = None
+                            for col in first_item.keys():
+                                col_lower = str(col).lower()
+                                if "percentage_change" in col_lower or "percent_change" in col_lower:
+                                    percentage_change_col_name = col
+                                    break
+                            
+                            if percentage_change_col_name:
+                                # Force correct encoding
+                                if not encoding.get("text") or encoding.get("text", {}).get("field") != "display_text":
+                                    encoding["text"] = {"field": "display_text", "type": "nominal"}
+                                    logger.info("Final fix: Updated encoding.text.field to display_text for percentage_change only")
+                                
+                                # Ensure transform exists
+                                if "transform" not in chart_schema:
+                                    chart_schema["transform"] = []
+                                
+                                has_display_text = any(t.get("as") == "display_text" for t in chart_schema["transform"])
+                                if not has_display_text:
+                                    # Generate transform: just show the percentage change formatted correctly
+                                    transform_expr = f"format(datum.{percentage_change_col_name} / 100, '+.1%')"
+                                    chart_schema["transform"] = [{
+                                        "calculate": transform_expr,
+                                        "as": "display_text"
+                                    }]
+                                    logger.info(f"Final fix: Added display_text transform for percentage_change only: {percentage_change_col_name}")
+                                
+                                # Ensure color encoding (can use percentage_change for conditional color)
+                                if "color" not in encoding or (isinstance(encoding.get("color"), dict) and encoding.get("color", {}).get("field") == "metric"):
+                                    encoding["color"] = {
+                                        "condition": {
+                                            "test": f"datum.{percentage_change_col_name} > 0",
+                                            "value": "#16a34a"
+                                        },
+                                        "value": "#ef4444"
+                                    }
+                                    logger.info("Final fix: Updated encoding.color for percentage_change only")
+                                
+                                chart_schema["encoding"] = encoding
                         else:
                             # Not a comparison KPI - ensure encoding exists for single value KPI
                             encoding = chart_schema.get("encoding", {})
@@ -750,16 +794,36 @@ class VegaLiteChartGenerationPipeline:
                             else:
                                 # No display_text transform - use original field
                                 if not encoding.get("text"):
-                                    # Find the primary numeric field
-                                    numeric_fields = [k for k, v in first_item.items() if isinstance(v, (int, float)) or (isinstance(v, str) and v.replace('.', '').replace('-', '').isdigit())]
+                                    # Find the primary numeric field (handle string numbers and None values)
+                                    numeric_fields = []
+                                    for k, v in first_item.items():
+                                        if v is None or (isinstance(v, str) and v.lower() in ["none", "null", ""]):
+                                            continue
+                                        try:
+                                            if isinstance(v, (int, float)):
+                                                numeric_fields.append(k)
+                                            elif isinstance(v, str):
+                                                # Try to parse as float (handle strings like "1.0517241379310345")
+                                                clean_val = v.replace(',', '').replace('$', '').replace('%', '').strip()
+                                                if clean_val and clean_val.lower() not in ["none", "null", ""]:
+                                                    float(clean_val)  # Test if it's a number
+                                                    numeric_fields.append(k)
+                                        except (ValueError, TypeError):
+                                            continue
+                                    
                                     if numeric_fields:
                                         primary_field = numeric_fields[0]
                                         encoding["text"] = {"field": primary_field, "type": "quantitative"}
                                         logger.info(f"Final fix: Added encoding.text.field = {primary_field} for single value KPI")
                                     else:
-                                        # Fallback to "value" if no numeric field found
-                                        encoding["text"] = {"field": "value", "type": "quantitative"}
-                                        logger.warning("Final fix: Using fallback encoding.text.field = value")
+                                        # Fallback to first non-None field or "value"
+                                        fallback_field = None
+                                        for k, v in first_item.items():
+                                            if v is not None and (not isinstance(v, str) or v.lower() not in ["none", "null", ""]):
+                                                fallback_field = k
+                                                break
+                                        encoding["text"] = {"field": fallback_field or "value", "type": "quantitative"}
+                                        logger.warning(f"Final fix: Using fallback encoding.text.field = {fallback_field or 'value'}")
                                     
                                     if "color" not in encoding:
                                         encoding["color"] = {"value": "#2563eb"}
@@ -773,6 +837,58 @@ class VegaLiteChartGenerationPipeline:
                         encoding["color"] = {"value": "#2563eb"}
                         chart_schema["encoding"] = encoding
                         logger.warning("No data values found, added default encoding")
+                
+                # CRITICAL: Final safety check - ensure encoding always exists and is valid
+                if "encoding" not in chart_schema or not chart_schema.get("encoding") or not chart_schema["encoding"].get("text"):
+                    logger.warning("Encoding missing or incomplete after processing, creating default encoding")
+                    encoding = chart_schema.get("encoding", {})
+                    
+                    # Try to find a numeric field from data
+                    if "data" in chart_schema and "values" in chart_schema["data"]:
+                        data_values = chart_schema["data"].get("values", [])
+                        if data_values and len(data_values) > 0:
+                            first_item = data_values[0]
+                            # Find numeric fields (handle string numbers and "None" values)
+                            numeric_fields = []
+                            for k, v in first_item.items():
+                                if v is None or (isinstance(v, str) and v.lower() in ["none", "null", ""]):
+                                    continue
+                                try:
+                                    if isinstance(v, (int, float)):
+                                        numeric_fields.append(k)
+                                    elif isinstance(v, str):
+                                        # Try to parse as float
+                                        clean_val = v.replace(',', '').replace('$', '').replace('%', '').strip()
+                                        if clean_val and clean_val.lower() not in ["none", "null", ""]:
+                                            float(clean_val)  # Test if it's a number
+                                            numeric_fields.append(k)
+                                except (ValueError, TypeError):
+                                    continue
+                            
+                            if numeric_fields:
+                                primary_field = numeric_fields[0]
+                                encoding["text"] = {"field": primary_field, "type": "quantitative"}
+                                logger.info(f"Final safety check: Added encoding.text.field = {primary_field}")
+                            else:
+                                # Fallback to first field in data
+                                first_key = list(first_item.keys())[0] if first_item else "value"
+                                encoding["text"] = {"field": first_key, "type": "quantitative"}
+                                logger.warning(f"Final safety check: Using fallback encoding.text.field = {first_key}")
+                        else:
+                            # No data values - use default
+                            encoding["text"] = {"field": "value", "type": "quantitative"}
+                            logger.warning("Final safety check: No data values, using default encoding")
+                    else:
+                        # No data section - use default
+                        encoding["text"] = {"field": "value", "type": "quantitative"}
+                        logger.warning("Final safety check: No data section, using default encoding")
+                    
+                    # Ensure color is set
+                    if "color" not in encoding:
+                        encoding["color"] = {"value": "#2563eb"}
+                    
+                    chart_schema["encoding"] = encoding
+                    logger.info("Final safety check: Encoding ensured in chart_schema")
                 
                 # Final cleanup: ensure dummy flags are removed from final schema
                 final_kpi_metadata = chart_schema.get("kpi_metadata", {})
@@ -791,6 +907,27 @@ class VegaLiteChartGenerationPipeline:
                 chart_schema["kpi_metadata"].pop("requires_custom_template", None)
                 if "kpi_metadata" in chart_schema and chart_schema["kpi_metadata"]:
                     chart_schema["kpi_metadata"]["vega_lite_compatible"] = True
+            
+            # ABSOLUTE FINAL CHECK: Ensure encoding exists before returning
+            if "encoding" not in chart_schema or not chart_schema.get("encoding") or not chart_schema["encoding"].get("text"):
+                logger.error("CRITICAL: Encoding still missing after all processing - creating emergency encoding")
+                # Get data to find a field
+                field_name = "value"
+                if "data" in chart_schema and "values" in chart_schema["data"]:
+                    data_values = chart_schema["data"].get("values", [])
+                    if data_values and len(data_values) > 0:
+                        first_item = data_values[0]
+                        # Get first key that's not None
+                        for k, v in first_item.items():
+                            if v is not None and (not isinstance(v, str) or v.lower() not in ["none", "null", ""]):
+                                field_name = k
+                                break
+                
+                chart_schema["encoding"] = {
+                    "text": {"field": field_name, "type": "quantitative"},
+                    "color": {"value": "#2563eb"}
+                }
+                logger.error(f"CRITICAL: Created emergency encoding with field = {field_name}")
             
             return chart_schema
             
@@ -1289,7 +1426,11 @@ class VegaLiteChartGenerationPipeline:
                                 value_val = float(row_dict.get(value_col, 0)) if isinstance(row_dict.get(value_col), (str, int, float)) else 0
                                 pct_change = float(row_dict.get(percentage_change_col, 0)) if isinstance(row_dict.get(percentage_change_col), (str, int, float)) else 0
                                 
-                                title = value_col.replace("_", " ").title()
+                                # Generate title from query context if available
+                                title = self._extract_title_from_query(query, value_col)
+                                if "percentage" in query.lower() or "change" in query.lower():
+                                    if not title.endswith("Change"):
+                                        title += " Change"
                                 
                                 kpi_chart = {
                                     "title": title,
@@ -1368,8 +1509,8 @@ class VegaLiteChartGenerationPipeline:
                         except (ValueError, TypeError):
                             num_value = 0
                         
-                        # Generate title from field name
-                        title = primary_field.replace("_", " ").title()
+                        # Generate title from query context if available, otherwise use field name
+                        title = self._extract_title_from_query(query, primary_field)
                         
                         # Determine format based on field type
                         field_lower = primary_field.lower()
@@ -1795,6 +1936,63 @@ class VegaLiteChartGenerationPipeline:
             kpi_charts.append(kpi_chart)
         
         return kpi_charts
+    
+    def _extract_title_from_query(self, query: str, field_name: str = None) -> str:
+        """Extract meaningful title from query, avoiding generic terms like 'count'
+        
+        Args:
+            query: User's natural language query
+            field_name: Optional field name to use as fallback
+            
+        Returns:
+            Meaningful title extracted from query
+        """
+        if not query:
+            return field_name.replace("_", " ").title() if field_name else "KPI"
+        
+        query_lower = query.lower()
+        field_lower = field_name.lower() if field_name else ""
+        
+        # Extract key concepts from query
+        if "activit" in query_lower:
+            if "average" in query_lower:
+                if "per learner" in query_lower or "per user" in query_lower:
+                    return "Average Activities per Learner"
+                return "Average Activities"
+            elif "number" in query_lower or "count" in query_lower or "total" in query_lower:
+                if "per learner" in query_lower or "per user" in query_lower:
+                    return "Number of Activities per Learner"
+                return "Number of Activities"
+            else:
+                return "Activities"
+        elif "learner" in query_lower:
+            if "average" in query_lower:
+                return "Average Learners"
+            elif "number" in query_lower or "count" in query_lower or "total" in query_lower:
+                return "Number of Learners"
+            else:
+                return "Learners"
+        elif "completion" in query_lower or "complete" in query_lower:
+            if "average" in query_lower:
+                return "Average Completions"
+            elif "rate" in query_lower:
+                return "Completion Rate"
+            else:
+                return "Completions"
+        elif "training" in query_lower or "course" in query_lower:
+            if "average" in query_lower:
+                return "Average Trainings"
+            else:
+                return "Trainings"
+        else:
+            # Fallback: use field name or first meaningful words from query
+            if field_name:
+                return field_name.replace("_", " ").title()
+            # Extract first few words from query as title
+            words = [w for w in query.split() if w.lower() not in ["show", "me", "the", "a", "an", "what", "is", "are", "how", "many"]]
+            if words:
+                return " ".join(words[:4]).title()
+            return "KPI"
     
     def _is_comparison_kpi(self, columns: List[str], kpi_metadata: Dict[str, Any]) -> bool:
         """Check if this is a comparison KPI based on column names and metadata"""
@@ -2450,7 +2648,7 @@ class VegaLiteChartGenerationPipeline:
                         "as": "percentage_change"
                     }},
                     {{
-                        "calculate": "format(datum.current, ',.0f') + ' (' + format(datum.percentage_change, '+.1%') + ')'",
+                        "calculate": "format(datum.current, ',.0f') + ' (' + format(datum.percentage_change / 100, '+.1%') + ')'",
                         "as": "display_text"
                     }}
                 ],
@@ -2567,10 +2765,17 @@ class VegaLiteChartGenerationPipeline:
                - Transform: `format(datum.total_time_spent, ',.0f') + ' (' + format(datum.percentage_change / 100, '+.1%') + ')'`
                - Display: "X (Z%)" (NOT "X vs X (Z%)")
             
+            3. **Only Percentage Change** (has ONLY percentage_change column, no other value columns):
+               - Data: `{{"percentage_change": <PERCENTAGE_CHANGE>}}`
+               - Transform: `format(datum.percentage_change / 100, '+.1%')`
+               - Display: "+Z%" or "-Z%" (just the percentage change)
+               - CRITICAL: Always divide by 100 when formatting percentage_change (e.g., `format(datum.percentage_change / 100, '+.1%')`)
+            
             - DO NOT transform column names - keep them as they are in the original data
             - Convert string values to numbers: "17035.0" → 17035.0 (keep as float)
-            - percentage_change is typically already a percentage value (e.g., 7.83 means 7.83%), so divide by 100 in the format expression
+            - percentage_change is typically already a percentage value (e.g., 7.83 means 7.83%), so ALWAYS divide by 100 in the format expression
             - If you only have ONE value column + percentage_change (no separate previous column), use format "X (Z%)" NOT "X vs Y (Z%)"
+            - If you ONLY have percentage_change (no other columns), display just the formatted percentage: "+Z%" or "-Z%"
             
             **IMPORTANT RULES:**
             - DO NOT use the original column names in encoding if they don't match the expected field names
@@ -2581,7 +2786,14 @@ class VegaLiteChartGenerationPipeline:
               * Use the percentage_change value directly from the data
               * In the transform, divide by 100 when formatting (e.g., `format(datum.percentage_change / 100, '+.1%')`)
               * Display as: "current_value (+percentage_change%)" or "current_value (-percentage_change%)"
-            - Use the query to determine an appropriate title
+            **CRITICAL: TITLE AND LABEL GENERATION:**
+            - ALWAYS use the user's query/question to determine meaningful titles and labels
+            - DO NOT use generic terms like "count", "value", "metric" - use specific terms from the query
+            - If the query mentions "activities", use "Activities" not "Count"
+            - If the query mentions "learners", use "Learners" not "Count"
+            - Extract meaningful nouns and concepts from the query to create descriptive titles
+            - Example: Query "average activities per learner" → Title: "Average Activities per Learner" (NOT "Count" or "Average Count")
+            - Example: Query "number of learners" → Title: "Number of Learners" (NOT "Count")
             - Preserve any existing title from the existing_schema if provided
             - The data.values array MUST contain transformed data with the correct field names
             - The encoding MUST reference the transformed field names, NOT the original column names
@@ -2649,6 +2861,39 @@ class VegaLiteChartGenerationPipeline:
             Input data: [{{"metric_name": "Sales", "value": 1000}}, {{"metric_name": "Revenue", "value": 2000}}]
             Transformed data.values: [{{"metric": "Sales", "value": 1000}}, {{"metric": "Revenue", "value": 2000}}]
             Encoding uses: "value" for text, "metric" for color
+            
+            Example 5 - Only Percentage Change KPI (CORRECT):
+            Input columns: ["percentage_change"]
+            Input sample_data: {{"percentage_change": "7.071776413296633"}}
+            
+            Output schema:
+            {{
+                "data": {{
+                    "values": [{{
+                        "percentage_change": 7.071776413296633
+                    }}]
+                }},
+                "transform": [{{
+                    "calculate": "format(datum.percentage_change / 100, '+.1%')",
+                    "as": "display_text"
+                }}],
+                "encoding": {{
+                    "text": {{"field": "display_text", "type": "nominal"}},
+                    "color": {{
+                        "condition": {{"test": "datum.percentage_change > 0", "value": "#16a34a"}},
+                        "value": "#ef4444"
+                    }}
+                }},
+                "kpi_metadata": {{
+                    "chart_type": "comparison_kpi",
+                    "chart_subtype": "current_vs_percentage"
+                }}
+            }}
+            
+            Example 6 - Only Percentage Change KPI (WRONG - DO NOT DO THIS):
+            DO NOT generate transforms like:
+            - "format(datum.percentage_change, '+.1%')" (WRONG: missing / 100 division)
+            - This would show "+707.2%" instead of "+7.1%" for a value of 7.07
             """
             
             kpi_user_prompt = f"""
@@ -2665,13 +2910,23 @@ class VegaLiteChartGenerationPipeline:
             Please analyze the data and generate the most appropriate KPI chart schema based on the question and data structure.
             
             **CRITICAL REMINDERS:**
+            0. **TITLE AND LABEL GENERATION (MOST IMPORTANT):**
+               - Use the user's query/question to create meaningful titles - DO NOT use generic terms
+               - Extract key concepts from the query (e.g., "activities", "learners", "completions")
+               - If query says "activities", title should say "Activities" NOT "Count"
+               - If query says "learners", title should say "Learners" NOT "Count"
+               - Example: Query "average activities per learner" → Title: "Average Activities per Learner"
+               - Example: Query "number of learners" → Title: "Number of Learners"
+               - NEVER use generic terms like "Count", "Value", "Metric" when the query has specific terms
             1. Check if this is a comparison KPI (look for "this_year"/"last_year", "current"/"previous" patterns in column names OR percentage_change column)
             2. If comparison KPI:
                - Check if you have BOTH current and previous columns (e.g., "completed_this_year" AND "completed_last_year")
                  * If YES: Use format "X vs Y (Z%)" - transform: "format(datum.completed_this_year, ',.0f') + ' vs ' + format(datum.completed_last_year, ',.0f') + ' (' + format(datum.percentage_change / 100, '+.1%') + ')'"
                  * If NO (only one value column + percentage_change): Use format "X (Z%)" - transform: "format(datum.total_time_spent, ',.0f') + ' (' + format(datum.percentage_change / 100, '+.1%') + ')'"
+                 * If ONLY percentage_change (no other columns): Use format "+Z%" or "-Z%" - transform: "format(datum.percentage_change / 100, '+.1%')"
+               - CRITICAL: ALWAYS divide percentage_change by 100 when formatting (e.g., `format(datum.percentage_change / 100, '+.1%')`)
                - Keep original column names in data (DO NOT transform to "current"/"previous")
-               - Convert string values to numbers (e.g., "17035.0" → 17035.0)
+               - Convert string values to numbers (e.g., "17035.0" → 17035.0, "7.07" → 7.07)
                - Use encoding.text.field = "display_text" (NOT "value" or "percentage_change")
                - Use encoding.text.type = "nominal" (NOT "quantitative")
                - Use encoding.color.condition based on percentage_change (NOT color.field = "metric")

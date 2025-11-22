@@ -1,0 +1,26 @@
+{
+  "name": "silver_to_gold_gold_average_time_to_completion",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_average_time_to_completion",
+  "target_model": "gold_gold_average_time_to_completion",
+  "steps": [
+    {
+      "step_name": "Metric: average_time_to_completion",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_average_time_to_completion (course_id, average_time_to_completion)\nSELECT \n    c.course_id,\n    COALESCE(SUM(cr.completion_time) / NULLIF(COUNT(cr.id), 0), 0) AS average_time_to_completion\nFROM \n    courses c\nJOIN \n    completion_records cr ON c.id = cr.course_id\nWHERE \n    cr.status = 'completed'  -- Only include completed courses\nGROUP BY \n    c.course_id;",
+      "description": "The average time taken to complete each course.",
+      "input_tables": [
+        "courses",
+        "completion_records"
+      ],
+      "output_table": "gold_average_time_to_completion",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_average_time_to_completion from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

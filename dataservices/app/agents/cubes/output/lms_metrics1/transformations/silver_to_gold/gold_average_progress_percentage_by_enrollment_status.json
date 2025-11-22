@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_average_progress_percentage_by_enrollment_status",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_average_progress_percentage_by_enrollment_status",
+  "target_model": "gold_gold_average_progress_percentage_by_enrollment_status",
+  "steps": [
+    {
+      "step_name": "Metric: average_progress_percentage_by_enrollment_status",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_average_progress_percentage_by_enrollment_status (enrollment_status, average_progress_percentage)\nSELECT \n    enrollment_status,\n    COALESCE(SUM(progress_percentage), 0) / NULLIF(COUNT(*), 0) AS average_progress_percentage\nFROM \n    enrollments\nWHERE \n    progress_percentage IS NOT NULL  -- Only include enrollments with a valid progress percentage\nGROUP BY \n    enrollment_status;",
+      "description": "The average progress percentage of enrollments, broken down by enrollment status.",
+      "input_tables": [
+        "enrollments"
+      ],
+      "output_table": "gold_average_progress_percentage_by_enrollment_status",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_average_progress_percentage_by_enrollment_status from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

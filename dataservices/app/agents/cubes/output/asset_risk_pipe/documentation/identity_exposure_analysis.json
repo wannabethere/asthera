@@ -1,0 +1,111 @@
+{
+  "table_name": "identity_exposure",
+  "description": "Table containing information about identity and access exposure for various assets.",
+  "columns": [
+    {
+      "name": "asset_id",
+      "data_type": "STRING",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": true,
+      "description": "Unique identifier for the asset.",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "num_admin_accounts",
+      "data_type": "INTEGER",
+      "is_dimension": false,
+      "is_measure": true,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Number of admin accounts associated with the asset.",
+      "suggested_cube_type": "measure",
+      "aggregation_type": "sum"
+    },
+    {
+      "name": "num_stale_accounts",
+      "data_type": "INTEGER",
+      "is_dimension": false,
+      "is_measure": true,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Number of stale accounts associated with the asset.",
+      "suggested_cube_type": "measure",
+      "aggregation_type": "sum"
+    },
+    {
+      "name": "has_password_reuse",
+      "data_type": "BOOLEAN",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Indicates if there is password reuse for the asset.",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "has_mfa_disabled",
+      "data_type": "BOOLEAN",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Indicates if multi-factor authentication is disabled for the asset.",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "assessed_at",
+      "data_type": "TIMESTAMP",
+      "is_dimension": false,
+      "is_measure": false,
+      "is_temporal": true,
+      "is_identifier": false,
+      "description": "Timestamp when the assessment was made.",
+      "suggested_cube_type": "time_dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "updated_at",
+      "data_type": "TIMESTAMP",
+      "is_dimension": false,
+      "is_measure": false,
+      "is_temporal": true,
+      "is_identifier": false,
+      "description": "Timestamp when the record was last updated.",
+      "suggested_cube_type": "time_dimension",
+      "aggregation_type": "none"
+    }
+  ],
+  "primary_keys": [
+    "asset_id"
+  ],
+  "foreign_keys": [
+    {
+      "column": "asset_id",
+      "references_table": "assets",
+      "references_column": "asset_id"
+    }
+  ],
+  "potential_joins": [
+    {
+      "target_table": "assets",
+      "join_type": "INNER JOIN",
+      "condition": "identity_exposure.asset_id = assets.asset_id"
+    }
+  ],
+  "grain": "Each row represents exposure information for a specific asset.",
+  "data_quality_concerns": [
+    "asset_id is a STRING and may not be unique if not properly enforced.",
+    "num_admin_accounts and num_stale_accounts could be null if not populated.",
+    "Boolean fields may have inconsistent values if not standardized."
+  ],
+  "recommended_transformations": [
+    "Ensure asset_id is unique and properly indexed.",
+    "Implement checks to ensure num_admin_accounts and num_stale_accounts are non-null.",
+    "Standardize Boolean fields to ensure consistent true/false values."
+  ]
+}

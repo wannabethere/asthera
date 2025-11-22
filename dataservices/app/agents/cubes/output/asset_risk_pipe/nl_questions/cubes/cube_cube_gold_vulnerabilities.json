@@ -1,0 +1,138 @@
+{
+  "question_id": "cube_gold_vulnerabilities",
+  "question": "Build a Cube.js cube definition for the gold layer table 'vulnerabilities' (cube name: 'gold_vulnerabilities').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- cve_id\n- is_kev\n- is_internet_facing\n- discovered_at\n- updated_at\n\nMeasures:\n- count\n- cvss_score\n- epss_score\n\nRelationships to other tables: vulnerabilities\n\nSteps to build:\n- 1. Define dimensions: asset_id, cve_id, is_kev, is_internet_facing, discovered_at\n- 2. Define measures: count, cvss_score, epss_score\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+  "context": {
+    "layer": "gold",
+    "table_name": "vulnerabilities",
+    "cube_name": "gold_vulnerabilities",
+    "description": "Gold layer cube for gold_vulnerabilities",
+    "table_metadata": {
+      "table_name": "vulnerabilities",
+      "description": ""
+    }
+  },
+  "expected_output_type": "cube",
+  "steps": [
+    "1. Define dimensions: asset_id, cve_id, is_kev, is_internet_facing, discovered_at",
+    "2. Define measures: count, cvss_score, epss_score",
+    "3. Configure pre-aggregations for performance",
+    "4. Set up joins with related tables"
+  ],
+  "metadata": {
+    "dimension_count": 6,
+    "measure_count": 3,
+    "generated_at": "2025-11-20T11:47:30.506868"
+  },
+  "dependencies": [],
+  "layer": "gold",
+  "table_name": "vulnerabilities",
+  "cube_name": "gold_vulnerabilities",
+  "dimensions": [
+    {
+      "name": "asset_id",
+      "sql": "${gold_vulnerabilities}.asset_id",
+      "type": "number",
+      "title": "Asset Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": true
+    },
+    {
+      "name": "cve_id",
+      "sql": "${gold_vulnerabilities}.cve_id",
+      "type": "string",
+      "title": "Cve Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "is_kev",
+      "sql": "${gold_vulnerabilities}.is_kev",
+      "type": "string",
+      "title": "Is Kev",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "is_internet_facing",
+      "sql": "${gold_vulnerabilities}.is_internet_facing",
+      "type": "string",
+      "title": "Is Internet Facing",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "discovered_at",
+      "sql": "${gold_vulnerabilities}.discovered_at",
+      "type": "time",
+      "title": "Discovered At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "updated_at",
+      "sql": "${gold_vulnerabilities}.updated_at",
+      "type": "time",
+      "title": "Updated At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    }
+  ],
+  "measures": [
+    {
+      "name": "count",
+      "sql": "1",
+      "type": "count",
+      "title": "Count",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": [
+        "asset_id"
+      ]
+    },
+    {
+      "name": "cvss_score",
+      "sql": "${gold_vulnerabilities}.cvss_score",
+      "type": "sum",
+      "title": "Cvss Score",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": null
+    },
+    {
+      "name": "epss_score",
+      "sql": "${gold_vulnerabilities}.epss_score",
+      "type": "sum",
+      "title": "Epss Score",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": null
+    }
+  ],
+  "relationships": [
+    {
+      "child_table": "vulnerabilities",
+      "parent_table": "assets",
+      "join_type": "MANY_TO_ONE",
+      "join_condition": "vulnerabilities.asset_id = assets.asset_id",
+      "layer": "silver"
+    }
+  ]
+}

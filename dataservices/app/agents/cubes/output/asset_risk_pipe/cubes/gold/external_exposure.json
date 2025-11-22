@@ -1,0 +1,97 @@
+{
+  "name": "gold_external_exposure",
+  "sql": "SELECT * FROM gold_external_exposure",
+  "title": "Gold External Exposure",
+  "description": "Gold layer cube for gold_external_exposure",
+  "dimensions": [
+    {
+      "name": "asset_id",
+      "sql": "${gold_external_exposure}.asset_id",
+      "type": "number",
+      "title": "Asset Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": true
+    },
+    {
+      "name": "is_public_ip",
+      "sql": "${gold_external_exposure}.is_public_ip",
+      "type": "string",
+      "title": "Is Public Ip",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "weak_tls",
+      "sql": "${gold_external_exposure}.weak_tls",
+      "type": "string",
+      "title": "Weak Tls",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "geo_risky",
+      "sql": "${gold_external_exposure}.geo_risky",
+      "type": "string",
+      "title": "Geo Risky",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "scanned_at",
+      "sql": "${gold_external_exposure}.scanned_at",
+      "type": "time",
+      "title": "Scanned At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "updated_at",
+      "sql": "${gold_external_exposure}.updated_at",
+      "type": "time",
+      "title": "Updated At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    }
+  ],
+  "measures": [
+    {
+      "name": "count",
+      "sql": "1",
+      "type": "count",
+      "title": "Count",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": [
+        "asset_id"
+      ]
+    },
+    {
+      "name": "open_ports",
+      "sql": "${gold_external_exposure}.open_ports",
+      "type": "sum",
+      "title": "Open Ports",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": null
+    }
+  ],
+  "joins": [],
+  "preAggregations": [],
+  "segments": []
+}

@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_average_progress_percentage",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_average_progress_percentage",
+  "target_model": "gold_gold_average_progress_percentage",
+  "steps": [
+    {
+      "step_name": "Metric: average_progress_percentage",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_average_progress_percentage (average_progress_percentage)\nSELECT \n    COALESCE(SUM(CASE \n        WHEN total_required_progress > 0 THEN (current_progress::DECIMAL / total_required_progress) * 100 \n        ELSE NULL \n    END) / NULLIF(COUNT(*), 0), 0) AS average_progress_percentage\nFROM \n    enrollments;",
+      "description": "The average progress percentage of all enrollments.",
+      "input_tables": [
+        "enrollments"
+      ],
+      "output_table": "gold_average_progress_percentage",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_average_progress_percentage from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "software_inventory",
+  "description": "Raw layer cube for software_inventory",
+  "dimensions": [],
+  "measures": [],
+  "preAggregations": []
+}

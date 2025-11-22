@@ -1,0 +1,122 @@
+version: 2
+
+models:
+metrics:
+  - name: attack_surface_summary_by_os_software_metrics
+    model: attack_surface_summary_by_os_software
+    dimensions:
+      - business_unit
+      - environment
+      - os
+      - software_stack
+    measures:
+      - name: total_assets
+        expression: ${model.total_assets}
+      - name: total_vulnerabilities
+        expression: ${model.total_vulnerabilities}
+      - name: total_misconfigurations
+        expression: ${model.total_misconfigurations}
+      - name: total_exposures
+        expression: ${model.total_exposures}
+
+  - name: software_asset_management_summary_metrics
+    model: software_asset_management_summary
+    dimensions:
+      - software_name
+      - version
+      - business_unit
+      - environment
+    measures:
+      - name: total_devices
+        expression: ${model.total_devices}
+      - name: total_vulnerabilities
+        expression: ${model.total_vulnerabilities}
+      - name: total_misconfigurations
+        expression: ${model.total_misconfigurations}
+
+  - name: external_exposure_risk_summary_metrics
+    model: external_exposure_risk_summary
+    dimensions:
+      - risk_category
+      - os_software_stack
+      - business_unit
+      - environment
+    measures:
+      - name: total_exposures
+        expression: ${model.total_exposures}
+      - name: total_potential_impact
+        expression: ${model.total_potential_impact}
+
+  - name: asset_management_trend_analysis_metrics
+    model: asset_management_trend_analysis
+    dimensions:
+      - asset_id
+      - asset_type
+      - acquisition_date
+      - month
+    measures:
+      - name: total_risk_score
+        expression: ${model.total_risk_score}
+      - name: total_vulnerabilities
+        expression: ${model.total_vulnerabilities}
+      - name: total_misconfigurations
+        expression: ${model.total_misconfigurations}
+      - name: total_external_exposures
+        expression: ${model.total_external_exposures}
+      - name: total_identity_exposures
+        expression: ${model.total_identity_exposures}
+      - name: depreciation_value
+        expression: ${model.depreciation_value}
+
+  - name: software_asset_management_trend_analysis_metrics
+    model: software_asset_management_trend_analysis
+    dimensions:
+      - software_id
+      - software_name
+      - license_type
+      - month
+    measures:
+      - name: total_devices
+        expression: ${model.total_devices}
+      - name: total_misconfigurations
+        expression: ${model.total_misconfigurations}
+      - name: total_external_exposures
+        expression: ${model.total_external_exposures}
+
+  - name: asset_exposure_summary_metrics
+    model: asset_exposure_summary
+    dimensions:
+      - asset_id
+      - asset_name
+    measures:
+      - name: total_vulnerability_score
+        expression: ${model.total_vulnerability_score}
+      - name: vulnerability_count
+        expression: ${model.vulnerability_count}
+      - name: total_misconfigurations
+        expression: ${model.total_misconfigurations}
+      - name: total_external_exposure
+        expression: ${model.total_external_exposure}
+
+  - name: identity_exposure_summary_metrics
+    model: identity_exposure_summary
+    dimensions:
+      - identity_id
+    measures:
+      - name: total_exposure_incidents
+        expression: ${model.total_exposure_incidents}
+      - name: average_severity
+        expression: ${model.average_severity}
+
+  - name: software_asset_usage_summary_metrics
+    model: software_asset_usage_summary
+    dimensions:
+      - software_id
+      - software_name
+      - created_at
+      - updated_at
+    measures:
+      - name: total_devices_used
+        expression: ${model.total_devices_used}
+      - name: total_usage_hours
+        expression: ${model.total_usage_hours}

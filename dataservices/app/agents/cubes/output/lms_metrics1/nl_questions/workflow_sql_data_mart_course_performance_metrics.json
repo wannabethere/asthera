@@ -1,0 +1,40 @@
+{
+  "question_id": "sql_data_mart_course_performance_metrics",
+  "question": "Generate SQL to create a data mart 'course_performance_metrics' from: courses, enrollments.\n\nBusiness Requirements:\n- \n- This mart contains metrics related to course performance, including total enrollments, average completion rates, and total duration of courses.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+  "context": {
+    "sql_type": "data_mart",
+    "target_object": "course_performance_metrics",
+    "source_tables": [
+      "courses",
+      "enrollments"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains metrics related to course performance, including total enrollments, average completion rates, and total duration of courses."
+    ],
+    "existing_sql": "CREATE TABLE course_performance_metrics AS \nSELECT \n    c.course_id, \n    c.title, \n    c.description, \n    COUNT(e.user_id) AS total_enrollments, \n    COALESCE(AVG(NULLIF(e.completion_rate, 0)), 0) AS average_completion_rate,  -- Handle NULL and avoid division by zero\n    COALESCE(SUM(e.duration), 0) AS total_duration  -- Handle NULL for total duration\nFROM \n    courses c \nLEFT JOIN \n    enrollments e ON c.course_id = e.course_id \nGROUP BY \n    c.course_id, c.title, c.description; \n\n-- Index su"
+  },
+  "expected_output_type": "sql",
+  "steps": [
+    "1. Analyze source tables and requirements",
+    "2. Design table/view structure",
+    "3. Write SQL CREATE statement",
+    "4. Add indexes and constraints",
+    "5. Validate SQL syntax and logic"
+  ],
+  "metadata": {
+    "generated_at": "2025-11-21T13:44:47.242457",
+    "source_table_count": 2
+  },
+  "dependencies": [],
+  "sql_type": "data_mart",
+  "target_object": "course_performance_metrics",
+  "source_tables": [
+    "courses",
+    "enrollments"
+  ],
+  "business_requirements": [
+    "",
+    "This mart contains metrics related to course performance, including total enrollments, average completion rates, and total duration of courses."
+  ]
+}

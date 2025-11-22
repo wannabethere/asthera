@@ -1,0 +1,26 @@
+{
+  "name": "silver_to_gold_gold_comparison_average_time_to_completion",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_comparison_average_time_to_completion",
+  "target_model": "gold_gold_comparison_average_time_to_completion",
+  "steps": [
+    {
+      "step_name": "Metric: comparison_average_time_to_completion",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_comparison_average_time_to_completion (course_id, avg_time_this_year, avg_time_last_year)\nWITH completion_data AS (\n    SELECT \n        cr.course_id,\n        DATE_TRUNC('year', cr.completion_date) AS completion_year,\n        AVG(cr.completion_time) AS avg_completion_time\n    FROM \n        completion_records cr\n    WHERE \n        cr.completion_date >= CURRENT_DATE - INTERVAL '2 years'  -- Filter for the last two years\n    GROUP BY \n        cr.course_id, DATE_TRUNC('year', cr.completion_date)\n),\nyearly_averages AS (\n    SELECT \n        cd.course_id,\n        MAX(CASE WHEN cd.completion_year = DATE_TRUNC('year', CURRENT_DATE) THEN cd.avg_completion_time END) AS avg_time_this_year,\n        MAX(CASE WHEN cd.completion_year = DATE_TRUNC('year', CURRENT_DATE) - INTERVAL '1 year' THEN cd.avg_completion_time END) AS avg_time_last_year\n    FROM \n        completion_data cd\n    GROUP BY \n        cd.course_id\n)\nSELECT \n    ya.course_id,\n    ya.avg_time_this_year,\n    ya.avg_time_last_year\nFROM \n    yearly_averages ya\nWHERE \n    COALESCE(ya.avg_time_this_year, 0) > 0 AND COALESCE(ya.avg_time_last_year, 0) > 0;  -- Ensure both years have valid data for comparison",
+      "description": "Comparison of average time to completion for each course between this year and last year.",
+      "input_tables": [
+        "courses",
+        "completion_records"
+      ],
+      "output_table": "gold_comparison_average_time_to_completion",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_comparison_average_time_to_completion from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

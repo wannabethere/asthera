@@ -1,0 +1,126 @@
+{
+  "question_id": "cube_raw_users",
+  "question": "Build a Cube.js cube definition for the raw layer table 'users' (cube name: 'raw_users').\n\nThe cube should include:\n\nDimensions:\n- user_id\n- username\n- email\n- user_type\n- created_at\n- last_login\n- is_active\n\nMeasures:\n- count\n\nRelationships to other tables: enrollments\n\nSteps to build:\n- 1. Define dimensions: user_id, username, email, user_type, created_at\n- 2. Define measures: count\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+  "context": {
+    "layer": "raw",
+    "table_name": "users",
+    "cube_name": "raw_users",
+    "description": "Raw layer cube for raw_users",
+    "table_metadata": {
+      "table_name": "users",
+      "description": ""
+    }
+  },
+  "expected_output_type": "cube",
+  "steps": [
+    "1. Define dimensions: user_id, username, email, user_type, created_at",
+    "2. Define measures: count",
+    "3. Configure pre-aggregations for performance",
+    "4. Set up joins with related tables"
+  ],
+  "metadata": {
+    "dimension_count": 7,
+    "measure_count": 1,
+    "generated_at": "2025-11-21T13:44:47.240571"
+  },
+  "dependencies": [],
+  "layer": "raw",
+  "table_name": "users",
+  "cube_name": "raw_users",
+  "dimensions": [
+    {
+      "name": "user_id",
+      "sql": "${raw_users}.user_id",
+      "type": "number",
+      "title": "User Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": true
+    },
+    {
+      "name": "username",
+      "sql": "${raw_users}.username",
+      "type": "string",
+      "title": "Username",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "email",
+      "sql": "${raw_users}.email",
+      "type": "string",
+      "title": "Email",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "user_type",
+      "sql": "${raw_users}.user_type",
+      "type": "string",
+      "title": "User Type",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "created_at",
+      "sql": "${raw_users}.created_at",
+      "type": "time",
+      "title": "Created At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "last_login",
+      "sql": "${raw_users}.last_login",
+      "type": "time",
+      "title": "Last Login",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "is_active",
+      "sql": "${raw_users}.is_active",
+      "type": "string",
+      "title": "Is Active",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    }
+  ],
+  "measures": [
+    {
+      "name": "count",
+      "sql": "1",
+      "type": "count",
+      "title": "Count",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": [
+        "user_id"
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "child_table": "enrollments",
+      "parent_table": "users",
+      "join_type": "MANY_TO_ONE",
+      "join_condition": "enrollments.user_id = users.user_id",
+      "layer": "silver"
+    }
+  ]
+}

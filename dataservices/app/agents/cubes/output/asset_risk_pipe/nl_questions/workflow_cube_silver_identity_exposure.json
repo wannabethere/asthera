@@ -1,0 +1,128 @@
+{
+  "question_id": "cube_silver_identity_exposure",
+  "question": "Build a Cube.js cube definition for the silver layer table 'identity_exposure' (cube name: 'silver_identity_exposure').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- has_password_reuse\n- has_mfa_disabled\n- assessed_at\n- updated_at\n\nMeasures:\n- count\n- num_admin_accounts\n- num_stale_accounts\n\nRelationships to other tables: identity_exposure\n\nSteps to build:\n- 1. Define dimensions: asset_id, has_password_reuse, has_mfa_disabled, assessed_at, updated_at\n- 2. Define measures: count, num_admin_accounts, num_stale_accounts\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+  "context": {
+    "layer": "silver",
+    "table_name": "identity_exposure",
+    "cube_name": "silver_identity_exposure",
+    "description": "Silver layer cube for silver_identity_exposure",
+    "table_metadata": {
+      "table_name": "identity_exposure",
+      "description": ""
+    }
+  },
+  "expected_output_type": "cube",
+  "steps": [
+    "1. Define dimensions: asset_id, has_password_reuse, has_mfa_disabled, assessed_at, updated_at",
+    "2. Define measures: count, num_admin_accounts, num_stale_accounts",
+    "3. Configure pre-aggregations for performance",
+    "4. Set up joins with related tables"
+  ],
+  "metadata": {
+    "dimension_count": 5,
+    "measure_count": 3,
+    "generated_at": "2025-11-20T11:47:30.506568"
+  },
+  "dependencies": [],
+  "layer": "silver",
+  "table_name": "identity_exposure",
+  "cube_name": "silver_identity_exposure",
+  "dimensions": [
+    {
+      "name": "asset_id",
+      "sql": "${silver_identity_exposure}.asset_id",
+      "type": "number",
+      "title": "Asset Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": true
+    },
+    {
+      "name": "has_password_reuse",
+      "sql": "${silver_identity_exposure}.has_password_reuse",
+      "type": "string",
+      "title": "Has Password Reuse",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "has_mfa_disabled",
+      "sql": "${silver_identity_exposure}.has_mfa_disabled",
+      "type": "string",
+      "title": "Has Mfa Disabled",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "assessed_at",
+      "sql": "${silver_identity_exposure}.assessed_at",
+      "type": "time",
+      "title": "Assessed At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "updated_at",
+      "sql": "${silver_identity_exposure}.updated_at",
+      "type": "time",
+      "title": "Updated At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    }
+  ],
+  "measures": [
+    {
+      "name": "count",
+      "sql": "1",
+      "type": "count",
+      "title": "Count",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": [
+        "asset_id"
+      ]
+    },
+    {
+      "name": "num_admin_accounts",
+      "sql": "${silver_identity_exposure}.num_admin_accounts",
+      "type": "sum",
+      "title": "Num Admin Accounts",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": null
+    },
+    {
+      "name": "num_stale_accounts",
+      "sql": "${silver_identity_exposure}.num_stale_accounts",
+      "type": "sum",
+      "title": "Num Stale Accounts",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": null
+    }
+  ],
+  "relationships": [
+    {
+      "child_table": "identity_exposure",
+      "parent_table": "assets",
+      "join_type": "ONE_TO_ONE",
+      "join_condition": "identity_exposure.asset_id = assets.asset_id",
+      "layer": "silver"
+    }
+  ]
+}

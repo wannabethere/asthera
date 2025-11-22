@@ -22,6 +22,11 @@ scp -i  files ec2-user@ec2-44-202-8-38.compute-1.amazonaws.com:~/.
 scp -i ~/Downloads/flowharmonic.pem agents.zip ec2-user@ec2-44-202-8-38.compute-1.amazonaws.com:~/.
 scp -i ~/Download       ec2-user@ec2-18-204-196-65.compute-1.amazonaws.com:~/.
 
+sameerm@Sameers-iMac genieml % scp -i ~/Downloads/flowharmonic.pem agents.zip  ec2-user@ec2-44-202-8-38.compute-1.amazonaws.com:~/.
+agents.zip                                                                                                                                                                                                                                                                                                                                100% 3515KB   3.2MB/s   00:01    
+sameerm@Sameers-iMac genieml % scp -i ~/Downloads/flowharmonic.pem agents.zip  ec2-user@ec2-18-204-196-65.compute-1.amazonaws.com:~/.
+agents.zip                
+
 
 
 https://ec2-54-161-71-105.compute-1.amazonaws.com/dashboards/dashboard-U13E13890/staticdashboards
@@ -41,3 +46,22 @@ nohup sh -c 'HOST=0.0.0.0 PORT=9001 npm start' > app.log 2>&1 & echo $! > run.pi
 https://github.com/llm-d/llm-d
 
  'columns': ['Full_Name', 'User_ID', 'Division', 'Assigned_Date', 'Completed_Date', 'Due_Date', 'is_completed', 'is_satisfied_late'], 'table_name': 'csod_training_records'}
+
+
+http://ec2-54-147-109-184.compute-1.amazonaws.com:8585/users/admin/access-token
+ admin
+
+ eyJraWQiOiJHYjM4OWEtOWY3Ni1nZGpzLWE5MmotMDI0MmJrOTQzNTYiLCJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJvcGVuLW1ldGFkYXRhLm9yZyIsInN1YiI6ImFkbWluIiwicm9sZXMiOlsiQWRtaW4iXSwiZW1haWwiOiJhZG1pbkBvcGVuLW1ldGFkYXRhLm9yZyIsImlzQm90IjpmYWxzZSwidG9rZW5UeXBlIjoiUEVSU09OQUxfQUNDRVNTIiwiaWF0IjoxNzYzMzQ2NzA2LCJleHAiOjE3Njg1MzA3MDZ9.wU2VR9b60SBA-Qp7TvaqxSwpHaqskg5kgWgyeclFz7vVC4NEZygEgEdp_l9q87R-sSr9BK_t2iJ2Nrkz0hCr2SqWRYdywT3KREX_vnVX6uNxeRJHXyplk2dHE9WL6b9KCZA1PjlX59XxiGg5sK9Q6ScT8XpfulVd-c2VrKXkTS3JmmNcRxuIs86x1sZNgWXH2ipnxTwYGZX-Y_S7lpN9hcvSJMnHc69pxfdG_3PFdsZRiC3s5nuM3EoHD3FeISR8SPXPzw71MjxabjevQzqXaNWPqagbsswEFfOydVmiieWI1Gfh9rqAFud9_U2KcoaY3fVfnet9lk4xFfV0yTHFKQ
+
+
+ # Run full workflow (all steps)
+python workflow_executor.py asset_risk_workflow.json --output-dir ./output/asset_risk_pipe
+
+# Run only silver layer generation
+python workflow_executor.py asset_risk_workflow.json --output-dir ./output/asset_risk_pipe --modeling_type silver
+
+# Run only gold layer generation (requires silver to be complete)
+python workflow_executor.py asset_risk_workflow.json --output-dir ./output/asset_risk_pipe --modeling_type gold
+
+# Run only transformation layer generation
+python workflow_executor.py asset_risk_workflow.json --output-dir ./output/asset_risk_pipe --modeling_type transform

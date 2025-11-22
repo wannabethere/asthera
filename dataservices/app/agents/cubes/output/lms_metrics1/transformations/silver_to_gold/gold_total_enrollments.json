@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_total_enrollments",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_total_enrollments",
+  "target_model": "gold_gold_total_enrollments",
+  "steps": [
+    {
+      "step_name": "Metric: total_enrollments",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_total_enrollments (total_enrollments)\nSELECT COUNT(*) AS total_enrollments\nFROM enrollments\nWHERE enrollment_status = 'active';  -- Assuming 'enrollment_status' is the column indicating active enrollments",
+      "description": "Total number of enrollments across all courses",
+      "input_tables": [
+        "enrollments"
+      ],
+      "output_table": "gold_total_enrollments",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_total_enrollments from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

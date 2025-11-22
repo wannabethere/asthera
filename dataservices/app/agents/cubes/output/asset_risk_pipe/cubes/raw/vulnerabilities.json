@@ -1,0 +1,7 @@
+{
+  "name": "vulnerabilities",
+  "description": "Raw layer cube for vulnerabilities",
+  "dimensions": [],
+  "measures": [],
+  "preAggregations": []
+}

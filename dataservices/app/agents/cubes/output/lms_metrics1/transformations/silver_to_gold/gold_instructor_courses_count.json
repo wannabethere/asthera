@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_instructor_courses_count",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_instructor_courses_count",
+  "target_model": "gold_gold_instructor_courses_count",
+  "steps": [
+    {
+      "step_name": "Metric: instructor_courses_count",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_instructor_courses_count (instructor_id, total_courses)\nSELECT \n    instructor_id,\n    COUNT(*) AS total_courses\nFROM \n    courses\nWHERE \n    semester = (SELECT current_semester FROM semesters WHERE CURRENT_DATE BETWEEN start_date AND end_date)\nGROUP BY \n    instructor_id;",
+      "description": "Total number of courses taught by instructors",
+      "input_tables": [
+        "courses"
+      ],
+      "output_table": "gold_instructor_courses_count",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_instructor_courses_count from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

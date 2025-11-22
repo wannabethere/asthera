@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_total_learners",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_total_learners",
+  "target_model": "gold_gold_total_learners",
+  "steps": [
+    {
+      "step_name": "Metric: total_learners",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_total_learners (total_learners)\nSELECT COUNT(DISTINCT learner_id) AS total_learners\nFROM learner_engagement\nWHERE active = TRUE  -- Only count active learners\n  AND deleted = FALSE;  -- Exclude deleted accounts",
+      "description": "Total number of learners engaged in the platform",
+      "input_tables": [
+        "learner_engagement"
+      ],
+      "output_table": "gold_total_learners",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_total_learners from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

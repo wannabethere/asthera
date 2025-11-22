@@ -1,0 +1,44 @@
+{
+  "question_id": "sql_data_mart_asset_exposure_summary",
+  "question": "Generate SQL to create a data mart 'asset_exposure_summary' from: assets, vulnerabilities, misconfigurations, external_exposure.\n\nBusiness Requirements:\n- \n- This mart contains aggregated exposure scores for each asset, including vulnerabilities, misconfigurations, and external risks.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+  "context": {
+    "sql_type": "data_mart",
+    "target_object": "asset_exposure_summary",
+    "source_tables": [
+      "assets",
+      "vulnerabilities",
+      "misconfigurations",
+      "external_exposure"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains aggregated exposure scores for each asset, including vulnerabilities, misconfigurations, and external risks."
+    ],
+    "existing_sql": "CREATE TABLE asset_exposure_summary (\n    asset_id INT NOT NULL,\n    asset_name VARCHAR(255) NOT NULL,\n    total_vulnerability_score DECIMAL(10, 2) DEFAULT 0.00,\n    vulnerability_count INT DEFAULT 0,\n    total_misconfigurations INT DEFAULT 0,\n    total_external_exposure DECIMAL(10, 2) DEFAULT 0.00,\n    exposure_score DECIMAL(10, 2) AS (total_vulnerability_score + total_misconfigurations + total_external_exposure) STORED,\n    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    CONSTRAINT pk_as"
+  },
+  "expected_output_type": "sql",
+  "steps": [
+    "1. Analyze source tables and requirements",
+    "2. Design table/view structure",
+    "3. Write SQL CREATE statement",
+    "4. Add indexes and constraints",
+    "5. Validate SQL syntax and logic"
+  ],
+  "metadata": {
+    "generated_at": "2025-11-20T11:47:30.507327",
+    "source_table_count": 4
+  },
+  "dependencies": [],
+  "sql_type": "data_mart",
+  "target_object": "asset_exposure_summary",
+  "source_tables": [
+    "assets",
+    "vulnerabilities",
+    "misconfigurations",
+    "external_exposure"
+  ],
+  "business_requirements": [
+    "",
+    "This mart contains aggregated exposure scores for each asset, including vulnerabilities, misconfigurations, and external risks."
+  ]
+}

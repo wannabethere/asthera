@@ -1,0 +1,99 @@
+{
+  "table_name": "users",
+  "description": "Table containing user information including their roles and activity status.",
+  "columns": [
+    {
+      "name": "user_id",
+      "data_type": "BIGINT",
+      "is_dimension": false,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": true,
+      "description": "Unique identifier for each user.",
+      "suggested_cube_type": "none",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "username",
+      "data_type": "VARCHAR",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "The username chosen by the user.",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "email",
+      "data_type": "VARCHAR",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Email address of the user.",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "user_type",
+      "data_type": "VARCHAR",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Type of user (learner, instructor, admin).",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "created_at",
+      "data_type": "TIMESTAMP",
+      "is_dimension": false,
+      "is_measure": false,
+      "is_temporal": true,
+      "is_identifier": false,
+      "description": "Timestamp when the user was created.",
+      "suggested_cube_type": "time_dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "last_login",
+      "data_type": "TIMESTAMP",
+      "is_dimension": false,
+      "is_measure": false,
+      "is_temporal": true,
+      "is_identifier": false,
+      "description": "Timestamp of the user's last login.",
+      "suggested_cube_type": "time_dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "is_active",
+      "data_type": "BOOLEAN",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Indicates if the user is currently active.",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    }
+  ],
+  "primary_keys": [
+    "user_id"
+  ],
+  "foreign_keys": [],
+  "potential_joins": [],
+  "grain": "Each row represents a unique user in the system.",
+  "data_quality_concerns": [
+    "Email addresses may not be unique, leading to potential duplicates.",
+    "Username may not be unique, leading to potential duplicates.",
+    "is_active field may have null values if not explicitly set."
+  ],
+  "recommended_transformations": [
+    "Ensure email and username fields are unique.",
+    "Implement validation for email format.",
+    "Set default value for is_active to false if not provided."
+  ]
+}

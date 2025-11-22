@@ -1,0 +1,1641 @@
+{
+  "catalog": "default_catalog",
+  "schema": "public",
+  "models": [
+    {
+      "name": "users",
+      "refSql": "SELECT * FROM public.users",
+      "columns": [],
+      "cached": false,
+      "properties": {
+        "description": "Raw layer cube for users",
+        "cube_name": "raw_users",
+        "pre_aggregations": ""
+      },
+      "layer": "raw"
+    },
+    {
+      "name": "courses",
+      "refSql": "SELECT * FROM public.courses",
+      "columns": [],
+      "cached": false,
+      "properties": {
+        "description": "Raw layer cube for courses",
+        "cube_name": "raw_courses",
+        "pre_aggregations": ""
+      },
+      "layer": "raw"
+    },
+    {
+      "name": "enrollments",
+      "refSql": "SELECT * FROM public.enrollments",
+      "columns": [],
+      "cached": false,
+      "properties": {
+        "description": "Raw layer cube for enrollments",
+        "cube_name": "raw_enrollments",
+        "pre_aggregations": ""
+      },
+      "layer": "raw"
+    }
+  ],
+  "relationships": [
+    {
+      "name": "enrollments_to_users",
+      "models": [
+        "enrollments",
+        "users"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "enrollments.user_id = users.user_id",
+      "properties": {
+        "description": "Relationship from enrollments to users"
+      },
+      "layer": "silver"
+    },
+    {
+      "name": "enrollments_to_courses",
+      "models": [
+        "enrollments",
+        "courses"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "enrollments.course_id = courses.course_id",
+      "properties": {
+        "description": "Relationship from enrollments to courses"
+      },
+      "layer": "silver"
+    }
+  ],
+  "metrics": [
+    {
+      "name": "learner_engagement_summary_metrics",
+      "baseObject": "learner_engagement_summary",
+      "dimension": [
+        {
+          "name": "user_id",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Unique identifier for each user."
+          }
+        },
+        {
+          "name": "registration_date",
+          "type": "date",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "The date when the user registered."
+          }
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_courses_enrolled",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_courses_enrolled}",
+          "properties": {
+            "description": "Total number of courses that a user is enrolled in.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "average_course_duration",
+          "type": "avg",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.average_course_duration}",
+          "properties": {
+            "description": "Average duration of courses that a user is enrolled in.",
+            "aggregation": "avg"
+          }
+        },
+        {
+          "name": "total_courses_completed",
+          "type": "sum",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_courses_completed}",
+          "properties": {
+            "description": "Total number of courses that a user has completed.",
+            "aggregation": "sum"
+          }
+        }
+      ],
+      "cached": false,
+      "properties": {
+        "description": "Metrics for learner_engagement_summary data mart"
+      }
+    },
+    {
+      "name": "course_performance_summary_metrics",
+      "baseObject": "course_performance_summary",
+      "dimension": [
+        {
+          "name": "course_id",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Unique identifier for each course."
+          }
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Title of the course."
+          }
+        },
+        {
+          "name": "course_id",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Unique identifier for each course."
+          }
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Title of the course."
+          }
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_enrollments",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_enrollments}",
+          "properties": {
+            "description": "Total number of enrollments for each course.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "total_completions",
+          "type": "sum",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_completions}",
+          "properties": {
+            "description": "Total number of completions for each course.",
+            "aggregation": "sum"
+          }
+        },
+        {
+          "name": "average_completion_time",
+          "type": "avg",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.average_completion_time}",
+          "properties": {
+            "description": "Average time taken to complete the course, excluding zero values.",
+            "aggregation": "avg"
+          }
+        },
+        {
+          "name": "total_enrollments",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_enrollments}",
+          "properties": {
+            "description": "Total number of enrollments for each course.",
+            "aggregation": "count"
+          }
+        }
+      ],
+      "cached": false,
+      "properties": {
+        "description": "Metrics for course_performance_summary data mart"
+      }
+    },
+    {
+      "name": "user_acquisition_retention_analysis_metrics",
+      "baseObject": "user_acquisition_retention_analysis",
+      "dimension": [
+        {
+          "name": "user_id",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Unique identifier for each user."
+          }
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_courses_enrolled",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_courses_enrolled}",
+          "properties": {
+            "description": "Total number of courses enrolled by the user, handling NULLs.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "enrollment_days",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.enrollment_days}",
+          "properties": {
+            "description": "Count of distinct days on which the user enrolled in courses.",
+            "aggregation": "count"
+          }
+        }
+      ],
+      "cached": false,
+      "properties": {
+        "description": "Metrics for user_acquisition_retention_analysis data mart"
+      }
+    },
+    {
+      "name": "course_performance_metrics_metrics",
+      "baseObject": "course_performance_metrics",
+      "dimension": [
+        {
+          "name": "course_id",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Unique identifier for each course."
+          }
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Title of the course."
+          }
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Description of the course content."
+          }
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_enrollments",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_enrollments}",
+          "properties": {
+            "description": "Total number of enrollments for each course.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "average_completion_rate",
+          "type": "avg",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.average_completion_rate}",
+          "properties": {
+            "description": "Average completion rate of the course, handling NULL and avoiding division by zero.",
+            "aggregation": "avg"
+          }
+        },
+        {
+          "name": "total_duration",
+          "type": "sum",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_duration}",
+          "properties": {
+            "description": "Total duration of all enrollments for the course, handling NULL values.",
+            "aggregation": "sum"
+          }
+        }
+      ],
+      "cached": false,
+      "properties": {
+        "description": "Metrics for course_performance_metrics data mart"
+      }
+    },
+    {
+      "name": "user_engagement_metrics_metrics",
+      "baseObject": "user_engagement_metrics",
+      "dimension": [
+        {
+          "name": "user_id",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Unique identifier for each user."
+          }
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_courses_enrolled",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_courses_enrolled}",
+          "properties": {
+            "description": "Total number of courses that a user is enrolled in.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "average_completion_rate",
+          "type": "avg",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.average_completion_rate}",
+          "properties": {
+            "description": "Average completion rate of courses for a user, handling NULL and avoiding division by zero.",
+            "aggregation": "avg"
+          }
+        },
+        {
+          "name": "total_time_spent",
+          "type": "sum",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_time_spent}",
+          "properties": {
+            "description": "Total time spent by a user on all enrolled courses, handling NULL values.",
+            "aggregation": "sum"
+          }
+        }
+      ],
+      "cached": false,
+      "properties": {
+        "description": "Metrics for user_engagement_metrics data mart"
+      }
+    },
+    {
+      "name": "enrollment_trends_metrics",
+      "baseObject": "enrollment_trends",
+      "dimension": [
+        {
+          "name": "enrollment_date",
+          "type": "date",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "The date of enrollment, truncated to the day for grouping."
+          }
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_enrollments",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_enrollments}",
+          "properties": {
+            "description": "The total number of enrollments on a given date.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "total_courses_offered",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_courses_offered}",
+          "properties": {
+            "description": "The total number of distinct courses offered on a given date.",
+            "aggregation": "count"
+          }
+        }
+      ],
+      "cached": false,
+      "properties": {
+        "description": "Metrics for enrollment_trends data mart"
+      }
+    },
+    {
+      "name": "instructor_engagement_summary_metrics",
+      "baseObject": "instructor_engagement_summary",
+      "dimension": [
+        {
+          "name": "user_id",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Unique identifier for each user."
+          }
+        },
+        {
+          "name": "user_name",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Name of the user."
+          }
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_courses_enrolled",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_courses_enrolled}",
+          "properties": {
+            "description": "Total number of courses that each user is enrolled in.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "avg_course_duration",
+          "type": "avg",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.avg_course_duration}",
+          "properties": {
+            "description": "Average duration of courses that each user is enrolled in.",
+            "aggregation": "avg"
+          }
+        },
+        {
+          "name": "total_courses_completed",
+          "type": "sum",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_courses_completed}",
+          "properties": {
+            "description": "Total number of courses completed by each user.",
+            "aggregation": "sum"
+          }
+        }
+      ],
+      "cached": false,
+      "properties": {
+        "description": "Metrics for instructor_engagement_summary data mart"
+      }
+    },
+    {
+      "name": "user_acquisition_retention_summary_metrics",
+      "baseObject": "user_acquisition_retention_summary",
+      "dimension": [
+        {
+          "name": "user_id",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Unique identifier for each user."
+          }
+        },
+        {
+          "name": "user_name",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Name of the user."
+          }
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_courses_enrolled",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_courses_enrolled}",
+          "properties": {
+            "description": "Total number of courses that users have enrolled in.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "enrollment_days",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.enrollment_days}",
+          "properties": {
+            "description": "Number of distinct days users have engaged with courses.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "total_courses_completed",
+          "type": "sum",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_courses_completed}",
+          "properties": {
+            "description": "Total number of courses that users have completed.",
+            "aggregation": "sum"
+          }
+        }
+      ],
+      "cached": false,
+      "properties": {
+        "description": "Metrics for user_acquisition_retention_summary data mart"
+      }
+    }
+  ],
+  "views": [],
+  "properties": {
+    "generated_at": "2025-11-21T13:44:47.224945",
+    "architecture": "medallion",
+    "layers": "raw,silver,gold"
+  },
+  "transformations": [
+    {
+      "name": "silver_to_gold_gold_total_learners_this_year",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_total_learners_this_year",
+      "target_model": "gold_gold_total_learners_this_year",
+      "steps": [
+        {
+          "step_name": "Metric: total_learners_this_year",
+          "step_type": "metric",
+          "sql_logic": "WITH activity_counts AS (\n    SELECT \n        \"learner_id\", \n        COUNT(*) AS activity_count\n    FROM \n        \"learners_activities\"\n    WHERE \n        DATE_TRUNC('year', \"activity_date\") = DATE_TRUNC('year', CURRENT_DATE)  -- Filter for current year\n    GROUP BY \n        \"learner_id\"\n)\nSELECT \n    COUNT(DISTINCT \"learner_id\") AS total_learners\nFROM \n    activity_counts\nWHERE \n    activity_count > 1;  -- Only count learners with more than one activity",
+          "description": "Total number of learners who consumed more than one activity this year.",
+          "input_tables": [
+            "learners_activities"
+          ],
+          "output_table": "gold_total_learners_this_year",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: total_learners_this_year: Total number of learners who consumed more than one activity this year.\nWITH activity_counts AS (\n    SELECT \n        \"learner_id\", \n        COUNT(*) AS activity_count\n    FROM \n        \"learners_activities\"\n    WHERE \n        DATE_TRUNC('year', \"activity_date\") = DATE_TRUNC('year', CURRENT_DATE)  -- Filter for current year\n    GROUP BY \n        \"learner_id\"\n)\nSELECT \n    COUNT(DISTINCT \"learner_id\") AS total_learners\nFROM \n    activity_counts\nWHERE \n    activity_count > 1;  -- Only count learners with more than one activity",
+      "description": "Transform gold_total_learners_this_year from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_total_learners_last_year",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_total_learners_last_year",
+      "target_model": "gold_gold_total_learners_last_year",
+      "steps": [
+        {
+          "step_name": "Metric: total_learners_last_year",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_total_learners_last_year (total_learners)\nSELECT COUNT(DISTINCT learner_id) AS total_learners\nFROM learners_activities\nWHERE DATE_TRUNC('year', activity_date) = DATE_TRUNC('year', CURRENT_DATE) - INTERVAL '1 year'\nGROUP BY learner_id\nHAVING COUNT(activity_id) > 1;",
+          "description": "Total number of learners who consumed more than one activity last year.",
+          "input_tables": [
+            "learners_activities"
+          ],
+          "output_table": "gold_total_learners_last_year",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: total_learners_last_year: Total number of learners who consumed more than one activity last year.\nINSERT INTO gold_total_learners_last_year (total_learners)\nSELECT COUNT(DISTINCT learner_id) AS total_learners\nFROM learners_activities\nWHERE DATE_TRUNC('year', activity_date) = DATE_TRUNC('year', CURRENT_DATE) - INTERVAL '1 year'\nGROUP BY learner_id\nHAVING COUNT(activity_id) > 1;",
+      "description": "Transform gold_total_learners_last_year from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_percentage_change_learners",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_percentage_change_learners",
+      "target_model": "gold_gold_percentage_change_learners",
+      "steps": [
+        {
+          "step_name": "Metric: percentage_change_learners",
+          "step_type": "metric",
+          "sql_logic": "WITH learner_activity AS (\n    SELECT \n        COUNT(DISTINCT learner_id) AS total_learners,\n        EXTRACT(YEAR FROM activity_date) AS activity_year\n    FROM \n        activities\n    WHERE \n        activity_count > 1  -- Filter for learners who consumed more than one activity\n    GROUP BY \n        activity_year\n)\n\nSELECT \n    COALESCE(\n        ((current_year.total_learners - last_year.total_learners) / NULLIF(last_year.total_learners, 0)) * 100, \n        0\n    ) AS percentage_change\nFROM \n    (SELECT total_learners FROM learner_activity WHERE activity_year = EXTRACT(YEAR FROM CURRENT_DATE)) AS current_year,\n    (SELECT total_learners FROM learner_activity WHERE activity_year = EXTRACT(YEAR FROM CURRENT_DATE) - 1) AS last_year;",
+          "description": "Percentage change in the number of learners who consumed more than one activity from last year to this year.",
+          "input_tables": [],
+          "output_table": "gold_percentage_change_learners",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: percentage_change_learners: Percentage change in the number of learners who consumed more than one activity from last year to this year.\nWITH learner_activity AS (\n    SELECT \n        COUNT(DISTINCT learner_id) AS total_learners,\n        EXTRACT(YEAR FROM activity_date) AS activity_year\n    FROM \n        activities\n    WHERE \n        activity_count > 1  -- Filter for learners who consumed more than one activity\n    GROUP BY \n        activity_year\n)\n\nSELECT \n    COALESCE(\n        ((current_year.total_learners - last_year.total_learners) / NULLIF(last_year.total_learners, 0)) * 100, \n        0\n    ) AS percentage_change\nFROM \n    (SELECT total_learners FROM learner_activity WHERE activity_year = EXTRACT(YEAR FROM CURRENT_DATE)) AS current_year,\n    (SELECT total_learners FROM learner_activity WHERE activity_year = EXTRACT(YEAR FROM CURRENT_DATE) - 1) AS last_year;",
+      "description": "Transform gold_percentage_change_learners from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_enrollment_count",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_enrollment_count",
+      "target_model": "gold_gold_enrollment_count",
+      "steps": [
+        {
+          "step_name": "Metric: enrollment_count",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_enrollment_count (course_id, total_enrollments)\nSELECT \n    course_id,\n    COUNT(*) AS total_enrollments\nFROM \n    enrollment_table\nGROUP BY \n    course_id;",
+          "description": "Total number of enrollments in each course",
+          "input_tables": [
+            "enrollment_table"
+          ],
+          "output_table": "gold_enrollment_count",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: enrollment_count: Total number of enrollments in each course\nINSERT INTO gold_enrollment_count (course_id, total_enrollments)\nSELECT \n    course_id,\n    COUNT(*) AS total_enrollments\nFROM \n    enrollment_table\nGROUP BY \n    course_id;",
+      "description": "Transform gold_enrollment_count from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_completion_count",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_completion_count",
+      "target_model": "gold_gold_completion_count",
+      "steps": [
+        {
+          "step_name": "Metric: completion_count",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_completion_count (course_id, total_completed_enrollments)\nSELECT \n    course_id,\n    COUNT(*) AS total_completed_enrollments\nFROM \n    enrollment_table\nWHERE \n    completion_status = 'completed'  -- Only count completed enrollments\nGROUP BY \n    course_id;",
+          "description": "Total number of completed enrollments in each course",
+          "input_tables": [
+            "enrollment_table"
+          ],
+          "output_table": "gold_completion_count",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: completion_count: Total number of completed enrollments in each course\nINSERT INTO gold_completion_count (course_id, total_completed_enrollments)\nSELECT \n    course_id,\n    COUNT(*) AS total_completed_enrollments\nFROM \n    enrollment_table\nWHERE \n    completion_status = 'completed'  -- Only count completed enrollments\nGROUP BY \n    course_id;",
+      "description": "Transform gold_completion_count from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_enrollment_completion_rate",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_enrollment_completion_rate",
+      "target_model": "gold_gold_enrollment_completion_rate",
+      "steps": [
+        {
+          "step_name": "Metric: enrollment_completion_rate",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_enrollment_completion_rate (course_id, completion_rate)\nSELECT \n    course_id,\n    COALESCE((SUM(completion_count) * 100.0) / NULLIF(SUM(enrollment_count), 0), 0) AS completion_rate\nFROM (\n    SELECT \n        course_id,\n        COUNT(*) AS enrollment_count,\n        COUNT(CASE WHEN completed = TRUE THEN 1 END) AS completion_count\n    FROM enrollment_table\n    GROUP BY course_id\n) AS enrollment_summary\nGROUP BY course_id;",
+          "description": "Rate of completion for enrollments in each course",
+          "input_tables": [
+            "enrollment_table"
+          ],
+          "output_table": "gold_enrollment_completion_rate",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: enrollment_completion_rate: Rate of completion for enrollments in each course\nINSERT INTO gold_enrollment_completion_rate (course_id, completion_rate)\nSELECT \n    course_id,\n    COALESCE((SUM(completion_count) * 100.0) / NULLIF(SUM(enrollment_count), 0), 0) AS completion_rate\nFROM (\n    SELECT \n        course_id,\n        COUNT(*) AS enrollment_count,\n        COUNT(CASE WHEN completed = TRUE THEN 1 END) AS completion_count\n    FROM enrollment_table\n    GROUP BY course_id\n) AS enrollment_summary\nGROUP BY course_id;",
+      "description": "Transform gold_enrollment_completion_rate from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_enrollment_completion_rate_trend",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_enrollment_completion_rate_trend",
+      "target_model": "gold_gold_enrollment_completion_rate_trend",
+      "steps": [
+        {
+          "step_name": "Metric: enrollment_completion_rate_trend",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_enrollment_completion_rate_trend (course_id, month, enrollment_completion_rate)\nWITH monthly_enrollment AS (\n    SELECT \n        course_id,\n        DATE_TRUNC('month', enrollment_date) AS month,\n        COUNT(*) AS total_enrollments,\n        SUM(CASE WHEN completion_status = 'completed' THEN 1 ELSE 0 END) AS completed_enrollments\n    FROM \n        enrollment_table\n    WHERE \n        enrollment_date >= CURRENT_DATE - INTERVAL '6 months'  -- Filter for the last 6 months\n    GROUP BY \n        course_id, DATE_TRUNC('month', enrollment_date)\n),\nenrollment_rate AS (\n    SELECT \n        course_id,\n        month,\n        COALESCE(SUM(completed_enrollments) / NULLIF(SUM(total_enrollments), 0), 0) AS enrollment_completion_rate\n    FROM \n        monthly_enrollment\n    GROUP BY \n        course_id, month\n)\nSELECT \n    course_id,\n    month,\n    enrollment_completion_rate\nFROM \n    enrollment_rate\nORDER BY \n    course_id, month;",
+          "description": "Trend of enrollment completion rate over the last 6 months for each course",
+          "input_tables": [
+            "enrollment_table"
+          ],
+          "output_table": "gold_enrollment_completion_rate_trend",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: enrollment_completion_rate_trend: Trend of enrollment completion rate over the last 6 months for each course\nINSERT INTO gold_enrollment_completion_rate_trend (course_id, month, enrollment_completion_rate)\nWITH monthly_enrollment AS (\n    SELECT \n        course_id,\n        DATE_TRUNC('month', enrollment_date) AS month,\n        COUNT(*) AS total_enrollments,\n        SUM(CASE WHEN completion_status = 'completed' THEN 1 ELSE 0 END) AS completed_enrollments\n    FROM \n        enrollment_table\n    WHERE \n        enrollment_date >= CURRENT_DATE - INTERVAL '6 months'  -- Filter for the last 6 months\n    GROUP BY \n        course_id, DATE_TRUNC('month', enrollment_date)\n),\nenrollment_rate AS (\n    SELECT \n        course_id,\n        month,\n        COALESCE(SUM(completed_enrollments) / NULLIF(SUM(total_enrollments), 0), 0) AS enrollment_completion_rate\n    FROM \n        monthly_enrollment\n    GROUP BY \n        course_id, month\n)\nSELECT \n    course_id,\n    month,\n    enrollment_completion_rate\nFROM \n    enrollment_rate\nORDER BY \n    course_id, month;",
+      "description": "Transform gold_enrollment_completion_rate_trend from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_active_learners_count",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_active_learners_count",
+      "target_model": "gold_gold_active_learners_count",
+      "steps": [
+        {
+          "step_name": "Metric: active_learners_count",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_active_learners_count (active_learners_count)\nSELECT COUNT(*) AS active_learners_count\nFROM learners_table\nWHERE \"status\" = 'active'\n  AND \"last_activity_date\" >= CURRENT_DATE - INTERVAL '30 days';",
+          "description": "Total number of active learners in the system.",
+          "input_tables": [
+            "learners_table"
+          ],
+          "output_table": "gold_active_learners_count",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: active_learners_count: Total number of active learners in the system.\nINSERT INTO gold_active_learners_count (active_learners_count)\nSELECT COUNT(*) AS active_learners_count\nFROM learners_table\nWHERE \"status\" = 'active'\n  AND \"last_activity_date\" >= CURRENT_DATE - INTERVAL '30 days';",
+      "description": "Transform gold_active_learners_count from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_active_learners_by_user_type",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_active_learners_by_user_type",
+      "target_model": "gold_gold_active_learners_by_user_type",
+      "steps": [
+        {
+          "step_name": "Metric: active_learners_by_user_type",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_active_learners_by_user_type (user_type, active_learners_count)\nSELECT \n    user_type,\n    COUNT(*) AS active_learners_count\nFROM \n    learners_table\nWHERE \n    learner_status = 'active'  -- Filter for active learners\n    AND user_type IS NOT NULL   -- Ensure user_type is not NULL\nGROUP BY \n    user_type\nORDER BY \n    user_type;  -- Optional: Order by user_type for better readability",
+          "description": "Breakdown of active learners by user type.",
+          "input_tables": [
+            "learners_table"
+          ],
+          "output_table": "gold_active_learners_by_user_type",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: active_learners_by_user_type: Breakdown of active learners by user type.\nINSERT INTO gold_active_learners_by_user_type (user_type, active_learners_count)\nSELECT \n    user_type,\n    COUNT(*) AS active_learners_count\nFROM \n    learners_table\nWHERE \n    learner_status = 'active'  -- Filter for active learners\n    AND user_type IS NOT NULL   -- Ensure user_type is not NULL\nGROUP BY \n    user_type\nORDER BY \n    user_type;  -- Optional: Order by user_type for better readability",
+      "description": "Transform gold_active_learners_by_user_type from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_active_learners_daily_trend",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_active_learners_daily_trend",
+      "target_model": "gold_gold_active_learners_daily_trend",
+      "steps": [
+        {
+          "step_name": "Metric: active_learners_daily_trend",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_active_learners_daily_trend (day, active_learners_count)\nSELECT \n    DATE_TRUNC('day', l.\"last_active_date\") AS day,\n    COUNT(DISTINCT l.\"learner_id\") AS active_learners_count\nFROM \n    learners_table l\nWHERE \n    l.\"last_active_date\" IS NOT NULL\n    AND l.\"last_active_date\" >= CURRENT_DATE - INTERVAL '30 days'\nGROUP BY \n    day\nORDER BY \n    day;",
+          "description": "Daily trend of active learners over a specified time period.",
+          "input_tables": [
+            "learners_table"
+          ],
+          "output_table": "gold_active_learners_daily_trend",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: active_learners_daily_trend: Daily trend of active learners over a specified time period.\nINSERT INTO gold_active_learners_daily_trend (day, active_learners_count)\nSELECT \n    DATE_TRUNC('day', l.\"last_active_date\") AS day,\n    COUNT(DISTINCT l.\"learner_id\") AS active_learners_count\nFROM \n    learners_table l\nWHERE \n    l.\"last_active_date\" IS NOT NULL\n    AND l.\"last_active_date\" >= CURRENT_DATE - INTERVAL '30 days'\nGROUP BY \n    day\nORDER BY \n    day;",
+      "description": "Transform gold_active_learners_daily_trend from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_average_time_to_completion",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_average_time_to_completion",
+      "target_model": "gold_gold_average_time_to_completion",
+      "steps": [
+        {
+          "step_name": "Metric: average_time_to_completion",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_average_time_to_completion (course_id, average_time_to_completion)\nSELECT \n    c.course_id,\n    COALESCE(SUM(cr.completion_time) / NULLIF(COUNT(cr.id), 0), 0) AS average_time_to_completion\nFROM \n    courses c\nJOIN \n    completion_records cr ON c.id = cr.course_id\nWHERE \n    cr.status = 'completed'  -- Only include completed courses\nGROUP BY \n    c.course_id;",
+          "description": "The average time taken to complete each course.",
+          "input_tables": [
+            "courses",
+            "completion_records"
+          ],
+          "output_table": "gold_average_time_to_completion",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: average_time_to_completion: The average time taken to complete each course.\nINSERT INTO gold_average_time_to_completion (course_id, average_time_to_completion)\nSELECT \n    c.course_id,\n    COALESCE(SUM(cr.completion_time) / NULLIF(COUNT(cr.id), 0), 0) AS average_time_to_completion\nFROM \n    courses c\nJOIN \n    completion_records cr ON c.id = cr.course_id\nWHERE \n    cr.status = 'completed'  -- Only include completed courses\nGROUP BY \n    c.course_id;",
+      "description": "Transform gold_average_time_to_completion from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_average_time_to_completion_last_year",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_average_time_to_completion_last_year",
+      "target_model": "gold_gold_average_time_to_completion_last_year",
+      "steps": [
+        {
+          "step_name": "Metric: average_time_to_completion_last_year",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_average_time_to_completion_last_year (course_id, average_time_to_completion)\nSELECT \n    cr.course_id,\n    COALESCE(SUM(cr.completion_time), 0) / NULLIF(COUNT(cr.id), 0) AS average_time_to_completion\nFROM \n    completion_records cr\nJOIN \n    courses c ON cr.course_id = c.id\nWHERE \n    cr.completed = TRUE\n    AND DATE_TRUNC('year', cr.completion_date) = DATE_TRUNC('year', CURRENT_DATE - INTERVAL '1 year')\nGROUP BY \n    cr.course_id;",
+          "description": "The average time taken to complete each course for the previous year.",
+          "input_tables": [
+            "courses",
+            "completion_records"
+          ],
+          "output_table": "gold_average_time_to_completion_last_year",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: average_time_to_completion_last_year: The average time taken to complete each course for the previous year.\nINSERT INTO gold_average_time_to_completion_last_year (course_id, average_time_to_completion)\nSELECT \n    cr.course_id,\n    COALESCE(SUM(cr.completion_time), 0) / NULLIF(COUNT(cr.id), 0) AS average_time_to_completion\nFROM \n    completion_records cr\nJOIN \n    courses c ON cr.course_id = c.id\nWHERE \n    cr.completed = TRUE\n    AND DATE_TRUNC('year', cr.completion_date) = DATE_TRUNC('year', CURRENT_DATE - INTERVAL '1 year')\nGROUP BY \n    cr.course_id;",
+      "description": "Transform gold_average_time_to_completion_last_year from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_comparison_average_time_to_completion",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_comparison_average_time_to_completion",
+      "target_model": "gold_gold_comparison_average_time_to_completion",
+      "steps": [
+        {
+          "step_name": "Metric: comparison_average_time_to_completion",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_comparison_average_time_to_completion (course_id, avg_time_this_year, avg_time_last_year)\nWITH completion_data AS (\n    SELECT \n        cr.course_id,\n        DATE_TRUNC('year', cr.completion_date) AS completion_year,\n        AVG(cr.completion_time) AS avg_completion_time\n    FROM \n        completion_records cr\n    WHERE \n        cr.completion_date >= CURRENT_DATE - INTERVAL '2 years'  -- Filter for the last two years\n    GROUP BY \n        cr.course_id, DATE_TRUNC('year', cr.completion_date)\n),\nyearly_averages AS (\n    SELECT \n        cd.course_id,\n        MAX(CASE WHEN cd.completion_year = DATE_TRUNC('year', CURRENT_DATE) THEN cd.avg_completion_time END) AS avg_time_this_year,\n        MAX(CASE WHEN cd.completion_year = DATE_TRUNC('year', CURRENT_DATE) - INTERVAL '1 year' THEN cd.avg_completion_time END) AS avg_time_last_year\n    FROM \n        completion_data cd\n    GROUP BY \n        cd.course_id\n)\nSELECT \n    ya.course_id,\n    ya.avg_time_this_year,\n    ya.avg_time_last_year\nFROM \n    yearly_averages ya\nWHERE \n    COALESCE(ya.avg_time_this_year, 0) > 0 AND COALESCE(ya.avg_time_last_year, 0) > 0;  -- Ensure both years have valid data for comparison",
+          "description": "Comparison of average time to completion for each course between this year and last year.",
+          "input_tables": [
+            "courses",
+            "completion_records"
+          ],
+          "output_table": "gold_comparison_average_time_to_completion",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: comparison_average_time_to_completion: Comparison of average time to completion for each course between this year and last year.\nINSERT INTO gold_comparison_average_time_to_completion (course_id, avg_time_this_year, avg_time_last_year)\nWITH completion_data AS (\n    SELECT \n        cr.course_id,\n        DATE_TRUNC('year', cr.completion_date) AS completion_year,\n        AVG(cr.completion_time) AS avg_completion_time\n    FROM \n        completion_records cr\n    WHERE \n        cr.completion_date >= CURRENT_DATE - INTERVAL '2 years'  -- Filter for the last two years\n    GROUP BY \n        cr.course_id, DATE_TRUNC('year', cr.completion_date)\n),\nyearly_averages AS (\n    SELECT \n        cd.course_id,\n        MAX(CASE WHEN cd.completion_year = DATE_TRUNC('year', CURRENT_DATE) THEN cd.avg_completion_time END) AS avg_time_this_year,\n        MAX(CASE WHEN cd.completion_year = DATE_TRUNC('year', CURRENT_DATE) - INTERVAL '1 year' THEN cd.avg_completion_time END) AS avg_time_last_year\n    FROM \n        completion_data cd\n    GROUP BY \n        cd.course_id\n)\nSELECT \n    ya.course_id,\n    ya.avg_time_this_year,\n    ya.avg_time_last_year\nFROM \n    yearly_averages ya\nWHERE \n    COALESCE(ya.avg_time_this_year, 0) > 0 AND COALESCE(ya.avg_time_last_year, 0) > 0;  -- Ensure both years have valid data for comparison",
+      "description": "Transform gold_comparison_average_time_to_completion from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_students_completed_courses",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_students_completed_courses",
+      "target_model": "gold_gold_students_completed_courses",
+      "steps": [
+        {
+          "step_name": "Metric: students_completed_courses",
+          "step_type": "metric",
+          "sql_logic": "SELECT \n    c.\"instructor_id\",\n    COUNT(DISTINCT s.\"student_id\") AS \"completed_students_count\"\nFROM \n    \"courses\" c\nJOIN \n    \"gold_students_completed_courses\" g ON c.\"course_id\" = g.\"course_id\"\nJOIN \n    \"students\" s ON g.\"student_id\" = s.\"student_id\"\nWHERE \n    COALESCE(g.\"completion_status\", '') = 'completed'  -- Only include completed courses\nGROUP BY \n    c.\"instructor_id\"\nORDER BY \n    c.\"instructor_id\";",
+          "description": "Count of students who completed courses taught by each instructor",
+          "input_tables": [
+            "courses",
+            "students",
+            "instructors"
+          ],
+          "output_table": "gold_students_completed_courses",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: students_completed_courses: Count of students who completed courses taught by each instructor\nSELECT \n    c.\"instructor_id\",\n    COUNT(DISTINCT s.\"student_id\") AS \"completed_students_count\"\nFROM \n    \"courses\" c\nJOIN \n    \"gold_students_completed_courses\" g ON c.\"course_id\" = g.\"course_id\"\nJOIN \n    \"students\" s ON g.\"student_id\" = s.\"student_id\"\nWHERE \n    COALESCE(g.\"completion_status\", '') = 'completed'  -- Only include completed courses\nGROUP BY \n    c.\"instructor_id\"\nORDER BY \n    c.\"instructor_id\";",
+      "description": "Transform gold_students_completed_courses from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_total_students_enrolled",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_total_students_enrolled",
+      "target_model": "gold_gold_total_students_enrolled",
+      "steps": [
+        {
+          "step_name": "Metric: total_students_enrolled",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_total_students_enrolled (instructor_id, total_students_enrolled)\nSELECT \n    c.instructor_id,\n    COUNT(DISTINCT s.student_id) AS total_students_enrolled\nFROM \n    courses c\nLEFT JOIN \n    students s ON s.course_id = c.course_id\nGROUP BY \n    c.instructor_id;",
+          "description": "Count of total students enrolled in courses taught by each instructor",
+          "input_tables": [
+            "courses",
+            "students",
+            "instructors"
+          ],
+          "output_table": "gold_total_students_enrolled",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: total_students_enrolled: Count of total students enrolled in courses taught by each instructor\nINSERT INTO gold_total_students_enrolled (instructor_id, total_students_enrolled)\nSELECT \n    c.instructor_id,\n    COUNT(DISTINCT s.student_id) AS total_students_enrolled\nFROM \n    courses c\nLEFT JOIN \n    students s ON s.course_id = c.course_id\nGROUP BY \n    c.instructor_id;",
+      "description": "Transform gold_total_students_enrolled from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_percentage_completed_courses",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_percentage_completed_courses",
+      "target_model": "gold_gold_percentage_completed_courses",
+      "steps": [
+        {
+          "step_name": "Metric: percentage_completed_courses",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_percentage_completed_courses (instructor_id, percentage_completed)\nSELECT \n    c.instructor_id,\n    COALESCE(\n        (COUNT(DISTINCT CASE WHEN s.completed = TRUE THEN s.student_id END) * 100.0) / \n        NULLIF(COUNT(DISTINCT s.student_id), 0), 0) AS percentage_completed\nFROM \n    courses c\nJOIN \n    students s ON c.course_id = s.course_id\nGROUP BY \n    c.instructor_id\nHAVING \n    COUNT(DISTINCT s.student_id) > 0;",
+          "description": "Percentage of students who completed courses taught by each instructor",
+          "input_tables": [
+            "courses",
+            "students",
+            "instructors"
+          ],
+          "output_table": "gold_percentage_completed_courses",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: percentage_completed_courses: Percentage of students who completed courses taught by each instructor\nINSERT INTO gold_percentage_completed_courses (instructor_id, percentage_completed)\nSELECT \n    c.instructor_id,\n    COALESCE(\n        (COUNT(DISTINCT CASE WHEN s.completed = TRUE THEN s.student_id END) * 100.0) / \n        NULLIF(COUNT(DISTINCT s.student_id), 0), 0) AS percentage_completed\nFROM \n    courses c\nJOIN \n    students s ON c.course_id = s.course_id\nGROUP BY \n    c.instructor_id\nHAVING \n    COUNT(DISTINCT s.student_id) > 0;",
+      "description": "Transform gold_percentage_completed_courses from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_quarterly_trend_percentage_completed_courses",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_quarterly_trend_percentage_completed_courses",
+      "target_model": "gold_gold_quarterly_trend_percentage_completed_courses",
+      "steps": [
+        {
+          "step_name": "Metric: quarterly_trend_percentage_completed_courses",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_quarterly_trend_percentage_completed_courses (instructor_id, quarter, percentage_completed_courses)\nWITH course_completion AS (\n    SELECT \n        c.instructor_id,\n        DATE_TRUNC('quarter', c.start_date) AS quarter,\n        COUNT(DISTINCT s.student_id) FILTER (WHERE s.completed = TRUE) AS completed_students,\n        COUNT(DISTINCT s.student_id) AS total_students\n    FROM \n        courses c\n    LEFT JOIN \n        students s ON c.course_id = s.course_id\n    GROUP BY \n        c.instructor_id, DATE_TRUNC('quarter', c.start_date)\n),\npercentage_calculation AS (\n    SELECT \n        instructor_id,\n        quarter,\n        COALESCE(100.0 * completed_students / NULLIF(total_students, 0), 0) AS percentage_completed_courses\n    FROM \n        course_completion\n)\nSELECT \n    instructor_id,\n    quarter,\n    percentage_completed_courses\nFROM \n    percentage_calculation\nORDER BY \n    instructor_id, quarter;",
+          "description": "Quarterly trend of the percentage of students who completed courses taught by each instructor",
+          "input_tables": [
+            "courses",
+            "students",
+            "instructors"
+          ],
+          "output_table": "gold_quarterly_trend_percentage_completed_courses",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: quarterly_trend_percentage_completed_courses: Quarterly trend of the percentage of students who completed courses taught by each instructor\nINSERT INTO gold_quarterly_trend_percentage_completed_courses (instructor_id, quarter, percentage_completed_courses)\nWITH course_completion AS (\n    SELECT \n        c.instructor_id,\n        DATE_TRUNC('quarter', c.start_date) AS quarter,\n        COUNT(DISTINCT s.student_id) FILTER (WHERE s.completed = TRUE) AS completed_students,\n        COUNT(DISTINCT s.student_id) AS total_students\n    FROM \n        courses c\n    LEFT JOIN \n        students s ON c.course_id = s.course_id\n    GROUP BY \n        c.instructor_id, DATE_TRUNC('quarter', c.start_date)\n),\npercentage_calculation AS (\n    SELECT \n        instructor_id,\n        quarter,\n        COALESCE(100.0 * completed_students / NULLIF(total_students, 0), 0) AS percentage_completed_courses\n    FROM \n        course_completion\n)\nSELECT \n    instructor_id,\n    quarter,\n    percentage_completed_courses\nFROM \n    percentage_calculation\nORDER BY \n    instructor_id, quarter;",
+      "description": "Transform gold_quarterly_trend_percentage_completed_courses from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_average_progress_percentage",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_average_progress_percentage",
+      "target_model": "gold_gold_average_progress_percentage",
+      "steps": [
+        {
+          "step_name": "Metric: average_progress_percentage",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_average_progress_percentage (average_progress_percentage)\nSELECT \n    COALESCE(SUM(CASE \n        WHEN total_required_progress > 0 THEN (current_progress::DECIMAL / total_required_progress) * 100 \n        ELSE NULL \n    END) / NULLIF(COUNT(*), 0), 0) AS average_progress_percentage\nFROM \n    enrollments;",
+          "description": "The average progress percentage of all enrollments.",
+          "input_tables": [
+            "enrollments"
+          ],
+          "output_table": "gold_average_progress_percentage",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: average_progress_percentage: The average progress percentage of all enrollments.\nINSERT INTO gold_average_progress_percentage (average_progress_percentage)\nSELECT \n    COALESCE(SUM(CASE \n        WHEN total_required_progress > 0 THEN (current_progress::DECIMAL / total_required_progress) * 100 \n        ELSE NULL \n    END) / NULLIF(COUNT(*), 0), 0) AS average_progress_percentage\nFROM \n    enrollments;",
+      "description": "Transform gold_average_progress_percentage from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_average_progress_percentage_by_course",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_average_progress_percentage_by_course",
+      "target_model": "gold_gold_average_progress_percentage_by_course",
+      "steps": [
+        {
+          "step_name": "Metric: average_progress_percentage_by_course",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_average_progress_percentage_by_course (course, average_progress_percentage)\nSELECT \n    course,\n    COALESCE(SUM(progress_percentage) / NULLIF(COUNT(*), 0), 0) AS average_progress_percentage\nFROM \n    enrollments\nWHERE \n    progress_percentage IS NOT NULL  -- Only include valid progress percentages\nGROUP BY \n    course;",
+          "description": "The average progress percentage of enrollments, broken down by course.",
+          "input_tables": [
+            "enrollments"
+          ],
+          "output_table": "gold_average_progress_percentage_by_course",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: average_progress_percentage_by_course: The average progress percentage of enrollments, broken down by course.\nINSERT INTO gold_average_progress_percentage_by_course (course, average_progress_percentage)\nSELECT \n    course,\n    COALESCE(SUM(progress_percentage) / NULLIF(COUNT(*), 0), 0) AS average_progress_percentage\nFROM \n    enrollments\nWHERE \n    progress_percentage IS NOT NULL  -- Only include valid progress percentages\nGROUP BY \n    course;",
+      "description": "Transform gold_average_progress_percentage_by_course from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_average_progress_percentage_by_enrollment_status",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_average_progress_percentage_by_enrollment_status",
+      "target_model": "gold_gold_average_progress_percentage_by_enrollment_status",
+      "steps": [
+        {
+          "step_name": "Metric: average_progress_percentage_by_enrollment_status",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_average_progress_percentage_by_enrollment_status (enrollment_status, average_progress_percentage)\nSELECT \n    enrollment_status,\n    COALESCE(SUM(progress_percentage), 0) / NULLIF(COUNT(*), 0) AS average_progress_percentage\nFROM \n    enrollments\nWHERE \n    progress_percentage IS NOT NULL  -- Only include enrollments with a valid progress percentage\nGROUP BY \n    enrollment_status;",
+          "description": "The average progress percentage of enrollments, broken down by enrollment status.",
+          "input_tables": [
+            "enrollments"
+          ],
+          "output_table": "gold_average_progress_percentage_by_enrollment_status",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: average_progress_percentage_by_enrollment_status: The average progress percentage of enrollments, broken down by enrollment status.\nINSERT INTO gold_average_progress_percentage_by_enrollment_status (enrollment_status, average_progress_percentage)\nSELECT \n    enrollment_status,\n    COALESCE(SUM(progress_percentage), 0) / NULLIF(COUNT(*), 0) AS average_progress_percentage\nFROM \n    enrollments\nWHERE \n    progress_percentage IS NOT NULL  -- Only include enrollments with a valid progress percentage\nGROUP BY \n    enrollment_status;",
+      "description": "Transform gold_average_progress_percentage_by_enrollment_status from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_total_learners",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_total_learners",
+      "target_model": "gold_gold_total_learners",
+      "steps": [
+        {
+          "step_name": "Metric: total_learners",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_total_learners (total_learners)\nSELECT COUNT(DISTINCT learner_id) AS total_learners\nFROM learner_engagement\nWHERE active = TRUE  -- Only count active learners\n  AND deleted = FALSE;  -- Exclude deleted accounts",
+          "description": "Total number of learners engaged in the platform",
+          "input_tables": [
+            "learner_engagement"
+          ],
+          "output_table": "gold_total_learners",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: total_learners: Total number of learners engaged in the platform\nINSERT INTO gold_total_learners (total_learners)\nSELECT COUNT(DISTINCT learner_id) AS total_learners\nFROM learner_engagement\nWHERE active = TRUE  -- Only count active learners\n  AND deleted = FALSE;  -- Exclude deleted accounts",
+      "description": "Transform gold_total_learners from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_average_engagement_time",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_average_engagement_time",
+      "target_model": "gold_gold_average_engagement_time",
+      "steps": [
+        {
+          "step_name": "Metric: average_engagement_time",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_average_engagement_time (month, average_time_spent)\nSELECT \n    DATE_TRUNC('month', engagement_timestamp) AS month,\n    COALESCE(SUM(engagement_time) / NULLIF(COUNT(*), 0), 0) AS average_time_spent\nFROM \n    learner_engagement\nWHERE \n    engagement_time > 1 -- Only include sessions longer than 1 minute\nGROUP BY \n    DATE_TRUNC('month', engagement_timestamp)\nORDER BY \n    month;",
+          "description": "Average time spent by learners on the platform",
+          "input_tables": [
+            "learner_engagement"
+          ],
+          "output_table": "gold_average_engagement_time",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: average_engagement_time: Average time spent by learners on the platform\nINSERT INTO gold_average_engagement_time (month, average_time_spent)\nSELECT \n    DATE_TRUNC('month', engagement_timestamp) AS month,\n    COALESCE(SUM(engagement_time) / NULLIF(COUNT(*), 0), 0) AS average_time_spent\nFROM \n    learner_engagement\nWHERE \n    engagement_time > 1 -- Only include sessions longer than 1 minute\nGROUP BY \n    DATE_TRUNC('month', engagement_timestamp)\nORDER BY \n    month;",
+      "description": "Transform gold_average_engagement_time from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_engagement_growth_rate",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_engagement_growth_rate",
+      "target_model": "gold_gold_engagement_growth_rate",
+      "steps": [
+        {
+          "step_name": "Metric: engagement_growth_rate",
+          "step_type": "metric",
+          "sql_logic": "WITH monthly_engagement AS (\n    SELECT \n        DATE_TRUNC('month', \"timestamp\") AS month,\n        COUNT(*) AS total_engagement\n    FROM \n        learner_engagement\n    GROUP BY \n        month\n),\nengagement_growth AS (\n    SELECT \n        current.month AS current_month,\n        current.total_engagement AS current_engagement,\n        COALESCE(previous.total_engagement, 0) AS previous_engagement\n    FROM \n        monthly_engagement current\n    LEFT JOIN \n        monthly_engagement previous \n    ON \n        current.month = previous.month + INTERVAL '1 month'\n)\nINSERT INTO gold_engagement_growth_rate (month, growth_rate)\nSELECT \n    current_month,\n    CASE \n        WHEN NULLIF(previous_engagement, 0) IS NOT NULL THEN \n            ((current_engagement - previous_engagement) / NULLIF(previous_engagement, 0)) * 100\n        ELSE \n            NULL \n    END AS growth_rate\nFROM \n    engagement_growth\nWHERE \n    current_engagement IS NOT NULL \n    AND previous_engagement IS NOT NULL;",
+          "description": "Growth rate of learner engagement over time",
+          "input_tables": [
+            "learner_engagement"
+          ],
+          "output_table": "gold_engagement_growth_rate",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: engagement_growth_rate: Growth rate of learner engagement over time\nWITH monthly_engagement AS (\n    SELECT \n        DATE_TRUNC('month', \"timestamp\") AS month,\n        COUNT(*) AS total_engagement\n    FROM \n        learner_engagement\n    GROUP BY \n        month\n),\nengagement_growth AS (\n    SELECT \n        current.month AS current_month,\n        current.total_engagement AS current_engagement,\n        COALESCE(previous.total_engagement, 0) AS previous_engagement\n    FROM \n        monthly_engagement current\n    LEFT JOIN \n        monthly_engagement previous \n    ON \n        current.month = previous.month + INTERVAL '1 month'\n)\nINSERT INTO gold_engagement_growth_rate (month, growth_rate)\nSELECT \n    current_month,\n    CASE \n        WHEN NULLIF(previous_engagement, 0) IS NOT NULL THEN \n            ((current_engagement - previous_engagement) / NULLIF(previous_engagement, 0)) * 100\n        ELSE \n            NULL \n    END AS growth_rate\nFROM \n    engagement_growth\nWHERE \n    current_engagement IS NOT NULL \n    AND previous_engagement IS NOT NULL;",
+      "description": "Transform gold_engagement_growth_rate from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_engagement_by_category",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_engagement_by_category",
+      "target_model": "gold_gold_engagement_by_category",
+      "steps": [
+        {
+          "step_name": "Metric: engagement_by_category",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_engagement_by_category (course_category, engagement_count, month)\nSELECT \n    cc.\"category_name\" AS course_category,\n    COUNT(le.\"engagement_id\") AS engagement_count,\n    DATE_TRUNC('month', le.\"engagement_timestamp\") AS month\nFROM \n    learner_engagement le\nJOIN \n    course_categories cc ON le.\"course_id\" = cc.\"course_id\"\nWHERE \n    cc.\"is_active\" = TRUE  -- Only include active courses\nGROUP BY \n    cc.\"category_name\", DATE_TRUNC('month', le.\"engagement_timestamp\")\nORDER BY \n    month, course_category;",
+          "description": "Engagement metrics segmented by course category",
+          "input_tables": [
+            "learner_engagement",
+            "course_categories"
+          ],
+          "output_table": "gold_engagement_by_category",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: engagement_by_category: Engagement metrics segmented by course category\nINSERT INTO gold_engagement_by_category (course_category, engagement_count, month)\nSELECT \n    cc.\"category_name\" AS course_category,\n    COUNT(le.\"engagement_id\") AS engagement_count,\n    DATE_TRUNC('month', le.\"engagement_timestamp\") AS month\nFROM \n    learner_engagement le\nJOIN \n    course_categories cc ON le.\"course_id\" = cc.\"course_id\"\nWHERE \n    cc.\"is_active\" = TRUE  -- Only include active courses\nGROUP BY \n    cc.\"category_name\", DATE_TRUNC('month', le.\"engagement_timestamp\")\nORDER BY \n    month, course_category;",
+      "description": "Transform gold_engagement_by_category from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_percentage_of_active_learners",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_percentage_of_active_learners",
+      "target_model": "gold_gold_percentage_of_active_learners",
+      "steps": [
+        {
+          "step_name": "Metric: percentage_of_active_learners",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_percentage_of_active_learners (percentage_active_learners)\nSELECT \n    COALESCE(\n        (COUNT(DISTINCT CASE WHEN le.engagement_date >= CURRENT_DATE - INTERVAL '30 days' THEN le.learner_id END) * 100.0) / \n        NULLIF(COUNT(DISTINCT l.learner_id), 0), \n    0) AS percentage_active_learners\nFROM \n    learners l\nLEFT JOIN \n    learner_engagement le ON l.learner_id = le.learner_id;",
+          "description": "Percentage of learners actively engaging with the platform",
+          "input_tables": [
+            "learner_engagement",
+            "learners"
+          ],
+          "output_table": "gold_percentage_of_active_learners",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: percentage_of_active_learners: Percentage of learners actively engaging with the platform\nINSERT INTO gold_percentage_of_active_learners (percentage_active_learners)\nSELECT \n    COALESCE(\n        (COUNT(DISTINCT CASE WHEN le.engagement_date >= CURRENT_DATE - INTERVAL '30 days' THEN le.learner_id END) * 100.0) / \n        NULLIF(COUNT(DISTINCT l.learner_id), 0), \n    0) AS percentage_active_learners\nFROM \n    learners l\nLEFT JOIN \n    learner_engagement le ON l.learner_id = le.learner_id;",
+      "description": "Transform gold_percentage_of_active_learners from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_engagement_trend",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_engagement_trend",
+      "target_model": "gold_gold_engagement_trend",
+      "steps": [
+        {
+          "step_name": "Metric: engagement_trend",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_engagement_trend (month, total_engagements)\nSELECT \n    DATE_TRUNC('month', engagement_date) AS month,\n    COUNT(*) AS total_engagements\nFROM \n    learner_engagement\nWHERE \n    engagement_date >= CURRENT_DATE - INTERVAL '6 months'  -- Ensure at least 6 months of data\nGROUP BY \n    month\nHAVING \n    COUNT(*) > 0  -- Only include months with engagements\nORDER BY \n    month;",
+          "description": "Trend of learner engagement over time",
+          "input_tables": [
+            "learner_engagement"
+          ],
+          "output_table": "gold_engagement_trend",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: engagement_trend: Trend of learner engagement over time\nINSERT INTO gold_engagement_trend (month, total_engagements)\nSELECT \n    DATE_TRUNC('month', engagement_date) AS month,\n    COUNT(*) AS total_engagements\nFROM \n    learner_engagement\nWHERE \n    engagement_date >= CURRENT_DATE - INTERVAL '6 months'  -- Ensure at least 6 months of data\nGROUP BY \n    month\nHAVING \n    COUNT(*) > 0  -- Only include months with engagements\nORDER BY \n    month;",
+      "description": "Transform gold_engagement_trend from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_total_courses_offered",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_total_courses_offered",
+      "target_model": "gold_gold_total_courses_offered",
+      "steps": [
+        {
+          "step_name": "Metric: total_courses_offered",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_total_courses_offered (total_courses)\nSELECT COUNT(*) AS total_courses\nFROM courses\nWHERE \"active\" = TRUE;",
+          "description": "Total number of courses offered in the data mart",
+          "input_tables": [
+            "courses"
+          ],
+          "output_table": "gold_total_courses_offered",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: total_courses_offered: Total number of courses offered in the data mart\nINSERT INTO gold_total_courses_offered (total_courses)\nSELECT COUNT(*) AS total_courses\nFROM courses\nWHERE \"active\" = TRUE;",
+      "description": "Transform gold_total_courses_offered from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_average_course_rating",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_average_course_rating",
+      "target_model": "gold_gold_average_course_rating",
+      "steps": [
+        {
+          "step_name": "Metric: average_course_rating",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_average_course_rating (average_rating)\nSELECT \n    COALESCE(SUM(rating), 0) / NULLIF(COUNT(rating), 0) AS average_rating\nFROM \n    course_ratings\nWHERE \n    course_status = 'completed';  -- Only include ratings from completed courses",
+          "description": "Average rating of all courses offered",
+          "input_tables": [
+            "course_ratings"
+          ],
+          "output_table": "gold_average_course_rating",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: average_course_rating: Average rating of all courses offered\nINSERT INTO gold_average_course_rating (average_rating)\nSELECT \n    COALESCE(SUM(rating), 0) / NULLIF(COUNT(rating), 0) AS average_rating\nFROM \n    course_ratings\nWHERE \n    course_status = 'completed';  -- Only include ratings from completed courses",
+      "description": "Transform gold_average_course_rating from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_total_enrollments",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_total_enrollments",
+      "target_model": "gold_gold_total_enrollments",
+      "steps": [
+        {
+          "step_name": "Metric: total_enrollments",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_total_enrollments (total_enrollments)\nSELECT COUNT(*) AS total_enrollments\nFROM enrollments\nWHERE enrollment_status = 'active';  -- Assuming 'enrollment_status' is the column indicating active enrollments",
+          "description": "Total number of enrollments across all courses",
+          "input_tables": [
+            "enrollments"
+          ],
+          "output_table": "gold_total_enrollments",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: total_enrollments: Total number of enrollments across all courses\nINSERT INTO gold_total_enrollments (total_enrollments)\nSELECT COUNT(*) AS total_enrollments\nFROM enrollments\nWHERE enrollment_status = 'active';  -- Assuming 'enrollment_status' is the column indicating active enrollments",
+      "description": "Transform gold_total_enrollments from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_course_completion_rate",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_course_completion_rate",
+      "target_model": "gold_gold_course_completion_rate",
+      "steps": [
+        {
+          "step_name": "Metric: course_completion_rate",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_course_completion_rate (completion_rate)\nSELECT \n    COALESCE(\n        (COUNT(DISTINCT cc.course_id) * 100.0) / NULLIF(COUNT(DISTINCT e.course_id), 0), \n        0) AS completion_rate\nFROM \n    enrollments e\nLEFT JOIN \n    course_completions cc ON e.course_id = cc.course_id\nWHERE \n    e.course_id IS NOT NULL\nGROUP BY \n    e.course_id\nHAVING \n    COUNT(e.student_id) > 0;",
+          "description": "Percentage of students who completed the courses they enrolled in",
+          "input_tables": [
+            "enrollments",
+            "course_completions"
+          ],
+          "output_table": "gold_course_completion_rate",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: course_completion_rate: Percentage of students who completed the courses they enrolled in\nINSERT INTO gold_course_completion_rate (completion_rate)\nSELECT \n    COALESCE(\n        (COUNT(DISTINCT cc.course_id) * 100.0) / NULLIF(COUNT(DISTINCT e.course_id), 0), \n        0) AS completion_rate\nFROM \n    enrollments e\nLEFT JOIN \n    course_completions cc ON e.course_id = cc.course_id\nWHERE \n    e.course_id IS NOT NULL\nGROUP BY \n    e.course_id\nHAVING \n    COUNT(e.student_id) > 0;",
+      "description": "Transform gold_course_completion_rate from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_enrollment_growth_rate",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_enrollment_growth_rate",
+      "target_model": "gold_gold_enrollment_growth_rate",
+      "steps": [
+        {
+          "step_name": "Metric: enrollment_growth_rate",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_enrollment_growth_rate (month, growth_rate)\nSELECT \n    DATE_TRUNC('month', e.current_month) AS month,\n    CASE \n        WHEN previous_month.enrollment_count IS NULL THEN NULL\n        ELSE \n            COALESCE(((e.enrollment_count - previous_month.enrollment_count) / NULLIF(previous_month.enrollment_count, 0)) * 100, 0)\n    END AS growth_rate\nFROM \n    (SELECT \n         DATE_TRUNC('month', enrollment_date) AS current_month,\n         COUNT(*) AS enrollment_count\n     FROM \n         enrollments\n     WHERE \n         enrollment_date >= CURRENT_DATE - INTERVAL '2 months'\n     GROUP BY \n         DATE_TRUNC('month', enrollment_date)\n    ) e\nLEFT JOIN \n    (SELECT \n         DATE_TRUNC('month', enrollment_date) AS previous_month,\n         COUNT(*) AS enrollment_count\n     FROM \n         enrollments\n     WHERE \n         enrollment_date >= CURRENT_DATE - INTERVAL '3 months' AND \n         enrollment_date < CURRENT_DATE - INTERVAL '2 months'\n     GROUP BY \n         DATE_TRUNC('month', enrollment_date)\n    ) previous_month \nON \n    DATE_TRUNC('month', e.current_month) = DATE_TRUNC('month', previous_month.previous_month) + INTERVAL '1 month'\nORDER BY \n    month;",
+          "description": "Growth rate of enrollments compared to the previous period",
+          "input_tables": [
+            "enrollments"
+          ],
+          "output_table": "gold_enrollment_growth_rate",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: enrollment_growth_rate: Growth rate of enrollments compared to the previous period\nINSERT INTO gold_enrollment_growth_rate (month, growth_rate)\nSELECT \n    DATE_TRUNC('month', e.current_month) AS month,\n    CASE \n        WHEN previous_month.enrollment_count IS NULL THEN NULL\n        ELSE \n            COALESCE(((e.enrollment_count - previous_month.enrollment_count) / NULLIF(previous_month.enrollment_count, 0)) * 100, 0)\n    END AS growth_rate\nFROM \n    (SELECT \n         DATE_TRUNC('month', enrollment_date) AS current_month,\n         COUNT(*) AS enrollment_count\n     FROM \n         enrollments\n     WHERE \n         enrollment_date >= CURRENT_DATE - INTERVAL '2 months'\n     GROUP BY \n         DATE_TRUNC('month', enrollment_date)\n    ) e\nLEFT JOIN \n    (SELECT \n         DATE_TRUNC('month', enrollment_date) AS previous_month,\n         COUNT(*) AS enrollment_count\n     FROM \n         enrollments\n     WHERE \n         enrollment_date >= CURRENT_DATE - INTERVAL '3 months' AND \n         enrollment_date < CURRENT_DATE - INTERVAL '2 months'\n     GROUP BY \n         DATE_TRUNC('month', enrollment_date)\n    ) previous_month \nON \n    DATE_TRUNC('month', e.current_month) = DATE_TRUNC('month', previous_month.previous_month) + INTERVAL '1 month'\nORDER BY \n    month;",
+      "description": "Transform gold_enrollment_growth_rate from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_average_time_to_complete",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_average_time_to_complete",
+      "target_model": "gold_gold_average_time_to_complete",
+      "steps": [
+        {
+          "step_name": "Metric: average_time_to_complete",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_average_time_to_complete (average_time)\nSELECT \n    COALESCE(SUM(time_taken), 0) / NULLIF(COUNT(*), 0) AS average_time\nFROM \n    course_completions\nWHERE \n    course_status = 'completed';",
+          "description": "Average time taken by students to complete courses",
+          "input_tables": [
+            "course_completions"
+          ],
+          "output_table": "gold_average_time_to_complete",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: average_time_to_complete: Average time taken by students to complete courses\nINSERT INTO gold_average_time_to_complete (average_time)\nSELECT \n    COALESCE(SUM(time_taken), 0) / NULLIF(COUNT(*), 0) AS average_time\nFROM \n    course_completions\nWHERE \n    course_status = 'completed';",
+      "description": "Transform gold_average_time_to_complete from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_course_performance_trend",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_course_performance_trend",
+      "target_model": "gold_gold_course_performance_trend",
+      "steps": [
+        {
+          "step_name": "Metric: course_performance_trend",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_course_performance_trend (course_id, month, average_score, total_enrollments)\nSELECT \n    course_id,\n    DATE_TRUNC('month', performance_date) AS month,\n    AVG(score) AS average_score,  -- Calculate average score for the month\n    COUNT(*) AS total_enrollments   -- Count total enrollments for the month\nFROM \n    course_performance\nWHERE \n    performance_date >= CURRENT_DATE - INTERVAL '12 months'  -- Filter for the last 12 months\nGROUP BY \n    course_id, month\nORDER BY \n    course_id, month;  -- Order by course_id and month for better readability",
+          "description": "Trend of course performance metrics over time",
+          "input_tables": [
+            "course_performance"
+          ],
+          "output_table": "gold_course_performance_trend",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: course_performance_trend: Trend of course performance metrics over time\nINSERT INTO gold_course_performance_trend (course_id, month, average_score, total_enrollments)\nSELECT \n    course_id,\n    DATE_TRUNC('month', performance_date) AS month,\n    AVG(score) AS average_score,  -- Calculate average score for the month\n    COUNT(*) AS total_enrollments   -- Count total enrollments for the month\nFROM \n    course_performance\nWHERE \n    performance_date >= CURRENT_DATE - INTERVAL '12 months'  -- Filter for the last 12 months\nGROUP BY \n    course_id, month\nORDER BY \n    course_id, month;  -- Order by course_id and month for better readability",
+      "description": "Transform gold_course_performance_trend from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_total_instructors_count",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_total_instructors_count",
+      "target_model": "gold_gold_total_instructors_count",
+      "steps": [
+        {
+          "step_name": "Metric: total_instructors_count",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_total_instructors_count (total_instructors_count)\nSELECT COUNT(*) AS total_instructors_count\nFROM instructors\nWHERE \"active\" = TRUE;",
+          "description": "Total number of instructors in the system",
+          "input_tables": [
+            "instructors"
+          ],
+          "output_table": "gold_total_instructors_count",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: total_instructors_count: Total number of instructors in the system\nINSERT INTO gold_total_instructors_count (total_instructors_count)\nSELECT COUNT(*) AS total_instructors_count\nFROM instructors\nWHERE \"active\" = TRUE;",
+      "description": "Transform gold_total_instructors_count from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_average_instructor_rating",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_average_instructor_rating",
+      "target_model": "gold_gold_average_instructor_rating",
+      "steps": [
+        {
+          "step_name": "Metric: average_instructor_rating",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_average_instructor_rating (average_rating)\nSELECT \n    COALESCE(SUM(rating), 0) / NULLIF(COUNT(rating), 0) AS average_rating\nFROM \n    instructor_feedback\nWHERE \n    feedback_date >= DATE_TRUNC('year', CURRENT_DATE) - INTERVAL '1 year'\n    AND feedback_date < DATE_TRUNC('year', CURRENT_DATE);",
+          "description": "Average rating of instructors based on student feedback",
+          "input_tables": [
+            "instructor_feedback"
+          ],
+          "output_table": "gold_average_instructor_rating",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: average_instructor_rating: Average rating of instructors based on student feedback\nINSERT INTO gold_average_instructor_rating (average_rating)\nSELECT \n    COALESCE(SUM(rating), 0) / NULLIF(COUNT(rating), 0) AS average_rating\nFROM \n    instructor_feedback\nWHERE \n    feedback_date >= DATE_TRUNC('year', CURRENT_DATE) - INTERVAL '1 year'\n    AND feedback_date < DATE_TRUNC('year', CURRENT_DATE);",
+      "description": "Transform gold_average_instructor_rating from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_instructor_courses_count",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_instructor_courses_count",
+      "target_model": "gold_gold_instructor_courses_count",
+      "steps": [
+        {
+          "step_name": "Metric: instructor_courses_count",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_instructor_courses_count (instructor_id, total_courses)\nSELECT \n    instructor_id,\n    COUNT(*) AS total_courses\nFROM \n    courses\nWHERE \n    semester = (SELECT current_semester FROM semesters WHERE CURRENT_DATE BETWEEN start_date AND end_date)\nGROUP BY \n    instructor_id;",
+          "description": "Total number of courses taught by instructors",
+          "input_tables": [
+            "courses"
+          ],
+          "output_table": "gold_instructor_courses_count",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: instructor_courses_count: Total number of courses taught by instructors\nINSERT INTO gold_instructor_courses_count (instructor_id, total_courses)\nSELECT \n    instructor_id,\n    COUNT(*) AS total_courses\nFROM \n    courses\nWHERE \n    semester = (SELECT current_semester FROM semesters WHERE CURRENT_DATE BETWEEN start_date AND end_date)\nGROUP BY \n    instructor_id;",
+      "description": "Transform gold_instructor_courses_count from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_instructor_attendance_rate",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_instructor_attendance_rate",
+      "target_model": "gold_gold_instructor_attendance_rate",
+      "steps": [
+        {
+          "step_name": "Metric: instructor_attendance_rate",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_instructor_attendance_rate (instructor_id, average_attendance_rate)\nSELECT \n    a.instructor_id,\n    COALESCE(SUM(a.attendance_rate), 0) / NULLIF(COUNT(a.class_id), 0) AS average_attendance_rate\nFROM \n    attendance a\nWHERE \n    a.class_date >= DATE_TRUNC('semester', CURRENT_DATE)  -- Filter for current semester classes\nGROUP BY \n    a.instructor_id;",
+          "description": "Average attendance rate of students in classes taught by instructors",
+          "input_tables": [
+            "attendance"
+          ],
+          "output_table": "gold_instructor_attendance_rate",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: instructor_attendance_rate: Average attendance rate of students in classes taught by instructors\nINSERT INTO gold_instructor_attendance_rate (instructor_id, average_attendance_rate)\nSELECT \n    a.instructor_id,\n    COALESCE(SUM(a.attendance_rate), 0) / NULLIF(COUNT(a.class_id), 0) AS average_attendance_rate\nFROM \n    attendance a\nWHERE \n    a.class_date >= DATE_TRUNC('semester', CURRENT_DATE)  -- Filter for current semester classes\nGROUP BY \n    a.instructor_id;",
+      "description": "Transform gold_instructor_attendance_rate from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_instructor_feedback_count",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_instructor_feedback_count",
+      "target_model": "gold_gold_instructor_feedback_count",
+      "steps": [
+        {
+          "step_name": "Metric: instructor_feedback_count",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_instructor_feedback_count (instructor_id, feedback_count)\nSELECT \n    instructor_id,\n    COUNT(*) AS feedback_count\nFROM \n    instructor_feedback\nWHERE \n    feedback_date >= DATE_TRUNC('year', CURRENT_DATE) - INTERVAL '1 year' \n    AND feedback_date < DATE_TRUNC('year', CURRENT_DATE)\nGROUP BY \n    instructor_id;",
+          "description": "Total number of feedback submissions for instructors",
+          "input_tables": [
+            "instructor_feedback"
+          ],
+          "output_table": "gold_instructor_feedback_count",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: instructor_feedback_count: Total number of feedback submissions for instructors\nINSERT INTO gold_instructor_feedback_count (instructor_id, feedback_count)\nSELECT \n    instructor_id,\n    COUNT(*) AS feedback_count\nFROM \n    instructor_feedback\nWHERE \n    feedback_date >= DATE_TRUNC('year', CURRENT_DATE) - INTERVAL '1 year' \n    AND feedback_date < DATE_TRUNC('year', CURRENT_DATE)\nGROUP BY \n    instructor_id;",
+      "description": "Transform gold_instructor_feedback_count from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_instructor_salary_sum",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_instructor_salary_sum",
+      "target_model": "gold_gold_instructor_salary_sum",
+      "steps": [
+        {
+          "step_name": "Metric: instructor_salary_sum",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_instructor_salary_sum (total_salary)\nSELECT COALESCE(SUM(salary), 0) AS total_salary\nFROM instructors\nWHERE active = TRUE;",
+          "description": "Total salary paid to instructors",
+          "input_tables": [
+            "instructors"
+          ],
+          "output_table": "gold_instructor_salary_sum",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: instructor_salary_sum: Total salary paid to instructors\nINSERT INTO gold_instructor_salary_sum (total_salary)\nSELECT COALESCE(SUM(salary), 0) AS total_salary\nFROM instructors\nWHERE active = TRUE;",
+      "description": "Transform gold_instructor_salary_sum from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_instructor_growth_rate",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_instructor_growth_rate",
+      "target_model": "gold_gold_instructor_growth_rate",
+      "steps": [
+        {
+          "step_name": "Metric: instructor_growth_rate",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_instructor_growth_rate (growth_rate, year)\nSELECT \n    CASE \n        WHEN COUNT(instructors_current.year) = 0 THEN NULL  -- Handle division by zero\n        ELSE (COUNT(instructors_current.year) - COUNT(instructors_previous.year))::DECIMAL / NULLIF(COUNT(instructors_previous.year), 0) \n    END AS growth_rate,\n    EXTRACT(YEAR FROM CURRENT_DATE) AS year\nFROM \n    (SELECT \n        DATE_TRUNC('year', created_at) AS year, \n        COUNT(*) AS instructor_count \n     FROM instructors \n     WHERE created_at >= DATE_TRUNC('year', CURRENT_DATE) - INTERVAL '1 year' \n     GROUP BY DATE_TRUNC('year', created_at)\n    ) AS instructors_current\nFULL OUTER JOIN \n    (SELECT \n        DATE_TRUNC('year', created_at) AS year, \n        COUNT(*) AS instructor_count \n     FROM instructors \n     WHERE created_at >= DATE_TRUNC('year', CURRENT_DATE) - INTERVAL '2 years' \n     AND created_at < DATE_TRUNC('year', CURRENT_DATE) - INTERVAL '1 year' \n     GROUP BY DATE_TRUNC('year', created_at)\n    ) AS instructors_previous\nON instructors_current.year = instructors_previous.year + INTERVAL '1 year'\nWHERE \n    instructors_current.year = DATE_TRUNC('year', CURRENT_DATE);",
+          "description": "Growth rate of the number of instructors over the last year",
+          "input_tables": [
+            "instructors"
+          ],
+          "output_table": "gold_instructor_growth_rate",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: instructor_growth_rate: Growth rate of the number of instructors over the last year\nINSERT INTO gold_instructor_growth_rate (growth_rate, year)\nSELECT \n    CASE \n        WHEN COUNT(instructors_current.year) = 0 THEN NULL  -- Handle division by zero\n        ELSE (COUNT(instructors_current.year) - COUNT(instructors_previous.year))::DECIMAL / NULLIF(COUNT(instructors_previous.year), 0) \n    END AS growth_rate,\n    EXTRACT(YEAR FROM CURRENT_DATE) AS year\nFROM \n    (SELECT \n        DATE_TRUNC('year', created_at) AS year, \n        COUNT(*) AS instructor_count \n     FROM instructors \n     WHERE created_at >= DATE_TRUNC('year', CURRENT_DATE) - INTERVAL '1 year' \n     GROUP BY DATE_TRUNC('year', created_at)\n    ) AS instructors_current\nFULL OUTER JOIN \n    (SELECT \n        DATE_TRUNC('year', created_at) AS year, \n        COUNT(*) AS instructor_count \n     FROM instructors \n     WHERE created_at >= DATE_TRUNC('year', CURRENT_DATE) - INTERVAL '2 years' \n     AND created_at < DATE_TRUNC('year', CURRENT_DATE) - INTERVAL '1 year' \n     GROUP BY DATE_TRUNC('year', created_at)\n    ) AS instructors_previous\nON instructors_current.year = instructors_previous.year + INTERVAL '1 year'\nWHERE \n    instructors_current.year = DATE_TRUNC('year', CURRENT_DATE);",
+      "description": "Transform gold_instructor_growth_rate from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    }
+  ],
+  "governance": {
+    "data_quality_rules": [],
+    "compliance_requirements": [
+      "GDPR",
+      "SOX"
+    ],
+    "data_lineage": {
+      "enrollments": [
+        "users",
+        "courses"
+      ]
+    },
+    "access_controls": {},
+    "retention_policies": {},
+    "properties": {}
+  }
+}

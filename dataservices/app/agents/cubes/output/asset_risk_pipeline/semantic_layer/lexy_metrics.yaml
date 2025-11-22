@@ -1,0 +1,365 @@
+# Lexy Semantic Layer - Asset Risk Metrics
+# This YAML defines metrics and dimensions for natural language querying
+# Compatible with Lexy agent framework
+
+version: 1.0
+domain: asset_risk_analytics
+
+entities:
+  - name: asset
+    description: IT asset with associated risk metrics
+    primary_key: asset_id
+    attributes:
+      - name: asset_id
+        type: string
+        description: Unique asset identifier
+      - name: hostname
+        type: string
+        description: Asset hostname
+      - name: business_unit
+        type: string
+        description: Business unit owning the asset
+      - name: env
+        type: string
+        description: Environment (prod/non-prod)
+      - name: criticality
+        type: integer
+        description: Asset criticality score (1-100)
+
+  - name: business_unit
+    description: Organizational business unit
+    primary_key: business_unit
+    attributes:
+      - name: business_unit
+        type: string
+        description: Business unit name
+
+  - name: vulnerability
+    description: Security vulnerability
+    primary_key: cve_id
+    attributes:
+      - name: cve_id
+        type: string
+        description: CVE identifier
+      - name: cvss_score
+        type: numeric
+        description: CVSS base score (0-10)
+      - name: epss_score
+        type: numeric
+        description: EPSS score (0-1)
+      - name: is_kev
+        type: boolean
+        description: Known Exploited Vulnerability flag
+
+metrics:
+  - name: attack_surface_index
+    description: |
+      Attack Surface Index (ASI) - composite score (0-100) combining all 
+      exposure components. Higher values indicate greater attack surface exposure.
+    type: numeric
+    aggregation: average
+    range: [0, 100]
+    unit: score
+    source_table: attack_surface_index
+    source_column: attack_surface_index
+    dimensions:
+      - business_unit
+      - env
+      - asset_id
+    natural_language_aliases:
+      - "attack surface"
+      - "ASI"
+      - "exposure score"
+      - "risk score"
+    questions:
+      - "What is the attack surface index for {business_unit}?"
+      - "Show me assets with high attack surface"
+      - "Which business units have the highest exposure?"
+
+  - name: total_risk_exposure
+    description: |
+      Total risk-weighted ASI. Sum of risk-weighted ASI across assets, 
+      accounting for criticality.
+    type: numeric
+    aggregation: sum
+    unit: score
+    source_table: attack_surface_by_bu
+    source_column: total_risk_exposure
+    dimensions:
+      - business_unit
+      - env
+    natural_language_aliases:
+      - "total risk"
+      - "risk exposure"
+      - "total exposure"
+    questions:
+      - "What is the total risk exposure for {business_unit}?"
+      - "Show me top business units by risk exposure"
+
+  - name: exploitability_likelihood
+    description: |
+      Exploitability likelihood (0-1 scale). Probability that an asset will 
+      be exploited based on vulnerabilities, EPSS, KEV status, and exposure.
+    type: numeric
+    aggregation: average
+    range: [0, 1]
+    unit: probability
+    source_table: exploitability_likelihood
+    source_column: asset_exploitability_likelihood
+    dimensions:
+      - business_unit
+      - env
+      - asset_id
+    natural_language_aliases:
+      - "likelihood"
+      - "exploitability"
+      - "exploitation probability"
+      - "breach likelihood"
+    questions:
+      - "What is the likelihood of exploitation for {business_unit}?"
+      - "Show me assets with high exploitability"
+      - "Which assets are most likely to be breached?"
+
+  - name: high_risk_asset_count
+    description: Count of assets with ASI >= 70 (high risk threshold)
+    type: integer
+    aggregation: count
+    unit: count
+    source_table: attack_surface_by_bu
+    source_column: high_risk_assets
+    dimensions:
+      - business_unit
+      - env
+    natural_language_aliases:
+      - "high risk assets"
+      - "critical assets"
+      - "at-risk assets"
+    questions:
+      - "How many high-risk assets are in {business_unit}?"
+      - "Show me the count of critical assets"
+
+  - name: breach_risk_count
+    description: |
+      Count of assets with high ASI (>=70) AND high likelihood (>=0.5). 
+      Represents highest breach risk.
+    type: integer
+    aggregation: sum
+    unit: count
+    source_table: exposure_trends_monthly
+    source_column: high_breach_risk_assets
+    dimensions:
+      - business_unit
+      - env
+      - snapshot_month
+    natural_language_aliases:
+      - "breach risk"
+      - "high breach risk"
+      - "critical breach risk"
+    questions:
+      - "How many assets are at high breach risk?"
+      - "Show me breach risk trends over time"
+
+  - name: external_exposure_score
+    description: External exposure component score (0-30 points)
+    type: numeric
+    aggregation: average
+    range: [0, 30]
+    unit: score
+    source_table: attack_surface_index
+    source_column: external_exposure_score
+    dimensions:
+      - business_unit
+      - env
+    natural_language_aliases:
+      - "external exposure"
+      - "internet exposure"
+      - "public exposure"
+    questions:
+      - "What is the external exposure for {business_unit}?"
+
+  - name: vulnerability_exposure_score
+    description: Vulnerability exposure component score (0-25 points)
+    type: numeric
+    aggregation: average
+    range: [0, 25]
+    unit: score
+    source_table: attack_surface_index
+    source_column: vulnerability_exposure_score
+    dimensions:
+      - business_unit
+      - env
+    natural_language_aliases:
+      - "vulnerability exposure"
+      - "CVE exposure"
+      - "vuln risk"
+    questions:
+      - "What is the vulnerability exposure for {business_unit}?"
+
+  - name: misconfiguration_exposure_score
+    description: Misconfiguration exposure component score (0-20 points)
+    type: numeric
+    aggregation: average
+    range: [0, 20]
+    unit: score
+    source_table: attack_surface_index
+    source_column: misconfiguration_exposure_score
+    dimensions:
+      - business_unit
+      - env
+    natural_language_aliases:
+      - "misconfiguration exposure"
+      - "config risk"
+      - "misconfig risk"
+    questions:
+      - "What is the misconfiguration exposure for {business_unit}?"
+
+  - name: identity_exposure_score
+    description: Identity exposure component score (0-15 points)
+    type: numeric
+    aggregation: average
+    range: [0, 15]
+    unit: score
+    source_table: attack_surface_index
+    source_column: identity_exposure_score
+    dimensions:
+      - business_unit
+      - env
+    natural_language_aliases:
+      - "identity exposure"
+      - "IAM exposure"
+      - "access exposure"
+    questions:
+      - "What is the identity exposure for {business_unit}?"
+
+  - name: software_exposure_score
+    description: Software exposure component score (0-10 points)
+    type: numeric
+    aggregation: average
+    range: [0, 10]
+    unit: score
+    source_table: attack_surface_index
+    source_column: software_exposure_score
+    dimensions:
+      - business_unit
+      - env
+    natural_language_aliases:
+      - "software exposure"
+      - "EOL exposure"
+      - "unsupported software"
+    questions:
+      - "What is the software exposure for {business_unit}?"
+
+dimensions:
+  - name: business_unit
+    description: Business unit dimension
+    type: string
+    source_table: attack_surface_index
+    source_column: business_unit
+    natural_language_aliases:
+      - "business unit"
+      - "BU"
+      - "department"
+      - "division"
+
+  - name: env
+    description: Environment dimension (prod/non-prod)
+    type: string
+    source_table: attack_surface_index
+    source_column: env
+    natural_language_aliases:
+      - "environment"
+      - "env"
+      - "production"
+      - "non-production"
+
+  - name: os_category
+    description: Operating system category
+    type: string
+    source_table: attack_surface_by_env_os
+    source_column: os_category
+    natural_language_aliases:
+      - "OS"
+      - "operating system"
+      - "platform"
+
+  - name: snapshot_month
+    description: Monthly snapshot timestamp for trend analysis
+    type: date
+    source_table: exposure_trends_monthly
+    source_column: snapshot_month
+    natural_language_aliases:
+      - "month"
+      - "time"
+      - "date"
+      - "snapshot"
+
+  - name: likelihood_category
+    description: Likelihood category (Very High, High, Medium, Low, Very Low)
+    type: string
+    source_table: exploitability_likelihood
+    source_column: likelihood_category
+    natural_language_aliases:
+      - "risk category"
+      - "likelihood level"
+      - "risk level"
+
+relationships:
+  - from: attack_surface_index
+    to: attack_surface_by_bu
+    type: aggregation
+    join_key: business_unit
+
+  - from: attack_surface_index
+    to: attack_surface_by_env_os
+    type: aggregation
+    join_keys:
+      - env
+      - os_category
+
+  - from: attack_surface_index
+    to: exploitability_likelihood
+    type: one_to_one
+    join_key: asset_id
+
+  - from: attack_surface_index
+    to: exposure_trends_monthly
+    type: time_series
+    join_keys:
+      - business_unit
+      - env
+
+query_templates:
+  - pattern: "top {N} business units by {metric}"
+    example: "top 5 business units by attack surface index"
+    sql_template: |
+      SELECT business_unit, {metric}
+      FROM {source_table}
+      ORDER BY {metric} DESC
+      LIMIT {N}
+
+  - pattern: "attack surface by {dimension}"
+    example: "attack surface by business unit"
+    sql_template: |
+      SELECT {dimension}, AVG(attack_surface_index) as avg_asi
+      FROM attack_surface_index
+      GROUP BY {dimension}
+      ORDER BY avg_asi DESC
+
+  - pattern: "{metric} trend over {time_period}"
+    example: "attack surface index trend over 12 months"
+    sql_template: |
+      SELECT snapshot_month, AVG({metric}) as avg_metric
+      FROM exposure_trends_monthly
+      WHERE snapshot_month >= DATEADD('month', -{time_period}, CURRENT_DATE)
+      GROUP BY snapshot_month
+      ORDER BY snapshot_month
+
+  - pattern: "contribution of {dimension} to {metric}"
+    example: "contribution of business units to total risk exposure"
+    sql_template: |
+      SELECT {dimension}, 
+             {metric},
+             ({metric} * 100.0 / SUM({metric}) OVER ()) as contribution_pct
+      FROM {source_table}
+      ORDER BY contribution_pct DESC
+

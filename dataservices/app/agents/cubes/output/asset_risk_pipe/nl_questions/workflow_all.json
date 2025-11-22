@@ -1,0 +1,3175 @@
+[
+  {
+    "question_id": "cube_raw_assets",
+    "question": "Build a Cube.js cube definition for the raw layer table 'assets' (cube name: 'raw_assets').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- hostname\n- business_unit\n- env\n- created_at\n- updated_at\n\nMeasures:\n- count\n- criticality\n\nRelationships to other tables: vulnerabilities, misconfigurations, external_exposure, identity_exposure, software_inventory\n\nSteps to build:\n- 1. Define dimensions: asset_id, hostname, business_unit, env, created_at\n- 2. Define measures: count, criticality\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "raw",
+      "table_name": "assets",
+      "cube_name": "raw_assets",
+      "description": "Raw layer cube for raw_assets",
+      "table_metadata": {
+        "table_name": "assets",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: asset_id, hostname, business_unit, env, created_at",
+      "2. Define measures: count, criticality",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 6,
+      "measure_count": 2,
+      "generated_at": "2025-11-20T11:47:30.505086"
+    },
+    "dependencies": [],
+    "layer": "raw",
+    "table_name": "assets",
+    "cube_name": "raw_assets",
+    "dimensions": [
+      {
+        "name": "asset_id",
+        "sql": "${raw_assets}.asset_id",
+        "type": "number",
+        "title": "Asset Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "hostname",
+        "sql": "${raw_assets}.hostname",
+        "type": "string",
+        "title": "Hostname",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "business_unit",
+        "sql": "${raw_assets}.business_unit",
+        "type": "string",
+        "title": "Business Unit",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "env",
+        "sql": "${raw_assets}.env",
+        "type": "string",
+        "title": "Env",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "created_at",
+        "sql": "${raw_assets}.created_at",
+        "type": "time",
+        "title": "Created At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "updated_at",
+        "sql": "${raw_assets}.updated_at",
+        "type": "time",
+        "title": "Updated At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "asset_id"
+        ]
+      },
+      {
+        "name": "criticality",
+        "sql": "${raw_assets}.criticality",
+        "type": "sum",
+        "title": "Criticality",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "vulnerabilities",
+        "parent_table": "assets",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "vulnerabilities.asset_id = assets.asset_id",
+        "layer": "silver"
+      },
+      {
+        "child_table": "misconfigurations",
+        "parent_table": "assets",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "misconfigurations.asset_id = assets.asset_id",
+        "layer": "silver"
+      },
+      {
+        "child_table": "external_exposure",
+        "parent_table": "assets",
+        "join_type": "ONE_TO_ONE",
+        "join_condition": "external_exposure.asset_id = assets.asset_id",
+        "layer": "silver"
+      },
+      {
+        "child_table": "identity_exposure",
+        "parent_table": "assets",
+        "join_type": "ONE_TO_ONE",
+        "join_condition": "identity_exposure.asset_id = assets.asset_id",
+        "layer": "silver"
+      },
+      {
+        "child_table": "software_inventory",
+        "parent_table": "assets",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "software_inventory.asset_id = assets.asset_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_raw_vulnerabilities",
+    "question": "Build a Cube.js cube definition for the raw layer table 'vulnerabilities' (cube name: 'raw_vulnerabilities').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- cve_id\n- is_kev\n- is_internet_facing\n- discovered_at\n- updated_at\n\nMeasures:\n- count\n- cvss_score\n- epss_score\n\nRelationships to other tables: vulnerabilities\n\nSteps to build:\n- 1. Define dimensions: asset_id, cve_id, is_kev, is_internet_facing, discovered_at\n- 2. Define measures: count, cvss_score, epss_score\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "raw",
+      "table_name": "vulnerabilities",
+      "cube_name": "raw_vulnerabilities",
+      "description": "Raw layer cube for raw_vulnerabilities",
+      "table_metadata": {
+        "table_name": "vulnerabilities",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: asset_id, cve_id, is_kev, is_internet_facing, discovered_at",
+      "2. Define measures: count, cvss_score, epss_score",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 6,
+      "measure_count": 3,
+      "generated_at": "2025-11-20T11:47:30.505315"
+    },
+    "dependencies": [],
+    "layer": "raw",
+    "table_name": "vulnerabilities",
+    "cube_name": "raw_vulnerabilities",
+    "dimensions": [
+      {
+        "name": "asset_id",
+        "sql": "${raw_vulnerabilities}.asset_id",
+        "type": "number",
+        "title": "Asset Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "cve_id",
+        "sql": "${raw_vulnerabilities}.cve_id",
+        "type": "string",
+        "title": "Cve Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "is_kev",
+        "sql": "${raw_vulnerabilities}.is_kev",
+        "type": "string",
+        "title": "Is Kev",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "is_internet_facing",
+        "sql": "${raw_vulnerabilities}.is_internet_facing",
+        "type": "string",
+        "title": "Is Internet Facing",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "discovered_at",
+        "sql": "${raw_vulnerabilities}.discovered_at",
+        "type": "time",
+        "title": "Discovered At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "updated_at",
+        "sql": "${raw_vulnerabilities}.updated_at",
+        "type": "time",
+        "title": "Updated At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "asset_id"
+        ]
+      },
+      {
+        "name": "cvss_score",
+        "sql": "${raw_vulnerabilities}.cvss_score",
+        "type": "sum",
+        "title": "Cvss Score",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      },
+      {
+        "name": "epss_score",
+        "sql": "${raw_vulnerabilities}.epss_score",
+        "type": "sum",
+        "title": "Epss Score",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "vulnerabilities",
+        "parent_table": "assets",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "vulnerabilities.asset_id = assets.asset_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_raw_misconfigurations",
+    "question": "Build a Cube.js cube definition for the raw layer table 'misconfigurations' (cube name: 'raw_misconfigurations').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- config_id\n- severity\n- category\n- discovered_at\n- updated_at\n\nMeasures:\n- count\n\nRelationships to other tables: misconfigurations\n\nSteps to build:\n- 1. Define dimensions: asset_id, config_id, severity, category, discovered_at\n- 2. Define measures: count\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "raw",
+      "table_name": "misconfigurations",
+      "cube_name": "raw_misconfigurations",
+      "description": "Raw layer cube for raw_misconfigurations",
+      "table_metadata": {
+        "table_name": "misconfigurations",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: asset_id, config_id, severity, category, discovered_at",
+      "2. Define measures: count",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 6,
+      "measure_count": 1,
+      "generated_at": "2025-11-20T11:47:30.505412"
+    },
+    "dependencies": [],
+    "layer": "raw",
+    "table_name": "misconfigurations",
+    "cube_name": "raw_misconfigurations",
+    "dimensions": [
+      {
+        "name": "asset_id",
+        "sql": "${raw_misconfigurations}.asset_id",
+        "type": "number",
+        "title": "Asset Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "config_id",
+        "sql": "${raw_misconfigurations}.config_id",
+        "type": "number",
+        "title": "Config Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "severity",
+        "sql": "${raw_misconfigurations}.severity",
+        "type": "string",
+        "title": "Severity",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "category",
+        "sql": "${raw_misconfigurations}.category",
+        "type": "string",
+        "title": "Category",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "discovered_at",
+        "sql": "${raw_misconfigurations}.discovered_at",
+        "type": "time",
+        "title": "Discovered At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "updated_at",
+        "sql": "${raw_misconfigurations}.updated_at",
+        "type": "time",
+        "title": "Updated At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "asset_id",
+          "config_id"
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "misconfigurations",
+        "parent_table": "assets",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "misconfigurations.asset_id = assets.asset_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_raw_external_exposure",
+    "question": "Build a Cube.js cube definition for the raw layer table 'external_exposure' (cube name: 'raw_external_exposure').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- is_public_ip\n- weak_tls\n- geo_risky\n- scanned_at\n- updated_at\n\nMeasures:\n- count\n- open_ports\n\nRelationships to other tables: external_exposure\n\nSteps to build:\n- 1. Define dimensions: asset_id, is_public_ip, weak_tls, geo_risky, scanned_at\n- 2. Define measures: count, open_ports\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "raw",
+      "table_name": "external_exposure",
+      "cube_name": "raw_external_exposure",
+      "description": "Raw layer cube for raw_external_exposure",
+      "table_metadata": {
+        "table_name": "external_exposure",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: asset_id, is_public_ip, weak_tls, geo_risky, scanned_at",
+      "2. Define measures: count, open_ports",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 6,
+      "measure_count": 2,
+      "generated_at": "2025-11-20T11:47:30.505708"
+    },
+    "dependencies": [],
+    "layer": "raw",
+    "table_name": "external_exposure",
+    "cube_name": "raw_external_exposure",
+    "dimensions": [
+      {
+        "name": "asset_id",
+        "sql": "${raw_external_exposure}.asset_id",
+        "type": "number",
+        "title": "Asset Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "is_public_ip",
+        "sql": "${raw_external_exposure}.is_public_ip",
+        "type": "string",
+        "title": "Is Public Ip",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "weak_tls",
+        "sql": "${raw_external_exposure}.weak_tls",
+        "type": "string",
+        "title": "Weak Tls",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "geo_risky",
+        "sql": "${raw_external_exposure}.geo_risky",
+        "type": "string",
+        "title": "Geo Risky",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "scanned_at",
+        "sql": "${raw_external_exposure}.scanned_at",
+        "type": "time",
+        "title": "Scanned At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "updated_at",
+        "sql": "${raw_external_exposure}.updated_at",
+        "type": "time",
+        "title": "Updated At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "asset_id"
+        ]
+      },
+      {
+        "name": "open_ports",
+        "sql": "${raw_external_exposure}.open_ports",
+        "type": "sum",
+        "title": "Open Ports",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "external_exposure",
+        "parent_table": "assets",
+        "join_type": "ONE_TO_ONE",
+        "join_condition": "external_exposure.asset_id = assets.asset_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_raw_identity_exposure",
+    "question": "Build a Cube.js cube definition for the raw layer table 'identity_exposure' (cube name: 'raw_identity_exposure').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- has_password_reuse\n- has_mfa_disabled\n- assessed_at\n- updated_at\n\nMeasures:\n- count\n- num_admin_accounts\n- num_stale_accounts\n\nRelationships to other tables: identity_exposure\n\nSteps to build:\n- 1. Define dimensions: asset_id, has_password_reuse, has_mfa_disabled, assessed_at, updated_at\n- 2. Define measures: count, num_admin_accounts, num_stale_accounts\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "raw",
+      "table_name": "identity_exposure",
+      "cube_name": "raw_identity_exposure",
+      "description": "Raw layer cube for raw_identity_exposure",
+      "table_metadata": {
+        "table_name": "identity_exposure",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: asset_id, has_password_reuse, has_mfa_disabled, assessed_at, updated_at",
+      "2. Define measures: count, num_admin_accounts, num_stale_accounts",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 5,
+      "measure_count": 3,
+      "generated_at": "2025-11-20T11:47:30.505829"
+    },
+    "dependencies": [],
+    "layer": "raw",
+    "table_name": "identity_exposure",
+    "cube_name": "raw_identity_exposure",
+    "dimensions": [
+      {
+        "name": "asset_id",
+        "sql": "${raw_identity_exposure}.asset_id",
+        "type": "number",
+        "title": "Asset Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "has_password_reuse",
+        "sql": "${raw_identity_exposure}.has_password_reuse",
+        "type": "string",
+        "title": "Has Password Reuse",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "has_mfa_disabled",
+        "sql": "${raw_identity_exposure}.has_mfa_disabled",
+        "type": "string",
+        "title": "Has Mfa Disabled",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "assessed_at",
+        "sql": "${raw_identity_exposure}.assessed_at",
+        "type": "time",
+        "title": "Assessed At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "updated_at",
+        "sql": "${raw_identity_exposure}.updated_at",
+        "type": "time",
+        "title": "Updated At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "asset_id"
+        ]
+      },
+      {
+        "name": "num_admin_accounts",
+        "sql": "${raw_identity_exposure}.num_admin_accounts",
+        "type": "sum",
+        "title": "Num Admin Accounts",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      },
+      {
+        "name": "num_stale_accounts",
+        "sql": "${raw_identity_exposure}.num_stale_accounts",
+        "type": "sum",
+        "title": "Num Stale Accounts",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "identity_exposure",
+        "parent_table": "assets",
+        "join_type": "ONE_TO_ONE",
+        "join_condition": "identity_exposure.asset_id = assets.asset_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_raw_software_inventory",
+    "question": "Build a Cube.js cube definition for the raw layer table 'software_inventory' (cube name: 'raw_software_inventory').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- software_name\n- version\n- is_eol\n- is_unsupported\n- discovered_at\n- updated_at\n\nMeasures:\n- count\n\nRelationships to other tables: software_inventory\n\nSteps to build:\n- 1. Define dimensions: asset_id, software_name, version, is_eol, is_unsupported\n- 2. Define measures: count\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "raw",
+      "table_name": "software_inventory",
+      "cube_name": "raw_software_inventory",
+      "description": "Raw layer cube for raw_software_inventory",
+      "table_metadata": {
+        "table_name": "software_inventory",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: asset_id, software_name, version, is_eol, is_unsupported",
+      "2. Define measures: count",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 7,
+      "measure_count": 1,
+      "generated_at": "2025-11-20T11:47:30.506077"
+    },
+    "dependencies": [],
+    "layer": "raw",
+    "table_name": "software_inventory",
+    "cube_name": "raw_software_inventory",
+    "dimensions": [
+      {
+        "name": "asset_id",
+        "sql": "${raw_software_inventory}.asset_id",
+        "type": "number",
+        "title": "Asset Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "software_name",
+        "sql": "${raw_software_inventory}.software_name",
+        "type": "string",
+        "title": "Software Name",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "version",
+        "sql": "${raw_software_inventory}.version",
+        "type": "string",
+        "title": "Version",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "is_eol",
+        "sql": "${raw_software_inventory}.is_eol",
+        "type": "string",
+        "title": "Is Eol",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "is_unsupported",
+        "sql": "${raw_software_inventory}.is_unsupported",
+        "type": "string",
+        "title": "Is Unsupported",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "discovered_at",
+        "sql": "${raw_software_inventory}.discovered_at",
+        "type": "time",
+        "title": "Discovered At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "updated_at",
+        "sql": "${raw_software_inventory}.updated_at",
+        "type": "time",
+        "title": "Updated At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "asset_id"
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "software_inventory",
+        "parent_table": "assets",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "software_inventory.asset_id = assets.asset_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_silver_assets",
+    "question": "Build a Cube.js cube definition for the silver layer table 'assets' (cube name: 'silver_assets').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- hostname\n- business_unit\n- env\n- created_at\n- updated_at\n\nMeasures:\n- count\n- criticality\n\nRelationships to other tables: vulnerabilities, misconfigurations, external_exposure, identity_exposure, software_inventory\n\nSteps to build:\n- 1. Define dimensions: asset_id, hostname, business_unit, env, created_at\n- 2. Define measures: count, criticality\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "silver",
+      "table_name": "assets",
+      "cube_name": "silver_assets",
+      "description": "Silver layer cube for silver_assets",
+      "table_metadata": {
+        "table_name": "assets",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: asset_id, hostname, business_unit, env, created_at",
+      "2. Define measures: count, criticality",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 6,
+      "measure_count": 2,
+      "generated_at": "2025-11-20T11:47:30.506202"
+    },
+    "dependencies": [],
+    "layer": "silver",
+    "table_name": "assets",
+    "cube_name": "silver_assets",
+    "dimensions": [
+      {
+        "name": "asset_id",
+        "sql": "${silver_assets}.asset_id",
+        "type": "number",
+        "title": "Asset Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "hostname",
+        "sql": "${silver_assets}.hostname",
+        "type": "string",
+        "title": "Hostname",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "business_unit",
+        "sql": "${silver_assets}.business_unit",
+        "type": "string",
+        "title": "Business Unit",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "env",
+        "sql": "${silver_assets}.env",
+        "type": "string",
+        "title": "Env",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "created_at",
+        "sql": "${silver_assets}.created_at",
+        "type": "time",
+        "title": "Created At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "updated_at",
+        "sql": "${silver_assets}.updated_at",
+        "type": "time",
+        "title": "Updated At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "asset_id"
+        ]
+      },
+      {
+        "name": "criticality",
+        "sql": "${silver_assets}.criticality",
+        "type": "sum",
+        "title": "Criticality",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "vulnerabilities",
+        "parent_table": "assets",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "vulnerabilities.asset_id = assets.asset_id",
+        "layer": "silver"
+      },
+      {
+        "child_table": "misconfigurations",
+        "parent_table": "assets",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "misconfigurations.asset_id = assets.asset_id",
+        "layer": "silver"
+      },
+      {
+        "child_table": "external_exposure",
+        "parent_table": "assets",
+        "join_type": "ONE_TO_ONE",
+        "join_condition": "external_exposure.asset_id = assets.asset_id",
+        "layer": "silver"
+      },
+      {
+        "child_table": "identity_exposure",
+        "parent_table": "assets",
+        "join_type": "ONE_TO_ONE",
+        "join_condition": "identity_exposure.asset_id = assets.asset_id",
+        "layer": "silver"
+      },
+      {
+        "child_table": "software_inventory",
+        "parent_table": "assets",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "software_inventory.asset_id = assets.asset_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_silver_vulnerabilities",
+    "question": "Build a Cube.js cube definition for the silver layer table 'vulnerabilities' (cube name: 'silver_vulnerabilities').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- cve_id\n- is_kev\n- is_internet_facing\n- discovered_at\n- updated_at\n\nMeasures:\n- count\n- cvss_score\n- epss_score\n\nRelationships to other tables: vulnerabilities\n\nSteps to build:\n- 1. Define dimensions: asset_id, cve_id, is_kev, is_internet_facing, discovered_at\n- 2. Define measures: count, cvss_score, epss_score\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "silver",
+      "table_name": "vulnerabilities",
+      "cube_name": "silver_vulnerabilities",
+      "description": "Silver layer cube for silver_vulnerabilities",
+      "table_metadata": {
+        "table_name": "vulnerabilities",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: asset_id, cve_id, is_kev, is_internet_facing, discovered_at",
+      "2. Define measures: count, cvss_score, epss_score",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 6,
+      "measure_count": 3,
+      "generated_at": "2025-11-20T11:47:30.506308"
+    },
+    "dependencies": [],
+    "layer": "silver",
+    "table_name": "vulnerabilities",
+    "cube_name": "silver_vulnerabilities",
+    "dimensions": [
+      {
+        "name": "asset_id",
+        "sql": "${silver_vulnerabilities}.asset_id",
+        "type": "number",
+        "title": "Asset Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "cve_id",
+        "sql": "${silver_vulnerabilities}.cve_id",
+        "type": "string",
+        "title": "Cve Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "is_kev",
+        "sql": "${silver_vulnerabilities}.is_kev",
+        "type": "string",
+        "title": "Is Kev",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "is_internet_facing",
+        "sql": "${silver_vulnerabilities}.is_internet_facing",
+        "type": "string",
+        "title": "Is Internet Facing",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "discovered_at",
+        "sql": "${silver_vulnerabilities}.discovered_at",
+        "type": "time",
+        "title": "Discovered At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "updated_at",
+        "sql": "${silver_vulnerabilities}.updated_at",
+        "type": "time",
+        "title": "Updated At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "asset_id"
+        ]
+      },
+      {
+        "name": "cvss_score",
+        "sql": "${silver_vulnerabilities}.cvss_score",
+        "type": "sum",
+        "title": "Cvss Score",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      },
+      {
+        "name": "epss_score",
+        "sql": "${silver_vulnerabilities}.epss_score",
+        "type": "sum",
+        "title": "Epss Score",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "vulnerabilities",
+        "parent_table": "assets",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "vulnerabilities.asset_id = assets.asset_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_silver_misconfigurations",
+    "question": "Build a Cube.js cube definition for the silver layer table 'misconfigurations' (cube name: 'silver_misconfigurations').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- config_id\n- severity\n- category\n- discovered_at\n- updated_at\n\nMeasures:\n- count\n\nRelationships to other tables: misconfigurations\n\nSteps to build:\n- 1. Define dimensions: asset_id, config_id, severity, category, discovered_at\n- 2. Define measures: count\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "silver",
+      "table_name": "misconfigurations",
+      "cube_name": "silver_misconfigurations",
+      "description": "Silver layer cube for silver_misconfigurations",
+      "table_metadata": {
+        "table_name": "misconfigurations",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: asset_id, config_id, severity, category, discovered_at",
+      "2. Define measures: count",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 6,
+      "measure_count": 1,
+      "generated_at": "2025-11-20T11:47:30.506392"
+    },
+    "dependencies": [],
+    "layer": "silver",
+    "table_name": "misconfigurations",
+    "cube_name": "silver_misconfigurations",
+    "dimensions": [
+      {
+        "name": "asset_id",
+        "sql": "${silver_misconfigurations}.asset_id",
+        "type": "number",
+        "title": "Asset Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "config_id",
+        "sql": "${silver_misconfigurations}.config_id",
+        "type": "number",
+        "title": "Config Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "severity",
+        "sql": "${silver_misconfigurations}.severity",
+        "type": "string",
+        "title": "Severity",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "category",
+        "sql": "${silver_misconfigurations}.category",
+        "type": "string",
+        "title": "Category",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "discovered_at",
+        "sql": "${silver_misconfigurations}.discovered_at",
+        "type": "time",
+        "title": "Discovered At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "updated_at",
+        "sql": "${silver_misconfigurations}.updated_at",
+        "type": "time",
+        "title": "Updated At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "asset_id",
+          "config_id"
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "misconfigurations",
+        "parent_table": "assets",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "misconfigurations.asset_id = assets.asset_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_silver_external_exposure",
+    "question": "Build a Cube.js cube definition for the silver layer table 'external_exposure' (cube name: 'silver_external_exposure').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- is_public_ip\n- weak_tls\n- geo_risky\n- scanned_at\n- updated_at\n\nMeasures:\n- count\n- open_ports\n\nRelationships to other tables: external_exposure\n\nSteps to build:\n- 1. Define dimensions: asset_id, is_public_ip, weak_tls, geo_risky, scanned_at\n- 2. Define measures: count, open_ports\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "silver",
+      "table_name": "external_exposure",
+      "cube_name": "silver_external_exposure",
+      "description": "Silver layer cube for silver_external_exposure",
+      "table_metadata": {
+        "table_name": "external_exposure",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: asset_id, is_public_ip, weak_tls, geo_risky, scanned_at",
+      "2. Define measures: count, open_ports",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 6,
+      "measure_count": 2,
+      "generated_at": "2025-11-20T11:47:30.506478"
+    },
+    "dependencies": [],
+    "layer": "silver",
+    "table_name": "external_exposure",
+    "cube_name": "silver_external_exposure",
+    "dimensions": [
+      {
+        "name": "asset_id",
+        "sql": "${silver_external_exposure}.asset_id",
+        "type": "number",
+        "title": "Asset Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "is_public_ip",
+        "sql": "${silver_external_exposure}.is_public_ip",
+        "type": "string",
+        "title": "Is Public Ip",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "weak_tls",
+        "sql": "${silver_external_exposure}.weak_tls",
+        "type": "string",
+        "title": "Weak Tls",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "geo_risky",
+        "sql": "${silver_external_exposure}.geo_risky",
+        "type": "string",
+        "title": "Geo Risky",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "scanned_at",
+        "sql": "${silver_external_exposure}.scanned_at",
+        "type": "time",
+        "title": "Scanned At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "updated_at",
+        "sql": "${silver_external_exposure}.updated_at",
+        "type": "time",
+        "title": "Updated At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "asset_id"
+        ]
+      },
+      {
+        "name": "open_ports",
+        "sql": "${silver_external_exposure}.open_ports",
+        "type": "sum",
+        "title": "Open Ports",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "external_exposure",
+        "parent_table": "assets",
+        "join_type": "ONE_TO_ONE",
+        "join_condition": "external_exposure.asset_id = assets.asset_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_silver_identity_exposure",
+    "question": "Build a Cube.js cube definition for the silver layer table 'identity_exposure' (cube name: 'silver_identity_exposure').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- has_password_reuse\n- has_mfa_disabled\n- assessed_at\n- updated_at\n\nMeasures:\n- count\n- num_admin_accounts\n- num_stale_accounts\n\nRelationships to other tables: identity_exposure\n\nSteps to build:\n- 1. Define dimensions: asset_id, has_password_reuse, has_mfa_disabled, assessed_at, updated_at\n- 2. Define measures: count, num_admin_accounts, num_stale_accounts\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "silver",
+      "table_name": "identity_exposure",
+      "cube_name": "silver_identity_exposure",
+      "description": "Silver layer cube for silver_identity_exposure",
+      "table_metadata": {
+        "table_name": "identity_exposure",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: asset_id, has_password_reuse, has_mfa_disabled, assessed_at, updated_at",
+      "2. Define measures: count, num_admin_accounts, num_stale_accounts",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 5,
+      "measure_count": 3,
+      "generated_at": "2025-11-20T11:47:30.506568"
+    },
+    "dependencies": [],
+    "layer": "silver",
+    "table_name": "identity_exposure",
+    "cube_name": "silver_identity_exposure",
+    "dimensions": [
+      {
+        "name": "asset_id",
+        "sql": "${silver_identity_exposure}.asset_id",
+        "type": "number",
+        "title": "Asset Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "has_password_reuse",
+        "sql": "${silver_identity_exposure}.has_password_reuse",
+        "type": "string",
+        "title": "Has Password Reuse",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "has_mfa_disabled",
+        "sql": "${silver_identity_exposure}.has_mfa_disabled",
+        "type": "string",
+        "title": "Has Mfa Disabled",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "assessed_at",
+        "sql": "${silver_identity_exposure}.assessed_at",
+        "type": "time",
+        "title": "Assessed At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "updated_at",
+        "sql": "${silver_identity_exposure}.updated_at",
+        "type": "time",
+        "title": "Updated At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "asset_id"
+        ]
+      },
+      {
+        "name": "num_admin_accounts",
+        "sql": "${silver_identity_exposure}.num_admin_accounts",
+        "type": "sum",
+        "title": "Num Admin Accounts",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      },
+      {
+        "name": "num_stale_accounts",
+        "sql": "${silver_identity_exposure}.num_stale_accounts",
+        "type": "sum",
+        "title": "Num Stale Accounts",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "identity_exposure",
+        "parent_table": "assets",
+        "join_type": "ONE_TO_ONE",
+        "join_condition": "identity_exposure.asset_id = assets.asset_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_silver_software_inventory",
+    "question": "Build a Cube.js cube definition for the silver layer table 'software_inventory' (cube name: 'silver_software_inventory').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- software_name\n- version\n- is_eol\n- is_unsupported\n- discovered_at\n- updated_at\n\nMeasures:\n- count\n\nRelationships to other tables: software_inventory\n\nSteps to build:\n- 1. Define dimensions: asset_id, software_name, version, is_eol, is_unsupported\n- 2. Define measures: count\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "silver",
+      "table_name": "software_inventory",
+      "cube_name": "silver_software_inventory",
+      "description": "Silver layer cube for silver_software_inventory",
+      "table_metadata": {
+        "table_name": "software_inventory",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: asset_id, software_name, version, is_eol, is_unsupported",
+      "2. Define measures: count",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 7,
+      "measure_count": 1,
+      "generated_at": "2025-11-20T11:47:30.506657"
+    },
+    "dependencies": [],
+    "layer": "silver",
+    "table_name": "software_inventory",
+    "cube_name": "silver_software_inventory",
+    "dimensions": [
+      {
+        "name": "asset_id",
+        "sql": "${silver_software_inventory}.asset_id",
+        "type": "number",
+        "title": "Asset Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "software_name",
+        "sql": "${silver_software_inventory}.software_name",
+        "type": "string",
+        "title": "Software Name",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "version",
+        "sql": "${silver_software_inventory}.version",
+        "type": "string",
+        "title": "Version",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "is_eol",
+        "sql": "${silver_software_inventory}.is_eol",
+        "type": "string",
+        "title": "Is Eol",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "is_unsupported",
+        "sql": "${silver_software_inventory}.is_unsupported",
+        "type": "string",
+        "title": "Is Unsupported",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "discovered_at",
+        "sql": "${silver_software_inventory}.discovered_at",
+        "type": "time",
+        "title": "Discovered At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "updated_at",
+        "sql": "${silver_software_inventory}.updated_at",
+        "type": "time",
+        "title": "Updated At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "asset_id"
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "software_inventory",
+        "parent_table": "assets",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "software_inventory.asset_id = assets.asset_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_gold_assets",
+    "question": "Build a Cube.js cube definition for the gold layer table 'assets' (cube name: 'gold_assets').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- hostname\n- business_unit\n- env\n- created_at\n- updated_at\n\nMeasures:\n- count\n- criticality\n\nRelationships to other tables: vulnerabilities, misconfigurations, external_exposure, identity_exposure, software_inventory\n\nSteps to build:\n- 1. Define dimensions: asset_id, hostname, business_unit, env, created_at\n- 2. Define measures: count, criticality\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "gold",
+      "table_name": "assets",
+      "cube_name": "gold_assets",
+      "description": "Gold layer cube for gold_assets",
+      "table_metadata": {
+        "table_name": "assets",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: asset_id, hostname, business_unit, env, created_at",
+      "2. Define measures: count, criticality",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 6,
+      "measure_count": 2,
+      "generated_at": "2025-11-20T11:47:30.506769"
+    },
+    "dependencies": [],
+    "layer": "gold",
+    "table_name": "assets",
+    "cube_name": "gold_assets",
+    "dimensions": [
+      {
+        "name": "asset_id",
+        "sql": "${gold_assets}.asset_id",
+        "type": "number",
+        "title": "Asset Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "hostname",
+        "sql": "${gold_assets}.hostname",
+        "type": "string",
+        "title": "Hostname",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "business_unit",
+        "sql": "${gold_assets}.business_unit",
+        "type": "string",
+        "title": "Business Unit",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "env",
+        "sql": "${gold_assets}.env",
+        "type": "string",
+        "title": "Env",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "created_at",
+        "sql": "${gold_assets}.created_at",
+        "type": "time",
+        "title": "Created At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "updated_at",
+        "sql": "${gold_assets}.updated_at",
+        "type": "time",
+        "title": "Updated At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "asset_id"
+        ]
+      },
+      {
+        "name": "criticality",
+        "sql": "${gold_assets}.criticality",
+        "type": "sum",
+        "title": "Criticality",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "vulnerabilities",
+        "parent_table": "assets",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "vulnerabilities.asset_id = assets.asset_id",
+        "layer": "silver"
+      },
+      {
+        "child_table": "misconfigurations",
+        "parent_table": "assets",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "misconfigurations.asset_id = assets.asset_id",
+        "layer": "silver"
+      },
+      {
+        "child_table": "external_exposure",
+        "parent_table": "assets",
+        "join_type": "ONE_TO_ONE",
+        "join_condition": "external_exposure.asset_id = assets.asset_id",
+        "layer": "silver"
+      },
+      {
+        "child_table": "identity_exposure",
+        "parent_table": "assets",
+        "join_type": "ONE_TO_ONE",
+        "join_condition": "identity_exposure.asset_id = assets.asset_id",
+        "layer": "silver"
+      },
+      {
+        "child_table": "software_inventory",
+        "parent_table": "assets",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "software_inventory.asset_id = assets.asset_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_gold_vulnerabilities",
+    "question": "Build a Cube.js cube definition for the gold layer table 'vulnerabilities' (cube name: 'gold_vulnerabilities').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- cve_id\n- is_kev\n- is_internet_facing\n- discovered_at\n- updated_at\n\nMeasures:\n- count\n- cvss_score\n- epss_score\n\nRelationships to other tables: vulnerabilities\n\nSteps to build:\n- 1. Define dimensions: asset_id, cve_id, is_kev, is_internet_facing, discovered_at\n- 2. Define measures: count, cvss_score, epss_score\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "gold",
+      "table_name": "vulnerabilities",
+      "cube_name": "gold_vulnerabilities",
+      "description": "Gold layer cube for gold_vulnerabilities",
+      "table_metadata": {
+        "table_name": "vulnerabilities",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: asset_id, cve_id, is_kev, is_internet_facing, discovered_at",
+      "2. Define measures: count, cvss_score, epss_score",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 6,
+      "measure_count": 3,
+      "generated_at": "2025-11-20T11:47:30.506868"
+    },
+    "dependencies": [],
+    "layer": "gold",
+    "table_name": "vulnerabilities",
+    "cube_name": "gold_vulnerabilities",
+    "dimensions": [
+      {
+        "name": "asset_id",
+        "sql": "${gold_vulnerabilities}.asset_id",
+        "type": "number",
+        "title": "Asset Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "cve_id",
+        "sql": "${gold_vulnerabilities}.cve_id",
+        "type": "string",
+        "title": "Cve Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "is_kev",
+        "sql": "${gold_vulnerabilities}.is_kev",
+        "type": "string",
+        "title": "Is Kev",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "is_internet_facing",
+        "sql": "${gold_vulnerabilities}.is_internet_facing",
+        "type": "string",
+        "title": "Is Internet Facing",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "discovered_at",
+        "sql": "${gold_vulnerabilities}.discovered_at",
+        "type": "time",
+        "title": "Discovered At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "updated_at",
+        "sql": "${gold_vulnerabilities}.updated_at",
+        "type": "time",
+        "title": "Updated At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "asset_id"
+        ]
+      },
+      {
+        "name": "cvss_score",
+        "sql": "${gold_vulnerabilities}.cvss_score",
+        "type": "sum",
+        "title": "Cvss Score",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      },
+      {
+        "name": "epss_score",
+        "sql": "${gold_vulnerabilities}.epss_score",
+        "type": "sum",
+        "title": "Epss Score",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "vulnerabilities",
+        "parent_table": "assets",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "vulnerabilities.asset_id = assets.asset_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_gold_misconfigurations",
+    "question": "Build a Cube.js cube definition for the gold layer table 'misconfigurations' (cube name: 'gold_misconfigurations').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- config_id\n- severity\n- category\n- discovered_at\n- updated_at\n\nMeasures:\n- count\n\nRelationships to other tables: misconfigurations\n\nSteps to build:\n- 1. Define dimensions: asset_id, config_id, severity, category, discovered_at\n- 2. Define measures: count\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "gold",
+      "table_name": "misconfigurations",
+      "cube_name": "gold_misconfigurations",
+      "description": "Gold layer cube for gold_misconfigurations",
+      "table_metadata": {
+        "table_name": "misconfigurations",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: asset_id, config_id, severity, category, discovered_at",
+      "2. Define measures: count",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 6,
+      "measure_count": 1,
+      "generated_at": "2025-11-20T11:47:30.506946"
+    },
+    "dependencies": [],
+    "layer": "gold",
+    "table_name": "misconfigurations",
+    "cube_name": "gold_misconfigurations",
+    "dimensions": [
+      {
+        "name": "asset_id",
+        "sql": "${gold_misconfigurations}.asset_id",
+        "type": "number",
+        "title": "Asset Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "config_id",
+        "sql": "${gold_misconfigurations}.config_id",
+        "type": "number",
+        "title": "Config Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "severity",
+        "sql": "${gold_misconfigurations}.severity",
+        "type": "string",
+        "title": "Severity",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "category",
+        "sql": "${gold_misconfigurations}.category",
+        "type": "string",
+        "title": "Category",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "discovered_at",
+        "sql": "${gold_misconfigurations}.discovered_at",
+        "type": "time",
+        "title": "Discovered At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "updated_at",
+        "sql": "${gold_misconfigurations}.updated_at",
+        "type": "time",
+        "title": "Updated At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "asset_id",
+          "config_id"
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "misconfigurations",
+        "parent_table": "assets",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "misconfigurations.asset_id = assets.asset_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_gold_external_exposure",
+    "question": "Build a Cube.js cube definition for the gold layer table 'external_exposure' (cube name: 'gold_external_exposure').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- is_public_ip\n- weak_tls\n- geo_risky\n- scanned_at\n- updated_at\n\nMeasures:\n- count\n- open_ports\n\nRelationships to other tables: external_exposure\n\nSteps to build:\n- 1. Define dimensions: asset_id, is_public_ip, weak_tls, geo_risky, scanned_at\n- 2. Define measures: count, open_ports\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "gold",
+      "table_name": "external_exposure",
+      "cube_name": "gold_external_exposure",
+      "description": "Gold layer cube for gold_external_exposure",
+      "table_metadata": {
+        "table_name": "external_exposure",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: asset_id, is_public_ip, weak_tls, geo_risky, scanned_at",
+      "2. Define measures: count, open_ports",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 6,
+      "measure_count": 2,
+      "generated_at": "2025-11-20T11:47:30.507034"
+    },
+    "dependencies": [],
+    "layer": "gold",
+    "table_name": "external_exposure",
+    "cube_name": "gold_external_exposure",
+    "dimensions": [
+      {
+        "name": "asset_id",
+        "sql": "${gold_external_exposure}.asset_id",
+        "type": "number",
+        "title": "Asset Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "is_public_ip",
+        "sql": "${gold_external_exposure}.is_public_ip",
+        "type": "string",
+        "title": "Is Public Ip",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "weak_tls",
+        "sql": "${gold_external_exposure}.weak_tls",
+        "type": "string",
+        "title": "Weak Tls",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "geo_risky",
+        "sql": "${gold_external_exposure}.geo_risky",
+        "type": "string",
+        "title": "Geo Risky",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "scanned_at",
+        "sql": "${gold_external_exposure}.scanned_at",
+        "type": "time",
+        "title": "Scanned At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "updated_at",
+        "sql": "${gold_external_exposure}.updated_at",
+        "type": "time",
+        "title": "Updated At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "asset_id"
+        ]
+      },
+      {
+        "name": "open_ports",
+        "sql": "${gold_external_exposure}.open_ports",
+        "type": "sum",
+        "title": "Open Ports",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "external_exposure",
+        "parent_table": "assets",
+        "join_type": "ONE_TO_ONE",
+        "join_condition": "external_exposure.asset_id = assets.asset_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_gold_identity_exposure",
+    "question": "Build a Cube.js cube definition for the gold layer table 'identity_exposure' (cube name: 'gold_identity_exposure').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- has_password_reuse\n- has_mfa_disabled\n- assessed_at\n- updated_at\n\nMeasures:\n- count\n- num_admin_accounts\n- num_stale_accounts\n\nRelationships to other tables: identity_exposure\n\nSteps to build:\n- 1. Define dimensions: asset_id, has_password_reuse, has_mfa_disabled, assessed_at, updated_at\n- 2. Define measures: count, num_admin_accounts, num_stale_accounts\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "gold",
+      "table_name": "identity_exposure",
+      "cube_name": "gold_identity_exposure",
+      "description": "Gold layer cube for gold_identity_exposure",
+      "table_metadata": {
+        "table_name": "identity_exposure",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: asset_id, has_password_reuse, has_mfa_disabled, assessed_at, updated_at",
+      "2. Define measures: count, num_admin_accounts, num_stale_accounts",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 5,
+      "measure_count": 3,
+      "generated_at": "2025-11-20T11:47:30.507125"
+    },
+    "dependencies": [],
+    "layer": "gold",
+    "table_name": "identity_exposure",
+    "cube_name": "gold_identity_exposure",
+    "dimensions": [
+      {
+        "name": "asset_id",
+        "sql": "${gold_identity_exposure}.asset_id",
+        "type": "number",
+        "title": "Asset Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "has_password_reuse",
+        "sql": "${gold_identity_exposure}.has_password_reuse",
+        "type": "string",
+        "title": "Has Password Reuse",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "has_mfa_disabled",
+        "sql": "${gold_identity_exposure}.has_mfa_disabled",
+        "type": "string",
+        "title": "Has Mfa Disabled",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "assessed_at",
+        "sql": "${gold_identity_exposure}.assessed_at",
+        "type": "time",
+        "title": "Assessed At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "updated_at",
+        "sql": "${gold_identity_exposure}.updated_at",
+        "type": "time",
+        "title": "Updated At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "asset_id"
+        ]
+      },
+      {
+        "name": "num_admin_accounts",
+        "sql": "${gold_identity_exposure}.num_admin_accounts",
+        "type": "sum",
+        "title": "Num Admin Accounts",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      },
+      {
+        "name": "num_stale_accounts",
+        "sql": "${gold_identity_exposure}.num_stale_accounts",
+        "type": "sum",
+        "title": "Num Stale Accounts",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": null
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "identity_exposure",
+        "parent_table": "assets",
+        "join_type": "ONE_TO_ONE",
+        "join_condition": "identity_exposure.asset_id = assets.asset_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "cube_gold_software_inventory",
+    "question": "Build a Cube.js cube definition for the gold layer table 'software_inventory' (cube name: 'gold_software_inventory').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- software_name\n- version\n- is_eol\n- is_unsupported\n- discovered_at\n- updated_at\n\nMeasures:\n- count\n\nRelationships to other tables: software_inventory\n\nSteps to build:\n- 1. Define dimensions: asset_id, software_name, version, is_eol, is_unsupported\n- 2. Define measures: count\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+    "context": {
+      "layer": "gold",
+      "table_name": "software_inventory",
+      "cube_name": "gold_software_inventory",
+      "description": "Gold layer cube for gold_software_inventory",
+      "table_metadata": {
+        "table_name": "software_inventory",
+        "description": ""
+      }
+    },
+    "expected_output_type": "cube",
+    "steps": [
+      "1. Define dimensions: asset_id, software_name, version, is_eol, is_unsupported",
+      "2. Define measures: count",
+      "3. Configure pre-aggregations for performance",
+      "4. Set up joins with related tables"
+    ],
+    "metadata": {
+      "dimension_count": 7,
+      "measure_count": 1,
+      "generated_at": "2025-11-20T11:47:30.507213"
+    },
+    "dependencies": [],
+    "layer": "gold",
+    "table_name": "software_inventory",
+    "cube_name": "gold_software_inventory",
+    "dimensions": [
+      {
+        "name": "asset_id",
+        "sql": "${gold_software_inventory}.asset_id",
+        "type": "number",
+        "title": "Asset Id",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": true
+      },
+      {
+        "name": "software_name",
+        "sql": "${gold_software_inventory}.software_name",
+        "type": "string",
+        "title": "Software Name",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "version",
+        "sql": "${gold_software_inventory}.version",
+        "type": "string",
+        "title": "Version",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "is_eol",
+        "sql": "${gold_software_inventory}.is_eol",
+        "type": "string",
+        "title": "Is Eol",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "is_unsupported",
+        "sql": "${gold_software_inventory}.is_unsupported",
+        "type": "string",
+        "title": "Is Unsupported",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "discovered_at",
+        "sql": "${gold_software_inventory}.discovered_at",
+        "type": "time",
+        "title": "Discovered At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      },
+      {
+        "name": "updated_at",
+        "sql": "${gold_software_inventory}.updated_at",
+        "type": "time",
+        "title": "Updated At",
+        "description": null,
+        "format": null,
+        "case": null,
+        "primaryKey": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "count",
+        "sql": "1",
+        "type": "count",
+        "title": "Count",
+        "description": null,
+        "format": null,
+        "filters": null,
+        "rollingWindow": null,
+        "drillMembers": [
+          "asset_id"
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "child_table": "software_inventory",
+        "parent_table": "assets",
+        "join_type": "MANY_TO_ONE",
+        "join_condition": "software_inventory.asset_id = assets.asset_id",
+        "layer": "silver"
+      }
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_attack_surface_summary_by_os_software",
+    "question": "Generate SQL to create a data mart 'attack_surface_summary_by_os_software' from: assets, vulnerabilities, misconfigurations, external_exposure.\n\nBusiness Requirements:\n- \n- This mart contains a summary of the attack surface categorized by operating system, software stack, business unit, and environment.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "attack_surface_summary_by_os_software",
+      "source_tables": [
+        "assets",
+        "vulnerabilities",
+        "misconfigurations",
+        "external_exposure"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains a summary of the attack surface categorized by operating system, software stack, business unit, and environment."
+      ],
+      "existing_sql": "CREATE TABLE attack_surface_summary_by_os_software (\n    business_unit VARCHAR(100) NOT NULL,\n    environment VARCHAR(50) NOT NULL,\n    os VARCHAR(50) NOT NULL,\n    software_stack VARCHAR(100) NOT NULL,\n    total_assets INT NOT NULL DEFAULT 0,\n    total_vulnerabilities INT NOT NULL DEFAULT 0,\n    total_misconfigurations INT NOT NULL DEFAULT 0,\n    total_exposures INT NOT NULL DEFAULT 0,\n    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    PRIMARY KEY (business_unit, environment, os, softwar"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507254",
+      "source_table_count": 4
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "attack_surface_summary_by_os_software",
+    "source_tables": [
+      "assets",
+      "vulnerabilities",
+      "misconfigurations",
+      "external_exposure"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains a summary of the attack surface categorized by operating system, software stack, business unit, and environment."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_software_asset_management_summary",
+    "question": "Generate SQL to create a data mart 'software_asset_management_summary' from: software_inventory, vulnerabilities, misconfigurations.\n\nBusiness Requirements:\n- \n- This mart provides a summary of software assets, including their usage and associated vulnerabilities and misconfigurations.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "software_asset_management_summary",
+      "source_tables": [
+        "software_inventory",
+        "vulnerabilities",
+        "misconfigurations"
+      ],
+      "business_requirements": [
+        "",
+        "This mart provides a summary of software assets, including their usage and associated vulnerabilities and misconfigurations."
+      ],
+      "existing_sql": "CREATE TABLE software_asset_management_summary (\n    software_name VARCHAR(255) NOT NULL,\n    version VARCHAR(50) NOT NULL,\n    total_devices INT NOT NULL DEFAULT 0,\n    total_vulnerabilities INT NOT NULL DEFAULT 0,\n    total_misconfigurations INT NOT NULL DEFAULT 0,\n    business_unit VARCHAR(100),\n    environment VARCHAR(50),\n    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    PRIMARY KEY (software_name, version),\n    CONSTRAINT chk_total_devices CHECK (total_devices >= 0),\n    CONSTRAINT"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507281",
+      "source_table_count": 3
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "software_asset_management_summary",
+    "source_tables": [
+      "software_inventory",
+      "vulnerabilities",
+      "misconfigurations"
+    ],
+    "business_requirements": [
+      "",
+      "This mart provides a summary of software assets, including their usage and associated vulnerabilities and misconfigurations."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_external_exposure_risk_summary",
+    "question": "Generate SQL to create a data mart 'external_exposure_risk_summary' from: external_exposure.\n\nBusiness Requirements:\n- \n- This mart summarizes external exposure risks categorized by risk type, including the total number of exposures and their potential impact.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "external_exposure_risk_summary",
+      "source_tables": [
+        "external_exposure"
+      ],
+      "business_requirements": [
+        "",
+        "This mart summarizes external exposure risks categorized by risk type, including the total number of exposures and their potential impact."
+      ],
+      "existing_sql": "CREATE TABLE external_exposure_risk_summary (\n    risk_category VARCHAR(255) NOT NULL,\n    total_exposures INT NOT NULL,\n    total_potential_impact DECIMAL(18, 2) NOT NULL,\n    os_software_stack VARCHAR(255),\n    business_unit VARCHAR(255),\n    environment VARCHAR(50),\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n    PRIMARY KEY (risk_category, os_software_stack, business_unit, environment),\n    CONSTRAINT chk"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507295",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "external_exposure_risk_summary",
+    "source_tables": [
+      "external_exposure"
+    ],
+    "business_requirements": [
+      "",
+      "This mart summarizes external exposure risks categorized by risk type, including the total number of exposures and their potential impact."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_asset_management_trend_analysis",
+    "question": "Generate SQL to create a data mart 'asset_management_trend_analysis' from: assets, vulnerabilities, misconfigurations, external_exposure, identity_exposure.\n\nBusiness Requirements:\n- \n- This mart contains a 12-month trend analysis of asset management, including risk scores, vulnerabilities, misconfigurations, and exposures related to each asset.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "asset_management_trend_analysis",
+      "source_tables": [
+        "assets",
+        "vulnerabilities",
+        "misconfigurations",
+        "external_exposure",
+        "identity_exposure"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains a 12-month trend analysis of asset management, including risk scores, vulnerabilities, misconfigurations, and exposures related to each asset."
+      ],
+      "existing_sql": "CREATE TABLE asset_management_trend_analysis (\n    asset_id INT NOT NULL,\n    asset_type VARCHAR(50) NOT NULL,\n    acquisition_date DATE NOT NULL,\n    depreciation_value DECIMAL(10, 2) NOT NULL,\n    total_risk_score DECIMAL(10, 2) NOT NULL,\n    total_vulnerabilities INT NOT NULL,\n    total_misconfigurations INT NOT NULL,\n    total_external_exposures INT NOT NULL,\n    total_identity_exposures INT NOT NULL,\n    month DATE NOT NULL,\n    risk_breach_likelihood DECIMAL(5, 4) GENERATED ALWAYS AS (tota"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507307",
+      "source_table_count": 5
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "asset_management_trend_analysis",
+    "source_tables": [
+      "assets",
+      "vulnerabilities",
+      "misconfigurations",
+      "external_exposure",
+      "identity_exposure"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains a 12-month trend analysis of asset management, including risk scores, vulnerabilities, misconfigurations, and exposures related to each asset."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_software_asset_management_trend_analysis",
+    "question": "Generate SQL to create a data mart 'software_asset_management_trend_analysis' from: software_inventory, misconfigurations, external_exposure.\n\nBusiness Requirements:\n- \n- This mart contains a 12-month trend analysis of software asset management, including device counts, misconfigurations, and external exposures related to each software application.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "software_asset_management_trend_analysis",
+      "source_tables": [
+        "software_inventory",
+        "misconfigurations",
+        "external_exposure"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains a 12-month trend analysis of software asset management, including device counts, misconfigurations, and external exposures related to each software application."
+      ],
+      "existing_sql": "CREATE TABLE software_asset_management_trend_analysis (\n    software_id INT NOT NULL,\n    software_name VARCHAR(255) NOT NULL,\n    license_type VARCHAR(50) NOT NULL,\n    total_devices INT NOT NULL DEFAULT 0,\n    total_misconfigurations INT NOT NULL DEFAULT 0,\n    total_external_exposures INT NOT NULL DEFAULT 0,\n    month DATE NOT NULL,\n    breach_risk_score DECIMAL(5, 2) GENERATED ALWAYS AS (\n        CASE \n            WHEN total_misconfigurations > 10 THEN 1.0\n            WHEN total_external_exp"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507317",
+      "source_table_count": 3
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "software_asset_management_trend_analysis",
+    "source_tables": [
+      "software_inventory",
+      "misconfigurations",
+      "external_exposure"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains a 12-month trend analysis of software asset management, including device counts, misconfigurations, and external exposures related to each software application."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_asset_exposure_summary",
+    "question": "Generate SQL to create a data mart 'asset_exposure_summary' from: assets, vulnerabilities, misconfigurations, external_exposure.\n\nBusiness Requirements:\n- \n- This mart contains aggregated exposure scores for each asset, including vulnerabilities, misconfigurations, and external risks.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "asset_exposure_summary",
+      "source_tables": [
+        "assets",
+        "vulnerabilities",
+        "misconfigurations",
+        "external_exposure"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains aggregated exposure scores for each asset, including vulnerabilities, misconfigurations, and external risks."
+      ],
+      "existing_sql": "CREATE TABLE asset_exposure_summary (\n    asset_id INT NOT NULL,\n    asset_name VARCHAR(255) NOT NULL,\n    total_vulnerability_score DECIMAL(10, 2) DEFAULT 0.00,\n    vulnerability_count INT DEFAULT 0,\n    total_misconfigurations INT DEFAULT 0,\n    total_external_exposure DECIMAL(10, 2) DEFAULT 0.00,\n    exposure_score DECIMAL(10, 2) AS (total_vulnerability_score + total_misconfigurations + total_external_exposure) STORED,\n    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    CONSTRAINT pk_as"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507327",
+      "source_table_count": 4
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "asset_exposure_summary",
+    "source_tables": [
+      "assets",
+      "vulnerabilities",
+      "misconfigurations",
+      "external_exposure"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains aggregated exposure scores for each asset, including vulnerabilities, misconfigurations, and external risks."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_identity_exposure_summary",
+    "question": "Generate SQL to create a data mart 'identity_exposure_summary' from: identity_exposure.\n\nBusiness Requirements:\n- \n- This mart contains aggregated data on identity exposure incidents, including total incidents and average severity levels.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "identity_exposure_summary",
+      "source_tables": [
+        "identity_exposure"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains aggregated data on identity exposure incidents, including total incidents and average severity levels."
+      ],
+      "existing_sql": "CREATE TABLE identity_exposure_summary (\n    identity_id UUID NOT NULL,\n    total_exposure_incidents INT NOT NULL CHECK (total_exposure_incidents >= 0),\n    average_severity DECIMAL(3, 2) CHECK (average_severity >= 0 AND average_severity <= 10),\n    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    PRIMARY KEY (identity_id)\n);\n\nCREATE INDEX idx_identity_exposure ON identity_exposure_summary (identity_id);\nCREATE INDEX idx_last_updated ON identity_exposure_summary (last_updated);\n\nINSERT INTO"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507336",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "identity_exposure_summary",
+    "source_tables": [
+      "identity_exposure"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains aggregated data on identity exposure incidents, including total incidents and average severity levels."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_software_asset_usage_summary",
+    "question": "Generate SQL to create a data mart 'software_asset_usage_summary' from: software_inventory.\n\nBusiness Requirements:\n- \n- This mart contains aggregated usage data for software assets, including the number of devices using each software and total usage hours.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "software_asset_usage_summary",
+      "source_tables": [
+        "software_inventory"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains aggregated usage data for software assets, including the number of devices using each software and total usage hours."
+      ],
+      "existing_sql": "CREATE TABLE software_asset_usage_summary (\n    software_id INT NOT NULL,\n    software_name VARCHAR(255) NOT NULL,\n    total_devices_used INT NOT NULL,\n    total_usage_hours DECIMAL(10, 2) NOT NULL,\n    exposure_score DECIMAL(10, 2) GENERATED ALWAYS AS (CASE WHEN total_usage_hours > 0 THEN total_devices_used / total_usage_hours ELSE 0 END) STORED,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n    PRIMARY KEY (s"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507352",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "software_asset_usage_summary",
+    "source_tables": [
+      "software_inventory"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains aggregated usage data for software assets, including the number of devices using each software and total usage hours."
+    ]
+  },
+  {
+    "question_id": "sql_transformation_silver_assets",
+    "question": "Generate SQL transformation code to create 'silver_assets' from: assets.\n\nBusiness Requirements:\n- Transform assets from raw to silver\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "silver_assets",
+      "source_tables": [
+        "assets"
+      ],
+      "business_requirements": [
+        "Transform assets from raw to silver",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507372",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "silver_assets",
+    "source_tables": [
+      "assets"
+    ],
+    "business_requirements": [
+      "Transform assets from raw to silver",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_silver_vulnerabilities",
+    "question": "Generate SQL transformation code to create 'silver_vulnerabilities' from: vulnerabilities.\n\nBusiness Requirements:\n- Transform vulnerabilities from raw to silver\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "silver_vulnerabilities",
+      "source_tables": [
+        "vulnerabilities"
+      ],
+      "business_requirements": [
+        "Transform vulnerabilities from raw to silver",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507387",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "silver_vulnerabilities",
+    "source_tables": [
+      "vulnerabilities"
+    ],
+    "business_requirements": [
+      "Transform vulnerabilities from raw to silver",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_silver_misconfigurations",
+    "question": "Generate SQL transformation code to create 'silver_misconfigurations' from: misconfigurations.\n\nBusiness Requirements:\n- Transform misconfigurations from raw to silver\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "silver_misconfigurations",
+      "source_tables": [
+        "misconfigurations"
+      ],
+      "business_requirements": [
+        "Transform misconfigurations from raw to silver",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507400",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "silver_misconfigurations",
+    "source_tables": [
+      "misconfigurations"
+    ],
+    "business_requirements": [
+      "Transform misconfigurations from raw to silver",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_silver_external_exposure",
+    "question": "Generate SQL transformation code to create 'silver_external_exposure' from: external_exposure.\n\nBusiness Requirements:\n- Transform external_exposure from raw to silver\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "silver_external_exposure",
+      "source_tables": [
+        "external_exposure"
+      ],
+      "business_requirements": [
+        "Transform external_exposure from raw to silver",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507409",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "silver_external_exposure",
+    "source_tables": [
+      "external_exposure"
+    ],
+    "business_requirements": [
+      "Transform external_exposure from raw to silver",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_silver_identity_exposure",
+    "question": "Generate SQL transformation code to create 'silver_identity_exposure' from: identity_exposure.\n\nBusiness Requirements:\n- Transform identity_exposure from raw to silver\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "silver_identity_exposure",
+      "source_tables": [
+        "identity_exposure"
+      ],
+      "business_requirements": [
+        "Transform identity_exposure from raw to silver",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507418",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "silver_identity_exposure",
+    "source_tables": [
+      "identity_exposure"
+    ],
+    "business_requirements": [
+      "Transform identity_exposure from raw to silver",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_silver_software_inventory",
+    "question": "Generate SQL transformation code to create 'silver_software_inventory' from: software_inventory.\n\nBusiness Requirements:\n- Transform software_inventory from raw to silver\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "silver_software_inventory",
+      "source_tables": [
+        "software_inventory"
+      ],
+      "business_requirements": [
+        "Transform software_inventory from raw to silver",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507426",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "silver_software_inventory",
+    "source_tables": [
+      "software_inventory"
+    ],
+    "business_requirements": [
+      "Transform software_inventory from raw to silver",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_gold_assets",
+    "question": "Generate SQL transformation code to create 'gold_assets' from: assets.\n\nBusiness Requirements:\n- Transform assets from silver to gold\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "gold_assets",
+      "source_tables": [
+        "assets"
+      ],
+      "business_requirements": [
+        "Transform assets from silver to gold",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507436",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "gold_assets",
+    "source_tables": [
+      "assets"
+    ],
+    "business_requirements": [
+      "Transform assets from silver to gold",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_gold_vulnerabilities",
+    "question": "Generate SQL transformation code to create 'gold_vulnerabilities' from: vulnerabilities.\n\nBusiness Requirements:\n- Transform vulnerabilities from silver to gold\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "gold_vulnerabilities",
+      "source_tables": [
+        "vulnerabilities"
+      ],
+      "business_requirements": [
+        "Transform vulnerabilities from silver to gold",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507447",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "gold_vulnerabilities",
+    "source_tables": [
+      "vulnerabilities"
+    ],
+    "business_requirements": [
+      "Transform vulnerabilities from silver to gold",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_gold_misconfigurations",
+    "question": "Generate SQL transformation code to create 'gold_misconfigurations' from: misconfigurations.\n\nBusiness Requirements:\n- Transform misconfigurations from silver to gold\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "gold_misconfigurations",
+      "source_tables": [
+        "misconfigurations"
+      ],
+      "business_requirements": [
+        "Transform misconfigurations from silver to gold",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507459",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "gold_misconfigurations",
+    "source_tables": [
+      "misconfigurations"
+    ],
+    "business_requirements": [
+      "Transform misconfigurations from silver to gold",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_gold_external_exposure",
+    "question": "Generate SQL transformation code to create 'gold_external_exposure' from: external_exposure.\n\nBusiness Requirements:\n- Transform external_exposure from silver to gold\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "gold_external_exposure",
+      "source_tables": [
+        "external_exposure"
+      ],
+      "business_requirements": [
+        "Transform external_exposure from silver to gold",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507470",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "gold_external_exposure",
+    "source_tables": [
+      "external_exposure"
+    ],
+    "business_requirements": [
+      "Transform external_exposure from silver to gold",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_gold_identity_exposure",
+    "question": "Generate SQL transformation code to create 'gold_identity_exposure' from: identity_exposure.\n\nBusiness Requirements:\n- Transform identity_exposure from silver to gold\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "gold_identity_exposure",
+      "source_tables": [
+        "identity_exposure"
+      ],
+      "business_requirements": [
+        "Transform identity_exposure from silver to gold",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507478",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "gold_identity_exposure",
+    "source_tables": [
+      "identity_exposure"
+    ],
+    "business_requirements": [
+      "Transform identity_exposure from silver to gold",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  {
+    "question_id": "sql_transformation_gold_software_inventory",
+    "question": "Generate SQL transformation code to create 'gold_software_inventory' from: software_inventory.\n\nBusiness Requirements:\n- Transform software_inventory from silver to gold\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+    "context": {
+      "sql_type": "transformation",
+      "target_object": "gold_software_inventory",
+      "source_tables": [
+        "software_inventory"
+      ],
+      "business_requirements": [
+        "Transform software_inventory from silver to gold",
+        "Apply data quality checks",
+        "Handle deduplication if needed"
+      ]
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-20T11:47:30.507487",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "transformation",
+    "target_object": "gold_software_inventory",
+    "source_tables": [
+      "software_inventory"
+    ],
+    "business_requirements": [
+      "Transform software_inventory from silver to gold",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  }
+]

@@ -1,0 +1,56 @@
+{
+  "goal": "Generate 12-month trend analysis for likelihood and breach risk",
+  "marts": [
+    {
+      "mart_name": "asset_management_trend_analysis",
+      "sql": "CREATE TABLE asset_management_trend_analysis AS SELECT\n    a.asset_id,\n    a.asset_type,\n    a.acquisition_date,\n    a.depreciation_value,\n    SUM(v.risk_score) AS total_risk_score,\n    COUNT(DISTINCT v.vulnerability_id) AS total_vulnerabilities,\n    COUNT(DISTINCT m misconfiguration_id) AS total_misconfigurations,\n    COUNT(DISTINCT e.exposure_id) AS total_external_exposures,\n    COUNT(DISTINCT i.identity_exposure_id) AS total_identity_exposures,\n    DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month' * (n.n) AS month\nFROM assets a\nLEFT JOIN vulnerabilities v ON a.asset_id = v.asset_id\nLEFT JOIN misconfigurations m ON a.asset_id = m.asset_id\nLEFT JOIN external_exposure e ON a.asset_id = e.asset_id\nLEFT JOIN identity_exposure i ON a.asset_id = i.asset_id\nJOIN generate_series(0, 11) n ON TRUE\nWHERE a.acquisition_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '12 months'\nGROUP BY a.asset_id, a.asset_type, a.acquisition_date, a.depreciation_value, month\nORDER BY month;",
+      "description": "This mart contains a 12-month trend analysis of asset management, including risk scores, vulnerabilities, misconfigurations, and exposures related to each asset.",
+      "natural_language_question": "What is the 12-month trend of risk scores and vulnerabilities for each asset?",
+      "source_tables": [
+        "assets",
+        "vulnerabilities",
+        "misconfigurations",
+        "external_exposure",
+        "identity_exposure"
+      ],
+      "target_columns": [
+        "asset_id",
+        "asset_type",
+        "acquisition_date",
+        "depreciation_value",
+        "total_risk_score",
+        "total_vulnerabilities",
+        "total_misconfigurations",
+        "total_external_exposures",
+        "total_identity_exposures",
+        "month"
+      ],
+      "business_value": "This mart provides insights into asset performance and risk management, enabling informed decisions regarding asset utilization, compliance, and strategic investments.",
+      "grain": "One row per asset per month over the last 12 months."
+    },
+    {
+      "mart_name": "software_asset_management_trend_analysis",
+      "sql": "CREATE TABLE software_asset_management_trend_analysis AS SELECT\n    s.software_id,\n    s.software_name,\n    s.license_type,\n    COUNT(DISTINCT s.device_id) AS total_devices,\n    SUM(m.misconfiguration_count) AS total_misconfigurations,\n    COUNT(DISTINCT e.exposure_id) AS total_external_exposures,\n    DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month' * (n.n) AS month\nFROM software_inventory s\nLEFT JOIN misconfigurations m ON s.software_id = m.software_id\nLEFT JOIN external_exposure e ON s.software_id = e.software_id\nJOIN generate_series(0, 11) n ON TRUE\nWHERE s.installation_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '12 months'\nGROUP BY s.software_id, s.software_name, s.license_type, month\nORDER BY month;",
+      "description": "This mart contains a 12-month trend analysis of software asset management, including device counts, misconfigurations, and external exposures related to each software application.",
+      "natural_language_question": "What is the 12-month trend of software usage and compliance across devices?",
+      "source_tables": [
+        "software_inventory",
+        "misconfigurations",
+        "external_exposure"
+      ],
+      "target_columns": [
+        "software_id",
+        "software_name",
+        "license_type",
+        "total_devices",
+        "total_misconfigurations",
+        "total_external_exposures",
+        "month"
+      ],
+      "business_value": "This mart helps optimize software asset management by providing insights into software usage, compliance, and potential risks, facilitating better decision-making regarding software procurement and management.",
+      "grain": "One row per software application per month over the last 12 months."
+    }
+  ],
+  "reasoning": "Planned data mart for goal: \"Generate 12-month trend analysis for likelihood and breach risk\"\n\nSelected 6 relevant silver tables: assets, vulnerabilities, misconfigurations, external_exposure, identity_exposure, software_inventory\n\nGenerated 2 data mart(s):\n\n1. asset_management_trend_analysis: This mart contains a 12-month trend analysis of asset management, including risk scores, vulnerabilities, misconfigurations, and exposures related to each asset.\n   - Answers: What is the 12-month trend of risk scores and vulnerabilities for each asset?\n   - Grain: One row per asset per month over the last 12 months.\n\n2. software_asset_management_trend_analysis: This mart contains a 12-month trend analysis of software asset management, including device counts, misconfigurations, and external exposures related to each software application.\n   - Answers: What is the 12-month trend of software usage and compliance across devices?\n   - Grain: One row per software application per month over the last 12 months.\n",
+  "complexity": "high"
+}

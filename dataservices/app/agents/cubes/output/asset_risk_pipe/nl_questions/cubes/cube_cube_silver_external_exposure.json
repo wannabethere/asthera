@@ -1,0 +1,127 @@
+{
+  "question_id": "cube_silver_external_exposure",
+  "question": "Build a Cube.js cube definition for the silver layer table 'external_exposure' (cube name: 'silver_external_exposure').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- is_public_ip\n- weak_tls\n- geo_risky\n- scanned_at\n- updated_at\n\nMeasures:\n- count\n- open_ports\n\nRelationships to other tables: external_exposure\n\nSteps to build:\n- 1. Define dimensions: asset_id, is_public_ip, weak_tls, geo_risky, scanned_at\n- 2. Define measures: count, open_ports\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+  "context": {
+    "layer": "silver",
+    "table_name": "external_exposure",
+    "cube_name": "silver_external_exposure",
+    "description": "Silver layer cube for silver_external_exposure",
+    "table_metadata": {
+      "table_name": "external_exposure",
+      "description": ""
+    }
+  },
+  "expected_output_type": "cube",
+  "steps": [
+    "1. Define dimensions: asset_id, is_public_ip, weak_tls, geo_risky, scanned_at",
+    "2. Define measures: count, open_ports",
+    "3. Configure pre-aggregations for performance",
+    "4. Set up joins with related tables"
+  ],
+  "metadata": {
+    "dimension_count": 6,
+    "measure_count": 2,
+    "generated_at": "2025-11-20T11:47:30.506478"
+  },
+  "dependencies": [],
+  "layer": "silver",
+  "table_name": "external_exposure",
+  "cube_name": "silver_external_exposure",
+  "dimensions": [
+    {
+      "name": "asset_id",
+      "sql": "${silver_external_exposure}.asset_id",
+      "type": "number",
+      "title": "Asset Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": true
+    },
+    {
+      "name": "is_public_ip",
+      "sql": "${silver_external_exposure}.is_public_ip",
+      "type": "string",
+      "title": "Is Public Ip",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "weak_tls",
+      "sql": "${silver_external_exposure}.weak_tls",
+      "type": "string",
+      "title": "Weak Tls",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "geo_risky",
+      "sql": "${silver_external_exposure}.geo_risky",
+      "type": "string",
+      "title": "Geo Risky",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "scanned_at",
+      "sql": "${silver_external_exposure}.scanned_at",
+      "type": "time",
+      "title": "Scanned At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "updated_at",
+      "sql": "${silver_external_exposure}.updated_at",
+      "type": "time",
+      "title": "Updated At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    }
+  ],
+  "measures": [
+    {
+      "name": "count",
+      "sql": "1",
+      "type": "count",
+      "title": "Count",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": [
+        "asset_id"
+      ]
+    },
+    {
+      "name": "open_ports",
+      "sql": "${silver_external_exposure}.open_ports",
+      "type": "sum",
+      "title": "Open Ports",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": null
+    }
+  ],
+  "relationships": [
+    {
+      "child_table": "external_exposure",
+      "parent_table": "assets",
+      "join_type": "ONE_TO_ONE",
+      "join_condition": "external_exposure.asset_id = assets.asset_id",
+      "layer": "silver"
+    }
+  ]
+}

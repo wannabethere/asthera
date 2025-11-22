@@ -1,0 +1,37 @@
+[
+  {
+    "step_id": "clean_001",
+    "step_name": "Clean misconfigurations",
+    "transformation_type": "cleaning",
+    "input_tables": [
+      "raw_misconfigurations"
+    ],
+    "output_table": "silver_misconfigurations_cleaned",
+    "sql_logic": "\nCREATE TABLE silver_misconfigurations_cleaned AS\nSELECT \n    *,\n    CASE \n        WHEN id IS NULL THEN FALSE \n        ELSE TRUE \n    END AS is_valid_record\nFROM raw_misconfigurations\nWHERE id IS NOT NULL;\n",
+    "description": "Remove invalid records and handle nulls",
+    "dependencies": [],
+    "business_rules": [],
+    "data_quality_checks": [
+      "Check for null IDs",
+      "Validate record count"
+    ]
+  },
+  {
+    "step_id": "dedup_001",
+    "step_name": "Deduplicate misconfigurations",
+    "transformation_type": "deduplication",
+    "input_tables": [
+      "silver_misconfigurations_cleaned"
+    ],
+    "output_table": "silver_misconfigurations_deduped",
+    "sql_logic": "\nCREATE TABLE silver_misconfigurations_deduped AS\nSELECT *\nFROM (\n    SELECT \n        *,\n        ROW_NUMBER() OVER (\n            PARTITION BY asset_id, config_id\n            ORDER BY updated_at DESC\n        ) as row_num\n    FROM silver_misconfigurations_cleaned\n) ranked\nWHERE row_num = 1;\n",
+    "description": "Deduplicate using LOD dimensions: asset_id, config_id",
+    "dependencies": [
+      "clean_001"
+    ],
+    "business_rules": [],
+    "data_quality_checks": [
+      "Verify uniqueness on LOD dimensions"
+    ]
+  }
+]

@@ -1,0 +1,26 @@
+{
+  "name": "silver_to_gold_gold_percentage_of_active_learners",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_percentage_of_active_learners",
+  "target_model": "gold_gold_percentage_of_active_learners",
+  "steps": [
+    {
+      "step_name": "Metric: percentage_of_active_learners",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_percentage_of_active_learners (percentage_active_learners)\nSELECT \n    COALESCE(\n        (COUNT(DISTINCT CASE WHEN le.engagement_date >= CURRENT_DATE - INTERVAL '30 days' THEN le.learner_id END) * 100.0) / \n        NULLIF(COUNT(DISTINCT l.learner_id), 0), \n    0) AS percentage_active_learners\nFROM \n    learners l\nLEFT JOIN \n    learner_engagement le ON l.learner_id = le.learner_id;",
+      "description": "Percentage of learners actively engaging with the platform",
+      "input_tables": [
+        "learner_engagement",
+        "learners"
+      ],
+      "output_table": "gold_percentage_of_active_learners",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_percentage_of_active_learners from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

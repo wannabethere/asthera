@@ -1,0 +1,137 @@
+{
+  "question_id": "cube_silver_courses",
+  "question": "Build a Cube.js cube definition for the silver layer table 'courses' (cube name: 'silver_courses').\n\nThe cube should include:\n\nDimensions:\n- course_id\n- course_name\n- course_code\n- instructor_id\n- category\n- difficulty_level\n- created_at\n\nMeasures:\n- count\n- duration_hours\n\nRelationships to other tables: enrollments\n\nSteps to build:\n- 1. Define dimensions: course_id, course_name, course_code, instructor_id, category\n- 2. Define measures: count, duration_hours\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+  "context": {
+    "layer": "silver",
+    "table_name": "courses",
+    "cube_name": "silver_courses",
+    "description": "Silver layer cube for silver_courses",
+    "table_metadata": {
+      "table_name": "courses",
+      "description": ""
+    }
+  },
+  "expected_output_type": "cube",
+  "steps": [
+    "1. Define dimensions: course_id, course_name, course_code, instructor_id, category",
+    "2. Define measures: count, duration_hours",
+    "3. Configure pre-aggregations for performance",
+    "4. Set up joins with related tables"
+  ],
+  "metadata": {
+    "dimension_count": 7,
+    "measure_count": 2,
+    "generated_at": "2025-11-21T13:44:47.241346"
+  },
+  "dependencies": [],
+  "layer": "silver",
+  "table_name": "courses",
+  "cube_name": "silver_courses",
+  "dimensions": [
+    {
+      "name": "course_id",
+      "sql": "${silver_courses}.course_id",
+      "type": "number",
+      "title": "Course Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": true
+    },
+    {
+      "name": "course_name",
+      "sql": "${silver_courses}.course_name",
+      "type": "string",
+      "title": "Course Name",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "course_code",
+      "sql": "${silver_courses}.course_code",
+      "type": "string",
+      "title": "Course Code",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "instructor_id",
+      "sql": "${silver_courses}.instructor_id",
+      "type": "string",
+      "title": "Instructor Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "category",
+      "sql": "${silver_courses}.category",
+      "type": "string",
+      "title": "Category",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "difficulty_level",
+      "sql": "${silver_courses}.difficulty_level",
+      "type": "string",
+      "title": "Difficulty Level",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "created_at",
+      "sql": "${silver_courses}.created_at",
+      "type": "time",
+      "title": "Created At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    }
+  ],
+  "measures": [
+    {
+      "name": "count",
+      "sql": "1",
+      "type": "count",
+      "title": "Count",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": [
+        "course_id"
+      ]
+    },
+    {
+      "name": "duration_hours",
+      "sql": "${silver_courses}.duration_hours",
+      "type": "sum",
+      "title": "Duration Hours",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": null
+    }
+  ],
+  "relationships": [
+    {
+      "child_table": "enrollments",
+      "parent_table": "courses",
+      "join_type": "MANY_TO_ONE",
+      "join_condition": "enrollments.course_id = courses.course_id",
+      "layer": "silver"
+    }
+  ]
+}

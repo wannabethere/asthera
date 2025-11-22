@@ -1,0 +1,270 @@
+{
+  "workflow_name": "asset_risk_analytics",
+  "description": "Comprehensive asset risk quantification dashboard with Attack Surface Index (ASI), exposure scoring, and non-financial risk metrics",
+  "raw_schemas": [
+    {
+      "table_name": "assets",
+      "table_ddl": "\n-- Asset inventory and criticality\nCREATE TABLE assets (\n  asset_id STRING NOT NULL,\n  hostname STRING,\n  business_unit STRING,\n  env STRING,\n  criticality INTEGER,\n  created_at TIMESTAMP,\n  updated_at TIMESTAMP\n);",
+      "relationships": [],
+      "layer": "raw"
+    },
+    {
+      "table_name": "vulnerabilities",
+      "table_ddl": "\n-- Vulnerability data per asset\nCREATE TABLE vulnerabilities (\n  asset_id STRING NOT NULL,\n  cve_id STRING NOT NULL,\n  cvss_score NUMERIC,\n  epss_score NUMERIC,\n  is_kev BOOLEAN,\n  is_internet_facing BOOLEAN,\n  discovered_at TIMESTAMP,\n  updated_at TIMESTAMP\n);",
+      "relationships": [
+        {
+          "from_table": "vulnerabilities",
+          "from_column": "asset_id",
+          "to_table": "assets",
+          "to_column": "asset_id",
+          "relationship_type": "many_to_one",
+          "layer": "silver"
+        }
+      ],
+      "layer": "raw"
+    },
+    {
+      "table_name": "misconfigurations",
+      "table_ddl": "\n-- Misconfiguration findings per asset\nCREATE TABLE misconfigurations (\n  asset_id STRING NOT NULL,\n  config_id STRING NOT NULL,\n  severity STRING,\n  category STRING,\n  discovered_at TIMESTAMP,\n  updated_at TIMESTAMP\n);",
+      "relationships": [
+        {
+          "from_table": "misconfigurations",
+          "from_column": "asset_id",
+          "to_table": "assets",
+          "to_column": "asset_id",
+          "relationship_type": "many_to_one",
+          "layer": "silver"
+        }
+      ],
+      "layer": "raw"
+    },
+    {
+      "table_name": "external_exposure",
+      "table_ddl": "\n-- External attack surface exposure\nCREATE TABLE external_exposure (\n  asset_id STRING NOT NULL,\n  is_public_ip BOOLEAN,\n  open_ports INTEGER,\n  weak_tls BOOLEAN,\n  geo_risky BOOLEAN,\n  scanned_at TIMESTAMP,\n  updated_at TIMESTAMP\n);",
+      "relationships": [
+        {
+          "from_table": "external_exposure",
+          "from_column": "asset_id",
+          "to_table": "assets",
+          "to_column": "asset_id",
+          "relationship_type": "one_to_one",
+          "layer": "silver"
+        }
+      ],
+      "layer": "raw"
+    },
+    {
+      "table_name": "identity_exposure",
+      "table_ddl": "\n-- Identity and access exposure\nCREATE TABLE identity_exposure (\n  asset_id STRING NOT NULL,\n  num_admin_accounts INTEGER,\n  num_stale_accounts INTEGER,\n  has_password_reuse BOOLEAN,\n  has_mfa_disabled BOOLEAN,\n  assessed_at TIMESTAMP,\n  updated_at TIMESTAMP\n);",
+      "relationships": [
+        {
+          "from_table": "identity_exposure",
+          "from_column": "asset_id",
+          "to_table": "assets",
+          "to_column": "asset_id",
+          "relationship_type": "one_to_one",
+          "layer": "silver"
+        }
+      ],
+      "layer": "raw"
+    },
+    {
+      "table_name": "software_inventory",
+      "table_ddl": "\n-- Software stack inventory per asset\nCREATE TABLE software_inventory (\n  asset_id STRING NOT NULL,\n  software_name STRING,\n  version STRING,\n  is_eol BOOLEAN,\n  is_unsupported BOOLEAN,\n  discovered_at TIMESTAMP,\n  updated_at TIMESTAMP\n);",
+      "relationships": [
+        {
+          "from_table": "software_inventory",
+          "from_column": "asset_id",
+          "to_table": "assets",
+          "to_column": "asset_id",
+          "relationship_type": "many_to_one",
+          "layer": "silver"
+        }
+      ],
+      "layer": "raw"
+    }
+  ],
+  "lod_configurations": [
+    {
+      "table_name": "assets",
+      "lod_type": "FIXED",
+      "dimensions": ["asset_id"],
+      "description": "One row per asset - no deduplication needed"
+    },
+    {
+      "table_name": "vulnerabilities",
+      "lod_type": "FIXED",
+      "dimensions": ["asset_id", "cve_id"],
+      "description": "One row per asset-vulnerability combination"
+    },
+    {
+      "table_name": "misconfigurations",
+      "lod_type": "FIXED",
+      "dimensions": ["asset_id", "config_id"],
+      "description": "One row per asset-misconfiguration combination"
+    },
+    {
+      "table_name": "software_inventory",
+      "lod_type": "FIXED",
+      "dimensions": ["asset_id", "software_name", "version"],
+      "description": "One row per asset-software-version combination"
+    }
+  ],
+  "relationship_mappings": [
+    {
+      "from_table": "vulnerabilities",
+      "from_column": "asset_id",
+      "to_table": "assets",
+      "to_column": "asset_id",
+      "relationship_type": "many_to_one",
+      "layer": "silver"
+    },
+    {
+      "from_table": "misconfigurations",
+      "from_column": "asset_id",
+      "to_table": "assets",
+      "to_column": "asset_id",
+      "relationship_type": "many_to_one",
+      "layer": "silver"
+    },
+    {
+      "from_table": "external_exposure",
+      "from_column": "asset_id",
+      "to_table": "assets",
+      "to_column": "asset_id",
+      "relationship_type": "one_to_one",
+      "layer": "silver"
+    },
+    {
+      "from_table": "identity_exposure",
+      "from_column": "asset_id",
+      "to_table": "assets",
+      "to_column": "asset_id",
+      "relationship_type": "one_to_one",
+      "layer": "silver"
+    },
+    {
+      "from_table": "software_inventory",
+      "from_column": "asset_id",
+      "to_table": "assets",
+      "to_column": "asset_id",
+      "relationship_type": "many_to_one",
+      "layer": "silver"
+    }
+  ],
+  "user_query": "\n    Create a comprehensive asset risk quantification dashboard that provides:\n    \n    1. Attack Surface Index (ASI) Metrics:\n       - ASI per asset (0-100 scale)\n       - ASI aggregation by business unit\n       - ASI by environment (prod/non-prod)\n       - Top 5 business units by exposure\n    \n    2. Exposure Scoring:\n       - External exposure score (public IPs, open ports, weak TLS)\n       - Vulnerability exposure score (CVSS × EPSS × KEV × internet-facing)\n       - Misconfiguration exposure score (severity-weighted)\n       - Identity exposure score (admin accounts, stale accounts, MFA)\n       - Software exposure score (EOL, unsupported versions)\n    \n    3. Risk Likelihood Metrics:\n       - Exploitability likelihood per asset\n       - Likelihood by business unit\n       - Likelihood trends over 12 months\n    \n    4. Attack Surface Analysis:\n       - Attack surface by OS/software stack\n       - Attack surface by business unit\n       - Attack surface by environment\n       - Contribution charts showing risk distribution\n    \n    5. Time-Series Analysis:\n       - 12-month trend lines for likelihood\n       - 12-month trend lines for breach risk\n       - Monthly snapshots of ASI\n       - Week-over-week exposure changes\n    \n    Focus on non-financial measures: exposure, exploitability, criticality.\n    Compute composite Attack Surface Index (ASI) using weighted components.\n    Enable drill-downs by business unit, environment, and time.\n    ",
+  "data_mart_goals": [
+    "Create Attack Surface Index (ASI) datamart by business unit with top 5 rankings",
+    "Show attack surface breakdown by OS/software stack, business unit, and environment",
+    "Generate 12-month trend analysis for likelihood and breach risk",
+    "Create exposure score aggregations for dashboard visualizations"
+  ],
+  "target_sql_dialect": "postgresql",
+  "metric_questions": [
+    "What is the Attack Surface Index (ASI) per asset? Show me the distribution and top 10 highest risk assets.",
+    "What is the average ASI by business unit? Compare this year vs last year and show percentage change.",
+    "What is the total external exposure score across all assets? Break it down by environment (prod vs non-prod).",
+    "What is the vulnerability exposure score per asset, calculated as CVSS × EPSS × KEV flag × internet-facing flag? Show me assets with score above 0.5.",
+    "What is the misconfiguration exposure score by severity category? Show me the trend over the last 6 months.",
+    "What is the identity exposure score per asset based on admin accounts, stale accounts, and MFA status? Show me assets with high identity risk.",
+    "What is the software exposure score per asset based on EOL and unsupported software? Show me the breakdown by business unit.",
+    "What is the exploitability likelihood per asset? Show me the trend over 12 months and identify assets with increasing risk.",
+    "What is the composite Attack Surface Index (ASI) using weighted components? Show me the calculation breakdown by asset.",
+    "What is the attack surface contribution by OS/software stack? Show me which stacks contribute most to overall risk.",
+    "What is the week-over-week change in exposure scores? Show me assets with significant increases.",
+    "What is the breach risk likelihood aggregated by business unit? Show me quarterly trends."
+  ],
+  "silver_cleaning_hints": {
+    "assets": {
+      "cleaning_steps": [
+        "Remove duplicate asset_id entries",
+        "Validate criticality is between 1-100",
+        "Standardize business_unit and env values",
+        "Ensure timestamps are valid"
+      ]
+    },
+    "vulnerabilities": {
+      "cleaning_steps": [
+        "Validate CVSS scores are between 0-10",
+        "Validate EPSS scores are between 0-1",
+        "Ensure CVE IDs follow standard format",
+        "Handle null values in scores"
+      ]
+    },
+    "misconfigurations": {
+      "cleaning_steps": [
+        "Standardize severity values (low/med/high/critical)",
+        "Validate category values",
+        "Ensure config_id is unique per asset"
+      ]
+    }
+  },
+  "gold_metrics_config": {
+    "dimensions": [
+      "business_unit",
+      "env",
+      "asset_id",
+      "os_category"
+    ],
+    "measures": [
+      "attack_surface_index",
+      "exploitability_likelihood",
+      "external_exposure_score",
+      "vulnerability_exposure_score",
+      "misconfiguration_exposure_score",
+      "identity_exposure_score",
+      "software_exposure_score"
+    ],
+    "time_grain": "month",
+    "aggregation_types": ["sum", "avg", "count", "max", "min", "percentile"]
+  },
+  "expected_outputs": {
+    "raw_cubes": [
+      "raw_assets",
+      "raw_vulnerabilities",
+      "raw_misconfigurations",
+      "raw_external_exposure",
+      "raw_identity_exposure",
+      "raw_software_inventory"
+    ],
+    "silver_cubes": [
+      "silver_assets_cleaned",
+      "silver_vulnerability_exposure",
+      "silver_misconfiguration_exposure",
+      "silver_external_exposure_scored",
+      "silver_identity_exposure_scored",
+      "silver_software_exposure_scored"
+    ],
+    "gold_cubes": [
+      "gold_attack_surface_index",
+      "gold_attack_surface_by_bu",
+      "gold_attack_surface_by_env",
+      "gold_exploitability_likelihood",
+      "gold_exposure_trends_monthly"
+    ],
+    "views": [
+      "attack_surface_analytics_view",
+      "risk_likelihood_view"
+    ],
+    "transformations": [
+      "raw_to_silver_asset_cleaning",
+      "raw_to_silver_exposure_scoring",
+      "silver_to_gold_asi_calculation",
+      "silver_to_gold_bu_aggregation",
+      "silver_to_gold_trend_rollups"
+    ],
+    "dbt_models": [
+      "attack_surface_index",
+      "attack_surface_by_bu",
+      "attack_surface_by_env_os",
+      "exploitability_likelihood",
+      "exposure_trends_monthly"
+    ]
+  },
+  "generate_gold": true,
+  "enable_dbt_generation": true,
+  "enable_enhanced_data_marts": true,
+  "enable_gold_metrics": true,
+  "output_formats": ["cubejs", "dbt"]
+}
+

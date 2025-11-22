@@ -1,0 +1,27 @@
+{
+  "name": "silver_to_gold_gold_students_completed_courses",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_students_completed_courses",
+  "target_model": "gold_gold_students_completed_courses",
+  "steps": [
+    {
+      "step_name": "Metric: students_completed_courses",
+      "step_type": "metric",
+      "sql_logic": "SELECT \n    c.\"instructor_id\",\n    COUNT(DISTINCT s.\"student_id\") AS \"completed_students_count\"\nFROM \n    \"courses\" c\nJOIN \n    \"gold_students_completed_courses\" g ON c.\"course_id\" = g.\"course_id\"\nJOIN \n    \"students\" s ON g.\"student_id\" = s.\"student_id\"\nWHERE \n    COALESCE(g.\"completion_status\", '') = 'completed'  -- Only include completed courses\nGROUP BY \n    c.\"instructor_id\"\nORDER BY \n    c.\"instructor_id\";",
+      "description": "Count of students who completed courses taught by each instructor",
+      "input_tables": [
+        "courses",
+        "students",
+        "instructors"
+      ],
+      "output_table": "gold_students_completed_courses",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_students_completed_courses from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

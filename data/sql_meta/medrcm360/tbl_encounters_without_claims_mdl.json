@@ -1,0 +1,221 @@
+{
+  "catalog": "medrcm360",
+  "schema": "public",
+  "models": [
+    {
+      "name": "encounters_without_claims",
+      "description": "Patient encounters that have not been converted to claims. This table tracks appointments and encounters that have occurred but for which no claim has been generated, including lag times and unbilled amounts.",
+      "tableReference": {
+        "table": "tbl_encounters_without_claims_202510232056"
+      },
+      "columns": [
+        {
+          "name": "encounter_uuid",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Encounter UUID",
+            "description": "Unique identifier for the encounter record"
+          }
+        },
+        {
+          "name": "facility",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Facility",
+            "description": "Name of the healthcare facility where the encounter occurred"
+          }
+        },
+        {
+          "name": "appointment_date",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Appointment Date",
+            "description": "Date and time of the appointment"
+          }
+        },
+        {
+          "name": "encounter_id",
+          "type": "INTEGER",
+          "properties": {
+            "displayName": "Encounter ID",
+            "description": "Unique identifier for the encounter"
+          }
+        },
+        {
+          "name": "appointment_facility_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Appointment Facility Name",
+            "description": "Name of the facility where the appointment took place"
+          }
+        },
+        {
+          "name": "appointment_facility_pos",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Appointment Facility Place of Service",
+            "description": "Place of service code for the appointment facility"
+          }
+        },
+        {
+          "name": "visit_type",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Visit Type",
+            "description": "Type of visit (e.g., NP: New Patient, FU: Follow Up, INJ: Injection, NURSE: Nurse Visit, NPC: Cancer NP)"
+          }
+        },
+        {
+          "name": "note_done_status",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Note Done Status",
+            "description": "Status indicating whether clinical notes have been completed"
+          }
+        },
+        {
+          "name": "chart_lock_status",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Chart Lock Status",
+            "description": "Status indicating whether the chart is locked (e.g., Locked, UnLocked)"
+          }
+        },
+        {
+          "name": "locked_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Locked Date",
+            "description": "Date when the chart was locked (if applicable)"
+          }
+        },
+        {
+          "name": "patient_acct_no",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Patient Account Number",
+            "description": "Unique account number assigned to the patient"
+          }
+        },
+        {
+          "name": "patient_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Patient Name",
+            "description": "Full name of the patient"
+          }
+        },
+        {
+          "name": "is_televisit",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Is Televisit",
+            "description": "Indicator whether this was a telehealth visit (Yes/No)"
+          }
+        },
+        {
+          "name": "call_duration",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Call Duration",
+            "description": "Duration of the call for telehealth visits"
+          }
+        },
+        {
+          "name": "telehealth_connection_count",
+          "type": "INTEGER",
+          "properties": {
+            "displayName": "Telehealth Connection Count",
+            "description": "Number of telehealth connections for this encounter"
+          }
+        },
+        {
+          "name": "unbilled_fee",
+          "type": "DECIMAL",
+          "properties": {
+            "displayName": "Unbilled Fee",
+            "description": "Fee amount that has not been billed yet"
+          }
+        },
+        {
+          "name": "lag_in_days",
+          "type": "INTEGER",
+          "properties": {
+            "displayName": "Lag in Days",
+            "description": "Number of days between appointment date and current date (billing lag)"
+          }
+        },
+        {
+          "name": "lag_in_days_lock",
+          "type": "INTEGER",
+          "properties": {
+            "displayName": "Lag in Days (Lock)",
+            "description": "Number of days between locked date and current date"
+          }
+        },
+        {
+          "name": "count_encounterid",
+          "type": "INTEGER",
+          "properties": {
+            "displayName": "Count Encounter ID",
+            "description": "Count of encounters with this encounter ID"
+          }
+        },
+        {
+          "name": "total_unbilled_amount",
+          "type": "DECIMAL",
+          "properties": {
+            "displayName": "Total Unbilled Amount",
+            "description": "Total amount that has not been billed across all encounters"
+          }
+        },
+        {
+          "name": "average_lag_in_days",
+          "type": "DECIMAL",
+          "properties": {
+            "displayName": "Average Lag in Days",
+            "description": "Average number of days of billing lag"
+          }
+        },
+        {
+          "name": "average_lag_in_days_lock",
+          "type": "DECIMAL",
+          "properties": {
+            "displayName": "Average Lag in Days (Lock)",
+            "description": "Average number of days of lag from lock date"
+          }
+        },
+        {
+          "name": "source_file",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Source File",
+            "description": "Source file from which the data was imported"
+          }
+        },
+        {
+          "name": "load_ts",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Load Timestamp",
+            "description": "Timestamp when the record was loaded into the system"
+          }
+        },
+        {
+          "name": "facility_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Facility Name",
+            "description": "Full name of the facility (may differ from facility field)"
+          }
+        }
+      ],
+      "primaryKey": "encounter_uuid",
+      "properties": {
+        "displayName": "Encounters Without Claims",
+        "description": "Patient encounters that have not been converted to claims"
+      }
+    }
+  ]
+}
+

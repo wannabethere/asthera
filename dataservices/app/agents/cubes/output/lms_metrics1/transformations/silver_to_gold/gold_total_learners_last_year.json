@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_total_learners_last_year",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_total_learners_last_year",
+  "target_model": "gold_gold_total_learners_last_year",
+  "steps": [
+    {
+      "step_name": "Metric: total_learners_last_year",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_total_learners_last_year (total_learners)\nSELECT COUNT(DISTINCT learner_id) AS total_learners\nFROM learners_activities\nWHERE DATE_TRUNC('year', activity_date) = DATE_TRUNC('year', CURRENT_DATE) - INTERVAL '1 year'\nGROUP BY learner_id\nHAVING COUNT(activity_id) > 1;",
+      "description": "Total number of learners who consumed more than one activity last year.",
+      "input_tables": [
+        "learners_activities"
+      ],
+      "output_table": "gold_total_learners_last_year",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_total_learners_last_year from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

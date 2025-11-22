@@ -1,0 +1,71 @@
+{
+  "workflow_name": "network_device_analytics",
+  "description": "Network device inventory and monitoring analytics",
+  "raw_schemas": [
+    {
+      "table_name": "dev_network_devices",
+      "table_ddl": "\n-- Network device inventory and management system\nCREATE TABLE dev_network_devices (\n  id BIGINT NOT NULL,\n  ip VARCHAR,\n  subnet VARCHAR,\n  site VARCHAR,\n  mac VARCHAR,\n  manufacturer VARCHAR,\n  updated_at TIMESTAMP,\n  nuid INTEGER,\n  dev_id INTEGER,\n  is_stale BOOLEAN NOT NULL,\n  raw_created_at TIMESTAMP,\n  store_created_at TIMESTAMP,\n  store_updated_at TIMESTAMP,\n  process_id VARCHAR,\n  is_cloud_device BOOLEAN,\n  is_virtual_machine BOOLEAN,\n  subnet_class VARCHAR,\n  days_since_last_seen INTEGER,\n  device_age_category VARCHAR,\n  ip_octets VARCHAR\n);",
+      "relationships": [],
+      "layer": "raw"
+    }
+  ],
+  "lod_configurations": [
+    {
+      "table_name": "dev_network_devices",
+      "lod_type": "FIXED",
+      "dimensions": [
+        "ip",
+        "mac"
+      ],
+      "description": "Deduplicate devices by unique IP and MAC address combination"
+    }
+  ],
+  "relationship_mappings": [],
+  "user_query": "\n    Create a comprehensive network device monitoring dashboard that provides:\n    \n    1. Device Inventory Metrics:\n       - Total devices by site\n       - Device distribution by manufacturer\n       - Cloud vs. on-premise device breakdown\n       - Virtual vs. physical machine counts\n    \n    2. Device Health Monitoring:\n       - Active vs. stale device counts\n       - Average days since last seen\n       - Device age category distribution\n       - Devices by subnet classification\n    \n    3. Time-Series Analysis:\n       - Daily device activity trends\n       - Week-over-week changes\n       - Monthly rollups for reporting\n    \n    4. Network Analysis:\n       - Subnet utilization\n       - IP address allocation\n       - Device density by site\n    \n    Focus on performance optimization with appropriate pre-aggregations.\n    ",
+  "data_mart_goals": [
+    "Create a comprehensive network device monitoring dashboard",
+    "Show device health metrics by site and manufacturer",
+    "Analyze device activity trends over time"
+  ],
+  "target_sql_dialect": "postgresql",
+  "metric_questions": [
+    "What is the total device count by site? Show me the distribution and identify sites with the most devices.",
+    "What is the device distribution by manufacturer? Show me the top 10 manufacturers and their device counts.",
+    "What is the cloud vs on-premise device breakdown? Show me the percentage split and trend over time.",
+    "What is the virtual vs physical machine count? Show me the ratio and breakdown by site.",
+    "What is the active vs stale device count? Show me the percentage of stale devices and trend over the last 3 months.",
+    "What is the average days since last seen per device? Show me devices with more than 30 days since last seen.",
+    "What is the device age category distribution? Show me devices by age category (new, medium, old) and their percentages.",
+    "What is the device count by subnet classification? Show me the distribution across different subnet classes.",
+    "What is the daily device activity trend? Show me the number of active devices per day over the last 30 days.",
+    "What is the week-over-week change in device counts? Show me sites with significant changes.",
+    "What is the subnet utilization rate? Show me subnets with high device density.",
+    "What is the device health score based on staleness and last seen? Show me devices with health score below 50.",
+    "What is the device density by site? Show me sites with highest device concentration per subnet.",
+    "What is the monthly device activity rollup? Show me total active devices per month and identify trends."
+  ],
+  "expected_outputs": {
+    "raw_cubes": [
+      "raw_network_devices"
+    ],
+    "silver_cubes": [
+      "silver_network_devices_cleaned",
+      "silver_network_devices_deduped"
+    ],
+    "gold_cubes": [
+      "gold_device_metrics_daily",
+      "gold_device_metrics_by_site",
+      "gold_device_metrics_by_manufacturer"
+    ],
+    "views": [
+      "network_analytics_view"
+    ],
+    "transformations": [
+      "raw_to_silver_cleaning",
+      "raw_to_silver_deduplication",
+      "silver_to_gold_daily_rollup",
+      "silver_to_gold_site_aggregation"
+    ]
+  },
+  "generate_gold": true
+}

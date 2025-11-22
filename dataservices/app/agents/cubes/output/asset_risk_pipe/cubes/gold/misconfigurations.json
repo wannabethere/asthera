@@ -1,0 +1,87 @@
+{
+  "name": "gold_misconfigurations",
+  "sql": "SELECT * FROM gold_misconfigurations",
+  "title": "Gold Misconfigurations",
+  "description": "Gold layer cube for gold_misconfigurations",
+  "dimensions": [
+    {
+      "name": "asset_id",
+      "sql": "${gold_misconfigurations}.asset_id",
+      "type": "number",
+      "title": "Asset Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": true
+    },
+    {
+      "name": "config_id",
+      "sql": "${gold_misconfigurations}.config_id",
+      "type": "number",
+      "title": "Config Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": true
+    },
+    {
+      "name": "severity",
+      "sql": "${gold_misconfigurations}.severity",
+      "type": "string",
+      "title": "Severity",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "category",
+      "sql": "${gold_misconfigurations}.category",
+      "type": "string",
+      "title": "Category",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "discovered_at",
+      "sql": "${gold_misconfigurations}.discovered_at",
+      "type": "time",
+      "title": "Discovered At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "updated_at",
+      "sql": "${gold_misconfigurations}.updated_at",
+      "type": "time",
+      "title": "Updated At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    }
+  ],
+  "measures": [
+    {
+      "name": "count",
+      "sql": "1",
+      "type": "count",
+      "title": "Count",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": [
+        "asset_id",
+        "config_id"
+      ]
+    }
+  ],
+  "joins": [],
+  "preAggregations": [],
+  "segments": []
+}

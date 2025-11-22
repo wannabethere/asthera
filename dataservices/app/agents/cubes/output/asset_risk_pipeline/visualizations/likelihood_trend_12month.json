@@ -1,0 +1,94 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "title": "Exploitability Likelihood Trend - 12 Months",
+  "description": "Time-series line chart showing average exploitability likelihood over 12 months. Supports trend analysis and breach risk forecasting.",
+  "width": 900,
+  "height": 400,
+  "data": {
+    "name": "exposure_trends_monthly"
+  },
+  "transform": [
+    {
+      "filter": "datum.snapshot_month >= date('2023-01-01')"
+    },
+    {
+      "calculate": "toDate(datum.snapshot_month)",
+      "as": "month_date"
+    }
+  ],
+  "layer": [
+    {
+      "mark": {
+        "type": "line",
+        "point": true,
+        "strokeWidth": 3,
+        "interpolate": "monotone"
+      },
+      "encoding": {
+        "x": {
+          "field": "month_date",
+          "type": "temporal",
+          "title": "Month",
+          "axis": {
+            "format": "%b %Y",
+            "labelAngle": -45
+          }
+        },
+        "y": {
+          "field": "avg_likelihood",
+          "type": "quantitative",
+          "title": "Average Exploitability Likelihood",
+          "scale": {"domain": [0, 1]},
+          "axis": {
+            "format": ".2f"
+          }
+        },
+        "color": {
+          "field": "business_unit",
+          "type": "nominal",
+          "title": "Business Unit",
+          "scale": {
+            "scheme": "category10"
+          },
+          "legend": {
+            "orient": "right"
+          }
+        },
+        "strokeDash": {
+          "field": "env",
+          "type": "nominal",
+          "title": "Environment",
+          "scale": {
+            "domain": ["prod", "non-prod"],
+            "range": [[1, 0], [5, 5]]
+          }
+        },
+        "tooltip": [
+          {"field": "month_date", "type": "temporal", "title": "Month", "format": "%B %Y"},
+          {"field": "business_unit", "type": "nominal", "title": "Business Unit"},
+          {"field": "env", "type": "nominal", "title": "Environment"},
+          {"field": "avg_likelihood", "type": "quantitative", "title": "Avg Likelihood", "format": ".3f"},
+          {"field": "very_high_likelihood_assets", "type": "quantitative", "title": "Very High Likelihood Assets"},
+          {"field": "high_likelihood_assets", "type": "quantitative", "title": "High Likelihood Assets"}
+        ]
+      }
+    },
+    {
+      "mark": {
+        "type": "area",
+        "opacity": 0.2
+      },
+      "encoding": {
+        "x": {"field": "month_date", "type": "temporal"},
+        "y": {"field": "avg_likelihood", "type": "quantitative"},
+        "color": {"field": "business_unit", "type": "nominal"}
+      }
+    }
+  ],
+  "config": {
+    "view": {
+      "stroke": "transparent"
+    }
+  }
+}
+

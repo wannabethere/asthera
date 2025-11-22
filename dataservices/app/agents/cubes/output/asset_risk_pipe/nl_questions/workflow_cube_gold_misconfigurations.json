@@ -1,0 +1,117 @@
+{
+  "question_id": "cube_gold_misconfigurations",
+  "question": "Build a Cube.js cube definition for the gold layer table 'misconfigurations' (cube name: 'gold_misconfigurations').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- config_id\n- severity\n- category\n- discovered_at\n- updated_at\n\nMeasures:\n- count\n\nRelationships to other tables: misconfigurations\n\nSteps to build:\n- 1. Define dimensions: asset_id, config_id, severity, category, discovered_at\n- 2. Define measures: count\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+  "context": {
+    "layer": "gold",
+    "table_name": "misconfigurations",
+    "cube_name": "gold_misconfigurations",
+    "description": "Gold layer cube for gold_misconfigurations",
+    "table_metadata": {
+      "table_name": "misconfigurations",
+      "description": ""
+    }
+  },
+  "expected_output_type": "cube",
+  "steps": [
+    "1. Define dimensions: asset_id, config_id, severity, category, discovered_at",
+    "2. Define measures: count",
+    "3. Configure pre-aggregations for performance",
+    "4. Set up joins with related tables"
+  ],
+  "metadata": {
+    "dimension_count": 6,
+    "measure_count": 1,
+    "generated_at": "2025-11-20T11:47:30.506946"
+  },
+  "dependencies": [],
+  "layer": "gold",
+  "table_name": "misconfigurations",
+  "cube_name": "gold_misconfigurations",
+  "dimensions": [
+    {
+      "name": "asset_id",
+      "sql": "${gold_misconfigurations}.asset_id",
+      "type": "number",
+      "title": "Asset Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": true
+    },
+    {
+      "name": "config_id",
+      "sql": "${gold_misconfigurations}.config_id",
+      "type": "number",
+      "title": "Config Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": true
+    },
+    {
+      "name": "severity",
+      "sql": "${gold_misconfigurations}.severity",
+      "type": "string",
+      "title": "Severity",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "category",
+      "sql": "${gold_misconfigurations}.category",
+      "type": "string",
+      "title": "Category",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "discovered_at",
+      "sql": "${gold_misconfigurations}.discovered_at",
+      "type": "time",
+      "title": "Discovered At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "updated_at",
+      "sql": "${gold_misconfigurations}.updated_at",
+      "type": "time",
+      "title": "Updated At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    }
+  ],
+  "measures": [
+    {
+      "name": "count",
+      "sql": "1",
+      "type": "count",
+      "title": "Count",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": [
+        "asset_id",
+        "config_id"
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "child_table": "misconfigurations",
+      "parent_table": "assets",
+      "join_type": "MANY_TO_ONE",
+      "join_condition": "misconfigurations.asset_id = assets.asset_id",
+      "layer": "silver"
+    }
+  ]
+}

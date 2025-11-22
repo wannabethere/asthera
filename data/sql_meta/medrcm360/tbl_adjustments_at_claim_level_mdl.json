@@ -1,0 +1,165 @@
+{
+  "catalog": "medrcm360",
+  "schema": "public",
+  "models": [
+    {
+      "name": "adjustments_at_claim_level",
+      "description": "Patient claim adjustments recorded at the claim level. This table tracks financial adjustments including write-offs, bad debt, and other claim-level adjustments applied to patient claims.",
+      "tableReference": {
+        "table": "tbl_adjustments_at_claim_level_202510232107"
+      },
+      "columns": [
+        {
+          "name": "adjustment_at_claim_uuid",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Adjustment at Claim UUID",
+            "description": "Unique identifier for the adjustment record at claim level"
+          }
+        },
+        {
+          "name": "facility",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Facility",
+            "description": "Name of the healthcare facility where the service was provided"
+          }
+        },
+        {
+          "name": "claim_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Claim Date",
+            "description": "Date when the claim was created or submitted"
+          }
+        },
+        {
+          "name": "service_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Service Date",
+            "description": "Date when the medical service was provided to the patient"
+          }
+        },
+        {
+          "name": "adjustment_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Adjustment Date",
+            "description": "Date when the adjustment was applied to the claim"
+          }
+        },
+        {
+          "name": "appointment_servicing_provider",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Appointment Servicing Provider",
+            "description": "Name of the healthcare provider who serviced the appointment"
+          }
+        },
+        {
+          "name": "facility_pos",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Facility Place of Service",
+            "description": "Place of service code indicating where the service was provided"
+          }
+        },
+        {
+          "name": "patient_acct_no",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Patient Account Number",
+            "description": "Unique account number assigned to the patient"
+          }
+        },
+        {
+          "name": "patient_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Patient Name",
+            "description": "Full name of the patient"
+          }
+        },
+        {
+          "name": "claim_no",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Claim Number",
+            "description": "Unique identifier for the claim"
+          }
+        },
+        {
+          "name": "adjustment_id",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Adjustment ID",
+            "description": "Unique identifier for the adjustment"
+          }
+        },
+        {
+          "name": "adjustment_code",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Adjustment Code",
+            "description": "Code identifying the type of adjustment (e.g., BD for Bad Debt, OA23, 08 for Provider write off)"
+          }
+        },
+        {
+          "name": "adjustment_code_description",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Adjustment Code Description",
+            "description": "Detailed description of the adjustment code and reason"
+          }
+        },
+        {
+          "name": "adjustment_group_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Adjustment Group Name",
+            "description": "Group or category name for the adjustment"
+          }
+        },
+        {
+          "name": "writeoff_adjustment",
+          "type": "DECIMAL",
+          "properties": {
+            "displayName": "Write-off Adjustment Amount",
+            "description": "Monetary amount of the write-off adjustment applied to the claim"
+          }
+        },
+        {
+          "name": "source_file",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Source File",
+            "description": "Source file from which the data was imported"
+          }
+        },
+        {
+          "name": "load_ts",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Load Timestamp",
+            "description": "Timestamp when the record was loaded into the system"
+          }
+        },
+        {
+          "name": "facility_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Facility Name",
+            "description": "Full name of the facility (may differ from facility field)"
+          }
+        }
+      ],
+      "primaryKey": "adjustment_at_claim_uuid",
+      "properties": {
+        "displayName": "Adjustments at Claim Level",
+        "description": "Financial adjustments applied to patient claims at the claim level"
+      }
+    }
+  ]
+}
+

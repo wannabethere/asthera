@@ -1,0 +1,18 @@
+[
+  {
+    "step_id": "agg_daily_001",
+    "step_name": "Daily Aggregation - enrollments",
+    "transformation_type": "aggregation",
+    "input_tables": [
+      "silver_enrollments"
+    ],
+    "output_table": "gold_enrollments_daily",
+    "sql_logic": "\nCREATE TABLE gold_enrollments_daily AS\nSELECT \n    DATE_TRUNC('day', updated_at) as date,\n    COUNT(*) as total_records,\n    COUNT(DISTINCT id) as unique_devices,\n    SUM(CASE WHEN is_stale THEN 1 ELSE 0 END) as stale_count\nFROM silver_enrollments\nGROUP BY DATE_TRUNC('day', updated_at);\n",
+    "description": "Daily aggregated metrics",
+    "dependencies": [],
+    "business_rules": [
+      "One row per day"
+    ],
+    "data_quality_checks": []
+  }
+]

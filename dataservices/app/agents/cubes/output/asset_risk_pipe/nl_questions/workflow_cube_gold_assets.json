@@ -1,0 +1,155 @@
+{
+  "question_id": "cube_gold_assets",
+  "question": "Build a Cube.js cube definition for the gold layer table 'assets' (cube name: 'gold_assets').\n\nThe cube should include:\n\nDimensions:\n- asset_id\n- hostname\n- business_unit\n- env\n- created_at\n- updated_at\n\nMeasures:\n- count\n- criticality\n\nRelationships to other tables: vulnerabilities, misconfigurations, external_exposure, identity_exposure, software_inventory\n\nSteps to build:\n- 1. Define dimensions: asset_id, hostname, business_unit, env, created_at\n- 2. Define measures: count, criticality\n- 3. Configure pre-aggregations for performance\n- 4. Set up joins with related tables\n\nGenerate a complete Cube.js cube definition with all dimensions, measures, joins, and pre-aggregations.",
+  "context": {
+    "layer": "gold",
+    "table_name": "assets",
+    "cube_name": "gold_assets",
+    "description": "Gold layer cube for gold_assets",
+    "table_metadata": {
+      "table_name": "assets",
+      "description": ""
+    }
+  },
+  "expected_output_type": "cube",
+  "steps": [
+    "1. Define dimensions: asset_id, hostname, business_unit, env, created_at",
+    "2. Define measures: count, criticality",
+    "3. Configure pre-aggregations for performance",
+    "4. Set up joins with related tables"
+  ],
+  "metadata": {
+    "dimension_count": 6,
+    "measure_count": 2,
+    "generated_at": "2025-11-20T11:47:30.506769"
+  },
+  "dependencies": [],
+  "layer": "gold",
+  "table_name": "assets",
+  "cube_name": "gold_assets",
+  "dimensions": [
+    {
+      "name": "asset_id",
+      "sql": "${gold_assets}.asset_id",
+      "type": "number",
+      "title": "Asset Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": true
+    },
+    {
+      "name": "hostname",
+      "sql": "${gold_assets}.hostname",
+      "type": "string",
+      "title": "Hostname",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "business_unit",
+      "sql": "${gold_assets}.business_unit",
+      "type": "string",
+      "title": "Business Unit",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "env",
+      "sql": "${gold_assets}.env",
+      "type": "string",
+      "title": "Env",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "created_at",
+      "sql": "${gold_assets}.created_at",
+      "type": "time",
+      "title": "Created At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "updated_at",
+      "sql": "${gold_assets}.updated_at",
+      "type": "time",
+      "title": "Updated At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    }
+  ],
+  "measures": [
+    {
+      "name": "count",
+      "sql": "1",
+      "type": "count",
+      "title": "Count",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": [
+        "asset_id"
+      ]
+    },
+    {
+      "name": "criticality",
+      "sql": "${gold_assets}.criticality",
+      "type": "sum",
+      "title": "Criticality",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": null
+    }
+  ],
+  "relationships": [
+    {
+      "child_table": "vulnerabilities",
+      "parent_table": "assets",
+      "join_type": "MANY_TO_ONE",
+      "join_condition": "vulnerabilities.asset_id = assets.asset_id",
+      "layer": "silver"
+    },
+    {
+      "child_table": "misconfigurations",
+      "parent_table": "assets",
+      "join_type": "MANY_TO_ONE",
+      "join_condition": "misconfigurations.asset_id = assets.asset_id",
+      "layer": "silver"
+    },
+    {
+      "child_table": "external_exposure",
+      "parent_table": "assets",
+      "join_type": "ONE_TO_ONE",
+      "join_condition": "external_exposure.asset_id = assets.asset_id",
+      "layer": "silver"
+    },
+    {
+      "child_table": "identity_exposure",
+      "parent_table": "assets",
+      "join_type": "ONE_TO_ONE",
+      "join_condition": "identity_exposure.asset_id = assets.asset_id",
+      "layer": "silver"
+    },
+    {
+      "child_table": "software_inventory",
+      "parent_table": "assets",
+      "join_type": "MANY_TO_ONE",
+      "join_condition": "software_inventory.asset_id = assets.asset_id",
+      "layer": "silver"
+    }
+  ]
+}

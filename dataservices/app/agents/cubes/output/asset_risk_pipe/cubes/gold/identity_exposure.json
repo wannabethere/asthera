@@ -1,0 +1,98 @@
+{
+  "name": "gold_identity_exposure",
+  "sql": "SELECT * FROM gold_identity_exposure",
+  "title": "Gold Identity Exposure",
+  "description": "Gold layer cube for gold_identity_exposure",
+  "dimensions": [
+    {
+      "name": "asset_id",
+      "sql": "${gold_identity_exposure}.asset_id",
+      "type": "number",
+      "title": "Asset Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": true
+    },
+    {
+      "name": "has_password_reuse",
+      "sql": "${gold_identity_exposure}.has_password_reuse",
+      "type": "string",
+      "title": "Has Password Reuse",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "has_mfa_disabled",
+      "sql": "${gold_identity_exposure}.has_mfa_disabled",
+      "type": "string",
+      "title": "Has Mfa Disabled",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "assessed_at",
+      "sql": "${gold_identity_exposure}.assessed_at",
+      "type": "time",
+      "title": "Assessed At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "updated_at",
+      "sql": "${gold_identity_exposure}.updated_at",
+      "type": "time",
+      "title": "Updated At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    }
+  ],
+  "measures": [
+    {
+      "name": "count",
+      "sql": "1",
+      "type": "count",
+      "title": "Count",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": [
+        "asset_id"
+      ]
+    },
+    {
+      "name": "num_admin_accounts",
+      "sql": "${gold_identity_exposure}.num_admin_accounts",
+      "type": "sum",
+      "title": "Num Admin Accounts",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": null
+    },
+    {
+      "name": "num_stale_accounts",
+      "sql": "${gold_identity_exposure}.num_stale_accounts",
+      "type": "sum",
+      "title": "Num Stale Accounts",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": null
+    }
+  ],
+  "joins": [],
+  "preAggregations": [],
+  "segments": []
+}

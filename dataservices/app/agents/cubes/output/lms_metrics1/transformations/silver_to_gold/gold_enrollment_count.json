@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_enrollment_count",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_enrollment_count",
+  "target_model": "gold_gold_enrollment_count",
+  "steps": [
+    {
+      "step_name": "Metric: enrollment_count",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_enrollment_count (course_id, total_enrollments)\nSELECT \n    course_id,\n    COUNT(*) AS total_enrollments\nFROM \n    enrollment_table\nGROUP BY \n    course_id;",
+      "description": "Total number of enrollments in each course",
+      "input_tables": [
+        "enrollment_table"
+      ],
+      "output_table": "gold_enrollment_count",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_enrollment_count from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

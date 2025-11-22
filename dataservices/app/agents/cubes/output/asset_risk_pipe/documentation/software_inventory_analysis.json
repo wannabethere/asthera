@@ -1,0 +1,110 @@
+{
+  "table_name": "software_inventory",
+  "description": "Software stack inventory per asset",
+  "columns": [
+    {
+      "name": "asset_id",
+      "data_type": "STRING",
+      "is_dimension": false,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": true,
+      "description": "Unique identifier for each asset",
+      "suggested_cube_type": "none",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "software_name",
+      "data_type": "STRING",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Name of the software installed on the asset",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "version",
+      "data_type": "STRING",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Version of the software installed",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "is_eol",
+      "data_type": "BOOLEAN",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Indicates if the software is end-of-life",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "is_unsupported",
+      "data_type": "BOOLEAN",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Indicates if the software is unsupported",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "discovered_at",
+      "data_type": "TIMESTAMP",
+      "is_dimension": false,
+      "is_measure": false,
+      "is_temporal": true,
+      "is_identifier": false,
+      "description": "Timestamp when the software was discovered",
+      "suggested_cube_type": "time_dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "updated_at",
+      "data_type": "TIMESTAMP",
+      "is_dimension": false,
+      "is_measure": false,
+      "is_temporal": true,
+      "is_identifier": false,
+      "description": "Timestamp when the software information was last updated",
+      "suggested_cube_type": "time_dimension",
+      "aggregation_type": "none"
+    }
+  ],
+  "primary_keys": [
+    "asset_id"
+  ],
+  "foreign_keys": [
+    {
+      "column": "asset_id",
+      "references_table": "assets",
+      "references_column": "asset_id"
+    }
+  ],
+  "potential_joins": [
+    {
+      "target_table": "assets",
+      "join_type": "many_to_one",
+      "condition": "software_inventory.asset_id = assets.asset_id"
+    }
+  ],
+  "grain": "One row represents the software inventory details for a specific asset.",
+  "data_quality_concerns": [
+    "asset_id is a STRING and may not be unique if not properly enforced.",
+    "Potential null values in software_name, version, discovered_at, and updated_at."
+  ],
+  "recommended_transformations": [
+    "Ensure asset_id is unique and properly indexed.",
+    "Implement checks to handle null values in software_name, version, discovered_at, and updated_at.",
+    "Consider normalizing software_name and version to avoid duplicates."
+  ]
+}

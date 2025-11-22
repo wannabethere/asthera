@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_average_engagement_time",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_average_engagement_time",
+  "target_model": "gold_gold_average_engagement_time",
+  "steps": [
+    {
+      "step_name": "Metric: average_engagement_time",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_average_engagement_time (month, average_time_spent)\nSELECT \n    DATE_TRUNC('month', engagement_timestamp) AS month,\n    COALESCE(SUM(engagement_time) / NULLIF(COUNT(*), 0), 0) AS average_time_spent\nFROM \n    learner_engagement\nWHERE \n    engagement_time > 1 -- Only include sessions longer than 1 minute\nGROUP BY \n    DATE_TRUNC('month', engagement_timestamp)\nORDER BY \n    month;",
+      "description": "Average time spent by learners on the platform",
+      "input_tables": [
+        "learner_engagement"
+      ],
+      "output_table": "gold_average_engagement_time",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_average_engagement_time from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

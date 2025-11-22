@@ -1,0 +1,44 @@
+{
+  "question_id": "sql_data_mart_attack_surface_summary_by_os_software",
+  "question": "Generate SQL to create a data mart 'attack_surface_summary_by_os_software' from: assets, vulnerabilities, misconfigurations, external_exposure.\n\nBusiness Requirements:\n- \n- This mart contains a summary of the attack surface categorized by operating system, software stack, business unit, and environment.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+  "context": {
+    "sql_type": "data_mart",
+    "target_object": "attack_surface_summary_by_os_software",
+    "source_tables": [
+      "assets",
+      "vulnerabilities",
+      "misconfigurations",
+      "external_exposure"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains a summary of the attack surface categorized by operating system, software stack, business unit, and environment."
+    ],
+    "existing_sql": "CREATE TABLE attack_surface_summary_by_os_software (\n    business_unit VARCHAR(100) NOT NULL,\n    environment VARCHAR(50) NOT NULL,\n    os VARCHAR(50) NOT NULL,\n    software_stack VARCHAR(100) NOT NULL,\n    total_assets INT NOT NULL DEFAULT 0,\n    total_vulnerabilities INT NOT NULL DEFAULT 0,\n    total_misconfigurations INT NOT NULL DEFAULT 0,\n    total_exposures INT NOT NULL DEFAULT 0,\n    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    PRIMARY KEY (business_unit, environment, os, softwar"
+  },
+  "expected_output_type": "sql",
+  "steps": [
+    "1. Analyze source tables and requirements",
+    "2. Design table/view structure",
+    "3. Write SQL CREATE statement",
+    "4. Add indexes and constraints",
+    "5. Validate SQL syntax and logic"
+  ],
+  "metadata": {
+    "generated_at": "2025-11-20T11:47:30.507254",
+    "source_table_count": 4
+  },
+  "dependencies": [],
+  "sql_type": "data_mart",
+  "target_object": "attack_surface_summary_by_os_software",
+  "source_tables": [
+    "assets",
+    "vulnerabilities",
+    "misconfigurations",
+    "external_exposure"
+  ],
+  "business_requirements": [
+    "",
+    "This mart contains a summary of the attack surface categorized by operating system, software stack, business unit, and environment."
+  ]
+}

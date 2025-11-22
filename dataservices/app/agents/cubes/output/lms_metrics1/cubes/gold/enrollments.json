@@ -1,0 +1,108 @@
+{
+  "name": "gold_enrollments",
+  "sql": "SELECT * FROM gold_enrollments",
+  "title": "Gold Enrollments",
+  "description": "Gold layer cube for gold_enrollments",
+  "dimensions": [
+    {
+      "name": "enrollment_id",
+      "sql": "${gold_enrollments}.enrollment_id",
+      "type": "number",
+      "title": "Enrollment Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": true
+    },
+    {
+      "name": "user_id",
+      "sql": "${gold_enrollments}.user_id",
+      "type": "string",
+      "title": "User Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "course_id",
+      "sql": "${gold_enrollments}.course_id",
+      "type": "string",
+      "title": "Course Id",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "enrolled_at",
+      "sql": "${gold_enrollments}.enrolled_at",
+      "type": "time",
+      "title": "Enrolled At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "completed_at",
+      "sql": "${gold_enrollments}.completed_at",
+      "type": "time",
+      "title": "Completed At",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    },
+    {
+      "name": "status",
+      "sql": "${gold_enrollments}.status",
+      "type": "string",
+      "title": "Status",
+      "description": null,
+      "format": null,
+      "case": null,
+      "primaryKey": false
+    }
+  ],
+  "measures": [
+    {
+      "name": "count",
+      "sql": "1",
+      "type": "count",
+      "title": "Count",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": [
+        "enrollment_id"
+      ]
+    },
+    {
+      "name": "progress_percent",
+      "sql": "${gold_enrollments}.progress_percent",
+      "type": "sum",
+      "title": "Progress Percent",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": null
+    },
+    {
+      "name": "final_grade",
+      "sql": "${gold_enrollments}.final_grade",
+      "type": "sum",
+      "title": "Final Grade",
+      "description": null,
+      "format": null,
+      "filters": null,
+      "rollingWindow": null,
+      "drillMembers": null
+    }
+  ],
+  "joins": [],
+  "preAggregations": [],
+  "segments": []
+}

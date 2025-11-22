@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_enrollment_growth_rate",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_enrollment_growth_rate",
+  "target_model": "gold_gold_enrollment_growth_rate",
+  "steps": [
+    {
+      "step_name": "Metric: enrollment_growth_rate",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_enrollment_growth_rate (month, growth_rate)\nSELECT \n    DATE_TRUNC('month', e.current_month) AS month,\n    CASE \n        WHEN previous_month.enrollment_count IS NULL THEN NULL\n        ELSE \n            COALESCE(((e.enrollment_count - previous_month.enrollment_count) / NULLIF(previous_month.enrollment_count, 0)) * 100, 0)\n    END AS growth_rate\nFROM \n    (SELECT \n         DATE_TRUNC('month', enrollment_date) AS current_month,\n         COUNT(*) AS enrollment_count\n     FROM \n         enrollments\n     WHERE \n         enrollment_date >= CURRENT_DATE - INTERVAL '2 months'\n     GROUP BY \n         DATE_TRUNC('month', enrollment_date)\n    ) e\nLEFT JOIN \n    (SELECT \n         DATE_TRUNC('month', enrollment_date) AS previous_month,\n         COUNT(*) AS enrollment_count\n     FROM \n         enrollments\n     WHERE \n         enrollment_date >= CURRENT_DATE - INTERVAL '3 months' AND \n         enrollment_date < CURRENT_DATE - INTERVAL '2 months'\n     GROUP BY \n         DATE_TRUNC('month', enrollment_date)\n    ) previous_month \nON \n    DATE_TRUNC('month', e.current_month) = DATE_TRUNC('month', previous_month.previous_month) + INTERVAL '1 month'\nORDER BY \n    month;",
+      "description": "Growth rate of enrollments compared to the previous period",
+      "input_tables": [
+        "enrollments"
+      ],
+      "output_table": "gold_enrollment_growth_rate",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_enrollment_growth_rate from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

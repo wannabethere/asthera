@@ -1,0 +1,805 @@
+{
+  "catalog": "default_catalog",
+  "schema": "public",
+  "models": [
+    {
+      "name": "assets",
+      "refSql": "SELECT * FROM public.assets",
+      "columns": [],
+      "cached": false,
+      "properties": {
+        "description": "Raw layer cube for assets",
+        "cube_name": "raw_assets",
+        "pre_aggregations": ""
+      },
+      "layer": "raw"
+    },
+    {
+      "name": "vulnerabilities",
+      "refSql": "SELECT * FROM public.vulnerabilities",
+      "columns": [],
+      "cached": false,
+      "properties": {
+        "description": "Raw layer cube for vulnerabilities",
+        "cube_name": "raw_vulnerabilities",
+        "pre_aggregations": ""
+      },
+      "layer": "raw"
+    },
+    {
+      "name": "misconfigurations",
+      "refSql": "SELECT * FROM public.misconfigurations",
+      "columns": [],
+      "cached": false,
+      "properties": {
+        "description": "Raw layer cube for misconfigurations",
+        "cube_name": "raw_misconfigurations",
+        "pre_aggregations": ""
+      },
+      "layer": "raw"
+    },
+    {
+      "name": "external_exposure",
+      "refSql": "SELECT * FROM public.external_exposure",
+      "columns": [],
+      "cached": false,
+      "properties": {
+        "description": "Raw layer cube for external_exposure",
+        "cube_name": "raw_external_exposure",
+        "pre_aggregations": ""
+      },
+      "layer": "raw"
+    },
+    {
+      "name": "identity_exposure",
+      "refSql": "SELECT * FROM public.identity_exposure",
+      "columns": [],
+      "cached": false,
+      "properties": {
+        "description": "Raw layer cube for identity_exposure",
+        "cube_name": "raw_identity_exposure",
+        "pre_aggregations": ""
+      },
+      "layer": "raw"
+    },
+    {
+      "name": "software_inventory",
+      "refSql": "SELECT * FROM public.software_inventory",
+      "columns": [],
+      "cached": false,
+      "properties": {
+        "description": "Raw layer cube for software_inventory",
+        "cube_name": "raw_software_inventory",
+        "pre_aggregations": ""
+      },
+      "layer": "raw"
+    }
+  ],
+  "relationships": [
+    {
+      "name": "vulnerabilities_to_assets",
+      "models": [
+        "vulnerabilities",
+        "assets"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "vulnerabilities.asset_id = assets.asset_id",
+      "properties": {
+        "description": "Relationship from vulnerabilities to assets"
+      },
+      "layer": "silver"
+    },
+    {
+      "name": "misconfigurations_to_assets",
+      "models": [
+        "misconfigurations",
+        "assets"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "misconfigurations.asset_id = assets.asset_id",
+      "properties": {
+        "description": "Relationship from misconfigurations to assets"
+      },
+      "layer": "silver"
+    },
+    {
+      "name": "external_exposure_to_assets",
+      "models": [
+        "external_exposure",
+        "assets"
+      ],
+      "joinType": "ONE_TO_ONE",
+      "condition": "external_exposure.asset_id = assets.asset_id",
+      "properties": {
+        "description": "Relationship from external_exposure to assets"
+      },
+      "layer": "silver"
+    },
+    {
+      "name": "identity_exposure_to_assets",
+      "models": [
+        "identity_exposure",
+        "assets"
+      ],
+      "joinType": "ONE_TO_ONE",
+      "condition": "identity_exposure.asset_id = assets.asset_id",
+      "properties": {
+        "description": "Relationship from identity_exposure to assets"
+      },
+      "layer": "silver"
+    },
+    {
+      "name": "software_inventory_to_assets",
+      "models": [
+        "software_inventory",
+        "assets"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "software_inventory.asset_id = assets.asset_id",
+      "properties": {
+        "description": "Relationship from software_inventory to assets"
+      },
+      "layer": "silver"
+    }
+  ],
+  "metrics": [
+    {
+      "name": "attack_surface_summary_by_os_software_metrics",
+      "baseObject": "attack_surface_summary_by_os_software",
+      "dimension": [
+        {
+          "name": "business_unit",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "The business unit responsible for the assets."
+          }
+        },
+        {
+          "name": "environment",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "The environment in which the assets are deployed (e.g., production, staging)."
+          }
+        },
+        {
+          "name": "os",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "The operating system of the assets."
+          }
+        },
+        {
+          "name": "software_stack",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "The software stack associated with the assets."
+          }
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_assets",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_assets}",
+          "properties": {
+            "description": "The total number of distinct assets.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "total_vulnerabilities",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_vulnerabilities}",
+          "properties": {
+            "description": "The total number of distinct vulnerabilities associated with the assets.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "total_misconfigurations",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_misconfigurations}",
+          "properties": {
+            "description": "The total number of distinct misconfigurations associated with the assets.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "total_exposures",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_exposures}",
+          "properties": {
+            "description": "The total number of distinct exposures associated with the assets.",
+            "aggregation": "count"
+          }
+        }
+      ],
+      "cached": false,
+      "properties": {
+        "description": "Metrics for attack_surface_summary_by_os_software data mart"
+      }
+    },
+    {
+      "name": "software_asset_management_summary_metrics",
+      "baseObject": "software_asset_management_summary",
+      "dimension": [
+        {
+          "name": "software_name",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "The name of the software asset."
+          }
+        },
+        {
+          "name": "version",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "The version of the software asset."
+          }
+        },
+        {
+          "name": "business_unit",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "The business unit associated with the software asset."
+          }
+        },
+        {
+          "name": "environment",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "The environment in which the software asset is deployed (e.g., production, development)."
+          }
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_devices",
+          "type": "sum",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_devices}",
+          "properties": {
+            "description": "The total number of devices using the software asset.",
+            "aggregation": "sum"
+          }
+        },
+        {
+          "name": "total_vulnerabilities",
+          "type": "sum",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_vulnerabilities}",
+          "properties": {
+            "description": "The total number of vulnerabilities associated with the software asset.",
+            "aggregation": "sum"
+          }
+        },
+        {
+          "name": "total_misconfigurations",
+          "type": "sum",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_misconfigurations}",
+          "properties": {
+            "description": "The total number of misconfigurations associated with the software asset.",
+            "aggregation": "sum"
+          }
+        }
+      ],
+      "cached": false,
+      "properties": {
+        "description": "Metrics for software_asset_management_summary data mart"
+      }
+    },
+    {
+      "name": "external_exposure_risk_summary_metrics",
+      "baseObject": "external_exposure_risk_summary",
+      "dimension": [
+        {
+          "name": "risk_category",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "The category of the risk associated with external exposures."
+          }
+        },
+        {
+          "name": "os_software_stack",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "The operating system and software stack associated with the exposure."
+          }
+        },
+        {
+          "name": "business_unit",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "The business unit responsible for the exposure."
+          }
+        },
+        {
+          "name": "environment",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "The environment in which the exposure exists (e.g., production, staging)."
+          }
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_exposures",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_exposures}",
+          "properties": {
+            "description": "The total number of distinct exposures recorded.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "total_potential_impact",
+          "type": "sum",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_potential_impact}",
+          "properties": {
+            "description": "The total potential impact value of all exposures.",
+            "aggregation": "sum"
+          }
+        }
+      ],
+      "cached": false,
+      "properties": {
+        "description": "Metrics for external_exposure_risk_summary data mart"
+      }
+    },
+    {
+      "name": "asset_management_trend_analysis_metrics",
+      "baseObject": "asset_management_trend_analysis",
+      "dimension": [
+        {
+          "name": "asset_id",
+          "type": "integer",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Unique identifier for each asset."
+          }
+        },
+        {
+          "name": "asset_type",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Type of the asset (e.g., server, application, etc.)."
+          }
+        },
+        {
+          "name": "acquisition_date",
+          "type": "date",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Date when the asset was acquired."
+          }
+        },
+        {
+          "name": "month",
+          "type": "date",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Month for which the trend analysis is performed."
+          }
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_risk_score",
+          "type": "sum",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_risk_score}",
+          "properties": {
+            "description": "Total risk score calculated for each asset based on associated vulnerabilities.",
+            "aggregation": "sum"
+          }
+        },
+        {
+          "name": "total_vulnerabilities",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_vulnerabilities}",
+          "properties": {
+            "description": "Total number of distinct vulnerabilities associated with the asset.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "total_misconfigurations",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_misconfigurations}",
+          "properties": {
+            "description": "Total number of distinct misconfigurations associated with the asset.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "total_external_exposures",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_external_exposures}",
+          "properties": {
+            "description": "Total number of distinct external exposures associated with the asset.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "total_identity_exposures",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_identity_exposures}",
+          "properties": {
+            "description": "Total number of distinct identity exposures associated with the asset.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "depreciation_value",
+          "type": "numeric",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.depreciation_value}",
+          "properties": {
+            "description": "Value of the asset after accounting for depreciation.",
+            "aggregation": "numeric"
+          }
+        }
+      ],
+      "cached": false,
+      "properties": {
+        "description": "Metrics for asset_management_trend_analysis data mart"
+      }
+    },
+    {
+      "name": "software_asset_management_trend_analysis_metrics",
+      "baseObject": "software_asset_management_trend_analysis",
+      "dimension": [
+        {
+          "name": "software_id",
+          "type": "numeric",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Unique identifier for each software application."
+          }
+        },
+        {
+          "name": "software_name",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Name of the software application."
+          }
+        },
+        {
+          "name": "license_type",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Type of license associated with the software application."
+          }
+        },
+        {
+          "name": "month",
+          "type": "date",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "The month for which the data is recorded, used for trend analysis."
+          }
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_devices",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_devices}",
+          "properties": {
+            "description": "Total number of distinct devices associated with the software application.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "total_misconfigurations",
+          "type": "sum",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_misconfigurations}",
+          "properties": {
+            "description": "Total number of misconfigurations related to the software application.",
+            "aggregation": "sum"
+          }
+        },
+        {
+          "name": "total_external_exposures",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_external_exposures}",
+          "properties": {
+            "description": "Total number of distinct external exposures related to the software application.",
+            "aggregation": "count"
+          }
+        }
+      ],
+      "cached": false,
+      "properties": {
+        "description": "Metrics for software_asset_management_trend_analysis data mart"
+      }
+    },
+    {
+      "name": "asset_exposure_summary_metrics",
+      "baseObject": "asset_exposure_summary",
+      "dimension": [
+        {
+          "name": "asset_id",
+          "type": "numeric",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Unique identifier for each asset."
+          }
+        },
+        {
+          "name": "asset_name",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Name of the asset."
+          }
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_vulnerability_score",
+          "type": "sum",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_vulnerability_score}",
+          "properties": {
+            "description": "Total score representing the vulnerabilities associated with the asset.",
+            "aggregation": "sum"
+          }
+        },
+        {
+          "name": "vulnerability_count",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.vulnerability_count}",
+          "properties": {
+            "description": "Count of distinct vulnerabilities associated with the asset.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "total_misconfigurations",
+          "type": "sum",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_misconfigurations}",
+          "properties": {
+            "description": "Total number of misconfigurations associated with the asset.",
+            "aggregation": "sum"
+          }
+        },
+        {
+          "name": "total_external_exposure",
+          "type": "sum",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_external_exposure}",
+          "properties": {
+            "description": "Total score representing the external exposure risks associated with the asset.",
+            "aggregation": "sum"
+          }
+        }
+      ],
+      "cached": false,
+      "properties": {
+        "description": "Metrics for asset_exposure_summary data mart"
+      }
+    },
+    {
+      "name": "identity_exposure_summary_metrics",
+      "baseObject": "identity_exposure_summary",
+      "dimension": [
+        {
+          "name": "identity_id",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Unique identifier for each identity."
+          }
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_exposure_incidents",
+          "type": "sum",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_exposure_incidents}",
+          "properties": {
+            "description": "Total number of exposure incidents associated with an identity.",
+            "aggregation": "sum"
+          }
+        },
+        {
+          "name": "average_severity",
+          "type": "avg",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.average_severity}",
+          "properties": {
+            "description": "Average severity level of exposure incidents associated with an identity.",
+            "aggregation": "avg"
+          }
+        }
+      ],
+      "cached": false,
+      "properties": {
+        "description": "Metrics for identity_exposure_summary data mart"
+      }
+    },
+    {
+      "name": "software_asset_usage_summary_metrics",
+      "baseObject": "software_asset_usage_summary",
+      "dimension": [
+        {
+          "name": "software_id",
+          "type": "numeric",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Unique identifier for each software asset."
+          }
+        },
+        {
+          "name": "software_name",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Name of the software asset."
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "date",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Timestamp when the record was created."
+          }
+        },
+        {
+          "name": "updated_at",
+          "type": "date",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Timestamp when the record was last updated."
+          }
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_devices_used",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_devices_used}",
+          "properties": {
+            "description": "Total number of distinct devices using the software.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "total_usage_hours",
+          "type": "sum",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_usage_hours}",
+          "properties": {
+            "description": "Total hours of usage for the software.",
+            "aggregation": "sum"
+          }
+        }
+      ],
+      "cached": false,
+      "properties": {
+        "description": "Metrics for software_asset_usage_summary data mart"
+      }
+    }
+  ],
+  "views": [],
+  "properties": {
+    "generated_at": "2025-11-20T11:47:30.501900",
+    "architecture": "medallion",
+    "layers": "raw,silver,gold"
+  },
+  "governance": {
+    "data_quality_rules": [],
+    "compliance_requirements": [
+      "GDPR",
+      "SOX"
+    ],
+    "data_lineage": {
+      "vulnerabilities": [
+        "assets"
+      ],
+      "misconfigurations": [
+        "assets"
+      ],
+      "external_exposure": [
+        "assets"
+      ],
+      "identity_exposure": [
+        "assets"
+      ],
+      "software_inventory": [
+        "assets"
+      ]
+    },
+    "access_controls": {},
+    "retention_policies": {},
+    "properties": {}
+  }
+}

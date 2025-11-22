@@ -1,0 +1,85 @@
+{
+  "catalog": "medrcm360",
+  "schema": "public",
+  "models": [
+    {
+      "name": "cpt_level_denials",
+      "description": "CPT (Current Procedural Terminology) level claim denials aggregated by facility. This table tracks denial amounts, denial counts, and total denial amounts for each facility.",
+      "tableReference": {
+        "table": "tbl_cpt_level_denials_202510232109"
+      },
+      "columns": [
+        {
+          "name": "cpt_denial_uuid",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "CPT Denial UUID",
+            "description": "Unique identifier for the CPT denial record"
+          }
+        },
+        {
+          "name": "facility",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Facility",
+            "description": "Name of the healthcare facility"
+          }
+        },
+        {
+          "name": "denial_amount",
+          "type": "DECIMAL",
+          "properties": {
+            "displayName": "Denial Amount",
+            "description": "Total monetary amount of denials for this facility"
+          }
+        },
+        {
+          "name": "denial_count",
+          "type": "INTEGER",
+          "properties": {
+            "displayName": "Denial Count",
+            "description": "Total number of denial occurrences for this facility"
+          }
+        },
+        {
+          "name": "total_denial_amount",
+          "type": "DECIMAL",
+          "properties": {
+            "displayName": "Total Denial Amount",
+            "description": "Grand total of all denial amounts (may be aggregated across facilities)"
+          }
+        },
+        {
+          "name": "source_file",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Source File",
+            "description": "Source file from which the data was imported"
+          }
+        },
+        {
+          "name": "load_ts",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Load Timestamp",
+            "description": "Timestamp when the record was loaded into the system"
+          }
+        },
+        {
+          "name": "facility_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Facility Name",
+            "description": "Full name of the facility (may differ from facility field)"
+          }
+        }
+      ],
+      "primaryKey": "cpt_denial_uuid",
+      "properties": {
+        "displayName": "CPT Level Denials",
+        "description": "Aggregated CPT level claim denials by facility"
+      }
+    }
+  ]
+}
+

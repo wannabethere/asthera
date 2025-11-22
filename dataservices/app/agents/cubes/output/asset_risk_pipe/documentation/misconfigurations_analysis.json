@@ -1,0 +1,99 @@
+{
+  "table_name": "misconfigurations",
+  "description": "Misconfiguration findings per asset",
+  "columns": [
+    {
+      "name": "asset_id",
+      "data_type": "STRING",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": true,
+      "description": "Unique identifier for the asset associated with the misconfiguration",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "config_id",
+      "data_type": "STRING",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": true,
+      "description": "Unique identifier for the configuration associated with the misconfiguration",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "severity",
+      "data_type": "STRING",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Severity level of the misconfiguration (e.g., low, medium, high)",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "category",
+      "data_type": "STRING",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Category of the misconfiguration",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "discovered_at",
+      "data_type": "TIMESTAMP",
+      "is_dimension": false,
+      "is_measure": false,
+      "is_temporal": true,
+      "is_identifier": false,
+      "description": "Timestamp when the misconfiguration was discovered",
+      "suggested_cube_type": "time_dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "updated_at",
+      "data_type": "TIMESTAMP",
+      "is_dimension": false,
+      "is_measure": false,
+      "is_temporal": true,
+      "is_identifier": false,
+      "description": "Timestamp when the misconfiguration was last updated",
+      "suggested_cube_type": "time_dimension",
+      "aggregation_type": "none"
+    }
+  ],
+  "primary_keys": [
+    "asset_id",
+    "config_id"
+  ],
+  "foreign_keys": [
+    {
+      "column": "asset_id",
+      "references_table": "assets",
+      "references_column": "asset_id"
+    }
+  ],
+  "potential_joins": [
+    {
+      "target_table": "assets",
+      "join_type": "many_to_one",
+      "condition": "misconfigurations.asset_id = assets.asset_id"
+    }
+  ],
+  "grain": "Each row represents a unique misconfiguration finding associated with a specific asset.",
+  "data_quality_concerns": [
+    "asset_id and config_id are strings and may not be unique if not properly managed.",
+    "Severity and category fields may contain inconsistent values if not standardized."
+  ],
+  "recommended_transformations": [
+    "Standardize severity and category values to a predefined set of options.",
+    "Implement checks to ensure asset_id and config_id combinations are unique."
+  ]
+}

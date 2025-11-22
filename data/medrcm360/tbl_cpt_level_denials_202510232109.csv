@@ -1,0 +1,10 @@
+"cpt_denial_uuid","facility","denial_amount","denial_count","total_denial_amount","source_file","load_ts","facility_name"
+ead937ad-9dc4-4fc8-8fe9-0d881cb28c31,Wang and Sons,"20749.92","23","","",2025-10-05 08:44:19.315,Wang and Sons
+"3d7ebfc4-ec19-4629-a642-cb821d449b81",Lewis Inc,"21659.2","9","","",2025-10-05 08:44:19.315,Lewis Inc
+"9691aa9c-f98f-42db-828b-ae7a027174da",Casey-Thomas,"10486602.66","41525","","",2025-10-05 08:44:19.315,Casey-Thomas
+da9ff32b-9844-4e3b-b806-e6b260ee6fd3,"Rivera, Hamilton and Green","8649509.95","31855","","",2025-10-05 08:44:19.315,"Rivera, Hamilton and Green"
+"35a12aa1-fa8c-45e4-a160-7a6214ba3a6f",Johnston LLC,"2280.55","12","","",2025-10-05 08:44:19.315,Johnston LLC
+fc892a85-fce4-483c-bf4a-305589fb932d,Stafford Inc,"2716573.63","12252","","",2025-10-05 08:44:19.315,Stafford Inc
+"7674d5dd-1451-48f6-a868-29fa7aa2197b","Horton, Lawrence and Wheeler","2049.46","5","","",2025-10-05 08:44:19.315,"Horton, Lawrence and Wheeler"
+"1460a358-764e-460f-beeb-f5bc5c2018be",Martin Group,"71879.24","22","","",2025-10-05 08:44:19.315,Martin Group
+dbdbea55-776d-4de9-aba8-94b8c078a8e4,Garcia-Porter,"126822.99","21","22098127.6","",2025-10-05 08:44:19.315,Garcia-Porter

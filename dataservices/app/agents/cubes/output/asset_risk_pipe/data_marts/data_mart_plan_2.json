@@ -1,0 +1,67 @@
+{
+  "goal": "Show attack surface breakdown by OS/software stack, business unit, and environment",
+  "marts": [
+    {
+      "mart_name": "attack_surface_summary_by_os_software",
+      "sql": "CREATE TABLE attack_surface_summary_by_os_software AS SELECT a.business_unit, a.environment, a.os, a.software_stack, COUNT(DISTINCT a.asset_id) AS total_assets, COUNT(DISTINCT v.vulnerability_id) AS total_vulnerabilities, COUNT(DISTINCT m misconfiguration_id) AS total_misconfigurations, COUNT(DISTINCT e.exposure_id) AS total_exposures FROM assets a LEFT JOIN vulnerabilities v ON a.asset_id = v.asset_id LEFT JOIN misconfigurations m ON a.asset_id = m.asset_id LEFT JOIN external_exposure e ON a.asset_id = e.asset_id GROUP BY a.business_unit, a.environment, a.os, a.software_stack;",
+      "description": "This mart contains a summary of the attack surface categorized by operating system, software stack, business unit, and environment.",
+      "natural_language_question": "What is the breakdown of the attack surface by OS/software stack, business unit, and environment?",
+      "source_tables": [
+        "assets",
+        "vulnerabilities",
+        "misconfigurations",
+        "external_exposure"
+      ],
+      "target_columns": [
+        "business_unit",
+        "environment",
+        "os",
+        "software_stack",
+        "total_assets",
+        "total_vulnerabilities",
+        "total_misconfigurations",
+        "total_exposures"
+      ],
+      "business_value": "This mart helps in optimizing asset management and enhancing risk management by providing a comprehensive view of vulnerabilities and misconfigurations across different business units and environments.",
+      "grain": "One row per business unit, environment, OS, and software stack."
+    },
+    {
+      "mart_name": "software_asset_management_summary",
+      "sql": "CREATE TABLE software_asset_management_summary AS SELECT s.software_name, s.version, COUNT(DISTINCT s.device_id) AS total_devices, COUNT(DISTINCT v.vulnerability_id) AS total_vulnerabilities, COUNT(DISTINCT m.misconfiguration_id) AS total_misconfigurations FROM software_inventory s LEFT JOIN vulnerabilities v ON s.software_id = v.software_id LEFT JOIN misconfigurations m ON s.software_id = m.software_id GROUP BY s.software_name, s.version;",
+      "description": "This mart provides a summary of software assets, including their usage and associated vulnerabilities and misconfigurations.",
+      "natural_language_question": "How many devices are using each software application, and what are the associated vulnerabilities and misconfigurations?",
+      "source_tables": [
+        "software_inventory",
+        "vulnerabilities",
+        "misconfigurations"
+      ],
+      "target_columns": [
+        "software_name",
+        "version",
+        "total_devices",
+        "total_vulnerabilities",
+        "total_misconfigurations"
+      ],
+      "business_value": "This mart supports strategic decision-making by providing insights into software usage and compliance, enabling effective software asset management.",
+      "grain": "One row per software application and version."
+    },
+    {
+      "mart_name": "external_exposure_risk_summary",
+      "sql": "CREATE TABLE external_exposure_risk_summary AS SELECT e.risk_category, COUNT(DISTINCT e.exposure_id) AS total_exposures, SUM(e.potential_impact) AS total_potential_impact FROM external_exposure e GROUP BY e.risk_category;",
+      "description": "This mart summarizes external exposure risks categorized by risk type, including the total number of exposures and their potential impact.",
+      "natural_language_question": "What are the total external exposures categorized by risk type, and what is their potential impact?",
+      "source_tables": [
+        "external_exposure"
+      ],
+      "target_columns": [
+        "risk_category",
+        "total_exposures",
+        "total_potential_impact"
+      ],
+      "business_value": "This mart enhances risk management by providing insights into external risks, allowing for better resource allocation and strategic decision-making.",
+      "grain": "One row per risk category."
+    }
+  ],
+  "reasoning": "Planned data mart for goal: \"Show attack surface breakdown by OS/software stack, business unit, and environment\"\n\nSelected 5 relevant silver tables: assets, vulnerabilities, misconfigurations, external_exposure, software_inventory\n\nGenerated 3 data mart(s):\n\n1. attack_surface_summary_by_os_software: This mart contains a summary of the attack surface categorized by operating system, software stack, business unit, and environment.\n   - Answers: What is the breakdown of the attack surface by OS/software stack, business unit, and environment?\n   - Grain: One row per business unit, environment, OS, and software stack.\n\n2. software_asset_management_summary: This mart provides a summary of software assets, including their usage and associated vulnerabilities and misconfigurations.\n   - Answers: How many devices are using each software application, and what are the associated vulnerabilities and misconfigurations?\n   - Grain: One row per software application and version.\n\n3. external_exposure_risk_summary: This mart summarizes external exposure risks categorized by risk type, including the total number of exposures and their potential impact.\n   - Answers: What are the total external exposures categorized by risk type, and what is their potential impact?\n   - Grain: One row per risk category.\n",
+  "complexity": "medium"
+}

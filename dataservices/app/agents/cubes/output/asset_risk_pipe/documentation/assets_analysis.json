@@ -1,0 +1,101 @@
+{
+  "table_name": "assets",
+  "description": "Asset inventory and criticality",
+  "columns": [
+    {
+      "name": "asset_id",
+      "data_type": "STRING",
+      "is_dimension": false,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": true,
+      "description": "Unique identifier for each asset",
+      "suggested_cube_type": "none",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "hostname",
+      "data_type": "STRING",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Hostname of the asset",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "business_unit",
+      "data_type": "STRING",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Business unit associated with the asset",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "env",
+      "data_type": "STRING",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Environment in which the asset operates (e.g., production, staging)",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "criticality",
+      "data_type": "INTEGER",
+      "is_dimension": false,
+      "is_measure": true,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Criticality level of the asset, represented as an integer",
+      "suggested_cube_type": "measure",
+      "aggregation_type": "avg"
+    },
+    {
+      "name": "created_at",
+      "data_type": "TIMESTAMP",
+      "is_dimension": false,
+      "is_measure": false,
+      "is_temporal": true,
+      "is_identifier": false,
+      "description": "Timestamp when the asset was created",
+      "suggested_cube_type": "time_dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "updated_at",
+      "data_type": "TIMESTAMP",
+      "is_dimension": false,
+      "is_measure": false,
+      "is_temporal": true,
+      "is_identifier": false,
+      "description": "Timestamp when the asset was last updated",
+      "suggested_cube_type": "time_dimension",
+      "aggregation_type": "none"
+    }
+  ],
+  "primary_keys": [
+    "asset_id"
+  ],
+  "foreign_keys": [],
+  "potential_joins": [],
+  "grain": "Each row represents a unique asset in the inventory.",
+  "data_quality_concerns": [
+    "asset_id is a STRING and may not be unique if not properly managed.",
+    "hostname, business_unit, and env can contain null values.",
+    "criticality is an INTEGER and may not have a defined range or validation.",
+    "created_at and updated_at are TIMESTAMP and should be checked for consistency."
+  ],
+  "recommended_transformations": [
+    "Ensure asset_id is unique and properly indexed.",
+    "Implement validation rules for criticality to ensure it falls within a defined range.",
+    "Consider adding default values for hostname, business_unit, and env to avoid nulls.",
+    "Standardize timestamp formats for created_at and updated_at."
+  ]
+}

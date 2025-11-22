@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_engagement_trend",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_engagement_trend",
+  "target_model": "gold_gold_engagement_trend",
+  "steps": [
+    {
+      "step_name": "Metric: engagement_trend",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_engagement_trend (month, total_engagements)\nSELECT \n    DATE_TRUNC('month', engagement_date) AS month,\n    COUNT(*) AS total_engagements\nFROM \n    learner_engagement\nWHERE \n    engagement_date >= CURRENT_DATE - INTERVAL '6 months'  -- Ensure at least 6 months of data\nGROUP BY \n    month\nHAVING \n    COUNT(*) > 0  -- Only include months with engagements\nORDER BY \n    month;",
+      "description": "Trend of learner engagement over time",
+      "input_tables": [
+        "learner_engagement"
+      ],
+      "output_table": "gold_engagement_trend",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_engagement_trend from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

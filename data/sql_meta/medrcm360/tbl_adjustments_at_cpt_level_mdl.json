@@ -1,0 +1,309 @@
+{
+  "catalog": "medrcm360",
+  "schema": "public",
+  "models": [
+    {
+      "name": "adjustments_at_cpt_level",
+      "description": "Patient claim adjustments recorded at the CPT (Current Procedural Terminology) code level. This table tracks financial adjustments including write-offs, bad debt, and other adjustments applied to specific CPT codes within claims.",
+      "tableReference": {
+        "table": "tbl_adjustments_at_cpt_level_202510232103"
+      },
+      "columns": [
+        {
+          "name": "adjustment_at_cpt_uuid",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Adjustment at CPT UUID",
+            "description": "Unique identifier for the adjustment record at CPT level"
+          }
+        },
+        {
+          "name": "facility",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Facility",
+            "description": "Name of the healthcare facility where the service was provided"
+          }
+        },
+        {
+          "name": "claim_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Claim Date",
+            "description": "Date when the claim was created or submitted"
+          }
+        },
+        {
+          "name": "service_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Service Date",
+            "description": "Date when the medical service was provided to the patient"
+          }
+        },
+        {
+          "name": "adjustment_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Adjustment Date",
+            "description": "Date when the adjustment was applied to the claim"
+          }
+        },
+        {
+          "name": "facility_pos",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Facility Place of Service",
+            "description": "Place of service code indicating where the service was provided"
+          }
+        },
+        {
+          "name": "appointment_servicing_provider",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Appointment Servicing Provider",
+            "description": "Name of the healthcare provider who serviced the appointment"
+          }
+        },
+        {
+          "name": "practice_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Practice Name",
+            "description": "Name of the medical practice"
+          }
+        },
+        {
+          "name": "patient_acct_no",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Patient Account Number",
+            "description": "Unique account number assigned to the patient"
+          }
+        },
+        {
+          "name": "patient_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Patient Name",
+            "description": "Full name of the patient"
+          }
+        },
+        {
+          "name": "claim_no",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Claim Number",
+            "description": "Unique identifier for the claim"
+          }
+        },
+        {
+          "name": "cpt_group_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "CPT Group Name",
+            "description": "Group or category name for the CPT code"
+          }
+        },
+        {
+          "name": "cpt_code",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "CPT Code",
+            "description": "Current Procedural Terminology code identifying the medical procedure"
+          }
+        },
+        {
+          "name": "cpt_description",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "CPT Description",
+            "description": "Description of the CPT procedure code"
+          }
+        },
+        {
+          "name": "start_date_of_service",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Start Date of Service",
+            "description": "Start date of the service period"
+          }
+        },
+        {
+          "name": "end_date_of_service",
+          "type": "DATE",
+          "properties": {
+            "displayName": "End Date of Service",
+            "description": "End date of the service period"
+          }
+        },
+        {
+          "name": "modifier_1",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Modifier 1",
+            "description": "First procedure modifier code"
+          }
+        },
+        {
+          "name": "modifier_2",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Modifier 2",
+            "description": "Second procedure modifier code"
+          }
+        },
+        {
+          "name": "modifier_3",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Modifier 3",
+            "description": "Third procedure modifier code"
+          }
+        },
+        {
+          "name": "modifier_4",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Modifier 4",
+            "description": "Fourth procedure modifier code"
+          }
+        },
+        {
+          "name": "icd1_code",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "ICD1 Code",
+            "description": "Primary International Classification of Diseases diagnosis code"
+          }
+        },
+        {
+          "name": "icd1_name",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "ICD1 Name",
+            "description": "Description of the primary ICD diagnosis code"
+          }
+        },
+        {
+          "name": "icd2_code",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "ICD2 Code",
+            "description": "Secondary International Classification of Diseases diagnosis code"
+          }
+        },
+        {
+          "name": "icd2_name",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "ICD2 Name",
+            "description": "Description of the secondary ICD diagnosis code"
+          }
+        },
+        {
+          "name": "icd3_code",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "ICD3 Code",
+            "description": "Tertiary International Classification of Diseases diagnosis code"
+          }
+        },
+        {
+          "name": "icd3_name",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "ICD3 Name",
+            "description": "Description of the tertiary ICD diagnosis code"
+          }
+        },
+        {
+          "name": "icd4_code",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "ICD4 Code",
+            "description": "Quaternary International Classification of Diseases diagnosis code"
+          }
+        },
+        {
+          "name": "icd4_name",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "ICD4 Name",
+            "description": "Description of the quaternary ICD diagnosis code"
+          }
+        },
+        {
+          "name": "adjustment_id",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Adjustment ID",
+            "description": "Unique identifier for the adjustment"
+          }
+        },
+        {
+          "name": "adjustment_code",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Adjustment Code",
+            "description": "Code identifying the type of adjustment"
+          }
+        },
+        {
+          "name": "adjustment_code_description",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Adjustment Code Description",
+            "description": "Detailed description of the adjustment code and reason"
+          }
+        },
+        {
+          "name": "adjustment_group_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Adjustment Group Name",
+            "description": "Group or category name for the adjustment"
+          }
+        },
+        {
+          "name": "writeoff_adjustment",
+          "type": "DECIMAL",
+          "properties": {
+            "displayName": "Write-off Adjustment Amount",
+            "description": "Monetary amount of the write-off adjustment for this CPT code"
+          }
+        },
+        {
+          "name": "total_writeoff_adj_amount",
+          "type": "DECIMAL",
+          "properties": {
+            "displayName": "Total Write-off Adjustment Amount",
+            "description": "Total monetary amount of write-off adjustments for this CPT code"
+          }
+        },
+        {
+          "name": "source_file",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Source File",
+            "description": "Source file from which the data was imported"
+          }
+        },
+        {
+          "name": "load_ts",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Load Timestamp",
+            "description": "Timestamp when the record was loaded into the system"
+          }
+        }
+      ],
+      "primaryKey": "adjustment_at_cpt_uuid",
+      "properties": {
+        "displayName": "Adjustments at CPT Level",
+        "description": "Financial adjustments applied to patient claims at the CPT code level"
+      }
+    }
+  ]
+}
+

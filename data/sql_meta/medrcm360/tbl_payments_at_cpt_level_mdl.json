@@ -1,0 +1,405 @@
+{
+  "catalog": "medrcm360",
+  "schema": "public",
+  "models": [
+    {
+      "name": "payments_at_cpt_level",
+      "description": "Patient claim payments recorded at the CPT (Current Procedural Terminology) code level. This table tracks payments received from payers and patients, payment dates, payment types, and payment amounts for specific CPT codes within claims.",
+      "tableReference": {
+        "table": "tbl_payments_at_cpt_level_202510232112"
+      },
+      "columns": [
+        {
+          "name": "payment_at_cpt_uuid",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Payment at CPT UUID",
+            "description": "Unique identifier for the payment record at CPT level"
+          }
+        },
+        {
+          "name": "facility",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Facility",
+            "description": "Name of the healthcare facility where the service was provided"
+          }
+        },
+        {
+          "name": "facility_pos",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Facility Place of Service",
+            "description": "Place of service code indicating where the service was provided"
+          }
+        },
+        {
+          "name": "rendering_provider_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Rendering Provider Name",
+            "description": "Name of the healthcare provider who rendered the service"
+          }
+        },
+        {
+          "name": "appointment_servicing_provider",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Appointment Servicing Provider",
+            "description": "Name of the healthcare provider who serviced the appointment"
+          }
+        },
+        {
+          "name": "resource_provider_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Resource Provider Name",
+            "description": "Name of the resource provider associated with the service"
+          }
+        },
+        {
+          "name": "created_by_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Created By Name",
+            "description": "Name of the user who created the payment record"
+          }
+        },
+        {
+          "name": "posted_by_user",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Posted By User",
+            "description": "Name of the user who posted the payment"
+          }
+        },
+        {
+          "name": "patient_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Patient Name",
+            "description": "Full name of the patient"
+          }
+        },
+        {
+          "name": "patient_acct_no",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Patient Account Number",
+            "description": "Unique account number assigned to the patient"
+          }
+        },
+        {
+          "name": "payer_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Payer Name",
+            "description": "Name of the payer (insurance payer or Patient for patient payments)"
+          }
+        },
+        {
+          "name": "service_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Service Date",
+            "description": "Date when the medical service was provided to the patient"
+          }
+        },
+        {
+          "name": "claim_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Claim Date",
+            "description": "Date when the claim was created or submitted"
+          }
+        },
+        {
+          "name": "payment_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Payment Date",
+            "description": "Date when the payment was received"
+          }
+        },
+        {
+          "name": "payment_check_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Payment Check Date",
+            "description": "Date on the payment check (if applicable)"
+          }
+        },
+        {
+          "name": "payment_deposit_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Payment Deposit Date",
+            "description": "Date when the payment was deposited"
+          }
+        },
+        {
+          "name": "payment_eob_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Payment EOB Date",
+            "description": "Date of the Explanation of Benefits (EOB) associated with the payment"
+          }
+        },
+        {
+          "name": "payment_posted_date",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Payment Posted Date",
+            "description": "Date when the payment was posted to the system"
+          }
+        },
+        {
+          "name": "payment_check_no",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Payment Check Number",
+            "description": "Check number for the payment (if applicable)"
+          }
+        },
+        {
+          "name": "payment_type",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Payment Type",
+            "description": "Type of payment (e.g., Check, Automated Clearing House (ACH), Credit Card, Non Payment Data)"
+          }
+        },
+        {
+          "name": "payer_type",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Payer Type",
+            "description": "Type of payer (e.g., Payer, Patient / Guarantor)"
+          }
+        },
+        {
+          "name": "claim_no",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Claim Number",
+            "description": "Unique identifier for the claim"
+          }
+        },
+        {
+          "name": "cpt_code",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "CPT Code",
+            "description": "Current Procedural Terminology code identifying the medical procedure"
+          }
+        },
+        {
+          "name": "cpt_description",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "CPT Description",
+            "description": "Description of the CPT procedure code"
+          }
+        },
+        {
+          "name": "start_date_of_service",
+          "type": "DATE",
+          "properties": {
+            "displayName": "Start Date of Service",
+            "description": "Start date of the service period"
+          }
+        },
+        {
+          "name": "end_date_of_service",
+          "type": "DATE",
+          "properties": {
+            "displayName": "End Date of Service",
+            "description": "End date of the service period"
+          }
+        },
+        {
+          "name": "cpt_group_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "CPT Group Name",
+            "description": "Group or category name for the CPT code"
+          }
+        },
+        {
+          "name": "modifier_1",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Modifier 1",
+            "description": "First procedure modifier code"
+          }
+        },
+        {
+          "name": "modifier_2",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Modifier 2",
+            "description": "Second procedure modifier code"
+          }
+        },
+        {
+          "name": "modifier_3",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Modifier 3",
+            "description": "Third procedure modifier code"
+          }
+        },
+        {
+          "name": "modifier_4",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Modifier 4",
+            "description": "Fourth procedure modifier code"
+          }
+        },
+        {
+          "name": "icd1_code",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "ICD1 Code",
+            "description": "Primary International Classification of Diseases diagnosis code"
+          }
+        },
+        {
+          "name": "icd1_name",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "ICD1 Name",
+            "description": "Description of the primary ICD diagnosis code"
+          }
+        },
+        {
+          "name": "icd2_code",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "ICD2 Code",
+            "description": "Secondary International Classification of Diseases diagnosis code"
+          }
+        },
+        {
+          "name": "icd2_name",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "ICD2 Name",
+            "description": "Description of the secondary ICD diagnosis code"
+          }
+        },
+        {
+          "name": "icd3_code",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "ICD3 Code",
+            "description": "Tertiary International Classification of Diseases diagnosis code"
+          }
+        },
+        {
+          "name": "icd3_name",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "ICD3 Name",
+            "description": "Description of the tertiary ICD diagnosis code"
+          }
+        },
+        {
+          "name": "icd4_code",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "ICD4 Code",
+            "description": "Quaternary International Classification of Diseases diagnosis code"
+          }
+        },
+        {
+          "name": "icd4_name",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "ICD4 Name",
+            "description": "Description of the quaternary ICD diagnosis code"
+          }
+        },
+        {
+          "name": "payment_id",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Payment ID",
+            "description": "Unique identifier for the payment"
+          }
+        },
+        {
+          "name": "payment",
+          "type": "DECIMAL",
+          "properties": {
+            "displayName": "Payment Amount",
+            "description": "Total payment amount received"
+          }
+        },
+        {
+          "name": "payer_payment",
+          "type": "DECIMAL",
+          "properties": {
+            "displayName": "Payer Payment Amount",
+            "description": "Payment amount received from the insurance payer"
+          }
+        },
+        {
+          "name": "patient_payment",
+          "type": "DECIMAL",
+          "properties": {
+            "displayName": "Patient Payment Amount",
+            "description": "Payment amount received directly from the patient"
+          }
+        },
+        {
+          "name": "contractual_adjustment",
+          "type": "DECIMAL",
+          "properties": {
+            "displayName": "Contractual Adjustment",
+            "description": "Contractual adjustment amount (difference between billed and allowed amounts)"
+          }
+        },
+        {
+          "name": "payer_withheld",
+          "type": "DECIMAL",
+          "properties": {
+            "displayName": "Payer Withheld Amount",
+            "description": "Amount withheld by the payer"
+          }
+        },
+        {
+          "name": "source_file",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Source File",
+            "description": "Source file from which the data was imported"
+          }
+        },
+        {
+          "name": "load_ts",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Load Timestamp",
+            "description": "Timestamp when the record was loaded into the system"
+          }
+        },
+        {
+          "name": "facility_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Facility Name",
+            "description": "Full name of the facility (may differ from facility field)"
+          }
+        }
+      ],
+      "primaryKey": "payment_at_cpt_uuid",
+      "properties": {
+        "displayName": "Payments at CPT Level",
+        "description": "Payments received for patient claims at the CPT code level"
+      }
+    }
+  ]
+}
+

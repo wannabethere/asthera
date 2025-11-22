@@ -1,0 +1,60 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "title": "Attack Surface by Environment and OS Category",
+  "description": "Grouped bar chart showing ASI by environment (prod/non-prod) and OS category. Enables drill-down analysis.",
+  "width": 800,
+  "height": 500,
+  "data": {
+    "name": "attack_surface_by_env_os"
+  },
+  "mark": {
+    "type": "bar",
+    "cornerRadius": 4
+  },
+  "encoding": {
+    "x": {
+      "field": "os_category",
+      "type": "ordinal",
+      "title": "OS Category",
+      "axis": {"labelAngle": -45}
+    },
+    "y": {
+      "field": "avg_asi",
+      "type": "quantitative",
+      "title": "Average Attack Surface Index",
+      "scale": {"domain": [0, 100]}
+    },
+    "color": {
+      "field": "env",
+      "type": "nominal",
+      "title": "Environment",
+      "scale": {
+        "domain": ["prod", "non-prod"],
+        "range": ["#E74C3C", "#3498DB"]
+      },
+      "legend": {
+        "orient": "top"
+      }
+    },
+    "column": {
+      "field": "env",
+      "type": "ordinal",
+      "title": "Environment",
+      "spacing": 20
+    },
+    "tooltip": [
+      {"field": "env", "type": "nominal", "title": "Environment"},
+      {"field": "os_category", "type": "nominal", "title": "OS Category"},
+      {"field": "avg_asi", "type": "quantitative", "title": "Avg ASI", "format": ".1f"},
+      {"field": "asset_count", "type": "quantitative", "title": "Asset Count"},
+      {"field": "high_risk_count", "type": "quantitative", "title": "High Risk Assets"},
+      {"field": "risk_contribution_pct_env", "type": "quantitative", "title": "Risk Contribution %", "format": ".1f"}
+    ]
+  },
+  "config": {
+    "view": {
+      "stroke": "transparent"
+    }
+  }
+}
+

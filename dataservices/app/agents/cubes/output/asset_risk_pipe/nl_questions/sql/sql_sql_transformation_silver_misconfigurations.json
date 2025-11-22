@@ -1,0 +1,39 @@
+{
+  "question_id": "sql_transformation_silver_misconfigurations",
+  "question": "Generate SQL transformation code to create 'silver_misconfigurations' from: misconfigurations.\n\nBusiness Requirements:\n- Transform misconfigurations from raw to silver\n- Apply data quality checks\n- Handle deduplication if needed\n\nThe transformation should:\n- Clean and validate input data\n- Apply business rules and calculations\n- Handle data quality issues\n- Optimize for performance",
+  "context": {
+    "sql_type": "transformation",
+    "target_object": "silver_misconfigurations",
+    "source_tables": [
+      "misconfigurations"
+    ],
+    "business_requirements": [
+      "Transform misconfigurations from raw to silver",
+      "Apply data quality checks",
+      "Handle deduplication if needed"
+    ]
+  },
+  "expected_output_type": "sql",
+  "steps": [
+    "1. Analyze source tables and requirements",
+    "2. Design table/view structure",
+    "3. Write SQL CREATE statement",
+    "4. Add indexes and constraints",
+    "5. Validate SQL syntax and logic"
+  ],
+  "metadata": {
+    "generated_at": "2025-11-20T11:47:30.507400",
+    "source_table_count": 1
+  },
+  "dependencies": [],
+  "sql_type": "transformation",
+  "target_object": "silver_misconfigurations",
+  "source_tables": [
+    "misconfigurations"
+  ],
+  "business_requirements": [
+    "Transform misconfigurations from raw to silver",
+    "Apply data quality checks",
+    "Handle deduplication if needed"
+  ]
+}

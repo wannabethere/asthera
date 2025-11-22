@@ -1,0 +1,7 @@
+{
+  "name": "external_exposure",
+  "description": "Raw layer cube for external_exposure",
+  "dimensions": [],
+  "measures": [],
+  "preAggregations": []
+}

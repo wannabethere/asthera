@@ -1,0 +1,131 @@
+{
+  "table_name": "enrollments",
+  "description": "This table records the enrollment details of users in various courses, including their progress and completion status.",
+  "columns": [
+    {
+      "name": "enrollment_id",
+      "data_type": "BIGINT",
+      "is_dimension": false,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": true,
+      "description": "Unique identifier for each enrollment record.",
+      "suggested_cube_type": "none",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "user_id",
+      "data_type": "BIGINT",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Identifier for the user enrolled in the course.",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "course_id",
+      "data_type": "BIGINT",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Identifier for the course in which the user is enrolled.",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "enrolled_at",
+      "data_type": "TIMESTAMP",
+      "is_dimension": false,
+      "is_measure": false,
+      "is_temporal": true,
+      "is_identifier": false,
+      "description": "Timestamp when the user enrolled in the course.",
+      "suggested_cube_type": "time_dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "completed_at",
+      "data_type": "TIMESTAMP",
+      "is_dimension": false,
+      "is_measure": false,
+      "is_temporal": true,
+      "is_identifier": false,
+      "description": "Timestamp when the user completed the course.",
+      "suggested_cube_type": "time_dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "status",
+      "data_type": "VARCHAR",
+      "is_dimension": true,
+      "is_measure": false,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Current status of the enrollment (e.g., enrolled, in_progress, completed, dropped).",
+      "suggested_cube_type": "dimension",
+      "aggregation_type": "none"
+    },
+    {
+      "name": "progress_percent",
+      "data_type": "DECIMAL(5,2)",
+      "is_dimension": false,
+      "is_measure": true,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Percentage of course progress made by the user.",
+      "suggested_cube_type": "measure",
+      "aggregation_type": "avg"
+    },
+    {
+      "name": "final_grade",
+      "data_type": "DECIMAL(5,2)",
+      "is_dimension": false,
+      "is_measure": true,
+      "is_temporal": false,
+      "is_identifier": false,
+      "description": "Final grade received by the user for the course.",
+      "suggested_cube_type": "measure",
+      "aggregation_type": "avg"
+    }
+  ],
+  "primary_keys": [
+    "enrollment_id"
+  ],
+  "foreign_keys": [
+    {
+      "column": "user_id",
+      "references_table": "users",
+      "references_column": "id"
+    },
+    {
+      "column": "course_id",
+      "references_table": "courses",
+      "references_column": "id"
+    }
+  ],
+  "potential_joins": [
+    {
+      "target_table": "users",
+      "join_type": "INNER JOIN",
+      "condition": "enrollments.user_id = users.id"
+    },
+    {
+      "target_table": "courses",
+      "join_type": "INNER JOIN",
+      "condition": "enrollments.course_id = courses.id"
+    }
+  ],
+  "grain": "One row represents a single enrollment of a user in a course.",
+  "data_quality_concerns": [
+    "user_id and course_id may be null, leading to orphaned records.",
+    "progress_percent and final_grade should be validated to ensure they are within expected ranges (0-100)."
+  ],
+  "recommended_transformations": [
+    "Implement foreign key constraints for user_id and course_id to ensure referential integrity.",
+    "Add checks to ensure progress_percent and final_grade are between 0 and 100.",
+    "Consider adding default values for status to avoid null values."
+  ]
+}

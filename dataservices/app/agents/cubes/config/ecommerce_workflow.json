@@ -1,0 +1,125 @@
+{
+  "workflow_name": "ecommerce_analytics",
+  "description": "E-commerce order and customer analytics",
+  "raw_schemas": [
+    {
+      "table_name": "customers",
+      "table_ddl": "\nCREATE TABLE customers (\n  customer_id BIGINT NOT NULL,\n  email VARCHAR,\n  first_name VARCHAR,\n  last_name VARCHAR,\n  created_at TIMESTAMP,\n  country VARCHAR,\n  state VARCHAR,\n  city VARCHAR,\n  total_orders INTEGER,\n  total_spent DECIMAL(10,2)\n);",
+      "relationships": [
+        {
+          "name": "customer_orders",
+          "models": [
+            "customers",
+            "orders"
+          ],
+          "joinType": "ONE_TO_MANY",
+          "condition": "customers.customer_id = orders.customer_id"
+        }
+      ],
+      "layer": "raw"
+    },
+    {
+      "table_name": "orders",
+      "table_ddl": "\nCREATE TABLE orders (\n  order_id BIGINT NOT NULL,\n  customer_id BIGINT,\n  order_date TIMESTAMP,\n  order_status VARCHAR,\n  total_amount DECIMAL(10,2),\n  discount_amount DECIMAL(10,2),\n  shipping_amount DECIMAL(10,2),\n  tax_amount DECIMAL(10,2),\n  payment_method VARCHAR\n);",
+      "relationships": [
+        {
+          "name": "order_items",
+          "models": [
+            "orders",
+            "order_items"
+          ],
+          "joinType": "ONE_TO_MANY",
+          "condition": "orders.order_id = order_items.order_id"
+        }
+      ],
+      "layer": "raw"
+    },
+    {
+      "table_name": "order_items",
+      "table_ddl": "\nCREATE TABLE order_items (\n  item_id BIGINT NOT NULL,\n  order_id BIGINT,\n  product_id BIGINT,\n  quantity INTEGER,\n  unit_price DECIMAL(10,2),\n  line_total DECIMAL(10,2),\n  discount_percent DECIMAL(5,2)\n);",
+      "relationships": [],
+      "layer": "raw"
+    }
+  ],
+  "lod_configurations": [
+    {
+      "table_name": "customers",
+      "lod_type": "FIXED",
+      "dimensions": [
+        "email"
+      ],
+      "description": "Deduplicate customers by email address"
+    },
+    {
+      "table_name": "orders",
+      "lod_type": "FIXED",
+      "dimensions": [
+        "order_id"
+      ],
+      "description": "One record per order"
+    }
+  ],
+  "relationship_mappings": [
+    {
+      "child_table": "orders",
+      "parent_table": "customers",
+      "join_type": "MANY_TO_ONE",
+      "join_condition": "orders.customer_id = customers.customer_id",
+      "layer": "silver"
+    },
+    {
+      "child_table": "order_items",
+      "parent_table": "orders",
+      "join_type": "MANY_TO_ONE",
+      "join_condition": "order_items.order_id = orders.order_id",
+      "layer": "silver"
+    }
+  ],
+  "user_query": "\n    Create an e-commerce analytics platform with:\n    \n    1. Customer Analytics:\n       - Customer lifetime value (CLV)\n       - Customer segmentation\n       - Customer acquisition trends\n       - Repeat purchase rate\n    \n    2. Order Analytics:\n       - Daily/weekly/monthly order volumes\n       - Average order value (AOV)\n       - Order status distribution\n       - Payment method breakdown\n    \n    3. Product Performance:\n       - Top-selling products\n       - Revenue by product\n       - Quantity sold trends\n    \n    4. Revenue Metrics:\n       - Total revenue by period\n       - Revenue by geography\n       - Discount impact analysis\n       - Shipping revenue\n    \n    Create optimized pre-aggregations for dashboard performance.\n    ",
+  "data_mart_goals": [
+    "Create customer lifetime value analysis data mart",
+    "Build daily order analytics summary",
+    "Generate product performance metrics dashboard"
+  ],
+  "target_sql_dialect": "postgresql",
+  "metric_questions": [
+    "What is the customer lifetime value (CLV) per customer? Show me the distribution and top 100 customers by CLV.",
+    "What is the average order value (AOV) by day? Compare this month vs last month and show percentage change.",
+    "What is the total revenue by product? Show me the top 20 products by revenue and their trend over the last 6 months.",
+    "What is the repeat purchase rate? Show me customers who made more than one purchase and their percentage of total customers.",
+    "What is the daily order volume? Show me the trend over the last 30 days and identify peak days.",
+    "What is the customer acquisition count by month? Show me the growth rate compared to previous periods.",
+    "What is the revenue by geography (country/state)? Show me the breakdown and identify top performing regions.",
+    "What is the discount impact on revenue? Show me the total discount amount and its percentage of total revenue.",
+    "What is the order status distribution? Show me completed vs cancelled vs pending orders and their percentages.",
+    "What is the payment method breakdown? Show me the distribution of payment methods and average order value by method.",
+    "What is the product performance by quantity sold? Show me top products and their weekly trends.",
+    "What is the customer segmentation based on total orders and spending? Show me high-value, medium-value, and low-value segments.",
+    "What is the shipping revenue contribution? Show me shipping revenue as a percentage of total revenue by month.",
+    "What is the average time between first and second purchase? Show me customer retention metrics."
+  ],
+  "expected_outputs": {
+    "raw_cubes": [
+      "raw_customers",
+      "raw_orders",
+      "raw_order_items"
+    ],
+    "silver_cubes": [
+      "silver_customers",
+      "silver_orders_with_customer",
+      "silver_order_details"
+    ],
+    "gold_cubes": [
+      "gold_customer_metrics",
+      "gold_order_metrics_daily",
+      "gold_product_performance",
+      "gold_revenue_analysis"
+    ],
+    "views": [
+      "ecommerce_overview",
+      "customer_analytics",
+      "order_analytics"
+    ]
+  },
+  "generate_gold": true
+}

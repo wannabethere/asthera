@@ -1,0 +1,71 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "title": "Attack Surface by Business Unit - Component Breakdown",
+  "description": "Stacked bar chart showing ASI components (external, vulnerability, misconfiguration, identity, software) by business unit. Top 5 business units highlighted.",
+  "width": 800,
+  "height": 500,
+  "data": {
+    "name": "attack_surface_by_bu"
+  },
+  "transform": [
+    {
+      "window": [{"op": "rank", "as": "rank"}],
+      "sort": [{"field": "avg_asi", "order": "desc"}]
+    },
+    {
+      "filter": "datum.rank <= 5"
+    },
+    {
+      "fold": [
+        "avg_external_exposure",
+        "avg_vulnerability_exposure",
+        "avg_misconfiguration_exposure",
+        "avg_identity_exposure",
+        "avg_software_exposure"
+      ],
+      "as": ["component", "score"]
+    },
+    {
+      "calculate": "if(datum.component == 'avg_external_exposure', 'External', if(datum.component == 'avg_vulnerability_exposure', 'Vulnerability', if(datum.component == 'avg_misconfiguration_exposure', 'Misconfiguration', if(datum.component == 'avg_identity_exposure', 'Identity', 'Software'))))",
+      "as": "component_name"
+    }
+  ],
+  "mark": {
+    "type": "bar",
+    "cornerRadius": 4
+  },
+  "encoding": {
+    "x": {
+      "field": "business_unit",
+      "type": "ordinal",
+      "title": "Business Unit",
+      "sort": {"field": "rank", "order": "asc"},
+      "axis": {"labelAngle": -45}
+    },
+    "y": {
+      "field": "score",
+      "type": "quantitative",
+      "title": "Exposure Score",
+      "stack": "zero"
+    },
+    "color": {
+      "field": "component_name",
+      "type": "nominal",
+      "title": "Exposure Component",
+      "scale": {
+        "domain": ["External", "Vulnerability", "Misconfiguration", "Identity", "Software"],
+        "range": ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8"]
+      },
+      "legend": {
+        "orient": "bottom",
+        "columns": 5
+      }
+    },
+    "tooltip": [
+      {"field": "business_unit", "type": "nominal", "title": "Business Unit"},
+      {"field": "component_name", "type": "nominal", "title": "Component"},
+      {"field": "score", "type": "quantitative", "title": "Score", "format": ".1f"},
+      {"field": "avg_asi", "type": "quantitative", "title": "Total ASI", "format": ".1f"}
+    ]
+  }
+}

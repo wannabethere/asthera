@@ -15,6 +15,21 @@ Division Performance Correlation
 "How does training completion rate in each division correlate with skills proficiency achievement rates?"
 
 🔄 LEFT JOIN Questions
+--------------------------
+Corner Stone learn:
+How many learners attempted at least one activity this year, and how does that number compare to last year, including the percentage change?
+How many learning activities were consumed or completed this year compared to last year, and what is the percentage change?
+What is the total duration of learning hours this year compared to last year, and how much has it increased or decreased in percentage terms?
+How many learners have consumed more than one activity this year compared to last year, and what is the percentage change?
+How has the number of learners changed each year over time?
+How has the number of consumed activities varied across the years?
+What are the top 5 divisions with the most learners enrolled in leadership programs, and how do their completion numbers compare?
+What are the top 5 categories under workplace health and safety with the most learners enrolled, and how do their completion numbers compare?
+What are the average activities per learner and average learning hours per learner for this year?
+How many users have not logged in yet, how many have not taken any courses, and how many have logged in more than once?
+
+Corner stone learn end:
+--------------------------
 Questions focused on training data with optional skills outcomes
 
 Training Without Skills Assessment

@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_instructor_growth_rate",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_instructor_growth_rate",
+  "target_model": "gold_gold_instructor_growth_rate",
+  "steps": [
+    {
+      "step_name": "Metric: instructor_growth_rate",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_instructor_growth_rate (growth_rate, year)\nSELECT \n    CASE \n        WHEN COUNT(instructors_current.year) = 0 THEN NULL  -- Handle division by zero\n        ELSE (COUNT(instructors_current.year) - COUNT(instructors_previous.year))::DECIMAL / NULLIF(COUNT(instructors_previous.year), 0) \n    END AS growth_rate,\n    EXTRACT(YEAR FROM CURRENT_DATE) AS year\nFROM \n    (SELECT \n        DATE_TRUNC('year', created_at) AS year, \n        COUNT(*) AS instructor_count \n     FROM instructors \n     WHERE created_at >= DATE_TRUNC('year', CURRENT_DATE) - INTERVAL '1 year' \n     GROUP BY DATE_TRUNC('year', created_at)\n    ) AS instructors_current\nFULL OUTER JOIN \n    (SELECT \n        DATE_TRUNC('year', created_at) AS year, \n        COUNT(*) AS instructor_count \n     FROM instructors \n     WHERE created_at >= DATE_TRUNC('year', CURRENT_DATE) - INTERVAL '2 years' \n     AND created_at < DATE_TRUNC('year', CURRENT_DATE) - INTERVAL '1 year' \n     GROUP BY DATE_TRUNC('year', created_at)\n    ) AS instructors_previous\nON instructors_current.year = instructors_previous.year + INTERVAL '1 year'\nWHERE \n    instructors_current.year = DATE_TRUNC('year', CURRENT_DATE);",
+      "description": "Growth rate of the number of instructors over the last year",
+      "input_tables": [
+        "instructors"
+      ],
+      "output_table": "gold_instructor_growth_rate",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_instructor_growth_rate from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

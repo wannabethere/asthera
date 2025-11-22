@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_active_learners_daily_trend",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_active_learners_daily_trend",
+  "target_model": "gold_gold_active_learners_daily_trend",
+  "steps": [
+    {
+      "step_name": "Metric: active_learners_daily_trend",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_active_learners_daily_trend (day, active_learners_count)\nSELECT \n    DATE_TRUNC('day', l.\"last_active_date\") AS day,\n    COUNT(DISTINCT l.\"learner_id\") AS active_learners_count\nFROM \n    learners_table l\nWHERE \n    l.\"last_active_date\" IS NOT NULL\n    AND l.\"last_active_date\" >= CURRENT_DATE - INTERVAL '30 days'\nGROUP BY \n    day\nORDER BY \n    day;",
+      "description": "Daily trend of active learners over a specified time period.",
+      "input_tables": [
+        "learners_table"
+      ],
+      "output_table": "gold_active_learners_daily_trend",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_active_learners_daily_trend from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

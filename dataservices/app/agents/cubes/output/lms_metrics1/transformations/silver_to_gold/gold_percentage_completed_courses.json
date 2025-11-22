@@ -1,0 +1,27 @@
+{
+  "name": "silver_to_gold_gold_percentage_completed_courses",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_percentage_completed_courses",
+  "target_model": "gold_gold_percentage_completed_courses",
+  "steps": [
+    {
+      "step_name": "Metric: percentage_completed_courses",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_percentage_completed_courses (instructor_id, percentage_completed)\nSELECT \n    c.instructor_id,\n    COALESCE(\n        (COUNT(DISTINCT CASE WHEN s.completed = TRUE THEN s.student_id END) * 100.0) / \n        NULLIF(COUNT(DISTINCT s.student_id), 0), 0) AS percentage_completed\nFROM \n    courses c\nJOIN \n    students s ON c.course_id = s.course_id\nGROUP BY \n    c.instructor_id\nHAVING \n    COUNT(DISTINCT s.student_id) > 0;",
+      "description": "Percentage of students who completed courses taught by each instructor",
+      "input_tables": [
+        "courses",
+        "students",
+        "instructors"
+      ],
+      "output_table": "gold_percentage_completed_courses",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_percentage_completed_courses from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}
