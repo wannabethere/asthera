@@ -1,6 +1,6 @@
 -- Transformation: silver_to_gold
 -- Table: software_inventory
--- Generated: 20251120_111506
+-- Generated: 20251124_084146
 
 -- Step: Daily Aggregation - software_inventory
 -- Type: TransformationType.AGGREGATION

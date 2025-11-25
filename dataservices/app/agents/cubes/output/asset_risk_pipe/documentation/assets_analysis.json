@@ -89,13 +89,11 @@
   "data_quality_concerns": [
     "asset_id is a STRING and may not be unique if not properly managed.",
     "hostname, business_unit, and env can contain null values.",
-    "criticality is an INTEGER and may not have a defined range or validation.",
-    "created_at and updated_at are TIMESTAMP and should be checked for consistency."
+    "criticality is an INTEGER and may have invalid values if not constrained."
   ],
   "recommended_transformations": [
     "Ensure asset_id is unique and properly indexed.",
-    "Implement validation rules for criticality to ensure it falls within a defined range.",
-    "Consider adding default values for hostname, business_unit, and env to avoid nulls.",
-    "Standardize timestamp formats for created_at and updated_at."
+    "Implement constraints to prevent null values in critical fields (hostname, business_unit, env).",
+    "Validate criticality values to ensure they fall within an acceptable range."
   ]
 }

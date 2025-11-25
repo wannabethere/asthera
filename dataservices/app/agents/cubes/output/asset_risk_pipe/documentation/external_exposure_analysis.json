@@ -53,7 +53,7 @@
       "is_measure": false,
       "is_temporal": false,
       "is_identifier": false,
-      "description": "Indicates if the asset is located in a risky geographical area",
+      "description": "Indicates if the asset is located in a geo-risky area",
       "suggested_cube_type": "dimension",
       "aggregation_type": "none"
     },
@@ -97,14 +97,14 @@
       "condition": "external_exposure.asset_id = assets.asset_id"
     }
   ],
-  "grain": "One row represents the exposure details of a specific asset.",
+  "grain": "One row represents the exposure details of a specific asset at a specific time.",
   "data_quality_concerns": [
-    "asset_id is a STRING and may not be unique if not properly enforced.",
+    "asset_id is a STRING and may not be unique if not properly managed.",
     "Boolean fields (is_public_ip, weak_tls, geo_risky) may have null values if not explicitly set."
   ],
   "recommended_transformations": [
     "Ensure asset_id is unique and properly indexed.",
-    "Consider setting default values for Boolean fields to avoid nulls.",
+    "Consider adding default values for Boolean fields to avoid nulls.",
     "Implement data validation rules to ensure the integrity of open_ports."
   ]
 }

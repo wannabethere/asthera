@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_attack_surface_breakdown_combined",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_attack_surface_breakdown_combined",
+  "target_model": "gold_gold_attack_surface_breakdown_combined",
+  "steps": [
+    {
+      "step_name": "Metric: attack_surface_breakdown_combined",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_attack_surface_breakdown_combined (os_software_stack, business_unit, environment, record_count)\nSELECT \n    COALESCE(os_software_stack, 'Unknown') AS os_software_stack,  -- Handle NULL values for OS/software stack\n    COALESCE(business_unit, 'Unknown') AS business_unit,          -- Handle NULL values for business unit\n    COALESCE(environment, 'Unknown') AS environment,              -- Handle NULL values for environment\n    COUNT(*) AS record_count                                       -- Count of records\nFROM \n    attack_surface_table\nGROUP BY \n    os_software_stack, \n    business_unit, \n    environment\nORDER BY \n    os_software_stack, \n    business_unit, \n    environment;  -- Order by dimensions for better readability",
+      "description": "Combined breakdown of attack surfaces by OS/software stack, business unit, and environment",
+      "input_tables": [
+        "attack_surface_table"
+      ],
+      "output_table": "gold_attack_surface_breakdown_combined",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_attack_surface_breakdown_combined from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

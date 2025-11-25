@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_attack_surface_by_business_unit",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_attack_surface_by_business_unit",
+  "target_model": "gold_gold_attack_surface_by_business_unit",
+  "steps": [
+    {
+      "step_name": "Metric: attack_surface_by_business_unit",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_attack_surface_by_business_unit (business_unit, attack_surface_count)\nSELECT \n    COALESCE(business_unit, 'Unknown') AS business_unit,  -- Handle NULL business units\n    COUNT(*) AS attack_surface_count\nFROM \n    attack_surface_table\nGROUP BY \n    business_unit\nORDER BY \n    business_unit;  -- Optional: Order by business unit for better readability",
+      "description": "Breakdown of attack surfaces by business unit",
+      "input_tables": [
+        "attack_surface_table"
+      ],
+      "output_table": "gold_attack_surface_by_business_unit",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_attack_surface_by_business_unit from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

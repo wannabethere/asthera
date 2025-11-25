@@ -1,14 +1,14 @@
-{{ config(
-    materialized='table'  -- Change to 'view' if you prefer a view instead of a table
-) }}
+{{ config(materialized='table') }}
 
--- This model aggregates data on identity exposure incidents, including total incidents and average severity levels.
+-- This mart summarizes the exposure of sensitive identity information by counting instances of exposure per identity.
 SELECT 
-    i.identity_id, 
-    COUNT(i.exposure_id) AS total_exposure_incidents, 
-    AVG(i.severity_level) AS average_severity, 
-    CURRENT_TIMESTAMP AS last_updated  -- Adding last_updated as the current timestamp
+    ie.identity_id, 
+    COUNT(ie.exposure_id) AS total_exposures,
+    COALESCE(COUNT(ie.exposure_id), 0) AS exposure_score -- Exposure score for dashboard visualizations
 FROM 
-    {{ ref('identity_exposure') }} AS i  -- Reference to the identity_exposure table
+    {{ ref('identity_exposure') }} ie
 GROUP BY 
-    i.identity_id
+    ie.identity_id;
+
+-- Index on identity_id for performance optimization
+-- CREATE INDEX idx_identity_exposure_identity_id ON identity_exposure(identity_id);

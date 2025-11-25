@@ -1,19 +1,17 @@
 {
   "question_id": "sql_data_mart_software_asset_management_summary",
-  "question": "Generate SQL to create a data mart 'software_asset_management_summary' from: software_inventory, vulnerabilities, misconfigurations.\n\nBusiness Requirements:\n- \n- This mart provides a summary of software assets, including their usage and associated vulnerabilities and misconfigurations.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+  "question": "Generate SQL to create a data mart 'software_asset_management_summary' from: software_inventory.\n\nBusiness Requirements:\n- \n- This mart contains a summary of software assets by department, including total software assets, total licenses, and average usage hours.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
   "context": {
     "sql_type": "data_mart",
     "target_object": "software_asset_management_summary",
     "source_tables": [
-      "software_inventory",
-      "vulnerabilities",
-      "misconfigurations"
+      "software_inventory"
     ],
     "business_requirements": [
       "",
-      "This mart provides a summary of software assets, including their usage and associated vulnerabilities and misconfigurations."
+      "This mart contains a summary of software assets by department, including total software assets, total licenses, and average usage hours."
     ],
-    "existing_sql": "CREATE TABLE software_asset_management_summary (\n    software_name VARCHAR(255) NOT NULL,\n    version VARCHAR(50) NOT NULL,\n    total_devices INT NOT NULL DEFAULT 0,\n    total_vulnerabilities INT NOT NULL DEFAULT 0,\n    total_misconfigurations INT NOT NULL DEFAULT 0,\n    business_unit VARCHAR(100),\n    environment VARCHAR(50),\n    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    PRIMARY KEY (software_name, version),\n    CONSTRAINT chk_total_devices CHECK (total_devices >= 0),\n    CONSTRAINT"
+    "existing_sql": "CREATE TABLE software_asset_management_summary AS \nSELECT \n    s.department, \n    COUNT(DISTINCT s.id) AS total_software_assets, \n    COALESCE(SUM(s.license_count), 0) AS total_licenses, \n    COALESCE(AVG(s.usage_hours), 0) AS avg_usage_hours \nFROM \n    software_inventory s \nGROUP BY \n    s.department \nORDER BY \n    total_software_assets DESC \nLIMIT 5; \n\n-- Index suggestion: CREATE INDEX idx_department ON software_inventory(department);"
   },
   "expected_output_type": "sql",
   "steps": [
@@ -24,19 +22,17 @@
     "5. Validate SQL syntax and logic"
   ],
   "metadata": {
-    "generated_at": "2025-11-20T11:47:30.507281",
-    "source_table_count": 3
+    "generated_at": "2025-11-24T09:18:54.884827",
+    "source_table_count": 1
   },
   "dependencies": [],
   "sql_type": "data_mart",
   "target_object": "software_asset_management_summary",
   "source_tables": [
-    "software_inventory",
-    "vulnerabilities",
-    "misconfigurations"
+    "software_inventory"
   ],
   "business_requirements": [
     "",
-    "This mart provides a summary of software assets, including their usage and associated vulnerabilities and misconfigurations."
+    "This mart contains a summary of software assets by department, including total software assets, total licenses, and average usage hours."
   ]
 }

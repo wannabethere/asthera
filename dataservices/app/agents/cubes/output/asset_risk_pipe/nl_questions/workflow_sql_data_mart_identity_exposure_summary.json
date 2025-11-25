@@ -1,6 +1,6 @@
 {
   "question_id": "sql_data_mart_identity_exposure_summary",
-  "question": "Generate SQL to create a data mart 'identity_exposure_summary' from: identity_exposure.\n\nBusiness Requirements:\n- \n- This mart contains aggregated data on identity exposure incidents, including total incidents and average severity levels.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+  "question": "Generate SQL to create a data mart 'identity_exposure_summary' from: identity_exposure.\n\nBusiness Requirements:\n- \n- This mart summarizes the exposure of sensitive identity information by counting instances of exposure per identity.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
   "context": {
     "sql_type": "data_mart",
     "target_object": "identity_exposure_summary",
@@ -9,9 +9,9 @@
     ],
     "business_requirements": [
       "",
-      "This mart contains aggregated data on identity exposure incidents, including total incidents and average severity levels."
+      "This mart summarizes the exposure of sensitive identity information by counting instances of exposure per identity."
     ],
-    "existing_sql": "CREATE TABLE identity_exposure_summary (\n    identity_id UUID NOT NULL,\n    total_exposure_incidents INT NOT NULL CHECK (total_exposure_incidents >= 0),\n    average_severity DECIMAL(3, 2) CHECK (average_severity >= 0 AND average_severity <= 10),\n    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    PRIMARY KEY (identity_id)\n);\n\nCREATE INDEX idx_identity_exposure ON identity_exposure_summary (identity_id);\nCREATE INDEX idx_last_updated ON identity_exposure_summary (last_updated);\n\nINSERT INTO"
+    "existing_sql": "CREATE TABLE identity_exposure_summary AS \nSELECT \n    ie.identity_id, \n    COUNT(ie.exposure_id) AS total_exposures,\n    CASE \n        WHEN COUNT(ie.exposure_id) > 0 THEN COUNT(ie.exposure_id) \n        ELSE 0 \n    END AS exposure_score -- Exposure score for dashboard visualizations\nFROM \n    identity_exposure ie\nGROUP BY \n    ie.identity_id; \n\n-- Index on identity_id for performance optimization\n-- CREATE INDEX idx_identity_exposure_identity_id ON identity_exposure(identity_id);"
   },
   "expected_output_type": "sql",
   "steps": [
@@ -22,7 +22,7 @@
     "5. Validate SQL syntax and logic"
   ],
   "metadata": {
-    "generated_at": "2025-11-20T11:47:30.507336",
+    "generated_at": "2025-11-24T09:18:54.885049",
     "source_table_count": 1
   },
   "dependencies": [],
@@ -33,6 +33,6 @@
   ],
   "business_requirements": [
     "",
-    "This mart contains aggregated data on identity exposure incidents, including total incidents and average severity levels."
+    "This mart summarizes the exposure of sensitive identity information by counting instances of exposure per identity."
   ]
 }

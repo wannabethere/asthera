@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_component_weight",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_component_weight",
+  "target_model": "gold_gold_component_weight",
+  "steps": [
+    {
+      "step_name": "Metric: component_weight",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_component_weight (component, weight)\nSELECT \n    component,\n    COALESCE(weight, 0) AS weight -- Handle NULL values by replacing with 0\nFROM \n    gold_component_weights\nWHERE \n    weight IS NOT NULL; -- Ensure only relevant weights are considered",
+      "description": "The weight assigned to each component in the ASI calculation.",
+      "input_tables": [
+        "gold_component_weights"
+      ],
+      "output_table": "gold_component_weight",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_component_weight from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_top_10_highest_risk_assets",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_top_10_highest_risk_assets",
+  "target_model": "gold_gold_top_10_highest_risk_assets",
+  "steps": [
+    {
+      "step_name": "Metric: top_10_highest_risk_assets",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_top_10_highest_risk_assets (asset_id, asi_value)\nSELECT asset_id, asi_value\nFROM assets_table\nWHERE asi_value IS NOT NULL  -- Ensure ASI is valid\nORDER BY asi_value DESC  -- Sort by ASI in descending order\nLIMIT 10;  -- Select top 10 assets",
+      "description": "The top 10 assets with the highest Attack Surface Index values.",
+      "input_tables": [
+        "assets_table"
+      ],
+      "output_table": "gold_top_10_highest_risk_assets",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_top_10_highest_risk_assets from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

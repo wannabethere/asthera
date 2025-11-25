@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_quarterly_trend_breach_risk_likelihood",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_quarterly_trend_breach_risk_likelihood",
+  "target_model": "gold_gold_quarterly_trend_breach_risk_likelihood",
+  "steps": [
+    {
+      "step_name": "Metric: quarterly_trend_breach_risk_likelihood",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_quarterly_trend_breach_risk_likelihood (quarter, business_unit, average_breach_risk_likelihood)\nSELECT \n    DATE_TRUNC('quarter', br.timestamp) AS quarter,  -- Truncate timestamp to quarter\n    br.business_unit,  -- Group by business unit\n    AVG(COALESCE(br.breach_risk_likelihood, 0)) AS average_breach_risk_likelihood  -- Calculate average, handling NULLs\nFROM \n    breach_risk_table br\nGROUP BY \n    quarter, \n    br.business_unit  -- Group by quarter and business unit\nORDER BY \n    quarter, \n    br.business_unit;  -- Order results for better readability",
+      "description": "Quarterly trends of breach risk likelihood aggregated by business unit.",
+      "input_tables": [
+        "breach_risk_table"
+      ],
+      "output_table": "gold_quarterly_trend_breach_risk_likelihood",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_quarterly_trend_breach_risk_likelihood from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

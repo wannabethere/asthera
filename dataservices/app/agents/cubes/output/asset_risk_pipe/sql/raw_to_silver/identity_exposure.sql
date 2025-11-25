@@ -1,6 +1,6 @@
 -- Transformation: raw_to_silver
 -- Table: identity_exposure
--- Generated: 20251120_111506
+-- Generated: 20251124_084146
 
 -- Step: Clean identity_exposure
 -- Type: TransformationType.CLEANING
@@ -22,7 +22,7 @@ WHERE id IS NOT NULL;
 
 -- Step: Deduplicate identity_exposure
 -- Type: TransformationType.DEDUPLICATION
--- Description: Deduplicate using LOD dimensions: user_id, exposure_timestamp
+-- Description: Deduplicate using LOD dimensions: user_id, exposure_event_id
 
 
 CREATE TABLE silver_identity_exposure_deduped AS
@@ -31,7 +31,7 @@ FROM (
     SELECT 
         *,
         ROW_NUMBER() OVER (
-            PARTITION BY user_id, exposure_timestamp
+            PARTITION BY user_id, exposure_event_id
             ORDER BY updated_at DESC
         ) as row_num
     FROM silver_identity_exposure_cleaned

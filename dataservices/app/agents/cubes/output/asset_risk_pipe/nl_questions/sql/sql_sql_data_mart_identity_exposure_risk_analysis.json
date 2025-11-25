@@ -1,0 +1,38 @@
+{
+  "question_id": "sql_data_mart_identity_exposure_risk_analysis",
+  "question": "Generate SQL to create a data mart 'identity_exposure_risk_analysis' from: identity_exposure.\n\nBusiness Requirements:\n- \n- This mart contains a 12-month trend analysis of identity exposures, focusing on the number of exposures and their severity.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+  "context": {
+    "sql_type": "data_mart",
+    "target_object": "identity_exposure_risk_analysis",
+    "source_tables": [
+      "identity_exposure"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains a 12-month trend analysis of identity exposures, focusing on the number of exposures and their severity."
+    ],
+    "existing_sql": "CREATE TABLE identity_exposure_risk_analysis AS \nSELECT\n    ie.identity_id,\n    COUNT(ie.exposure_id) AS total_exposures,\n    AVG(CASE WHEN ie.severity = 'High' THEN 1.0 ELSE 0.0 END) AS high_risk_exposure_ratio,\n    DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month' * n.n AS month\nFROM\n    identity_exposure ie\nCROSS JOIN\n    generate_series(0, 11) n\nWHERE\n    DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month' * n.n >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '12 months'\nGROUP BY\n   "
+  },
+  "expected_output_type": "sql",
+  "steps": [
+    "1. Analyze source tables and requirements",
+    "2. Design table/view structure",
+    "3. Write SQL CREATE statement",
+    "4. Add indexes and constraints",
+    "5. Validate SQL syntax and logic"
+  ],
+  "metadata": {
+    "generated_at": "2025-11-24T09:18:54.885020",
+    "source_table_count": 1
+  },
+  "dependencies": [],
+  "sql_type": "data_mart",
+  "target_object": "identity_exposure_risk_analysis",
+  "source_tables": [
+    "identity_exposure"
+  ],
+  "business_requirements": [
+    "",
+    "This mart contains a 12-month trend analysis of identity exposures, focusing on the number of exposures and their severity."
+  ]
+}

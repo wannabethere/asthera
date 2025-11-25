@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_misconfiguration_exposure_score",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_misconfiguration_exposure_score",
+  "target_model": "gold_gold_misconfiguration_exposure_score",
+  "steps": [
+    {
+      "step_name": "Metric: misconfiguration_exposure_score",
+      "step_type": "metric",
+      "sql_logic": "SELECT \n    \"severity_category\",\n    DATE_TRUNC('month', \"created_at\") AS \"month\",\n    COALESCE(SUM(\"exposure_score\"), 0) AS \"total_exposure_score\"\nFROM \n    \"misconfiguration_scores\"\nGROUP BY \n    \"severity_category\", \n    DATE_TRUNC('month', \"created_at\")\nORDER BY \n    \"month\" DESC, \n    \"severity_category\";",
+      "description": "The total misconfiguration exposure score calculated based on severity categories.",
+      "input_tables": [
+        "misconfiguration_scores"
+      ],
+      "output_table": "gold_misconfiguration_exposure_score",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_misconfiguration_exposure_score from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

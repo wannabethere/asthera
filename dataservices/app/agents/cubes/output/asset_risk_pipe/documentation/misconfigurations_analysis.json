@@ -90,10 +90,12 @@
   "grain": "Each row represents a unique misconfiguration finding associated with a specific asset.",
   "data_quality_concerns": [
     "asset_id and config_id are strings and may not be unique if not properly managed.",
-    "Severity and category fields may contain inconsistent values if not standardized."
+    "Potential null values in severity and category columns.",
+    "Timestamps (discovered_at, updated_at) may be null."
   ],
   "recommended_transformations": [
-    "Standardize severity and category values to a predefined set of options.",
-    "Implement checks to ensure asset_id and config_id combinations are unique."
+    "Ensure asset_id and config_id are unique by enforcing constraints.",
+    "Implement data validation rules to prevent null values in severity and category.",
+    "Consider adding default values for discovered_at and updated_at timestamps."
   ]
 }

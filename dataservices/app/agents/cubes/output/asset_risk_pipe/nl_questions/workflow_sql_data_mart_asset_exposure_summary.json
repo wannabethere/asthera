@@ -1,20 +1,19 @@
 {
   "question_id": "sql_data_mart_asset_exposure_summary",
-  "question": "Generate SQL to create a data mart 'asset_exposure_summary' from: assets, vulnerabilities, misconfigurations, external_exposure.\n\nBusiness Requirements:\n- \n- This mart contains aggregated exposure scores for each asset, including vulnerabilities, misconfigurations, and external risks.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+  "question": "Generate SQL to create a data mart 'asset_exposure_summary' from: vulnerabilities, misconfigurations, external_exposure.\n\nBusiness Requirements:\n- \n- This mart aggregates exposure scores related to assets by counting vulnerabilities, misconfigurations, and external exposures.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
   "context": {
     "sql_type": "data_mart",
     "target_object": "asset_exposure_summary",
     "source_tables": [
-      "assets",
       "vulnerabilities",
       "misconfigurations",
       "external_exposure"
     ],
     "business_requirements": [
       "",
-      "This mart contains aggregated exposure scores for each asset, including vulnerabilities, misconfigurations, and external risks."
+      "This mart aggregates exposure scores related to assets by counting vulnerabilities, misconfigurations, and external exposures."
     ],
-    "existing_sql": "CREATE TABLE asset_exposure_summary (\n    asset_id INT NOT NULL,\n    asset_name VARCHAR(255) NOT NULL,\n    total_vulnerability_score DECIMAL(10, 2) DEFAULT 0.00,\n    vulnerability_count INT DEFAULT 0,\n    total_misconfigurations INT DEFAULT 0,\n    total_external_exposure DECIMAL(10, 2) DEFAULT 0.00,\n    exposure_score DECIMAL(10, 2) AS (total_vulnerability_score + total_misconfigurations + total_external_exposure) STORED,\n    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    CONSTRAINT pk_as"
+    "existing_sql": "CREATE TABLE asset_exposure_summary AS \nSELECT \n    a.asset_id, \n    COUNT(DISTINCT v.vulnerability_id) AS total_vulnerabilities, \n    COUNT(DISTINCT m.misconfiguration_id) AS total_misconfigurations, \n    COUNT(DISTINCT e.exposure_id) AS total_external_exposures \nFROM \n    assets a \nLEFT JOIN \n    vulnerabilities v ON v.asset_id = a.asset_id \nLEFT JOIN \n    misconfigurations m ON a.asset_id = m.asset_id \nLEFT JOIN \n    external_exposure e ON a.asset_id = e.asset_id \nGROUP BY \n    a.asset_id; \n\n"
   },
   "expected_output_type": "sql",
   "steps": [
@@ -25,20 +24,19 @@
     "5. Validate SQL syntax and logic"
   ],
   "metadata": {
-    "generated_at": "2025-11-20T11:47:30.507327",
-    "source_table_count": 4
+    "generated_at": "2025-11-24T09:18:54.885040",
+    "source_table_count": 3
   },
   "dependencies": [],
   "sql_type": "data_mart",
   "target_object": "asset_exposure_summary",
   "source_tables": [
-    "assets",
     "vulnerabilities",
     "misconfigurations",
     "external_exposure"
   ],
   "business_requirements": [
     "",
-    "This mart contains aggregated exposure scores for each asset, including vulnerabilities, misconfigurations, and external risks."
+    "This mart aggregates exposure scores related to assets by counting vulnerabilities, misconfigurations, and external exposures."
   ]
 }

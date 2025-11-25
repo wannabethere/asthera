@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_increasing_risk_assets",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_increasing_risk_assets",
+  "target_model": "gold_gold_increasing_risk_assets",
+  "steps": [
+    {
+      "step_name": "Metric: increasing_risk_assets",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_increasing_risk_assets (asset_id, current_month_score, previous_month_score, score_increase)\nWITH monthly_scores AS (\n    SELECT \n        asset_id,\n        DATE_TRUNC('month', score_date) AS month,\n        AVG(exploitability_likelihood) AS avg_score\n    FROM \n        assets_table\n    WHERE \n        score_date >= CURRENT_DATE - INTERVAL '12 months'\n    GROUP BY \n        asset_id, DATE_TRUNC('month', score_date)\n),\nscore_comparison AS (\n    SELECT \n        current.asset_id,\n        current.avg_score AS current_month_score,\n        previous.avg_score AS previous_month_score\n    FROM \n        monthly_scores AS current\n    LEFT JOIN \n        monthly_scores AS previous \n    ON \n        current.asset_id = previous.asset_id \n        AND current.month = previous.month + INTERVAL '1 month'\n)\nSELECT \n    asset_id,\n    current_month_score,\n    previous_month_score,\n    CASE \n        WHEN current_month_score > COALESCE(previous_month_score, 0) THEN TRUE \n        ELSE FALSE \n    END AS score_increase\nFROM \n    score_comparison\nWHERE \n    current_month_score > COALESCE(previous_month_score, 0);",
+      "description": "Assets that have shown an increase in exploitability likelihood over the last 12 months.",
+      "input_tables": [
+        "assets_table"
+      ],
+      "output_table": "gold_increasing_risk_assets",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_increasing_risk_assets from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

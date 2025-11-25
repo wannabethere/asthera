@@ -1,0 +1,26 @@
+{
+  "name": "silver_to_gold_gold_count_of_assets_with_eol_or_unsupported_software",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_count_of_assets_with_eol_or_unsupported_software",
+  "target_model": "gold_gold_count_of_assets_with_eol_or_unsupported_software",
+  "steps": [
+    {
+      "step_name": "Metric: count_of_assets_with_eol_or_unsupported_software",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_count_of_assets_with_eol_or_unsupported_software (business_unit, asset_count)\nSELECT \n    a.business_unit,\n    COUNT(DISTINCT a.asset_id) AS asset_count\nFROM \n    assets_table a\nJOIN \n    software_table s ON a.software_id = s.software_id\nWHERE \n    COALESCE(s.eol, FALSE) = TRUE OR COALESCE(s.unsupported, FALSE) = TRUE\nGROUP BY \n    a.business_unit;",
+      "description": "The count of assets that have EOL or unsupported software.",
+      "input_tables": [
+        "assets_table",
+        "software_table"
+      ],
+      "output_table": "gold_count_of_assets_with_eol_or_unsupported_software",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_count_of_assets_with_eol_or_unsupported_software from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

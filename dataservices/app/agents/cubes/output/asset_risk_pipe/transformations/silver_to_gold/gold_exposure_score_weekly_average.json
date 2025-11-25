@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_exposure_score_weekly_average",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_exposure_score_weekly_average",
+  "target_model": "gold_gold_exposure_score_weekly_average",
+  "steps": [
+    {
+      "step_name": "Metric: exposure_score_weekly_average",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_exposure_score_weekly_average (week_start, average_exposure_score)\nSELECT \n    DATE_TRUNC('week', es.\"timestamp\") AS week_start,  -- Truncate timestamp to week\n    COALESCE(SUM(es.exposure_score), 0) / NULLIF(COUNT(es.exposure_score), 0) AS average_exposure_score  -- Calculate average, handle division by zero\nFROM \n    exposure_scores es\nWHERE \n    es.exposure_score IS NOT NULL  -- Only include records with valid exposure scores\nGROUP BY \n    week_start\nORDER BY \n    week_start;  -- Order by week for clarity",
+      "description": "Average exposure score calculated on a weekly basis.",
+      "input_tables": [
+        "exposure_scores"
+      ],
+      "output_table": "gold_exposure_score_weekly_average",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_exposure_score_weekly_average from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

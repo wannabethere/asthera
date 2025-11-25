@@ -99,12 +99,12 @@
   ],
   "grain": "One row represents the software inventory details for a specific asset.",
   "data_quality_concerns": [
-    "asset_id is a STRING and may not be unique if not properly enforced.",
+    "asset_id is a STRING and may not be unique if not properly managed.",
     "Potential null values in software_name, version, discovered_at, and updated_at."
   ],
   "recommended_transformations": [
     "Ensure asset_id is unique and properly indexed.",
     "Implement checks to handle null values in software_name, version, discovered_at, and updated_at.",
-    "Consider normalizing software_name and version to avoid duplicates."
+    "Consider normalizing software_name and version to a consistent format."
   ]
 }

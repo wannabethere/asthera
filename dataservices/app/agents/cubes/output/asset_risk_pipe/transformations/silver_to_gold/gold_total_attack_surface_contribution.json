@@ -1,0 +1,26 @@
+{
+  "name": "silver_to_gold_gold_total_attack_surface_contribution",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_total_attack_surface_contribution",
+  "target_model": "gold_gold_total_attack_surface_contribution",
+  "steps": [
+    {
+      "step_name": "Metric: total_attack_surface_contribution",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_total_attack_surface_contribution (os_stack, software_stack, total_contribution)\nSELECT \n    COALESCE(s.os_stack, 'Unknown') AS os_stack,  -- Handle NULL OS stack\n    COALESCE(s.software_stack, 'Unknown') AS software_stack,  -- Handle NULL software stack\n    SUM(COALESCE(s.contribution, 0)) AS total_contribution  -- Sum contributions, treating NULL as 0\nFROM \n    silver_attack_surface s\nJOIN \n    gold_attack_surface g ON s.id = g.id  -- Assuming a common identifier for joining\nGROUP BY \n    s.os_stack, s.software_stack  -- Group by OS and software stack\nHAVING \n    SUM(COALESCE(s.contribution, 0)) > 0;  -- Only include groups with positive contributions",
+      "description": "Total contribution to the attack surface by the OS/software stack.",
+      "input_tables": [
+        "silver_attack_surface",
+        "gold_attack_surface"
+      ],
+      "output_table": "gold_total_attack_surface_contribution",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_total_attack_surface_contribution from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

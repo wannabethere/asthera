@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_stale_account_count",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_stale_account_count",
+  "target_model": "gold_gold_stale_account_count",
+  "steps": [
+    {
+      "step_name": "Metric: stale_account_count",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_stale_account_count (asset_id, stale_account_count)\nSELECT \n    asset_id,\n    COUNT(DISTINCT account_id) AS stale_account_count\nFROM \n    stale_accounts\nWHERE \n    account_status = 'stale'  -- Assuming there is a status column to identify stale accounts\nGROUP BY \n    asset_id;",
+      "description": "Count of stale accounts associated with each asset.",
+      "input_tables": [
+        "stale_accounts"
+      ],
+      "output_table": "gold_stale_account_count",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_stale_account_count from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

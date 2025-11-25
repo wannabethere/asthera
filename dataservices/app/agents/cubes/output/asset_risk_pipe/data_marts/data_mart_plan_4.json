@@ -3,60 +3,58 @@
   "marts": [
     {
       "mart_name": "asset_exposure_summary",
-      "sql": "CREATE TABLE asset_exposure_summary AS SELECT a.asset_id, a.asset_name, SUM(v.severity_score) AS total_vulnerability_score, COUNT(DISTINCT v.vulnerability_id) AS vulnerability_count, SUM(m.configuration_issues) AS total_misconfigurations, SUM(e.external_risk_score) AS total_external_exposure FROM assets a LEFT JOIN vulnerabilities v ON a.asset_id = v.asset_id LEFT JOIN misconfigurations m ON a.asset_id = m.asset_id LEFT JOIN external_exposure e ON a.asset_id = e.asset_id GROUP BY a.asset_id, a.asset_name;",
-      "description": "This mart contains aggregated exposure scores for each asset, including vulnerabilities, misconfigurations, and external risks.",
-      "natural_language_question": "What is the total vulnerability score and count of vulnerabilities for each asset?",
+      "sql": "CREATE TABLE asset_exposure_summary AS SELECT a.asset_id, COUNT(DISTINCT v.vulnerability_id) AS total_vulnerabilities, COUNT(DISTINCT m misconfiguration_id) AS total_misconfigurations, COUNT(DISTINCT e.exposure_id) AS total_external_exposures FROM vulnerabilities v JOIN assets a ON v.asset_id = a.asset_id LEFT JOIN misconfigurations m ON a.asset_id = m.asset_id LEFT JOIN external_exposure e ON a.asset_id = e.asset_id GROUP BY a.asset_id;",
+      "description": "This mart aggregates exposure scores related to assets by counting vulnerabilities, misconfigurations, and external exposures.",
+      "natural_language_question": "What is the total number of vulnerabilities, misconfigurations, and external exposures for each asset?",
       "source_tables": [
-        "assets",
         "vulnerabilities",
         "misconfigurations",
         "external_exposure"
       ],
       "target_columns": [
         "asset_id",
-        "asset_name",
-        "total_vulnerability_score",
-        "vulnerability_count",
+        "total_vulnerabilities",
         "total_misconfigurations",
-        "total_external_exposure"
+        "total_external_exposures"
       ],
-      "business_value": "This mart helps in optimizing asset management by providing a comprehensive view of asset exposure, enabling better tracking and decision-making regarding asset utilization and risk management.",
-      "grain": "One row per asset"
+      "business_value": "This mart provides insights into asset performance and risk, enabling proactive maintenance and optimized resource allocation.",
+      "grain": "One row per asset",
+      "associated_metrics": []
     },
     {
       "mart_name": "identity_exposure_summary",
-      "sql": "CREATE TABLE identity_exposure_summary AS SELECT i.identity_id, COUNT(i.exposure_id) AS total_exposure_incidents, AVG(i.severity_level) AS average_severity FROM identity_exposure i GROUP BY i.identity_id;",
-      "description": "This mart contains aggregated data on identity exposure incidents, including total incidents and average severity levels.",
-      "natural_language_question": "How many identity exposure incidents have occurred for each identity, and what is the average severity of these incidents?",
+      "sql": "CREATE TABLE identity_exposure_summary AS SELECT ie.identity_id, COUNT(ie.exposure_id) AS total_exposures FROM identity_exposure ie GROUP BY ie.identity_id;",
+      "description": "This mart summarizes the exposure of sensitive identity information by counting instances of exposure per identity.",
+      "natural_language_question": "How many instances of sensitive identity information exposure are there for each identity?",
       "source_tables": [
         "identity_exposure"
       ],
       "target_columns": [
         "identity_id",
-        "total_exposure_incidents",
-        "average_severity"
+        "total_exposures"
       ],
-      "business_value": "This mart enhances risk management by providing insights into identity exposure incidents, allowing for better compliance and security measures to protect sensitive information.",
-      "grain": "One row per identity"
+      "business_value": "This mart helps in understanding risks associated with sensitive identity information, enhancing compliance and security measures.",
+      "grain": "One row per identity",
+      "associated_metrics": []
     },
     {
-      "mart_name": "software_asset_usage_summary",
-      "sql": "CREATE TABLE software_asset_usage_summary AS SELECT s.software_id, s.software_name, COUNT(DISTINCT s.device_id) AS total_devices_used, SUM(s.usage_hours) AS total_usage_hours FROM software_inventory s GROUP BY s.software_id, s.software_name;",
-      "description": "This mart contains aggregated usage data for software assets, including the number of devices using each software and total usage hours.",
-      "natural_language_question": "What is the total number of devices using each software and how many hours it has been used?",
+      "mart_name": "software_inventory_summary",
+      "sql": "CREATE TABLE software_inventory_summary AS SELECT si.software_id, COUNT(si.license_id) AS total_licenses, SUM(si.usage_hours) AS total_usage_hours FROM software_inventory si GROUP BY si.software_id;",
+      "description": "This mart aggregates software inventory data by counting licenses and summing usage hours for each software.",
+      "natural_language_question": "What is the total number of licenses and usage hours for each software asset?",
       "source_tables": [
         "software_inventory"
       ],
       "target_columns": [
         "software_id",
-        "software_name",
-        "total_devices_used",
+        "total_licenses",
         "total_usage_hours"
       ],
-      "business_value": "This mart supports strategic decision-making by providing insights into software usage, enabling effective software asset management and compliance with licensing agreements.",
-      "grain": "One row per software application"
+      "business_value": "This mart supports strategic decision-making regarding software procurement and compliance with licensing agreements.",
+      "grain": "One row per software asset",
+      "associated_metrics": []
     }
   ],
-  "reasoning": "Planned data mart for goal: \"Create exposure score aggregations for dashboard visualizations\"\n\nSelected 6 relevant silver tables: assets, vulnerabilities, misconfigurations, external_exposure, identity_exposure, software_inventory\n\nGenerated 3 data mart(s):\n\n1. asset_exposure_summary: This mart contains aggregated exposure scores for each asset, including vulnerabilities, misconfigurations, and external risks.\n   - Answers: What is the total vulnerability score and count of vulnerabilities for each asset?\n   - Grain: One row per asset\n\n2. identity_exposure_summary: This mart contains aggregated data on identity exposure incidents, including total incidents and average severity levels.\n   - Answers: How many identity exposure incidents have occurred for each identity, and what is the average severity of these incidents?\n   - Grain: One row per identity\n\n3. software_asset_usage_summary: This mart contains aggregated usage data for software assets, including the number of devices using each software and total usage hours.\n   - Answers: What is the total number of devices using each software and how many hours it has been used?\n   - Grain: One row per software application\n",
+  "reasoning": "Planned data mart for goal: \"Create exposure score aggregations for dashboard visualizations\"\n\nSelected 5 relevant silver tables: vulnerabilities, misconfigurations, external_exposure, identity_exposure, software_inventory\n\nGenerated 3 data mart(s):\n\n1. asset_exposure_summary: This mart aggregates exposure scores related to assets by counting vulnerabilities, misconfigurations, and external exposures.\n   - Answers: What is the total number of vulnerabilities, misconfigurations, and external exposures for each asset?\n   - Grain: One row per asset\n\n2. identity_exposure_summary: This mart summarizes the exposure of sensitive identity information by counting instances of exposure per identity.\n   - Answers: How many instances of sensitive identity information exposure are there for each identity?\n   - Grain: One row per identity\n\n3. software_inventory_summary: This mart aggregates software inventory data by counting licenses and summing usage hours for each software.\n   - Answers: What is the total number of licenses and usage hours for each software asset?\n   - Grain: One row per software asset\n",
   "complexity": "medium"
 }

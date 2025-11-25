@@ -1,0 +1,26 @@
+{
+  "name": "silver_to_gold_gold_software_exposure_score_per_asset",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_software_exposure_score_per_asset",
+  "target_model": "gold_gold_software_exposure_score_per_asset",
+  "steps": [
+    {
+      "step_name": "Metric: software_exposure_score_per_asset",
+      "step_type": "metric",
+      "sql_logic": "WITH latest_software AS (\n    SELECT \n        s.\"asset_id\",\n        MAX(s.\"exposure_score\") AS \"latest_exposure_score\"\n    FROM \n        software_table s\n    WHERE \n        s.\"status\" IN ('EOL', 'unsupported')  -- Filter for EOL or unsupported software\n    GROUP BY \n        s.\"asset_id\"\n),\nasset_exposure AS (\n    SELECT \n        a.\"business_unit\",\n        COALESCE(SUM(ls.\"latest_exposure_score\"), 0) AS \"total_exposure_score\"\n    FROM \n        assets_table a\n    LEFT JOIN \n        latest_software ls ON a.\"id\" = ls.\"asset_id\"\n    WHERE \n        ls.\"latest_exposure_score\" IS NOT NULL  -- Only include assets with exposure scores\n    GROUP BY \n        a.\"business_unit\"\n)\nSELECT \n    \"business_unit\",\n    COALESCE(AVG(\"total_exposure_score\"), 0) AS \"average_exposure_score\"\nFROM \n    asset_exposure\nGROUP BY \n    \"business_unit\";",
+      "description": "The average exposure score of software per asset based on EOL and unsupported software.",
+      "input_tables": [
+        "assets_table",
+        "software_table"
+      ],
+      "output_table": "gold_software_exposure_score_per_asset",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_software_exposure_score_per_asset from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

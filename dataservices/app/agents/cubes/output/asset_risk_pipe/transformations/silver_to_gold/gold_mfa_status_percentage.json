@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_mfa_status_percentage",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_mfa_status_percentage",
+  "target_model": "gold_gold_mfa_status_percentage",
+  "steps": [
+    {
+      "step_name": "Metric: mfa_status_percentage",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_mfa_status_percentage (asset_id, mfa_enabled_percentage)\nSELECT \n    asset_id,\n    COALESCE(\n        (COUNT(CASE WHEN mfa_configured THEN 1 END) * 100.0) / NULLIF(COUNT(*), 0), \n        0) AS mfa_enabled_percentage\nFROM \n    mfa_status\nGROUP BY \n    asset_id;",
+      "description": "Percentage of assets that have Multi-Factor Authentication (MFA) enabled.",
+      "input_tables": [
+        "mfa_status"
+      ],
+      "output_table": "gold_mfa_status_percentage",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_mfa_status_percentage from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

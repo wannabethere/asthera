@@ -1,0 +1,54 @@
+[
+  {
+    "question_id": "pipeline_automation_setup",
+    "question": "How do I set up automation for the asset_risk_analytics data pipeline execution?\n            \nThe pipeline includes:\n- 0 Trino materialized views to create\n- 0 Spark transformations to execute\n- 0 Python transformations to execute\n- 0 total steps in execution order\n\nConfiguration requirements:\n- Trino connection: catalog=hive, schema=default\n- Spark configuration: 4g memory, 4 executors\n- Python runtime: python3 with dependencies pandas, numpy\n\nGenerate an automation script that:\n1. Establishes connections to Trino, Spark, and Python environments\n2. Executes all pipeline steps in the correct order\n3. Handles errors and retries\n4. Logs execution progress\n5. Validates results after each step",
+    "context": {
+      "workflow_name": "asset_risk_analytics",
+      "trino_config": {},
+      "spark_config": {},
+      "python_config": {},
+      "total_steps": 0
+    },
+    "expected_output_type": "automation_script",
+    "steps": [
+      "Set up Trino connection with catalog and schema",
+      "Configure Spark session with specified resources",
+      "Set up Python environment with required dependencies",
+      "Load execution order from pipeline plan",
+      "Implement step-by-step execution with error handling",
+      "Add logging and progress tracking",
+      "Implement result validation"
+    ],
+    "metadata": {
+      "category": "pipeline_setup",
+      "priority": "high"
+    }
+  },
+  {
+    "question_id": "pipeline_monitoring_validation",
+    "question": "How do I monitor and validate the execution of the asset_risk_analytics pipeline?\n            \nPipeline Components:\n- 0 materialized views to monitor\n- 0 Spark jobs to track\n- 0 Python processes to monitor\n\nGenerate monitoring and validation code that:\n1. Tracks execution status of all pipeline steps\n2. Monitors Trino materialized view refresh status\n3. Tracks Spark job progress and resource usage\n4. Monitors Python process execution\n5. Validates data quality after each step\n6. Checks row counts and data freshness\n7. Generates alerts for failures or anomalies\n8. Creates execution dashboards and reports\n9. Implements health checks for all components",
+    "context": {
+      "workflow_name": "asset_risk_analytics",
+      "pipeline_components": {
+        "trino_mvs": 0,
+        "spark_jobs": 0,
+        "python_processes": 0
+      }
+    },
+    "expected_output_type": "monitoring_script",
+    "steps": [
+      "Set up monitoring infrastructure",
+      "Track Trino MV refresh status",
+      "Monitor Spark job metrics",
+      "Track Python process execution",
+      "Implement data quality checks",
+      "Generate alerts and notifications",
+      "Create execution dashboards",
+      "Generate execution reports"
+    ],
+    "metadata": {
+      "category": "monitoring",
+      "priority": "medium"
+    }
+  }
+]

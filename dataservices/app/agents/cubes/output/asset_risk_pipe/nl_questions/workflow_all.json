@@ -22,7 +22,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 2,
-      "generated_at": "2025-11-20T11:47:30.505086"
+      "generated_at": "2025-11-24T09:18:54.882724"
     },
     "dependencies": [],
     "layer": "raw",
@@ -177,7 +177,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 3,
-      "generated_at": "2025-11-20T11:47:30.505315"
+      "generated_at": "2025-11-24T09:18:54.882853"
     },
     "dependencies": [],
     "layer": "raw",
@@ -315,7 +315,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 1,
-      "generated_at": "2025-11-20T11:47:30.505412"
+      "generated_at": "2025-11-24T09:18:54.882945"
     },
     "dependencies": [],
     "layer": "raw",
@@ -432,7 +432,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 2,
-      "generated_at": "2025-11-20T11:47:30.505708"
+      "generated_at": "2025-11-24T09:18:54.883036"
     },
     "dependencies": [],
     "layer": "raw",
@@ -559,7 +559,7 @@
     "metadata": {
       "dimension_count": 5,
       "measure_count": 3,
-      "generated_at": "2025-11-20T11:47:30.505829"
+      "generated_at": "2025-11-24T09:18:54.883132"
     },
     "dependencies": [],
     "layer": "raw",
@@ -687,7 +687,7 @@
     "metadata": {
       "dimension_count": 7,
       "measure_count": 1,
-      "generated_at": "2025-11-20T11:47:30.506077"
+      "generated_at": "2025-11-24T09:18:54.883223"
     },
     "dependencies": [],
     "layer": "raw",
@@ -813,7 +813,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 2,
-      "generated_at": "2025-11-20T11:47:30.506202"
+      "generated_at": "2025-11-24T09:18:54.883336"
     },
     "dependencies": [],
     "layer": "silver",
@@ -968,7 +968,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 3,
-      "generated_at": "2025-11-20T11:47:30.506308"
+      "generated_at": "2025-11-24T09:18:54.883433"
     },
     "dependencies": [],
     "layer": "silver",
@@ -1106,7 +1106,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 1,
-      "generated_at": "2025-11-20T11:47:30.506392"
+      "generated_at": "2025-11-24T09:18:54.883514"
     },
     "dependencies": [],
     "layer": "silver",
@@ -1223,7 +1223,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 2,
-      "generated_at": "2025-11-20T11:47:30.506478"
+      "generated_at": "2025-11-24T09:18:54.883600"
     },
     "dependencies": [],
     "layer": "silver",
@@ -1350,7 +1350,7 @@
     "metadata": {
       "dimension_count": 5,
       "measure_count": 3,
-      "generated_at": "2025-11-20T11:47:30.506568"
+      "generated_at": "2025-11-24T09:18:54.883686"
     },
     "dependencies": [],
     "layer": "silver",
@@ -1478,7 +1478,7 @@
     "metadata": {
       "dimension_count": 7,
       "measure_count": 1,
-      "generated_at": "2025-11-20T11:47:30.506657"
+      "generated_at": "2025-11-24T09:18:54.883787"
     },
     "dependencies": [],
     "layer": "silver",
@@ -1604,7 +1604,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 2,
-      "generated_at": "2025-11-20T11:47:30.506769"
+      "generated_at": "2025-11-24T09:18:54.883900"
     },
     "dependencies": [],
     "layer": "gold",
@@ -1759,7 +1759,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 3,
-      "generated_at": "2025-11-20T11:47:30.506868"
+      "generated_at": "2025-11-24T09:18:54.883999"
     },
     "dependencies": [],
     "layer": "gold",
@@ -1897,7 +1897,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 1,
-      "generated_at": "2025-11-20T11:47:30.506946"
+      "generated_at": "2025-11-24T09:18:54.884183"
     },
     "dependencies": [],
     "layer": "gold",
@@ -2014,7 +2014,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 2,
-      "generated_at": "2025-11-20T11:47:30.507034"
+      "generated_at": "2025-11-24T09:18:54.884285"
     },
     "dependencies": [],
     "layer": "gold",
@@ -2141,7 +2141,7 @@
     "metadata": {
       "dimension_count": 5,
       "measure_count": 3,
-      "generated_at": "2025-11-20T11:47:30.507125"
+      "generated_at": "2025-11-24T09:18:54.884600"
     },
     "dependencies": [],
     "layer": "gold",
@@ -2269,7 +2269,7 @@
     "metadata": {
       "dimension_count": 7,
       "measure_count": 1,
-      "generated_at": "2025-11-20T11:47:30.507213"
+      "generated_at": "2025-11-24T09:18:54.884763"
     },
     "dependencies": [],
     "layer": "gold",
@@ -2373,135 +2373,11 @@
     ]
   },
   {
-    "question_id": "sql_data_mart_attack_surface_summary_by_os_software",
-    "question": "Generate SQL to create a data mart 'attack_surface_summary_by_os_software' from: assets, vulnerabilities, misconfigurations, external_exposure.\n\nBusiness Requirements:\n- \n- This mart contains a summary of the attack surface categorized by operating system, software stack, business unit, and environment.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "question_id": "sql_data_mart_attack_surface_index_by_business_unit",
+    "question": "Generate SQL to create a data mart 'attack_surface_index_by_business_unit' from: assets, vulnerabilities, misconfigurations, external_exposure, identity_exposure.\n\nBusiness Requirements:\n- \n- This mart contains the Attack Surface Index (ASI) by business unit, summarizing the total vulnerabilities, misconfigurations, external exposures, and identity exposures.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
     "context": {
       "sql_type": "data_mart",
-      "target_object": "attack_surface_summary_by_os_software",
-      "source_tables": [
-        "assets",
-        "vulnerabilities",
-        "misconfigurations",
-        "external_exposure"
-      ],
-      "business_requirements": [
-        "",
-        "This mart contains a summary of the attack surface categorized by operating system, software stack, business unit, and environment."
-      ],
-      "existing_sql": "CREATE TABLE attack_surface_summary_by_os_software (\n    business_unit VARCHAR(100) NOT NULL,\n    environment VARCHAR(50) NOT NULL,\n    os VARCHAR(50) NOT NULL,\n    software_stack VARCHAR(100) NOT NULL,\n    total_assets INT NOT NULL DEFAULT 0,\n    total_vulnerabilities INT NOT NULL DEFAULT 0,\n    total_misconfigurations INT NOT NULL DEFAULT 0,\n    total_exposures INT NOT NULL DEFAULT 0,\n    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    PRIMARY KEY (business_unit, environment, os, softwar"
-    },
-    "expected_output_type": "sql",
-    "steps": [
-      "1. Analyze source tables and requirements",
-      "2. Design table/view structure",
-      "3. Write SQL CREATE statement",
-      "4. Add indexes and constraints",
-      "5. Validate SQL syntax and logic"
-    ],
-    "metadata": {
-      "generated_at": "2025-11-20T11:47:30.507254",
-      "source_table_count": 4
-    },
-    "dependencies": [],
-    "sql_type": "data_mart",
-    "target_object": "attack_surface_summary_by_os_software",
-    "source_tables": [
-      "assets",
-      "vulnerabilities",
-      "misconfigurations",
-      "external_exposure"
-    ],
-    "business_requirements": [
-      "",
-      "This mart contains a summary of the attack surface categorized by operating system, software stack, business unit, and environment."
-    ]
-  },
-  {
-    "question_id": "sql_data_mart_software_asset_management_summary",
-    "question": "Generate SQL to create a data mart 'software_asset_management_summary' from: software_inventory, vulnerabilities, misconfigurations.\n\nBusiness Requirements:\n- \n- This mart provides a summary of software assets, including their usage and associated vulnerabilities and misconfigurations.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
-    "context": {
-      "sql_type": "data_mart",
-      "target_object": "software_asset_management_summary",
-      "source_tables": [
-        "software_inventory",
-        "vulnerabilities",
-        "misconfigurations"
-      ],
-      "business_requirements": [
-        "",
-        "This mart provides a summary of software assets, including their usage and associated vulnerabilities and misconfigurations."
-      ],
-      "existing_sql": "CREATE TABLE software_asset_management_summary (\n    software_name VARCHAR(255) NOT NULL,\n    version VARCHAR(50) NOT NULL,\n    total_devices INT NOT NULL DEFAULT 0,\n    total_vulnerabilities INT NOT NULL DEFAULT 0,\n    total_misconfigurations INT NOT NULL DEFAULT 0,\n    business_unit VARCHAR(100),\n    environment VARCHAR(50),\n    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    PRIMARY KEY (software_name, version),\n    CONSTRAINT chk_total_devices CHECK (total_devices >= 0),\n    CONSTRAINT"
-    },
-    "expected_output_type": "sql",
-    "steps": [
-      "1. Analyze source tables and requirements",
-      "2. Design table/view structure",
-      "3. Write SQL CREATE statement",
-      "4. Add indexes and constraints",
-      "5. Validate SQL syntax and logic"
-    ],
-    "metadata": {
-      "generated_at": "2025-11-20T11:47:30.507281",
-      "source_table_count": 3
-    },
-    "dependencies": [],
-    "sql_type": "data_mart",
-    "target_object": "software_asset_management_summary",
-    "source_tables": [
-      "software_inventory",
-      "vulnerabilities",
-      "misconfigurations"
-    ],
-    "business_requirements": [
-      "",
-      "This mart provides a summary of software assets, including their usage and associated vulnerabilities and misconfigurations."
-    ]
-  },
-  {
-    "question_id": "sql_data_mart_external_exposure_risk_summary",
-    "question": "Generate SQL to create a data mart 'external_exposure_risk_summary' from: external_exposure.\n\nBusiness Requirements:\n- \n- This mart summarizes external exposure risks categorized by risk type, including the total number of exposures and their potential impact.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
-    "context": {
-      "sql_type": "data_mart",
-      "target_object": "external_exposure_risk_summary",
-      "source_tables": [
-        "external_exposure"
-      ],
-      "business_requirements": [
-        "",
-        "This mart summarizes external exposure risks categorized by risk type, including the total number of exposures and their potential impact."
-      ],
-      "existing_sql": "CREATE TABLE external_exposure_risk_summary (\n    risk_category VARCHAR(255) NOT NULL,\n    total_exposures INT NOT NULL,\n    total_potential_impact DECIMAL(18, 2) NOT NULL,\n    os_software_stack VARCHAR(255),\n    business_unit VARCHAR(255),\n    environment VARCHAR(50),\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n    PRIMARY KEY (risk_category, os_software_stack, business_unit, environment),\n    CONSTRAINT chk"
-    },
-    "expected_output_type": "sql",
-    "steps": [
-      "1. Analyze source tables and requirements",
-      "2. Design table/view structure",
-      "3. Write SQL CREATE statement",
-      "4. Add indexes and constraints",
-      "5. Validate SQL syntax and logic"
-    ],
-    "metadata": {
-      "generated_at": "2025-11-20T11:47:30.507295",
-      "source_table_count": 1
-    },
-    "dependencies": [],
-    "sql_type": "data_mart",
-    "target_object": "external_exposure_risk_summary",
-    "source_tables": [
-      "external_exposure"
-    ],
-    "business_requirements": [
-      "",
-      "This mart summarizes external exposure risks categorized by risk type, including the total number of exposures and their potential impact."
-    ]
-  },
-  {
-    "question_id": "sql_data_mart_asset_management_trend_analysis",
-    "question": "Generate SQL to create a data mart 'asset_management_trend_analysis' from: assets, vulnerabilities, misconfigurations, external_exposure, identity_exposure.\n\nBusiness Requirements:\n- \n- This mart contains a 12-month trend analysis of asset management, including risk scores, vulnerabilities, misconfigurations, and exposures related to each asset.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
-    "context": {
-      "sql_type": "data_mart",
-      "target_object": "asset_management_trend_analysis",
+      "target_object": "attack_surface_index_by_business_unit",
       "source_tables": [
         "assets",
         "vulnerabilities",
@@ -2511,9 +2387,9 @@
       ],
       "business_requirements": [
         "",
-        "This mart contains a 12-month trend analysis of asset management, including risk scores, vulnerabilities, misconfigurations, and exposures related to each asset."
+        "This mart contains the Attack Surface Index (ASI) by business unit, summarizing the total vulnerabilities, misconfigurations, external exposures, and identity exposures."
       ],
-      "existing_sql": "CREATE TABLE asset_management_trend_analysis (\n    asset_id INT NOT NULL,\n    asset_type VARCHAR(50) NOT NULL,\n    acquisition_date DATE NOT NULL,\n    depreciation_value DECIMAL(10, 2) NOT NULL,\n    total_risk_score DECIMAL(10, 2) NOT NULL,\n    total_vulnerabilities INT NOT NULL,\n    total_misconfigurations INT NOT NULL,\n    total_external_exposures INT NOT NULL,\n    total_identity_exposures INT NOT NULL,\n    month DATE NOT NULL,\n    risk_breach_likelihood DECIMAL(5, 4) GENERATED ALWAYS AS (tota"
+      "existing_sql": "CREATE TABLE attack_surface_index_by_business_unit AS \nSELECT \n    a.business_unit, \n    COUNT(DISTINCT v.id) AS total_vulnerabilities, \n    COUNT(DISTINCT m.id) AS total_misconfigurations, \n    COUNT(DISTINCT e.id) AS total_external_exposures, \n    COUNT(DISTINCT ie.id) AS total_identity_exposures \nFROM \n    assets a \nLEFT JOIN \n    vulnerabilities v ON a.id = v.asset_id \nLEFT JOIN \n    misconfigurations m ON a.id = m.asset_id \nLEFT JOIN \n    external_exposure e ON a.id = e.asset_id \nLEFT JOIN "
     },
     "expected_output_type": "sql",
     "steps": [
@@ -2524,12 +2400,12 @@
       "5. Validate SQL syntax and logic"
     ],
     "metadata": {
-      "generated_at": "2025-11-20T11:47:30.507307",
+      "generated_at": "2025-11-24T09:18:54.884806",
       "source_table_count": 5
     },
     "dependencies": [],
     "sql_type": "data_mart",
-    "target_object": "asset_management_trend_analysis",
+    "target_object": "attack_surface_index_by_business_unit",
     "source_tables": [
       "assets",
       "vulnerabilities",
@@ -2539,25 +2415,23 @@
     ],
     "business_requirements": [
       "",
-      "This mart contains a 12-month trend analysis of asset management, including risk scores, vulnerabilities, misconfigurations, and exposures related to each asset."
+      "This mart contains the Attack Surface Index (ASI) by business unit, summarizing the total vulnerabilities, misconfigurations, external exposures, and identity exposures."
     ]
   },
   {
-    "question_id": "sql_data_mart_software_asset_management_trend_analysis",
-    "question": "Generate SQL to create a data mart 'software_asset_management_trend_analysis' from: software_inventory, misconfigurations, external_exposure.\n\nBusiness Requirements:\n- \n- This mart contains a 12-month trend analysis of software asset management, including device counts, misconfigurations, and external exposures related to each software application.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "question_id": "sql_data_mart_software_asset_management_summary",
+    "question": "Generate SQL to create a data mart 'software_asset_management_summary' from: software_inventory.\n\nBusiness Requirements:\n- \n- This mart contains a summary of software assets by department, including total software assets, total licenses, and average usage hours.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
     "context": {
       "sql_type": "data_mart",
-      "target_object": "software_asset_management_trend_analysis",
+      "target_object": "software_asset_management_summary",
       "source_tables": [
-        "software_inventory",
-        "misconfigurations",
-        "external_exposure"
+        "software_inventory"
       ],
       "business_requirements": [
         "",
-        "This mart contains a 12-month trend analysis of software asset management, including device counts, misconfigurations, and external exposures related to each software application."
+        "This mart contains a summary of software assets by department, including total software assets, total licenses, and average usage hours."
       ],
-      "existing_sql": "CREATE TABLE software_asset_management_trend_analysis (\n    software_id INT NOT NULL,\n    software_name VARCHAR(255) NOT NULL,\n    license_type VARCHAR(50) NOT NULL,\n    total_devices INT NOT NULL DEFAULT 0,\n    total_misconfigurations INT NOT NULL DEFAULT 0,\n    total_external_exposures INT NOT NULL DEFAULT 0,\n    month DATE NOT NULL,\n    breach_risk_score DECIMAL(5, 2) GENERATED ALWAYS AS (\n        CASE \n            WHEN total_misconfigurations > 10 THEN 1.0\n            WHEN total_external_exp"
+      "existing_sql": "CREATE TABLE software_asset_management_summary AS \nSELECT \n    s.department, \n    COUNT(DISTINCT s.id) AS total_software_assets, \n    COALESCE(SUM(s.license_count), 0) AS total_licenses, \n    COALESCE(AVG(s.usage_hours), 0) AS avg_usage_hours \nFROM \n    software_inventory s \nGROUP BY \n    s.department \nORDER BY \n    total_software_assets DESC \nLIMIT 5; \n\n-- Index suggestion: CREATE INDEX idx_department ON software_inventory(department);"
     },
     "expected_output_type": "sql",
     "steps": [
@@ -2568,39 +2442,114 @@
       "5. Validate SQL syntax and logic"
     ],
     "metadata": {
-      "generated_at": "2025-11-20T11:47:30.507317",
+      "generated_at": "2025-11-24T09:18:54.884827",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "software_asset_management_summary",
+    "source_tables": [
+      "software_inventory"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains a summary of software assets by department, including total software assets, total licenses, and average usage hours."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_vulnerability_risk_assessment",
+    "question": "Generate SQL to create a data mart 'vulnerability_risk_assessment' from: vulnerabilities.\n\nBusiness Requirements:\n- \n- This mart contains a risk assessment of vulnerabilities based on their severity, including total vulnerabilities and average time to remediate.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "vulnerability_risk_assessment",
+      "source_tables": [
+        "vulnerabilities"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains a risk assessment of vulnerabilities based on their severity, including total vulnerabilities and average time to remediate."
+      ],
+      "existing_sql": "CREATE TABLE vulnerability_risk_assessment AS \nSELECT \n    v.severity, \n    COUNT(v.id) AS total_vulnerabilities, \n    AVG(COALESCE(v.time_to_remediate, 0)) AS avg_time_to_remediate -- Handle NULL values in time_to_remediate\nFROM \n    vulnerabilities v \nGROUP BY \n    v.severity \nORDER BY \n    total_vulnerabilities DESC \nLIMIT 5; \n\n-- Index suggestion: CREATE INDEX idx_vulnerability_severity ON vulnerabilities(severity);"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-24T09:18:54.884840",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "vulnerability_risk_assessment",
+    "source_tables": [
+      "vulnerabilities"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains a risk assessment of vulnerabilities based on their severity, including total vulnerabilities and average time to remediate."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_attack_surface_summary_by_os_software",
+    "question": "Generate SQL to create a data mart 'attack_surface_summary_by_os_software' from: assets, vulnerabilities, misconfigurations.\n\nBusiness Requirements:\n- \n- This mart contains a summary of the attack surface categorized by operating system, software stack, business unit, and environment.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "attack_surface_summary_by_os_software",
+      "source_tables": [
+        "assets",
+        "vulnerabilities",
+        "misconfigurations"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains a summary of the attack surface categorized by operating system, software stack, business unit, and environment."
+      ],
+      "existing_sql": "CREATE TABLE attack_surface_summary_by_os_software AS \nSELECT \n    a.business_unit, \n    a.environment, \n    a.os, \n    a.software_stack, \n    COUNT(DISTINCT a.asset_id) AS total_assets, \n    COUNT(DISTINCT COALESCE(v.vulnerability_id, NULL)) AS total_vulnerabilities, \n    COUNT(DISTINCT COALESCE(m.misconfiguration_id, NULL)) AS total_misconfigurations \nFROM \n    assets a \nLEFT JOIN \n    vulnerabilities v ON a.asset_id = v.asset_id \nLEFT JOIN \n    misconfigurations m ON a.asset_id = m.asset_id \n"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-24T09:18:54.884971",
       "source_table_count": 3
     },
     "dependencies": [],
     "sql_type": "data_mart",
-    "target_object": "software_asset_management_trend_analysis",
+    "target_object": "attack_surface_summary_by_os_software",
     "source_tables": [
-      "software_inventory",
-      "misconfigurations",
-      "external_exposure"
+      "assets",
+      "vulnerabilities",
+      "misconfigurations"
     ],
     "business_requirements": [
       "",
-      "This mart contains a 12-month trend analysis of software asset management, including device counts, misconfigurations, and external exposures related to each software application."
+      "This mart contains a summary of the attack surface categorized by operating system, software stack, business unit, and environment."
     ]
   },
   {
-    "question_id": "sql_data_mart_asset_exposure_summary",
-    "question": "Generate SQL to create a data mart 'asset_exposure_summary' from: assets, vulnerabilities, misconfigurations, external_exposure.\n\nBusiness Requirements:\n- \n- This mart contains aggregated exposure scores for each asset, including vulnerabilities, misconfigurations, and external risks.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "question_id": "sql_data_mart_external_exposure_summary",
+    "question": "Generate SQL to create a data mart 'external_exposure_summary' from: external_exposure.\n\nBusiness Requirements:\n- \n- This mart summarizes external exposures categorized by business unit, environment, and type of exposure.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
     "context": {
       "sql_type": "data_mart",
-      "target_object": "asset_exposure_summary",
+      "target_object": "external_exposure_summary",
       "source_tables": [
-        "assets",
-        "vulnerabilities",
-        "misconfigurations",
         "external_exposure"
       ],
       "business_requirements": [
         "",
-        "This mart contains aggregated exposure scores for each asset, including vulnerabilities, misconfigurations, and external risks."
+        "This mart summarizes external exposures categorized by business unit, environment, and type of exposure."
       ],
-      "existing_sql": "CREATE TABLE asset_exposure_summary (\n    asset_id INT NOT NULL,\n    asset_name VARCHAR(255) NOT NULL,\n    total_vulnerability_score DECIMAL(10, 2) DEFAULT 0.00,\n    vulnerability_count INT DEFAULT 0,\n    total_misconfigurations INT DEFAULT 0,\n    total_external_exposure DECIMAL(10, 2) DEFAULT 0.00,\n    exposure_score DECIMAL(10, 2) AS (total_vulnerability_score + total_misconfigurations + total_external_exposure) STORED,\n    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    CONSTRAINT pk_as"
+      "existing_sql": "CREATE TABLE external_exposure_summary AS \nSELECT \n    e.business_unit, \n    e.environment, \n    e.exposure_type, \n    COUNT(DISTINCT e.exposure_id) AS total_exposures \nFROM \n    external_exposure e \nGROUP BY \n    e.business_unit, \n    e.environment, \n    e.exposure_type; \n\n-- Indexes can be added on business_unit, environment, and exposure_type for performance optimization\n-- CREATE INDEX idx_business_unit ON external_exposure_summary (business_unit);\n-- CREATE INDEX idx_environment ON external"
     },
     "expected_output_type": "sql",
     "steps": [
@@ -2611,26 +2560,23 @@
       "5. Validate SQL syntax and logic"
     ],
     "metadata": {
-      "generated_at": "2025-11-20T11:47:30.507327",
-      "source_table_count": 4
+      "generated_at": "2025-11-24T09:18:54.884985",
+      "source_table_count": 1
     },
     "dependencies": [],
     "sql_type": "data_mart",
-    "target_object": "asset_exposure_summary",
+    "target_object": "external_exposure_summary",
     "source_tables": [
-      "assets",
-      "vulnerabilities",
-      "misconfigurations",
       "external_exposure"
     ],
     "business_requirements": [
       "",
-      "This mart contains aggregated exposure scores for each asset, including vulnerabilities, misconfigurations, and external risks."
+      "This mart summarizes external exposures categorized by business unit, environment, and type of exposure."
     ]
   },
   {
     "question_id": "sql_data_mart_identity_exposure_summary",
-    "question": "Generate SQL to create a data mart 'identity_exposure_summary' from: identity_exposure.\n\nBusiness Requirements:\n- \n- This mart contains aggregated data on identity exposure incidents, including total incidents and average severity levels.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "question": "Generate SQL to create a data mart 'identity_exposure_summary' from: identity_exposure.\n\nBusiness Requirements:\n- \n- This mart summarizes identity exposures by business unit and environment.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
     "context": {
       "sql_type": "data_mart",
       "target_object": "identity_exposure_summary",
@@ -2639,9 +2585,9 @@
       ],
       "business_requirements": [
         "",
-        "This mart contains aggregated data on identity exposure incidents, including total incidents and average severity levels."
+        "This mart summarizes identity exposures by business unit and environment."
       ],
-      "existing_sql": "CREATE TABLE identity_exposure_summary (\n    identity_id UUID NOT NULL,\n    total_exposure_incidents INT NOT NULL CHECK (total_exposure_incidents >= 0),\n    average_severity DECIMAL(3, 2) CHECK (average_severity >= 0 AND average_severity <= 10),\n    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    PRIMARY KEY (identity_id)\n);\n\nCREATE INDEX idx_identity_exposure ON identity_exposure_summary (identity_id);\nCREATE INDEX idx_last_updated ON identity_exposure_summary (last_updated);\n\nINSERT INTO"
+      "existing_sql": "CREATE TABLE identity_exposure_summary AS \nSELECT \n    i.business_unit, \n    i.environment, \n    COUNT(DISTINCT i.identity_exposure_id) AS total_identity_exposures\nFROM \n    identity_exposure i\nGROUP BY \n    i.business_unit, \n    i.environment\nHAVING \n    COUNT(DISTINCT i.identity_exposure_id) > 0;  -- Ensure only groups with exposures are included\n\n-- Index suggestion for performance improvement\n-- CREATE INDEX idx_identity_exposure_business_unit_environment ON identity_exposure (business_unit,"
     },
     "expected_output_type": "sql",
     "steps": [
@@ -2652,7 +2598,7 @@
       "5. Validate SQL syntax and logic"
     ],
     "metadata": {
-      "generated_at": "2025-11-20T11:47:30.507336",
+      "generated_at": "2025-11-24T09:18:54.884996",
       "source_table_count": 1
     },
     "dependencies": [],
@@ -2663,23 +2609,26 @@
     ],
     "business_requirements": [
       "",
-      "This mart contains aggregated data on identity exposure incidents, including total incidents and average severity levels."
+      "This mart summarizes identity exposures by business unit and environment."
     ]
   },
   {
-    "question_id": "sql_data_mart_software_asset_usage_summary",
-    "question": "Generate SQL to create a data mart 'software_asset_usage_summary' from: software_inventory.\n\nBusiness Requirements:\n- \n- This mart contains aggregated usage data for software assets, including the number of devices using each software and total usage hours.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "question_id": "sql_data_mart_asset_performance_trend_analysis",
+    "question": "Generate SQL to create a data mart 'asset_performance_trend_analysis' from: assets, vulnerabilities, misconfigurations, external_exposure.\n\nBusiness Requirements:\n- \n- This mart contains a 12-month trend analysis of asset performance, including vulnerabilities, misconfigurations, and external exposures.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
     "context": {
       "sql_type": "data_mart",
-      "target_object": "software_asset_usage_summary",
+      "target_object": "asset_performance_trend_analysis",
       "source_tables": [
-        "software_inventory"
+        "assets",
+        "vulnerabilities",
+        "misconfigurations",
+        "external_exposure"
       ],
       "business_requirements": [
         "",
-        "This mart contains aggregated usage data for software assets, including the number of devices using each software and total usage hours."
+        "This mart contains a 12-month trend analysis of asset performance, including vulnerabilities, misconfigurations, and external exposures."
       ],
-      "existing_sql": "CREATE TABLE software_asset_usage_summary (\n    software_id INT NOT NULL,\n    software_name VARCHAR(255) NOT NULL,\n    total_devices_used INT NOT NULL,\n    total_usage_hours DECIMAL(10, 2) NOT NULL,\n    exposure_score DECIMAL(10, 2) GENERATED ALWAYS AS (CASE WHEN total_usage_hours > 0 THEN total_devices_used / total_usage_hours ELSE 0 END) STORED,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n    PRIMARY KEY (s"
+      "existing_sql": "CREATE TABLE asset_performance_trend_analysis AS \nSELECT\n    a.asset_id,\n    a.asset_name,\n    a.asset_type,\n    COUNT(DISTINCT v.vulnerability_id) AS total_vulnerabilities,\n    COUNT(DISTINCT m.misconfiguration_id) AS total_misconfigurations,\n    COUNT(DISTINCT e.exposure_id) AS total_external_exposures,\n    AVG(CASE WHEN v.severity = 'High' THEN 1.0 ELSE 0.0 END) AS high_risk_vulnerability_ratio,\n    AVG(CASE WHEN m.severity = 'Critical' THEN 1.0 ELSE 0.0 END) AS critical_misconfiguration_rati"
     },
     "expected_output_type": "sql",
     "steps": [
@@ -2690,18 +2639,215 @@
       "5. Validate SQL syntax and logic"
     ],
     "metadata": {
-      "generated_at": "2025-11-20T11:47:30.507352",
+      "generated_at": "2025-11-24T09:18:54.885006",
+      "source_table_count": 4
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "asset_performance_trend_analysis",
+    "source_tables": [
+      "assets",
+      "vulnerabilities",
+      "misconfigurations",
+      "external_exposure"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains a 12-month trend analysis of asset performance, including vulnerabilities, misconfigurations, and external exposures."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_identity_exposure_risk_analysis",
+    "question": "Generate SQL to create a data mart 'identity_exposure_risk_analysis' from: identity_exposure.\n\nBusiness Requirements:\n- \n- This mart contains a 12-month trend analysis of identity exposures, focusing on the number of exposures and their severity.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "identity_exposure_risk_analysis",
+      "source_tables": [
+        "identity_exposure"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains a 12-month trend analysis of identity exposures, focusing on the number of exposures and their severity."
+      ],
+      "existing_sql": "CREATE TABLE identity_exposure_risk_analysis AS \nSELECT\n    ie.identity_id,\n    COUNT(ie.exposure_id) AS total_exposures,\n    AVG(CASE WHEN ie.severity = 'High' THEN 1.0 ELSE 0.0 END) AS high_risk_exposure_ratio,\n    DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month' * n.n AS month\nFROM\n    identity_exposure ie\nCROSS JOIN\n    generate_series(0, 11) n\nWHERE\n    DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month' * n.n >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '12 months'\nGROUP BY\n   "
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-24T09:18:54.885020",
       "source_table_count": 1
     },
     "dependencies": [],
     "sql_type": "data_mart",
-    "target_object": "software_asset_usage_summary",
+    "target_object": "identity_exposure_risk_analysis",
+    "source_tables": [
+      "identity_exposure"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains a 12-month trend analysis of identity exposures, focusing on the number of exposures and their severity."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_software_inventory_compliance_analysis",
+    "question": "Generate SQL to create a data mart 'software_inventory_compliance_analysis' from: software_inventory.\n\nBusiness Requirements:\n- \n- This mart contains a 12-month trend analysis of software inventory compliance, focusing on the number of licenses and compliance status.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "software_inventory_compliance_analysis",
+      "source_tables": [
+        "software_inventory"
+      ],
+      "business_requirements": [
+        "",
+        "This mart contains a 12-month trend analysis of software inventory compliance, focusing on the number of licenses and compliance status."
+      ],
+      "existing_sql": "CREATE TABLE software_inventory_compliance_analysis AS \nSELECT\n    si.software_id,\n    si.software_name,\n    COUNT(si.license_id) AS total_licenses,\n    AVG(CASE WHEN si.compliance_status = 'Non-Compliant' THEN 1.0 ELSE 0.0 END) AS non_compliance_ratio,\n    DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month' * n.n AS month\nFROM\n    software_inventory si\nCROSS JOIN\n    generate_series(0, 11) n\nWHERE\n    DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month' * n.n >= DATE_TRUNC('month', CURRENT"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-24T09:18:54.885030",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "software_inventory_compliance_analysis",
     "source_tables": [
       "software_inventory"
     ],
     "business_requirements": [
       "",
-      "This mart contains aggregated usage data for software assets, including the number of devices using each software and total usage hours."
+      "This mart contains a 12-month trend analysis of software inventory compliance, focusing on the number of licenses and compliance status."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_asset_exposure_summary",
+    "question": "Generate SQL to create a data mart 'asset_exposure_summary' from: vulnerabilities, misconfigurations, external_exposure.\n\nBusiness Requirements:\n- \n- This mart aggregates exposure scores related to assets by counting vulnerabilities, misconfigurations, and external exposures.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "asset_exposure_summary",
+      "source_tables": [
+        "vulnerabilities",
+        "misconfigurations",
+        "external_exposure"
+      ],
+      "business_requirements": [
+        "",
+        "This mart aggregates exposure scores related to assets by counting vulnerabilities, misconfigurations, and external exposures."
+      ],
+      "existing_sql": "CREATE TABLE asset_exposure_summary AS \nSELECT \n    a.asset_id, \n    COUNT(DISTINCT v.vulnerability_id) AS total_vulnerabilities, \n    COUNT(DISTINCT m.misconfiguration_id) AS total_misconfigurations, \n    COUNT(DISTINCT e.exposure_id) AS total_external_exposures \nFROM \n    assets a \nLEFT JOIN \n    vulnerabilities v ON v.asset_id = a.asset_id \nLEFT JOIN \n    misconfigurations m ON a.asset_id = m.asset_id \nLEFT JOIN \n    external_exposure e ON a.asset_id = e.asset_id \nGROUP BY \n    a.asset_id; \n\n"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-24T09:18:54.885040",
+      "source_table_count": 3
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "asset_exposure_summary",
+    "source_tables": [
+      "vulnerabilities",
+      "misconfigurations",
+      "external_exposure"
+    ],
+    "business_requirements": [
+      "",
+      "This mart aggregates exposure scores related to assets by counting vulnerabilities, misconfigurations, and external exposures."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_identity_exposure_summary",
+    "question": "Generate SQL to create a data mart 'identity_exposure_summary' from: identity_exposure.\n\nBusiness Requirements:\n- \n- This mart summarizes the exposure of sensitive identity information by counting instances of exposure per identity.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "identity_exposure_summary",
+      "source_tables": [
+        "identity_exposure"
+      ],
+      "business_requirements": [
+        "",
+        "This mart summarizes the exposure of sensitive identity information by counting instances of exposure per identity."
+      ],
+      "existing_sql": "CREATE TABLE identity_exposure_summary AS \nSELECT \n    ie.identity_id, \n    COUNT(ie.exposure_id) AS total_exposures,\n    CASE \n        WHEN COUNT(ie.exposure_id) > 0 THEN COUNT(ie.exposure_id) \n        ELSE 0 \n    END AS exposure_score -- Exposure score for dashboard visualizations\nFROM \n    identity_exposure ie\nGROUP BY \n    ie.identity_id; \n\n-- Index on identity_id for performance optimization\n-- CREATE INDEX idx_identity_exposure_identity_id ON identity_exposure(identity_id);"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-24T09:18:54.885049",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "identity_exposure_summary",
+    "source_tables": [
+      "identity_exposure"
+    ],
+    "business_requirements": [
+      "",
+      "This mart summarizes the exposure of sensitive identity information by counting instances of exposure per identity."
+    ]
+  },
+  {
+    "question_id": "sql_data_mart_software_inventory_summary",
+    "question": "Generate SQL to create a data mart 'software_inventory_summary' from: software_inventory.\n\nBusiness Requirements:\n- \n- This mart aggregates software inventory data by counting licenses and summing usage hours for each software.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+    "context": {
+      "sql_type": "data_mart",
+      "target_object": "software_inventory_summary",
+      "source_tables": [
+        "software_inventory"
+      ],
+      "business_requirements": [
+        "",
+        "This mart aggregates software inventory data by counting licenses and summing usage hours for each software."
+      ],
+      "existing_sql": "CREATE TABLE software_inventory_summary AS \nSELECT \n    si.software_id, \n    COUNT(si.license_id) AS total_licenses, \n    SUM(COALESCE(si.usage_hours, 0)) AS total_usage_hours, \n    CASE \n        WHEN COUNT(si.license_id) > 0 THEN SUM(COALESCE(si.usage_hours, 0)) / NULLIF(COUNT(si.license_id), 0) \n        ELSE 0 \n    END AS exposure_score -- Calculating exposure score as total usage hours per license\nFROM \n    software_inventory si \nGROUP BY \n    si.software_id; \n\n-- Index on software_id for per"
+    },
+    "expected_output_type": "sql",
+    "steps": [
+      "1. Analyze source tables and requirements",
+      "2. Design table/view structure",
+      "3. Write SQL CREATE statement",
+      "4. Add indexes and constraints",
+      "5. Validate SQL syntax and logic"
+    ],
+    "metadata": {
+      "generated_at": "2025-11-24T09:18:54.885058",
+      "source_table_count": 1
+    },
+    "dependencies": [],
+    "sql_type": "data_mart",
+    "target_object": "software_inventory_summary",
+    "source_tables": [
+      "software_inventory"
+    ],
+    "business_requirements": [
+      "",
+      "This mart aggregates software inventory data by counting licenses and summing usage hours for each software."
     ]
   },
   {
@@ -2728,7 +2874,7 @@
       "5. Validate SQL syntax and logic"
     ],
     "metadata": {
-      "generated_at": "2025-11-20T11:47:30.507372",
+      "generated_at": "2025-11-24T09:18:54.885074",
       "source_table_count": 1
     },
     "dependencies": [],
@@ -2767,7 +2913,7 @@
       "5. Validate SQL syntax and logic"
     ],
     "metadata": {
-      "generated_at": "2025-11-20T11:47:30.507387",
+      "generated_at": "2025-11-24T09:18:54.885085",
       "source_table_count": 1
     },
     "dependencies": [],
@@ -2806,7 +2952,7 @@
       "5. Validate SQL syntax and logic"
     ],
     "metadata": {
-      "generated_at": "2025-11-20T11:47:30.507400",
+      "generated_at": "2025-11-24T09:18:54.885095",
       "source_table_count": 1
     },
     "dependencies": [],
@@ -2845,7 +2991,7 @@
       "5. Validate SQL syntax and logic"
     ],
     "metadata": {
-      "generated_at": "2025-11-20T11:47:30.507409",
+      "generated_at": "2025-11-24T09:18:54.885104",
       "source_table_count": 1
     },
     "dependencies": [],
@@ -2884,7 +3030,7 @@
       "5. Validate SQL syntax and logic"
     ],
     "metadata": {
-      "generated_at": "2025-11-20T11:47:30.507418",
+      "generated_at": "2025-11-24T09:18:54.885113",
       "source_table_count": 1
     },
     "dependencies": [],
@@ -2923,7 +3069,7 @@
       "5. Validate SQL syntax and logic"
     ],
     "metadata": {
-      "generated_at": "2025-11-20T11:47:30.507426",
+      "generated_at": "2025-11-24T09:18:54.885121",
       "source_table_count": 1
     },
     "dependencies": [],
@@ -2962,7 +3108,7 @@
       "5. Validate SQL syntax and logic"
     ],
     "metadata": {
-      "generated_at": "2025-11-20T11:47:30.507436",
+      "generated_at": "2025-11-24T09:18:54.885131",
       "source_table_count": 1
     },
     "dependencies": [],
@@ -3001,7 +3147,7 @@
       "5. Validate SQL syntax and logic"
     ],
     "metadata": {
-      "generated_at": "2025-11-20T11:47:30.507447",
+      "generated_at": "2025-11-24T09:18:54.885140",
       "source_table_count": 1
     },
     "dependencies": [],
@@ -3040,7 +3186,7 @@
       "5. Validate SQL syntax and logic"
     ],
     "metadata": {
-      "generated_at": "2025-11-20T11:47:30.507459",
+      "generated_at": "2025-11-24T09:18:54.885149",
       "source_table_count": 1
     },
     "dependencies": [],
@@ -3079,7 +3225,7 @@
       "5. Validate SQL syntax and logic"
     ],
     "metadata": {
-      "generated_at": "2025-11-20T11:47:30.507470",
+      "generated_at": "2025-11-24T09:18:54.885157",
       "source_table_count": 1
     },
     "dependencies": [],
@@ -3118,7 +3264,7 @@
       "5. Validate SQL syntax and logic"
     ],
     "metadata": {
-      "generated_at": "2025-11-20T11:47:30.507478",
+      "generated_at": "2025-11-24T09:18:54.885166",
       "source_table_count": 1
     },
     "dependencies": [],
@@ -3157,7 +3303,7 @@
       "5. Validate SQL syntax and logic"
     ],
     "metadata": {
-      "generated_at": "2025-11-20T11:47:30.507487",
+      "generated_at": "2025-11-24T09:18:54.885174",
       "source_table_count": 1
     },
     "dependencies": [],

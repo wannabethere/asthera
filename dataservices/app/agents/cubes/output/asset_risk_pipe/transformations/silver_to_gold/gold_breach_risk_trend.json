@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_breach_risk_trend",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_breach_risk_trend",
+  "target_model": "gold_gold_breach_risk_trend",
+  "steps": [
+    {
+      "step_name": "Metric: breach_risk_trend",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_breach_risk_trend (month, average_breach_risk_score)\nSELECT \n    DATE_TRUNC('month', br.timestamp) AS month,  -- Truncate timestamp to month\n    AVG(COALESCE(br.breach_risk_score, 0)) AS average_breach_risk_score  -- Calculate average, handling NULLs\nFROM \n    breach_risk_table br\nWHERE \n    br.timestamp >= CURRENT_DATE - INTERVAL '12 months'  -- Filter for the last 12 months\nGROUP BY \n    month  -- Group by the truncated month\nORDER BY \n    month;  -- Order by month for consistency",
+      "description": "Measures the trend of breach risk scores over the past 12 months.",
+      "input_tables": [
+        "breach_risk_table"
+      ],
+      "output_table": "gold_breach_risk_trend",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_breach_risk_trend from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

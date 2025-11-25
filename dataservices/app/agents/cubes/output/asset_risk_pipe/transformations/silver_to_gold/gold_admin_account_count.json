@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_admin_account_count",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_admin_account_count",
+  "target_model": "gold_gold_admin_account_count",
+  "steps": [
+    {
+      "step_name": "Metric: admin_account_count",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_admin_account_count (asset_id, admin_account_count)\nSELECT \n    asset_id,\n    COUNT(DISTINCT id) AS admin_account_count  -- Count of distinct active admin accounts\nFROM \n    admin_accounts\nWHERE \n    status = 'active'  -- Only consider active admin accounts\nGROUP BY \n    asset_id;  -- Group by asset_id to get counts per asset",
+      "description": "Count of admin accounts associated with each asset.",
+      "input_tables": [
+        "admin_accounts"
+      ],
+      "output_table": "gold_admin_account_count",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_admin_account_count from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

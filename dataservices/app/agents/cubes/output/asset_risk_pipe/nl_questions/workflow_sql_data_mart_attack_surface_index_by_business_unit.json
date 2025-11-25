@@ -1,0 +1,46 @@
+{
+  "question_id": "sql_data_mart_attack_surface_index_by_business_unit",
+  "question": "Generate SQL to create a data mart 'attack_surface_index_by_business_unit' from: assets, vulnerabilities, misconfigurations, external_exposure, identity_exposure.\n\nBusiness Requirements:\n- \n- This mart contains the Attack Surface Index (ASI) by business unit, summarizing the total vulnerabilities, misconfigurations, external exposures, and identity exposures.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+  "context": {
+    "sql_type": "data_mart",
+    "target_object": "attack_surface_index_by_business_unit",
+    "source_tables": [
+      "assets",
+      "vulnerabilities",
+      "misconfigurations",
+      "external_exposure",
+      "identity_exposure"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains the Attack Surface Index (ASI) by business unit, summarizing the total vulnerabilities, misconfigurations, external exposures, and identity exposures."
+    ],
+    "existing_sql": "CREATE TABLE attack_surface_index_by_business_unit AS \nSELECT \n    a.business_unit, \n    COUNT(DISTINCT v.id) AS total_vulnerabilities, \n    COUNT(DISTINCT m.id) AS total_misconfigurations, \n    COUNT(DISTINCT e.id) AS total_external_exposures, \n    COUNT(DISTINCT ie.id) AS total_identity_exposures \nFROM \n    assets a \nLEFT JOIN \n    vulnerabilities v ON a.id = v.asset_id \nLEFT JOIN \n    misconfigurations m ON a.id = m.asset_id \nLEFT JOIN \n    external_exposure e ON a.id = e.asset_id \nLEFT JOIN "
+  },
+  "expected_output_type": "sql",
+  "steps": [
+    "1. Analyze source tables and requirements",
+    "2. Design table/view structure",
+    "3. Write SQL CREATE statement",
+    "4. Add indexes and constraints",
+    "5. Validate SQL syntax and logic"
+  ],
+  "metadata": {
+    "generated_at": "2025-11-24T09:18:54.884806",
+    "source_table_count": 5
+  },
+  "dependencies": [],
+  "sql_type": "data_mart",
+  "target_object": "attack_surface_index_by_business_unit",
+  "source_tables": [
+    "assets",
+    "vulnerabilities",
+    "misconfigurations",
+    "external_exposure",
+    "identity_exposure"
+  ],
+  "business_requirements": [
+    "",
+    "This mart contains the Attack Surface Index (ASI) by business unit, summarizing the total vulnerabilities, misconfigurations, external exposures, and identity exposures."
+  ]
+}

@@ -1,6 +1,6 @@
 -- Transformation: raw_to_silver
 -- Table: misconfigurations
--- Generated: 20251120_111506
+-- Generated: 20251124_084146
 
 -- Step: Clean misconfigurations
 -- Type: TransformationType.CLEANING

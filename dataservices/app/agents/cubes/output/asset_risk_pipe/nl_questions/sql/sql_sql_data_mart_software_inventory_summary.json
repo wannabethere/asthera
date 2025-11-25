@@ -1,0 +1,38 @@
+{
+  "question_id": "sql_data_mart_software_inventory_summary",
+  "question": "Generate SQL to create a data mart 'software_inventory_summary' from: software_inventory.\n\nBusiness Requirements:\n- \n- This mart aggregates software inventory data by counting licenses and summing usage hours for each software.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+  "context": {
+    "sql_type": "data_mart",
+    "target_object": "software_inventory_summary",
+    "source_tables": [
+      "software_inventory"
+    ],
+    "business_requirements": [
+      "",
+      "This mart aggregates software inventory data by counting licenses and summing usage hours for each software."
+    ],
+    "existing_sql": "CREATE TABLE software_inventory_summary AS \nSELECT \n    si.software_id, \n    COUNT(si.license_id) AS total_licenses, \n    SUM(COALESCE(si.usage_hours, 0)) AS total_usage_hours, \n    CASE \n        WHEN COUNT(si.license_id) > 0 THEN SUM(COALESCE(si.usage_hours, 0)) / NULLIF(COUNT(si.license_id), 0) \n        ELSE 0 \n    END AS exposure_score -- Calculating exposure score as total usage hours per license\nFROM \n    software_inventory si \nGROUP BY \n    si.software_id; \n\n-- Index on software_id for per"
+  },
+  "expected_output_type": "sql",
+  "steps": [
+    "1. Analyze source tables and requirements",
+    "2. Design table/view structure",
+    "3. Write SQL CREATE statement",
+    "4. Add indexes and constraints",
+    "5. Validate SQL syntax and logic"
+  ],
+  "metadata": {
+    "generated_at": "2025-11-24T09:18:54.885058",
+    "source_table_count": 1
+  },
+  "dependencies": [],
+  "sql_type": "data_mart",
+  "target_object": "software_inventory_summary",
+  "source_tables": [
+    "software_inventory"
+  ],
+  "business_requirements": [
+    "",
+    "This mart aggregates software inventory data by counting licenses and summing usage hours for each software."
+  ]
+}

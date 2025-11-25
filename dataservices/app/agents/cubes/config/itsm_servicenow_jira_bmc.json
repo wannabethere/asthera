@@ -1,0 +1,351 @@
+{
+    "workflow_name": "itsm_servicenow_jira_bmc_analytics",
+    "description": "Unified ITSM operational analytics across ServiceNow, Jira Service Management, and BMC Remedy (HPD Help Desk), normalized onto common business services and CI dimensions.",
+    "raw_schemas": [
+      {
+        "table_name": "sn_incident",
+        "table_ddl": "\n-- ServiceNow Incident table (incident)\nCREATE TABLE sn_incident (\n  sys_id STRING NOT NULL,\n  number STRING,\n  short_description STRING,\n  description STRING,\n  category STRING,\n  subcategory STRING,\n  priority STRING,\n  impact STRING,\n  urgency STRING,\n  state STRING,\n  opened_at TIMESTAMP,\n  resolved_at TIMESTAMP,\n  closed_at TIMESTAMP,\n  caller_id STRING,\n  assignment_group STRING,\n  assigned_to STRING,\n  u_business_service STRING,\n  cmdb_ci STRING,\n  company STRING,\n  sys_created_on TIMESTAMP,\n  sys_updated_on TIMESTAMP,\n  sys_created_by STRING,\n  sys_updated_by STRING\n);",
+        "relationships": [
+          {
+            "from_table": "sn_incident",
+            "from_column": "cmdb_ci",
+            "to_table": "sn_cmdb_ci",
+            "to_column": "sys_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          },
+          {
+            "from_table": "sn_incident",
+            "from_column": "u_business_service",
+            "to_table": "business_services",
+            "to_column": "source_service_key",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          }
+        ],
+        "layer": "raw"
+      },
+      {
+        "table_name": "sn_task_sla",
+        "table_ddl": "\n-- ServiceNow task SLA tracking (task_sla)\nCREATE TABLE sn_task_sla (\n  sys_id STRING NOT NULL,\n  task STRING,\n  sla STRING,\n  start_time TIMESTAMP,\n  end_time TIMESTAMP,\n  business_percentage NUMERIC,\n  elapsed_time_seconds BIGINT,\n  pause_duration_seconds BIGINT,\n  stage STRING,\n  has_breached BOOLEAN,\n  sys_created_on TIMESTAMP,\n  sys_updated_on TIMESTAMP\n);",
+        "relationships": [
+          {
+            "from_table": "sn_task_sla",
+            "from_column": "task",
+            "to_table": "sn_incident",
+            "to_column": "sys_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          },
+          {
+            "from_table": "sn_task_sla",
+            "from_column": "sla",
+            "to_table": "sn_contract_sla",
+            "to_column": "sys_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          }
+        ],
+        "layer": "raw"
+      },
+      {
+        "table_name": "sn_contract_sla",
+        "table_ddl": "\n-- ServiceNow SLA definition (contract_sla)\nCREATE TABLE sn_contract_sla (\n  sys_id STRING NOT NULL,\n  name STRING,\n  duration BIGINT,\n  type STRING,\n  schedule STRING,\n  active BOOLEAN,\n  stage STRING,\n  sys_created_on TIMESTAMP,\n  sys_updated_on TIMESTAMP\n);",
+        "relationships": [],
+        "layer": "raw"
+      },
+      {
+        "table_name": "sn_cmdb_ci",
+        "table_ddl": "\n-- ServiceNow CMDB CI (cmdb_ci)\nCREATE TABLE sn_cmdb_ci (\n  sys_id STRING NOT NULL,\n  name STRING,\n  sys_class_name STRING,\n  install_status STRING,\n  u_business_service STRING,\n  environment STRING,\n  owned_by STRING,\n  company STRING,\n  location STRING,\n  sys_created_on TIMESTAMP,\n  sys_updated_on TIMESTAMP\n);",
+        "relationships": [
+          {
+            "from_table": "sn_cmdb_ci",
+            "from_column": "u_business_service",
+            "to_table": "business_services",
+            "to_column": "source_service_key",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          }
+        ],
+        "layer": "raw"
+      },
+  
+      {
+        "table_name": "jira_itsm_issue",
+        "table_ddl": "\n-- Jira Service Management issues used as incidents/requests\nCREATE TABLE jira_itsm_issue (\n  id STRING NOT NULL,\n  issue_key STRING,\n  project_key STRING,\n  issuetype_name STRING,\n  summary STRING,\n  description STRING,\n  priority_name STRING,\n  status_name STRING,\n  created TIMESTAMP,\n  updated TIMESTAMP,\n  resolutiondate TIMESTAMP,\n  reporter STRING,\n  assignee STRING,\n  customfield_service STRING,\n  customfield_ci STRING,\n  customfield_request_type STRING,\n  customfield_impact STRING,\n  customfield_urgency STRING\n);",
+        "relationships": [
+          {
+            "from_table": "jira_itsm_issue",
+            "from_column": "customfield_ci",
+            "to_table": "jira_cmdb_ci",
+            "to_column": "object_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          },
+          {
+            "from_table": "jira_itsm_issue",
+            "from_column": "customfield_service",
+            "to_table": "business_services",
+            "to_column": "source_service_key",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          }
+        ],
+        "layer": "raw"
+      },
+      {
+        "table_name": "jira_issue_sla",
+        "table_ddl": "\n-- Jira SLAs per issue (export from JSM SLA report)\nCREATE TABLE jira_issue_sla (\n  issue_id STRING NOT NULL,\n  issue_key STRING,\n  metric_name STRING,\n  goal_minutes INTEGER,\n  elapsed_minutes INTEGER,\n  breached BOOLEAN,\n  start_time TIMESTAMP,\n  stop_time TIMESTAMP\n);",
+        "relationships": [
+          {
+            "from_table": "jira_issue_sla",
+            "from_column": "issue_id",
+            "to_table": "jira_itsm_issue",
+            "to_column": "id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          }
+        ],
+        "layer": "raw"
+      },
+      {
+        "table_name": "jira_cmdb_ci",
+        "table_ddl": "\n-- Jira Assets / CMDB objects\nCREATE TABLE jira_cmdb_ci (\n  object_id STRING NOT NULL,\n  object_key STRING,\n  object_name STRING,\n  object_type STRING,\n  environment STRING,\n  business_service_key STRING,\n  is_critical BOOLEAN,\n  owner_team STRING,\n  updated TIMESTAMP\n);",
+        "relationships": [
+          {
+            "from_table": "jira_cmdb_ci",
+            "from_column": "business_service_key",
+            "to_table": "business_services",
+            "to_column": "source_service_key",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          }
+        ],
+        "layer": "raw"
+      },
+  
+      {
+        "table_name": "bmc_hpd_helpdesk",
+        "table_ddl": "\n-- BMC Remedy HPD:Help Desk incidents export\nCREATE TABLE bmc_hpd_helpdesk (\n  incident_id STRING NOT NULL,\n  incident_number STRING,\n  submit_date TIMESTAMP,\n  last_modified_date TIMESTAMP,\n  status STRING,\n  priority STRING,\n  impact STRING,\n  urgency STRING,\n  summary STRING,\n  detailed_description STRING,\n  assigned_group STRING,\n  assignee STRING,\n  service_ci STRING,\n  ci_name STRING,\n  customer_company STRING,\n  sla_id STRING,\n  respond_by TIMESTAMP,\n  resolve_by TIMESTAMP,\n  closed_date TIMESTAMP\n);",
+        "relationships": [
+          {
+            "from_table": "bmc_hpd_helpdesk",
+            "from_column": "service_ci",
+            "to_table": "bmc_cmdb_ci",
+            "to_column": "ci_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          },
+          {
+            "from_table": "bmc_hpd_helpdesk",
+            "from_column": "sla_id",
+            "to_table": "bmc_sla",
+            "to_column": "sla_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          }
+        ],
+        "layer": "raw"
+      },
+      {
+        "table_name": "bmc_cmdb_ci",
+        "table_ddl": "\n-- BMC CMDB CI entities\nCREATE TABLE bmc_cmdb_ci (\n  ci_id STRING NOT NULL,\n  ci_name STRING,\n  ci_type STRING,\n  environment STRING,\n  business_service_name STRING,\n  criticality STRING,\n  owner_group STRING,\n  created_at TIMESTAMP,\n  updated_at TIMESTAMP\n);",
+        "relationships": [
+          {
+            "from_table": "bmc_cmdb_ci",
+            "from_column": "business_service_name",
+            "to_table": "business_services",
+            "to_column": "source_service_key",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          }
+        ],
+        "layer": "raw"
+      },
+      {
+        "table_name": "bmc_sla",
+        "table_ddl": "\n-- BMC SLA definitions\nCREATE TABLE bmc_sla (\n  sla_id STRING NOT NULL,\n  sla_name STRING,\n  priority STRING,\n  target_response_minutes INTEGER,\n  target_resolution_minutes INTEGER,\n  active BOOLEAN,\n  created_at TIMESTAMP,\n  updated_at TIMESTAMP\n);",
+        "relationships": [],
+        "layer": "raw"
+      },
+  
+      {
+        "table_name": "business_services",
+        "table_ddl": "\n-- Unified business service dimension across systems\nCREATE TABLE business_services (\n  service_id STRING NOT NULL,\n  source_system STRING,\n  source_service_key STRING,\n  service_name STRING,\n  service_tier STRING,\n  business_unit STRING,\n  env STRING,\n  criticality INTEGER,\n  owner_group STRING,\n  created_at TIMESTAMP,\n  updated_at TIMESTAMP\n);",
+        "relationships": [],
+        "layer": "raw"
+      }
+    ],
+    "lod_configurations": [
+      {
+        "table_name": "sn_incident",
+        "lod_type": "FIXED",
+        "dimensions": ["sys_id"],
+        "description": "One row per ServiceNow incident"
+      },
+      {
+        "table_name": "jira_itsm_issue",
+        "lod_type": "FIXED",
+        "dimensions": ["id"],
+        "description": "One row per Jira issue"
+      },
+      {
+        "table_name": "bmc_hpd_helpdesk",
+        "lod_type": "FIXED",
+        "dimensions": ["incident_id"],
+        "description": "One row per BMC HPD incident"
+      },
+      {
+        "table_name": "business_services",
+        "lod_type": "FIXED",
+        "dimensions": ["service_id"],
+        "description": "One row per logical business service"
+      },
+      {
+        "table_name": "sn_cmdb_ci",
+        "lod_type": "FIXED",
+        "dimensions": ["sys_id"],
+        "description": "One row per ServiceNow CI"
+      },
+      {
+        "table_name": "jira_cmdb_ci",
+        "lod_type": "FIXED",
+        "dimensions": ["object_id"],
+        "description": "One row per Jira CMDB object"
+      },
+      {
+        "table_name": "bmc_cmdb_ci",
+        "lod_type": "FIXED",
+        "dimensions": ["ci_id"],
+        "description": "One row per BMC CI"
+      }
+    ],
+    "relationship_mappings": [
+      {
+        "from_table": "sn_incident",
+        "from_column": "cmdb_ci",
+        "to_table": "sn_cmdb_ci",
+        "to_column": "sys_id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "sn_incident",
+        "from_column": "u_business_service",
+        "to_table": "business_services",
+        "to_column": "source_service_key",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "sn_task_sla",
+        "from_column": "task",
+        "to_table": "sn_incident",
+        "to_column": "sys_id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "jira_itsm_issue",
+        "from_column": "customfield_ci",
+        "to_table": "jira_cmdb_ci",
+        "to_column": "object_id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "jira_itsm_issue",
+        "from_column": "customfield_service",
+        "to_table": "business_services",
+        "to_column": "source_service_key",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "jira_issue_sla",
+        "from_column": "issue_id",
+        "to_table": "jira_itsm_issue",
+        "to_column": "id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "bmc_hpd_helpdesk",
+        "from_column": "service_ci",
+        "to_table": "bmc_cmdb_ci",
+        "to_column": "ci_id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "bmc_hpd_helpdesk",
+        "from_column": "sla_id",
+        "to_table": "bmc_sla",
+        "to_column": "sla_id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "bmc_cmdb_ci",
+        "from_column": "business_service_name",
+        "to_table": "business_services",
+        "to_column": "source_service_key",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      }
+    ],
+    "user_query": "Create a unified ITSM operational dashboard across ServiceNow, Jira, and BMC showing incident/request volume, MTTA, MTTR, SLA performance, backlog aging, and service health by business service and CI.",
+    "data_mart_goals": [
+      "Normalize incident, request, and SLA data from ServiceNow, Jira Service Management, and BMC Remedy onto a common business service dimension.",
+      "Provide cross-platform MTTA, MTTR, SLA breach rates, and backlog aging by service, CI, environment, and assignment/owner groups.",
+      "Enable 12-month trends and benchmarks across platforms to identify hotspots and improvement opportunities."
+    ],
+    "target_sql_dialect": "postgresql",
+    "metric_questions": [
+      "What is the combined incident volume across ServiceNow, Jira, and BMC by priority and business service?",
+      "How do MTTA and MTTR compare by platform and by assignment group?",
+      "Which services have the highest SLA breach rates across all three systems?",
+      "What is the backlog of open incidents/issues and their aging buckets by platform?",
+      "Which CIs and services are the noisiest across all platforms?"
+    ],
+    "gold_metrics_config": {
+      "dimensions": [
+        "source_system",
+        "business_unit",
+        "env",
+        "service_id",
+        "service_tier",
+        "priority",
+        "status_name",
+        "assignment_group",
+        "assignee",
+        "owner_group"
+      ],
+      "measures": [
+        "incident_volume",
+        "open_incident_count",
+        "mttr_hours",
+        "mtta_minutes",
+        "sla_breach_rate",
+        "backlog_aging_days",
+        "service_health_score"
+      ],
+      "time_grain": "month",
+      "aggregation_types": [
+        "sum",
+        "avg",
+        "count",
+        "max",
+        "min"
+      ]
+    },
+    "generate_gold": true,
+    "enable_dbt_generation": true,
+    "enable_enhanced_data_marts": true,
+    "enable_gold_metrics": true,
+    "output_formats": [
+      "cubejs",
+      "dbt"
+    ]
+  }
+  

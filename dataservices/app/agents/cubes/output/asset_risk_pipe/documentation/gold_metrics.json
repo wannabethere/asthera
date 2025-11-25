@@ -1,43 +1,49 @@
 {
   "metrics": [
     {
-      "name": "risk_breach_likelihood",
-      "formula": "total_risk_score / NULLIF(total_vulnerabilities, 0)",
-      "description": "Likelihood of a risk breach calculated as the total risk score divided by the total number of vulnerabilities.",
-      "mart_name": "asset_management_trend_analysis"
+      "name": "high_risk_exposure_ratio",
+      "formula": "AVG(CASE WHEN severity = 'High' THEN 1.0 ELSE 0.0 END)",
+      "description": "The ratio of high-risk exposures to total exposures for each identity.",
+      "mart_name": "identity_exposure_risk_analysis"
     },
     {
-      "name": "risk_breach_score",
-      "formula": "total_risk_score * 0.1",
-      "description": "Calculated risk breach score based on the total risk score, scaled by a factor of 0.1.",
-      "mart_name": "asset_management_trend_analysis"
-    },
-    {
-      "name": "breach_risk_score",
-      "formula": "CASE WHEN total_misconfigurations > 10 THEN 1.0 WHEN total_external_exposures > 5 THEN 0.75 ELSE 0.5 END",
-      "description": "Calculated score indicating the risk of a breach based on misconfigurations and external exposures.",
-      "mart_name": "software_asset_management_trend_analysis"
-    },
-    {
-      "name": "likelihood_score",
-      "formula": "CASE WHEN total_devices > 100 THEN 0.9 WHEN total_devices BETWEEN 50 AND 100 THEN 0.7 ELSE 0.3 END",
-      "description": "Calculated score indicating the likelihood of an incident based on the number of devices.",
-      "mart_name": "software_asset_management_trend_analysis"
+      "name": "non_compliance_ratio",
+      "formula": "AVG(CASE WHEN si.compliance_status = 'Non-Compliant' THEN 1.0 ELSE 0.0 END)",
+      "description": "Ratio of non-compliant licenses to total licenses.",
+      "mart_name": "software_inventory_compliance_analysis"
     },
     {
       "name": "exposure_score",
-      "formula": "total_vulnerability_score + total_misconfigurations + total_external_exposure",
-      "description": "Calculated score representing the overall exposure of the asset based on vulnerabilities, misconfigurations, and external risks.",
-      "mart_name": "asset_exposure_summary"
+      "formula": "CASE WHEN COUNT(ie.exposure_id) > 0 THEN COUNT(ie.exposure_id) ELSE 0 END",
+      "description": "Calculated score representing the number of exposures for an identity, used for dashboard visualizations.",
+      "mart_name": "identity_exposure_summary"
     },
     {
       "name": "exposure_score",
-      "formula": "CASE WHEN total_usage_hours > 0 THEN total_devices_used / total_usage_hours ELSE 0 END",
-      "description": "Calculated score representing the exposure of the software based on usage.",
-      "mart_name": "software_asset_usage_summary"
+      "formula": "SUM(COALESCE(si.usage_hours, 0)) / NULLIF(COUNT(si.license_id), 0)",
+      "description": "Calculated exposure score as total usage hours per license.",
+      "mart_name": "software_inventory_summary"
     }
   ],
   "dimensions": [
+    {
+      "name": "business_unit",
+      "type": "string",
+      "description": "The business unit associated with the assets.",
+      "mart_name": "attack_surface_index_by_business_unit"
+    },
+    {
+      "name": "department",
+      "type": "string",
+      "description": "The department associated with the software assets.",
+      "mart_name": "software_asset_management_summary"
+    },
+    {
+      "name": "severity",
+      "type": "string",
+      "description": "The severity level of the vulnerabilities, which categorizes them into different risk levels.",
+      "mart_name": "vulnerability_risk_assessment"
+    },
     {
       "name": "business_unit",
       "type": "string",
@@ -63,145 +69,163 @@
       "mart_name": "attack_surface_summary_by_os_software"
     },
     {
-      "name": "software_name",
-      "type": "string",
-      "description": "The name of the software asset.",
-      "mart_name": "software_asset_management_summary"
-    },
-    {
-      "name": "version",
-      "type": "string",
-      "description": "The version of the software asset.",
-      "mart_name": "software_asset_management_summary"
-    },
-    {
-      "name": "business_unit",
-      "type": "string",
-      "description": "The business unit associated with the software asset.",
-      "mart_name": "software_asset_management_summary"
-    },
-    {
-      "name": "environment",
-      "type": "string",
-      "description": "The environment in which the software asset is deployed (e.g., production, development).",
-      "mart_name": "software_asset_management_summary"
-    },
-    {
-      "name": "risk_category",
-      "type": "string",
-      "description": "The category of the risk associated with external exposures.",
-      "mart_name": "external_exposure_risk_summary"
-    },
-    {
-      "name": "os_software_stack",
-      "type": "string",
-      "description": "The operating system and software stack associated with the exposure.",
-      "mart_name": "external_exposure_risk_summary"
-    },
-    {
       "name": "business_unit",
       "type": "string",
       "description": "The business unit responsible for the exposure.",
-      "mart_name": "external_exposure_risk_summary"
+      "mart_name": "external_exposure_summary"
     },
     {
       "name": "environment",
       "type": "string",
-      "description": "The environment in which the exposure exists (e.g., production, staging).",
-      "mart_name": "external_exposure_risk_summary"
+      "description": "The environment in which the exposure is categorized (e.g., production, staging).",
+      "mart_name": "external_exposure_summary"
+    },
+    {
+      "name": "exposure_type",
+      "type": "string",
+      "description": "The type of exposure (e.g., vulnerability, misconfiguration).",
+      "mart_name": "external_exposure_summary"
+    },
+    {
+      "name": "business_unit",
+      "type": "string",
+      "description": "The business unit associated with the identity exposure.",
+      "mart_name": "identity_exposure_summary"
+    },
+    {
+      "name": "environment",
+      "type": "string",
+      "description": "The environment (e.g., production, staging) where the identity exposure occurred.",
+      "mart_name": "identity_exposure_summary"
     },
     {
       "name": "asset_id",
-      "type": "integer",
+      "type": "string",
       "description": "Unique identifier for each asset.",
-      "mart_name": "asset_management_trend_analysis"
-    },
-    {
-      "name": "asset_type",
-      "type": "string",
-      "description": "Type of the asset (e.g., server, application, etc.).",
-      "mart_name": "asset_management_trend_analysis"
-    },
-    {
-      "name": "acquisition_date",
-      "type": "date",
-      "description": "Date when the asset was acquired.",
-      "mart_name": "asset_management_trend_analysis"
-    },
-    {
-      "name": "month",
-      "type": "date",
-      "description": "Month for which the trend analysis is performed.",
-      "mart_name": "asset_management_trend_analysis"
-    },
-    {
-      "name": "software_id",
-      "type": "numeric",
-      "description": "Unique identifier for each software application.",
-      "mart_name": "software_asset_management_trend_analysis"
-    },
-    {
-      "name": "software_name",
-      "type": "string",
-      "description": "Name of the software application.",
-      "mart_name": "software_asset_management_trend_analysis"
-    },
-    {
-      "name": "license_type",
-      "type": "string",
-      "description": "Type of license associated with the software application.",
-      "mart_name": "software_asset_management_trend_analysis"
-    },
-    {
-      "name": "month",
-      "type": "date",
-      "description": "The month for which the data is recorded, used for trend analysis.",
-      "mart_name": "software_asset_management_trend_analysis"
-    },
-    {
-      "name": "asset_id",
-      "type": "numeric",
-      "description": "Unique identifier for each asset.",
-      "mart_name": "asset_exposure_summary"
+      "mart_name": "asset_performance_trend_analysis"
     },
     {
       "name": "asset_name",
       "type": "string",
       "description": "Name of the asset.",
+      "mart_name": "asset_performance_trend_analysis"
+    },
+    {
+      "name": "asset_type",
+      "type": "string",
+      "description": "Type of the asset (e.g., server, application, etc.).",
+      "mart_name": "asset_performance_trend_analysis"
+    },
+    {
+      "name": "month",
+      "type": "date",
+      "description": "Month of the performance trend analysis.",
+      "mart_name": "asset_performance_trend_analysis"
+    },
+    {
+      "name": "identity_id",
+      "type": "string",
+      "description": "Unique identifier for each identity being analyzed.",
+      "mart_name": "identity_exposure_risk_analysis"
+    },
+    {
+      "name": "month",
+      "type": "date",
+      "description": "The month for which the exposure data is aggregated.",
+      "mart_name": "identity_exposure_risk_analysis"
+    },
+    {
+      "name": "software_id",
+      "type": "string",
+      "description": "Unique identifier for each software.",
+      "mart_name": "software_inventory_compliance_analysis"
+    },
+    {
+      "name": "software_name",
+      "type": "string",
+      "description": "Name of the software.",
+      "mart_name": "software_inventory_compliance_analysis"
+    },
+    {
+      "name": "month",
+      "type": "date",
+      "description": "The month for which the compliance data is reported.",
+      "mart_name": "software_inventory_compliance_analysis"
+    },
+    {
+      "name": "asset_id",
+      "type": "string",
+      "description": "Unique identifier for each asset.",
       "mart_name": "asset_exposure_summary"
     },
     {
       "name": "identity_id",
       "type": "string",
-      "description": "Unique identifier for each identity.",
+      "description": "Unique identifier for each identity whose exposure is being summarized.",
       "mart_name": "identity_exposure_summary"
     },
     {
       "name": "software_id",
-      "type": "numeric",
-      "description": "Unique identifier for each software asset.",
-      "mart_name": "software_asset_usage_summary"
-    },
-    {
-      "name": "software_name",
       "type": "string",
-      "description": "Name of the software asset.",
-      "mart_name": "software_asset_usage_summary"
-    },
-    {
-      "name": "created_at",
-      "type": "date",
-      "description": "Timestamp when the record was created.",
-      "mart_name": "software_asset_usage_summary"
-    },
-    {
-      "name": "updated_at",
-      "type": "date",
-      "description": "Timestamp when the record was last updated.",
-      "mart_name": "software_asset_usage_summary"
+      "description": "Unique identifier for each software in the inventory.",
+      "mart_name": "software_inventory_summary"
     }
   ],
   "measures": [
+    {
+      "name": "total_vulnerabilities",
+      "type": "count",
+      "description": "The total number of distinct vulnerabilities associated with the assets in the business unit.",
+      "mart_name": "attack_surface_index_by_business_unit"
+    },
+    {
+      "name": "total_misconfigurations",
+      "type": "count",
+      "description": "The total number of distinct misconfigurations associated with the assets in the business unit.",
+      "mart_name": "attack_surface_index_by_business_unit"
+    },
+    {
+      "name": "total_external_exposures",
+      "type": "count",
+      "description": "The total number of distinct external exposures associated with the assets in the business unit.",
+      "mart_name": "attack_surface_index_by_business_unit"
+    },
+    {
+      "name": "total_identity_exposures",
+      "type": "count",
+      "description": "The total number of distinct identity exposures associated with the assets in the business unit.",
+      "mart_name": "attack_surface_index_by_business_unit"
+    },
+    {
+      "name": "total_software_assets",
+      "type": "count",
+      "description": "The total number of distinct software assets in the department.",
+      "mart_name": "software_asset_management_summary"
+    },
+    {
+      "name": "total_licenses",
+      "type": "sum",
+      "description": "The total number of licenses for software assets in the department.",
+      "mart_name": "software_asset_management_summary"
+    },
+    {
+      "name": "avg_usage_hours",
+      "type": "avg",
+      "description": "The average usage hours of software assets in the department.",
+      "mart_name": "software_asset_management_summary"
+    },
+    {
+      "name": "total_vulnerabilities",
+      "type": "count",
+      "description": "The total number of vulnerabilities recorded for each severity level.",
+      "mart_name": "vulnerability_risk_assessment"
+    },
+    {
+      "name": "avg_time_to_remediate",
+      "type": "avg",
+      "description": "The average time taken to remediate vulnerabilities, calculated by averaging the time_to_remediate values.",
+      "mart_name": "vulnerability_risk_assessment"
+    },
     {
       "name": "total_assets",
       "type": "count",
@@ -223,140 +247,92 @@
     {
       "name": "total_exposures",
       "type": "count",
-      "description": "The total number of distinct exposures associated with the assets.",
-      "mart_name": "attack_surface_summary_by_os_software"
-    },
-    {
-      "name": "total_devices",
-      "type": "sum",
-      "description": "The total number of devices using the software asset.",
-      "mart_name": "software_asset_management_summary"
-    },
-    {
-      "name": "total_vulnerabilities",
-      "type": "sum",
-      "description": "The total number of vulnerabilities associated with the software asset.",
-      "mart_name": "software_asset_management_summary"
-    },
-    {
-      "name": "total_misconfigurations",
-      "type": "sum",
-      "description": "The total number of misconfigurations associated with the software asset.",
-      "mart_name": "software_asset_management_summary"
-    },
-    {
-      "name": "total_exposures",
-      "type": "count",
       "description": "The total number of distinct exposures recorded.",
-      "mart_name": "external_exposure_risk_summary"
+      "mart_name": "external_exposure_summary"
     },
     {
-      "name": "total_potential_impact",
-      "type": "sum",
-      "description": "The total potential impact value of all exposures.",
-      "mart_name": "external_exposure_risk_summary"
-    },
-    {
-      "name": "total_risk_score",
-      "type": "sum",
-      "description": "Total risk score calculated for each asset based on associated vulnerabilities.",
-      "mart_name": "asset_management_trend_analysis"
+      "name": "total_identity_exposures",
+      "type": "count",
+      "description": "The total number of distinct identity exposures counted for each business unit and environment.",
+      "mart_name": "identity_exposure_summary"
     },
     {
       "name": "total_vulnerabilities",
       "type": "count",
       "description": "Total number of distinct vulnerabilities associated with the asset.",
-      "mart_name": "asset_management_trend_analysis"
+      "mart_name": "asset_performance_trend_analysis"
     },
     {
       "name": "total_misconfigurations",
       "type": "count",
       "description": "Total number of distinct misconfigurations associated with the asset.",
-      "mart_name": "asset_management_trend_analysis"
+      "mart_name": "asset_performance_trend_analysis"
     },
     {
       "name": "total_external_exposures",
       "type": "count",
       "description": "Total number of distinct external exposures associated with the asset.",
-      "mart_name": "asset_management_trend_analysis"
+      "mart_name": "asset_performance_trend_analysis"
     },
     {
-      "name": "total_identity_exposures",
+      "name": "high_risk_vulnerability_ratio",
+      "type": "avg",
+      "description": "Average ratio of high-risk vulnerabilities per asset.",
+      "mart_name": "asset_performance_trend_analysis"
+    },
+    {
+      "name": "critical_misconfiguration_ratio",
+      "type": "avg",
+      "description": "Average ratio of critical misconfigurations per asset.",
+      "mart_name": "asset_performance_trend_analysis"
+    },
+    {
+      "name": "total_exposures",
       "type": "count",
-      "description": "Total number of distinct identity exposures associated with the asset.",
-      "mart_name": "asset_management_trend_analysis"
+      "description": "Total number of exposures recorded for each identity in the specified month.",
+      "mart_name": "identity_exposure_risk_analysis"
     },
     {
-      "name": "depreciation_value",
-      "type": "numeric",
-      "description": "Value of the asset after accounting for depreciation.",
-      "mart_name": "asset_management_trend_analysis"
-    },
-    {
-      "name": "total_devices",
+      "name": "total_licenses",
       "type": "count",
-      "description": "Total number of distinct devices associated with the software application.",
-      "mart_name": "software_asset_management_trend_analysis"
+      "description": "Total number of licenses for each software.",
+      "mart_name": "software_inventory_compliance_analysis"
+    },
+    {
+      "name": "total_vulnerabilities",
+      "type": "count",
+      "description": "Total number of distinct vulnerabilities associated with the asset.",
+      "mart_name": "asset_exposure_summary"
     },
     {
       "name": "total_misconfigurations",
-      "type": "sum",
-      "description": "Total number of misconfigurations related to the software application.",
-      "mart_name": "software_asset_management_trend_analysis"
+      "type": "count",
+      "description": "Total number of distinct misconfigurations associated with the asset.",
+      "mart_name": "asset_exposure_summary"
     },
     {
       "name": "total_external_exposures",
       "type": "count",
-      "description": "Total number of distinct external exposures related to the software application.",
-      "mart_name": "software_asset_management_trend_analysis"
-    },
-    {
-      "name": "total_vulnerability_score",
-      "type": "sum",
-      "description": "Total score representing the vulnerabilities associated with the asset.",
+      "description": "Total number of distinct external exposures associated with the asset.",
       "mart_name": "asset_exposure_summary"
     },
     {
-      "name": "vulnerability_count",
+      "name": "total_exposures",
       "type": "count",
-      "description": "Count of distinct vulnerabilities associated with the asset.",
-      "mart_name": "asset_exposure_summary"
-    },
-    {
-      "name": "total_misconfigurations",
-      "type": "sum",
-      "description": "Total number of misconfigurations associated with the asset.",
-      "mart_name": "asset_exposure_summary"
-    },
-    {
-      "name": "total_external_exposure",
-      "type": "sum",
-      "description": "Total score representing the external exposure risks associated with the asset.",
-      "mart_name": "asset_exposure_summary"
-    },
-    {
-      "name": "total_exposure_incidents",
-      "type": "sum",
-      "description": "Total number of exposure incidents associated with an identity.",
+      "description": "Total number of exposure instances recorded for each identity.",
       "mart_name": "identity_exposure_summary"
     },
     {
-      "name": "average_severity",
-      "type": "avg",
-      "description": "Average severity level of exposure incidents associated with an identity.",
-      "mart_name": "identity_exposure_summary"
-    },
-    {
-      "name": "total_devices_used",
+      "name": "total_licenses",
       "type": "count",
-      "description": "Total number of distinct devices using the software.",
-      "mart_name": "software_asset_usage_summary"
+      "description": "Total number of licenses counted for each software.",
+      "mart_name": "software_inventory_summary"
     },
     {
       "name": "total_usage_hours",
       "type": "sum",
-      "description": "Total hours of usage for the software.",
-      "mart_name": "software_asset_usage_summary"
+      "description": "Total usage hours summed for each software.",
+      "mart_name": "software_inventory_summary"
     }
   ]
 }

@@ -1,0 +1,44 @@
+{
+  "question_id": "sql_data_mart_asset_performance_trend_analysis",
+  "question": "Generate SQL to create a data mart 'asset_performance_trend_analysis' from: assets, vulnerabilities, misconfigurations, external_exposure.\n\nBusiness Requirements:\n- \n- This mart contains a 12-month trend analysis of asset performance, including vulnerabilities, misconfigurations, and external exposures.\n\nThe data mart should:\n- Aggregate data appropriately for analytics\n- Include calculated metrics and KPIs\n- Support common analytical queries\n- Be optimized for reporting and dashboards",
+  "context": {
+    "sql_type": "data_mart",
+    "target_object": "asset_performance_trend_analysis",
+    "source_tables": [
+      "assets",
+      "vulnerabilities",
+      "misconfigurations",
+      "external_exposure"
+    ],
+    "business_requirements": [
+      "",
+      "This mart contains a 12-month trend analysis of asset performance, including vulnerabilities, misconfigurations, and external exposures."
+    ],
+    "existing_sql": "CREATE TABLE asset_performance_trend_analysis AS \nSELECT\n    a.asset_id,\n    a.asset_name,\n    a.asset_type,\n    COUNT(DISTINCT v.vulnerability_id) AS total_vulnerabilities,\n    COUNT(DISTINCT m.misconfiguration_id) AS total_misconfigurations,\n    COUNT(DISTINCT e.exposure_id) AS total_external_exposures,\n    AVG(CASE WHEN v.severity = 'High' THEN 1.0 ELSE 0.0 END) AS high_risk_vulnerability_ratio,\n    AVG(CASE WHEN m.severity = 'Critical' THEN 1.0 ELSE 0.0 END) AS critical_misconfiguration_rati"
+  },
+  "expected_output_type": "sql",
+  "steps": [
+    "1. Analyze source tables and requirements",
+    "2. Design table/view structure",
+    "3. Write SQL CREATE statement",
+    "4. Add indexes and constraints",
+    "5. Validate SQL syntax and logic"
+  ],
+  "metadata": {
+    "generated_at": "2025-11-24T09:18:54.885006",
+    "source_table_count": 4
+  },
+  "dependencies": [],
+  "sql_type": "data_mart",
+  "target_object": "asset_performance_trend_analysis",
+  "source_tables": [
+    "assets",
+    "vulnerabilities",
+    "misconfigurations",
+    "external_exposure"
+  ],
+  "business_requirements": [
+    "",
+    "This mart contains a 12-month trend analysis of asset performance, including vulnerabilities, misconfigurations, and external exposures."
+  ]
+}

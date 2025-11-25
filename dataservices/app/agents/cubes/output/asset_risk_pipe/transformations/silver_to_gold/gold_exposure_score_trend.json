@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_exposure_score_trend",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_exposure_score_trend",
+  "target_model": "gold_gold_exposure_score_trend",
+  "steps": [
+    {
+      "step_name": "Metric: exposure_score_trend",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_exposure_score_trend (month, average_score)\nSELECT \n    DATE_TRUNC('month', es.\"timestamp\") AS month,  -- Truncate timestamp to month\n    AVG(COALESCE(es.score, 0)) AS average_score    -- Calculate average score, handling NULLs\nFROM \n    exposure_scores es\nWHERE \n    es.\"timestamp\" >= CURRENT_DATE - INTERVAL '12 months'  -- Filter for the last 12 months\nGROUP BY \n    month\nORDER BY \n    month;  -- Order results by month for trend analysis",
+      "description": "Trend of exposure scores over time",
+      "input_tables": [
+        "exposure_scores"
+      ],
+      "output_table": "gold_exposure_score_trend",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_exposure_score_trend from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

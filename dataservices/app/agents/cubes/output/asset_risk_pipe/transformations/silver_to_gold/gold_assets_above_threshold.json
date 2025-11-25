@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_assets_above_threshold",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_assets_above_threshold",
+  "target_model": "gold_gold_assets_above_threshold",
+  "steps": [
+    {
+      "step_name": "Metric: assets_above_threshold",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_assets_above_threshold (asset_count)\nSELECT COUNT(*) AS asset_count\nFROM assets_table\nWHERE COALESCE(vulnerability_exposure_score, 0) > 0.5;",
+      "description": "Count of assets with a vulnerability exposure score greater than 0.5.",
+      "input_tables": [
+        "assets_table"
+      ],
+      "output_table": "gold_assets_above_threshold",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_assets_above_threshold from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

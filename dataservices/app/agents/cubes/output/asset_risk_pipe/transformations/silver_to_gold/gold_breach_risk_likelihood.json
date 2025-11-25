@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_breach_risk_likelihood",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_breach_risk_likelihood",
+  "target_model": "gold_gold_breach_risk_likelihood",
+  "steps": [
+    {
+      "step_name": "Metric: breach_risk_likelihood",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_breach_risk_likelihood (business_unit, average_breach_risk_likelihood)\nSELECT \n    business_unit,\n    AVG(COALESCE(breach_risk_value, 0)) AS average_breach_risk_likelihood\nFROM \n    breach_risk_table\nWHERE \n    breach_risk_value IS NOT NULL  -- Filter out NULL values to ensure accurate average calculation\nGROUP BY \n    business_unit;",
+      "description": "The likelihood of breach risk aggregated by business unit.",
+      "input_tables": [
+        "breach_risk_table"
+      ],
+      "output_table": "gold_breach_risk_likelihood",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_breach_risk_likelihood from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

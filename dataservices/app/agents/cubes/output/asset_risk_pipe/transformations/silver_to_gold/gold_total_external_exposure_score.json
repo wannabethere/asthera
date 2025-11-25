@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_total_external_exposure_score",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_total_external_exposure_score",
+  "target_model": "gold_gold_total_external_exposure_score",
+  "steps": [
+    {
+      "step_name": "Metric: total_external_exposure_score",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_total_external_exposure_score (environment, total_external_exposure_score)\nSELECT \n    environment,\n    COALESCE(SUM(external_exposure_score), 0) AS total_external_exposure_score\nFROM \n    assets_table\nGROUP BY \n    environment;",
+      "description": "The total score representing external exposure across all assets.",
+      "input_tables": [
+        "assets_table"
+      ],
+      "output_table": "gold_total_external_exposure_score",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_total_external_exposure_score from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

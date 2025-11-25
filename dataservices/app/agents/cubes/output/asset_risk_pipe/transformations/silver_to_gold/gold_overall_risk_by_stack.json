@@ -1,0 +1,26 @@
+{
+  "name": "silver_to_gold_gold_overall_risk_by_stack",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_overall_risk_by_stack",
+  "target_model": "gold_gold_overall_risk_by_stack",
+  "steps": [
+    {
+      "step_name": "Metric: overall_risk_by_stack",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_overall_risk_by_stack (os_stack, software_stack, total_risk_score)\nSELECT \n    COALESCE(sra.os_stack, 'Unknown OS') AS os_stack,  -- Handle NULL OS stack\n    COALESCE(sra.software_stack, 'Unknown Software') AS software_stack,  -- Handle NULL software stack\n    SUM(COALESCE(gra.risk_score, 0)) AS total_risk_score  -- Sum risk scores, treating NULL as 0\nFROM \n    silver_risk_assessment sra\nLEFT JOIN \n    gold_risk_assessment gra ON sra.id = gra.assessment_id  -- Assuming a join condition based on assessment ID\nGROUP BY \n    sra.os_stack, \n    sra.software_stack\nORDER BY \n    os_stack, \n    software_stack;  -- Order by OS and software stack for better readability",
+      "description": "Overall risk associated with each OS/software stack.",
+      "input_tables": [
+        "silver_risk_assessment",
+        "gold_risk_assessment"
+      ],
+      "output_table": "gold_overall_risk_by_stack",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_overall_risk_by_stack from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_exposure_score_sum",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_exposure_score_sum",
+  "target_model": "gold_gold_exposure_score_sum",
+  "steps": [
+    {
+      "step_name": "Metric: exposure_score_sum",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_exposure_score_sum (total_exposure_score)\nSELECT \n    COALESCE(SUM(exposure_score), 0) AS total_exposure_score\nFROM \n    exposure_scores\nWHERE \n    exposure_score IS NOT NULL;",
+      "description": "Total exposure score across all records",
+      "input_tables": [
+        "exposure_scores"
+      ],
+      "output_table": "gold_exposure_score_sum",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_exposure_score_sum from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

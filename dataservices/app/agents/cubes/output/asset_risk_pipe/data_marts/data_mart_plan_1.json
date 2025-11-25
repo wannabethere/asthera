@@ -1,6 +1,65 @@
 {
   "goal": "Create Attack Surface Index (ASI) datamart by business unit with top 5 rankings",
-  "marts": [],
-  "reasoning": "No relevant silver tables found for this goal",
-  "complexity": "low"
+  "marts": [
+    {
+      "mart_name": "attack_surface_index_by_business_unit",
+      "sql": "CREATE TABLE attack_surface_index_by_business_unit AS SELECT a.business_unit, COUNT(DISTINCT v.id) AS total_vulnerabilities, COUNT(DISTINCT m.id) AS total_misconfigurations, COUNT(DISTINCT e.id) AS total_external_exposures, COUNT(DISTINCT ie.id) AS total_identity_exposures FROM assets a LEFT JOIN vulnerabilities v ON a.id = v.asset_id LEFT JOIN misconfigurations m ON a.id = m.asset_id LEFT JOIN external_exposure e ON a.id = e.asset_id LEFT JOIN identity_exposure ie ON a.id = ie.asset_id GROUP BY a.business_unit ORDER BY total_vulnerabilities DESC LIMIT 5;",
+      "description": "This mart contains the Attack Surface Index (ASI) by business unit, summarizing the total vulnerabilities, misconfigurations, external exposures, and identity exposures.",
+      "natural_language_question": "Which business units have the highest number of vulnerabilities and exposures?",
+      "source_tables": [
+        "assets",
+        "vulnerabilities",
+        "misconfigurations",
+        "external_exposure",
+        "identity_exposure"
+      ],
+      "target_columns": [
+        "business_unit",
+        "total_vulnerabilities",
+        "total_misconfigurations",
+        "total_external_exposures",
+        "total_identity_exposures"
+      ],
+      "business_value": "This mart helps in understanding the security posture of different business units, enabling targeted resource allocation and risk mitigation strategies.",
+      "grain": "One row per business unit",
+      "associated_metrics": []
+    },
+    {
+      "mart_name": "software_asset_management_summary",
+      "sql": "CREATE TABLE software_asset_management_summary AS SELECT s.department, COUNT(DISTINCT s.id) AS total_software_assets, SUM(s.license_count) AS total_licenses, AVG(s.usage_hours) AS avg_usage_hours FROM software_inventory s GROUP BY s.department ORDER BY total_software_assets DESC LIMIT 5;",
+      "description": "This mart contains a summary of software assets by department, including total software assets, total licenses, and average usage hours.",
+      "natural_language_question": "Which departments have the highest number of software assets and how are they utilizing them?",
+      "source_tables": [
+        "software_inventory"
+      ],
+      "target_columns": [
+        "department",
+        "total_software_assets",
+        "total_licenses",
+        "avg_usage_hours"
+      ],
+      "business_value": "This mart provides insights into software utilization across departments, aiding in effective license management and resource allocation.",
+      "grain": "One row per department",
+      "associated_metrics": []
+    },
+    {
+      "mart_name": "vulnerability_risk_assessment",
+      "sql": "CREATE TABLE vulnerability_risk_assessment AS SELECT v.severity, COUNT(v.id) AS total_vulnerabilities, AVG(v.time_to_remediate) AS avg_time_to_remediate FROM vulnerabilities v GROUP BY v.severity ORDER BY total_vulnerabilities DESC LIMIT 5;",
+      "description": "This mart contains a risk assessment of vulnerabilities based on their severity, including total vulnerabilities and average time to remediate.",
+      "natural_language_question": "What are the most common vulnerabilities by severity and how quickly can they be remediated?",
+      "source_tables": [
+        "vulnerabilities"
+      ],
+      "target_columns": [
+        "severity",
+        "total_vulnerabilities",
+        "avg_time_to_remediate"
+      ],
+      "business_value": "This mart assists in prioritizing remediation efforts based on vulnerability severity, enhancing overall security posture and compliance.",
+      "grain": "One row per vulnerability severity level",
+      "associated_metrics": []
+    }
+  ],
+  "reasoning": "Planned data mart for goal: \"Create Attack Surface Index (ASI) datamart by business unit with top 5 rankings\"\n\nSelected 6 relevant silver tables: assets, vulnerabilities, misconfigurations, external_exposure, identity_exposure, software_inventory\n\nGenerated 3 data mart(s):\n\n1. attack_surface_index_by_business_unit: This mart contains the Attack Surface Index (ASI) by business unit, summarizing the total vulnerabilities, misconfigurations, external exposures, and identity exposures.\n   - Answers: Which business units have the highest number of vulnerabilities and exposures?\n   - Grain: One row per business unit\n\n2. software_asset_management_summary: This mart contains a summary of software assets by department, including total software assets, total licenses, and average usage hours.\n   - Answers: Which departments have the highest number of software assets and how are they utilizing them?\n   - Grain: One row per department\n\n3. vulnerability_risk_assessment: This mart contains a risk assessment of vulnerabilities based on their severity, including total vulnerabilities and average time to remediate.\n   - Answers: What are the most common vulnerabilities by severity and how quickly can they be remediated?\n   - Grain: One row per vulnerability severity level\n",
+  "complexity": "medium"
 }

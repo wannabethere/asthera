@@ -1,0 +1,28 @@
+{
+  "name": "silver_to_gold_gold_top_contributing_stacks",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_top_contributing_stacks",
+  "target_model": "gold_gold_top_contributing_stacks",
+  "steps": [
+    {
+      "step_name": "Metric: top_contributing_stacks",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_top_contributing_stacks (os_stack, software_stack, total_risk_score)\nWITH risk_contributions AS (\n    SELECT \n        s.os_stack,\n        s.software_stack,\n        SUM(COALESCE(gra.risk_score, 0)) AS total_risk_score\n    FROM \n        silver_attack_surface s\n    JOIN \n        gold_attack_surface ga ON s.id = ga.attack_surface_id\n    JOIN \n        silver_risk_assessment sra ON ga.id = sra.attack_surface_id\n    JOIN \n        gold_risk_assessment gra ON sra.id = gra.risk_assessment_id\n    GROUP BY \n        s.os_stack, s.software_stack\n)\nSELECT \n    os_stack,\n    software_stack,\n    total_risk_score\nFROM \n    risk_contributions\nORDER BY \n    total_risk_score DESC\nLIMIT 10;",
+      "description": "Identify the top OS/software stacks contributing to the overall risk.",
+      "input_tables": [
+        "silver_attack_surface",
+        "gold_attack_surface",
+        "silver_risk_assessment",
+        "gold_risk_assessment"
+      ],
+      "output_table": "gold_top_contributing_stacks",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_top_contributing_stacks from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

@@ -1,0 +1,378 @@
+{
+    "workflow_name": "itam_servicenow_vuln_risk_analytics",
+    "description": "Unified IT Asset Management (ITAM) and vulnerability risk assessment across ServiceNow (ALM, CMDB, Vulnerability Response) and external scanners, rolled up to business services and asset owners.",
+    "raw_schemas": [
+      {
+        "table_name": "sn_alm_asset",
+        "table_ddl": "\n-- ServiceNow ITAM Asset table (alm_asset)\nCREATE TABLE sn_alm_asset (\n  sys_id STRING NOT NULL,\n  asset_tag STRING,\n  display_name STRING,\n  serial_number STRING,\n  model STRING,\n  model_category STRING,\n  asset_type STRING,\n  subcategory STRING,\n  status STRING,\n  install_status STRING,\n  owned_by STRING,\n  used_by STRING,\n  department STRING,\n  cost_center STRING,\n  location STRING,\n  company STRING,\n  env STRING,\n  ci STRING,\n  u_business_service STRING,\n  acquisition_date TIMESTAMP,\n  warranty_expiration TIMESTAMP,\n  lease_end TIMESTAMP,\n  purchase_price NUMERIC,\n  depreciation NUMERIC,\n  sys_created_on TIMESTAMP,\n  sys_updated_on TIMESTAMP\n);",
+        "relationships": [
+          {
+            "from_table": "sn_alm_asset",
+            "from_column": "ci",
+            "to_table": "sn_cmdb_ci",
+            "to_column": "sys_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          },
+          {
+            "from_table": "sn_alm_asset",
+            "from_column": "u_business_service",
+            "to_table": "business_services",
+            "to_column": "source_service_key",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          }
+        ],
+        "layer": "raw"
+      },
+      {
+        "table_name": "sn_cmdb_ci",
+        "table_ddl": "\n-- ServiceNow CMDB CI base table (cmdb_ci)\nCREATE TABLE sn_cmdb_ci (\n  sys_id STRING NOT NULL,\n  name STRING,\n  sys_class_name STRING,\n  fqdn STRING,\n  ip_address STRING,\n  os STRING,\n  os_version STRING,\n  environment STRING,\n  install_status STRING,\n  u_business_service STRING,\n  owned_by STRING,\n  support_group STRING,\n  location STRING,\n  company STRING,\n  hardware_status STRING,\n  sys_created_on TIMESTAMP,\n  sys_updated_on TIMESTAMP\n);",
+        "relationships": [
+          {
+            "from_table": "sn_cmdb_ci",
+            "from_column": "u_business_service",
+            "to_table": "business_services",
+            "to_column": "source_service_key",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          }
+        ],
+        "layer": "raw"
+      },
+      {
+        "table_name": "sn_vul_vulnerability",
+        "table_ddl": "\n-- ServiceNow Vulnerability definition (sn_vul_vulnerability)\nCREATE TABLE sn_vul_vulnerability (\n  sys_id STRING NOT NULL,\n  number STRING,\n  name STRING,\n  cve_id STRING,\n  cvss_score NUMERIC,\n  cvss_vector STRING,\n  severity STRING,\n  published_date TIMESTAMP,\n  remediation_target_date TIMESTAMP,\n  remediation_owner STRING,\n  source STRING,\n  sys_created_on TIMESTAMP,\n  sys_updated_on TIMESTAMP\n);",
+        "relationships": [],
+        "layer": "raw"
+      },
+      {
+        "table_name": "sn_vul_vulnerable_item",
+        "table_ddl": "\n-- ServiceNow Vulnerable Item (sn_vul_vulnerable_item)\nCREATE TABLE sn_vul_vulnerable_item (\n  sys_id STRING NOT NULL,\n  vulnerability STRING,\n  cmdb_ci STRING,\n  state STRING,\n  risk_score NUMERIC,\n  severity STRING,\n  opened TIMESTAMP,\n  due_date TIMESTAMP,\n  closed TIMESTAMP,\n  remediation_status STRING,\n  exception_status STRING,\n  source STRING,\n  sys_created_on TIMESTAMP,\n  sys_updated_on TIMESTAMP\n);",
+        "relationships": [
+          {
+            "from_table": "sn_vul_vulnerable_item",
+            "from_column": "vulnerability",
+            "to_table": "sn_vul_vulnerability",
+            "to_column": "sys_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          },
+          {
+            "from_table": "sn_vul_vulnerable_item",
+            "from_column": "cmdb_ci",
+            "to_table": "sn_cmdb_ci",
+            "to_column": "sys_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          }
+        ],
+        "layer": "raw"
+      },
+      {
+        "table_name": "ext_vuln_findings",
+        "table_ddl": "\n-- External vulnerability scanner findings (e.g., Qualys/Tenable/etc.)\nCREATE TABLE ext_vuln_findings (\n  finding_id STRING NOT NULL,\n  scanner_source STRING,\n  scan_id STRING,\n  asset_hostname STRING,\n  asset_ip STRING,\n  asset_tag STRING,\n  cve_id STRING,\n  title STRING,\n  severity STRING,\n  cvss_score NUMERIC,\n  first_seen TIMESTAMP,\n  last_seen TIMESTAMP,\n  last_fixed_attempt TIMESTAMP,\n  status STRING,\n  remediation_due_date TIMESTAMP,\n  patch_available BOOLEAN,\n  exploitation_in_the_wild BOOLEAN\n);",
+        "relationships": [],
+        "layer": "raw"
+      },
+      {
+        "table_name": "ext_asset_inventory",
+        "table_ddl": "\n-- External asset inventory from scanner (optional, to crosswalk with CMDB/ALM)\nCREATE TABLE ext_asset_inventory (\n  asset_id STRING NOT NULL,\n  scanner_source STRING,\n  hostname STRING,\n  ip_address STRING,\n  asset_tag STRING,\n  os STRING,\n  os_version STRING,\n  site_name STRING,\n  business_unit STRING,\n  env STRING,\n  criticality STRING,\n  first_seen TIMESTAMP,\n  last_seen TIMESTAMP\n);",
+        "relationships": [],
+        "layer": "raw"
+      },
+      {
+        "table_name": "business_services",
+        "table_ddl": "\n-- Unified business service dimension across ITAM/CMDB\nCREATE TABLE business_services (\n  service_id STRING NOT NULL,\n  source_system STRING,\n  source_service_key STRING,\n  service_name STRING,\n  service_tier STRING,\n  business_unit STRING,\n  env STRING,\n  criticality INTEGER,\n  owner_group STRING,\n  created_at TIMESTAMP,\n  updated_at TIMESTAMP\n);",
+        "relationships": [],
+        "layer": "raw"
+      }
+    ],
+    "lod_configurations": [
+      {
+        "table_name": "sn_alm_asset",
+        "lod_type": "FIXED",
+        "dimensions": ["sys_id"],
+        "description": "One row per ServiceNow ITAM asset"
+      },
+      {
+        "table_name": "sn_cmdb_ci",
+        "lod_type": "FIXED",
+        "dimensions": ["sys_id"],
+        "description": "One row per ServiceNow CI"
+      },
+      {
+        "table_name": "sn_vul_vulnerability",
+        "lod_type": "FIXED",
+        "dimensions": ["sys_id"],
+        "description": "One row per vulnerability definition"
+      },
+      {
+        "table_name": "sn_vul_vulnerable_item",
+        "lod_type": "FIXED",
+        "dimensions": ["sys_id"],
+        "description": "One row per CMDB CI and vulnerability pairing"
+      },
+      {
+        "table_name": "ext_vuln_findings",
+        "lod_type": "FIXED",
+        "dimensions": ["finding_id"],
+        "description": "One row per external scanner finding"
+      },
+      {
+        "table_name": "ext_asset_inventory",
+        "lod_type": "FIXED",
+        "dimensions": ["asset_id"],
+        "description": "One row per external scanner asset"
+      },
+      {
+        "table_name": "business_services",
+        "lod_type": "FIXED",
+        "dimensions": ["service_id"],
+        "description": "One row per business service"
+      }
+    ],
+    "relationship_mappings": [
+      {
+        "from_table": "sn_alm_asset",
+        "from_column": "ci",
+        "to_table": "sn_cmdb_ci",
+        "to_column": "sys_id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "sn_alm_asset",
+        "from_column": "u_business_service",
+        "to_table": "business_services",
+        "to_column": "source_service_key",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "sn_cmdb_ci",
+        "from_column": "u_business_service",
+        "to_table": "business_services",
+        "to_column": "source_service_key",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "sn_vul_vulnerable_item",
+        "from_column": "vulnerability",
+        "to_table": "sn_vul_vulnerability",
+        "to_column": "sys_id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "sn_vul_vulnerable_item",
+        "from_column": "cmdb_ci",
+        "to_table": "sn_cmdb_ci",
+        "to_column": "sys_id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+  
+      {
+        "from_table": "ext_asset_inventory",
+        "from_column": "asset_tag",
+        "to_table": "sn_alm_asset",
+        "to_column": "asset_tag",
+        "relationship_type": "many_to_one",
+        "layer": "gold"
+      },
+      {
+        "from_table": "ext_asset_inventory",
+        "from_column": "hostname",
+        "to_table": "sn_cmdb_ci",
+        "to_column": "name",
+        "relationship_type": "many_to_one",
+        "layer": "gold"
+      },
+  
+      {
+        "from_table": "ext_vuln_findings",
+        "from_column": "asset_tag",
+        "to_table": "sn_alm_asset",
+        "to_column": "asset_tag",
+        "relationship_type": "many_to_one",
+        "layer": "gold"
+      },
+      {
+        "from_table": "ext_vuln_findings",
+        "from_column": "asset_hostname",
+        "to_table": "sn_cmdb_ci",
+        "to_column": "name",
+        "relationship_type": "many_to_one",
+        "layer": "gold"
+      },
+      {
+        "from_table": "ext_vuln_findings",
+        "from_column": "cve_id",
+        "to_table": "sn_vul_vulnerability",
+        "to_column": "cve_id",
+        "relationship_type": "many_to_one",
+        "layer": "gold"
+      }
+    ],
+    "user_query": "\nBuild an ITAM and vulnerability risk dashboard that shows asset coverage, vulnerable asset counts, exposure windows, and risk scores by business service, asset owner, environment, and criticality. Correlate ServiceNow ALM/CMDB assets and vulnerable items with external scanner findings (by hostname/IP/asset tag) to give a unified risk posture.\n",
+    "data_mart_goals": [
+      "Provide a unified IT asset inventory across ServiceNow ALM, CMDB, and external scanner assets.",
+      "Quantify vulnerability exposure per asset, CI, and business service, including counts of open critical/high vulns and average exposure window.",
+      "Highlight coverage gaps where assets exist in ITAM/CMDB but are not scanned, or scanner assets have no CMDB/ALM match.",
+      "Compute composite risk scores per service and per owner, combining asset criticality, vulnerability severity, and exposure duration."
+    ],
+    "target_sql_dialect": "postgresql",
+    "metric_questions": [
+      "How many in-scope assets do we have by asset_type, env, and business_unit?",
+      "What percentage of assets have at least one open critical or high vulnerability?",
+      "What is the average and p90 exposure window (days open) for critical vulnerabilities by business service?",
+      "Which asset owners or support groups have the highest backlog of vulnerable items?",
+      "Which services have the highest risk scores when combining ITAM criticality and vulnerability severity?",
+      "Where are the biggest coverage gaps (assets in ALM/CMDB not seen by scanner, and scanner assets not mapped to CMDB/ALM)?",
+      "What is the trend of open vs closed vulnerable items and external findings over the last 12 months?",
+      "What is the remediation performance (time-to-fix) by scanner_source, owner_group, and business_unit?"
+    ],
+    "silver_cleaning_hints": {
+      "sn_alm_asset": {
+        "cleaning_steps": [
+          "Ensure sys_id and asset_tag are unique per asset where possible.",
+          "Normalize asset_type, model_category, and status values to a controlled vocabulary.",
+          "Standardize env and location values (e.g., PROD/DEV/UAT).",
+          "Derive business_unit from department, cost_center, or company where missing."
+        ]
+      },
+      "sn_cmdb_ci": {
+        "cleaning_steps": [
+          "Ensure sys_id is unique per CI.",
+          "Normalize environment, os, and os_version values.",
+          "Flag CIs with missing u_business_service or owned_by for follow-up.",
+          "Standardize name/fqdn to enable reliable hostname joins with external scanner assets."
+        ]
+      },
+      "sn_vul_vulnerability": {
+        "cleaning_steps": [
+          "Ensure cve_id format is valid where present.",
+          "Bucket severity into standardized levels (e.g., Critical/High/Medium/Low).",
+          "Handle missing or null cvss_score values with defaults or flags.",
+          "Derive age_since_published in days for risk modelling."
+        ]
+      },
+      "sn_vul_vulnerable_item": {
+        "cleaning_steps": [
+          "Ensure vulnerability and cmdb_ci foreign keys exist in their source tables.",
+          "Normalize state, remediation_status, and exception_status values.",
+          "Compute days_open as difference between closed and opened (or now if still open).",
+          "Flag items with due_date in the past and not closed as overdue."
+        ]
+      },
+      "ext_vuln_findings": {
+        "cleaning_steps": [
+          "Normalize severity and status across different scanner_sources.",
+          "Ensure cve_id, asset_hostname, and asset_ip formats are valid.",
+          "Compute exposure_days as difference between last_seen and first_seen.",
+          "Derive a unified severity_score from cvss_score and exploitation_in_the_wild."
+        ]
+      },
+      "ext_asset_inventory": {
+        "cleaning_steps": [
+          "Normalize hostname (case, domain suffix) to improve join quality.",
+          "Standardize env and business_unit values.",
+          "Derive criticality buckets (e.g., Tier 0/1/2) from criticality text.",
+          "Flag assets with first_seen very recent and no CMDB/ALM mapping as potential shadow IT."
+        ]
+      }
+    },
+    "gold_metrics_config": {
+      "dimensions": [
+        "business_unit",
+        "env",
+        "service_id",
+        "service_tier",
+        "asset_type",
+        "model_category",
+        "os",
+        "owner_group",
+        "severity",
+        "scanner_source"
+      ],
+      "measures": [
+        "asset_count",
+        "in_scope_scanned_asset_count",
+        "unscanned_asset_count",
+        "vulnerable_asset_count",
+        "open_vuln_count",
+        "open_critical_vuln_count",
+        "open_high_vuln_count",
+        "avg_exposure_days",
+        "p90_exposure_days",
+        "risk_score",
+        "coverage_gap_count"
+      ],
+      "time_grain": "month",
+      "aggregation_types": [
+        "sum",
+        "avg",
+        "count",
+        "max",
+        "min",
+        "percentile"
+      ]
+    },
+    "expected_outputs": {
+      "raw_cubes": [
+        "raw_sn_alm_asset",
+        "raw_sn_cmdb_ci",
+        "raw_sn_vul_vulnerability",
+        "raw_sn_vul_vulnerable_item",
+        "raw_ext_vuln_findings",
+        "raw_ext_asset_inventory",
+        "raw_business_services"
+      ],
+      "silver_cubes": [
+        "silver_assets_enriched",
+        "silver_cmdb_ci_enriched",
+        "silver_vuln_items_enriched",
+        "silver_ext_findings_normalized",
+        "silver_ext_assets_normalized",
+        "silver_service_asset_vuln_link"
+      ],
+      "gold_cubes": [
+        "gold_itam_vuln_risk_by_service",
+        "gold_itam_vuln_risk_by_owner",
+        "gold_asset_coverage_gaps",
+        "gold_vuln_exposure_trends"
+      ],
+      "views": [
+        "itam_vuln_risk_dashboard_view",
+        "service_risk_overview_view",
+        "asset_coverage_view"
+      ],
+      "transformations": [
+        "raw_to_silver_asset_enrichment",
+        "raw_to_silver_cmdb_enrichment",
+        "raw_to_silver_vuln_item_enrichment",
+        "raw_to_silver_ext_vuln_normalization",
+        "silver_to_gold_service_risk_rollup",
+        "silver_to_gold_owner_risk_rollup",
+        "silver_to_gold_coverage_gap_analysis",
+        "silver_to_gold_exposure_trend_rollups"
+      ],
+      "dbt_models": [
+        "itam_vuln_risk_by_service",
+        "itam_vuln_risk_by_owner",
+        "asset_coverage_gaps",
+        "vuln_exposure_trends"
+      ]
+    },
+    "generate_gold": true,
+    "enable_dbt_generation": true,
+    "enable_enhanced_data_marts": true,
+    "enable_gold_metrics": true,
+    "output_formats": [
+      "cubejs",
+      "dbt"
+    ]
+  }
+  

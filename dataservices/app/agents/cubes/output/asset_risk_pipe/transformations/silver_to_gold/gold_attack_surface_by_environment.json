@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_attack_surface_by_environment",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_attack_surface_by_environment",
+  "target_model": "gold_gold_attack_surface_by_environment",
+  "steps": [
+    {
+      "step_name": "Metric: attack_surface_by_environment",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_attack_surface_by_environment (environment, attack_surface_count)\nSELECT \n    COALESCE(environment, 'Unknown') AS environment,  -- Handle NULL values by replacing with 'Unknown'\n    COUNT(*) AS attack_surface_count  -- Count of records for each environment\nFROM \n    attack_surface_table\nGROUP BY \n    environment  -- Group by distinct environment values\nORDER BY \n    environment;  -- Order by environment for better readability",
+      "description": "Breakdown of attack surfaces by environment",
+      "input_tables": [
+        "attack_surface_table"
+      ],
+      "output_table": "gold_attack_surface_by_environment",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_attack_surface_by_environment from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

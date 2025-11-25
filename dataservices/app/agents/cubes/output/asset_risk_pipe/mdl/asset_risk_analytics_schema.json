@@ -144,6 +144,168 @@
   ],
   "metrics": [
     {
+      "name": "attack_surface_index_by_business_unit_metrics",
+      "baseObject": "attack_surface_index_by_business_unit",
+      "dimension": [
+        {
+          "name": "business_unit",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "The business unit associated with the assets."
+          }
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_vulnerabilities",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_vulnerabilities}",
+          "properties": {
+            "description": "The total number of distinct vulnerabilities associated with the assets in the business unit.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "total_misconfigurations",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_misconfigurations}",
+          "properties": {
+            "description": "The total number of distinct misconfigurations associated with the assets in the business unit.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "total_external_exposures",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_external_exposures}",
+          "properties": {
+            "description": "The total number of distinct external exposures associated with the assets in the business unit.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "total_identity_exposures",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_identity_exposures}",
+          "properties": {
+            "description": "The total number of distinct identity exposures associated with the assets in the business unit.",
+            "aggregation": "count"
+          }
+        }
+      ],
+      "cached": false,
+      "properties": {
+        "description": "Metrics for attack_surface_index_by_business_unit data mart"
+      }
+    },
+    {
+      "name": "software_asset_management_summary_metrics",
+      "baseObject": "software_asset_management_summary",
+      "dimension": [
+        {
+          "name": "department",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "The department associated with the software assets."
+          }
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_software_assets",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_software_assets}",
+          "properties": {
+            "description": "The total number of distinct software assets in the department.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "total_licenses",
+          "type": "sum",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_licenses}",
+          "properties": {
+            "description": "The total number of licenses for software assets in the department.",
+            "aggregation": "sum"
+          }
+        },
+        {
+          "name": "avg_usage_hours",
+          "type": "avg",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.avg_usage_hours}",
+          "properties": {
+            "description": "The average usage hours of software assets in the department.",
+            "aggregation": "avg"
+          }
+        }
+      ],
+      "cached": false,
+      "properties": {
+        "description": "Metrics for software_asset_management_summary data mart"
+      }
+    },
+    {
+      "name": "vulnerability_risk_assessment_metrics",
+      "baseObject": "vulnerability_risk_assessment",
+      "dimension": [
+        {
+          "name": "severity",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "The severity level of the vulnerabilities, which categorizes them into different risk levels."
+          }
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_vulnerabilities",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_vulnerabilities}",
+          "properties": {
+            "description": "The total number of vulnerabilities recorded for each severity level.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "avg_time_to_remediate",
+          "type": "avg",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.avg_time_to_remediate}",
+          "properties": {
+            "description": "The average time taken to remediate vulnerabilities, calculated by averaging the time_to_remediate values.",
+            "aggregation": "avg"
+          }
+        }
+      ],
+      "cached": false,
+      "properties": {
+        "description": "Metrics for vulnerability_risk_assessment data mart"
+      }
+    },
+    {
       "name": "attack_surface_summary_by_os_software_metrics",
       "baseObject": "attack_surface_summary_by_os_software",
       "dimension": [
@@ -217,17 +379,6 @@
             "description": "The total number of distinct misconfigurations associated with the assets.",
             "aggregation": "count"
           }
-        },
-        {
-          "name": "total_exposures",
-          "type": "count",
-          "isCalculated": true,
-          "notNull": false,
-          "expression": "${model.total_exposures}",
-          "properties": {
-            "description": "The total number of distinct exposures associated with the assets.",
-            "aggregation": "count"
-          }
         }
       ],
       "cached": false,
@@ -236,108 +387,9 @@
       }
     },
     {
-      "name": "software_asset_management_summary_metrics",
-      "baseObject": "software_asset_management_summary",
+      "name": "external_exposure_summary_metrics",
+      "baseObject": "external_exposure_summary",
       "dimension": [
-        {
-          "name": "software_name",
-          "type": "string",
-          "isCalculated": false,
-          "notNull": false,
-          "properties": {
-            "description": "The name of the software asset."
-          }
-        },
-        {
-          "name": "version",
-          "type": "string",
-          "isCalculated": false,
-          "notNull": false,
-          "properties": {
-            "description": "The version of the software asset."
-          }
-        },
-        {
-          "name": "business_unit",
-          "type": "string",
-          "isCalculated": false,
-          "notNull": false,
-          "properties": {
-            "description": "The business unit associated with the software asset."
-          }
-        },
-        {
-          "name": "environment",
-          "type": "string",
-          "isCalculated": false,
-          "notNull": false,
-          "properties": {
-            "description": "The environment in which the software asset is deployed (e.g., production, development)."
-          }
-        }
-      ],
-      "measure": [
-        {
-          "name": "total_devices",
-          "type": "sum",
-          "isCalculated": true,
-          "notNull": false,
-          "expression": "${model.total_devices}",
-          "properties": {
-            "description": "The total number of devices using the software asset.",
-            "aggregation": "sum"
-          }
-        },
-        {
-          "name": "total_vulnerabilities",
-          "type": "sum",
-          "isCalculated": true,
-          "notNull": false,
-          "expression": "${model.total_vulnerabilities}",
-          "properties": {
-            "description": "The total number of vulnerabilities associated with the software asset.",
-            "aggregation": "sum"
-          }
-        },
-        {
-          "name": "total_misconfigurations",
-          "type": "sum",
-          "isCalculated": true,
-          "notNull": false,
-          "expression": "${model.total_misconfigurations}",
-          "properties": {
-            "description": "The total number of misconfigurations associated with the software asset.",
-            "aggregation": "sum"
-          }
-        }
-      ],
-      "cached": false,
-      "properties": {
-        "description": "Metrics for software_asset_management_summary data mart"
-      }
-    },
-    {
-      "name": "external_exposure_risk_summary_metrics",
-      "baseObject": "external_exposure_risk_summary",
-      "dimension": [
-        {
-          "name": "risk_category",
-          "type": "string",
-          "isCalculated": false,
-          "notNull": false,
-          "properties": {
-            "description": "The category of the risk associated with external exposures."
-          }
-        },
-        {
-          "name": "os_software_stack",
-          "type": "string",
-          "isCalculated": false,
-          "notNull": false,
-          "properties": {
-            "description": "The operating system and software stack associated with the exposure."
-          }
-        },
         {
           "name": "business_unit",
           "type": "string",
@@ -353,7 +405,16 @@
           "isCalculated": false,
           "notNull": false,
           "properties": {
-            "description": "The environment in which the exposure exists (e.g., production, staging)."
+            "description": "The environment in which the exposure is categorized (e.g., production, staging)."
+          }
+        },
+        {
+          "name": "exposure_type",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "The type of exposure (e.g., vulnerability, misconfiguration)."
           }
         }
       ],
@@ -368,35 +429,94 @@
             "description": "The total number of distinct exposures recorded.",
             "aggregation": "count"
           }
+        }
+      ],
+      "cached": false,
+      "properties": {
+        "description": "Metrics for external_exposure_summary data mart"
+      }
+    },
+    {
+      "name": "identity_exposure_summary_metrics",
+      "baseObject": "identity_exposure_summary",
+      "dimension": [
+        {
+          "name": "business_unit",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "The business unit associated with the identity exposure."
+          }
         },
         {
-          "name": "total_potential_impact",
-          "type": "sum",
+          "name": "environment",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "The environment (e.g., production, staging) where the identity exposure occurred."
+          }
+        },
+        {
+          "name": "identity_id",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Unique identifier for each identity whose exposure is being summarized."
+          }
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_identity_exposures",
+          "type": "count",
           "isCalculated": true,
           "notNull": false,
-          "expression": "${model.total_potential_impact}",
+          "expression": "${model.total_identity_exposures}",
           "properties": {
-            "description": "The total potential impact value of all exposures.",
-            "aggregation": "sum"
+            "description": "The total number of distinct identity exposures counted for each business unit and environment.",
+            "aggregation": "count"
+          }
+        },
+        {
+          "name": "total_exposures",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_exposures}",
+          "properties": {
+            "description": "Total number of exposure instances recorded for each identity.",
+            "aggregation": "count"
           }
         }
       ],
       "cached": false,
       "properties": {
-        "description": "Metrics for external_exposure_risk_summary data mart"
+        "description": "Metrics for identity_exposure_summary data mart"
       }
     },
     {
-      "name": "asset_management_trend_analysis_metrics",
-      "baseObject": "asset_management_trend_analysis",
+      "name": "asset_performance_trend_analysis_metrics",
+      "baseObject": "asset_performance_trend_analysis",
       "dimension": [
         {
           "name": "asset_id",
-          "type": "integer",
+          "type": "string",
           "isCalculated": false,
           "notNull": false,
           "properties": {
             "description": "Unique identifier for each asset."
+          }
+        },
+        {
+          "name": "asset_name",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Name of the asset."
           }
         },
         {
@@ -409,36 +529,16 @@
           }
         },
         {
-          "name": "acquisition_date",
-          "type": "date",
-          "isCalculated": false,
-          "notNull": false,
-          "properties": {
-            "description": "Date when the asset was acquired."
-          }
-        },
-        {
           "name": "month",
           "type": "date",
           "isCalculated": false,
           "notNull": false,
           "properties": {
-            "description": "Month for which the trend analysis is performed."
+            "description": "Month of the performance trend analysis."
           }
         }
       ],
       "measure": [
-        {
-          "name": "total_risk_score",
-          "type": "sum",
-          "isCalculated": true,
-          "notNull": false,
-          "expression": "${model.total_risk_score}",
-          "properties": {
-            "description": "Total risk score calculated for each asset based on associated vulnerabilities.",
-            "aggregation": "sum"
-          }
-        },
         {
           "name": "total_vulnerabilities",
           "type": "count",
@@ -473,62 +573,44 @@
           }
         },
         {
-          "name": "total_identity_exposures",
-          "type": "count",
+          "name": "high_risk_vulnerability_ratio",
+          "type": "avg",
           "isCalculated": true,
           "notNull": false,
-          "expression": "${model.total_identity_exposures}",
+          "expression": "${model.high_risk_vulnerability_ratio}",
           "properties": {
-            "description": "Total number of distinct identity exposures associated with the asset.",
-            "aggregation": "count"
+            "description": "Average ratio of high-risk vulnerabilities per asset.",
+            "aggregation": "avg"
           }
         },
         {
-          "name": "depreciation_value",
-          "type": "numeric",
+          "name": "critical_misconfiguration_ratio",
+          "type": "avg",
           "isCalculated": true,
           "notNull": false,
-          "expression": "${model.depreciation_value}",
+          "expression": "${model.critical_misconfiguration_ratio}",
           "properties": {
-            "description": "Value of the asset after accounting for depreciation.",
-            "aggregation": "numeric"
+            "description": "Average ratio of critical misconfigurations per asset.",
+            "aggregation": "avg"
           }
         }
       ],
       "cached": false,
       "properties": {
-        "description": "Metrics for asset_management_trend_analysis data mart"
+        "description": "Metrics for asset_performance_trend_analysis data mart"
       }
     },
     {
-      "name": "software_asset_management_trend_analysis_metrics",
-      "baseObject": "software_asset_management_trend_analysis",
+      "name": "identity_exposure_risk_analysis_metrics",
+      "baseObject": "identity_exposure_risk_analysis",
       "dimension": [
         {
-          "name": "software_id",
-          "type": "numeric",
-          "isCalculated": false,
-          "notNull": false,
-          "properties": {
-            "description": "Unique identifier for each software application."
-          }
-        },
-        {
-          "name": "software_name",
+          "name": "identity_id",
           "type": "string",
           "isCalculated": false,
           "notNull": false,
           "properties": {
-            "description": "Name of the software application."
-          }
-        },
-        {
-          "name": "license_type",
-          "type": "string",
-          "isCalculated": false,
-          "notNull": false,
-          "properties": {
-            "description": "Type of license associated with the software application."
+            "description": "Unique identifier for each identity being analyzed."
           }
         },
         {
@@ -537,31 +619,113 @@
           "isCalculated": false,
           "notNull": false,
           "properties": {
-            "description": "The month for which the data is recorded, used for trend analysis."
+            "description": "The month for which the exposure data is aggregated."
           }
         }
       ],
       "measure": [
         {
-          "name": "total_devices",
+          "name": "total_exposures",
           "type": "count",
           "isCalculated": true,
           "notNull": false,
-          "expression": "${model.total_devices}",
+          "expression": "${model.total_exposures}",
           "properties": {
-            "description": "Total number of distinct devices associated with the software application.",
+            "description": "Total number of exposures recorded for each identity in the specified month.",
+            "aggregation": "count"
+          }
+        }
+      ],
+      "cached": false,
+      "properties": {
+        "description": "Metrics for identity_exposure_risk_analysis data mart"
+      }
+    },
+    {
+      "name": "software_inventory_compliance_analysis_metrics",
+      "baseObject": "software_inventory_compliance_analysis",
+      "dimension": [
+        {
+          "name": "software_id",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Unique identifier for each software."
+          }
+        },
+        {
+          "name": "software_name",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Name of the software."
+          }
+        },
+        {
+          "name": "month",
+          "type": "date",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "The month for which the compliance data is reported."
+          }
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_licenses",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_licenses}",
+          "properties": {
+            "description": "Total number of licenses for each software.",
+            "aggregation": "count"
+          }
+        }
+      ],
+      "cached": false,
+      "properties": {
+        "description": "Metrics for software_inventory_compliance_analysis data mart"
+      }
+    },
+    {
+      "name": "asset_exposure_summary_metrics",
+      "baseObject": "asset_exposure_summary",
+      "dimension": [
+        {
+          "name": "asset_id",
+          "type": "string",
+          "isCalculated": false,
+          "notNull": false,
+          "properties": {
+            "description": "Unique identifier for each asset."
+          }
+        }
+      ],
+      "measure": [
+        {
+          "name": "total_vulnerabilities",
+          "type": "count",
+          "isCalculated": true,
+          "notNull": false,
+          "expression": "${model.total_vulnerabilities}",
+          "properties": {
+            "description": "Total number of distinct vulnerabilities associated with the asset.",
             "aggregation": "count"
           }
         },
         {
           "name": "total_misconfigurations",
-          "type": "sum",
+          "type": "count",
           "isCalculated": true,
           "notNull": false,
           "expression": "${model.total_misconfigurations}",
           "properties": {
-            "description": "Total number of misconfigurations related to the software application.",
-            "aggregation": "sum"
+            "description": "Total number of distinct misconfigurations associated with the asset.",
+            "aggregation": "count"
           }
         },
         {
@@ -571,82 +735,8 @@
           "notNull": false,
           "expression": "${model.total_external_exposures}",
           "properties": {
-            "description": "Total number of distinct external exposures related to the software application.",
+            "description": "Total number of distinct external exposures associated with the asset.",
             "aggregation": "count"
-          }
-        }
-      ],
-      "cached": false,
-      "properties": {
-        "description": "Metrics for software_asset_management_trend_analysis data mart"
-      }
-    },
-    {
-      "name": "asset_exposure_summary_metrics",
-      "baseObject": "asset_exposure_summary",
-      "dimension": [
-        {
-          "name": "asset_id",
-          "type": "numeric",
-          "isCalculated": false,
-          "notNull": false,
-          "properties": {
-            "description": "Unique identifier for each asset."
-          }
-        },
-        {
-          "name": "asset_name",
-          "type": "string",
-          "isCalculated": false,
-          "notNull": false,
-          "properties": {
-            "description": "Name of the asset."
-          }
-        }
-      ],
-      "measure": [
-        {
-          "name": "total_vulnerability_score",
-          "type": "sum",
-          "isCalculated": true,
-          "notNull": false,
-          "expression": "${model.total_vulnerability_score}",
-          "properties": {
-            "description": "Total score representing the vulnerabilities associated with the asset.",
-            "aggregation": "sum"
-          }
-        },
-        {
-          "name": "vulnerability_count",
-          "type": "count",
-          "isCalculated": true,
-          "notNull": false,
-          "expression": "${model.vulnerability_count}",
-          "properties": {
-            "description": "Count of distinct vulnerabilities associated with the asset.",
-            "aggregation": "count"
-          }
-        },
-        {
-          "name": "total_misconfigurations",
-          "type": "sum",
-          "isCalculated": true,
-          "notNull": false,
-          "expression": "${model.total_misconfigurations}",
-          "properties": {
-            "description": "Total number of misconfigurations associated with the asset.",
-            "aggregation": "sum"
-          }
-        },
-        {
-          "name": "total_external_exposure",
-          "type": "sum",
-          "isCalculated": true,
-          "notNull": false,
-          "expression": "${model.total_external_exposure}",
-          "properties": {
-            "description": "Total score representing the external exposure risks associated with the asset.",
-            "aggregation": "sum"
           }
         }
       ],
@@ -656,98 +746,28 @@
       }
     },
     {
-      "name": "identity_exposure_summary_metrics",
-      "baseObject": "identity_exposure_summary",
-      "dimension": [
-        {
-          "name": "identity_id",
-          "type": "string",
-          "isCalculated": false,
-          "notNull": false,
-          "properties": {
-            "description": "Unique identifier for each identity."
-          }
-        }
-      ],
-      "measure": [
-        {
-          "name": "total_exposure_incidents",
-          "type": "sum",
-          "isCalculated": true,
-          "notNull": false,
-          "expression": "${model.total_exposure_incidents}",
-          "properties": {
-            "description": "Total number of exposure incidents associated with an identity.",
-            "aggregation": "sum"
-          }
-        },
-        {
-          "name": "average_severity",
-          "type": "avg",
-          "isCalculated": true,
-          "notNull": false,
-          "expression": "${model.average_severity}",
-          "properties": {
-            "description": "Average severity level of exposure incidents associated with an identity.",
-            "aggregation": "avg"
-          }
-        }
-      ],
-      "cached": false,
-      "properties": {
-        "description": "Metrics for identity_exposure_summary data mart"
-      }
-    },
-    {
-      "name": "software_asset_usage_summary_metrics",
-      "baseObject": "software_asset_usage_summary",
+      "name": "software_inventory_summary_metrics",
+      "baseObject": "software_inventory_summary",
       "dimension": [
         {
           "name": "software_id",
-          "type": "numeric",
-          "isCalculated": false,
-          "notNull": false,
-          "properties": {
-            "description": "Unique identifier for each software asset."
-          }
-        },
-        {
-          "name": "software_name",
           "type": "string",
           "isCalculated": false,
           "notNull": false,
           "properties": {
-            "description": "Name of the software asset."
-          }
-        },
-        {
-          "name": "created_at",
-          "type": "date",
-          "isCalculated": false,
-          "notNull": false,
-          "properties": {
-            "description": "Timestamp when the record was created."
-          }
-        },
-        {
-          "name": "updated_at",
-          "type": "date",
-          "isCalculated": false,
-          "notNull": false,
-          "properties": {
-            "description": "Timestamp when the record was last updated."
+            "description": "Unique identifier for each software in the inventory."
           }
         }
       ],
       "measure": [
         {
-          "name": "total_devices_used",
+          "name": "total_licenses",
           "type": "count",
           "isCalculated": true,
           "notNull": false,
-          "expression": "${model.total_devices_used}",
+          "expression": "${model.total_licenses}",
           "properties": {
-            "description": "Total number of distinct devices using the software.",
+            "description": "Total number of licenses counted for each software.",
             "aggregation": "count"
           }
         },
@@ -758,23 +778,1260 @@
           "notNull": false,
           "expression": "${model.total_usage_hours}",
           "properties": {
-            "description": "Total hours of usage for the software.",
+            "description": "Total usage hours summed for each software.",
             "aggregation": "sum"
           }
         }
       ],
       "cached": false,
       "properties": {
-        "description": "Metrics for software_asset_usage_summary data mart"
+        "description": "Metrics for software_inventory_summary data mart"
       }
     }
   ],
   "views": [],
   "properties": {
-    "generated_at": "2025-11-20T11:47:30.501900",
+    "generated_at": "2025-11-24T09:18:54.875315",
     "architecture": "medallion",
     "layers": "raw,silver,gold"
   },
+  "transformations": [
+    {
+      "name": "silver_to_gold_gold_attack_surface_index_per_asset",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_attack_surface_index_per_asset",
+      "target_model": "gold_gold_attack_surface_index_per_asset",
+      "steps": [
+        {
+          "step_name": "Metric: attack_surface_index_per_asset",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_attack_surface_index_per_asset (asset_id, attack_surface_index)\nSELECT \n    a.asset_id,\n    COALESCE(SUM(asi.value), 0) / NULLIF(COUNT(ass.id), 0) AS attack_surface_index\nFROM \n    assets_table a\nLEFT JOIN \n    assessments_table ass ON a.asset_id = ass.asset_id\nLEFT JOIN \n    attack_surface_index_table asi ON ass.id = asi.assessment_id\nWHERE \n    ass.timestamp = (SELECT MAX(timestamp) FROM assessments_table WHERE asset_id = a.asset_id)\nGROUP BY \n    a.asset_id;",
+          "description": "The Attack Surface Index (ASI) calculated for each asset.",
+          "input_tables": [
+            "assets_table"
+          ],
+          "output_table": "gold_attack_surface_index_per_asset",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: attack_surface_index_per_asset: The Attack Surface Index (ASI) calculated for each asset.\nINSERT INTO gold_attack_surface_index_per_asset (asset_id, attack_surface_index)\nSELECT \n    a.asset_id,\n    COALESCE(SUM(asi.value), 0) / NULLIF(COUNT(ass.id), 0) AS attack_surface_index\nFROM \n    assets_table a\nLEFT JOIN \n    assessments_table ass ON a.asset_id = ass.asset_id\nLEFT JOIN \n    attack_surface_index_table asi ON ass.id = asi.assessment_id\nWHERE \n    ass.timestamp = (SELECT MAX(timestamp) FROM assessments_table WHERE asset_id = a.asset_id)\nGROUP BY \n    a.asset_id;",
+      "description": "Transform gold_attack_surface_index_per_asset from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_distribution_of_attack_surface_index",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_distribution_of_attack_surface_index",
+      "target_model": "gold_gold_distribution_of_attack_surface_index",
+      "steps": [
+        {
+          "step_name": "Metric: distribution_of_attack_surface_index",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_distribution_of_attack_surface_index (attack_surface_index, asset_count)\nSELECT \n    attack_surface_index,\n    COUNT(*) AS asset_count\nFROM \n    assets_table\nWHERE \n    attack_surface_index IS NOT NULL  -- Ensure only valid ASI values are considered\nGROUP BY \n    attack_surface_index\nORDER BY \n    attack_surface_index;  -- Optional: Order by ASI for better readability",
+          "description": "The distribution of Attack Surface Index values across all assets.",
+          "input_tables": [
+            "assets_table"
+          ],
+          "output_table": "gold_distribution_of_attack_surface_index",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: distribution_of_attack_surface_index: The distribution of Attack Surface Index values across all assets.\nINSERT INTO gold_distribution_of_attack_surface_index (attack_surface_index, asset_count)\nSELECT \n    attack_surface_index,\n    COUNT(*) AS asset_count\nFROM \n    assets_table\nWHERE \n    attack_surface_index IS NOT NULL  -- Ensure only valid ASI values are considered\nGROUP BY \n    attack_surface_index\nORDER BY \n    attack_surface_index;  -- Optional: Order by ASI for better readability",
+      "description": "Transform gold_distribution_of_attack_surface_index from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_top_10_highest_risk_assets",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_top_10_highest_risk_assets",
+      "target_model": "gold_gold_top_10_highest_risk_assets",
+      "steps": [
+        {
+          "step_name": "Metric: top_10_highest_risk_assets",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_top_10_highest_risk_assets (asset_id, asi_value)\nSELECT asset_id, asi_value\nFROM assets_table\nWHERE asi_value IS NOT NULL  -- Ensure ASI is valid\nORDER BY asi_value DESC  -- Sort by ASI in descending order\nLIMIT 10;  -- Select top 10 assets",
+          "description": "The top 10 assets with the highest Attack Surface Index values.",
+          "input_tables": [
+            "assets_table"
+          ],
+          "output_table": "gold_top_10_highest_risk_assets",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: top_10_highest_risk_assets: The top 10 assets with the highest Attack Surface Index values.\nINSERT INTO gold_top_10_highest_risk_assets (asset_id, asi_value)\nSELECT asset_id, asi_value\nFROM assets_table\nWHERE asi_value IS NOT NULL  -- Ensure ASI is valid\nORDER BY asi_value DESC  -- Sort by ASI in descending order\nLIMIT 10;  -- Select top 10 assets",
+      "description": "Transform gold_top_10_highest_risk_assets from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_total_external_exposure_score",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_total_external_exposure_score",
+      "target_model": "gold_gold_total_external_exposure_score",
+      "steps": [
+        {
+          "step_name": "Metric: total_external_exposure_score",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_total_external_exposure_score (environment, total_external_exposure_score)\nSELECT \n    environment,\n    COALESCE(SUM(external_exposure_score), 0) AS total_external_exposure_score\nFROM \n    assets_table\nGROUP BY \n    environment;",
+          "description": "The total score representing external exposure across all assets.",
+          "input_tables": [
+            "assets_table"
+          ],
+          "output_table": "gold_total_external_exposure_score",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: total_external_exposure_score: The total score representing external exposure across all assets.\nINSERT INTO gold_total_external_exposure_score (environment, total_external_exposure_score)\nSELECT \n    environment,\n    COALESCE(SUM(external_exposure_score), 0) AS total_external_exposure_score\nFROM \n    assets_table\nGROUP BY \n    environment;",
+      "description": "Transform gold_total_external_exposure_score from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_external_exposure_score_by_environment",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_external_exposure_score_by_environment",
+      "target_model": "gold_gold_external_exposure_score_by_environment",
+      "steps": [
+        {
+          "step_name": "Metric: external_exposure_score_by_environment",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_external_exposure_score_by_environment (environment, total_external_exposure_score)\nSELECT \n    COALESCE(environment, 'Unknown') AS environment,  -- Handle NULL environments\n    SUM(external_exposure_score) AS total_external_exposure_score\nFROM \n    assets_table\nWHERE \n    environment IS NOT NULL  -- Only consider assets with an assigned environment\nGROUP BY \n    environment\nORDER BY \n    environment;  -- Optional: Order by environment for better readability",
+          "description": "The breakdown of total external exposure score by environment (prod vs non-prod).",
+          "input_tables": [
+            "assets_table"
+          ],
+          "output_table": "gold_external_exposure_score_by_environment",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: external_exposure_score_by_environment: The breakdown of total external exposure score by environment (prod vs non-prod).\nINSERT INTO gold_external_exposure_score_by_environment (environment, total_external_exposure_score)\nSELECT \n    COALESCE(environment, 'Unknown') AS environment,  -- Handle NULL environments\n    SUM(external_exposure_score) AS total_external_exposure_score\nFROM \n    assets_table\nWHERE \n    environment IS NOT NULL  -- Only consider assets with an assigned environment\nGROUP BY \n    environment\nORDER BY \n    environment;  -- Optional: Order by environment for better readability",
+      "description": "Transform gold_external_exposure_score_by_environment from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_vulnerability_exposure_score",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_vulnerability_exposure_score",
+      "target_model": "gold_gold_vulnerability_exposure_score",
+      "steps": [
+        {
+          "step_name": "Metric: vulnerability_exposure_score",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_vulnerability_exposure_score (asset_id, vulnerability_exposure_score)\nSELECT \n    asset_id,\n    COALESCE(NULLIF(CVSS, 0), 0) * \n    COALESCE(NULLIF(EPSS, 0), 0) * \n    COALESCE(NULLIF(KEV_flag, 0), 0) * \n    COALESCE(NULLIF(internet_facing_flag, 0), 0) AS vulnerability_exposure_score\nFROM \n    assets_table\nWHERE \n    CVSS IS NOT NULL AND \n    EPSS IS NOT NULL AND \n    KEV_flag IS NOT NULL AND \n    internet_facing_flag IS NOT NULL;",
+          "description": "The calculated vulnerability exposure score for each asset based on CVSS, EPSS, KEV flag, and internet-facing flag.",
+          "input_tables": [
+            "assets_table"
+          ],
+          "output_table": "gold_vulnerability_exposure_score",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: vulnerability_exposure_score: The calculated vulnerability exposure score for each asset based on CVSS, EPSS, KEV flag, and internet-facing flag.\nINSERT INTO gold_vulnerability_exposure_score (asset_id, vulnerability_exposure_score)\nSELECT \n    asset_id,\n    COALESCE(NULLIF(CVSS, 0), 0) * \n    COALESCE(NULLIF(EPSS, 0), 0) * \n    COALESCE(NULLIF(KEV_flag, 0), 0) * \n    COALESCE(NULLIF(internet_facing_flag, 0), 0) AS vulnerability_exposure_score\nFROM \n    assets_table\nWHERE \n    CVSS IS NOT NULL AND \n    EPSS IS NOT NULL AND \n    KEV_flag IS NOT NULL AND \n    internet_facing_flag IS NOT NULL;",
+      "description": "Transform gold_vulnerability_exposure_score from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_assets_above_threshold",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_assets_above_threshold",
+      "target_model": "gold_gold_assets_above_threshold",
+      "steps": [
+        {
+          "step_name": "Metric: assets_above_threshold",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_assets_above_threshold (asset_count)\nSELECT COUNT(*) AS asset_count\nFROM assets_table\nWHERE COALESCE(vulnerability_exposure_score, 0) > 0.5;",
+          "description": "Count of assets with a vulnerability exposure score greater than 0.5.",
+          "input_tables": [
+            "assets_table"
+          ],
+          "output_table": "gold_assets_above_threshold",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: assets_above_threshold: Count of assets with a vulnerability exposure score greater than 0.5.\nINSERT INTO gold_assets_above_threshold (asset_count)\nSELECT COUNT(*) AS asset_count\nFROM assets_table\nWHERE COALESCE(vulnerability_exposure_score, 0) > 0.5;",
+      "description": "Transform gold_assets_above_threshold from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_misconfiguration_exposure_score",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_misconfiguration_exposure_score",
+      "target_model": "gold_gold_misconfiguration_exposure_score",
+      "steps": [
+        {
+          "step_name": "Metric: misconfiguration_exposure_score",
+          "step_type": "metric",
+          "sql_logic": "SELECT \n    \"severity_category\",\n    DATE_TRUNC('month', \"created_at\") AS \"month\",\n    COALESCE(SUM(\"exposure_score\"), 0) AS \"total_exposure_score\"\nFROM \n    \"misconfiguration_scores\"\nGROUP BY \n    \"severity_category\", \n    DATE_TRUNC('month', \"created_at\")\nORDER BY \n    \"month\" DESC, \n    \"severity_category\";",
+          "description": "The total misconfiguration exposure score calculated based on severity categories.",
+          "input_tables": [
+            "misconfiguration_scores"
+          ],
+          "output_table": "gold_misconfiguration_exposure_score",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: misconfiguration_exposure_score: The total misconfiguration exposure score calculated based on severity categories.\nSELECT \n    \"severity_category\",\n    DATE_TRUNC('month', \"created_at\") AS \"month\",\n    COALESCE(SUM(\"exposure_score\"), 0) AS \"total_exposure_score\"\nFROM \n    \"misconfiguration_scores\"\nGROUP BY \n    \"severity_category\", \n    DATE_TRUNC('month', \"created_at\")\nORDER BY \n    \"month\" DESC, \n    \"severity_category\";",
+      "description": "Transform gold_misconfiguration_exposure_score from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_misconfiguration_exposure_score_trend",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_misconfiguration_exposure_score_trend",
+      "target_model": "gold_gold_misconfiguration_exposure_score_trend",
+      "steps": [
+        {
+          "step_name": "Metric: misconfiguration_exposure_score_trend",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_misconfiguration_exposure_score_trend (month, severity_category, total_exposure_score)\nSELECT \n    DATE_TRUNC('month', ms.timestamp) AS month,  -- Truncate timestamp to month\n    ms.severity_category,  -- Group by severity category\n    SUM(COALESCE(ms.exposure_score, 0)) AS total_exposure_score  -- Sum exposure scores, handling NULLs\nFROM \n    misconfiguration_scores ms\nWHERE \n    ms.timestamp >= CURRENT_DATE - INTERVAL '6 months'  -- Filter for the last 6 months\nGROUP BY \n    month, severity_category  -- Group by month and severity category\nORDER BY \n    month, severity_category;  -- Order results for better readability",
+          "description": "The trend of misconfiguration exposure scores over the last 6 months.",
+          "input_tables": [
+            "misconfiguration_scores"
+          ],
+          "output_table": "gold_misconfiguration_exposure_score_trend",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: misconfiguration_exposure_score_trend: The trend of misconfiguration exposure scores over the last 6 months.\nINSERT INTO gold_misconfiguration_exposure_score_trend (month, severity_category, total_exposure_score)\nSELECT \n    DATE_TRUNC('month', ms.timestamp) AS month,  -- Truncate timestamp to month\n    ms.severity_category,  -- Group by severity category\n    SUM(COALESCE(ms.exposure_score, 0)) AS total_exposure_score  -- Sum exposure scores, handling NULLs\nFROM \n    misconfiguration_scores ms\nWHERE \n    ms.timestamp >= CURRENT_DATE - INTERVAL '6 months'  -- Filter for the last 6 months\nGROUP BY \n    month, severity_category  -- Group by month and severity category\nORDER BY \n    month, severity_category;  -- Order results for better readability",
+      "description": "Transform gold_misconfiguration_exposure_score_trend from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_identity_exposure_score_per_asset",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_identity_exposure_score_per_asset",
+      "target_model": "gold_gold_identity_exposure_score_per_asset",
+      "steps": [
+        {
+          "step_name": "Metric: identity_exposure_score_per_asset",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_identity_exposure_score_per_asset (asset_id, exposure_score)\nSELECT \n    a.asset_id,\n    COALESCE(SUM(\n        CASE \n            WHEN aa.admin_account_id IS NOT NULL THEN 1 \n            ELSE 0 \n        END +\n        CASE \n            WHEN sa.stale_account_id IS NOT NULL THEN 1 \n            ELSE 0 \n        END +\n        CASE \n            WHEN mfa.mfa_enabled = TRUE THEN 1 \n            ELSE 0 \n        END\n    ), 0) AS identity_exposure_score\nFROM \n    assets a\nLEFT JOIN \n    admin_accounts aa ON a.asset_id = aa.asset_id\nLEFT JOIN \n    stale_accounts sa ON a.asset_id = sa.asset_id\nLEFT JOIN \n    mfa_status mfa ON a.asset_id = mfa.asset_id\nGROUP BY \n    a.asset_id;",
+          "description": "The calculated identity exposure score for each asset based on the status of admin accounts, stale accounts, and MFA.",
+          "input_tables": [
+            "assets",
+            "admin_accounts",
+            "stale_accounts",
+            "mfa_status"
+          ],
+          "output_table": "gold_identity_exposure_score_per_asset",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: identity_exposure_score_per_asset: The calculated identity exposure score for each asset based on the status of admin accounts, stale accounts, and MFA.\nINSERT INTO gold_identity_exposure_score_per_asset (asset_id, exposure_score)\nSELECT \n    a.asset_id,\n    COALESCE(SUM(\n        CASE \n            WHEN aa.admin_account_id IS NOT NULL THEN 1 \n            ELSE 0 \n        END +\n        CASE \n            WHEN sa.stale_account_id IS NOT NULL THEN 1 \n            ELSE 0 \n        END +\n        CASE \n            WHEN mfa.mfa_enabled = TRUE THEN 1 \n            ELSE 0 \n        END\n    ), 0) AS identity_exposure_score\nFROM \n    assets a\nLEFT JOIN \n    admin_accounts aa ON a.asset_id = aa.asset_id\nLEFT JOIN \n    stale_accounts sa ON a.asset_id = sa.asset_id\nLEFT JOIN \n    mfa_status mfa ON a.asset_id = mfa.asset_id\nGROUP BY \n    a.asset_id;",
+      "description": "Transform gold_identity_exposure_score_per_asset from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_count_high_identity_risk_assets",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_count_high_identity_risk_assets",
+      "target_model": "gold_gold_count_high_identity_risk_assets",
+      "steps": [
+        {
+          "step_name": "Metric: count_high_identity_risk_assets",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_count_high_identity_risk_assets (asset_count)\nSELECT COUNT(*) AS asset_count\nFROM assets\nWHERE COALESCE(identity_exposure_score, 0) > :high_risk_threshold;",
+          "description": "Count of assets that are identified as having high identity risk based on the exposure score.",
+          "input_tables": [
+            "assets"
+          ],
+          "output_table": "gold_count_high_identity_risk_assets",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: count_high_identity_risk_assets: Count of assets that are identified as having high identity risk based on the exposure score.\nINSERT INTO gold_count_high_identity_risk_assets (asset_count)\nSELECT COUNT(*) AS asset_count\nFROM assets\nWHERE COALESCE(identity_exposure_score, 0) > :high_risk_threshold;",
+      "description": "Transform gold_count_high_identity_risk_assets from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_admin_account_count",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_admin_account_count",
+      "target_model": "gold_gold_admin_account_count",
+      "steps": [
+        {
+          "step_name": "Metric: admin_account_count",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_admin_account_count (asset_id, admin_account_count)\nSELECT \n    asset_id,\n    COUNT(DISTINCT id) AS admin_account_count  -- Count of distinct active admin accounts\nFROM \n    admin_accounts\nWHERE \n    status = 'active'  -- Only consider active admin accounts\nGROUP BY \n    asset_id;  -- Group by asset_id to get counts per asset",
+          "description": "Count of admin accounts associated with each asset.",
+          "input_tables": [
+            "admin_accounts"
+          ],
+          "output_table": "gold_admin_account_count",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: admin_account_count: Count of admin accounts associated with each asset.\nINSERT INTO gold_admin_account_count (asset_id, admin_account_count)\nSELECT \n    asset_id,\n    COUNT(DISTINCT id) AS admin_account_count  -- Count of distinct active admin accounts\nFROM \n    admin_accounts\nWHERE \n    status = 'active'  -- Only consider active admin accounts\nGROUP BY \n    asset_id;  -- Group by asset_id to get counts per asset",
+      "description": "Transform gold_admin_account_count from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_stale_account_count",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_stale_account_count",
+      "target_model": "gold_gold_stale_account_count",
+      "steps": [
+        {
+          "step_name": "Metric: stale_account_count",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_stale_account_count (asset_id, stale_account_count)\nSELECT \n    asset_id,\n    COUNT(DISTINCT account_id) AS stale_account_count\nFROM \n    stale_accounts\nWHERE \n    account_status = 'stale'  -- Assuming there is a status column to identify stale accounts\nGROUP BY \n    asset_id;",
+          "description": "Count of stale accounts associated with each asset.",
+          "input_tables": [
+            "stale_accounts"
+          ],
+          "output_table": "gold_stale_account_count",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: stale_account_count: Count of stale accounts associated with each asset.\nINSERT INTO gold_stale_account_count (asset_id, stale_account_count)\nSELECT \n    asset_id,\n    COUNT(DISTINCT account_id) AS stale_account_count\nFROM \n    stale_accounts\nWHERE \n    account_status = 'stale'  -- Assuming there is a status column to identify stale accounts\nGROUP BY \n    asset_id;",
+      "description": "Transform gold_stale_account_count from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_mfa_status_percentage",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_mfa_status_percentage",
+      "target_model": "gold_gold_mfa_status_percentage",
+      "steps": [
+        {
+          "step_name": "Metric: mfa_status_percentage",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_mfa_status_percentage (asset_id, mfa_enabled_percentage)\nSELECT \n    asset_id,\n    COALESCE(\n        (COUNT(CASE WHEN mfa_configured THEN 1 END) * 100.0) / NULLIF(COUNT(*), 0), \n        0) AS mfa_enabled_percentage\nFROM \n    mfa_status\nGROUP BY \n    asset_id;",
+          "description": "Percentage of assets that have Multi-Factor Authentication (MFA) enabled.",
+          "input_tables": [
+            "mfa_status"
+          ],
+          "output_table": "gold_mfa_status_percentage",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: mfa_status_percentage: Percentage of assets that have Multi-Factor Authentication (MFA) enabled.\nINSERT INTO gold_mfa_status_percentage (asset_id, mfa_enabled_percentage)\nSELECT \n    asset_id,\n    COALESCE(\n        (COUNT(CASE WHEN mfa_configured THEN 1 END) * 100.0) / NULLIF(COUNT(*), 0), \n        0) AS mfa_enabled_percentage\nFROM \n    mfa_status\nGROUP BY \n    asset_id;",
+      "description": "Transform gold_mfa_status_percentage from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_software_exposure_score_per_asset",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_software_exposure_score_per_asset",
+      "target_model": "gold_gold_software_exposure_score_per_asset",
+      "steps": [
+        {
+          "step_name": "Metric: software_exposure_score_per_asset",
+          "step_type": "metric",
+          "sql_logic": "WITH latest_software AS (\n    SELECT \n        s.\"asset_id\",\n        MAX(s.\"exposure_score\") AS \"latest_exposure_score\"\n    FROM \n        software_table s\n    WHERE \n        s.\"status\" IN ('EOL', 'unsupported')  -- Filter for EOL or unsupported software\n    GROUP BY \n        s.\"asset_id\"\n),\nasset_exposure AS (\n    SELECT \n        a.\"business_unit\",\n        COALESCE(SUM(ls.\"latest_exposure_score\"), 0) AS \"total_exposure_score\"\n    FROM \n        assets_table a\n    LEFT JOIN \n        latest_software ls ON a.\"id\" = ls.\"asset_id\"\n    WHERE \n        ls.\"latest_exposure_score\" IS NOT NULL  -- Only include assets with exposure scores\n    GROUP BY \n        a.\"business_unit\"\n)\nSELECT \n    \"business_unit\",\n    COALESCE(AVG(\"total_exposure_score\"), 0) AS \"average_exposure_score\"\nFROM \n    asset_exposure\nGROUP BY \n    \"business_unit\";",
+          "description": "The average exposure score of software per asset based on EOL and unsupported software.",
+          "input_tables": [
+            "assets_table",
+            "software_table"
+          ],
+          "output_table": "gold_software_exposure_score_per_asset",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: software_exposure_score_per_asset: The average exposure score of software per asset based on EOL and unsupported software.\nWITH latest_software AS (\n    SELECT \n        s.\"asset_id\",\n        MAX(s.\"exposure_score\") AS \"latest_exposure_score\"\n    FROM \n        software_table s\n    WHERE \n        s.\"status\" IN ('EOL', 'unsupported')  -- Filter for EOL or unsupported software\n    GROUP BY \n        s.\"asset_id\"\n),\nasset_exposure AS (\n    SELECT \n        a.\"business_unit\",\n        COALESCE(SUM(ls.\"latest_exposure_score\"), 0) AS \"total_exposure_score\"\n    FROM \n        assets_table a\n    LEFT JOIN \n        latest_software ls ON a.\"id\" = ls.\"asset_id\"\n    WHERE \n        ls.\"latest_exposure_score\" IS NOT NULL  -- Only include assets with exposure scores\n    GROUP BY \n        a.\"business_unit\"\n)\nSELECT \n    \"business_unit\",\n    COALESCE(AVG(\"total_exposure_score\"), 0) AS \"average_exposure_score\"\nFROM \n    asset_exposure\nGROUP BY \n    \"business_unit\";",
+      "description": "Transform gold_software_exposure_score_per_asset from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_count_of_assets_with_eol_or_unsupported_software",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_count_of_assets_with_eol_or_unsupported_software",
+      "target_model": "gold_gold_count_of_assets_with_eol_or_unsupported_software",
+      "steps": [
+        {
+          "step_name": "Metric: count_of_assets_with_eol_or_unsupported_software",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_count_of_assets_with_eol_or_unsupported_software (business_unit, asset_count)\nSELECT \n    a.business_unit,\n    COUNT(DISTINCT a.asset_id) AS asset_count\nFROM \n    assets_table a\nJOIN \n    software_table s ON a.software_id = s.software_id\nWHERE \n    COALESCE(s.eol, FALSE) = TRUE OR COALESCE(s.unsupported, FALSE) = TRUE\nGROUP BY \n    a.business_unit;",
+          "description": "The count of assets that have EOL or unsupported software.",
+          "input_tables": [
+            "assets_table",
+            "software_table"
+          ],
+          "output_table": "gold_count_of_assets_with_eol_or_unsupported_software",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: count_of_assets_with_eol_or_unsupported_software: The count of assets that have EOL or unsupported software.\nINSERT INTO gold_count_of_assets_with_eol_or_unsupported_software (business_unit, asset_count)\nSELECT \n    a.business_unit,\n    COUNT(DISTINCT a.asset_id) AS asset_count\nFROM \n    assets_table a\nJOIN \n    software_table s ON a.software_id = s.software_id\nWHERE \n    COALESCE(s.eol, FALSE) = TRUE OR COALESCE(s.unsupported, FALSE) = TRUE\nGROUP BY \n    a.business_unit;",
+      "description": "Transform gold_count_of_assets_with_eol_or_unsupported_software from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_exploitability_likelihood_per_asset",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_exploitability_likelihood_per_asset",
+      "target_model": "gold_gold_exploitability_likelihood_per_asset",
+      "steps": [
+        {
+          "step_name": "Metric: exploitability_likelihood_per_asset",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_exploitability_likelihood_per_asset (asset_id, exploitability_likelihood_score)\nSELECT \n    asset_id,\n    COALESCE(AVG(exploitability_score), 0) AS exploitability_likelihood_score\nFROM \n    assets_table\nGROUP BY \n    asset_id;",
+          "description": "The likelihood of exploitability for each asset, measured as a score or rating.",
+          "input_tables": [
+            "assets_table"
+          ],
+          "output_table": "gold_exploitability_likelihood_per_asset",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: exploitability_likelihood_per_asset: The likelihood of exploitability for each asset, measured as a score or rating.\nINSERT INTO gold_exploitability_likelihood_per_asset (asset_id, exploitability_likelihood_score)\nSELECT \n    asset_id,\n    COALESCE(AVG(exploitability_score), 0) AS exploitability_likelihood_score\nFROM \n    assets_table\nGROUP BY \n    asset_id;",
+      "description": "Transform gold_exploitability_likelihood_per_asset from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_exploitability_trend_over_12_months",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_exploitability_trend_over_12_months",
+      "target_model": "gold_gold_exploitability_trend_over_12_months",
+      "steps": [
+        {
+          "step_name": "Metric: exploitability_trend_over_12_months",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_exploitability_trend_over_12_months (asset_id, month, average_exploitability_score)\nSELECT \n    asset_id,\n    DATE_TRUNC('month', exploitability_date) AS month,\n    AVG(COALESCE(exploitability_score, 0)) AS average_exploitability_score\nFROM \n    assets_table\nWHERE \n    exploitability_date >= CURRENT_DATE - INTERVAL '12 months'\nGROUP BY \n    asset_id, month\nORDER BY \n    asset_id, month;",
+          "description": "The trend of exploitability likelihood scores for assets over the past 12 months.",
+          "input_tables": [
+            "assets_table"
+          ],
+          "output_table": "gold_exploitability_trend_over_12_months",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: exploitability_trend_over_12_months: The trend of exploitability likelihood scores for assets over the past 12 months.\nINSERT INTO gold_exploitability_trend_over_12_months (asset_id, month, average_exploitability_score)\nSELECT \n    asset_id,\n    DATE_TRUNC('month', exploitability_date) AS month,\n    AVG(COALESCE(exploitability_score, 0)) AS average_exploitability_score\nFROM \n    assets_table\nWHERE \n    exploitability_date >= CURRENT_DATE - INTERVAL '12 months'\nGROUP BY \n    asset_id, month\nORDER BY \n    asset_id, month;",
+      "description": "Transform gold_exploitability_trend_over_12_months from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_increasing_risk_assets",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_increasing_risk_assets",
+      "target_model": "gold_gold_increasing_risk_assets",
+      "steps": [
+        {
+          "step_name": "Metric: increasing_risk_assets",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_increasing_risk_assets (asset_id, current_month_score, previous_month_score, score_increase)\nWITH monthly_scores AS (\n    SELECT \n        asset_id,\n        DATE_TRUNC('month', score_date) AS month,\n        AVG(exploitability_likelihood) AS avg_score\n    FROM \n        assets_table\n    WHERE \n        score_date >= CURRENT_DATE - INTERVAL '12 months'\n    GROUP BY \n        asset_id, DATE_TRUNC('month', score_date)\n),\nscore_comparison AS (\n    SELECT \n        current.asset_id,\n        current.avg_score AS current_month_score,\n        previous.avg_score AS previous_month_score\n    FROM \n        monthly_scores AS current\n    LEFT JOIN \n        monthly_scores AS previous \n    ON \n        current.asset_id = previous.asset_id \n        AND current.month = previous.month + INTERVAL '1 month'\n)\nSELECT \n    asset_id,\n    current_month_score,\n    previous_month_score,\n    CASE \n        WHEN current_month_score > COALESCE(previous_month_score, 0) THEN TRUE \n        ELSE FALSE \n    END AS score_increase\nFROM \n    score_comparison\nWHERE \n    current_month_score > COALESCE(previous_month_score, 0);",
+          "description": "Assets that have shown an increase in exploitability likelihood over the last 12 months.",
+          "input_tables": [
+            "assets_table"
+          ],
+          "output_table": "gold_increasing_risk_assets",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: increasing_risk_assets: Assets that have shown an increase in exploitability likelihood over the last 12 months.\nINSERT INTO gold_increasing_risk_assets (asset_id, current_month_score, previous_month_score, score_increase)\nWITH monthly_scores AS (\n    SELECT \n        asset_id,\n        DATE_TRUNC('month', score_date) AS month,\n        AVG(exploitability_likelihood) AS avg_score\n    FROM \n        assets_table\n    WHERE \n        score_date >= CURRENT_DATE - INTERVAL '12 months'\n    GROUP BY \n        asset_id, DATE_TRUNC('month', score_date)\n),\nscore_comparison AS (\n    SELECT \n        current.asset_id,\n        current.avg_score AS current_month_score,\n        previous.avg_score AS previous_month_score\n    FROM \n        monthly_scores AS current\n    LEFT JOIN \n        monthly_scores AS previous \n    ON \n        current.asset_id = previous.asset_id \n        AND current.month = previous.month + INTERVAL '1 month'\n)\nSELECT \n    asset_id,\n    current_month_score,\n    previous_month_score,\n    CASE \n        WHEN current_month_score > COALESCE(previous_month_score, 0) THEN TRUE \n        ELSE FALSE \n    END AS score_increase\nFROM \n    score_comparison\nWHERE \n    current_month_score > COALESCE(previous_month_score, 0);",
+      "description": "Transform gold_increasing_risk_assets from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_attack_surface_index",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_attack_surface_index",
+      "target_model": "gold_gold_attack_surface_index",
+      "steps": [
+        {
+          "step_name": "Metric: attack_surface_index",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_attack_surface_index (asset, asi)\nSELECT \n    asset,\n    SUM(weight * COALESCE(component_value, 0)) AS asi\nFROM \n    silver_attack_surface_components\nGROUP BY \n    asset;",
+          "description": "The composite Attack Surface Index (ASI) calculated using weighted components.",
+          "input_tables": [
+            "silver_attack_surface_components"
+          ],
+          "output_table": "gold_attack_surface_index",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: attack_surface_index: The composite Attack Surface Index (ASI) calculated using weighted components.\nINSERT INTO gold_attack_surface_index (asset, asi)\nSELECT \n    asset,\n    SUM(weight * COALESCE(component_value, 0)) AS asi\nFROM \n    silver_attack_surface_components\nGROUP BY \n    asset;",
+      "description": "Transform gold_attack_surface_index from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_weighted_component_value",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_weighted_component_value",
+      "target_model": "gold_gold_weighted_component_value",
+      "steps": [
+        {
+          "step_name": "Metric: weighted_component_value",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_weighted_component_value (asset, component, weighted_value)\nSELECT \n    asset,\n    component,\n    SUM(COALESCE(value, 0) * COALESCE(weight, 0)) AS weighted_value\nFROM (\n    SELECT \n        asset,\n        component,\n        value,\n        weight,\n        SUM(weight) OVER (PARTITION BY asset) AS total_weight\n    FROM \n        silver_attack_surface_components\n) AS subquery\nWHERE \n    total_weight > 0  -- Ensure weights are normalized\nGROUP BY \n    asset, component;",
+          "description": "The value of each component weighted according to its importance.",
+          "input_tables": [
+            "silver_attack_surface_components"
+          ],
+          "output_table": "gold_weighted_component_value",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: weighted_component_value: The value of each component weighted according to its importance.\nINSERT INTO gold_weighted_component_value (asset, component, weighted_value)\nSELECT \n    asset,\n    component,\n    SUM(COALESCE(value, 0) * COALESCE(weight, 0)) AS weighted_value\nFROM (\n    SELECT \n        asset,\n        component,\n        value,\n        weight,\n        SUM(weight) OVER (PARTITION BY asset) AS total_weight\n    FROM \n        silver_attack_surface_components\n) AS subquery\nWHERE \n    total_weight > 0  -- Ensure weights are normalized\nGROUP BY \n    asset, component;",
+      "description": "Transform gold_weighted_component_value from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_component_weight",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_component_weight",
+      "target_model": "gold_gold_component_weight",
+      "steps": [
+        {
+          "step_name": "Metric: component_weight",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_component_weight (component, weight)\nSELECT \n    component,\n    COALESCE(weight, 0) AS weight -- Handle NULL values by replacing with 0\nFROM \n    gold_component_weights\nWHERE \n    weight IS NOT NULL; -- Ensure only relevant weights are considered",
+          "description": "The weight assigned to each component in the ASI calculation.",
+          "input_tables": [
+            "gold_component_weights"
+          ],
+          "output_table": "gold_component_weight",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: component_weight: The weight assigned to each component in the ASI calculation.\nINSERT INTO gold_component_weight (component, weight)\nSELECT \n    component,\n    COALESCE(weight, 0) AS weight -- Handle NULL values by replacing with 0\nFROM \n    gold_component_weights\nWHERE \n    weight IS NOT NULL; -- Ensure only relevant weights are considered",
+      "description": "Transform gold_component_weight from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_total_attack_surface_contribution",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_total_attack_surface_contribution",
+      "target_model": "gold_gold_total_attack_surface_contribution",
+      "steps": [
+        {
+          "step_name": "Metric: total_attack_surface_contribution",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_total_attack_surface_contribution (os_stack, software_stack, total_contribution)\nSELECT \n    COALESCE(s.os_stack, 'Unknown') AS os_stack,  -- Handle NULL OS stack\n    COALESCE(s.software_stack, 'Unknown') AS software_stack,  -- Handle NULL software stack\n    SUM(COALESCE(s.contribution, 0)) AS total_contribution  -- Sum contributions, treating NULL as 0\nFROM \n    silver_attack_surface s\nJOIN \n    gold_attack_surface g ON s.id = g.id  -- Assuming a common identifier for joining\nGROUP BY \n    s.os_stack, s.software_stack  -- Group by OS and software stack\nHAVING \n    SUM(COALESCE(s.contribution, 0)) > 0;  -- Only include groups with positive contributions",
+          "description": "Total contribution to the attack surface by the OS/software stack.",
+          "input_tables": [
+            "silver_attack_surface",
+            "gold_attack_surface"
+          ],
+          "output_table": "gold_total_attack_surface_contribution",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: total_attack_surface_contribution: Total contribution to the attack surface by the OS/software stack.\nINSERT INTO gold_total_attack_surface_contribution (os_stack, software_stack, total_contribution)\nSELECT \n    COALESCE(s.os_stack, 'Unknown') AS os_stack,  -- Handle NULL OS stack\n    COALESCE(s.software_stack, 'Unknown') AS software_stack,  -- Handle NULL software stack\n    SUM(COALESCE(s.contribution, 0)) AS total_contribution  -- Sum contributions, treating NULL as 0\nFROM \n    silver_attack_surface s\nJOIN \n    gold_attack_surface g ON s.id = g.id  -- Assuming a common identifier for joining\nGROUP BY \n    s.os_stack, s.software_stack  -- Group by OS and software stack\nHAVING \n    SUM(COALESCE(s.contribution, 0)) > 0;  -- Only include groups with positive contributions",
+      "description": "Transform gold_total_attack_surface_contribution from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_overall_risk_by_stack",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_overall_risk_by_stack",
+      "target_model": "gold_gold_overall_risk_by_stack",
+      "steps": [
+        {
+          "step_name": "Metric: overall_risk_by_stack",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_overall_risk_by_stack (os_stack, software_stack, total_risk_score)\nSELECT \n    COALESCE(sra.os_stack, 'Unknown OS') AS os_stack,  -- Handle NULL OS stack\n    COALESCE(sra.software_stack, 'Unknown Software') AS software_stack,  -- Handle NULL software stack\n    SUM(COALESCE(gra.risk_score, 0)) AS total_risk_score  -- Sum risk scores, treating NULL as 0\nFROM \n    silver_risk_assessment sra\nLEFT JOIN \n    gold_risk_assessment gra ON sra.id = gra.assessment_id  -- Assuming a join condition based on assessment ID\nGROUP BY \n    sra.os_stack, \n    sra.software_stack\nORDER BY \n    os_stack, \n    software_stack;  -- Order by OS and software stack for better readability",
+          "description": "Overall risk associated with each OS/software stack.",
+          "input_tables": [
+            "silver_risk_assessment",
+            "gold_risk_assessment"
+          ],
+          "output_table": "gold_overall_risk_by_stack",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: overall_risk_by_stack: Overall risk associated with each OS/software stack.\nINSERT INTO gold_overall_risk_by_stack (os_stack, software_stack, total_risk_score)\nSELECT \n    COALESCE(sra.os_stack, 'Unknown OS') AS os_stack,  -- Handle NULL OS stack\n    COALESCE(sra.software_stack, 'Unknown Software') AS software_stack,  -- Handle NULL software stack\n    SUM(COALESCE(gra.risk_score, 0)) AS total_risk_score  -- Sum risk scores, treating NULL as 0\nFROM \n    silver_risk_assessment sra\nLEFT JOIN \n    gold_risk_assessment gra ON sra.id = gra.assessment_id  -- Assuming a join condition based on assessment ID\nGROUP BY \n    sra.os_stack, \n    sra.software_stack\nORDER BY \n    os_stack, \n    software_stack;  -- Order by OS and software stack for better readability",
+      "description": "Transform gold_overall_risk_by_stack from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_percentage_contribution_to_risk",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_percentage_contribution_to_risk",
+      "target_model": "gold_gold_percentage_contribution_to_risk",
+      "steps": [
+        {
+          "step_name": "Metric: percentage_contribution_to_risk",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_percentage_contribution_to_risk (os_stack, software_stack, percentage_contribution)\nWITH risk_data AS (\n    SELECT \n        s.os_stack,\n        s.software_stack,\n        SUM(COALESCE(r.risk_score, 0)) AS total_risk_contribution\n    FROM \n        silver_attack_surface s\n    JOIN \n        silver_risk_assessment r ON s.id = r.attack_surface_id\n    GROUP BY \n        s.os_stack, s.software_stack\n),\noverall_risk AS (\n    SELECT \n        SUM(total_risk_contribution) AS total_overall_risk\n    FROM \n        risk_data\n)\nSELECT \n    rd.os_stack,\n    rd.software_stack,\n    CASE \n        WHEN o.total_overall_risk IS NULL OR o.total_overall_risk = 0 THEN 0\n        ELSE (rd.total_risk_contribution / NULLIF(o.total_overall_risk, 0)) * 100\n    END AS percentage_contribution\nFROM \n    risk_data rd,\n    overall_risk o;",
+          "description": "Percentage contribution of each OS/software stack to the overall risk.",
+          "input_tables": [
+            "silver_attack_surface",
+            "gold_attack_surface",
+            "silver_risk_assessment",
+            "gold_risk_assessment"
+          ],
+          "output_table": "gold_percentage_contribution_to_risk",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: percentage_contribution_to_risk: Percentage contribution of each OS/software stack to the overall risk.\nINSERT INTO gold_percentage_contribution_to_risk (os_stack, software_stack, percentage_contribution)\nWITH risk_data AS (\n    SELECT \n        s.os_stack,\n        s.software_stack,\n        SUM(COALESCE(r.risk_score, 0)) AS total_risk_contribution\n    FROM \n        silver_attack_surface s\n    JOIN \n        silver_risk_assessment r ON s.id = r.attack_surface_id\n    GROUP BY \n        s.os_stack, s.software_stack\n),\noverall_risk AS (\n    SELECT \n        SUM(total_risk_contribution) AS total_overall_risk\n    FROM \n        risk_data\n)\nSELECT \n    rd.os_stack,\n    rd.software_stack,\n    CASE \n        WHEN o.total_overall_risk IS NULL OR o.total_overall_risk = 0 THEN 0\n        ELSE (rd.total_risk_contribution / NULLIF(o.total_overall_risk, 0)) * 100\n    END AS percentage_contribution\nFROM \n    risk_data rd,\n    overall_risk o;",
+      "description": "Transform gold_percentage_contribution_to_risk from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_top_contributing_stacks",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_top_contributing_stacks",
+      "target_model": "gold_gold_top_contributing_stacks",
+      "steps": [
+        {
+          "step_name": "Metric: top_contributing_stacks",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_top_contributing_stacks (os_stack, software_stack, total_risk_score)\nWITH risk_contributions AS (\n    SELECT \n        s.os_stack,\n        s.software_stack,\n        SUM(COALESCE(gra.risk_score, 0)) AS total_risk_score\n    FROM \n        silver_attack_surface s\n    JOIN \n        gold_attack_surface ga ON s.id = ga.attack_surface_id\n    JOIN \n        silver_risk_assessment sra ON ga.id = sra.attack_surface_id\n    JOIN \n        gold_risk_assessment gra ON sra.id = gra.risk_assessment_id\n    GROUP BY \n        s.os_stack, s.software_stack\n)\nSELECT \n    os_stack,\n    software_stack,\n    total_risk_score\nFROM \n    risk_contributions\nORDER BY \n    total_risk_score DESC\nLIMIT 10;",
+          "description": "Identify the top OS/software stacks contributing to the overall risk.",
+          "input_tables": [
+            "silver_attack_surface",
+            "gold_attack_surface",
+            "silver_risk_assessment",
+            "gold_risk_assessment"
+          ],
+          "output_table": "gold_top_contributing_stacks",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: top_contributing_stacks: Identify the top OS/software stacks contributing to the overall risk.\nINSERT INTO gold_top_contributing_stacks (os_stack, software_stack, total_risk_score)\nWITH risk_contributions AS (\n    SELECT \n        s.os_stack,\n        s.software_stack,\n        SUM(COALESCE(gra.risk_score, 0)) AS total_risk_score\n    FROM \n        silver_attack_surface s\n    JOIN \n        gold_attack_surface ga ON s.id = ga.attack_surface_id\n    JOIN \n        silver_risk_assessment sra ON ga.id = sra.attack_surface_id\n    JOIN \n        gold_risk_assessment gra ON sra.id = gra.risk_assessment_id\n    GROUP BY \n        s.os_stack, s.software_stack\n)\nSELECT \n    os_stack,\n    software_stack,\n    total_risk_score\nFROM \n    risk_contributions\nORDER BY \n    total_risk_score DESC\nLIMIT 10;",
+      "description": "Transform gold_top_contributing_stacks from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_exposure_score_weekly_average",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_exposure_score_weekly_average",
+      "target_model": "gold_gold_exposure_score_weekly_average",
+      "steps": [
+        {
+          "step_name": "Metric: exposure_score_weekly_average",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_exposure_score_weekly_average (week_start, average_exposure_score)\nSELECT \n    DATE_TRUNC('week', es.\"timestamp\") AS week_start,  -- Truncate timestamp to week\n    COALESCE(SUM(es.exposure_score), 0) / NULLIF(COUNT(es.exposure_score), 0) AS average_exposure_score  -- Calculate average, handle division by zero\nFROM \n    exposure_scores es\nWHERE \n    es.exposure_score IS NOT NULL  -- Only include records with valid exposure scores\nGROUP BY \n    week_start\nORDER BY \n    week_start;  -- Order by week for clarity",
+          "description": "Average exposure score calculated on a weekly basis.",
+          "input_tables": [
+            "exposure_scores"
+          ],
+          "output_table": "gold_exposure_score_weekly_average",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: exposure_score_weekly_average: Average exposure score calculated on a weekly basis.\nINSERT INTO gold_exposure_score_weekly_average (week_start, average_exposure_score)\nSELECT \n    DATE_TRUNC('week', es.\"timestamp\") AS week_start,  -- Truncate timestamp to week\n    COALESCE(SUM(es.exposure_score), 0) / NULLIF(COUNT(es.exposure_score), 0) AS average_exposure_score  -- Calculate average, handle division by zero\nFROM \n    exposure_scores es\nWHERE \n    es.exposure_score IS NOT NULL  -- Only include records with valid exposure scores\nGROUP BY \n    week_start\nORDER BY \n    week_start;  -- Order by week for clarity",
+      "description": "Transform gold_exposure_score_weekly_average from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_exposure_score_week_over_week_change",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_exposure_score_week_over_week_change",
+      "target_model": "gold_gold_exposure_score_week_over_week_change",
+      "steps": [
+        {
+          "step_name": "Metric: exposure_score_week_over_week_change",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_exposure_score_week_over_week_change (week_start_date, percentage_change)\nWITH weekly_averages AS (\n    SELECT \n        DATE_TRUNC('week', \"timestamp\") AS week_start,\n        AVG(exposure_score) AS avg_exposure_score\n    FROM \n        exposure_scores\n    GROUP BY \n        DATE_TRUNC('week', \"timestamp\")\n),\ncurrent_previous_weeks AS (\n    SELECT \n        current.week_start AS current_week,\n        previous.avg_exposure_score AS previous_week_avg,\n        current.avg_exposure_score AS current_week_avg\n    FROM \n        weekly_averages AS current\n    LEFT JOIN \n        weekly_averages AS previous \n    ON \n        current.week_start = current_previous_weeks.current_week + INTERVAL '1 week'\n)\nSELECT \n    current_week,\n    CASE \n        WHEN NULLIF(previous_week_avg, 0) IS NOT NULL THEN \n            ((current_week_avg - previous_week_avg) / NULLIF(previous_week_avg, 0)) * 100\n        ELSE \n            NULL \n    END AS percentage_change\nFROM \n    current_previous_weeks\nWHERE \n    previous_week_avg IS NOT NULL;",
+          "description": "The change in average exposure scores from one week to the next.",
+          "input_tables": [
+            "exposure_scores"
+          ],
+          "output_table": "gold_exposure_score_week_over_week_change",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: exposure_score_week_over_week_change: The change in average exposure scores from one week to the next.\nINSERT INTO gold_exposure_score_week_over_week_change (week_start_date, percentage_change)\nWITH weekly_averages AS (\n    SELECT \n        DATE_TRUNC('week', \"timestamp\") AS week_start,\n        AVG(exposure_score) AS avg_exposure_score\n    FROM \n        exposure_scores\n    GROUP BY \n        DATE_TRUNC('week', \"timestamp\")\n),\ncurrent_previous_weeks AS (\n    SELECT \n        current.week_start AS current_week,\n        previous.avg_exposure_score AS previous_week_avg,\n        current.avg_exposure_score AS current_week_avg\n    FROM \n        weekly_averages AS current\n    LEFT JOIN \n        weekly_averages AS previous \n    ON \n        current.week_start = current_previous_weeks.current_week + INTERVAL '1 week'\n)\nSELECT \n    current_week,\n    CASE \n        WHEN NULLIF(previous_week_avg, 0) IS NOT NULL THEN \n            ((current_week_avg - previous_week_avg) / NULLIF(previous_week_avg, 0)) * 100\n        ELSE \n            NULL \n    END AS percentage_change\nFROM \n    current_previous_weeks\nWHERE \n    previous_week_avg IS NOT NULL;",
+      "description": "Transform gold_exposure_score_week_over_week_change from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_significant_increase_assets",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_significant_increase_assets",
+      "target_model": "gold_gold_significant_increase_assets",
+      "steps": [
+        {
+          "step_name": "Metric: significant_increase_assets",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_significant_increase_assets (asset_id, week_start, exposure_score_previous, exposure_score_current, percentage_increase)\nWITH weekly_scores AS (\n    SELECT \n        asset_id,\n        DATE_TRUNC('week', score_date) AS week_start,\n        AVG(exposure_score) AS avg_exposure_score\n    FROM \n        exposure_scores\n    GROUP BY \n        asset_id, DATE_TRUNC('week', score_date)\n),\nweek_over_week AS (\n    SELECT \n        current.asset_id,\n        current.week_start,\n        COALESCE(previous.avg_exposure_score, 0) AS exposure_score_previous,\n        current.avg_exposure_score AS exposure_score_current,\n        CASE \n            WHEN NULLIF(previous.avg_exposure_score, 0) IS NOT NULL THEN \n                (current.avg_exposure_score - previous.avg_exposure_score) / NULLIF(previous.avg_exposure_score, 0) * 100\n            ELSE \n                NULL \n        END AS percentage_increase\n    FROM \n        weekly_scores current\n    LEFT JOIN \n        weekly_scores previous \n    ON \n        current.asset_id = previous.asset_id \n        AND current.week_start = previous.week_start + INTERVAL '1 week'\n)\nSELECT \n    asset_id,\n    week_start,\n    exposure_score_previous,\n    exposure_score_current,\n    percentage_increase\nFROM \n    week_over_week\nWHERE \n    percentage_increase > 10;",
+          "description": "List of assets that have shown a significant increase in exposure scores week-over-week.",
+          "input_tables": [
+            "exposure_scores"
+          ],
+          "output_table": "gold_significant_increase_assets",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: significant_increase_assets: List of assets that have shown a significant increase in exposure scores week-over-week.\nINSERT INTO gold_significant_increase_assets (asset_id, week_start, exposure_score_previous, exposure_score_current, percentage_increase)\nWITH weekly_scores AS (\n    SELECT \n        asset_id,\n        DATE_TRUNC('week', score_date) AS week_start,\n        AVG(exposure_score) AS avg_exposure_score\n    FROM \n        exposure_scores\n    GROUP BY \n        asset_id, DATE_TRUNC('week', score_date)\n),\nweek_over_week AS (\n    SELECT \n        current.asset_id,\n        current.week_start,\n        COALESCE(previous.avg_exposure_score, 0) AS exposure_score_previous,\n        current.avg_exposure_score AS exposure_score_current,\n        CASE \n            WHEN NULLIF(previous.avg_exposure_score, 0) IS NOT NULL THEN \n                (current.avg_exposure_score - previous.avg_exposure_score) / NULLIF(previous.avg_exposure_score, 0) * 100\n            ELSE \n                NULL \n        END AS percentage_increase\n    FROM \n        weekly_scores current\n    LEFT JOIN \n        weekly_scores previous \n    ON \n        current.asset_id = previous.asset_id \n        AND current.week_start = previous.week_start + INTERVAL '1 week'\n)\nSELECT \n    asset_id,\n    week_start,\n    exposure_score_previous,\n    exposure_score_current,\n    percentage_increase\nFROM \n    week_over_week\nWHERE \n    percentage_increase > 10;",
+      "description": "Transform gold_significant_increase_assets from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_breach_risk_likelihood",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_breach_risk_likelihood",
+      "target_model": "gold_gold_breach_risk_likelihood",
+      "steps": [
+        {
+          "step_name": "Metric: breach_risk_likelihood",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_breach_risk_likelihood (business_unit, average_breach_risk_likelihood)\nSELECT \n    business_unit,\n    AVG(COALESCE(breach_risk_value, 0)) AS average_breach_risk_likelihood\nFROM \n    breach_risk_table\nWHERE \n    breach_risk_value IS NOT NULL  -- Filter out NULL values to ensure accurate average calculation\nGROUP BY \n    business_unit;",
+          "description": "The likelihood of breach risk aggregated by business unit.",
+          "input_tables": [
+            "breach_risk_table"
+          ],
+          "output_table": "gold_breach_risk_likelihood",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: breach_risk_likelihood: The likelihood of breach risk aggregated by business unit.\nINSERT INTO gold_breach_risk_likelihood (business_unit, average_breach_risk_likelihood)\nSELECT \n    business_unit,\n    AVG(COALESCE(breach_risk_value, 0)) AS average_breach_risk_likelihood\nFROM \n    breach_risk_table\nWHERE \n    breach_risk_value IS NOT NULL  -- Filter out NULL values to ensure accurate average calculation\nGROUP BY \n    business_unit;",
+      "description": "Transform gold_breach_risk_likelihood from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_quarterly_trend_breach_risk_likelihood",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_quarterly_trend_breach_risk_likelihood",
+      "target_model": "gold_gold_quarterly_trend_breach_risk_likelihood",
+      "steps": [
+        {
+          "step_name": "Metric: quarterly_trend_breach_risk_likelihood",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_quarterly_trend_breach_risk_likelihood (quarter, business_unit, average_breach_risk_likelihood)\nSELECT \n    DATE_TRUNC('quarter', br.timestamp) AS quarter,  -- Truncate timestamp to quarter\n    br.business_unit,  -- Group by business unit\n    AVG(COALESCE(br.breach_risk_likelihood, 0)) AS average_breach_risk_likelihood  -- Calculate average, handling NULLs\nFROM \n    breach_risk_table br\nGROUP BY \n    quarter, \n    br.business_unit  -- Group by quarter and business unit\nORDER BY \n    quarter, \n    br.business_unit;  -- Order results for better readability",
+          "description": "Quarterly trends of breach risk likelihood aggregated by business unit.",
+          "input_tables": [
+            "breach_risk_table"
+          ],
+          "output_table": "gold_quarterly_trend_breach_risk_likelihood",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: quarterly_trend_breach_risk_likelihood: Quarterly trends of breach risk likelihood aggregated by business unit.\nINSERT INTO gold_quarterly_trend_breach_risk_likelihood (quarter, business_unit, average_breach_risk_likelihood)\nSELECT \n    DATE_TRUNC('quarter', br.timestamp) AS quarter,  -- Truncate timestamp to quarter\n    br.business_unit,  -- Group by business unit\n    AVG(COALESCE(br.breach_risk_likelihood, 0)) AS average_breach_risk_likelihood  -- Calculate average, handling NULLs\nFROM \n    breach_risk_table br\nGROUP BY \n    quarter, \n    br.business_unit  -- Group by quarter and business unit\nORDER BY \n    quarter, \n    br.business_unit;  -- Order results for better readability",
+      "description": "Transform gold_quarterly_trend_breach_risk_likelihood from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_total_attack_surface",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_total_attack_surface",
+      "target_model": "gold_gold_total_attack_surface",
+      "steps": [
+        {
+          "step_name": "Metric: total_attack_surface",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_total_attack_surface (business_unit, total_attack_surface_elements)\nSELECT \n    business_unit,\n    COUNT(DISTINCT attack_surface_element) AS total_attack_surface_elements\nFROM \n    attack_surface_table\nWHERE \n    business_unit IS NOT NULL  -- Ensure business unit is not NULL\n    AND is_active = TRUE        -- Only include active business units\nGROUP BY \n    business_unit;",
+          "description": "Total number of attack surface elements identified per business unit",
+          "input_tables": [
+            "attack_surface_table"
+          ],
+          "output_table": "gold_total_attack_surface",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: total_attack_surface: Total number of attack surface elements identified per business unit\nINSERT INTO gold_total_attack_surface (business_unit, total_attack_surface_elements)\nSELECT \n    business_unit,\n    COUNT(DISTINCT attack_surface_element) AS total_attack_surface_elements\nFROM \n    attack_surface_table\nWHERE \n    business_unit IS NOT NULL  -- Ensure business unit is not NULL\n    AND is_active = TRUE        -- Only include active business units\nGROUP BY \n    business_unit;",
+      "description": "Transform gold_total_attack_surface from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_vulnerability_score",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_vulnerability_score",
+      "target_model": "gold_gold_vulnerability_score",
+      "steps": [
+        {
+          "step_name": "Metric: vulnerability_score",
+          "step_type": "metric",
+          "sql_logic": "SELECT \n    as_table.business_unit,\n    SUM(COALESCE(vs.score, 0)) AS total_vulnerability_score\nFROM \n    attack_surface_table AS as_table\nJOIN \n    gold_vulnerability_score AS vs ON as_table.id = vs.attack_surface_id\nWHERE \n    vs.is_active = TRUE  -- Include only active vulnerabilities\n    AND vs.assessment_date = (\n        SELECT MAX(assessment_date) \n        FROM gold_vulnerability_score \n        WHERE attack_surface_id = as_table.id\n    )  -- Ensure we are using the latest assessment\nGROUP BY \n    as_table.business_unit\nORDER BY \n    as_table.business_unit;",
+          "description": "Sum of vulnerability scores associated with attack surface elements per business unit",
+          "input_tables": [
+            "attack_surface_table"
+          ],
+          "output_table": "gold_vulnerability_score",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: vulnerability_score: Sum of vulnerability scores associated with attack surface elements per business unit\nSELECT \n    as_table.business_unit,\n    SUM(COALESCE(vs.score, 0)) AS total_vulnerability_score\nFROM \n    attack_surface_table AS as_table\nJOIN \n    gold_vulnerability_score AS vs ON as_table.id = vs.attack_surface_id\nWHERE \n    vs.is_active = TRUE  -- Include only active vulnerabilities\n    AND vs.assessment_date = (\n        SELECT MAX(assessment_date) \n        FROM gold_vulnerability_score \n        WHERE attack_surface_id = as_table.id\n    )  -- Ensure we are using the latest assessment\nGROUP BY \n    as_table.business_unit\nORDER BY \n    as_table.business_unit;",
+      "description": "Transform gold_vulnerability_score from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_average_vulnerability_score",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_average_vulnerability_score",
+      "target_model": "gold_gold_average_vulnerability_score",
+      "steps": [
+        {
+          "step_name": "Metric: average_vulnerability_score",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_average_vulnerability_score (business_unit, average_vulnerability_score)\nSELECT \n    business_unit,\n    AVG(vulnerability_score) AS average_vulnerability_score\nFROM \n    attack_surface_table\nWHERE \n    vulnerability_score IS NOT NULL  -- Exclude elements with null scores\nGROUP BY \n    business_unit;",
+          "description": "Average vulnerability score per attack surface element for each business unit",
+          "input_tables": [
+            "attack_surface_table"
+          ],
+          "output_table": "gold_average_vulnerability_score",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: average_vulnerability_score: Average vulnerability score per attack surface element for each business unit\nINSERT INTO gold_average_vulnerability_score (business_unit, average_vulnerability_score)\nSELECT \n    business_unit,\n    AVG(vulnerability_score) AS average_vulnerability_score\nFROM \n    attack_surface_table\nWHERE \n    vulnerability_score IS NOT NULL  -- Exclude elements with null scores\nGROUP BY \n    business_unit;",
+      "description": "Transform gold_average_vulnerability_score from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_top_5_business_units_by_attack_surface",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_top_5_business_units_by_attack_surface",
+      "target_model": "gold_gold_top_5_business_units_by_attack_surface",
+      "steps": [
+        {
+          "step_name": "Metric: top_5_business_units_by_attack_surface",
+          "step_type": "metric",
+          "sql_logic": "WITH ranked_business_units AS (\n    SELECT \n        business_unit,\n        COUNT(*) AS total_attack_surface,\n        MAX(vulnerability_score) AS highest_vulnerability_score\n    FROM \n        attack_surface_table\n    GROUP BY \n        business_unit\n    HAVING \n        COUNT(*) > 0  -- Only include business units with at least one attack surface element\n),\nranked_with_ranks AS (\n    SELECT \n        business_unit,\n        total_attack_surface,\n        highest_vulnerability_score,\n        RANK() OVER (ORDER BY total_attack_surface DESC, highest_vulnerability_score DESC) AS rank\n    FROM \n        ranked_business_units\n)\nSELECT \n    business_unit,\n    total_attack_surface,\n    highest_vulnerability_score\nFROM \n    ranked_with_ranks\nWHERE \n    rank <= 5  -- Select top 5 business units\nORDER BY \n    rank;  -- Order by rank for final output\n\n-- Insert the results into the target table\nINSERT INTO gold_top_5_business_units_by_attack_surface (business_unit, total_attack_surface, highest_vulnerability_score)\nSELECT \n    business_unit,\n    total_attack_surface,\n    highest_vulnerability_score\nFROM \n    ranked_with_ranks\nWHERE \n    rank <= 5;  -- Ensure only top 5 are inserted",
+          "description": "Ranking of the top 5 business units based on total attack surface count",
+          "input_tables": [
+            "attack_surface_table"
+          ],
+          "output_table": "gold_top_5_business_units_by_attack_surface",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: top_5_business_units_by_attack_surface: Ranking of the top 5 business units based on total attack surface count\nWITH ranked_business_units AS (\n    SELECT \n        business_unit,\n        COUNT(*) AS total_attack_surface,\n        MAX(vulnerability_score) AS highest_vulnerability_score\n    FROM \n        attack_surface_table\n    GROUP BY \n        business_unit\n    HAVING \n        COUNT(*) > 0  -- Only include business units with at least one attack surface element\n),\nranked_with_ranks AS (\n    SELECT \n        business_unit,\n        total_attack_surface,\n        highest_vulnerability_score,\n        RANK() OVER (ORDER BY total_attack_surface DESC, highest_vulnerability_score DESC) AS rank\n    FROM \n        ranked_business_units\n)\nSELECT \n    business_unit,\n    total_attack_surface,\n    highest_vulnerability_score\nFROM \n    ranked_with_ranks\nWHERE \n    rank <= 5  -- Select top 5 business units\nORDER BY \n    rank;  -- Order by rank for final output\n\n-- Insert the results into the target table\nINSERT INTO gold_top_5_business_units_by_attack_surface (business_unit, total_attack_surface, highest_vulnerability_score)\nSELECT \n    business_unit,\n    total_attack_surface,\n    highest_vulnerability_score\nFROM \n    ranked_with_ranks\nWHERE \n    rank <= 5;  -- Ensure only top 5 are inserted",
+      "description": "Transform gold_top_5_business_units_by_attack_surface from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_attack_surface_count",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_attack_surface_count",
+      "target_model": "gold_gold_attack_surface_count",
+      "steps": [
+        {
+          "step_name": "Metric: attack_surface_count",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_attack_surface_count (os_software_stack, business_unit, environment, total_attack_surfaces)\nSELECT \n    COALESCE(os_software_stack, 'Unknown') AS os_software_stack,  -- Handle NULL values for os_software_stack\n    COALESCE(business_unit, 'Unknown') AS business_unit,        -- Handle NULL values for business_unit\n    COALESCE(environment, 'Unknown') AS environment,            -- Handle NULL values for environment\n    COUNT(*) AS total_attack_surfaces                            -- Count of all attack surfaces\nFROM \n    attack_surface_table\nGROUP BY \n    os_software_stack, \n    business_unit, \n    environment;",
+          "description": "Total number of attack surfaces identified",
+          "input_tables": [
+            "attack_surface_table"
+          ],
+          "output_table": "gold_attack_surface_count",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: attack_surface_count: Total number of attack surfaces identified\nINSERT INTO gold_attack_surface_count (os_software_stack, business_unit, environment, total_attack_surfaces)\nSELECT \n    COALESCE(os_software_stack, 'Unknown') AS os_software_stack,  -- Handle NULL values for os_software_stack\n    COALESCE(business_unit, 'Unknown') AS business_unit,        -- Handle NULL values for business_unit\n    COALESCE(environment, 'Unknown') AS environment,            -- Handle NULL values for environment\n    COUNT(*) AS total_attack_surfaces                            -- Count of all attack surfaces\nFROM \n    attack_surface_table\nGROUP BY \n    os_software_stack, \n    business_unit, \n    environment;",
+      "description": "Transform gold_attack_surface_count from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_attack_surface_by_os_software_stack",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_attack_surface_by_os_software_stack",
+      "target_model": "gold_gold_attack_surface_by_os_software_stack",
+      "steps": [
+        {
+          "step_name": "Metric: attack_surface_by_os_software_stack",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_attack_surface_by_os_software_stack (os_software_stack, record_count)\nSELECT \n    COALESCE(os_software_stack, 'Unknown') AS os_software_stack,  -- Handle NULL values by replacing with 'Unknown'\n    COUNT(*) AS record_count\nFROM \n    attack_surface_table\nGROUP BY \n    os_software_stack  -- Group by distinct OS/software stack values\nORDER BY \n    os_software_stack;  -- Order results for better readability",
+          "description": "Breakdown of attack surfaces by operating system/software stack",
+          "input_tables": [
+            "attack_surface_table"
+          ],
+          "output_table": "gold_attack_surface_by_os_software_stack",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: attack_surface_by_os_software_stack: Breakdown of attack surfaces by operating system/software stack\nINSERT INTO gold_attack_surface_by_os_software_stack (os_software_stack, record_count)\nSELECT \n    COALESCE(os_software_stack, 'Unknown') AS os_software_stack,  -- Handle NULL values by replacing with 'Unknown'\n    COUNT(*) AS record_count\nFROM \n    attack_surface_table\nGROUP BY \n    os_software_stack  -- Group by distinct OS/software stack values\nORDER BY \n    os_software_stack;  -- Order results for better readability",
+      "description": "Transform gold_attack_surface_by_os_software_stack from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_attack_surface_by_business_unit",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_attack_surface_by_business_unit",
+      "target_model": "gold_gold_attack_surface_by_business_unit",
+      "steps": [
+        {
+          "step_name": "Metric: attack_surface_by_business_unit",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_attack_surface_by_business_unit (business_unit, attack_surface_count)\nSELECT \n    COALESCE(business_unit, 'Unknown') AS business_unit,  -- Handle NULL business units\n    COUNT(*) AS attack_surface_count\nFROM \n    attack_surface_table\nGROUP BY \n    business_unit\nORDER BY \n    business_unit;  -- Optional: Order by business unit for better readability",
+          "description": "Breakdown of attack surfaces by business unit",
+          "input_tables": [
+            "attack_surface_table"
+          ],
+          "output_table": "gold_attack_surface_by_business_unit",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: attack_surface_by_business_unit: Breakdown of attack surfaces by business unit\nINSERT INTO gold_attack_surface_by_business_unit (business_unit, attack_surface_count)\nSELECT \n    COALESCE(business_unit, 'Unknown') AS business_unit,  -- Handle NULL business units\n    COUNT(*) AS attack_surface_count\nFROM \n    attack_surface_table\nGROUP BY \n    business_unit\nORDER BY \n    business_unit;  -- Optional: Order by business unit for better readability",
+      "description": "Transform gold_attack_surface_by_business_unit from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_attack_surface_by_environment",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_attack_surface_by_environment",
+      "target_model": "gold_gold_attack_surface_by_environment",
+      "steps": [
+        {
+          "step_name": "Metric: attack_surface_by_environment",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_attack_surface_by_environment (environment, attack_surface_count)\nSELECT \n    COALESCE(environment, 'Unknown') AS environment,  -- Handle NULL values by replacing with 'Unknown'\n    COUNT(*) AS attack_surface_count  -- Count of records for each environment\nFROM \n    attack_surface_table\nGROUP BY \n    environment  -- Group by distinct environment values\nORDER BY \n    environment;  -- Order by environment for better readability",
+          "description": "Breakdown of attack surfaces by environment",
+          "input_tables": [
+            "attack_surface_table"
+          ],
+          "output_table": "gold_attack_surface_by_environment",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: attack_surface_by_environment: Breakdown of attack surfaces by environment\nINSERT INTO gold_attack_surface_by_environment (environment, attack_surface_count)\nSELECT \n    COALESCE(environment, 'Unknown') AS environment,  -- Handle NULL values by replacing with 'Unknown'\n    COUNT(*) AS attack_surface_count  -- Count of records for each environment\nFROM \n    attack_surface_table\nGROUP BY \n    environment  -- Group by distinct environment values\nORDER BY \n    environment;  -- Order by environment for better readability",
+      "description": "Transform gold_attack_surface_by_environment from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_attack_surface_breakdown_combined",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_attack_surface_breakdown_combined",
+      "target_model": "gold_gold_attack_surface_breakdown_combined",
+      "steps": [
+        {
+          "step_name": "Metric: attack_surface_breakdown_combined",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_attack_surface_breakdown_combined (os_software_stack, business_unit, environment, record_count)\nSELECT \n    COALESCE(os_software_stack, 'Unknown') AS os_software_stack,  -- Handle NULL values for OS/software stack\n    COALESCE(business_unit, 'Unknown') AS business_unit,          -- Handle NULL values for business unit\n    COALESCE(environment, 'Unknown') AS environment,              -- Handle NULL values for environment\n    COUNT(*) AS record_count                                       -- Count of records\nFROM \n    attack_surface_table\nGROUP BY \n    os_software_stack, \n    business_unit, \n    environment\nORDER BY \n    os_software_stack, \n    business_unit, \n    environment;  -- Order by dimensions for better readability",
+          "description": "Combined breakdown of attack surfaces by OS/software stack, business unit, and environment",
+          "input_tables": [
+            "attack_surface_table"
+          ],
+          "output_table": "gold_attack_surface_breakdown_combined",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: attack_surface_breakdown_combined: Combined breakdown of attack surfaces by OS/software stack, business unit, and environment\nINSERT INTO gold_attack_surface_breakdown_combined (os_software_stack, business_unit, environment, record_count)\nSELECT \n    COALESCE(os_software_stack, 'Unknown') AS os_software_stack,  -- Handle NULL values for OS/software stack\n    COALESCE(business_unit, 'Unknown') AS business_unit,          -- Handle NULL values for business unit\n    COALESCE(environment, 'Unknown') AS environment,              -- Handle NULL values for environment\n    COUNT(*) AS record_count                                       -- Count of records\nFROM \n    attack_surface_table\nGROUP BY \n    os_software_stack, \n    business_unit, \n    environment\nORDER BY \n    os_software_stack, \n    business_unit, \n    environment;  -- Order by dimensions for better readability",
+      "description": "Transform gold_attack_surface_breakdown_combined from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_likelihood_trend",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_likelihood_trend",
+      "target_model": "gold_gold_likelihood_trend",
+      "steps": [
+        {
+          "step_name": "Metric: likelihood_trend",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_likelihood_trend (month, average_likelihood_score)\nSELECT \n    DATE_TRUNC('month', likelihood_date) AS month,\n    AVG(COALESCE(likelihood_score, 0)) AS average_likelihood_score\nFROM \n    likelihood_table\nWHERE \n    likelihood_date >= CURRENT_DATE - INTERVAL '12 months'\nGROUP BY \n    month\nORDER BY \n    month;",
+          "description": "Measures the trend of likelihood scores over the past 12 months.",
+          "input_tables": [
+            "likelihood_table"
+          ],
+          "output_table": "gold_likelihood_trend",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: likelihood_trend: Measures the trend of likelihood scores over the past 12 months.\nINSERT INTO gold_likelihood_trend (month, average_likelihood_score)\nSELECT \n    DATE_TRUNC('month', likelihood_date) AS month,\n    AVG(COALESCE(likelihood_score, 0)) AS average_likelihood_score\nFROM \n    likelihood_table\nWHERE \n    likelihood_date >= CURRENT_DATE - INTERVAL '12 months'\nGROUP BY \n    month\nORDER BY \n    month;",
+      "description": "Transform gold_likelihood_trend from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_breach_risk_trend",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_breach_risk_trend",
+      "target_model": "gold_gold_breach_risk_trend",
+      "steps": [
+        {
+          "step_name": "Metric: breach_risk_trend",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_breach_risk_trend (month, average_breach_risk_score)\nSELECT \n    DATE_TRUNC('month', br.timestamp) AS month,  -- Truncate timestamp to month\n    AVG(COALESCE(br.breach_risk_score, 0)) AS average_breach_risk_score  -- Calculate average, handling NULLs\nFROM \n    breach_risk_table br\nWHERE \n    br.timestamp >= CURRENT_DATE - INTERVAL '12 months'  -- Filter for the last 12 months\nGROUP BY \n    month  -- Group by the truncated month\nORDER BY \n    month;  -- Order by month for consistency",
+          "description": "Measures the trend of breach risk scores over the past 12 months.",
+          "input_tables": [
+            "breach_risk_table"
+          ],
+          "output_table": "gold_breach_risk_trend",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: breach_risk_trend: Measures the trend of breach risk scores over the past 12 months.\nINSERT INTO gold_breach_risk_trend (month, average_breach_risk_score)\nSELECT \n    DATE_TRUNC('month', br.timestamp) AS month,  -- Truncate timestamp to month\n    AVG(COALESCE(br.breach_risk_score, 0)) AS average_breach_risk_score  -- Calculate average, handling NULLs\nFROM \n    breach_risk_table br\nWHERE \n    br.timestamp >= CURRENT_DATE - INTERVAL '12 months'  -- Filter for the last 12 months\nGROUP BY \n    month  -- Group by the truncated month\nORDER BY \n    month;  -- Order by month for consistency",
+      "description": "Transform gold_breach_risk_trend from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_exposure_score_sum",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_exposure_score_sum",
+      "target_model": "gold_gold_exposure_score_sum",
+      "steps": [
+        {
+          "step_name": "Metric: exposure_score_sum",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_exposure_score_sum (total_exposure_score)\nSELECT \n    COALESCE(SUM(exposure_score), 0) AS total_exposure_score\nFROM \n    exposure_scores\nWHERE \n    exposure_score IS NOT NULL;",
+          "description": "Total exposure score across all records",
+          "input_tables": [
+            "exposure_scores"
+          ],
+          "output_table": "gold_exposure_score_sum",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: exposure_score_sum: Total exposure score across all records\nINSERT INTO gold_exposure_score_sum (total_exposure_score)\nSELECT \n    COALESCE(SUM(exposure_score), 0) AS total_exposure_score\nFROM \n    exposure_scores\nWHERE \n    exposure_score IS NOT NULL;",
+      "description": "Transform gold_exposure_score_sum from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_exposure_score_avg",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_exposure_score_avg",
+      "target_model": "gold_gold_exposure_score_avg",
+      "steps": [
+        {
+          "step_name": "Metric: exposure_score_avg",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_exposure_score_avg (average_exposure_score)\nSELECT AVG(COALESCE(exposure_score, 0)) AS average_exposure_score\nFROM exposure_scores\nWHERE exposure_score IS NOT NULL;",
+          "description": "Average exposure score across all records",
+          "input_tables": [
+            "exposure_scores"
+          ],
+          "output_table": "gold_exposure_score_avg",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: exposure_score_avg: Average exposure score across all records\nINSERT INTO gold_exposure_score_avg (average_exposure_score)\nSELECT AVG(COALESCE(exposure_score, 0)) AS average_exposure_score\nFROM exposure_scores\nWHERE exposure_score IS NOT NULL;",
+      "description": "Transform gold_exposure_score_avg from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_exposure_score_count",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_exposure_score_count",
+      "target_model": "gold_gold_exposure_score_count",
+      "steps": [
+        {
+          "step_name": "Metric: exposure_score_count",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_exposure_score_count (record_count)\nSELECT COUNT(*) AS record_count\nFROM exposure_scores\nWHERE exposure_score IS NOT NULL;",
+          "description": "Count of records with exposure scores",
+          "input_tables": [
+            "exposure_scores"
+          ],
+          "output_table": "gold_exposure_score_count",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: exposure_score_count: Count of records with exposure scores\nINSERT INTO gold_exposure_score_count (record_count)\nSELECT COUNT(*) AS record_count\nFROM exposure_scores\nWHERE exposure_score IS NOT NULL;",
+      "description": "Transform gold_exposure_score_count from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_exposure_score_trend",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_exposure_score_trend",
+      "target_model": "gold_gold_exposure_score_trend",
+      "steps": [
+        {
+          "step_name": "Metric: exposure_score_trend",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_exposure_score_trend (month, average_score)\nSELECT \n    DATE_TRUNC('month', es.\"timestamp\") AS month,  -- Truncate timestamp to month\n    AVG(COALESCE(es.score, 0)) AS average_score    -- Calculate average score, handling NULLs\nFROM \n    exposure_scores es\nWHERE \n    es.\"timestamp\" >= CURRENT_DATE - INTERVAL '12 months'  -- Filter for the last 12 months\nGROUP BY \n    month\nORDER BY \n    month;  -- Order results by month for trend analysis",
+          "description": "Trend of exposure scores over time",
+          "input_tables": [
+            "exposure_scores"
+          ],
+          "output_table": "gold_exposure_score_trend",
+          "layer": "gold"
+        }
+      ],
+      "sql": "-- Metric: exposure_score_trend: Trend of exposure scores over time\nINSERT INTO gold_exposure_score_trend (month, average_score)\nSELECT \n    DATE_TRUNC('month', es.\"timestamp\") AS month,  -- Truncate timestamp to month\n    AVG(COALESCE(es.score, 0)) AS average_score    -- Calculate average score, handling NULLs\nFROM \n    exposure_scores es\nWHERE \n    es.\"timestamp\" >= CURRENT_DATE - INTERVAL '12 months'  -- Filter for the last 12 months\nGROUP BY \n    month\nORDER BY \n    month;  -- Order results by month for trend analysis",
+      "description": "Transform gold_exposure_score_trend from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    },
+    {
+      "name": "silver_to_gold_gold_exposure_score_comparison_by_category",
+      "source_layer": "silver",
+      "target_layer": "gold",
+      "source_model": "gold_exposure_score_comparison_by_category",
+      "target_model": "gold_gold_exposure_score_comparison_by_category",
+      "steps": [
+        {
+          "step_name": "Metric: exposure_score_comparison_by_category",
+          "step_type": "metric",
+          "sql_logic": "INSERT INTO gold_exposure_score_comparison_by_category (category, average_exposure_score)\nSELECT \n    category,\n    AVG(COALESCE(exposure_score, 0)) AS average_exposure_score\nFROM \n    exposure_scores\nWHERE \n    exposure_score IS NOT NULL  -- Include only valid exposure scores\nGROUP BY \n    category\nORDER BY \n    category;",
+          "description": "Comparison of average exposure scores by category",
+          "input_tables": [
+            "exposure_scores"
+          ],
+          "output_table": "gold_exposure_score_comparison_by_category",
+          "layer": "silver"
+        }
+      ],
+      "sql": "-- Metric: exposure_score_comparison_by_category: Comparison of average exposure scores by category\nINSERT INTO gold_exposure_score_comparison_by_category (category, average_exposure_score)\nSELECT \n    category,\n    AVG(COALESCE(exposure_score, 0)) AS average_exposure_score\nFROM \n    exposure_scores\nWHERE \n    exposure_score IS NOT NULL  -- Include only valid exposure scores\nGROUP BY \n    category\nORDER BY \n    category;",
+      "description": "Transform gold_exposure_score_comparison_by_category from silver to gold",
+      "properties": {
+        "step_count": "1",
+        "transformation_types": "metric"
+      }
+    }
+  ],
   "governance": {
     "data_quality_rules": [],
     "compliance_requirements": [

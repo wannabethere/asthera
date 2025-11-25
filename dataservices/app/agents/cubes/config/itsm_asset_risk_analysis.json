@@ -1,0 +1,454 @@
+{
+    "workflow_name": "itsm_service_analytics",
+    "description": "ITSM operational excellence and service health dashboard covering incidents, changes, requests, SLAs, and service reliability.",
+    "raw_schemas": [
+      {
+        "table_name": "incidents",
+        "table_ddl": "\n-- Incident management core table\nCREATE TABLE incidents (\n  incident_id STRING NOT NULL,\n  short_description STRING,\n  description STRING,\n  category STRING,\n  subcategory STRING,\n  priority STRING,\n  impact STRING,\n  urgency STRING,\n  state STRING,\n  status STRING,\n  opened_at TIMESTAMP,\n  resolved_at TIMESTAMP,\n  closed_at TIMESTAMP,\n  reopened_count INTEGER,\n  caller_user STRING,\n  assignment_group STRING,\n  assigned_to STRING,\n  business_unit STRING,\n  env STRING,\n  service_id STRING,\n  ci_id STRING,\n  sla_id STRING,\n  sla_breached BOOLEAN,\n  created_at TIMESTAMP,\n  updated_at TIMESTAMP\n);",
+        "relationships": [
+          {
+            "from_table": "incidents",
+            "from_column": "service_id",
+            "to_table": "business_services",
+            "to_column": "service_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          },
+          {
+            "from_table": "incidents",
+            "from_column": "ci_id",
+            "to_table": "cmdb_ci",
+            "to_column": "ci_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          },
+          {
+            "from_table": "incidents",
+            "from_column": "sla_id",
+            "to_table": "sla_definitions",
+            "to_column": "sla_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          }
+        ],
+        "layer": "raw"
+      },
+      {
+        "table_name": "problems",
+        "table_ddl": "\n-- Problem management\nCREATE TABLE problems (\n  problem_id STRING NOT NULL,\n  title STRING,\n  description STRING,\n  root_cause STRING,\n  workaround STRING,\n  status STRING,\n  priority STRING,\n  business_unit STRING,\n  env STRING,\n  service_id STRING,\n  opened_at TIMESTAMP,\n  resolved_at TIMESTAMP,\n  known_error BOOLEAN,\n  created_at TIMESTAMP,\n  updated_at TIMESTAMP\n);",
+        "relationships": [
+          {
+            "from_table": "problems",
+            "from_column": "service_id",
+            "to_table": "business_services",
+            "to_column": "service_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          }
+        ],
+        "layer": "raw"
+      },
+      {
+        "table_name": "changes",
+        "table_ddl": "\n-- Change management\nCREATE TABLE changes (\n  change_id STRING NOT NULL,\n  short_description STRING,\n  description STRING,\n  change_type STRING,\n  risk STRING,\n  impact STRING,\n  status STRING,\n  category STRING,\n  env STRING,\n  business_unit STRING,\n  service_id STRING,\n  ci_id STRING,\n  scheduled_start TIMESTAMP,\n  scheduled_end TIMESTAMP,\n  actual_start TIMESTAMP,\n  actual_end TIMESTAMP,\n  backout_required BOOLEAN,\n  backout_used BOOLEAN,\n  caused_incident BOOLEAN,\n  created_at TIMESTAMP,\n  updated_at TIMESTAMP\n);",
+        "relationships": [
+          {
+            "from_table": "changes",
+            "from_column": "service_id",
+            "to_table": "business_services",
+            "to_column": "service_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          },
+          {
+            "from_table": "changes",
+            "from_column": "ci_id",
+            "to_table": "cmdb_ci",
+            "to_column": "ci_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          }
+        ],
+        "layer": "raw"
+      },
+      {
+        "table_name": "service_requests",
+        "table_ddl": "\n-- Service requests (request fulfillment)\nCREATE TABLE service_requests (\n  request_id STRING NOT NULL,\n  request_number STRING,\n  request_type STRING,\n  category STRING,\n  subcategory STRING,\n  status STRING,\n  priority STRING,\n  requested_for STRING,\n  opened_at TIMESTAMP,\n  approved_at TIMESTAMP,\n  fulfilled_at TIMESTAMP,\n  closed_at TIMESTAMP,\n  assignment_group STRING,\n  business_unit STRING,\n  env STRING,\n  service_id STRING,\n  catalog_item_id STRING,\n  sla_id STRING,\n  sla_breached BOOLEAN,\n  created_at TIMESTAMP,\n  updated_at TIMESTAMP\n);",
+        "relationships": [
+          {
+            "from_table": "service_requests",
+            "from_column": "service_id",
+            "to_table": "business_services",
+            "to_column": "service_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          },
+          {
+            "from_table": "service_requests",
+            "from_column": "sla_id",
+            "to_table": "sla_definitions",
+            "to_column": "sla_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          }
+        ],
+        "layer": "raw"
+      },
+      {
+        "table_name": "cmdb_ci",
+        "table_ddl": "\n-- Configuration items (CMDB)\nCREATE TABLE cmdb_ci (\n  ci_id STRING NOT NULL,\n  ci_name STRING,\n  ci_type STRING,\n  env STRING,\n  business_unit STRING,\n  service_id STRING,\n  lifecycle_state STRING,\n  is_critical BOOLEAN,\n  owner_group STRING,\n  created_at TIMESTAMP,\n  updated_at TIMESTAMP\n);",
+        "relationships": [
+          {
+            "from_table": "cmdb_ci",
+            "from_column": "service_id",
+            "to_table": "business_services",
+            "to_column": "service_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          }
+        ],
+        "layer": "raw"
+      },
+      {
+        "table_name": "business_services",
+        "table_ddl": "\n-- Business and technical services\nCREATE TABLE business_services (\n  service_id STRING NOT NULL,\n  service_name STRING,\n  service_type STRING,\n  service_tier STRING,\n  owner_group STRING,\n  business_unit STRING,\n  env STRING,\n  criticality INTEGER,\n  created_at TIMESTAMP,\n  updated_at TIMESTAMP\n);",
+        "relationships": [],
+        "layer": "raw"
+      },
+      {
+        "table_name": "sla_definitions",
+        "table_ddl": "\n-- SLA definitions for incidents/requests\nCREATE TABLE sla_definitions (\n  sla_id STRING NOT NULL,\n  sla_name STRING,\n  applies_to STRING,\n  priority STRING,\n  target_response_minutes INTEGER,\n  target_resolution_minutes INTEGER,\n  business_calendar STRING,\n  active BOOLEAN,\n  created_at TIMESTAMP,\n  updated_at TIMESTAMP\n);",
+        "relationships": [],
+        "layer": "raw"
+      },
+      {
+        "table_name": "sla_events",
+        "table_ddl": "\n-- SLA tracking events (per incident)\nCREATE TABLE sla_events (\n  sla_event_id STRING NOT NULL,\n  incident_id STRING NOT NULL,\n  sla_id STRING NOT NULL,\n  start_time TIMESTAMP,\n  end_time TIMESTAMP,\n  elapsed_minutes INTEGER,\n  status STRING,\n  paused_minutes INTEGER,\n  created_at TIMESTAMP,\n  updated_at TIMESTAMP\n);",
+        "relationships": [
+          {
+            "from_table": "sla_events",
+            "from_column": "incident_id",
+            "to_table": "incidents",
+            "to_column": "incident_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          },
+          {
+            "from_table": "sla_events",
+            "from_column": "sla_id",
+            "to_table": "sla_definitions",
+            "to_column": "sla_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          }
+        ],
+        "layer": "raw"
+      }
+    ],
+    "lod_configurations": [
+      {
+        "table_name": "incidents",
+        "lod_type": "FIXED",
+        "dimensions": ["incident_id"],
+        "description": "One row per incident"
+      },
+      {
+        "table_name": "problems",
+        "lod_type": "FIXED",
+        "dimensions": ["problem_id"],
+        "description": "One row per problem record"
+      },
+      {
+        "table_name": "changes",
+        "lod_type": "FIXED",
+        "dimensions": ["change_id"],
+        "description": "One row per change record"
+      },
+      {
+        "table_name": "service_requests",
+        "lod_type": "FIXED",
+        "dimensions": ["request_id"],
+        "description": "One row per service request"
+      },
+      {
+        "table_name": "cmdb_ci",
+        "lod_type": "FIXED",
+        "dimensions": ["ci_id"],
+        "description": "One row per configuration item"
+      },
+      {
+        "table_name": "business_services",
+        "lod_type": "FIXED",
+        "dimensions": ["service_id"],
+        "description": "One row per service"
+      },
+      {
+        "table_name": "sla_definitions",
+        "lod_type": "FIXED",
+        "dimensions": ["sla_id"],
+        "description": "One row per SLA definition"
+      },
+      {
+        "table_name": "sla_events",
+        "lod_type": "FIXED",
+        "dimensions": ["sla_event_id"],
+        "description": "One row per SLA event instance"
+      }
+    ],
+    "relationship_mappings": [
+      {
+        "from_table": "incidents",
+        "from_column": "service_id",
+        "to_table": "business_services",
+        "to_column": "service_id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "incidents",
+        "from_column": "ci_id",
+        "to_table": "cmdb_ci",
+        "to_column": "ci_id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "incidents",
+        "from_column": "sla_id",
+        "to_table": "sla_definitions",
+        "to_column": "sla_id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "problems",
+        "from_column": "service_id",
+        "to_table": "business_services",
+        "to_column": "service_id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "changes",
+        "from_column": "service_id",
+        "to_table": "business_services",
+        "to_column": "service_id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "changes",
+        "from_column": "ci_id",
+        "to_table": "cmdb_ci",
+        "to_column": "ci_id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "service_requests",
+        "from_column": "service_id",
+        "to_table": "business_services",
+        "to_column": "service_id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "service_requests",
+        "from_column": "sla_id",
+        "to_table": "sla_definitions",
+        "to_column": "sla_id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "cmdb_ci",
+        "from_column": "service_id",
+        "to_table": "business_services",
+        "to_column": "service_id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "sla_events",
+        "from_column": "incident_id",
+        "to_table": "incidents",
+        "to_column": "incident_id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "sla_events",
+        "from_column": "sla_id",
+        "to_table": "sla_definitions",
+        "to_column": "sla_id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      }
+    ],
+    "user_query": "\n    Create a comprehensive ITSM operational excellence dashboard that provides:\n    \n    1. Incident and Request Efficiency:\n       - Incident volume by priority, category, and service\n       - Mean Time to Acknowledge (MTTA) and Mean Time to Resolve (MTTR)\n       - Reopen rate and backlog aging\n       - Request fulfillment cycle time by business unit and environment\n    \n    2. SLA Compliance and Service Reliability:\n       - SLA response and resolution compliance rates\n       - SLA breach distribution by assignment group and service\n       - Time-in-state analysis for key lifecycle states\n       - Service availability proxy via incident trends and severities\n    \n    3. Change Risk and Stability:\n       - Change volume by type (standard/normal/emergency)\n       - Change success and failure rates\n       - Incidents caused by changes by service and environment\n       - Lead time and implementation duration metrics\n    \n    4. Service Health by CI and Business Service:\n       - Incident density by CI and service criticality\n       - Hotspot analysis by business_unit, env, and service_tier\n       - Top noisy CIs and services driving the majority of incidents\n    \n    5. Time-Series Trends:\n       - 12-month trends for incident volume and MTTR\n       - Month-over-month SLA compliance changes\n       - Change failure trends and correlation with major incidents\n       - Request volume seasonality by catalog category\n    \n    Focus on operational measures: velocity, stability, reliability, and team load.\n    Compute composite health scores for services using weighted components.\n    Enable drill-downs by business unit, environment, assignment group, and time.\n    ",
+    "data_mart_goals": [
+      "Create an ITSM operational metrics datamart with MTTR, MTTA, volume, and SLA compliance by business unit and service.",
+      "Show service health breakdown by business service, CI, and environment to identify hotspots.",
+      "Generate 12-month trend analysis for incidents, changes, requests, and SLA performance.",
+      "Create change risk and stability metrics to correlate change failures with major incidents."
+    ],
+    "target_sql_dialect": "postgresql",
+    "metric_questions": [
+      "What is the incident volume by priority and service over the last 12 months?",
+      "What is the MTTA and MTTR for incidents by assignment group and business unit?",
+      "What percentage of incidents breached their resolution SLA by month and by priority?",
+      "What is the backlog of open incidents and how long have they been open by age bucket?",
+      "What is the average request fulfillment time by request type and business unit?",
+      "What is the change success vs failure rate by change type and environment?",
+      "How many incidents are caused by failed or high-risk changes per service?",
+      "Which CIs and services generate the highest number of incidents and SLA breaches?",
+      "What is the composite service health score per business service based on volume, MTTR, and SLA compliance?",
+      "What are the month-over-month trends in incident volume, MTTR, and SLA compliance?",
+      "Which assignment groups are overloaded based on volume, backlog, and SLA breach rates?",
+      "How do emergency changes correlate with major incident spikes over time?"
+    ],
+    "silver_cleaning_hints": {
+      "incidents": {
+        "cleaning_steps": [
+          "Ensure incident_id is unique per row.",
+          "Standardize priority, impact, and urgency to a consistent scale.",
+          "Normalize category and subcategory values.",
+          "Validate that resolved_at and closed_at are greater than or equal to opened_at.",
+          "Fill or flag records with missing service_id, ci_id, or business_unit."
+        ]
+      },
+      "problems": {
+        "cleaning_steps": [
+          "Ensure problem_id is unique per row.",
+          "Normalize status and priority values.",
+          "Validate resolved_at is greater than or equal to opened_at.",
+          "Flag records without a service_id or business_unit for review."
+        ]
+      },
+      "changes": {
+        "cleaning_steps": [
+          "Ensure change_id is unique per row.",
+          "Standardize change_type, risk, and category.",
+          "Validate that actual_start and actual_end timestamps are within scheduled windows where available.",
+          "Flag changes with missing service_id, env, or business_unit."
+        ]
+      },
+      "service_requests": {
+        "cleaning_steps": [
+          "Ensure request_id is unique per row.",
+          "Standardize status and priority values.",
+          "Validate fulfilled_at and closed_at timestamps relative to opened_at.",
+          "Normalize catalog_item_id and map to consistent request_type where possible."
+        ]
+      },
+      "cmdb_ci": {
+        "cleaning_steps": [
+          "Ensure ci_id is unique per row.",
+          "Standardize ci_type and lifecycle_state values.",
+          "Normalize env and business_unit values.",
+          "Flag CIs without an associated service_id or owner_group."
+        ]
+      },
+      "sla_events": {
+        "cleaning_steps": [
+          "Ensure sla_event_id is unique per row.",
+          "Validate that sla_id and incident_id exist in their respective tables.",
+          "Check elapsed_minutes and paused_minutes for negative or null values.",
+          "Validate that end_time is greater than or equal to start_time."
+        ]
+      }
+    },
+    "gold_metrics_config": {
+      "dimensions": [
+        "business_unit",
+        "env",
+        "service_id",
+        "service_tier",
+        "ci_id",
+        "assignment_group",
+        "priority",
+        "category"
+      ],
+      "measures": [
+        "incident_volume",
+        "open_incident_count",
+        "mttr_hours",
+        "mtta_minutes",
+        "reopen_rate",
+        "sla_breach_rate",
+        "request_volume",
+        "request_fulfillment_time_hours",
+        "change_volume",
+        "change_failure_rate",
+        "change_success_rate",
+        "service_health_score"
+      ],
+      "time_grain": "month",
+      "aggregation_types": [
+        "sum",
+        "avg",
+        "count",
+        "max",
+        "min",
+        "percentile"
+      ]
+    },
+    "expected_outputs": {
+      "raw_cubes": [
+        "raw_incidents",
+        "raw_problems",
+        "raw_changes",
+        "raw_service_requests",
+        "raw_cmdb_ci",
+        "raw_business_services",
+        "raw_sla_definitions",
+        "raw_sla_events"
+      ],
+      "silver_cubes": [
+        "silver_incidents_enriched",
+        "silver_problems_enriched",
+        "silver_changes_enriched",
+        "silver_service_requests_enriched",
+        "silver_cmdb_ci_enriched",
+        "silver_business_services_enriched",
+        "silver_sla_events_aggregated"
+      ],
+      "gold_cubes": [
+        "gold_itsm_operational_metrics",
+        "gold_incident_sla_performance",
+        "gold_request_fulfillment_metrics",
+        "gold_change_risk_and_stability",
+        "gold_service_health_over_time"
+      ],
+      "views": [
+        "itsm_operational_dashboard_view",
+        "service_health_view",
+        "change_risk_view"
+      ],
+      "transformations": [
+        "raw_to_silver_incident_enrichment",
+        "raw_to_silver_request_enrichment",
+        "raw_to_silver_change_enrichment",
+        "raw_to_silver_sla_enrichment",
+        "silver_to_gold_itsm_kpi_rollup",
+        "silver_to_gold_service_health",
+        "silver_to_gold_trend_rollups"
+      ],
+      "dbt_models": [
+        "itsm_operational_metrics",
+        "incident_sla_performance",
+        "request_fulfillment_metrics",
+        "change_risk_and_stability",
+        "service_health_overview"
+      ]
+    },
+    "generate_gold": true,
+    "enable_dbt_generation": true,
+    "enable_enhanced_data_marts": true,
+    "enable_gold_metrics": true,
+    "output_formats": [
+      "cubejs",
+      "dbt"
+    ]
+  }
+  

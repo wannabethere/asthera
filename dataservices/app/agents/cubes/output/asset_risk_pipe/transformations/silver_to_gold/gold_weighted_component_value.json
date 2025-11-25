@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_weighted_component_value",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_weighted_component_value",
+  "target_model": "gold_gold_weighted_component_value",
+  "steps": [
+    {
+      "step_name": "Metric: weighted_component_value",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_weighted_component_value (asset, component, weighted_value)\nSELECT \n    asset,\n    component,\n    SUM(COALESCE(value, 0) * COALESCE(weight, 0)) AS weighted_value\nFROM (\n    SELECT \n        asset,\n        component,\n        value,\n        weight,\n        SUM(weight) OVER (PARTITION BY asset) AS total_weight\n    FROM \n        silver_attack_surface_components\n) AS subquery\nWHERE \n    total_weight > 0  -- Ensure weights are normalized\nGROUP BY \n    asset, component;",
+      "description": "The value of each component weighted according to its importance.",
+      "input_tables": [
+        "silver_attack_surface_components"
+      ],
+      "output_table": "gold_weighted_component_value",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_weighted_component_value from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

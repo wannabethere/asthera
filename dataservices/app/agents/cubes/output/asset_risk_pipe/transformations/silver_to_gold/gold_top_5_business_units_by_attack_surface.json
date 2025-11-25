@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_top_5_business_units_by_attack_surface",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_top_5_business_units_by_attack_surface",
+  "target_model": "gold_gold_top_5_business_units_by_attack_surface",
+  "steps": [
+    {
+      "step_name": "Metric: top_5_business_units_by_attack_surface",
+      "step_type": "metric",
+      "sql_logic": "WITH ranked_business_units AS (\n    SELECT \n        business_unit,\n        COUNT(*) AS total_attack_surface,\n        MAX(vulnerability_score) AS highest_vulnerability_score\n    FROM \n        attack_surface_table\n    GROUP BY \n        business_unit\n    HAVING \n        COUNT(*) > 0  -- Only include business units with at least one attack surface element\n),\nranked_with_ranks AS (\n    SELECT \n        business_unit,\n        total_attack_surface,\n        highest_vulnerability_score,\n        RANK() OVER (ORDER BY total_attack_surface DESC, highest_vulnerability_score DESC) AS rank\n    FROM \n        ranked_business_units\n)\nSELECT \n    business_unit,\n    total_attack_surface,\n    highest_vulnerability_score\nFROM \n    ranked_with_ranks\nWHERE \n    rank <= 5  -- Select top 5 business units\nORDER BY \n    rank;  -- Order by rank for final output\n\n-- Insert the results into the target table\nINSERT INTO gold_top_5_business_units_by_attack_surface (business_unit, total_attack_surface, highest_vulnerability_score)\nSELECT \n    business_unit,\n    total_attack_surface,\n    highest_vulnerability_score\nFROM \n    ranked_with_ranks\nWHERE \n    rank <= 5;  -- Ensure only top 5 are inserted",
+      "description": "Ranking of the top 5 business units based on total attack surface count",
+      "input_tables": [
+        "attack_surface_table"
+      ],
+      "output_table": "gold_top_5_business_units_by_attack_surface",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_top_5_business_units_by_attack_surface from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

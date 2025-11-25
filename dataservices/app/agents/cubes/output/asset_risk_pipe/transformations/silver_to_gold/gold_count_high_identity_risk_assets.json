@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_count_high_identity_risk_assets",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_count_high_identity_risk_assets",
+  "target_model": "gold_gold_count_high_identity_risk_assets",
+  "steps": [
+    {
+      "step_name": "Metric: count_high_identity_risk_assets",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_count_high_identity_risk_assets (asset_count)\nSELECT COUNT(*) AS asset_count\nFROM assets\nWHERE COALESCE(identity_exposure_score, 0) > :high_risk_threshold;",
+      "description": "Count of assets that are identified as having high identity risk based on the exposure score.",
+      "input_tables": [
+        "assets"
+      ],
+      "output_table": "gold_count_high_identity_risk_assets",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_count_high_identity_risk_assets from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

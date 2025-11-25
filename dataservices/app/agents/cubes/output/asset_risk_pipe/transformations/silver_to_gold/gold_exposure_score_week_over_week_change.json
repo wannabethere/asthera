@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_exposure_score_week_over_week_change",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_exposure_score_week_over_week_change",
+  "target_model": "gold_gold_exposure_score_week_over_week_change",
+  "steps": [
+    {
+      "step_name": "Metric: exposure_score_week_over_week_change",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_exposure_score_week_over_week_change (week_start_date, percentage_change)\nWITH weekly_averages AS (\n    SELECT \n        DATE_TRUNC('week', \"timestamp\") AS week_start,\n        AVG(exposure_score) AS avg_exposure_score\n    FROM \n        exposure_scores\n    GROUP BY \n        DATE_TRUNC('week', \"timestamp\")\n),\ncurrent_previous_weeks AS (\n    SELECT \n        current.week_start AS current_week,\n        previous.avg_exposure_score AS previous_week_avg,\n        current.avg_exposure_score AS current_week_avg\n    FROM \n        weekly_averages AS current\n    LEFT JOIN \n        weekly_averages AS previous \n    ON \n        current.week_start = current_previous_weeks.current_week + INTERVAL '1 week'\n)\nSELECT \n    current_week,\n    CASE \n        WHEN NULLIF(previous_week_avg, 0) IS NOT NULL THEN \n            ((current_week_avg - previous_week_avg) / NULLIF(previous_week_avg, 0)) * 100\n        ELSE \n            NULL \n    END AS percentage_change\nFROM \n    current_previous_weeks\nWHERE \n    previous_week_avg IS NOT NULL;",
+      "description": "The change in average exposure scores from one week to the next.",
+      "input_tables": [
+        "exposure_scores"
+      ],
+      "output_table": "gold_exposure_score_week_over_week_change",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_exposure_score_week_over_week_change from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

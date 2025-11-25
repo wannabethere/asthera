@@ -1,6 +1,6 @@
 -- Transformation: silver_to_gold
 -- Table: identity_exposure
--- Generated: 20251120_111506
+-- Generated: 20251124_084146
 
 -- Step: Daily Aggregation - identity_exposure
 -- Type: TransformationType.AGGREGATION

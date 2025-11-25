@@ -1,0 +1,254 @@
+{
+    "workflow_name": "itsm_sn_jira_crowdstrike_risk_analytics",
+    "description": "Blend ITSM incidents from ServiceNow/Jira with CrowdStrike Falcon detections and assets to understand operational and cyber risk at the service and CI level.",
+    "raw_schemas": [
+      {
+        "table_name": "sn_incident",
+        "table_ddl": "\n-- ServiceNow Incident table (incident)\nCREATE TABLE sn_incident (\n  sys_id STRING NOT NULL,\n  number STRING,\n  short_description STRING,\n  description STRING,\n  category STRING,\n  subcategory STRING,\n  priority STRING,\n  impact STRING,\n  urgency STRING,\n  state STRING,\n  opened_at TIMESTAMP,\n  resolved_at TIMESTAMP,\n  closed_at TIMESTAMP,\n  caller_id STRING,\n  assignment_group STRING,\n  assigned_to STRING,\n  u_business_service STRING,\n  cmdb_ci STRING,\n  company STRING,\n  sys_created_on TIMESTAMP,\n  sys_updated_on TIMESTAMP\n);",
+        "relationships": [
+          {
+            "from_table": "sn_incident",
+            "from_column": "cmdb_ci",
+            "to_table": "sn_cmdb_ci",
+            "to_column": "sys_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          },
+          {
+            "from_table": "sn_incident",
+            "from_column": "u_business_service",
+            "to_table": "business_services",
+            "to_column": "source_service_key",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          }
+        ],
+        "layer": "raw"
+      },
+      {
+        "table_name": "sn_cmdb_ci",
+        "table_ddl": "\n-- ServiceNow CMDB CI (cmdb_ci)\nCREATE TABLE sn_cmdb_ci (\n  sys_id STRING NOT NULL,\n  name STRING,\n  sys_class_name STRING,\n  fqdn STRING,\n  ip_address STRING,\n  install_status STRING,\n  u_business_service STRING,\n  environment STRING,\n  owned_by STRING,\n  company STRING,\n  sys_created_on TIMESTAMP,\n  sys_updated_on TIMESTAMP\n);",
+        "relationships": [
+          {
+            "from_table": "sn_cmdb_ci",
+            "from_column": "u_business_service",
+            "to_table": "business_services",
+            "to_column": "source_service_key",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          }
+        ],
+        "layer": "raw"
+      },
+  
+      {
+        "table_name": "jira_itsm_issue",
+        "table_ddl": "\n-- Jira Service Management issues\nCREATE TABLE jira_itsm_issue (\n  id STRING NOT NULL,\n  issue_key STRING,\n  project_key STRING,\n  issuetype_name STRING,\n  summary STRING,\n  description STRING,\n  priority_name STRING,\n  status_name STRING,\n  created TIMESTAMP,\n  updated TIMESTAMP,\n  resolutiondate TIMESTAMP,\n  reporter STRING,\n  assignee STRING,\n  customfield_service STRING,\n  customfield_ci STRING,\n  customfield_request_type STRING\n);",
+        "relationships": [
+          {
+            "from_table": "jira_itsm_issue",
+            "from_column": "customfield_service",
+            "to_table": "business_services",
+            "to_column": "source_service_key",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          },
+          {
+            "from_table": "jira_itsm_issue",
+            "from_column": "customfield_ci",
+            "to_table": "jira_cmdb_ci",
+            "to_column": "object_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          }
+        ],
+        "layer": "raw"
+      },
+      {
+        "table_name": "jira_cmdb_ci",
+        "table_ddl": "\n-- Jira Assets / CMDB objects\nCREATE TABLE jira_cmdb_ci (\n  object_id STRING NOT NULL,\n  object_key STRING,\n  object_name STRING,\n  object_type STRING,\n  hostname STRING,\n  ip_address STRING,\n  environment STRING,\n  business_service_key STRING,\n  is_critical BOOLEAN,\n  updated TIMESTAMP\n);",
+        "relationships": [
+          {
+            "from_table": "jira_cmdb_ci",
+            "from_column": "business_service_key",
+            "to_table": "business_services",
+            "to_column": "source_service_key",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          }
+        ],
+        "layer": "raw"
+      },
+  
+      {
+        "table_name": "cs_falcon_detection",
+        "table_ddl": "\n-- CrowdStrike Falcon detections (simplified)\nCREATE TABLE cs_falcon_detection (\n  detection_id STRING NOT NULL,\n  customer_id STRING,\n  device_id STRING,\n  host_name STRING,\n  local_ip STRING,\n  tactic STRING,\n  technique STRING,\n  severity STRING,\n  status STRING,\n  platform_name STRING,\n  created_timestamp TIMESTAMP,\n  first_behavior_timestamp TIMESTAMP,\n  last_behavior_timestamp TIMESTAMP\n);",
+        "relationships": [
+          {
+            "from_table": "cs_falcon_detection",
+            "from_column": "device_id",
+            "to_table": "cs_falcon_device",
+            "to_column": "device_id",
+            "relationship_type": "many_to_one",
+            "layer": "silver"
+          }
+        ],
+        "layer": "raw"
+      },
+      {
+        "table_name": "cs_falcon_device",
+        "table_ddl": "\n-- CrowdStrike Falcon devices\nCREATE TABLE cs_falcon_device (\n  device_id STRING NOT NULL,\n  hostname STRING,\n  local_ip STRING,\n  os_version STRING,\n  platform_name STRING,\n  site_name STRING,\n  asset_criticality STRING,\n  first_seen TIMESTAMP,\n  last_seen TIMESTAMP\n);",
+        "relationships": [],
+        "layer": "raw"
+      },
+  
+      {
+        "table_name": "business_services",
+        "table_ddl": "\n-- Unified business service dimension\nCREATE TABLE business_services (\n  service_id STRING NOT NULL,\n  source_system STRING,\n  source_service_key STRING,\n  service_name STRING,\n  service_tier STRING,\n  business_unit STRING,\n  env STRING,\n  criticality INTEGER,\n  owner_group STRING,\n  created_at TIMESTAMP,\n  updated_at TIMESTAMP\n);",
+        "relationships": [],
+        "layer": "raw"
+      }
+    ],
+    "lod_configurations": [
+      {
+        "table_name": "sn_incident",
+        "lod_type": "FIXED",
+        "dimensions": ["sys_id"],
+        "description": "One row per ServiceNow incident"
+      },
+      {
+        "table_name": "jira_itsm_issue",
+        "lod_type": "FIXED",
+        "dimensions": ["id"],
+        "description": "One row per Jira ITSM issue"
+      },
+      {
+        "table_name": "cs_falcon_detection",
+        "lod_type": "FIXED",
+        "dimensions": ["detection_id"],
+        "description": "One row per Falcon detection"
+      },
+      {
+        "table_name": "cs_falcon_device",
+        "lod_type": "FIXED",
+        "dimensions": ["device_id"],
+        "description": "One row per Falcon device"
+      },
+      {
+        "table_name": "business_services",
+        "lod_type": "FIXED",
+        "dimensions": ["service_id"],
+        "description": "One row per business service"
+      }
+    ],
+    "relationship_mappings": [
+      {
+        "from_table": "sn_incident",
+        "from_column": "cmdb_ci",
+        "to_table": "sn_cmdb_ci",
+        "to_column": "sys_id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "sn_cmdb_ci",
+        "from_column": "u_business_service",
+        "to_table": "business_services",
+        "to_column": "source_service_key",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "jira_itsm_issue",
+        "from_column": "customfield_ci",
+        "to_table": "jira_cmdb_ci",
+        "to_column": "object_id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+      {
+        "from_table": "jira_cmdb_ci",
+        "from_column": "business_service_key",
+        "to_table": "business_services",
+        "to_column": "source_service_key",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+  
+      {
+        "from_table": "cs_falcon_detection",
+        "from_column": "device_id",
+        "to_table": "cs_falcon_device",
+        "to_column": "device_id",
+        "relationship_type": "many_to_one",
+        "layer": "silver"
+      },
+  
+      {
+        "from_table": "cs_falcon_device",
+        "from_column": "hostname",
+        "to_table": "sn_cmdb_ci",
+        "to_column": "name",
+        "relationship_type": "many_to_one",
+        "layer": "gold"
+      },
+      {
+        "from_table": "cs_falcon_device",
+        "from_column": "hostname",
+        "to_table": "jira_cmdb_ci",
+        "to_column": "hostname",
+        "relationship_type": "many_to_one",
+        "layer": "gold"
+      }
+    ],
+    "user_query": "Create a risk and operational dashboard that correlates ServiceNow and Jira incidents with CrowdStrike Falcon detections and devices, rolled up to business services and CIs.",
+    "data_mart_goals": [
+      "Link ITSM incidents from ServiceNow and Jira to Falcon devices and detections via hostname/IP to understand which services are under active attack.",
+      "Compute combined operational and security health scores per business service (incidents, MTTR, detection volume, detection severity).",
+      "Provide trends for detections, incidents, and service health by environment and business unit."
+    ],
+    "target_sql_dialect": "postgresql",
+    "metric_questions": [
+      "Which business services have both high incident volume and high Falcon detection activity?",
+      "For each service, what is the count of high-severity detections vs P1/P2 incidents over the last 90 days?",
+      "Which CIs/devices have repeated Falcon detections and repeated ITSM incidents?",
+      "How does MTTR for security-related incidents compare to other incident types?",
+      "What is the composite risk score per business service when combining incident MTTR, incident volume, and detection severity mix?"
+    ],
+    "gold_metrics_config": {
+      "dimensions": [
+        "business_unit",
+        "env",
+        "service_id",
+        "service_tier",
+        "severity",
+        "priority",
+        "platform_name"
+      ],
+      "measures": [
+        "incident_volume",
+        "security_incident_volume",
+        "falcon_detection_count",
+        "high_severity_detection_count",
+        "mttr_hours",
+        "service_risk_score",
+        "service_health_score"
+      ],
+      "time_grain": "day",
+      "aggregation_types": [
+        "sum",
+        "avg",
+        "count",
+        "max"
+      ]
+    },
+    "generate_gold": true,
+    "enable_dbt_generation": true,
+    "enable_enhanced_data_marts": true,
+    "enable_gold_metrics": true,
+    "output_formats": [
+      "cubejs",
+      "dbt"
+    ]
+  }
+  

@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_distribution_of_attack_surface_index",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_distribution_of_attack_surface_index",
+  "target_model": "gold_gold_distribution_of_attack_surface_index",
+  "steps": [
+    {
+      "step_name": "Metric: distribution_of_attack_surface_index",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_distribution_of_attack_surface_index (attack_surface_index, asset_count)\nSELECT \n    attack_surface_index,\n    COUNT(*) AS asset_count\nFROM \n    assets_table\nWHERE \n    attack_surface_index IS NOT NULL  -- Ensure only valid ASI values are considered\nGROUP BY \n    attack_surface_index\nORDER BY \n    attack_surface_index;  -- Optional: Order by ASI for better readability",
+      "description": "The distribution of Attack Surface Index values across all assets.",
+      "input_tables": [
+        "assets_table"
+      ],
+      "output_table": "gold_distribution_of_attack_surface_index",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_distribution_of_attack_surface_index from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

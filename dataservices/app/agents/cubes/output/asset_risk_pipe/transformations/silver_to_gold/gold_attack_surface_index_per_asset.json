@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_attack_surface_index_per_asset",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_attack_surface_index_per_asset",
+  "target_model": "gold_gold_attack_surface_index_per_asset",
+  "steps": [
+    {
+      "step_name": "Metric: attack_surface_index_per_asset",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_attack_surface_index_per_asset (asset_id, attack_surface_index)\nSELECT \n    a.asset_id,\n    COALESCE(SUM(asi.value), 0) / NULLIF(COUNT(ass.id), 0) AS attack_surface_index\nFROM \n    assets_table a\nLEFT JOIN \n    assessments_table ass ON a.asset_id = ass.asset_id\nLEFT JOIN \n    attack_surface_index_table asi ON ass.id = asi.assessment_id\nWHERE \n    ass.timestamp = (SELECT MAX(timestamp) FROM assessments_table WHERE asset_id = a.asset_id)\nGROUP BY \n    a.asset_id;",
+      "description": "The Attack Surface Index (ASI) calculated for each asset.",
+      "input_tables": [
+        "assets_table"
+      ],
+      "output_table": "gold_attack_surface_index_per_asset",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_attack_surface_index_per_asset from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

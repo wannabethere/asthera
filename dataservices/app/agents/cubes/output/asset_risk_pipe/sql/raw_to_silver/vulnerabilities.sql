@@ -1,6 +1,6 @@
 -- Transformation: raw_to_silver
 -- Table: vulnerabilities
--- Generated: 20251120_111506
+-- Generated: 20251124_084146
 
 -- Step: Clean vulnerabilities
 -- Type: TransformationType.CLEANING

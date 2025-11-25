@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_attack_surface_by_os_software_stack",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_attack_surface_by_os_software_stack",
+  "target_model": "gold_gold_attack_surface_by_os_software_stack",
+  "steps": [
+    {
+      "step_name": "Metric: attack_surface_by_os_software_stack",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_attack_surface_by_os_software_stack (os_software_stack, record_count)\nSELECT \n    COALESCE(os_software_stack, 'Unknown') AS os_software_stack,  -- Handle NULL values by replacing with 'Unknown'\n    COUNT(*) AS record_count\nFROM \n    attack_surface_table\nGROUP BY \n    os_software_stack  -- Group by distinct OS/software stack values\nORDER BY \n    os_software_stack;  -- Order results for better readability",
+      "description": "Breakdown of attack surfaces by operating system/software stack",
+      "input_tables": [
+        "attack_surface_table"
+      ],
+      "output_table": "gold_attack_surface_by_os_software_stack",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_attack_surface_by_os_software_stack from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

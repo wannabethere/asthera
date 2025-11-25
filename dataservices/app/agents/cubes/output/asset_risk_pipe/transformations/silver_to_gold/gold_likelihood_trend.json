@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_likelihood_trend",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_likelihood_trend",
+  "target_model": "gold_gold_likelihood_trend",
+  "steps": [
+    {
+      "step_name": "Metric: likelihood_trend",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_likelihood_trend (month, average_likelihood_score)\nSELECT \n    DATE_TRUNC('month', likelihood_date) AS month,\n    AVG(COALESCE(likelihood_score, 0)) AS average_likelihood_score\nFROM \n    likelihood_table\nWHERE \n    likelihood_date >= CURRENT_DATE - INTERVAL '12 months'\nGROUP BY \n    month\nORDER BY \n    month;",
+      "description": "Measures the trend of likelihood scores over the past 12 months.",
+      "input_tables": [
+        "likelihood_table"
+      ],
+      "output_table": "gold_likelihood_trend",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_likelihood_trend from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

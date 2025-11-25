@@ -27,6 +27,7 @@ agents.zip                                                                      
 sameerm@Sameers-iMac genieml % scp -i ~/Downloads/flowharmonic.pem agents.zip  ec2-user@ec2-18-204-196-65.compute-1.amazonaws.com:~/.
 agents.zip                
 
+ec2-user@100.26.125.159
 
 
 https://ec2-54-161-71-105.compute-1.amazonaws.com/dashboards/dashboard-U13E13890/staticdashboards

@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_exposure_score_comparison_by_category",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_exposure_score_comparison_by_category",
+  "target_model": "gold_gold_exposure_score_comparison_by_category",
+  "steps": [
+    {
+      "step_name": "Metric: exposure_score_comparison_by_category",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_exposure_score_comparison_by_category (category, average_exposure_score)\nSELECT \n    category,\n    AVG(COALESCE(exposure_score, 0)) AS average_exposure_score\nFROM \n    exposure_scores\nWHERE \n    exposure_score IS NOT NULL  -- Include only valid exposure scores\nGROUP BY \n    category\nORDER BY \n    category;",
+      "description": "Comparison of average exposure scores by category",
+      "input_tables": [
+        "exposure_scores"
+      ],
+      "output_table": "gold_exposure_score_comparison_by_category",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_exposure_score_comparison_by_category from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

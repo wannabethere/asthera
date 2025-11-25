@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_attack_surface_index",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_attack_surface_index",
+  "target_model": "gold_gold_attack_surface_index",
+  "steps": [
+    {
+      "step_name": "Metric: attack_surface_index",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_attack_surface_index (asset, asi)\nSELECT \n    asset,\n    SUM(weight * COALESCE(component_value, 0)) AS asi\nFROM \n    silver_attack_surface_components\nGROUP BY \n    asset;",
+      "description": "The composite Attack Surface Index (ASI) calculated using weighted components.",
+      "input_tables": [
+        "silver_attack_surface_components"
+      ],
+      "output_table": "gold_attack_surface_index",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_attack_surface_index from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

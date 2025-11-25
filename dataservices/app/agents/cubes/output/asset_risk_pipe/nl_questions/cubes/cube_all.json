@@ -22,7 +22,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 2,
-      "generated_at": "2025-11-20T11:47:30.505086"
+      "generated_at": "2025-11-24T09:18:54.882724"
     },
     "dependencies": [],
     "layer": "raw",
@@ -177,7 +177,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 3,
-      "generated_at": "2025-11-20T11:47:30.505315"
+      "generated_at": "2025-11-24T09:18:54.882853"
     },
     "dependencies": [],
     "layer": "raw",
@@ -315,7 +315,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 1,
-      "generated_at": "2025-11-20T11:47:30.505412"
+      "generated_at": "2025-11-24T09:18:54.882945"
     },
     "dependencies": [],
     "layer": "raw",
@@ -432,7 +432,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 2,
-      "generated_at": "2025-11-20T11:47:30.505708"
+      "generated_at": "2025-11-24T09:18:54.883036"
     },
     "dependencies": [],
     "layer": "raw",
@@ -559,7 +559,7 @@
     "metadata": {
       "dimension_count": 5,
       "measure_count": 3,
-      "generated_at": "2025-11-20T11:47:30.505829"
+      "generated_at": "2025-11-24T09:18:54.883132"
     },
     "dependencies": [],
     "layer": "raw",
@@ -687,7 +687,7 @@
     "metadata": {
       "dimension_count": 7,
       "measure_count": 1,
-      "generated_at": "2025-11-20T11:47:30.506077"
+      "generated_at": "2025-11-24T09:18:54.883223"
     },
     "dependencies": [],
     "layer": "raw",
@@ -813,7 +813,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 2,
-      "generated_at": "2025-11-20T11:47:30.506202"
+      "generated_at": "2025-11-24T09:18:54.883336"
     },
     "dependencies": [],
     "layer": "silver",
@@ -968,7 +968,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 3,
-      "generated_at": "2025-11-20T11:47:30.506308"
+      "generated_at": "2025-11-24T09:18:54.883433"
     },
     "dependencies": [],
     "layer": "silver",
@@ -1106,7 +1106,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 1,
-      "generated_at": "2025-11-20T11:47:30.506392"
+      "generated_at": "2025-11-24T09:18:54.883514"
     },
     "dependencies": [],
     "layer": "silver",
@@ -1223,7 +1223,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 2,
-      "generated_at": "2025-11-20T11:47:30.506478"
+      "generated_at": "2025-11-24T09:18:54.883600"
     },
     "dependencies": [],
     "layer": "silver",
@@ -1350,7 +1350,7 @@
     "metadata": {
       "dimension_count": 5,
       "measure_count": 3,
-      "generated_at": "2025-11-20T11:47:30.506568"
+      "generated_at": "2025-11-24T09:18:54.883686"
     },
     "dependencies": [],
     "layer": "silver",
@@ -1478,7 +1478,7 @@
     "metadata": {
       "dimension_count": 7,
       "measure_count": 1,
-      "generated_at": "2025-11-20T11:47:30.506657"
+      "generated_at": "2025-11-24T09:18:54.883787"
     },
     "dependencies": [],
     "layer": "silver",
@@ -1604,7 +1604,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 2,
-      "generated_at": "2025-11-20T11:47:30.506769"
+      "generated_at": "2025-11-24T09:18:54.883900"
     },
     "dependencies": [],
     "layer": "gold",
@@ -1759,7 +1759,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 3,
-      "generated_at": "2025-11-20T11:47:30.506868"
+      "generated_at": "2025-11-24T09:18:54.883999"
     },
     "dependencies": [],
     "layer": "gold",
@@ -1897,7 +1897,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 1,
-      "generated_at": "2025-11-20T11:47:30.506946"
+      "generated_at": "2025-11-24T09:18:54.884183"
     },
     "dependencies": [],
     "layer": "gold",
@@ -2014,7 +2014,7 @@
     "metadata": {
       "dimension_count": 6,
       "measure_count": 2,
-      "generated_at": "2025-11-20T11:47:30.507034"
+      "generated_at": "2025-11-24T09:18:54.884285"
     },
     "dependencies": [],
     "layer": "gold",
@@ -2141,7 +2141,7 @@
     "metadata": {
       "dimension_count": 5,
       "measure_count": 3,
-      "generated_at": "2025-11-20T11:47:30.507125"
+      "generated_at": "2025-11-24T09:18:54.884600"
     },
     "dependencies": [],
     "layer": "gold",
@@ -2269,7 +2269,7 @@
     "metadata": {
       "dimension_count": 7,
       "measure_count": 1,
-      "generated_at": "2025-11-20T11:47:30.507213"
+      "generated_at": "2025-11-24T09:18:54.884763"
     },
     "dependencies": [],
     "layer": "gold",

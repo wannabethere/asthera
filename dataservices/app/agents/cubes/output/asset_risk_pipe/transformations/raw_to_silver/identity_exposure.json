@@ -24,8 +24,8 @@
       "silver_identity_exposure_cleaned"
     ],
     "output_table": "silver_identity_exposure_deduped",
-    "sql_logic": "\nCREATE TABLE silver_identity_exposure_deduped AS\nSELECT *\nFROM (\n    SELECT \n        *,\n        ROW_NUMBER() OVER (\n            PARTITION BY user_id, exposure_timestamp\n            ORDER BY updated_at DESC\n        ) as row_num\n    FROM silver_identity_exposure_cleaned\n) ranked\nWHERE row_num = 1;\n",
-    "description": "Deduplicate using LOD dimensions: user_id, exposure_timestamp",
+    "sql_logic": "\nCREATE TABLE silver_identity_exposure_deduped AS\nSELECT *\nFROM (\n    SELECT \n        *,\n        ROW_NUMBER() OVER (\n            PARTITION BY user_id, exposure_event_id\n            ORDER BY updated_at DESC\n        ) as row_num\n    FROM silver_identity_exposure_cleaned\n) ranked\nWHERE row_num = 1;\n",
+    "description": "Deduplicate using LOD dimensions: user_id, exposure_event_id",
     "dependencies": [
       "clean_001"
     ],

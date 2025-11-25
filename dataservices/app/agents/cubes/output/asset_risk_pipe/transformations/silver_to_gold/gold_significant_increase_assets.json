@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_significant_increase_assets",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_significant_increase_assets",
+  "target_model": "gold_gold_significant_increase_assets",
+  "steps": [
+    {
+      "step_name": "Metric: significant_increase_assets",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_significant_increase_assets (asset_id, week_start, exposure_score_previous, exposure_score_current, percentage_increase)\nWITH weekly_scores AS (\n    SELECT \n        asset_id,\n        DATE_TRUNC('week', score_date) AS week_start,\n        AVG(exposure_score) AS avg_exposure_score\n    FROM \n        exposure_scores\n    GROUP BY \n        asset_id, DATE_TRUNC('week', score_date)\n),\nweek_over_week AS (\n    SELECT \n        current.asset_id,\n        current.week_start,\n        COALESCE(previous.avg_exposure_score, 0) AS exposure_score_previous,\n        current.avg_exposure_score AS exposure_score_current,\n        CASE \n            WHEN NULLIF(previous.avg_exposure_score, 0) IS NOT NULL THEN \n                (current.avg_exposure_score - previous.avg_exposure_score) / NULLIF(previous.avg_exposure_score, 0) * 100\n            ELSE \n                NULL \n        END AS percentage_increase\n    FROM \n        weekly_scores current\n    LEFT JOIN \n        weekly_scores previous \n    ON \n        current.asset_id = previous.asset_id \n        AND current.week_start = previous.week_start + INTERVAL '1 week'\n)\nSELECT \n    asset_id,\n    week_start,\n    exposure_score_previous,\n    exposure_score_current,\n    percentage_increase\nFROM \n    week_over_week\nWHERE \n    percentage_increase > 10;",
+      "description": "List of assets that have shown a significant increase in exposure scores week-over-week.",
+      "input_tables": [
+        "exposure_scores"
+      ],
+      "output_table": "gold_significant_increase_assets",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_significant_increase_assets from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

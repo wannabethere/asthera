@@ -1,0 +1,25 @@
+{
+  "name": "silver_to_gold_gold_exposure_score_count",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_exposure_score_count",
+  "target_model": "gold_gold_exposure_score_count",
+  "steps": [
+    {
+      "step_name": "Metric: exposure_score_count",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_exposure_score_count (record_count)\nSELECT COUNT(*) AS record_count\nFROM exposure_scores\nWHERE exposure_score IS NOT NULL;",
+      "description": "Count of records with exposure scores",
+      "input_tables": [
+        "exposure_scores"
+      ],
+      "output_table": "gold_exposure_score_count",
+      "layer": "silver"
+    }
+  ],
+  "description": "Transform gold_exposure_score_count from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}

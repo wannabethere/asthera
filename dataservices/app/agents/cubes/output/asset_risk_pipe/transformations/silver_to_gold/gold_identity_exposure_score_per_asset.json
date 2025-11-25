@@ -1,0 +1,28 @@
+{
+  "name": "silver_to_gold_gold_identity_exposure_score_per_asset",
+  "source_layer": "silver",
+  "target_layer": "gold",
+  "source_model": "gold_identity_exposure_score_per_asset",
+  "target_model": "gold_gold_identity_exposure_score_per_asset",
+  "steps": [
+    {
+      "step_name": "Metric: identity_exposure_score_per_asset",
+      "step_type": "metric",
+      "sql_logic": "INSERT INTO gold_identity_exposure_score_per_asset (asset_id, exposure_score)\nSELECT \n    a.asset_id,\n    COALESCE(SUM(\n        CASE \n            WHEN aa.admin_account_id IS NOT NULL THEN 1 \n            ELSE 0 \n        END +\n        CASE \n            WHEN sa.stale_account_id IS NOT NULL THEN 1 \n            ELSE 0 \n        END +\n        CASE \n            WHEN mfa.mfa_enabled = TRUE THEN 1 \n            ELSE 0 \n        END\n    ), 0) AS identity_exposure_score\nFROM \n    assets a\nLEFT JOIN \n    admin_accounts aa ON a.asset_id = aa.asset_id\nLEFT JOIN \n    stale_accounts sa ON a.asset_id = sa.asset_id\nLEFT JOIN \n    mfa_status mfa ON a.asset_id = mfa.asset_id\nGROUP BY \n    a.asset_id;",
+      "description": "The calculated identity exposure score for each asset based on the status of admin accounts, stale accounts, and MFA.",
+      "input_tables": [
+        "assets",
+        "admin_accounts",
+        "stale_accounts",
+        "mfa_status"
+      ],
+      "output_table": "gold_identity_exposure_score_per_asset",
+      "layer": "gold"
+    }
+  ],
+  "description": "Transform gold_identity_exposure_score_per_asset from silver to gold",
+  "properties": {
+    "step_count": "1",
+    "transformation_types": "metric"
+  }
+}
