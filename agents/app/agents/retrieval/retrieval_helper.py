@@ -16,6 +16,7 @@ from app.agents.retrieval.sql_pairs_retrieval import SqlPairsRetrieval
 from app.agents.retrieval.retrieval import TableRetrieval
 from app.agents.retrieval.preprocess_sql_data import PreprocessSqlData
 from app.agents.nodes.sql.utils.sql_prompts import AskHistory
+from app.agents.retrieval.sql_functions import SqlFunctions
 from app.core.dependencies import get_doc_store_provider
 from app.utils.cache import InMemoryCache
 
@@ -87,6 +88,17 @@ class RetrievalHelper:
             max_iterations=1000,
             reduction_step=50
         )
+        
+        # Initialize SQL functions retriever
+        if "sql_functions" in self.document_stores:
+            self.sql_functions_retriever = SqlFunctions(
+                document_store=self.document_stores["sql_functions"],
+                engine_timeout=30.0,
+                ttl=60 * 60 * 24  # 24 hours
+            )
+        else:
+            logger.warning("SQL functions store not available")
+            self.sql_functions_retriever = None
 
         self.cache = InMemoryCache()
 
@@ -780,6 +792,69 @@ class RetrievalHelper:
         except Exception as e:
             logger.error(f"Error retrieving column metadata for table {table_name}: {e}")
             return []
+
+    async def get_sql_functions(
+        self,
+        data_source: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Retrieve SQL functions globally (not tied to a project).
+        
+        Args:
+            data_source: Optional data source identifier to filter functions.
+                        If None, retrieves all SQL functions.
+            
+        Returns:
+            Dictionary containing SQL functions and metadata
+        """
+        cache_key = hashlib.sha256(json.dumps({
+            'method': 'get_sql_functions',
+            'data_source': data_source
+        }, sort_keys=True, default=str).encode()).hexdigest()
+        cached = await self.cache.get(cache_key)
+        if cached is not None:
+            return cached
+        
+        try:
+            if not self.sql_functions_retriever:
+                logger.warning("SQL functions retriever not available")
+                result = {
+                    "error": "SQL functions retriever not available",
+                    "sql_functions": []
+                }
+                return result
+            
+            # Retrieve SQL functions (no project_id filter)
+            sql_functions = await self.sql_functions_retriever.run(data_source=data_source)
+            
+            # Convert SqlFunction objects to dictionaries
+            functions_list = []
+            for func in sql_functions:
+                func_dict = {
+                    "name": func._expr.split('(')[0] if func._expr else "",
+                    "expression": str(func),
+                    "definition": func._expr if hasattr(func, '_expr') else str(func)
+                }
+                functions_list.append(func_dict)
+            
+            result = {
+                "sql_functions": functions_list,
+                "total_functions": len(functions_list),
+                "data_source": data_source or "all"
+            }
+            
+            if functions_list:
+                await self.cache.set(cache_key, result, ttl=300)
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error retrieving SQL functions: {str(e)}")
+            result = {
+                "error": str(e),
+                "sql_functions": [],
+                "data_source": data_source or "all"
+            }
+            await self.cache.set(cache_key, result, ttl=300)
+            return result
 
 
 async def main():

@@ -77,37 +77,15 @@ class SqlFunctions:
         self._engine_timeout = engine_timeout
 
    
-    async def _retrieve_metadata(self, project_id: str) -> dict[str, Any]:
-        """Retrieve project metadata.
-        
-        Args:
-            project_id: Project identifier
-            
-        Returns:
-            Dictionary containing project metadata
-        """
-        where = {}
-        if project_id:
-            where["project_id"] = project_id
-
-        results = await self._document_store.collection.get(
-            where=where,
-            limit=1
-        )
-        
-        if results and results.get("documents"):
-            return results["documents"][0].get("metadata", {})
-        return {}
-
-   
     async def run(
         self,
-        project_id: Optional[str] = None,
+        data_source: Optional[str] = None,
     ) -> List[SqlFunction]:
-        """Retrieve SQL functions for a project.
+        """Retrieve SQL functions globally (not tied to a project).
         
         Args:
-            project_id: Optional project identifier
+            data_source: Optional data source identifier to filter functions.
+                        If None, retrieves all SQL functions.
             
         Returns:
             List of SQL functions
@@ -116,30 +94,32 @@ class SqlFunctions:
             Exception: If function retrieval fails
         """
         logger.info(
-            f"Project ID: {project_id} SQL Functions Retrieval is running..."
+            f"SQL Functions Retrieval is running... (data_source: {data_source or 'all'})"
         )
 
         try:
-            metadata = await self._retrieve_metadata(project_id or "")
-            data_source = metadata.get("data_source", "local_file")
+            # Use cache key based on data_source
+            cache_key = data_source or "all"
+            
+            if cache_key in self._cache:
+                logger.info(f"Hit cache of SQL Functions for {cache_key}")
+                return self._cache[cache_key]
 
-            if data_source in self._cache:
-                logger.info(f"Hit cache of SQL Functions for {data_source}")
-                return self._cache[data_source]
-
-            # Get functions from document store
+            # Get functions from document store (no project_id filter)
             where = {
-                "type": "SQL_FUNCTION",
-                "data_source": data_source
+                "type": "SQL_FUNCTION"
             }
-            if project_id:
-                where["project_id"] = project_id
+            
+            # Optionally filter by data_source if provided
+            if data_source:
+                where["data_source"] = data_source
 
             results = await self._document_store.collection.get(
                 where=where
             )
 
             if not results or not results.get("documents"):
+                logger.info(f"No SQL functions found for data_source: {cache_key}")
                 return []
 
             # Convert to SqlFunction objects
@@ -149,7 +129,8 @@ class SqlFunctions:
             ]
             
             # Cache the results
-            self._cache[data_source] = sql_functions
+            self._cache[cache_key] = sql_functions
+            logger.info(f"Retrieved {len(sql_functions)} SQL functions for data_source: {cache_key}")
             
             return sql_functions
             
@@ -179,7 +160,7 @@ if __name__ == "__main__":
         ttl=60 * 60 * 24  # 24 hours
     )
     
-    # Retrieve functions
+    # Retrieve functions (no project_id needed)
     import asyncio
-    functions = asyncio.run(processor.run(project_id="test"))
+    functions = asyncio.run(processor.run(data_source="vulnerability_risk"))
     print(f"Retrieved functions: {functions}")

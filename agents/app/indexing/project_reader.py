@@ -61,6 +61,10 @@ class ProjectReader:
         logger.info("Initializing column metadata store")
         self._init_column_metadata_store()
         
+        # Initialize SQL functions store
+        logger.info("Initializing SQL functions store")
+        self._init_sql_functions_store()
+        
         logger.info("IndexingOrchestrator initialization complete")
 
     def _init_document_stores(self):
@@ -180,6 +184,40 @@ class ProjectReader:
             except Exception as fallback_error:
                 logger.error(f"Fallback initialization also failed: {fallback_error}")
                 self.column_metadata_store = None
+
+    def _init_sql_functions_store(self):
+        """Initialize SQL functions store for storing SQL function definitions."""
+        logger.info("Setting up SQL functions store")
+        
+        try:
+            # Create the SQL functions store
+            self.sql_functions_store = DocumentChromaStore(
+                persistent_client=self.persistent_client,
+                collection_name="sql_functions",
+                embeddings_model=self.embeddings,
+                tf_idf=True  # Enable TF-IDF for better search
+            )
+            # Add it to the document stores for consistency
+            self.document_stores["sql_functions"] = self.sql_functions_store
+            logger.info("SQL functions store initialized successfully")
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize SQL functions store: {e}")
+            # Create a minimal fallback store without TF-IDF
+            logger.warning("Creating fallback SQL functions store without TF-IDF")
+            try:
+                self.sql_functions_store = DocumentChromaStore(
+                    persistent_client=self.persistent_client,
+                    collection_name="sql_functions",
+                    embeddings_model=self.embeddings,
+                    tf_idf=False  # Disable TF-IDF to avoid collection creation issues
+                )
+                # Add it to the document stores for consistency
+                self.document_stores["sql_functions"] = self.sql_functions_store
+                logger.info("Fallback SQL functions store created successfully")
+            except Exception as fallback_error:
+                logger.error(f"Fallback initialization also failed: {fallback_error}")
+                self.sql_functions_store = None
 
     def _populate_alert_knowledge_base(self):
         """Populate the alert knowledge base with domain-specific knowledge."""
@@ -425,12 +463,16 @@ class ProjectReader:
         
         # Process example files
         examples = await self._process_example_files(project_path, metadata.get("examples", []), project_id)
+        
+        # Process SQL function files
+        sql_functions = await self._process_sql_functions_files(project_path, metadata.get("sql_functions", []), project_id)
 
         return {
             "project_id": project_id,
             "tables": tables,
             "knowledge_base": knowledge_base,
-            "examples": examples
+            "examples": examples,
+            "sql_functions": sql_functions
         }
 
     def _read_project_metadata(self, project_path: Path) -> Dict:
@@ -1082,6 +1124,47 @@ class ProjectReader:
                     "content": example_data
                 })
         return examples
+
+    async def _process_sql_functions_files(
+        self, 
+        project_path: Path, 
+        sql_functions_metadata: List[Dict], 
+        project_id: str
+    ) -> List[Dict]:
+        """Process SQL function files.
+        
+        Args:
+            project_path: Base path of the project
+            sql_functions_metadata: List of SQL function file metadata
+            project_id: Project identifier
+            
+        Returns:
+            List of processed SQL function file results
+        """
+        sql_functions = []
+        for func_meta in sql_functions_metadata:
+            file_path = func_meta.get("file_path", "")
+            data_source = func_meta.get("data_source", "local_file")
+            
+            if not file_path:
+                logger.warning("SQL function metadata missing file_path, skipping")
+                continue
+            
+            func_data = await self._process_sql_functions_file(
+                project_path, 
+                file_path, 
+                project_id,
+                data_source
+            )
+            if func_data:
+                sql_functions.append({
+                    "name": func_meta.get("name", ""),
+                    "display_name": func_meta.get("display_name", ""),
+                    "description": func_meta.get("description", ""),
+                    "data_source": data_source,
+                    "content": func_data
+                })
+        return sql_functions
 #/home/ec2-user/sql_meta_new/
     async def _process_sql_pairs_file(self, project_path: Path, file_path: str, project_id: str) -> Optional[Dict]:
         """Process SQL pairs file and extract relevant information."""
@@ -1146,6 +1229,224 @@ class ProjectReader:
         except Exception as e:
             logger.error(f"Error processing SQL pairs file {sql_pairs_path}: {str(e)}")
             return None
+
+    async def _process_sql_functions_file(
+        self, 
+        project_path: Path, 
+        file_path: str, 
+        project_id: str,
+        data_source: str = "local_file"
+    ) -> Optional[Dict]:
+        """Process SQL functions file and index function definitions.
+        
+        Supports multiple formats:
+        1. JSON with 'function_reference' key containing function definitions
+        2. JSON array of function definitions
+        3. JSON object with function names as keys
+        
+        Args:
+            project_path: Base path of the project
+            file_path: Relative path to the SQL functions file
+            project_id: Project identifier
+            data_source: Data source identifier (default: 'local_file')
+            
+        Returns:
+            Dictionary with processing results or None if error
+        """
+        sql_functions_path = project_path / file_path
+        if not sql_functions_path.exists():
+            logger.warning(f"SQL functions file not found: {sql_functions_path}")
+            return None
+            
+        logger.info(f"Processing SQL functions file: {sql_functions_path}")
+        
+        try:
+            # Check if file is empty
+            if sql_functions_path.stat().st_size == 0:
+                logger.warning(f"SQL functions file is empty: {sql_functions_path}")
+                return None
+            
+            with open(sql_functions_path, "r") as f:
+                content = f.read().strip()
+                
+            # Check if content is empty after stripping whitespace
+            if not content:
+                logger.warning(f"SQL functions file contains only whitespace: {sql_functions_path}")
+                return None
+                
+            # Try to parse JSON
+            try:
+                functions_data = json.loads(content)
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid JSON in SQL functions file {sql_functions_path}: {str(e)}")
+                logger.error(f"File content preview: {content[:200]}...")
+                return None
+            
+            # Extract function_reference if it exists (vulnerability_instructions.json format)
+            if isinstance(functions_data, dict) and "function_reference" in functions_data:
+                functions_dict = functions_data["function_reference"]
+            elif isinstance(functions_data, dict):
+                # Assume the dict itself contains function definitions
+                functions_dict = functions_data
+            elif isinstance(functions_data, list):
+                # Convert list to dict with function names as keys
+                functions_dict = {func.get("name", f"func_{i}"): func for i, func in enumerate(functions_data)}
+            else:
+                logger.warning(f"SQL functions file has unsupported format: {sql_functions_path}")
+                return None
+            
+            if not functions_dict:
+                logger.warning(f"SQL functions file contains no function definitions: {sql_functions_path}")
+                return None
+            
+            # Process and index functions
+            documents = []
+            for func_name, func_def in functions_dict.items():
+                try:
+                    # Convert function definition to SqlFunctions format
+                    # Expected format: { name, param_types, return_type }
+                    # Input format: { description, parameters: [...], returns, usage }
+                    
+                    # Extract parameter types from parameters list
+                    parameters = func_def.get("parameters", [])
+                    param_types = []
+                    for param in parameters:
+                        if isinstance(param, str):
+                            # Format: "param_name: type" or just "type"
+                            if ":" in param:
+                                param_type = param.split(":")[-1].strip()
+                            else:
+                                param_type = param.strip()
+                        elif isinstance(param, dict):
+                            param_type = param.get("type", "any")
+                        else:
+                            param_type = "any"
+                        param_types.append(param_type)
+                    
+                    # Extract return type
+                    return_type = func_def.get("returns", func_def.get("return_type", "any"))
+                    if isinstance(return_type, str):
+                        # Clean up return type string
+                        return_type = return_type.strip()
+                    else:
+                        return_type = "any"
+                    
+                    # Create function definition in SqlFunctions format
+                    sql_function_def = {
+                        "name": func_name,
+                        "param_types": ",".join(param_types) if param_types else "any",
+                        "return_type": return_type
+                    }
+                    
+                    # Create document content with full function information
+                    doc_content = json.dumps({
+                        "name": func_name,
+                        "description": func_def.get("description", ""),
+                        "parameters": parameters,
+                        "returns": return_type,
+                        "usage": func_def.get("usage", ""),
+                        "param_types": sql_function_def["param_types"],
+                        "return_type": return_type
+                    })
+                    
+                    # Create document metadata
+                    doc_metadata = {
+                        "type": "SQL_FUNCTION",
+                        "project_id": project_id,
+                        "data_source": data_source,
+                        "name": func_name,
+                        "param_types": sql_function_def["param_types"],
+                        "return_type": return_type,
+                        "description": func_def.get("description", "")[:200] if func_def.get("description") else "",
+                        "category": func_def.get("category", ""),
+                        "domain": func_def.get("domain", "")
+                    }
+                    
+                    document = Document(
+                        page_content=doc_content,
+                        metadata=doc_metadata
+                    )
+                    documents.append(document)
+                    
+                    logger.debug(f"Processed function: {func_name} with {len(param_types)} parameters")
+                    
+                except Exception as e:
+                    logger.warning(f"Error processing function {func_name}: {str(e)}")
+                    continue
+            
+            # Store documents in SQL functions store
+            if documents and self.sql_functions_store:
+                logger.info(f"Storing {len(documents)} SQL function documents")
+                write_result = await self.sql_functions_store.add_documents(documents)
+                logger.info(f"Successfully stored {write_result.get('documents_written', 0)} SQL function documents")
+            else:
+                logger.warning("No SQL function documents to store or store not available")
+            
+            result = {
+                "documents_written": len(documents),
+                "total_functions": len(documents),
+                "project_id": project_id,
+                "data_source": data_source
+            }
+            
+            logger.info(f"SQL functions processing completed successfully: {result}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error processing SQL functions file {sql_functions_path}: {str(e)}")
+            return {
+                "documents_written": 0,
+                "total_functions": 0,
+                "project_id": project_id,
+                "data_source": data_source,
+                "error": str(e)
+            }
+
+    async def index_sql_functions_from_file(
+        self,
+        file_path: str,
+        project_id: str,
+        data_source: str = "local_file"
+    ) -> Dict[str, Any]:
+        """Index SQL functions from a file path directly.
+        
+        This is a convenience method to index SQL functions without going through
+        the full project reading process.
+        
+        Args:
+            file_path: Absolute or relative path to the SQL functions JSON file
+            project_id: Project identifier
+            data_source: Data source identifier (default: 'local_file')
+            
+        Returns:
+            Dictionary with indexing results
+        """
+        file_path_obj = Path(file_path)
+        if not file_path_obj.is_absolute():
+            # If relative, assume it's relative to base_path
+            file_path_obj = self.base_path / file_path
+        
+        # Extract relative path from base_path for processing
+        try:
+            relative_path = file_path_obj.relative_to(self.base_path)
+        except ValueError:
+            # If not relative to base_path, use the file name
+            relative_path = file_path_obj.name
+        
+        result = await self._process_sql_functions_file(
+            project_path=self.base_path,
+            file_path=str(relative_path),
+            project_id=project_id,
+            data_source=data_source
+        )
+        
+        return result or {
+            "documents_written": 0,
+            "total_functions": 0,
+            "project_id": project_id,
+            "data_source": data_source,
+            "error": "Failed to process file"
+        }
 
     async def delete_project(self, project_id: str) -> Dict[str, Any]:
         """Delete all data associated with a project from all document stores.
