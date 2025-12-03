@@ -12,6 +12,7 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_chroma import Chroma
 from langchain_core.documents import Document as LangchainDocument
 import chromadb
+from chromadb.errors import UniqueConstraintError
 from app.settings import get_settings
 from collections import defaultdict
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -413,15 +414,25 @@ class DocumentChromaStore:
                         raise dim_error
                         
             except Exception as e:
-                logger.warning(f"Collection '{self.collection_name}' does not exist, creating it...")
+                logger.warning(f"Collection '{self.collection_name}' does not exist or error getting it: {e}, attempting to create it...")
                 try:
                     # Try to create the collection as a fallback
                     self.collection = self.persistent_client.create_collection(name=self.collection_name)
                     logger.info(f"Successfully created collection '{self.collection_name}'")
                 except Exception as create_error:
-                    logger.error(f"Failed to create collection '{self.collection_name}': {create_error}")
-                    logger.error("Please create the collection manually before using this service.")
-                    raise
+                    # Check if collection already exists (UniqueConstraintError)
+                    if isinstance(create_error, UniqueConstraintError) or "already exists" in str(create_error) or "UniqueConstraintError" in str(type(create_error).__name__):
+                        logger.info(f"Collection '{self.collection_name}' already exists, retrieving it...")
+                        try:
+                            self.collection = self.persistent_client.get_collection(name=self.collection_name)
+                            logger.info(f"Successfully retrieved existing collection '{self.collection_name}'")
+                        except Exception as get_error:
+                            logger.error(f"Failed to get existing collection '{self.collection_name}': {get_error}")
+                            raise get_error
+                    else:
+                        logger.error(f"Failed to create collection '{self.collection_name}': {create_error}")
+                        logger.error("Please create the collection manually before using this service.")
+                        raise
             
             # Get TF-IDF collection if enabled
             if self.tf_idf:
@@ -487,9 +498,20 @@ class DocumentChromaStore:
                         self.tfidf_collection = self.persistent_client.create_collection(name=self.tfidf_collection_name)
                         logger.info(f"Successfully created TF-IDF collection '{self.tfidf_collection_name}'")
                     except Exception as create_error:
-                        logger.error(f"Failed to create TF-IDF collection '{self.tfidf_collection_name}': {create_error}")
-                        logger.error("TF-IDF collection creation failed. Continuing without TF-IDF functionality.")
-                        # Don't raise here - continue without TF-IDF
+                        # Check if collection already exists
+                        if isinstance(create_error, UniqueConstraintError) or "already exists" in str(create_error) or "UniqueConstraintError" in str(type(create_error).__name__):
+                            logger.info(f"TF-IDF collection '{self.tfidf_collection_name}' already exists, retrieving it...")
+                            try:
+                                self.tfidf_collection = self.persistent_client.get_collection(name=self.tfidf_collection_name)
+                                logger.info(f"Successfully retrieved existing TF-IDF collection '{self.tfidf_collection_name}'")
+                            except Exception as get_error:
+                                logger.error(f"Failed to get existing TF-IDF collection '{self.tfidf_collection_name}': {get_error}")
+                                logger.error("TF-IDF collection retrieval failed. Continuing without TF-IDF functionality.")
+                                # Don't raise here - continue without TF-IDF
+                        else:
+                            logger.error(f"Failed to create TF-IDF collection '{self.tfidf_collection_name}': {create_error}")
+                            logger.error("TF-IDF collection creation failed. Continuing without TF-IDF functionality.")
+                            # Don't raise here - continue without TF-IDF
                         self.tf_idf = False
                         logger.warning("Continuing without TF-IDF functionality")
             

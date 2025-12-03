@@ -30,12 +30,14 @@ def get_recommendation_system(app_state=Depends(get_app_state)):
 # Configuration
 def get_llm(temperature: float = 0.0, model: str = "gpt-4o-mini"):
     """Get the LLM with specified temperature and model."""
+    settings = get_settings()
     return ChatOpenAI(
-        model="gpt-4o-mini",
+        model=model,
         temperature=temperature,
         top_p=1.0,
         frequency_penalty=0.0,
-        presence_penalty=0.0
+        presence_penalty=0.0,
+        openai_api_key=settings.OPENAI_API_KEY
     )
 
 def get_chromadb_client():
@@ -185,6 +187,11 @@ def get_doc_store_provider():
         "column_metadata": DocumentChromaStore(
             persistent_client=client,
             collection_name="column_metadata",
+            tf_idf=True  # Enable TF-IDF for better search
+        ),
+        "sql_functions": DocumentChromaStore(
+            persistent_client=client,
+            collection_name="sql_functions",
             tf_idf=True  # Enable TF-IDF for better search
         )
     }

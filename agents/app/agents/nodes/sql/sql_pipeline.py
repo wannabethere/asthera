@@ -370,6 +370,50 @@ class SQLPipeline:
                 metadata={"operation": "summary", "rag_enabled": self.use_rag}
             )
     
+    async def generate_transform_sql(
+        self,
+        query: str,
+        knowledge: List[str] = None,
+        contexts: List[str] = None,
+        project_id: str = None,
+        timeout: float = 30.0
+    ) -> SQLResult:
+        """Generate SQL with dynamic column transformations"""
+        try:
+            if self.use_rag and self.rag_agent:
+                result = await self.rag_agent.process_sql_request(
+                    SQLOperationType.GENERATE_TRANSFORM,
+                    query,
+                    knowledge=knowledge or [],
+                    contexts=contexts or [],
+                    project_id=project_id,
+                    timeout=timeout
+                )
+            else:
+                # Fallback: use regular generation if RAG not enabled
+                request = SQLRequest(
+                    query=query,
+                    contexts=contexts or [],
+                    project_id=project_id,
+                    timeout=timeout
+                )
+                result = await self.generate_sql(request)
+                return result
+            
+            return SQLResult(
+                success=result.get("success", False),
+                data=result.get("data", {}),
+                error=result.get("error"),
+                metadata={"operation": "generate_transform", "rag_enabled": self.use_rag}
+            )
+        except Exception as e:
+            logger.error(f"Error in SQL transform generation: {e}")
+            return SQLResult(
+                success=False,
+                error=str(e),
+                metadata={"operation": "generate_transform", "rag_enabled": self.use_rag}
+            )
+    
     async def complete_sql_workflow(self, request: SQLRequest) -> Dict[str, SQLResult]:
         """Complete SQL workflow with unified context: reasoning -> generation -> breakdown -> answer"""
         results = {}

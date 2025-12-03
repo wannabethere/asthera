@@ -87,6 +87,7 @@ class PipelineType(Enum):
     SQL_ANSWER = "sql_answer"
     SQL_CORRECTION = "sql_correction"
     SQL_EXPANSION = "sql_expansion"
+    SQL_GENERATE_TRANSFORM = "sql_generate_transform"
     CHART_ADJUSTMENT = "chart_adjustment"
     FOLLOWUP_SQL_REASONING = "followup_sql_reasoning"
     FOLLOWUP_SQL_GENERATION = "followup_sql_generation"
@@ -178,6 +179,7 @@ class EnhancedSQLPipelineWrapper:
             PipelineType.SQL_REASONING: "sql_reasoning",
             PipelineType.SQL_CORRECTION: "sql_correction",
             PipelineType.SQL_EXPANSION: "sql_expansion",
+            PipelineType.SQL_GENERATE_TRANSFORM: "sql_transform",
             PipelineType.CHART_ADJUSTMENT: "chart_adjustment",
             PipelineType.FOLLOWUP_SQL_REASONING: "followup_sql_reasoning",
             PipelineType.FOLLOWUP_SQL_GENERATION: "followup_sql_generation",
@@ -502,6 +504,7 @@ class EnhancedUnifiedPipelineSystem:
                 PipelineType.SQL_ANSWER,
                 PipelineType.SQL_CORRECTION,
                 PipelineType.SQL_EXPANSION,
+                PipelineType.SQL_GENERATE_TRANSFORM,
             ]:
                 return await self._execute_enhanced_sql_pipeline(request)
             
@@ -574,6 +577,15 @@ class EnhancedUnifiedPipelineSystem:
             elif request.pipeline_type == PipelineType.SQL_EXPANSION:
                 original_sql = request.additional_params.get("original_sql", "") if request.additional_params else ""
                 result = await self.sql_pipeline.expand_sql(request.query, original_sql, request.contexts or [])
+            elif request.pipeline_type == PipelineType.SQL_GENERATE_TRANSFORM:
+                knowledge = request.additional_params.get("knowledge", []) if request.additional_params else []
+                result = await self.sql_pipeline.generate_transform_sql(
+                    request.query,
+                    knowledge=knowledge,
+                    contexts=request.contexts or [],
+                    project_id=request.project_id,
+                    timeout=request.timeout
+                )
             else:
                 raise ValueError(f"Unsupported SQL pipeline type: {request.pipeline_type}")
             

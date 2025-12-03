@@ -408,6 +408,107 @@ class SQLExpansionPipeline(AgentPipeline):
                 "error": result.get("error", "Unknown error")
             }
 
+class SQLTransformPipeline(AgentPipeline):
+    """Pipeline for SQL transform generation (dynamic column transformations)"""
+    
+    def __init__(
+        self,
+        llm: ChatOpenAI,
+        retrieval_helper: RetrievalHelper,
+        document_store_provider: Optional[DocumentStoreProvider] = None,
+        engine: Optional[Engine] = None,
+        use_enhanced_agent: bool = True
+    ):
+        super().__init__(
+            name="SQL Transform Pipeline",
+            version="1.0",
+            description="Generates SQL queries with dynamic column transformations",
+            llm=llm,
+            retrieval_helper=retrieval_helper,
+            document_store_provider=document_store_provider,
+            engine=engine
+        )
+        self.use_enhanced_agent = use_enhanced_agent
+        
+        # Import and initialize transform agent
+        from app.agents.nodes.sql.transform_sql_rag_agent import create_transform_sql_rag_agent
+        
+        self.agent = create_transform_sql_rag_agent(
+            llm=llm,
+            engine=engine,
+            document_store_provider=document_store_provider
+        )
+        
+    async def run(self, **kwargs) -> Dict[str, Any]:
+        """Run the SQL transform pipeline
+        
+        Args:
+            **kwargs: Input parameters including:
+                - query: The natural language question
+                - knowledge: Additional knowledge context (List[str])
+                - contexts: Schema contexts
+                - project_id: The project ID
+                - language: Language for generation (default: "English")
+                - schema_context: Optional schema context
+                
+        Returns:
+            Dict[str, Any]: Transform results containing:
+                - success: Whether the transform was generated successfully
+                - data: The generated SQL and metadata
+                - error: Any error that occurred
+        """
+        try:
+            query = kwargs.pop("query", "")  # Remove query from kwargs
+            knowledge = kwargs.pop("knowledge", [])  # Remove knowledge from kwargs
+            contexts = kwargs.get("contexts", [])
+            project_id = kwargs.get("project_id")
+            language = kwargs.get("language", "English")
+            schema_context = kwargs.pop("schema_context", None)  # Remove schema_context from kwargs
+            
+            # Append project-specific instructions to the query
+            from app.utils.project_instructions import project_instructions_manager
+            enhanced_query = project_instructions_manager.append_instructions_to_query(
+                query, project_id
+            )
+            
+            logger.info(f"Starting SQL transform generation for query: {query}")
+            logger.info(f"Enhanced query: {enhanced_query}")
+            logger.info(f"Project ID: {project_id}")
+            logger.info(f"Knowledge items: {len(knowledge)}")
+            logger.info(f"Number of contexts: {len(contexts)}")
+            
+            # Process transform request using transform agent
+            result = await self.agent.process_transform_request(
+                query=enhanced_query,
+                knowledge=knowledge,
+                contexts=contexts,
+                language=language,
+                project_id=project_id,
+                schema_context=schema_context,
+                **kwargs
+            )
+            
+            logger.info(f"SQL transform result: {result}")
+            
+            # Return the result in the expected format
+            return {
+                "success": result.get("success", False),
+                "data": result.get("data", {}),
+                "error": result.get("error"),
+                "metadata": {
+                    "transform_type": result.get("data", {}).get("transform_type"),
+                    "reasoning_plan": result.get("data", {}).get("reasoning_plan", {})
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in SQL transform pipeline: {e}")
+            return {
+                "success": False,
+                "data": None,
+                "error": str(e)
+            }
+
 class ChartGenerationPipeline(AgentPipeline):
     """Pipeline for chart generation with support for multiple chart types including enhanced Vega-Lite"""
     

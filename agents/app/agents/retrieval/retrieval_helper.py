@@ -97,8 +97,28 @@ class RetrievalHelper:
                 ttl=60 * 60 * 24  # 24 hours
             )
         else:
-            logger.warning("SQL functions store not available")
-            self.sql_functions_retriever = None
+            # Create SQL functions store if not available in provider
+            logger.warning("SQL functions store not in provider, creating fallback store")
+            try:
+                from app.storage.documents import DocumentChromaStore
+                from app.core.dependencies import get_chromadb_client
+                sql_functions_store = DocumentChromaStore(
+                    persistent_client=get_chromadb_client(),
+                    collection_name="sql_functions",
+                    embeddings_model=self.embeddings,
+                    tf_idf=True
+                )
+                # Add it to document stores for consistency
+                self.document_stores["sql_functions"] = sql_functions_store
+                self.sql_functions_retriever = SqlFunctions(
+                    document_store=sql_functions_store,
+                    engine_timeout=30.0,
+                    ttl=60 * 60 * 24  # 24 hours
+                )
+                logger.info("SQL functions store created successfully")
+            except Exception as e:
+                logger.error(f"Failed to create SQL functions store: {e}")
+                self.sql_functions_retriever = None
 
         self.cache = InMemoryCache()
 
@@ -795,20 +815,37 @@ class RetrievalHelper:
 
     async def get_sql_functions(
         self,
-        data_source: Optional[str] = None
+        query: Optional[str] = None,
+        data_source: Optional[str] = None,
+        project_id: Optional[str] = None,
+        k: int = 10,
+        similarity_threshold: float = 0.7,
+        max_results: int = 3
     ) -> Dict[str, Any]:
-        """Retrieve SQL functions globally (not tied to a project).
+        """Retrieve SQL functions using semantic search or filtering.
         
         Args:
+            query: Optional natural language query to search for relevant functions.
+                   If provided, uses semantic search. If None, retrieves all functions.
             data_source: Optional data source identifier to filter functions.
                         If None, retrieves all SQL functions.
+            project_id: Optional project ID to filter functions by project.
+                       If None, retrieves all SQL functions regardless of project.
+            k: Number of results to retrieve from semantic search (default: 10)
+            similarity_threshold: Minimum similarity score to include (0-1, default: 0.7)
+            max_results: Maximum number of functions to return (default: 3)
             
         Returns:
-            Dictionary containing SQL functions and metadata
+            Dictionary containing SQL functions and metadata (only functions meeting relevance threshold, up to max_results)
         """
         cache_key = hashlib.sha256(json.dumps({
             'method': 'get_sql_functions',
-            'data_source': data_source
+            'query': query,
+            'data_source': data_source,
+            'project_id': project_id,
+            'k': k,
+            'similarity_threshold': similarity_threshold,
+            'max_results': max_results
         }, sort_keys=True, default=str).encode()).hexdigest()
         cached = await self.cache.get(cache_key)
         if cached is not None:
@@ -823,23 +860,49 @@ class RetrievalHelper:
                 }
                 return result
             
-            # Retrieve SQL functions (no project_id filter)
-            sql_functions = await self.sql_functions_retriever.run(data_source=data_source)
+            # Retrieve SQL functions using semantic search if query provided
+            sql_functions = await self.sql_functions_retriever.run(
+                query=query,
+                data_source=data_source,
+                project_id=project_id,
+                k=k,
+                similarity_threshold=similarity_threshold,
+                max_results=max_results
+            )
             
-            # Convert SqlFunction objects to dictionaries
+            # Convert SqlFunction objects to dictionaries with full metadata
             functions_list = []
             for func in sql_functions:
+                # Try to get full metadata from the document store if available
                 func_dict = {
                     "name": func._expr.split('(')[0] if func._expr else "",
                     "expression": str(func),
                     "definition": func._expr if hasattr(func, '_expr') else str(func)
                 }
+                
+                # Add similarity score if available
+                if hasattr(func, '_similarity'):
+                    func_dict["similarity_score"] = func._similarity
+                
+                # If we have access to the original metadata, include it
+                if hasattr(func, '_definition'):
+                    func_dict.update({
+                        "description": func._definition.get("description", ""),
+                        "parameters": func._definition.get("parameters", []),
+                        "returns": func._definition.get("returns", ""),
+                        "usage": func._definition.get("usage", "")
+                    })
+                
                 functions_list.append(func_dict)
             
             result = {
                 "sql_functions": functions_list,
                 "total_functions": len(functions_list),
-                "data_source": data_source or "all"
+                "query": query or "all",
+                "data_source": data_source or "all",
+                "project_id": project_id or "all",
+                "similarity_threshold": similarity_threshold,
+                "max_results": max_results
             }
             
             if functions_list:
@@ -851,7 +914,11 @@ class RetrievalHelper:
             result = {
                 "error": str(e),
                 "sql_functions": [],
-                "data_source": data_source or "all"
+                "query": query or "all",
+                "data_source": data_source or "all",
+                "project_id": project_id or "all",
+                "similarity_threshold": similarity_threshold,
+                "max_results": max_results
             }
             await self.cache.set(cache_key, result, ttl=300)
             return result
@@ -860,6 +927,17 @@ class RetrievalHelper:
 async def main():
     """Main function to test the RetrievalHelper functionality."""
     try:
+        # Initialize settings and ensure environment variables are set
+        from app.settings import get_settings, set_os_environ
+        from app.core.dependencies import clear_chromadb_cache
+        settings = get_settings()
+        set_os_environ(settings)
+        logger.info("Settings initialized and environment variables set")
+        
+        # Clear ChromaDB cache to ensure we get the latest document store provider with sql_functions
+        clear_chromadb_cache()
+        logger.info("ChromaDB cache cleared to ensure latest stores are available")
+        
         # Initialize helper
         helper = RetrievalHelper()
         
@@ -956,6 +1034,21 @@ async def main():
         except Exception as e:
             logger.error(f"❌ Metrics retrieval failed: {str(e)}")
             metrics_results = {"error": str(e)}
+        
+        # Test SQL functions retrieval
+        logger.info(f"\n🔍 Testing SQL functions retrieval")
+        try:
+            # Test with natural language query, relevance threshold, and max 3 results
+            sql_functions_results = await helper.get_sql_functions(
+                query="Create a remediation priority list combining risk score, asset criticality, and breach method likelihood",
+                similarity_threshold=0.7,
+                max_results=3
+            )
+            logger.info(f"Retrieved Functions: {sql_functions_results}")
+            logger.info(f"✅ SQL functions retrieval completed")
+        except Exception as e:
+            logger.error(f"❌ SQL functions retrieval failed: {str(e)}")
+            sql_functions_results = {"error": str(e)}
         
         # Test table names and schema contexts extraction
         logger.info(f"\n🔍 Testing table names and schema contexts extraction")
@@ -1083,6 +1176,32 @@ async def main():
                 logger.info(f"\n📈 Metric {i}:")
                 logger.info(f"   Metric Name: {metric.get('metric_name', 'N/A')}")
                 logger.info(f"   Metric Value: {metric.get('metric_value', 'N/A')}")
+        
+        # Print SQL functions results
+        logger.info("\n📊 SQL Functions Retrieval Results:")
+        if "error" in sql_functions_results:
+            logger.error(f"❌ Error: {sql_functions_results['error']}")
+        else:
+            logger.info(f"✅ Query used: {sql_functions_results.get('query', 'N/A')}")
+            logger.info(f"✅ Similarity threshold: {sql_functions_results.get('similarity_threshold', 'N/A')}")
+            logger.info(f"✅ Max results: {sql_functions_results.get('max_results', 'N/A')}")
+            logger.info(f"✅ Total SQL functions found: {sql_functions_results.get('total_functions', 0)}")
+            logger.info(f"✅ Data source: {sql_functions_results.get('data_source', 'N/A')}")
+            sql_functions = sql_functions_results.get('sql_functions', [])
+            if not sql_functions:
+                logger.warning("⚠️  No SQL functions found matching the relevance threshold")
+            for i, func in enumerate(sql_functions, 1):
+                logger.info(f"\n🔧 SQL Function {i}:")
+                logger.info(f"   Name: {func.get('name', 'N/A')}")
+                logger.info(f"   Expression: {func.get('expression', 'N/A')}")
+                if func.get('similarity_score') is not None:
+                    logger.info(f"   Similarity Score: {func.get('similarity_score', 0):.3f}")
+                if func.get('description'):
+                    logger.info(f"   Description: {func.get('description', 'N/A')[:150]}...")
+                if func.get('usage'):
+                    logger.info(f"   Usage: {func.get('usage', 'N/A')[:150]}...")
+                if func.get('definition'):
+                    logger.info(f"   Definition: {func.get('definition', 'N/A')[:200]}...")
         
         # Print table names and schema contexts results
         logger.info("\n📊 Table Names and Schema Contexts Results:")

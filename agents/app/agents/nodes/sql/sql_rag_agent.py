@@ -49,6 +49,7 @@ class SQLOperationType(Enum):
     ANSWER = "answer"
     QUESTION = "question"
     SUMMARY = "summary"
+    GENERATE_TRANSFORM = "generate_transform"
 
 
 class SQLRAGAgent:
@@ -2068,6 +2069,8 @@ Your response must be ONLY a valid JSON object with this exact structure:
                     return await self._handle_sql_summary(query, **kwargs)
                 elif operation == SQLOperationType.REFRESH:
                     return await self._handle_sql_refresh(query, **kwargs)
+                elif operation == SQLOperationType.GENERATE_TRANSFORM:
+                    return await self._handle_sql_transform(query, **kwargs)
                 else:
                     return {"error": f"Unknown operation: {operation.value}", "success": False}
                     
@@ -2427,6 +2430,41 @@ Your response must be ONLY a valid JSON object with this exact structure:
             existing_reasoning=existing_reasoning,
             **kwargs
         )
+    
+    async def _handle_sql_transform(self, query: str, **kwargs) -> Dict[str, Any]:
+        """Handle SQL transform generation using TransformSQLRAGAgent"""
+        try:
+            from app.agents.nodes.sql.transform_sql_rag_agent import create_transform_sql_rag_agent
+            
+            # Create transform agent instance
+            transform_agent = create_transform_sql_rag_agent(
+                llm=self.llm,
+                engine=self.engine,
+                document_store_provider=self.document_store_provider,
+                retrieval_helper=self.retrieval_helper,
+                embeddings=self.embeddings,
+                max_iterations=self.max_iterations
+            )
+            
+            # Extract knowledge from kwargs
+            knowledge = kwargs.pop("knowledge", None)
+            
+            # Process transform request
+            result = await transform_agent.process_transform_request(
+                query=query,
+                knowledge=knowledge,
+                **kwargs
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error in SQL transform generation: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "data": None
+            }
 
     async def _retrieve_and_cache_metadata(
         self,
@@ -3052,4 +3090,3 @@ class EnhancedSQLRAGAgent:
             json.dump(export_data, f, indent=2)
         
         return filepath
-

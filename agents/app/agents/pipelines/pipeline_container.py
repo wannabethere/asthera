@@ -12,11 +12,11 @@ from app.agents.nodes.sql.sql_rag_agent import SQLRAGAgent
 from app.agents.pipelines.sql_execution import SQLExecutionPipeline, SQLValidationPipeline, UserGuideAssistancePipeline, QuestionRecommendationPipeline
 from app.agents.pipelines.sql_pipelines import (
     SQLGenerationPipeline, SQLBreakdownPipeline, SQLReasoningPipeline,
-    SQLCorrectionPipeline, SQLExpansionPipeline, ChartGenerationPipeline,
-    ChartAdjustmentPipeline, FollowUpSQLReasoningPipeline, FollowUpSQLGenerationPipeline,
-    IntentClassificationPipeline, MisleadingAssistancePipeline, RelationshipRecommendationPipeline,
-    SemanticsDescriptionPipeline, DataAssistancePipeline, AnalysisAssistancePipeline,
-    QuestionSuggestionPipeline, SQLSummaryPipeline, SQLAnswerPipeline
+    SQLCorrectionPipeline, SQLExpansionPipeline, SQLTransformPipeline,
+    ChartGenerationPipeline, ChartAdjustmentPipeline, FollowUpSQLReasoningPipeline,
+    FollowUpSQLGenerationPipeline, IntentClassificationPipeline, MisleadingAssistancePipeline,
+    RelationshipRecommendationPipeline, SemanticsDescriptionPipeline, DataAssistancePipeline,
+    AnalysisAssistancePipeline, QuestionSuggestionPipeline, SQLSummaryPipeline, SQLAnswerPipeline
 )
 from app.agents.pipelines.retrieval_pipeline import RetrievalPipeline
 from app.core.engine_provider import EngineProvider
@@ -242,6 +242,24 @@ class PipelineContainer:
             engine=self._engine
         )
         self._pipelines["sql_expansion"]._initialized = True
+        
+        # Initialize SQL transform pipeline
+        try:
+            from app.agents.pipelines.sql_pipelines import SQLTransformPipeline
+            self._pipelines["sql_transform"] = SQLTransformPipeline(
+                llm=self._llm,
+                retrieval_helper=self._retrieval_helper,
+                document_store_provider=self._doc_store_provider,
+                engine=self._engine
+            )
+            self._pipelines["sql_transform"]._initialized = True
+            logger.info("SQL transform pipeline initialized successfully")
+        except ImportError as e:
+            logger.warning(f"Failed to import SQL transform pipeline: {e}")
+            self._pipelines["sql_transform"] = None
+        except Exception as e:
+            logger.error(f"Error initializing SQL transform pipeline: {e}")
+            self._pipelines["sql_transform"] = None
         
         self._pipelines["relationship_recommendation"] = RelationshipRecommendationPipeline(
             llm=self._llm,
