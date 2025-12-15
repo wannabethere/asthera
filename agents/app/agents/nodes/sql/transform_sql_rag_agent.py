@@ -21,6 +21,7 @@ from app.agents.nodes.sql.utils.sql_prompts import (
     calculated_field_instructions,
     metric_instructions
 )
+from app.agents.nodes.sql.utils.enum_metadata_reasoning import EnumMetadataReasoningAgent
 from langchain_openai import OpenAIEmbeddings
 
 logger = logging.getLogger("lexy-ai-service")
@@ -69,6 +70,9 @@ class TransformSQLRAGAgent(SQLRAGAgent):
         # Transform-specific cache
         self._transform_knowledge_cache = {}
         self._sql_functions_cache = {}
+        
+        # Initialize enum metadata reasoning agent
+        self._enum_metadata_agent = EnumMetadataReasoningAgent(llm=self.llm)
     
     async def _generate_transform_reasoning(
         self,
@@ -130,6 +134,12 @@ class TransformSQLRAGAgent(SQLRAGAgent):
                     knowledge=knowledge or []
                 )
             
+            # Get enum metadata reasoning plan if provided
+            enum_metadata_reasoning_plan = kwargs.get("enum_metadata_reasoning_plan", {})
+            
+            # Remove enum_metadata_reasoning_plan from kwargs to avoid duplicate argument error
+            kwargs_for_prompt = {k: v for k, v in kwargs.items() if k != "enum_metadata_reasoning_plan"}
+            
             # Build reasoning prompt
             reasoning_prompt = self._build_transform_reasoning_prompt(
                 query=query,
@@ -137,7 +147,8 @@ class TransformSQLRAGAgent(SQLRAGAgent):
                 contexts=contexts or [],
                 language=language,
                 transform_metadata=transform_metadata,
-                **kwargs
+                enum_metadata_reasoning_plan=enum_metadata_reasoning_plan,
+                **kwargs_for_prompt
             )
             
             # Generate reasoning using LLM
@@ -336,6 +347,7 @@ Provide a structured reasoning plan in JSON format:
         contexts: List[str],
         language: str,
         transform_metadata: Dict[str, Any],
+        enum_metadata_reasoning_plan: Dict[str, Any] = None,
         **kwargs
     ) -> str:
         """Build the prompt for transform reasoning generation"""
@@ -376,6 +388,16 @@ Provide a structured reasoning plan in JSON format:
             has_metric=has_metric,
             instructions=project_instructions
         )
+        
+        # Format enum metadata reasoning plan if provided
+        enum_metadata_text = ""
+        if enum_metadata_reasoning_plan:
+            enum_metadata_text = "\n### ENUM METADATA REASONING PLAN ###\n"
+            enum_metadata_text += "The following enum metadata reasoning plan was generated to guide the transformation:\n\n"
+            enum_metadata_text += json.dumps(enum_metadata_reasoning_plan, indent=2)
+            enum_metadata_text += "\n\n**IMPORTANT**: Use this enum metadata reasoning plan to inform your transformation steps. "
+            enum_metadata_text += "The plan identifies which enum metadata tables to use, how to classify assets, "
+            enum_metadata_text += "and how to retrieve numeric scores from enum metadata tables.\n"
         
         # Format additional metadata (metrics removed for now)
         calculated_fields_text = ""
@@ -421,6 +443,8 @@ Provide a structured reasoning plan in JSON format:
 ### DATABASE SCHEMA ###
 {chr(10).join(contexts) if contexts else "No schema context provided"}
 
+{enum_metadata_text}
+
 {calculated_fields_text}
 {knowledge_text}
 {sql_functions_text}
@@ -438,8 +462,10 @@ Analyze the user's question and determine:
 3. What new calculated columns or transformations need to be created
 4. What SQL functions and logic are required
 5. If this is a metric, identify dimensions and measures
+6. How to use enum metadata tables (if enum metadata reasoning plan is provided)
 
 Use the calculated field and metric instructions above to guide your reasoning.
+If an enum metadata reasoning plan is provided, incorporate it into your transformation steps.
 
 Generate a detailed reasoning plan in the specified JSON format.
 """
@@ -1259,9 +1285,10 @@ Generate an ANSI SQL query that implements the transformations specified in the 
         
         Process:
         1. Retrieve unified context (schemas, instructions, examples, etc.) once
-        2. Generate reasoning plan using unified context
-        3. Retrieve refined schema based on reasoning plan (only necessary columns)
-        4. Generate transform SQL using reasoning plan and refined schema
+        2. Generate enum metadata reasoning plan (identifies enum tables and classification logic)
+        3. Generate transform reasoning plan using unified context and enum metadata reasoning
+        4. Retrieve refined schema based on reasoning plan (only necessary columns)
+        5. Generate transform SQL using reasoning plan and refined schema
         
         Args:
             query: Natural language question
@@ -1288,8 +1315,22 @@ Generate an ANSI SQL query that implements the transformations specified in the 
                 **kwargs_for_context
             )
             
-            # Step 2: Generate reasoning plan using unified context
-            logger.info("Step 2: Generating transform reasoning plan")
+            # Step 2: Generate enum metadata reasoning plan
+            logger.info("Step 2: Generating enum metadata reasoning plan")
+            enum_metadata_reasoning_result = await self._enum_metadata_agent.generate_reasoning_plan(
+                query=query,
+                knowledge=knowledge,
+                contexts=unified_context["schema_contexts"]
+            )
+            
+            if not enum_metadata_reasoning_result.get("success", False):
+                logger.warning(f"Enum metadata reasoning failed: {enum_metadata_reasoning_result.get('error')}")
+                # Continue with empty enum metadata reasoning plan
+            
+            enum_metadata_reasoning_plan = enum_metadata_reasoning_result.get("reasoning_plan", {})
+            
+            # Step 3: Generate transform reasoning plan using unified context and enum metadata reasoning
+            logger.info("Step 3: Generating transform reasoning plan")
             # Remove arguments that are passed explicitly to avoid duplicate argument errors
             kwargs_for_reasoning = {k: v for k, v in kwargs.items() if k not in ["contexts", "language", "project_id"]}
             reasoning_result = await self._generate_transform_reasoning(
@@ -1299,6 +1340,7 @@ Generate an ANSI SQL query that implements the transformations specified in the 
                 language=kwargs.get("language", "English"),
                 project_id=project_id,  # Pass project_id explicitly
                 unified_context=unified_context,
+                enum_metadata_reasoning_plan=enum_metadata_reasoning_plan,  # Pass enum metadata reasoning plan
                 **kwargs_for_reasoning
             )
             
@@ -1311,8 +1353,8 @@ Generate an ANSI SQL query that implements the transformations specified in the 
             
             reasoning_plan = reasoning_result.get("reasoning_plan", {})
             
-            # Step 3: Retrieve refined schema based on reasoning plan (only necessary columns)
-            logger.info("Step 3: Retrieving refined schema based on reasoning plan")
+            # Step 4: Retrieve refined schema based on reasoning plan (only necessary columns)
+            logger.info("Step 4: Retrieving refined schema based on reasoning plan")
             # Remove arguments that are passed explicitly to avoid duplicate argument errors
             kwargs_for_refined = {k: v for k, v in kwargs.items() if k != "project_id"}
             refined_schema_context = await self._retrieve_refined_schema_based_on_reasoning(
@@ -1330,8 +1372,8 @@ Generate an ANSI SQL query that implements the transformations specified in the 
                 unified_context["relationships"] = refined_schema_context.get("relationships", unified_context["relationships"])
                 logger.info(f"Refined schema: {len(refined_schema_context.get('schema_contexts', []))} contexts, {len(refined_schema_context.get('table_names', []))} tables")
             
-            # Step 4: Generate transform SQL using reasoning plan and refined schema
-            logger.info("Step 4: Generating transform SQL with refined schema")
+            # Step 5: Generate transform SQL using reasoning plan and refined schema
+            logger.info("Step 5: Generating transform SQL with refined schema")
             # Remove arguments that are passed explicitly to avoid duplicate argument errors
             kwargs_for_sql = {k: v for k, v in kwargs.items() if k not in ["contexts", "knowledge", "project_id"]}
             sql_result = await self._generate_transform_sql(

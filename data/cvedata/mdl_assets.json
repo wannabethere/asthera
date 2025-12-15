@@ -244,6 +244,334 @@
           }
         },
         {
+          "name": "raw_impact",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Raw Impact",
+            "description": "Raw impact score if the asset were compromised"
+          }
+        },
+        {
+          "name": "raw_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Raw Likelihood",
+            "description": "Raw likelihood score of the asset being compromised"
+          }
+        },
+        {
+          "name": "raw_risk",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Raw Risk",
+            "description": "Raw risk score calculated for the asset based on various security factors"
+          }
+        },
+        {
+          "name": "bastion_impact",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Bastion Impact",
+            "description": "Impact score specific to bastion host configurations"
+          }
+        },
+        {
+          "name": "propagation_impact",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Propagation Impact",
+            "description": "Impact score based on lateral movement potential"
+          }
+        },
+        {
+          "name": "category_impact",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Category Impact",
+            "description": "Impact score based on asset category classification"
+          }
+        },
+        {
+          "name": "unpatched_vulnerability_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Unpatched Vulnerability Likelihood",
+            "description": "Likelihood score based on unpatched vulnerabilities"
+          }
+        },
+        {
+          "name": "weak_credentials_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Weak Credentials Likelihood",
+            "description": "Likelihood score based on weak or compromised credentials"
+          }
+        },
+        {
+          "name": "zero_day_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Zero Day Likelihood",
+            "description": "Likelihood score based on zero-day vulnerabilities"
+          }
+        },
+        {
+          "name": "weak_encryption_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Weak Encryption Likelihood",
+            "description": "Likelihood score based on weak encryption implementations"
+          }
+        },
+        {
+          "name": "trust_relationship_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Trust Relationship Likelihood",
+            "description": "Likelihood score based on trust relationship vulnerabilities"
+          }
+        },
+        {
+          "name": "misconfiguration_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Misconfiguration Likelihood",
+            "description": "Likelihood score based on security misconfigurations"
+          }
+        },
+        {
+          "name": "compromised_credentials_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Compromised Credentials Likelihood",
+            "description": "Likelihood score based on compromised credentials"
+          }
+        },
+        {
+          "name": "phishing_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Phishing Likelihood",
+            "description": "Likelihood score based on phishing attack vectors"
+          }
+        },
+        {
+          "name": "malicious_insider_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Malicious Insider Likelihood",
+            "description": "Likelihood score based on malicious insider threats"
+          }
+        },
+        {
+          "name": "credential_vulnerability_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Credential Vulnerability Likelihood",
+            "description": "Likelihood score based on credential vulnerabilities"
+          }
+        },
+        {
+          "name": "likelihood_active",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Active Likelihood",
+            "description": "Current active likelihood score considering all factors"
+          }
+        },
+        {
+          "name": "unpatched_vulnerability_likelihood_active",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Unpatched Vulnerability Likelihood (Active)",
+            "description": "Active likelihood score for unpatched vulnerabilities"
+          }
+        },
+        {
+          "name": "weak_credentials_likelihood_active",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Weak Credentials Likelihood (Active)",
+            "description": "Active likelihood score for weak credentials"
+          }
+        },
+        {
+          "name": "zero_day_likelihood_active",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Zero Day Likelihood (Active)",
+            "description": "Active likelihood score for zero-day vulnerabilities"
+          }
+        },
+        {
+          "name": "weak_encryption_likelihood_active",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Weak Encryption Likelihood (Active)",
+            "description": "Active likelihood score for weak encryption"
+          }
+        },
+        {
+          "name": "trust_relationship_likelihood_active",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Trust Relationship Likelihood (Active)",
+            "description": "Active likelihood score for trust relationships"
+          }
+        },
+        {
+          "name": "misconfiguration_likelihood_active",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Misconfiguration Likelihood (Active)",
+            "description": "Active likelihood score for misconfigurations"
+          }
+        },
+        {
+          "name": "compromised_credentials_likelihood_active",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Compromised Credentials Likelihood (Active)",
+            "description": "Active likelihood score for compromised credentials"
+          }
+        },
+        {
+          "name": "phishing_likelihood_active",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Phishing Likelihood (Active)",
+            "description": "Active likelihood score for phishing attacks"
+          }
+        },
+        {
+          "name": "malicious_insider_likelihood_active",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Malicious Insider Likelihood (Active)",
+            "description": "Active likelihood score for malicious insiders"
+          }
+        },
+        {
+          "name": "credential_vulnerability_likelihood_active",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Credential Vulnerability Likelihood (Active)",
+            "description": "Active likelihood score for credential vulnerabilities"
+          }
+        },
+        {
+          "name": "likelihood_inherent",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Inherent Likelihood",
+            "description": "Inherent likelihood score without security controls"
+          }
+        },
+        {
+          "name": "unpatched_vulnerability_likelihood_inherent",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Unpatched Vulnerability Likelihood (Inherent)",
+            "description": "Inherent likelihood score for unpatched vulnerabilities"
+          }
+        },
+        {
+          "name": "weak_credentials_likelihood_inherent",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Weak Credentials Likelihood (Inherent)",
+            "description": "Inherent likelihood score for weak credentials"
+          }
+        },
+        {
+          "name": "zero_day_likelihood_inherent",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Zero Day Likelihood (Inherent)",
+            "description": "Inherent likelihood score for zero-day vulnerabilities"
+          }
+        },
+        {
+          "name": "weak_encryption_likelihood_inherent",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Weak Encryption Likelihood (Inherent)",
+            "description": "Inherent likelihood score for weak encryption"
+          }
+        },
+        {
+          "name": "trust_relationship_likelihood_inherent",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Trust Relationship Likelihood (Inherent)",
+            "description": "Inherent likelihood score for trust relationships"
+          }
+        },
+        {
+          "name": "misconfiguration_likelihood_inherent",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Misconfiguration Likelihood (Inherent)",
+            "description": "Inherent likelihood score for misconfigurations"
+          }
+        },
+        {
+          "name": "compromised_credentials_likelihood_inherent",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Compromised Credentials Likelihood (Inherent)",
+            "description": "Inherent likelihood score for compromised credentials"
+          }
+        },
+        {
+          "name": "phishing_likelihood_inherent",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Phishing Likelihood (Inherent)",
+            "description": "Inherent likelihood score for phishing attacks"
+          }
+        },
+        {
+          "name": "malicious_insider_likelihood_inherent",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Malicious Insider Likelihood (Inherent)",
+            "description": "Inherent likelihood score for malicious insiders"
+          }
+        },
+        {
+          "name": "credential_vulnerability_likelihood_inherent",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Credential Vulnerability Likelihood (Inherent)",
+            "description": "Inherent likelihood score for credential vulnerabilities"
+          }
+        },
+        {
+          "name": "effective_impact",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Effective Impact",
+            "description": "Effective impact score considering business criticality"
+          }
+        },
+        {
+          "name": "effective_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Effective Likelihood",
+            "description": "Effective likelihood score after applying security controls"
+          }
+        },
+        {
+          "name": "effective_risk",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Effective Risk",
+            "description": "Effective risk score after applying business context and mitigations"
+          }
+        },
+        {
           "name": "device_type",
           "type": "VARCHAR",
           "properties": {

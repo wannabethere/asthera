@@ -1,0 +1,908 @@
+-- ============================================================================
+-- Vulnerability Risk Calculation Framework
+-- ============================================================================
+-- SQL instructions for calculating breach methods, risk scores, and impact
+-- using time-series vulnerability data with metadata enrichment
+-- ============================================================================
+
+-- ============================================================================
+-- 1. VULNERABILITY DETAIL ENRICHMENT
+-- ============================================================================
+-- Purpose: Enrich raw vulnerability instances with detailed metadata for
+--          time-series analysis and risk calculation
+
+-- 1.1 Parse CVSS Vector Strings into Individual Components
+-- ============================================================================
+CREATE OR REPLACE FUNCTION parse_cvss_v3_vector(vector_string TEXT)
+RETURNS TABLE (
+    attack_vector VARCHAR(1),
+    attack_complexity VARCHAR(1),
+    privileges_required VARCHAR(1),
+    user_interaction VARCHAR(1),
+    scope VARCHAR(1),
+    confidentiality VARCHAR(1),
+    integrity VARCHAR(1),
+    availability VARCHAR(1)
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        SUBSTRING(vector_string FROM 'AV:([NALP])') as attack_vector,
+        SUBSTRING(vector_string FROM 'AC:([LH])') as attack_complexity,
+        SUBSTRING(vector_string FROM 'PR:([NLH])') as privileges_required,
+        SUBSTRING(vector_string FROM 'UI:([NR])') as user_interaction,
+        SUBSTRING(vector_string FROM 'S:([UC])') as scope,
+        SUBSTRING(vector_string FROM 'C:([NLH])') as confidentiality,
+        SUBSTRING(vector_string FROM 'I:([NLH])') as integrity,
+        SUBSTRING(vector_string FROM 'A:([NLH])') as availability;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- 1.2 Enrich Vulnerability Instances with Metadata
+-- ============================================================================
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_enriched_vulnerability_instances AS
+WITH vuln_cvss_parsed AS (
+    SELECT 
+        vi.cve_partition_id,
+        vi.nuid,
+        vi.dev_id,
+        vi.instance_id,
+        vi.sw_instance_id,
+        vi.cve_id,
+        vi.cvssv2_basescore,
+        vi.cvssv3_basescore,
+        vi.gtm_score,
+        vi.severity,
+        vi.threat_level,
+        vi.exposure,
+        vi.priority,
+        vi.tags,
+        vi.state,
+        vi.published_time,
+        vi.detected_time,
+        vi.remediation_time,
+        vi.is_stale,
+        vi.store_created_at,
+        vi.store_updated_at,
+        -- Parse CVSS v3 vector (assume stored in a cvss_vector_string column or as JSON)
+        -- For now, we'll add placeholder columns that should be populated from vuln detail
+        NULL::VARCHAR(1) as attack_vector,
+        NULL::VARCHAR(1) as attack_complexity,
+        NULL::VARCHAR(1) as privileges_required,
+        NULL::VARCHAR(1) as user_interaction,
+        NULL::VARCHAR(1) as scope,
+        NULL::VARCHAR(1) as confidentiality_impact,
+        NULL::VARCHAR(1) as integrity_impact,
+        NULL::VARCHAR(1) as availability_impact
+    FROM vulnerability_instances vi
+),
+vuln_with_metadata AS (
+    SELECT 
+        vcp.*,
+        -- Severity metadata
+        rim_sev.description as severity_description,
+        rim_sev.priority_order as severity_priority,
+        rim_sev.numeric_score as severity_score,
+        rim_sev.severity_level as severity_level_num,
+        rim_sev.weight as severity_weight,
+        -- State metadata
+        vm_state.description as state_description,
+        vm_state.risk_score as state_risk_score,
+        vm_state.remediation_priority as state_remediation_priority,
+        -- CVSS Attack Vector metadata
+        cvss_av.description as attack_vector_desc,
+        cvss_av.numeric_value as attack_vector_value,
+        cvss_av.weight as attack_vector_weight,
+        -- CVSS Attack Complexity metadata
+        cvss_ac.description as attack_complexity_desc,
+        cvss_ac.numeric_value as attack_complexity_value,
+        cvss_ac.weight as attack_complexity_weight,
+        -- CVSS Privileges Required metadata
+        cvss_pr.description as privileges_required_desc,
+        cvss_pr.numeric_value as privileges_required_value,
+        cvss_pr.weight as privileges_required_weight,
+        -- CVSS User Interaction metadata
+        cvss_ui.description as user_interaction_desc,
+        cvss_ui.numeric_value as user_interaction_value,
+        cvss_ui.weight as user_interaction_weight,
+        -- CVSS Scope metadata
+        cvss_s.description as scope_desc,
+        cvss_s.numeric_value as scope_value,
+        cvss_s.weight as scope_weight,
+        -- CVSS Impact metadata
+        cvss_c.description as confidentiality_impact_desc,
+        cvss_c.numeric_value as confidentiality_impact_value,
+        cvss_c.weight as confidentiality_impact_weight,
+        cvss_i.description as integrity_impact_desc,
+        cvss_i.numeric_value as integrity_impact_value,
+        cvss_i.weight as integrity_impact_weight,
+        cvss_a.description as availability_impact_desc,
+        cvss_a.numeric_value as availability_impact_value,
+        cvss_a.weight as availability_impact_weight,
+        -- Time calculations
+        EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - vcp.detected_time))/86400 as days_since_detection,
+        EXTRACT(EPOCH FROM (COALESCE(vcp.remediation_time, CURRENT_TIMESTAMP) - vcp.detected_time))/86400 as dwell_time_days,
+        EXTRACT(EPOCH FROM (vcp.detected_time - vcp.published_time))/86400 as days_to_detect,
+        -- Tags parsing
+        CASE WHEN vcp.tags LIKE '%CISA Known Exploit%' THEN TRUE ELSE FALSE END as has_cisa_exploit
+    FROM vuln_cvss_parsed vcp
+    LEFT JOIN risk_impact_metadata rim_sev 
+        ON rim_sev.enum_type = 'vuln_level' AND rim_sev.code = vcp.severity
+    LEFT JOIN vulnerability_metadata vm_state 
+        ON vm_state.enum_type = 'state' AND vm_state.code = vcp.state
+    LEFT JOIN cvss_metadata cvss_av 
+        ON cvss_av.cvss_version = 'v3' 
+        AND cvss_av.metric_type = 'attack_vector' 
+        AND cvss_av.code = vcp.attack_vector
+    LEFT JOIN cvss_metadata cvss_ac 
+        ON cvss_ac.cvss_version = 'v3' 
+        AND cvss_ac.metric_type = 'attack_complexity' 
+        AND cvss_ac.code = vcp.attack_complexity
+    LEFT JOIN cvss_metadata cvss_pr 
+        ON cvss_pr.cvss_version = 'v3' 
+        AND cvss_pr.metric_type = 'privileges_required' 
+        AND cvss_pr.code = vcp.privileges_required
+    LEFT JOIN cvss_metadata cvss_ui 
+        ON cvss_ui.cvss_version = 'v3' 
+        AND cvss_ui.metric_type = 'user_interaction' 
+        AND cvss_ui.code = vcp.user_interaction
+    LEFT JOIN cvss_metadata cvss_s 
+        ON cvss_s.cvss_version = 'v3' 
+        AND cvss_s.metric_type = 'scope' 
+        AND cvss_s.code = vcp.scope
+    LEFT JOIN cvss_metadata cvss_c 
+        ON cvss_c.cvss_version = 'v3' 
+        AND cvss_c.metric_type = 'confidentiality_impact' 
+        AND cvss_c.code = vcp.confidentiality_impact
+    LEFT JOIN cvss_metadata cvss_i 
+        ON cvss_i.cvss_version = 'v3' 
+        AND cvss_i.metric_type = 'integrity_impact' 
+        AND cvss_i.code = vcp.integrity_impact
+    LEFT JOIN cvss_metadata cvss_a 
+        ON cvss_a.cvss_version = 'v3' 
+        AND cvss_a.metric_type = 'availability_impact' 
+        AND cvss_a.code = vcp.availability_impact
+)
+SELECT * FROM vuln_with_metadata;
+
+-- Create indexes for performance
+CREATE INDEX IF NOT EXISTS idx_mv_enrich_vuln_cve ON mv_enriched_vulnerability_instances(cve_id);
+CREATE INDEX IF NOT EXISTS idx_mv_enrich_vuln_nuid_dev ON mv_enriched_vulnerability_instances(nuid, dev_id);
+CREATE INDEX IF NOT EXISTS idx_mv_enrich_vuln_severity ON mv_enriched_vulnerability_instances(severity);
+CREATE INDEX IF NOT EXISTS idx_mv_enrich_vuln_state ON mv_enriched_vulnerability_instances(state);
+CREATE INDEX IF NOT EXISTS idx_mv_enrich_vuln_detected ON mv_enriched_vulnerability_instances(detected_time);
+
+-- ============================================================================
+-- 2. EXPLOITABILITY SCORE CALCULATION
+-- ============================================================================
+-- Purpose: Calculate exploitability based on CVSS metrics and metadata
+
+CREATE OR REPLACE FUNCTION calculate_exploitability_score(
+    p_attack_vector_weight DECIMAL,
+    p_attack_complexity_weight DECIMAL,
+    p_privileges_required_weight DECIMAL,
+    p_user_interaction_weight DECIMAL
+)
+RETURNS DECIMAL AS $$
+DECLARE
+    v_exploitability_score DECIMAL;
+BEGIN
+    -- Exploitability score formula based on weighted CVSS components
+    -- Higher weight = easier to exploit
+    v_exploitability_score := (
+        (COALESCE(p_attack_vector_weight, 0.5) * 0.4) +           -- 40% weight
+        (COALESCE(p_attack_complexity_weight, 0.5) * 0.2) +       -- 20% weight
+        (COALESCE(p_privileges_required_weight, 0.5) * 0.3) +     -- 30% weight
+        (COALESCE(p_user_interaction_weight, 0.5) * 0.1)          -- 10% weight
+    ) * 100;
+    
+    RETURN v_exploitability_score;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- ============================================================================
+-- 3. IMPACT SCORE CALCULATION
+-- ============================================================================
+-- Purpose: Calculate impact based on CVSS impact triad and scope
+
+CREATE OR REPLACE FUNCTION calculate_impact_score(
+    p_confidentiality_weight DECIMAL,
+    p_integrity_weight DECIMAL,
+    p_availability_weight DECIMAL,
+    p_scope_weight DECIMAL
+)
+RETURNS DECIMAL AS $$
+DECLARE
+    v_impact_score DECIMAL;
+    v_base_impact DECIMAL;
+BEGIN
+    -- Base impact from CIA triad (equal weighting)
+    v_base_impact := (
+        COALESCE(p_confidentiality_weight, 0.33) +
+        COALESCE(p_integrity_weight, 0.33) +
+        COALESCE(p_availability_weight, 0.33)
+    ) / 3.0;
+    
+    -- Scope multiplier (Changed scope = higher impact)
+    v_impact_score := v_base_impact * COALESCE(p_scope_weight, 0.9) * 100;
+    
+    RETURN v_impact_score;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- ============================================================================
+-- 4. BREACH METHOD LIKELIHOOD CALCULATION
+-- ============================================================================
+-- Purpose: Calculate likelihood of each breach method based on vulnerability
+--          characteristics and asset context
+
+CREATE OR REPLACE FUNCTION calculate_breach_method_likelihood(
+    p_cve_id VARCHAR,
+    p_exploitability_score DECIMAL,
+    p_impact_score DECIMAL,
+    p_has_known_exploit BOOLEAN,
+    p_has_patch_available BOOLEAN,
+    p_dwell_time_days DECIMAL,
+    p_asset_exposure_score DECIMAL
+)
+RETURNS TABLE (
+    breach_method VARCHAR,
+    likelihood_score DECIMAL,
+    contributing_factors TEXT[]
+) AS $$
+BEGIN
+    RETURN QUERY
+    
+    -- Unpatched Vulnerability Likelihood
+    SELECT 
+        'unpatched_vulnerability'::VARCHAR as breach_method,
+        CASE 
+            WHEN p_has_patch_available AND p_dwell_time_days > 30 THEN 0.9
+            WHEN p_has_patch_available AND p_dwell_time_days > 7 THEN 0.7
+            WHEN NOT p_has_patch_available THEN 0.8
+            ELSE 0.5
+        END * (p_exploitability_score / 100.0) as likelihood_score,
+        ARRAY[
+            CASE WHEN p_has_patch_available THEN 'patch_available' ELSE 'no_patch' END,
+            CASE WHEN p_dwell_time_days > 30 THEN 'long_exposure' ELSE 'recent_detection' END,
+            'exploitability:' || ROUND(p_exploitability_score, 2)::TEXT
+        ] as contributing_factors
+    
+    UNION ALL
+    
+    -- Zero Day Likelihood
+    SELECT 
+        'zero_day'::VARCHAR,
+        CASE 
+            WHEN NOT p_has_patch_available AND p_has_known_exploit THEN 0.9
+            WHEN NOT p_has_patch_available THEN 0.6
+            WHEN p_dwell_time_days < 7 THEN 0.5
+            ELSE 0.2
+        END * (p_impact_score / 100.0) as likelihood_score,
+        ARRAY[
+            CASE WHEN NOT p_has_patch_available THEN 'no_patch_available' ELSE 'patch_exists' END,
+            CASE WHEN p_has_known_exploit THEN 'known_exploit' ELSE 'no_known_exploit' END,
+            'impact:' || ROUND(p_impact_score, 2)::TEXT
+        ]
+    
+    UNION ALL
+    
+    -- Misconfiguration Likelihood
+    -- (Higher for service/config vulnerabilities)
+    SELECT 
+        'misconfiguration'::VARCHAR,
+        CASE 
+            WHEN p_cve_id LIKE '%CONFIG%' OR p_cve_id LIKE '%SERVICE%' THEN 0.8
+            ELSE 0.3
+        END * (p_asset_exposure_score / 100.0) as likelihood_score,
+        ARRAY[
+            CASE WHEN p_cve_id LIKE '%CONFIG%' THEN 'config_vulnerability' ELSE 'other_type' END,
+            'exposure:' || ROUND(p_asset_exposure_score, 2)::TEXT
+        ]
+    
+    UNION ALL
+    
+    -- Trust Relationship Likelihood
+    -- (Higher for authentication/privilege vulnerabilities)
+    SELECT 
+        'trust_relationship'::VARCHAR,
+        CASE 
+            WHEN p_cve_id LIKE '%AUTH%' OR p_cve_id LIKE '%PRIV%' THEN 0.7
+            ELSE 0.25
+        END as likelihood_score,
+        ARRAY[
+            CASE WHEN p_cve_id LIKE '%AUTH%' THEN 'auth_vulnerability' ELSE 'other_type' END
+        ];
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- ============================================================================
+-- 5. TIME-WEIGHTED RISK CALCULATION (EXPONENTIAL DECAY)
+-- ============================================================================
+-- Purpose: Calculate time-weighted statistics using exponential decay
+--          for Gamma distribution modeling
+
+CREATE OR REPLACE FUNCTION calculate_time_weighted_stats(
+    p_value DECIMAL,
+    p_time_delta_days DECIMAL,
+    p_tau_zero DECIMAL DEFAULT 30.0  -- decay constant (days)
+)
+RETURNS TABLE (
+    exp_factor DECIMAL,
+    mu_hat DECIMAL,
+    lambda_hat DECIMAL,
+    n_hat DECIMAL
+) AS $$
+DECLARE
+    v_exp_factor DECIMAL;
+    v_mu_hat DECIMAL;
+    v_lambda_hat DECIMAL;
+    v_n_hat DECIMAL;
+BEGIN
+    -- Calculate exponential decay factor
+    -- exp(-time_delta / tau_zero)
+    IF p_time_delta_days = 0 OR p_tau_zero = 0 THEN
+        v_exp_factor := 1.0;
+    ELSE
+        v_exp_factor := EXP(-1.0 * p_time_delta_days / p_tau_zero);
+    END IF;
+    
+    -- Calculate sufficient statistics
+    -- mu_hat: weighted sum of values
+    v_mu_hat := p_value * v_exp_factor;
+    
+    -- lambda_hat: weighted sum of log values
+    IF p_value > 0 THEN
+        v_lambda_hat := LN(p_value) * v_exp_factor;
+    ELSE
+        v_lambda_hat := 0;
+    END IF;
+    
+    -- n_hat: effective sample size (sum of weights)
+    v_n_hat := v_exp_factor;
+    
+    RETURN QUERY
+    SELECT v_exp_factor, v_mu_hat, v_lambda_hat, v_n_hat;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- ============================================================================
+-- 6. COMPREHENSIVE VULNERABILITY RISK SCORE
+-- ============================================================================
+-- Purpose: Calculate comprehensive risk score combining multiple factors
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_vulnerability_risk_scores AS
+WITH vuln_scores AS (
+    SELECT 
+        vi.cve_id,
+        vi.nuid,
+        vi.dev_id,
+        vi.instance_id,
+        vi.severity,
+        vi.state,
+        vi.detected_time,
+        vi.remediation_time,
+        vi.cvssv3_basescore,
+        vi.gtm_score,
+        vi.has_cisa_exploit,
+        vi.days_since_detection,
+        vi.dwell_time_days,
+        
+        -- Exploitability Score
+        calculate_exploitability_score(
+            vi.attack_vector_weight,
+            vi.attack_complexity_weight,
+            vi.privileges_required_weight,
+            vi.user_interaction_weight
+        ) as exploitability_score,
+        
+        -- Impact Score
+        calculate_impact_score(
+            vi.confidentiality_impact_weight,
+            vi.integrity_impact_weight,
+            vi.availability_impact_weight,
+            vi.scope_weight
+        ) as impact_score,
+        
+        -- Severity weighting
+        vi.severity_score,
+        vi.severity_weight,
+        
+        -- State weighting
+        vi.state_risk_score,
+        
+        -- Asset context (will be joined later)
+        a.effective_impact as asset_impact,
+        a.bastion_impact,
+        a.propagation_impact,
+        CASE 
+            WHEN a.propagation_class = 'Perimeter' THEN 80.0
+            WHEN a.propagation_class = 'Core' THEN 60.0
+            ELSE 40.0
+        END as asset_exposure_score,
+        
+        -- Check for patch availability
+        CASE 
+            WHEN EXISTS (
+                SELECT 1 FROM fix_instances fi 
+                WHERE fi.sw_instance_id = vi.sw_instance_id 
+                  AND fi.state IN ('AVAILABLE', 'PENDING')
+            ) THEN TRUE 
+            ELSE FALSE 
+        END as has_patch_available
+        
+    FROM mv_enriched_vulnerability_instances vi
+    LEFT JOIN assets a ON vi.nuid = a.nuid AND vi.dev_id = a.dev_id
+    WHERE vi.state = 'ACTIVE'
+),
+vuln_risk_calculated AS (
+    SELECT 
+        vs.*,
+        
+        -- Base Vulnerability Risk Score
+        -- Formula: (CVSS + Exploitability + Impact) / 3 * Severity Weight * State Weight
+        (
+            (COALESCE(vs.cvssv3_basescore, 0) * 10) +  -- Normalize to 0-100
+            vs.exploitability_score +
+            vs.impact_score
+        ) / 3.0 * COALESCE(vs.severity_weight, 1.0) * (vs.state_risk_score / 100.0) as base_risk_score,
+        
+        -- GTM Enhanced Risk Score
+        COALESCE(vs.gtm_score, vs.cvssv3_basescore * 10) as gtm_risk_score,
+        
+        -- CISA Exploit Multiplier
+        CASE WHEN vs.has_cisa_exploit THEN 1.5 ELSE 1.0 END as cisa_multiplier,
+        
+        -- Time-based urgency factor (increases with dwell time)
+        LEAST(1.0 + (vs.dwell_time_days / 30.0) * 0.5, 2.0) as time_urgency_factor,
+        
+        -- Patch availability penalty
+        CASE WHEN vs.has_patch_available THEN 1.2 ELSE 1.0 END as patch_penalty,
+        
+        -- Asset context multiplier
+        (
+            (COALESCE(vs.asset_impact, 50.0) / 100.0) * 0.4 +
+            (COALESCE(vs.bastion_impact, 0.0) / 100.0) * 0.3 +
+            (COALESCE(vs.propagation_impact, 0.0) / 100.0) * 0.2 +
+            (vs.asset_exposure_score / 100.0) * 0.1
+        ) as asset_context_multiplier
+        
+    FROM vuln_scores vs
+)
+SELECT 
+    vrc.*,
+    
+    -- Final Comprehensive Risk Score
+    -- Combines all factors into single score (0-100 scale)
+    LEAST(
+        vrc.base_risk_score * 
+        vrc.cisa_multiplier * 
+        vrc.time_urgency_factor * 
+        vrc.patch_penalty * 
+        (1.0 + vrc.asset_context_multiplier),
+        100.0
+    ) as comprehensive_risk_score,
+    
+    -- Risk Category
+    CASE 
+        WHEN LEAST(vrc.base_risk_score * vrc.cisa_multiplier * vrc.time_urgency_factor * vrc.patch_penalty * (1.0 + vrc.asset_context_multiplier), 100.0) >= 90 THEN 'CRITICAL'
+        WHEN LEAST(vrc.base_risk_score * vrc.cisa_multiplier * vrc.time_urgency_factor * vrc.patch_penalty * (1.0 + vrc.asset_context_multiplier), 100.0) >= 70 THEN 'HIGH'
+        WHEN LEAST(vrc.base_risk_score * vrc.cisa_multiplier * vrc.time_urgency_factor * vrc.patch_penalty * (1.0 + vrc.asset_context_multiplier), 100.0) >= 40 THEN 'MEDIUM'
+        ELSE 'LOW'
+    END as risk_category,
+    
+    -- Time-weighted statistics (using 30-day decay)
+    (calculate_time_weighted_stats(
+        LEAST(vrc.base_risk_score * vrc.cisa_multiplier * vrc.time_urgency_factor * vrc.patch_penalty * (1.0 + vrc.asset_context_multiplier), 100.0),
+        vrc.days_since_detection,
+        30.0
+    )).*
+    
+FROM vuln_risk_calculated vrc;
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_mv_vuln_risk_cve ON mv_vulnerability_risk_scores(cve_id);
+CREATE INDEX IF NOT EXISTS idx_mv_vuln_risk_asset ON mv_vulnerability_risk_scores(nuid, dev_id);
+CREATE INDEX IF NOT EXISTS idx_mv_vuln_risk_score ON mv_vulnerability_risk_scores(comprehensive_risk_score DESC);
+CREATE INDEX IF NOT EXISTS idx_mv_vuln_risk_category ON mv_vulnerability_risk_scores(risk_category);
+
+-- ============================================================================
+-- 7. TIME-SERIES VULNERABILITY AGGREGATION
+-- ============================================================================
+-- Purpose: Create time-series aggregates with exponential decay weighting
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_vulnerability_timeseries AS
+WITH daily_snapshots AS (
+    SELECT 
+        DATE(vi.detected_time) as snapshot_date,
+        vi.cve_id,
+        vi.severity,
+        vi.state,
+        COUNT(DISTINCT CONCAT(vi.nuid, '-', vi.dev_id)) as asset_count,
+        COUNT(DISTINCT vi.instance_id) as instance_count,
+        AVG(vi.cvssv3_basescore) as avg_cvss_score,
+        AVG(vi.gtm_score) as avg_gtm_score,
+        SUM(CASE WHEN vi.has_cisa_exploit THEN 1 ELSE 0 END) as cisa_exploit_count,
+        -- Risk scores from computed view
+        AVG(vrs.comprehensive_risk_score) as avg_risk_score,
+        SUM(vrs.comprehensive_risk_score) as total_risk_score
+    FROM mv_enriched_vulnerability_instances vi
+    LEFT JOIN mv_vulnerability_risk_scores vrs 
+        ON vi.cve_id = vrs.cve_id 
+        AND vi.nuid = vrs.nuid 
+        AND vi.dev_id = vrs.dev_id
+        AND vi.instance_id = vrs.instance_id
+    GROUP BY DATE(vi.detected_time), vi.cve_id, vi.severity, vi.state
+),
+time_weighted_daily AS (
+    SELECT 
+        ds.snapshot_date,
+        ds.cve_id,
+        ds.severity,
+        ds.state,
+        ds.asset_count,
+        ds.instance_count,
+        ds.avg_cvss_score,
+        ds.avg_gtm_score,
+        ds.cisa_exploit_count,
+        ds.avg_risk_score,
+        ds.total_risk_score,
+        
+        -- Calculate time-weighted stats for each metric
+        -- Using current date as reference, apply decay to historical data
+        EXTRACT(EPOCH FROM (CURRENT_DATE - ds.snapshot_date))/86400 as days_ago,
+        
+        -- Exponential decay factor (30-day tau)
+        EXP(-1.0 * EXTRACT(EPOCH FROM (CURRENT_DATE - ds.snapshot_date))/86400 / 30.0) as decay_factor,
+        
+        -- Weighted metrics
+        ds.total_risk_score * EXP(-1.0 * EXTRACT(EPOCH FROM (CURRENT_DATE - ds.snapshot_date))/86400 / 30.0) as weighted_risk_score,
+        ds.instance_count * EXP(-1.0 * EXTRACT(EPOCH FROM (CURRENT_DATE - ds.snapshot_date))/86400 / 30.0) as weighted_instance_count,
+        
+        -- For Gamma distribution parameters
+        ds.total_risk_score * EXP(-1.0 * EXTRACT(EPOCH FROM (CURRENT_DATE - ds.snapshot_date))/86400 / 30.0) as mu_hat_contribution,
+        LN(NULLIF(ds.total_risk_score, 0)) * EXP(-1.0 * EXTRACT(EPOCH FROM (CURRENT_DATE - ds.snapshot_date))/86400 / 30.0) as lambda_hat_contribution,
+        EXP(-1.0 * EXTRACT(EPOCH FROM (CURRENT_DATE - ds.snapshot_date))/86400 / 30.0) as n_hat_contribution
+        
+    FROM daily_snapshots ds
+)
+SELECT 
+    snapshot_date,
+    cve_id,
+    severity,
+    state,
+    asset_count,
+    instance_count,
+    avg_cvss_score,
+    avg_gtm_score,
+    cisa_exploit_count,
+    avg_risk_score,
+    total_risk_score,
+    days_ago,
+    decay_factor,
+    weighted_risk_score,
+    weighted_instance_count,
+    mu_hat_contribution,
+    lambda_hat_contribution,
+    n_hat_contribution
+FROM time_weighted_daily
+ORDER BY snapshot_date DESC, cve_id;
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_mv_vuln_ts_date ON mv_vulnerability_timeseries(snapshot_date DESC);
+CREATE INDEX IF NOT EXISTS idx_mv_vuln_ts_cve ON mv_vulnerability_timeseries(cve_id);
+CREATE INDEX IF NOT EXISTS idx_mv_vuln_ts_severity ON mv_vulnerability_timeseries(severity);
+
+-- ============================================================================
+-- 8. AGGREGATED TIME-SERIES STATISTICS BY CVE
+-- ============================================================================
+-- Purpose: Aggregate time-weighted statistics per CVE for trend analysis
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_cve_timeseries_aggregates AS
+SELECT 
+    cve_id,
+    severity,
+    -- Current metrics (most recent snapshot)
+    MAX(snapshot_date) as latest_snapshot_date,
+    MAX(CASE WHEN snapshot_date = (SELECT MAX(snapshot_date) FROM mv_vulnerability_timeseries WHERE cve_id = ts.cve_id) 
+        THEN asset_count END) as current_asset_count,
+    MAX(CASE WHEN snapshot_date = (SELECT MAX(snapshot_date) FROM mv_vulnerability_timeseries WHERE cve_id = ts.cve_id) 
+        THEN instance_count END) as current_instance_count,
+    MAX(CASE WHEN snapshot_date = (SELECT MAX(snapshot_date) FROM mv_vulnerability_timeseries WHERE cve_id = ts.cve_id) 
+        THEN avg_risk_score END) as current_avg_risk_score,
+    
+    -- Time-weighted aggregates (Gamma distribution parameters)
+    SUM(mu_hat_contribution) as mu_hat,
+    SUM(lambda_hat_contribution) as lambda_hat,
+    SUM(n_hat_contribution) as n_hat,
+    
+    -- Simple aggregates for reference
+    SUM(total_risk_score) as running_sum_risk,
+    SUM(instance_count) as total_instances_observed,
+    
+    -- Trend indicators
+    (MAX(CASE WHEN snapshot_date = (SELECT MAX(snapshot_date) FROM mv_vulnerability_timeseries WHERE cve_id = ts.cve_id) 
+        THEN total_risk_score END) -
+     MAX(CASE WHEN snapshot_date = (SELECT MAX(snapshot_date) - INTERVAL '7 days' FROM mv_vulnerability_timeseries WHERE cve_id = ts.cve_id) 
+        THEN total_risk_score END)) as risk_change_7days,
+    
+    (MAX(CASE WHEN snapshot_date = (SELECT MAX(snapshot_date) FROM mv_vulnerability_timeseries WHERE cve_id = ts.cve_id) 
+        THEN instance_count END) -
+     MAX(CASE WHEN snapshot_date = (SELECT MAX(snapshot_date) - INTERVAL '7 days' FROM mv_vulnerability_timeseries WHERE cve_id = ts.cve_id) 
+        THEN instance_count END)) as instance_change_7days,
+    
+    -- Statistical measures
+    AVG(avg_risk_score) as mean_risk_score,
+    STDDEV(avg_risk_score) as stddev_risk_score,
+    MIN(avg_risk_score) as min_risk_score,
+    MAX(avg_risk_score) as max_risk_score,
+    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY avg_risk_score) as median_risk_score,
+    
+    -- Calculated Gamma distribution parameters
+    -- Shape parameter (alpha): mu_hat^2 / (mu_hat - lambda_hat)
+    -- Rate parameter (beta): mu_hat / (mu_hat - lambda_hat)
+    CASE 
+        WHEN SUM(n_hat_contribution) > 0 AND (SUM(mu_hat_contribution) - SUM(lambda_hat_contribution)) > 0 THEN
+            POWER(SUM(mu_hat_contribution), 2) / (SUM(mu_hat_contribution) - SUM(lambda_hat_contribution))
+        ELSE NULL
+    END as gamma_shape_alpha,
+    
+    CASE 
+        WHEN SUM(n_hat_contribution) > 0 AND (SUM(mu_hat_contribution) - SUM(lambda_hat_contribution)) > 0 THEN
+            SUM(mu_hat_contribution) / (SUM(mu_hat_contribution) - SUM(lambda_hat_contribution))
+        ELSE NULL
+    END as gamma_rate_beta,
+    
+    -- Trend classification
+    CASE 
+        WHEN (MAX(CASE WHEN snapshot_date = (SELECT MAX(snapshot_date) FROM mv_vulnerability_timeseries WHERE cve_id = ts.cve_id) 
+            THEN instance_count END) -
+         MAX(CASE WHEN snapshot_date = (SELECT MAX(snapshot_date) - INTERVAL '7 days' FROM mv_vulnerability_timeseries WHERE cve_id = ts.cve_id) 
+            THEN instance_count END)) > 5 THEN 'INCREASING'
+        WHEN (MAX(CASE WHEN snapshot_date = (SELECT MAX(snapshot_date) FROM mv_vulnerability_timeseries WHERE cve_id = ts.cve_id) 
+            THEN instance_count END) -
+         MAX(CASE WHEN snapshot_date = (SELECT MAX(snapshot_date) - INTERVAL '7 days' FROM mv_vulnerability_timeseries WHERE cve_id = ts.cve_id) 
+            THEN instance_count END)) < -5 THEN 'DECREASING'
+        ELSE 'STABLE'
+    END as trend_direction,
+    
+    -- Velocity (rate of change)
+    (MAX(CASE WHEN snapshot_date = (SELECT MAX(snapshot_date) FROM mv_vulnerability_timeseries WHERE cve_id = ts.cve_id) 
+        THEN instance_count END)::DECIMAL -
+     MAX(CASE WHEN snapshot_date = (SELECT MAX(snapshot_date) - INTERVAL '7 days' FROM mv_vulnerability_timeseries WHERE cve_id = ts.cve_id) 
+        THEN instance_count END)::DECIMAL) / 7.0 as velocity_instances_per_day
+
+FROM mv_vulnerability_timeseries ts
+GROUP BY cve_id, severity;
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_mv_cve_ts_agg_cve ON mv_cve_timeseries_aggregates(cve_id);
+CREATE INDEX IF NOT EXISTS idx_mv_cve_ts_agg_trend ON mv_cve_timeseries_aggregates(trend_direction);
+CREATE INDEX IF NOT EXISTS idx_mv_cve_ts_agg_risk ON mv_cve_timeseries_aggregates(current_avg_risk_score DESC);
+
+-- ============================================================================
+-- 9. ASSET-LEVEL BREACH METHOD LIKELIHOOD AGGREGATION
+-- ============================================================================
+-- Purpose: Aggregate breach method likelihoods at asset level
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_asset_breach_likelihood AS
+WITH vuln_breach_methods AS (
+    SELECT 
+        vi.nuid,
+        vi.dev_id,
+        vi.cve_id,
+        vrs.comprehensive_risk_score,
+        vrs.exploitability_score,
+        vrs.impact_score,
+        vrs.has_cisa_exploit,
+        vrs.has_patch_available,
+        vrs.dwell_time_days,
+        vrs.asset_exposure_score,
+        -- Calculate breach method likelihoods
+        bml.*
+    FROM mv_enriched_vulnerability_instances vi
+    JOIN mv_vulnerability_risk_scores vrs 
+        ON vi.cve_id = vrs.cve_id 
+        AND vi.nuid = vrs.nuid 
+        AND vi.dev_id = vrs.dev_id
+    CROSS JOIN LATERAL calculate_breach_method_likelihood(
+        vi.cve_id,
+        vrs.exploitability_score,
+        vrs.impact_score,
+        vrs.has_cisa_exploit,
+        vrs.has_patch_available,
+        vrs.dwell_time_days,
+        vrs.asset_exposure_score
+    ) AS bml
+    WHERE vi.state = 'ACTIVE'
+),
+asset_level_aggregates AS (
+    SELECT 
+        vbm.nuid,
+        vbm.dev_id,
+        vbm.breach_method,
+        -- Aggregate likelihoods
+        SUM(vbm.likelihood_score) as total_likelihood_score,
+        AVG(vbm.likelihood_score) as avg_likelihood_score,
+        MAX(vbm.likelihood_score) as max_likelihood_score,
+        COUNT(DISTINCT vbm.cve_id) as vuln_count,
+        -- Time-weighted aggregates
+        SUM(vbm.likelihood_score * vrs.exp_factor) as weighted_likelihood_score,
+        SUM(vrs.exp_factor) as total_weight,
+        -- Contributing factors
+        ARRAY_AGG(DISTINCT unnest) as all_contributing_factors
+    FROM vuln_breach_methods vbm
+    LEFT JOIN mv_vulnerability_risk_scores vrs 
+        ON vbm.cve_id = vrs.cve_id 
+        AND vbm.nuid = vrs.nuid 
+        AND vbm.dev_id = vrs.dev_id
+    CROSS JOIN LATERAL unnest(vbm.contributing_factors) AS unnest
+    GROUP BY vbm.nuid, vbm.dev_id, vbm.breach_method
+)
+SELECT 
+    ala.*,
+    -- Normalized likelihood (0-1 scale)
+    ala.weighted_likelihood_score / NULLIF(ala.total_weight, 0) as normalized_likelihood,
+    -- Breach method metadata
+    bmm.description as breach_method_description,
+    bmm.risk_score as breach_method_base_risk,
+    bmm.exploitability_score as breach_method_exploitability,
+    bmm.priority_order as breach_method_priority,
+    -- Final breach method likelihood for asset
+    LEAST(
+        (ala.weighted_likelihood_score / NULLIF(ala.total_weight, 0)) * bmm.weight * 100,
+        100.0
+    ) as final_breach_likelihood_score
+FROM asset_level_aggregates ala
+LEFT JOIN breach_method_metadata bmm ON ala.breach_method = bmm.code;
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_mv_asset_breach_asset ON mv_asset_breach_likelihood(nuid, dev_id);
+CREATE INDEX IF NOT EXISTS idx_mv_asset_breach_method ON mv_asset_breach_likelihood(breach_method);
+CREATE INDEX IF NOT EXISTS idx_mv_asset_breach_score ON mv_asset_breach_likelihood(final_breach_likelihood_score DESC);
+
+-- ============================================================================
+-- 10. REFRESH MATERIALIZED VIEWS
+-- ============================================================================
+-- Purpose: Refresh all materialized views in correct dependency order
+
+CREATE OR REPLACE FUNCTION refresh_vulnerability_analytics_views()
+RETURNS VOID AS $$
+BEGIN
+    -- Refresh in dependency order
+    REFRESH MATERIALIZED VIEW CONCURRENTLY mv_enriched_vulnerability_instances;
+    REFRESH MATERIALIZED VIEW CONCURRENTLY mv_vulnerability_risk_scores;
+    REFRESH MATERIALIZED VIEW CONCURRENTLY mv_vulnerability_timeseries;
+    REFRESH MATERIALIZED VIEW CONCURRENTLY mv_cve_timeseries_aggregates;
+    REFRESH MATERIALIZED VIEW CONCURRENTLY mv_asset_breach_likelihood;
+    
+    RAISE NOTICE 'All vulnerability analytics views refreshed successfully';
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- 11. EXAMPLE QUERIES FOR REPORTS AND ALERTS
+-- ============================================================================
+
+-- Example 1: Top 10 CVEs by Comprehensive Risk Score
+-- ============================================================================
+/*
+SELECT 
+    vrs.cve_id,
+    vrs.severity,
+    vrs.comprehensive_risk_score,
+    vrs.risk_category,
+    vrs.exploitability_score,
+    vrs.impact_score,
+    vrs.has_cisa_exploit,
+    vrs.dwell_time_days,
+    COUNT(DISTINCT CONCAT(vrs.nuid, '-', vrs.dev_id)) as affected_assets
+FROM mv_vulnerability_risk_scores vrs
+WHERE vrs.state = 'ACTIVE'
+GROUP BY 
+    vrs.cve_id,
+    vrs.severity,
+    vrs.comprehensive_risk_score,
+    vrs.risk_category,
+    vrs.exploitability_score,
+    vrs.impact_score,
+    vrs.has_cisa_exploit,
+    vrs.dwell_time_days
+ORDER BY vrs.comprehensive_risk_score DESC
+LIMIT 10;
+*/
+
+-- Example 2: Asset Breach Method Likelihood Summary
+-- ============================================================================
+/*
+SELECT 
+    a.final_name,
+    a.ip,
+    ast.impact_class,
+    ast.propagation_class,
+    abl.breach_method,
+    abl.final_breach_likelihood_score,
+    abl.vuln_count,
+    abl.all_contributing_factors
+FROM mv_asset_breach_likelihood abl
+JOIN assets a ON abl.nuid = a.nuid AND abl.dev_id = a.dev_id
+WHERE abl.final_breach_likelihood_score > 70
+ORDER BY 
+    abl.final_breach_likelihood_score DESC,
+    a.impact_class,
+    abl.breach_method;
+*/
+
+-- Example 3: CVE Time-Series Trend Analysis
+-- ============================================================================
+/*
+SELECT 
+    cta.cve_id,
+    cta.severity,
+    cta.trend_direction,
+    cta.current_instance_count,
+    cta.instance_change_7days,
+    cta.velocity_instances_per_day,
+    cta.current_avg_risk_score,
+    cta.gamma_shape_alpha,
+    cta.gamma_rate_beta,
+    cta.mu_hat,
+    cta.lambda_hat,
+    cta.n_hat
+FROM mv_cve_timeseries_aggregates cta
+WHERE cta.trend_direction = 'INCREASING'
+  AND cta.current_avg_risk_score > 70
+ORDER BY cta.velocity_instances_per_day DESC
+LIMIT 20;
+*/
+
+-- Example 4: Time-Weighted Risk Score for Asset
+-- ============================================================================
+/*
+SELECT 
+    a.final_name,
+    a.ip,
+    ast.impact_class,
+    SUM(vrs.weighted_risk_score) as total_weighted_risk,
+    SUM(vrs.mu_hat) as mu_hat_total,
+    SUM(vrs.lambda_hat) as lambda_hat_total,
+    SUM(vrs.n_hat) as n_hat_total,
+    COUNT(DISTINCT vrs.cve_id) as active_cve_count
+FROM mv_vulnerability_risk_scores vrs
+JOIN assets a ON vrs.nuid = a.nuid AND vrs.dev_id = a.dev_id
+WHERE vrs.state = 'ACTIVE'
+GROUP BY a.final_name, a.ip, ast.impact_class
+ORDER BY total_weighted_risk DESC
+LIMIT 100;
+*/
+
+-- ============================================================================
+-- NOTES ON SCHEMA INTEGRATION
+-- ============================================================================
+/*
+The following columns need to be added to vulnerability_instances table 
+to support the calculations above:
+
+ALTER TABLE vulnerability_instances ADD COLUMN IF NOT EXISTS cvss_vector_string TEXT;
+ALTER TABLE vulnerability_instances ADD COLUMN IF NOT EXISTS cvssv2_vector_string TEXT;
+ALTER TABLE vulnerability_instances ADD COLUMN IF NOT EXISTS cvssv3_vector_string TEXT;
+ALTER TABLE vulnerability_instances ADD COLUMN IF NOT EXISTS threat_names TEXT[];
+ALTER TABLE vulnerability_instances ADD COLUMN IF NOT EXISTS likelihood_vuln_attributes JSONB;
+
+The vulnerability detail schema provided includes:
+- scores (cvssv2_basescore, cvssv3_basescore, gtm_score) ✓
+- threat_names (list of threat categories)
+- cvss_vector_string (CVSSv2 and CVSSv3 vectors) - NEEDED for parsing
+- tags (vulnerability tags with dates) - partially implemented
+- likelihood_vuln_attributes (accessibility, intent, exposure, exploit_maturity, 
+  complexity, severity, mitigation) - NEEDED for advanced likelihood calculations
+
+For complete implementation, you would:
+1. Parse the vulnerability detail JSON and populate these columns
+2. Use the CVSS vector strings to populate the parsed CVSS component columns
+3. Leverage likelihood_vuln_attributes for more sophisticated breach method calculations
+4. Integrate threat_names for categorization and filtering
+
+The current SQL provides a framework that works with existing schema and
+can be enhanced as additional columns are added from the vulnerability detail model.
+*/

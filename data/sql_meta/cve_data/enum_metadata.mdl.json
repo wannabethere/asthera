@@ -1,0 +1,3847 @@
+{
+  "catalog": "compliance_spark",
+  "schema": "enum_metadata",
+  "models": [
+    {
+      "name": "risk_impact_metadata",
+      "tableReference": {
+        "table": "risk_impact_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "enum_type",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Enum Type",
+            "description": "Type of enum: risk_level, impact_class, propagation_class, vuln_level"
+          }
+        },
+        {
+          "name": "code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Code",
+            "description": "Enum code value"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Description",
+            "description": "Human-readable description"
+          }
+        },
+        {
+          "name": "priority_order",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "Priority Order",
+            "description": "Sorting order (1 = highest priority)"
+          }
+        },
+        {
+          "name": "numeric_score",
+          "type": "DECIMAL",
+          "notNull": true,
+          "properties": {
+            "displayName": "Numeric Score",
+            "description": "Score for calculations (0-100 scale)"
+          }
+        },
+        {
+          "name": "severity_level",
+          "type": "INTEGER",
+          "notNull": false,
+          "properties": {
+            "displayName": "Severity Level",
+            "description": "Numeric severity (1-10 scale)"
+          }
+        },
+        {
+          "name": "weight",
+          "type": "DECIMAL",
+          "notNull": false,
+          "properties": {
+            "displayName": "Weight",
+            "description": "Weight for weighted calculations"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Risk & Impact Metadata",
+        "description": "Combined risk, impact, propagation, and vulnerability level metadata with numeric prioritization and scoring"
+      }
+    },
+    {
+      "name": "breach_method_metadata",
+      "tableReference": {
+        "table": "breach_method_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Code",
+            "description": "Breach method code"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Description",
+            "description": "Human-readable description"
+          }
+        },
+        {
+          "name": "prefix",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Prefix",
+            "description": "Short-hand prefix"
+          }
+        },
+        {
+          "name": "priority_order",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "Priority Order",
+            "description": "Attack vector priority"
+          }
+        },
+        {
+          "name": "risk_score",
+          "type": "DECIMAL",
+          "notNull": true,
+          "properties": {
+            "displayName": "Risk Score",
+            "description": "Base risk score (0-100)"
+          }
+        },
+        {
+          "name": "exploitability_score",
+          "type": "DECIMAL",
+          "notNull": false,
+          "properties": {
+            "displayName": "Exploitability Score",
+            "description": "How easily exploitable (0-100)"
+          }
+        },
+        {
+          "name": "impact_score",
+          "type": "DECIMAL",
+          "notNull": false,
+          "properties": {
+            "displayName": "Impact Score",
+            "description": "Potential impact (0-100)"
+          }
+        },
+        {
+          "name": "weight",
+          "type": "DECIMAL",
+          "notNull": false,
+          "properties": {
+            "displayName": "Weight",
+            "description": "Weight for calculations"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Breach Method Metadata",
+        "description": "Breach method metadata with risk, exploitability, and impact scores for pipeline enrichment"
+      }
+    },
+    {
+      "name": "security_strength_metadata",
+      "tableReference": {
+        "table": "security_strength_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "enum_type",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Enum Type",
+            "description": "Type: certificate, cipher, encryption, credential"
+          }
+        },
+        {
+          "name": "code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Code",
+            "description": "Strength code (WEAK, MODERATE, STRONG, etc.)"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Description",
+            "description": "Human-readable description"
+          }
+        },
+        {
+          "name": "strength_order",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "Strength Order",
+            "description": "1 = weakest, higher = stronger"
+          }
+        },
+        {
+          "name": "numeric_score",
+          "type": "DECIMAL",
+          "notNull": true,
+          "properties": {
+            "displayName": "Numeric Score",
+            "description": "Strength score (0-100)"
+          }
+        },
+        {
+          "name": "security_level",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "Security Level",
+            "description": "Security level (1-5 scale)"
+          }
+        },
+        {
+          "name": "weight",
+          "type": "DECIMAL",
+          "notNull": false,
+          "properties": {
+            "displayName": "Weight",
+            "description": "Weight for calculations"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Security Strength Metadata",
+        "description": "Combined security strength metadata (certificates, ciphers, encryption, credentials) with numeric scoring"
+      }
+    },
+    {
+      "name": "asset_classification_metadata",
+      "tableReference": {
+        "table": "asset_classification_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "classification_type",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Classification Type",
+            "description": "Type: os_type, device_type, canonical_type, subtype, platform"
+          }
+        },
+        {
+          "name": "code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Code",
+            "description": "Classification code"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Description",
+            "description": "Human-readable description"
+          }
+        },
+        {
+          "name": "priority_order",
+          "type": "INTEGER",
+          "notNull": false,
+          "properties": {
+            "displayName": "Priority Order",
+            "description": "For prioritization in risk calculations"
+          }
+        },
+        {
+          "name": "risk_weight",
+          "type": "DECIMAL",
+          "notNull": false,
+          "properties": {
+            "displayName": "Risk Weight",
+            "description": "Risk weight for this asset type"
+          }
+        },
+        {
+          "name": "criticality_score",
+          "type": "DECIMAL",
+          "notNull": false,
+          "properties": {
+            "displayName": "Criticality Score",
+            "description": "Criticality score (0-100)"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Asset Classification Metadata",
+        "description": "Combined asset classification metadata with risk weights and criticality scores"
+      }
+    },
+    {
+      "name": "asset_type_subtype_map",
+      "tableReference": {
+        "table": "asset_type_subtype_map"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "canonical_type_code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Canonical Type Code",
+            "description": "Reference to canonical device type"
+          }
+        },
+        {
+          "name": "device_subtype_code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Device Subtype Code",
+            "description": "Reference to device subtype"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Asset Type Subtype Map",
+        "description": "Mapping between canonical device types and device subtypes"
+      }
+    },
+    {
+      "name": "asset_subtype_platform_map",
+      "tableReference": {
+        "table": "asset_subtype_platform_map"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "device_subtype_code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Device Subtype Code",
+            "description": "Reference to device subtype"
+          }
+        },
+        {
+          "name": "platform_code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Platform Code",
+            "description": "Reference to platform"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Asset Subtype Platform Map",
+        "description": "Mapping between device subtypes and platforms"
+      }
+    },
+    {
+      "name": "vulnerability_metadata",
+      "tableReference": {
+        "table": "vulnerability_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "enum_type",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Enum Type",
+            "description": "Type: type, subtype, state, tag"
+          }
+        },
+        {
+          "name": "code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Code",
+            "description": "Vulnerability code"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Description",
+            "description": "Human-readable description"
+          }
+        },
+        {
+          "name": "parent_code",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Parent Code",
+            "description": "For subtypes, references type code"
+          }
+        },
+        {
+          "name": "priority_order",
+          "type": "INTEGER",
+          "notNull": false,
+          "properties": {
+            "displayName": "Priority Order",
+            "description": "Priority order"
+          }
+        },
+        {
+          "name": "risk_score",
+          "type": "DECIMAL",
+          "notNull": false,
+          "properties": {
+            "displayName": "Risk Score",
+            "description": "Risk contribution score"
+          }
+        },
+        {
+          "name": "remediation_priority",
+          "type": "INTEGER",
+          "notNull": false,
+          "properties": {
+            "displayName": "Remediation Priority",
+            "description": "1 = highest priority for remediation"
+          }
+        },
+        {
+          "name": "weight",
+          "type": "DECIMAL",
+          "notNull": false,
+          "properties": {
+            "displayName": "Weight",
+            "description": "Weight for calculations"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Vulnerability Metadata",
+        "description": "Combined vulnerability type, subtype, state, and tag metadata with risk scoring"
+      }
+    },
+    {
+      "name": "software_metadata",
+      "tableReference": {
+        "table": "software_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "enum_type",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Enum Type",
+            "description": "Type: category, os, part, product_state, patch_state, vuln_state"
+          }
+        },
+        {
+          "name": "code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Code",
+            "description": "Software code"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Description",
+            "description": "Human-readable description"
+          }
+        },
+        {
+          "name": "priority_order",
+          "type": "INTEGER",
+          "notNull": false,
+          "properties": {
+            "displayName": "Priority Order",
+            "description": "Priority order"
+          }
+        },
+        {
+          "name": "risk_score",
+          "type": "DECIMAL",
+          "notNull": false,
+          "properties": {
+            "displayName": "Risk Score",
+            "description": "Risk score for this software classification"
+          }
+        },
+        {
+          "name": "maintenance_priority",
+          "type": "INTEGER",
+          "notNull": false,
+          "properties": {
+            "displayName": "Maintenance Priority",
+            "description": "Priority for maintenance/updates"
+          }
+        },
+        {
+          "name": "weight",
+          "type": "DECIMAL",
+          "notNull": false,
+          "properties": {
+            "displayName": "Weight",
+            "description": "Weight for calculations"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Software Metadata",
+        "description": "Combined software metadata with risk scores and maintenance priorities"
+      }
+    },
+    {
+      "name": "state_status_metadata",
+      "tableReference": {
+        "table": "state_status_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "enum_type",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Enum Type",
+            "description": "Type: risk_state, process_status, project_status, project_processing_status"
+          }
+        },
+        {
+          "name": "code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Code",
+            "description": "State or status code"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Description",
+            "description": "Human-readable description"
+          }
+        },
+        {
+          "name": "status_order",
+          "type": "INTEGER",
+          "notNull": false,
+          "properties": {
+            "displayName": "Status Order",
+            "description": "Order in workflow"
+          }
+        },
+        {
+          "name": "is_active",
+          "type": "BOOLEAN",
+          "notNull": false,
+          "properties": {
+            "displayName": "Is Active",
+            "description": "Whether this is an active state"
+          }
+        },
+        {
+          "name": "is_terminal",
+          "type": "BOOLEAN",
+          "notNull": false,
+          "properties": {
+            "displayName": "Is Terminal",
+            "description": "Whether this is a terminal/final state"
+          }
+        },
+        {
+          "name": "priority_order",
+          "type": "INTEGER",
+          "notNull": false,
+          "properties": {
+            "displayName": "Priority Order",
+            "description": "Priority order"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "State & Status Metadata",
+        "description": "Combined state and status metadata for risk issues, processes, and projects"
+      }
+    },
+    {
+      "name": "data_source_metadata",
+      "tableReference": {
+        "table": "data_source_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Code",
+            "description": "Data source code"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Description",
+            "description": "Human-readable description"
+          }
+        },
+        {
+          "name": "data_source_type",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Data Source Type",
+            "description": "Type: sensor, import, etc."
+          }
+        },
+        {
+          "name": "confidence_score",
+          "type": "DECIMAL",
+          "notNull": false,
+          "properties": {
+            "displayName": "Confidence Score",
+            "description": "Data quality/confidence (0-1)"
+          }
+        },
+        {
+          "name": "priority_order",
+          "type": "INTEGER",
+          "notNull": false,
+          "properties": {
+            "displayName": "Priority Order",
+            "description": "Priority order"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Data Source Metadata",
+        "description": "Data source types with confidence scores"
+      }
+    },
+    {
+      "name": "event_type_metadata",
+      "tableReference": {
+        "table": "event_type_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Code",
+            "description": "Event type code"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Description",
+            "description": "Human-readable description"
+          }
+        },
+        {
+          "name": "priority_order",
+          "type": "INTEGER",
+          "notNull": false,
+          "properties": {
+            "displayName": "Priority Order",
+            "description": "Priority order"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Event Type Metadata",
+        "description": "Event type classifications"
+      }
+    },
+    {
+      "name": "roles_metadata",
+      "tableReference": {
+        "table": "roles_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Code",
+            "description": "Role code"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Description",
+            "description": "Human-readable description"
+          }
+        },
+        {
+          "name": "role_category",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Role Category",
+            "description": "Category: admin, service, cloud, cmdb"
+          }
+        },
+        {
+          "name": "is_admin_role",
+          "type": "BOOLEAN",
+          "notNull": false,
+          "properties": {
+            "displayName": "Is Admin Role",
+            "description": "Whether this is an admin role"
+          }
+        },
+        {
+          "name": "is_proxy_role",
+          "type": "BOOLEAN",
+          "notNull": false,
+          "properties": {
+            "displayName": "Is Proxy Role",
+            "description": "Whether this is a proxy role"
+          }
+        },
+        {
+          "name": "criticality_score",
+          "type": "DECIMAL",
+          "notNull": false,
+          "properties": {
+            "displayName": "Criticality Score",
+            "description": "Criticality of this role (0-100)"
+          }
+        },
+        {
+          "name": "risk_weight",
+          "type": "DECIMAL",
+          "notNull": false,
+          "properties": {
+            "displayName": "Risk Weight",
+            "description": "Risk weight"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Roles Metadata",
+        "description": "Service and system roles with criticality scores and risk weights"
+      }
+    },
+    {
+      "name": "pipeline_metadata",
+      "tableReference": {
+        "table": "pipeline_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "enum_type",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Enum Type",
+            "description": "Type: module, module_trigger, process_task"
+          }
+        },
+        {
+          "name": "code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Code",
+            "description": "Pipeline code"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Description",
+            "description": "Human-readable description"
+          }
+        },
+        {
+          "name": "priority_order",
+          "type": "INTEGER",
+          "notNull": false,
+          "properties": {
+            "displayName": "Priority Order",
+            "description": "Priority order"
+          }
+        },
+        {
+          "name": "execution_order",
+          "type": "INTEGER",
+          "notNull": false,
+          "properties": {
+            "displayName": "Execution Order",
+            "description": "Order in pipeline execution"
+          }
+        },
+        {
+          "name": "weight",
+          "type": "DECIMAL",
+          "notNull": false,
+          "properties": {
+            "displayName": "Weight",
+            "description": "Weight for calculations"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Pipeline Metadata",
+        "description": "Pipeline module and processing metadata"
+      }
+    },
+    {
+      "name": "ops_metrics_metadata",
+      "tableReference": {
+        "table": "ops_metrics_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Code",
+            "description": "Operations metric code"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Description",
+            "description": "Human-readable description"
+          }
+        },
+        {
+          "name": "metric_type",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Metric Type",
+            "description": "Type: ttr, mttr, mttr_threat, mttr_severity"
+          }
+        },
+        {
+          "name": "priority_order",
+          "type": "INTEGER",
+          "notNull": false,
+          "properties": {
+            "displayName": "Priority Order",
+            "description": "Priority order"
+          }
+        },
+        {
+          "name": "weight",
+          "type": "DECIMAL",
+          "notNull": false,
+          "properties": {
+            "displayName": "Weight",
+            "description": "Weight for calculations"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Operations Metrics Metadata",
+        "description": "Operations metrics types"
+      }
+    },
+    {
+      "name": "protocol_port_metadata",
+      "tableReference": {
+        "table": "protocol_port_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Code",
+            "description": "Protocol code"
+          }
+        },
+        {
+          "name": "port_number",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "Port Number",
+            "description": "Port number"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Description",
+            "description": "Human-readable description"
+          }
+        },
+        {
+          "name": "protocol_type",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Protocol Type",
+            "description": "Type: tcp, udp, both"
+          }
+        },
+        {
+          "name": "security_risk_score",
+          "type": "DECIMAL",
+          "notNull": false,
+          "properties": {
+            "displayName": "Security Risk Score",
+            "description": "Security risk (0-100)"
+          }
+        },
+        {
+          "name": "is_insecure",
+          "type": "BOOLEAN",
+          "notNull": false,
+          "properties": {
+            "displayName": "Is Insecure",
+            "description": "Whether this protocol is insecure"
+          }
+        },
+        {
+          "name": "priority_order",
+          "type": "INTEGER",
+          "notNull": false,
+          "properties": {
+            "displayName": "Priority Order",
+            "description": "Priority order"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Protocol Port Metadata",
+        "description": "Protocol and port mappings with security risk scores"
+      }
+    },
+    {
+      "name": "ssl_tls_version_metadata",
+      "tableReference": {
+        "table": "ssl_tls_version_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Code",
+            "description": "SSL/TLS version code"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Description",
+            "description": "Human-readable description"
+          }
+        },
+        {
+          "name": "version_order",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "Version Order",
+            "description": "Chronological order"
+          }
+        },
+        {
+          "name": "security_score",
+          "type": "DECIMAL",
+          "notNull": true,
+          "properties": {
+            "displayName": "Security Score",
+            "description": "Security score (0-100)"
+          }
+        },
+        {
+          "name": "is_vulnerable",
+          "type": "BOOLEAN",
+          "notNull": false,
+          "properties": {
+            "displayName": "Is Vulnerable",
+            "description": "Whether this version is vulnerable"
+          }
+        },
+        {
+          "name": "is_deprecated",
+          "type": "BOOLEAN",
+          "notNull": false,
+          "properties": {
+            "displayName": "Is Deprecated",
+            "description": "Whether this version is deprecated"
+          }
+        },
+        {
+          "name": "priority_order",
+          "type": "INTEGER",
+          "notNull": false,
+          "properties": {
+            "displayName": "Priority Order",
+            "description": "Priority order"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "SSL/TLS Version Metadata",
+        "description": "SSL/TLS protocol versions with security scores"
+      }
+    },
+    {
+      "name": "cred_usage_category_metadata",
+      "tableReference": {
+        "table": "cred_usage_category_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Code",
+            "description": "Credential usage category code"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Description",
+            "description": "Human-readable description"
+          }
+        },
+        {
+          "name": "risk_score",
+          "type": "DECIMAL",
+          "notNull": true,
+          "properties": {
+            "displayName": "Risk Score",
+            "description": "Risk score (0-100)"
+          }
+        },
+        {
+          "name": "priority_order",
+          "type": "INTEGER",
+          "notNull": false,
+          "properties": {
+            "displayName": "Priority Order",
+            "description": "Priority order"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Credential Usage Category Metadata",
+        "description": "Credential usage categories with risk scores"
+      }
+    },
+    {
+      "name": "sw_source_metadata",
+      "tableReference": {
+        "table": "sw_source_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Code",
+            "description": "Software source code"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Description",
+            "description": "Human-readable description"
+          }
+        },
+        {
+          "name": "data_source_code",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Data Source Code",
+            "description": "Reference to data source"
+          }
+        },
+        {
+          "name": "is_confident",
+          "type": "BOOLEAN",
+          "notNull": false,
+          "properties": {
+            "displayName": "Is Confident",
+            "description": "Whether this is a confident source"
+          }
+        },
+        {
+          "name": "confidence_score",
+          "type": "DECIMAL",
+          "notNull": false,
+          "properties": {
+            "displayName": "Confidence Score",
+            "description": "Data confidence (0-1)"
+          }
+        },
+        {
+          "name": "priority_order",
+          "type": "INTEGER",
+          "notNull": false,
+          "properties": {
+            "displayName": "Priority Order",
+            "description": "Priority order"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Software Source Metadata",
+        "description": "Software source metadata with confidence scores"
+      }
+    },
+    {
+      "name": "search_tag_metadata",
+      "tableReference": {
+        "table": "search_tag_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Code",
+            "description": "Search tag code"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Description",
+            "description": "Human-readable description"
+          }
+        },
+        {
+          "name": "tag_category",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Tag Category",
+            "description": "Category: password, cve, encryption, certificate"
+          }
+        },
+        {
+          "name": "risk_score",
+          "type": "DECIMAL",
+          "notNull": false,
+          "properties": {
+            "displayName": "Risk Score",
+            "description": "Risk indicator score"
+          }
+        },
+        {
+          "name": "priority_order",
+          "type": "INTEGER",
+          "notNull": false,
+          "properties": {
+            "displayName": "Priority Order",
+            "description": "Priority order"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Search Tag Metadata",
+        "description": "Search tags with risk scores"
+      }
+    },
+    {
+      "name": "likelihood_vuln_attributes_metadata",
+      "tableReference": {
+        "table": "likelihood_vuln_attributes_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Code",
+            "description": "Attribute code"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Description",
+            "description": "Human-readable description"
+          }
+        },
+        {
+          "name": "attribute_type",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Attribute Type",
+            "description": "Type: exploitability, exposure, impact, mitigation"
+          }
+        },
+        {
+          "name": "weight",
+          "type": "DECIMAL",
+          "notNull": false,
+          "properties": {
+            "displayName": "Weight",
+            "description": "Weight in likelihood calculation"
+          }
+        },
+        {
+          "name": "priority_order",
+          "type": "INTEGER",
+          "notNull": false,
+          "properties": {
+            "displayName": "Priority Order",
+            "description": "Priority order"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Likelihood Vulnerability Attributes Metadata",
+        "description": "Likelihood vulnerability attributes with weights"
+      }
+    },
+    {
+      "name": "cpe_metadata",
+      "tableReference": {
+        "table": "cpe_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "enum_type",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Enum Type",
+            "description": "Type: portion, version_range_specifier"
+          }
+        },
+        {
+          "name": "code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Code",
+            "description": "CPE code"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Description",
+            "description": "Human-readable description"
+          }
+        },
+        {
+          "name": "portion_order",
+          "type": "INTEGER",
+          "notNull": false,
+          "properties": {
+            "displayName": "Portion Order",
+            "description": "Order in CPE string"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "CPE Metadata",
+        "description": "CPE portion and version range specifiers"
+      }
+    },
+    {
+      "name": "cloud_connector_vuln_metadata",
+      "tableReference": {
+        "table": "cloud_connector_vuln_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Code",
+            "description": "Cloud vulnerability code"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Description",
+            "description": "Human-readable description"
+          }
+        },
+        {
+          "name": "cloud_service",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Cloud Service",
+            "description": "Service: EC2, S3, VPC, IAM"
+          }
+        },
+        {
+          "name": "vulnerability_category",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Vulnerability Category",
+            "description": "Category: encryption, access, logging, network"
+          }
+        },
+        {
+          "name": "risk_score",
+          "type": "DECIMAL",
+          "notNull": true,
+          "properties": {
+            "displayName": "Risk Score",
+            "description": "Risk score (0-100)"
+          }
+        },
+        {
+          "name": "remediation_priority",
+          "type": "INTEGER",
+          "notNull": false,
+          "properties": {
+            "displayName": "Remediation Priority",
+            "description": "1 = highest priority"
+          }
+        },
+        {
+          "name": "compliance_impact",
+          "type": "BOOLEAN",
+          "notNull": false,
+          "properties": {
+            "displayName": "Compliance Impact",
+            "description": "Whether this affects compliance"
+          }
+        },
+        {
+          "name": "weight",
+          "type": "DECIMAL",
+          "notNull": false,
+          "properties": {
+            "displayName": "Weight",
+            "description": "Weight for calculations"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Cloud Connector Vulnerability Metadata",
+        "description": "Cloud connector vulnerability metadata with risk scores and compliance impact flags"
+      }
+    },
+    {
+      "name": "cvss_metadata",
+      "tableReference": {
+        "table": "cvss_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "cvss_version",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "CVSS Version",
+            "description": "Version: v2 or v3"
+          }
+        },
+        {
+          "name": "metric_type",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Metric Type",
+            "description": "Type: base_metric, access_vector, access_complexity, etc."
+          }
+        },
+        {
+          "name": "code",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Code",
+            "description": "CVSS code"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Description",
+            "description": "Human-readable description"
+          }
+        },
+        {
+          "name": "numeric_value",
+          "type": "INTEGER",
+          "notNull": false,
+          "properties": {
+            "displayName": "Numeric Value",
+            "description": "Numeric value for calculations"
+          }
+        },
+        {
+          "name": "weight",
+          "type": "DECIMAL",
+          "notNull": false,
+          "properties": {
+            "displayName": "Weight",
+            "description": "Weight for calculations"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "CVSS Metadata",
+        "description": "CVSS v2 and v3 metadata with numeric values and weights"
+      }
+    },
+    {
+      "name": "int_strength_level_metadata",
+      "tableReference": {
+        "table": "int_strength_level_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "ID",
+            "description": "Primary key identifier"
+          }
+        },
+        {
+          "name": "enum_type",
+          "type": "VARCHAR",
+          "notNull": true,
+          "properties": {
+            "displayName": "Enum Type",
+            "description": "Type: credential, cipher, certificate, encryption"
+          }
+        },
+        {
+          "name": "code",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "Code",
+            "description": "Integer strength level code"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "notNull": false,
+          "properties": {
+            "displayName": "Description",
+            "description": "Human-readable description"
+          }
+        },
+        {
+          "name": "strength_order",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "Strength Order",
+            "description": "Strength order"
+          }
+        },
+        {
+          "name": "numeric_score",
+          "type": "DECIMAL",
+          "notNull": true,
+          "properties": {
+            "displayName": "Numeric Score",
+            "description": "Numeric strength score"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "properties": {
+            "displayName": "Created At",
+            "description": "Timestamp when record was created"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Integer Strength Level Metadata",
+        "description": "Integer-based strength level metadata for credentials, ciphers, certificates, and encryption"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "name": "asset_type_subtype_to_canonical",
+      "models": ["asset_type_subtype_map", "asset_classification_metadata"],
+      "joinType": "MANY_TO_ONE",
+      "condition": "asset_type_subtype_map.canonical_type_code = asset_classification_metadata.code AND asset_classification_metadata.classification_type = 'canonical_type'",
+      "properties": {
+        "displayName": "Asset Type Subtype to Canonical Type",
+        "description": "Relationship from asset type-subtype map to canonical device type"
+      }
+    },
+    {
+      "name": "asset_type_subtype_to_subtype",
+      "models": ["asset_type_subtype_map", "asset_classification_metadata"],
+      "joinType": "MANY_TO_ONE",
+      "condition": "asset_type_subtype_map.device_subtype_code = asset_classification_metadata.code AND asset_classification_metadata.classification_type = 'subtype'",
+      "properties": {
+        "displayName": "Asset Type Subtype to Device Subtype",
+        "description": "Relationship from asset type-subtype map to device subtype"
+      }
+    },
+    {
+      "name": "asset_subtype_platform_to_subtype",
+      "models": ["asset_subtype_platform_map", "asset_classification_metadata"],
+      "joinType": "MANY_TO_ONE",
+      "condition": "asset_subtype_platform_map.device_subtype_code = asset_classification_metadata.code AND asset_classification_metadata.classification_type = 'subtype'",
+      "properties": {
+        "displayName": "Asset Subtype Platform to Device Subtype",
+        "description": "Relationship from asset subtype-platform map to device subtype"
+      }
+    },
+    {
+      "name": "asset_subtype_platform_to_platform",
+      "models": ["asset_subtype_platform_map", "asset_classification_metadata"],
+      "joinType": "MANY_TO_ONE",
+      "condition": "asset_subtype_platform_map.platform_code = asset_classification_metadata.code AND asset_classification_metadata.classification_type = 'platform'",
+      "properties": {
+        "displayName": "Asset Subtype Platform to Platform",
+        "description": "Relationship from asset subtype-platform map to platform"
+      }
+    },
+    {
+      "name": "sw_source_to_data_source",
+      "models": ["sw_source_metadata", "data_source_metadata"],
+      "joinType": "MANY_TO_ONE",
+      "condition": "sw_source_metadata.data_source_code = data_source_metadata.code",
+      "properties": {
+        "displayName": "Software Source to Data Source",
+        "description": "Relationship from software source to data source"
+      }
+    }
+  ],
+  "enumDefinitions": [
+    {
+      "name": "RiskLevelEnum",
+      "values": [
+        {
+          "name": "CRITICAL",
+          "value": "CRITICAL",
+          "properties": {
+            "description": "Critical Risk",
+            "priority_order": "1",
+            "numeric_score": "100.0",
+            "severity_level": "10",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "HIGH",
+          "value": "HIGH",
+          "properties": {
+            "description": "High Risk",
+            "priority_order": "2",
+            "numeric_score": "75.0",
+            "severity_level": "8",
+            "weight": "0.75"
+          }
+        },
+        {
+          "name": "MEDIUM",
+          "value": "MEDIUM",
+          "properties": {
+            "description": "Medium Risk",
+            "priority_order": "3",
+            "numeric_score": "50.0",
+            "severity_level": "5",
+            "weight": "0.5"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Risk Level",
+        "description": "Risk issue severity levels"
+      }
+    },
+    {
+      "name": "ImpactClassEnum",
+      "values": [
+        {
+          "name": "MissionCritical",
+          "value": "Mission Critical",
+          "properties": {
+            "description": "Mission Critical Impact",
+            "priority_order": "1",
+            "numeric_score": "100.0",
+            "severity_level": "10",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "Critical",
+          "value": "Critical",
+          "properties": {
+            "description": "Critical Impact",
+            "priority_order": "2",
+            "numeric_score": "70.0",
+            "severity_level": "7",
+            "weight": "0.7"
+          }
+        },
+        {
+          "name": "Other",
+          "value": "Other",
+          "properties": {
+            "description": "Other Impact",
+            "priority_order": "3",
+            "numeric_score": "30.0",
+            "severity_level": "3",
+            "weight": "0.3"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Impact Class",
+        "description": "Impact classification levels for assets"
+      }
+    },
+    {
+      "name": "PropagationClassEnum",
+      "values": [
+        {
+          "name": "Perimeter",
+          "value": "Perimeter",
+          "properties": {
+            "description": "Perimeter Network",
+            "priority_order": "1",
+            "numeric_score": "80.0",
+            "severity_level": "8",
+            "weight": "0.8"
+          }
+        },
+        {
+          "name": "Core",
+          "value": "Core",
+          "properties": {
+            "description": "Core Network",
+            "priority_order": "2",
+            "numeric_score": "60.0",
+            "severity_level": "6",
+            "weight": "0.6"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Propagation Class",
+        "description": "Network topology classification"
+      }
+    },
+    {
+      "name": "VulnLevelEnum",
+      "values": [
+        {
+          "name": "CRITICAL",
+          "value": "CRITICAL",
+          "properties": {
+            "description": "Critical Vulnerability",
+            "priority_order": "1",
+            "numeric_score": "100.0",
+            "severity_level": "10",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "HIGH",
+          "value": "HIGH",
+          "properties": {
+            "description": "High Vulnerability",
+            "priority_order": "2",
+            "numeric_score": "75.0",
+            "severity_level": "8",
+            "weight": "0.75"
+          }
+        },
+        {
+          "name": "MEDIUM",
+          "value": "MEDIUM",
+          "properties": {
+            "description": "Medium Vulnerability",
+            "priority_order": "3",
+            "numeric_score": "50.0",
+            "severity_level": "5",
+            "weight": "0.5"
+          }
+        },
+        {
+          "name": "LOW",
+          "value": "LOW",
+          "properties": {
+            "description": "Low Vulnerability",
+            "priority_order": "4",
+            "numeric_score": "25.0",
+            "severity_level": "2",
+            "weight": "0.25"
+          }
+        },
+        {
+          "name": "NONE",
+          "value": "NONE",
+          "properties": {
+            "description": "No Vulnerability",
+            "priority_order": "5",
+            "numeric_score": "0.0",
+            "severity_level": "0",
+            "weight": "0.0"
+          }
+        },
+        {
+          "name": "UNKNOWN",
+          "value": "UNKNOWN",
+          "properties": {
+            "description": "Unknown Vulnerability",
+            "priority_order": "6",
+            "numeric_score": "10.0",
+            "severity_level": "1",
+            "weight": "0.1"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Vulnerability Level",
+        "description": "Vulnerability severity levels"
+      }
+    },
+    {
+      "name": "BreachMethodEnum",
+      "values": [
+        {
+          "name": "ZeroDay",
+          "value": "zero_day",
+          "properties": {
+            "description": "Zero Day",
+            "prefix": "zd",
+            "priority_order": "1",
+            "risk_score": "95.0",
+            "exploitability_score": "90.0",
+            "impact_score": "95.0",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "UnpatchedVulnerability",
+          "value": "unpatched_vulnerability",
+          "properties": {
+            "description": "Unpatched Vulnerability",
+            "prefix": "uv",
+            "priority_order": "2",
+            "risk_score": "85.0",
+            "exploitability_score": "75.0",
+            "impact_score": "85.0",
+            "weight": "0.9"
+          }
+        },
+        {
+          "name": "CompromisedCredentials",
+          "value": "compromised_credentials",
+          "properties": {
+            "description": "Compromised Credentials",
+            "prefix": "cc",
+            "priority_order": "3",
+            "risk_score": "90.0",
+            "exploitability_score": "85.0",
+            "impact_score": "80.0",
+            "weight": "0.95"
+          }
+        },
+        {
+          "name": "MaliciousInsider",
+          "value": "malicious_insider",
+          "properties": {
+            "description": "Malicious Insider",
+            "prefix": "mi",
+            "priority_order": "4",
+            "risk_score": "95.0",
+            "exploitability_score": "95.0",
+            "impact_score": "90.0",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "TrustRelationship",
+          "value": "trust_relationship",
+          "properties": {
+            "description": "Trust Relationship",
+            "prefix": "tr",
+            "priority_order": "5",
+            "risk_score": "75.0",
+            "exploitability_score": "70.0",
+            "impact_score": "75.0",
+            "weight": "0.8"
+          }
+        },
+        {
+          "name": "Misconfiguration",
+          "value": "misconfiguration",
+          "properties": {
+            "description": "Misconfiguration",
+            "prefix": "misconfig",
+            "priority_order": "6",
+            "risk_score": "70.0",
+            "exploitability_score": "65.0",
+            "impact_score": "70.0",
+            "weight": "0.75"
+          }
+        },
+        {
+          "name": "Phishing",
+          "value": "phishing",
+          "properties": {
+            "description": "Phishing",
+            "prefix": "phish",
+            "priority_order": "7",
+            "risk_score": "80.0",
+            "exploitability_score": "75.0",
+            "impact_score": "70.0",
+            "weight": "0.85"
+          }
+        },
+        {
+          "name": "CredentialVulnerability",
+          "value": "credential_vulnerability",
+          "properties": {
+            "description": "Credential Vulnerability",
+            "prefix": "creds",
+            "priority_order": "8",
+            "risk_score": "75.0",
+            "exploitability_score": "70.0",
+            "impact_score": "70.0",
+            "weight": "0.8"
+          }
+        },
+        {
+          "name": "LostStolenCredentials",
+          "value": "lost_stolen_credentials",
+          "properties": {
+            "description": "Lost Stolen Credentials",
+            "prefix": "lsc",
+            "priority_order": "9",
+            "risk_score": "70.0",
+            "exploitability_score": "65.0",
+            "impact_score": "65.0",
+            "weight": "0.75"
+          }
+        },
+        {
+          "name": "WeakCredentials",
+          "value": "weak_credentials",
+          "properties": {
+            "description": "Weak Credentials",
+            "prefix": "wp",
+            "priority_order": "10",
+            "risk_score": "60.0",
+            "exploitability_score": "55.0",
+            "impact_score": "60.0",
+            "weight": "0.65"
+          }
+        },
+        {
+          "name": "ManInTheMiddle",
+          "value": "man_in_the_middle",
+          "properties": {
+            "description": "Man in the Middle",
+            "prefix": "mitm",
+            "priority_order": "11",
+            "risk_score": "65.0",
+            "exploitability_score": "60.0",
+            "impact_score": "65.0",
+            "weight": "0.7"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Breach Method",
+        "description": "Breach methods with risk, exploitability, and impact scores"
+      }
+    },
+    {
+      "name": "SecurityStrengthEnum",
+      "values": [
+        {
+          "name": "WEAK",
+          "value": "WEAK",
+          "properties": {
+            "description": "Weak",
+            "strength_order": "1",
+            "numeric_score": "20.0",
+            "security_level": "1",
+            "weight": "0.2"
+          }
+        },
+        {
+          "name": "MODERATE",
+          "value": "MODERATE",
+          "properties": {
+            "description": "Moderate",
+            "strength_order": "2",
+            "numeric_score": "50.0",
+            "security_level": "3",
+            "weight": "0.5"
+          }
+        },
+        {
+          "name": "STRONG",
+          "value": "STRONG",
+          "properties": {
+            "description": "Strong",
+            "strength_order": "3",
+            "numeric_score": "100.0",
+            "security_level": "5",
+            "weight": "1.0"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Security Strength",
+        "description": "Security strength levels (certificate, cipher, encryption, credential)"
+      }
+    },
+    {
+      "name": "CredentialStrengthEnum",
+      "values": [
+        {
+          "name": "EMPTY",
+          "value": "EMPTY",
+          "properties": {
+            "description": "Empty Password",
+            "strength_order": "0",
+            "numeric_score": "0.0",
+            "security_level": "0",
+            "weight": "0.0"
+          }
+        },
+        {
+          "name": "DEFAULT",
+          "value": "DEFAULT",
+          "properties": {
+            "description": "Default Password",
+            "strength_order": "1",
+            "numeric_score": "10.0",
+            "security_level": "1",
+            "weight": "0.1"
+          }
+        },
+        {
+          "name": "WEAK",
+          "value": "WEAK",
+          "properties": {
+            "description": "Weak Password",
+            "strength_order": "2",
+            "numeric_score": "30.0",
+            "security_level": "2",
+            "weight": "0.3"
+          }
+        },
+        {
+          "name": "MODERATE",
+          "value": "MODERATE",
+          "properties": {
+            "description": "Moderate Password",
+            "strength_order": "3",
+            "numeric_score": "60.0",
+            "security_level": "3",
+            "weight": "0.6"
+          }
+        },
+        {
+          "name": "STRONG",
+          "value": "STRONG",
+          "properties": {
+            "description": "Strong Password",
+            "strength_order": "4",
+            "numeric_score": "100.0",
+            "security_level": "5",
+            "weight": "1.0"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Credential Strength",
+        "description": "Credential/password strength levels"
+      }
+    },
+    {
+      "name": "AssetOSTypeEnum",
+      "values": [
+        {
+          "name": "Windows",
+          "value": "Windows",
+          "properties": {
+            "description": "Windows",
+            "priority_order": "1",
+            "risk_weight": "1.0",
+            "criticality_score": "80.0"
+          }
+        },
+        {
+          "name": "LinuxUnix",
+          "value": "Linux/Unix",
+          "properties": {
+            "description": "Linux/Unix",
+            "priority_order": "2",
+            "risk_weight": "0.9",
+            "criticality_score": "75.0"
+          }
+        },
+        {
+          "name": "OSX",
+          "value": "OSX",
+          "properties": {
+            "description": "macOS",
+            "priority_order": "3",
+            "risk_weight": "0.8",
+            "criticality_score": "70.0"
+          }
+        },
+        {
+          "name": "iOS",
+          "value": "iOS",
+          "properties": {
+            "description": "iOS",
+            "priority_order": "4",
+            "risk_weight": "0.7",
+            "criticality_score": "65.0"
+          }
+        },
+        {
+          "name": "Android",
+          "value": "Android",
+          "properties": {
+            "description": "Android",
+            "priority_order": "5",
+            "risk_weight": "0.7",
+            "criticality_score": "65.0"
+          }
+        },
+        {
+          "name": "CiscoIOS",
+          "value": "Cisco IOS",
+          "properties": {
+            "description": "Cisco IOS",
+            "priority_order": "6",
+            "risk_weight": "0.9",
+            "criticality_score": "75.0"
+          }
+        },
+        {
+          "name": "Panos",
+          "value": "Panos",
+          "properties": {
+            "description": "Panos",
+            "priority_order": "7",
+            "risk_weight": "0.9",
+            "criticality_score": "75.0"
+          }
+        },
+        {
+          "name": "ChromeOS",
+          "value": "ChromeOS",
+          "properties": {
+            "description": "ChromeOS",
+            "priority_order": "8",
+            "risk_weight": "0.6",
+            "criticality_score": "60.0"
+          }
+        },
+        {
+          "name": "Embedded",
+          "value": "Embedded",
+          "properties": {
+            "description": "Embedded",
+            "priority_order": "9",
+            "risk_weight": "0.5",
+            "criticality_score": "50.0"
+          }
+        },
+        {
+          "name": "Junos",
+          "value": "Junos",
+          "properties": {
+            "description": "Junos",
+            "priority_order": "10",
+            "risk_weight": "0.8",
+            "criticality_score": "70.0"
+          }
+        },
+        {
+          "name": "OtherMobileOS",
+          "value": "Other Mobile OS",
+          "properties": {
+            "description": "Other Mobile OS",
+            "priority_order": "11",
+            "risk_weight": "0.5",
+            "criticality_score": "50.0"
+          }
+        },
+        {
+          "name": "TvOS",
+          "value": "tvOS",
+          "properties": {
+            "description": "tvOS",
+            "priority_order": "12",
+            "risk_weight": "0.4",
+            "criticality_score": "40.0"
+          }
+        },
+        {
+          "name": "Unknown",
+          "value": "Unknown",
+          "properties": {
+            "description": "Unknown",
+            "priority_order": "13",
+            "risk_weight": "0.3",
+            "criticality_score": "30.0"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Asset OS Type",
+        "description": "Operating system types for assets"
+      }
+    },
+    {
+      "name": "AssetCanonicalDeviceTypeEnum",
+      "values": [
+        {
+          "name": "Servers",
+          "value": "Servers",
+          "properties": {
+            "description": "Servers",
+            "priority_order": "1",
+            "risk_weight": "1.0",
+            "criticality_score": "90.0"
+          }
+        },
+        {
+          "name": "NetworkingAssets",
+          "value": "Networking Assets",
+          "properties": {
+            "description": "Networking Assets",
+            "priority_order": "2",
+            "risk_weight": "0.95",
+            "criticality_score": "85.0"
+          }
+        },
+        {
+          "name": "StorageAssets",
+          "value": "Storage Assets",
+          "properties": {
+            "description": "Storage Assets",
+            "priority_order": "3",
+            "risk_weight": "0.9",
+            "criticality_score": "80.0"
+          }
+        },
+        {
+          "name": "OTAssets",
+          "value": "OT Assets",
+          "properties": {
+            "description": "OT Assets",
+            "priority_order": "4",
+            "risk_weight": "0.95",
+            "criticality_score": "85.0"
+          }
+        },
+        {
+          "name": "Container",
+          "value": "Container",
+          "properties": {
+            "description": "Container",
+            "priority_order": "5",
+            "risk_weight": "0.85",
+            "criticality_score": "75.0"
+          }
+        },
+        {
+          "name": "DesktopsLaptops",
+          "value": "Desktops/Laptops",
+          "properties": {
+            "description": "Desktops/Laptops",
+            "priority_order": "6",
+            "risk_weight": "0.7",
+            "criticality_score": "60.0"
+          }
+        },
+        {
+          "name": "SmartphonesTablets",
+          "value": "Smartphones/Tablets",
+          "properties": {
+            "description": "Smartphones/Tablets",
+            "priority_order": "7",
+            "risk_weight": "0.6",
+            "criticality_score": "50.0"
+          }
+        },
+        {
+          "name": "AVVoIP",
+          "value": "AV/VoIP",
+          "properties": {
+            "description": "AV/VoIP",
+            "priority_order": "8",
+            "risk_weight": "0.5",
+            "criticality_score": "45.0"
+          }
+        },
+        {
+          "name": "IoT",
+          "value": "IoT",
+          "properties": {
+            "description": "IoT",
+            "priority_order": "9",
+            "risk_weight": "0.4",
+            "criticality_score": "40.0"
+          }
+        },
+        {
+          "name": "Other",
+          "value": "Other",
+          "properties": {
+            "description": "Other",
+            "priority_order": "10",
+            "risk_weight": "0.3",
+            "criticality_score": "30.0"
+          }
+        },
+        {
+          "name": "PartiallyCategorized",
+          "value": "Partially Categorized",
+          "properties": {
+            "description": "Partially Categorized",
+            "priority_order": "11",
+            "risk_weight": "0.2",
+            "criticality_score": "20.0"
+          }
+        },
+        {
+          "name": "Unexamined",
+          "value": "Unexamined",
+          "properties": {
+            "description": "Unexamined",
+            "priority_order": "12",
+            "risk_weight": "0.1",
+            "criticality_score": "10.0"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Asset Canonical Device Type",
+        "description": "Canonical device type classifications"
+      }
+    },
+    {
+      "name": "VulnerabilityTypeEnum",
+      "values": [
+        {
+          "name": "Software",
+          "value": "Software",
+          "properties": {
+            "description": "Software Vulnerabilities",
+            "priority_order": "1",
+            "risk_score": "85.0",
+            "remediation_priority": "1",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "Services",
+          "value": "Services",
+          "properties": {
+            "description": "Service Vulnerabilities",
+            "priority_order": "2",
+            "risk_score": "75.0",
+            "remediation_priority": "2",
+            "weight": "0.9"
+          }
+        },
+        {
+          "name": "DataInTransit",
+          "value": "Data In Transit",
+          "properties": {
+            "description": "Data In Transit Vulnerabilities",
+            "priority_order": "3",
+            "risk_score": "70.0",
+            "remediation_priority": "3",
+            "weight": "0.85"
+          }
+        },
+        {
+          "name": "Cloud",
+          "value": "Cloud",
+          "properties": {
+            "description": "Cloud Vulnerabilities",
+            "priority_order": "4",
+            "risk_score": "80.0",
+            "remediation_priority": "2",
+            "weight": "0.95"
+          }
+        },
+        {
+          "name": "General",
+          "value": "General",
+          "properties": {
+            "description": "General Vulnerabilities",
+            "priority_order": "5",
+            "risk_score": "50.0",
+            "remediation_priority": "5",
+            "weight": "0.6"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Vulnerability Type",
+        "description": "High-level vulnerability type classifications"
+      }
+    },
+    {
+      "name": "VulnerabilityStateEnum",
+      "values": [
+        {
+          "name": "ACTIVE",
+          "value": "ACTIVE",
+          "properties": {
+            "description": "Active Vulnerability",
+            "priority_order": "1",
+            "risk_score": "100.0",
+            "remediation_priority": "1",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "ACCEPTED",
+          "value": "ACCEPTED",
+          "properties": {
+            "description": "Accepted Vulnerability",
+            "priority_order": "2",
+            "risk_score": "80.0",
+            "remediation_priority": "3",
+            "weight": "0.8"
+          }
+        },
+        {
+          "name": "MITIGATED",
+          "value": "MITIGATED",
+          "properties": {
+            "description": "Mitigated Vulnerability",
+            "priority_order": "3",
+            "risk_score": "40.0",
+            "remediation_priority": "4",
+            "weight": "0.4"
+          }
+        },
+        {
+          "name": "REMEDIATED",
+          "value": "REMEDIATED",
+          "properties": {
+            "description": "Remediated Vulnerability",
+            "priority_order": "4",
+            "risk_score": "0.0",
+            "remediation_priority": "5",
+            "weight": "0.0"
+          }
+        },
+        {
+          "name": "UNKNOWN",
+          "value": "UNKNOWN",
+          "properties": {
+            "description": "Unknown State",
+            "priority_order": "5",
+            "risk_score": "50.0",
+            "remediation_priority": "2",
+            "weight": "0.5"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Vulnerability State",
+        "description": "Vulnerability states"
+      }
+    },
+    {
+      "name": "RiskIssueStateEnum",
+      "values": [
+        {
+          "name": "ACTIVE",
+          "value": "ACTIVE",
+          "properties": {
+            "description": "Active",
+            "status_order": "1",
+            "is_active": "true",
+            "is_terminal": "false",
+            "priority_order": "1"
+          }
+        },
+        {
+          "name": "ACCEPTED_BY_USER",
+          "value": "ACCEPTED_BY_USER",
+          "properties": {
+            "description": "Accepted by User",
+            "status_order": "2",
+            "is_active": "false",
+            "is_terminal": "false",
+            "priority_order": "3"
+          }
+        },
+        {
+          "name": "ACCEPTED_ML_INFERENCE",
+          "value": "ACCEPTED_ML_INFERENCE",
+          "properties": {
+            "description": "Accepted ML Inference",
+            "status_order": "3",
+            "is_active": "false",
+            "is_terminal": "false",
+            "priority_order": "4"
+          }
+        },
+        {
+          "name": "MITIGATED",
+          "value": "MITIGATED",
+          "properties": {
+            "description": "Mitigated",
+            "status_order": "4",
+            "is_active": "false",
+            "is_terminal": "false",
+            "priority_order": "2"
+          }
+        },
+        {
+          "name": "REMEDIATED",
+          "value": "REMEDIATED",
+          "properties": {
+            "description": "Remediated",
+            "status_order": "5",
+            "is_active": "false",
+            "is_terminal": "true",
+            "priority_order": "5"
+          }
+        },
+        {
+          "name": "ERROR",
+          "value": "ERROR",
+          "properties": {
+            "description": "Error",
+            "status_order": "6",
+            "is_active": "false",
+            "is_terminal": "false",
+            "priority_order": "6"
+          }
+        },
+        {
+          "name": "DROP",
+          "value": "DROP",
+          "properties": {
+            "description": "Drop",
+            "status_order": "7",
+            "is_active": "false",
+            "is_terminal": "true",
+            "priority_order": "7"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Risk Issue State",
+        "description": "Risk issue states"
+      }
+    },
+    {
+      "name": "ProcessStatusEnum",
+      "values": [
+        {
+          "name": "SUCCESS",
+          "value": "SUCCESS",
+          "properties": {
+            "description": "Success",
+            "status_order": "1",
+            "is_active": "true",
+            "is_terminal": "true",
+            "priority_order": "1"
+          }
+        },
+        {
+          "name": "DROPPED",
+          "value": "DROPPED",
+          "properties": {
+            "description": "Dropped",
+            "status_order": "2",
+            "is_active": "false",
+            "is_terminal": "true",
+            "priority_order": "3"
+          }
+        },
+        {
+          "name": "FAILURE",
+          "value": "FAILURE",
+          "properties": {
+            "description": "Failure",
+            "status_order": "3",
+            "is_active": "false",
+            "is_terminal": "true",
+            "priority_order": "2"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Process Status",
+        "description": "Process status values"
+      }
+    },
+    {
+      "name": "DataSourceEnum",
+      "values": [
+        {
+          "name": "AD",
+          "value": "AD",
+          "properties": {
+            "description": "Active Directory",
+            "data_source_type": "sensor",
+            "confidence_score": "0.9",
+            "priority_order": "1"
+          }
+        },
+        {
+          "name": "HA",
+          "value": "HA",
+          "properties": {
+            "description": "HA",
+            "data_source_type": "sensor",
+            "confidence_score": "0.95",
+            "priority_order": "2"
+          }
+        },
+        {
+          "name": "COMPONENT",
+          "value": "COMPONENT",
+          "properties": {
+            "description": "Component",
+            "data_source_type": "sensor",
+            "confidence_score": "0.9",
+            "priority_order": "3"
+          }
+        },
+        {
+          "name": "SNMP",
+          "value": "SNMP",
+          "properties": {
+            "description": "SNMP",
+            "data_source_type": "sensor",
+            "confidence_score": "0.85",
+            "priority_order": "4"
+          }
+        },
+        {
+          "name": "NA",
+          "value": "NA",
+          "properties": {
+            "description": "NA",
+            "data_source_type": "sensor",
+            "confidence_score": "0.8",
+            "priority_order": "5"
+          }
+        },
+        {
+          "name": "TA",
+          "value": "TA",
+          "properties": {
+            "description": "TA",
+            "data_source_type": "sensor",
+            "confidence_score": "0.75",
+            "priority_order": "6"
+          }
+        },
+        {
+          "name": "PROCESSES",
+          "value": "PROCESSES",
+          "properties": {
+            "description": "Processes",
+            "data_source_type": "sensor",
+            "confidence_score": "0.8",
+            "priority_order": "7"
+          }
+        },
+        {
+          "name": "IMPORT",
+          "value": "IMPORT",
+          "properties": {
+            "description": "Import",
+            "data_source_type": "import",
+            "confidence_score": "0.9",
+            "priority_order": "8"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Data Source",
+        "description": "Data source types with confidence scores"
+      }
+    },
+    {
+      "name": "EventTypeEnum",
+      "values": [
+        {
+          "name": "FirstObserved",
+          "value": "first_observed",
+          "properties": {
+            "description": "First Observed",
+            "priority_order": "1"
+          }
+        },
+        {
+          "name": "ThreatChange",
+          "value": "threat_change",
+          "properties": {
+            "description": "Threat Change",
+            "priority_order": "2"
+          }
+        },
+        {
+          "name": "LastObserved",
+          "value": "last_observed",
+          "properties": {
+            "description": "Last Observed",
+            "priority_order": "3"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Event Type",
+        "description": "Event type classifications"
+      }
+    },
+    {
+      "name": "ProductStateEnum",
+      "values": [
+        {
+          "name": "EOL",
+          "value": "EOL",
+          "properties": {
+            "description": "End of Life",
+            "priority_order": "1",
+            "risk_score": "95.0",
+            "maintenance_priority": "1",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "VULNERABLE",
+          "value": "VULNERABLE",
+          "properties": {
+            "description": "Vulnerable",
+            "priority_order": "2",
+            "risk_score": "90.0",
+            "maintenance_priority": "1",
+            "weight": "0.95"
+          }
+        },
+        {
+          "name": "UNPATCHED",
+          "value": "UNPATCHED",
+          "properties": {
+            "description": "Unpatched",
+            "priority_order": "3",
+            "risk_score": "85.0",
+            "maintenance_priority": "1",
+            "weight": "0.9"
+          }
+        },
+        {
+          "name": "UPDATABLE",
+          "value": "UPDATABLE",
+          "properties": {
+            "description": "Updatable",
+            "priority_order": "4",
+            "risk_score": "50.0",
+            "maintenance_priority": "3",
+            "weight": "0.5"
+          }
+        },
+        {
+          "name": "PATCHED",
+          "value": "PATCHED",
+          "properties": {
+            "description": "Patched",
+            "priority_order": "5",
+            "risk_score": "20.0",
+            "maintenance_priority": "5",
+            "weight": "0.2"
+          }
+        },
+        {
+          "name": "UNKNOWN",
+          "value": "UNKNOWN",
+          "properties": {
+            "description": "Unknown",
+            "priority_order": "6",
+            "risk_score": "40.0",
+            "maintenance_priority": "4",
+            "weight": "0.4"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Product State",
+        "description": "Product patch/vulnerability states"
+      }
+    },
+    {
+      "name": "PatchStateEnum",
+      "values": [
+        {
+          "name": "AVAILABLE",
+          "value": "AVAILABLE",
+          "properties": {
+            "description": "Patch Available",
+            "priority_order": "1",
+            "risk_score": "80.0",
+            "maintenance_priority": "1",
+            "weight": "0.9"
+          }
+        },
+        {
+          "name": "PENDING",
+          "value": "PENDING",
+          "properties": {
+            "description": "Patch Pending",
+            "priority_order": "2",
+            "risk_score": "70.0",
+            "maintenance_priority": "2",
+            "weight": "0.8"
+          }
+        },
+        {
+          "name": "REBOOT_PENDING",
+          "value": "REBOOT PENDING",
+          "properties": {
+            "description": "Reboot Pending",
+            "priority_order": "3",
+            "risk_score": "60.0",
+            "maintenance_priority": "2",
+            "weight": "0.7"
+          }
+        },
+        {
+          "name": "INSTALLED",
+          "value": "INSTALLED",
+          "properties": {
+            "description": "Patch Installed",
+            "priority_order": "4",
+            "risk_score": "20.0",
+            "maintenance_priority": "5",
+            "weight": "0.2"
+          }
+        },
+        {
+          "name": "SUPERSEDED",
+          "value": "SUPERSEDED",
+          "properties": {
+            "description": "Patch Superseded",
+            "priority_order": "5",
+            "risk_score": "30.0",
+            "maintenance_priority": "4",
+            "weight": "0.3"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Patch State",
+        "description": "Patch installation states"
+      }
+    },
+    {
+      "name": "SSLTLSVersionEnum",
+      "values": [
+        {
+          "name": "SSLV2",
+          "value": "sslv2",
+          "properties": {
+            "description": "SSL v2.0",
+            "version_order": "1",
+            "security_score": "0.0",
+            "is_vulnerable": "true",
+            "is_deprecated": "true",
+            "priority_order": "1"
+          }
+        },
+        {
+          "name": "SSLV3",
+          "value": "sslv3",
+          "properties": {
+            "description": "SSL v3.0",
+            "version_order": "2",
+            "security_score": "10.0",
+            "is_vulnerable": "true",
+            "is_deprecated": "true",
+            "priority_order": "2"
+          }
+        },
+        {
+          "name": "TLSV1_0",
+          "value": "tlsv0",
+          "properties": {
+            "description": "TLS v1.0",
+            "version_order": "3",
+            "security_score": "30.0",
+            "is_vulnerable": "true",
+            "is_deprecated": "true",
+            "priority_order": "3"
+          }
+        },
+        {
+          "name": "TLSV1_1",
+          "value": "tlsv1",
+          "properties": {
+            "description": "TLS v1.1",
+            "version_order": "4",
+            "security_score": "40.0",
+            "is_vulnerable": "true",
+            "is_deprecated": "true",
+            "priority_order": "4"
+          }
+        },
+        {
+          "name": "TLSV1_2",
+          "value": "tlsv2",
+          "properties": {
+            "description": "TLS v1.2",
+            "version_order": "5",
+            "security_score": "80.0",
+            "is_vulnerable": "false",
+            "is_deprecated": "false",
+            "priority_order": "5"
+          }
+        },
+        {
+          "name": "TLSV1_3",
+          "value": "tlsv3",
+          "properties": {
+            "description": "TLS v1.3",
+            "version_order": "6",
+            "security_score": "100.0",
+            "is_vulnerable": "false",
+            "is_deprecated": "false",
+            "priority_order": "6"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "SSL/TLS Version",
+        "description": "SSL/TLS protocol versions with security scores"
+      }
+    },
+    {
+      "name": "CredUsageCategoryEnum",
+      "values": [
+        {
+          "name": "Intranet",
+          "value": "Intranet",
+          "properties": {
+            "description": "Intranet",
+            "risk_score": "40.0",
+            "priority_order": "1"
+          }
+        },
+        {
+          "name": "InternetWork",
+          "value": "Internet Work",
+          "properties": {
+            "description": "Internet Work",
+            "risk_score": "60.0",
+            "priority_order": "2"
+          }
+        },
+        {
+          "name": "InternetSSO",
+          "value": "Internet SSO",
+          "properties": {
+            "description": "Internet SSO",
+            "risk_score": "70.0",
+            "priority_order": "3"
+          }
+        },
+        {
+          "name": "InternetLeisure",
+          "value": "Internet Leisure",
+          "properties": {
+            "description": "Internet Leisure",
+            "risk_score": "80.0",
+            "priority_order": "4"
+          }
+        },
+        {
+          "name": "Internet",
+          "value": "Internet",
+          "properties": {
+            "description": "Internet",
+            "risk_score": "75.0",
+            "priority_order": "5"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Credential Usage Category",
+        "description": "Credential usage categories with risk scores"
+      }
+    },
+    {
+      "name": "ProductCategoryEnum",
+      "values": [
+        {
+          "name": "OPERATING_SYSTEM",
+          "value": "OPERATING SYSTEM",
+          "properties": {
+            "description": "Operating System",
+            "priority_order": "1",
+            "risk_score": "90.0",
+            "maintenance_priority": "1",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "SECURITY",
+          "value": "SECURITY",
+          "properties": {
+            "description": "Security Software",
+            "priority_order": "2",
+            "risk_score": "85.0",
+            "maintenance_priority": "1",
+            "weight": "0.95"
+          }
+        },
+        {
+          "name": "APPLICATION",
+          "value": "APPLICATION",
+          "properties": {
+            "description": "Application",
+            "priority_order": "3",
+            "risk_score": "70.0",
+            "maintenance_priority": "2",
+            "weight": "0.8"
+          }
+        },
+        {
+          "name": "BROWSER",
+          "value": "BROWSER",
+          "properties": {
+            "description": "Browser",
+            "priority_order": "4",
+            "risk_score": "65.0",
+            "maintenance_priority": "2",
+            "weight": "0.75"
+          }
+        },
+        {
+          "name": "PLUGIN",
+          "value": "PLUGIN",
+          "properties": {
+            "description": "Plugin",
+            "priority_order": "5",
+            "risk_score": "60.0",
+            "maintenance_priority": "3",
+            "weight": "0.7"
+          }
+        },
+        {
+          "name": "HARDWARE",
+          "value": "HARDWARE",
+          "properties": {
+            "description": "Hardware",
+            "priority_order": "6",
+            "risk_score": "50.0",
+            "maintenance_priority": "4",
+            "weight": "0.6"
+          }
+        },
+        {
+          "name": "UNKNOWN",
+          "value": "UNKNOWN",
+          "properties": {
+            "description": "Unknown",
+            "priority_order": "7",
+            "risk_score": "30.0",
+            "maintenance_priority": "5",
+            "weight": "0.3"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Product Category",
+        "description": "Product categories for software"
+      }
+    },
+    {
+      "name": "OSEnum",
+      "values": [
+        {
+          "name": "WINDOWS",
+          "value": "WINDOWS",
+          "properties": {
+            "description": "Windows",
+            "priority_order": "1",
+            "risk_score": "85.0",
+            "maintenance_priority": "1",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "LINUX",
+          "value": "LINUX",
+          "properties": {
+            "description": "Linux",
+            "priority_order": "2",
+            "risk_score": "80.0",
+            "maintenance_priority": "1",
+            "weight": "0.95"
+          }
+        },
+        {
+          "name": "MAC",
+          "value": "MAC",
+          "properties": {
+            "description": "macOS",
+            "priority_order": "3",
+            "risk_score": "75.0",
+            "maintenance_priority": "2",
+            "weight": "0.9"
+          }
+        },
+        {
+          "name": "UNKNOWN",
+          "value": "UNKNOWN",
+          "properties": {
+            "description": "Unknown",
+            "priority_order": "4",
+            "risk_score": "30.0",
+            "maintenance_priority": "5",
+            "weight": "0.3"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Operating System",
+        "description": "Operating system types"
+      }
+    },
+    {
+      "name": "PipelineModuleEnum",
+      "values": [
+        {
+          "name": "ALL_DATA",
+          "value": "ALL_DATA",
+          "properties": {
+            "description": "All Data",
+            "priority_order": "1",
+            "execution_order": "0",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "DATA_INTERPRETER",
+          "value": "DATA_INTERPRETER",
+          "properties": {
+            "description": "Data Interpreter",
+            "priority_order": "2",
+            "execution_order": "1",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "TAGGER",
+          "value": "TAGGER",
+          "properties": {
+            "description": "Tagger",
+            "priority_order": "3",
+            "execution_order": "2",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "VULS_TAGGER",
+          "value": "VULS_TAGGER",
+          "properties": {
+            "description": "Vulnerabilities Tagger",
+            "priority_order": "4",
+            "execution_order": "3",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "FEATURIZATION",
+          "value": "FEATURIZATION",
+          "properties": {
+            "description": "Featurization",
+            "priority_order": "5",
+            "execution_order": "4",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "CATEGORIZATION",
+          "value": "CATEGORIZATION",
+          "properties": {
+            "description": "Categorization",
+            "priority_order": "6",
+            "execution_order": "5",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "CATEGORIZER",
+          "value": "CATEGORIZER",
+          "properties": {
+            "description": "Categorizer",
+            "priority_order": "7",
+            "execution_order": "6",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "EXPERT_SYSTEM",
+          "value": "EXPERT_SYSTEM",
+          "properties": {
+            "description": "Expert System",
+            "priority_order": "8",
+            "execution_order": "7",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "LIKELIHOOD",
+          "value": "LIKELIHOOD",
+          "properties": {
+            "description": "Likelihood",
+            "priority_order": "9",
+            "execution_order": "8",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "IMPACT_ALLOCATOR",
+          "value": "IMPACT_ALLOCATOR",
+          "properties": {
+            "description": "Impact Allocator",
+            "priority_order": "10",
+            "execution_order": "9",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "MTTP",
+          "value": "MTTP",
+          "properties": {
+            "description": "MTTP",
+            "priority_order": "11",
+            "execution_order": "10",
+            "weight": "1.0"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Pipeline Module",
+        "description": "ML pipeline modules"
+      }
+    },
+    {
+      "name": "AdminRoleEnum",
+      "values": [
+        {
+          "name": "NW_ADMIN",
+          "value": "NW-ADMIN",
+          "properties": {
+            "description": "Network Admin",
+            "role_category": "admin",
+            "is_admin_role": "true",
+            "is_proxy_role": "false",
+            "criticality_score": "95.0",
+            "risk_weight": "1.0"
+          }
+        },
+        {
+          "name": "WIN_ADMIN",
+          "value": "WIN-ADMIN",
+          "properties": {
+            "description": "Windows Admin",
+            "role_category": "admin",
+            "is_admin_role": "true",
+            "is_proxy_role": "false",
+            "criticality_score": "95.0",
+            "risk_weight": "1.0"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Admin Role",
+        "description": "Administrative roles with high criticality"
+      }
+    },
+    {
+      "name": "ProjectStatusEnum",
+      "values": [
+        {
+          "name": "CREATING",
+          "value": "CREATING",
+          "properties": {
+            "description": "Creating",
+            "status_order": "1",
+            "is_active": "true",
+            "is_terminal": "false",
+            "priority_order": "1"
+          }
+        },
+        {
+          "name": "ON_TRACK",
+          "value": "ON TRACK",
+          "properties": {
+            "description": "On Track",
+            "status_order": "2",
+            "is_active": "true",
+            "is_terminal": "false",
+            "priority_order": "2"
+          }
+        },
+        {
+          "name": "WARNING",
+          "value": "WARNING",
+          "properties": {
+            "description": "Warning",
+            "status_order": "3",
+            "is_active": "true",
+            "is_terminal": "false",
+            "priority_order": "3"
+          }
+        },
+        {
+          "name": "PAST_DUE",
+          "value": "PAST DUE",
+          "properties": {
+            "description": "Past Due",
+            "status_order": "4",
+            "is_active": "true",
+            "is_terminal": "false",
+            "priority_order": "4"
+          }
+        },
+        {
+          "name": "COMPLETED",
+          "value": "COMPLETED",
+          "properties": {
+            "description": "Completed",
+            "status_order": "5",
+            "is_active": "false",
+            "is_terminal": "true",
+            "priority_order": "5"
+          }
+        },
+        {
+          "name": "DELETING",
+          "value": "DELETING",
+          "properties": {
+            "description": "Deleting",
+            "status_order": "6",
+            "is_active": "false",
+            "is_terminal": "false",
+            "priority_order": "6"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Project Status",
+        "description": "Project status values"
+      }
+    },
+    {
+      "name": "OpsMetricsEnum",
+      "values": [
+        {
+          "name": "TTR_DAYS",
+          "value": "TTR_DAYS",
+          "properties": {
+            "description": "Time to Remediate (Days)",
+            "metric_type": "ttr",
+            "priority_order": "1",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "MTTR_DAYS",
+          "value": "MTTR_DAYS",
+          "properties": {
+            "description": "Mean Time to Remediate (Days)",
+            "metric_type": "mttr",
+            "priority_order": "2",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "MTTR_CRITICAL_THREAT_DAYS",
+          "value": "MTTR_CRITICAL_THREAT_DAYS",
+          "properties": {
+            "description": "MTTR Critical Threat (Days)",
+            "metric_type": "mttr_threat",
+            "priority_order": "3",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "MTTR_HIGH_THREAT_DAYS",
+          "value": "MTTR_HIGH_THREAT_DAYS",
+          "properties": {
+            "description": "MTTR High Threat (Days)",
+            "metric_type": "mttr_threat",
+            "priority_order": "4",
+            "weight": "0.8"
+          }
+        },
+        {
+          "name": "MTTR_CRITICAL_SEVERITY_DAYS",
+          "value": "MTTR_CRITICAL_SEVERITY_DAYS",
+          "properties": {
+            "description": "MTTR Critical Severity (Days)",
+            "metric_type": "mttr_severity",
+            "priority_order": "5",
+            "weight": "1.0"
+          }
+        },
+        {
+          "name": "MTTR_HIGH_SEVERITY_DAYS",
+          "value": "MTTR_HIGH_SEVERITY_DAYS",
+          "properties": {
+            "description": "MTTR High Severity (Days)",
+            "metric_type": "mttr_severity",
+            "priority_order": "6",
+            "weight": "0.8"
+          }
+        }
+      ],
+      "properties": {
+        "displayName": "Operations Metrics",
+        "description": "Operations metrics types"
+      }
+    }
+  ],
+  "properties": {
+    "displayName": "Enum Metadata Schema",
+    "description": "MDL schema for enum metadata tables used in risk, impact, and breach parameter calculations",
+    "version": "1.0.0",
+    "created_at": "2024-01-01T00:00:00Z"
+  }
+}
+

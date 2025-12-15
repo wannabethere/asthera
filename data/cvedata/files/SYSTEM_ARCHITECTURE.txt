@@ -1,0 +1,364 @@
+═══════════════════════════════════════════════════════════════════════════════
+    VULNERABILITY ANALYTICS KNOWLEDGE GRAPH SYSTEM - ARCHITECTURE
+═══════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          PHASE 1: BUILD KNOWLEDGE GRAPH                     │
+│                              (One-Time Setup)                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+INPUT: JSON Schema Files
+┌─────────────────────────────────────┐
+│  schemas/                           │
+│  ├─ assets_schema.json              │
+│  ├─ vulnerability_instances.json    │
+│  ├─ software_instances.json         │
+│  └─ function_definitions.json       │
+└─────────────────────────────────────┘
+            │
+            ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         kg_builder.py (42 KB)                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Step 1: Load Entity Schemas                                               │
+│  ┌────────────────────────────────────────────────────────────┐            │
+│  │ • Parse JSON schema files                                  │            │
+│  │ • Extract entity attributes (50+ per entity)               │            │
+│  │ • Categorize into groups:                                  │            │
+│  │   - Identifiers (nuid, dev_id, keys)                       │            │
+│  │   - Scores (risk, CVSS, GTM)                               │            │
+│  │   - CVSS Components (AV, AC, PR, UI, C, I, A)              │            │
+│  │   - Temporal (dates, dwell time, age)                      │            │
+│  │   - Network (IP, propagation, bastion)                     │            │
+│  │   - Configuration (SMB, secure boot, policies)             │            │
+│  └────────────────────────────────────────────────────────────┘            │
+│                                                                             │
+│  Step 2: Load Function Definitions                                         │
+│  ┌────────────────────────────────────────────────────────────┐            │
+│  │ • Parse function metadata                                  │            │
+│  │ • Extract parameters and return types                      │            │
+│  │ • Map parameters to entity attributes                      │            │
+│  │ • Example: calculate_exploitability_score needs:           │            │
+│  │   Vulnerability.attack_vector,                             │            │
+│  │   Vulnerability.attack_complexity,                         │            │
+│  │   Vulnerability.privileges_required,                       │            │
+│  │   Vulnerability.user_interaction                           │            │
+│  └────────────────────────────────────────────────────────────┘            │
+│                                                                             │
+│  Step 3: Discover Calculation Paths (AUTOMATIC)                            │
+│  ┌────────────────────────────────────────────────────────────┐            │
+│  │ For each function:                                         │            │
+│  │   For each entity:                                         │            │
+│  │     If entity has all required attributes:                 │            │
+│  │       Create CalculationPath:                              │            │
+│  │         • Source: Entity                                   │            │
+│  │         • Target: Function                                 │            │
+│  │         • Parameters: Attribute mappings                   │            │
+│  │         • Output: Calculated value                         │            │
+│  │                                                            │            │
+│  │ Example discovered paths:                                  │            │
+│  │ • Vulnerability → Exploitability Score                     │            │
+│  │ • Vulnerability → Impact Score                             │            │
+│  │ • Vulnerability → Breach Method Likelihoods                │            │
+│  │ • Asset → Comprehensive Risk (composite)                   │            │
+│  └────────────────────────────────────────────────────────────┘            │
+│                                                                             │
+│  Step 4: Build Attribute Dependencies                                      │
+│  ┌────────────────────────────────────────────────────────────┐            │
+│  │ For each attribute:                                        │            │
+│  │   • Track which functions it enables                       │            │
+│  │   • Track which calculations it enables                    │            │
+│  │   • Track what it depends on                               │            │
+│  │                                                            │            │
+│  │ Example: Vulnerability.attack_vector enables:              │            │
+│  │   - calculate_exploitability_score()                       │            │
+│  │   - Comprehensive risk calculation                         │            │
+│  └────────────────────────────────────────────────────────────┘            │
+│                                                                             │
+│  Step 5: Store in ChromaDB                                                 │
+│  ┌────────────────────────────────────────────────────────────┐            │
+│  │ • Convert to natural language documents                    │            │
+│  │ • Generate embeddings (semantic vectors)                   │            │
+│  │ • Store in 4 collections                                   │            │
+│  └────────────────────────────────────────────────────────────┘            │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+            │
+            ↓
+OUTPUT: Knowledge Graph in ChromaDB
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  chromadb_kg/                                                               │
+│  ├─ kg_entity_schemas/              (3 entities × 50+ attributes)          │
+│  ├─ kg_calculation_paths/           (10+ automatic paths)                  │
+│  ├─ kg_function_definitions/        (5 SQL functions)                      │
+│  └─ kg_attribute_dependencies/      (50+ dependencies)                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      PHASE 2: QUERY WITH AGENT (Runtime)                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+INPUT: Natural Language Query
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  "Which Mission Critical assets have CRITICAL vulnerabilities with         │
+│   Network attack vectors in the last 30 days?"                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+            │
+            ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        kg_query_agent.py (34 KB)                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Step 1: Parse Query Intent                                                │
+│  ┌────────────────────────────────────────────────────────────┐            │
+│  │ Query: "Which Mission Critical assets have CRITICAL..."    │            │
+│  │                                                            │            │
+│  │ Detected:                                                  │            │
+│  │ • Intent Type: vulnerability_assessment                    │            │
+│  │ • Primary Entity: Asset                                    │            │
+│  │ • Filters:                                                 │            │
+│  │   - severity = 'CRITICAL'                                  │            │
+│  │   - impact_class = 'Mission Critical'                      │            │
+│  │   - attack_vector = 'N' (Network)                          │            │
+│  │   - time_window = '30 days'                                │            │
+│  │ • Aggregations: None                                       │            │
+│  │ • Order By: risk DESC (implied)                            │            │
+│  │ • Limit: 10 (implied "top")                                │            │
+│  │ • Complexity: COMPLEX                                      │            │
+│  │ • Confidence: 0.90                                         │            │
+│  └────────────────────────────────────────────────────────────┘            │
+│                                                                             │
+│  Step 2: Search Knowledge Graph (ChromaDB Semantic Search)                 │
+│  ┌────────────────────────────────────────────────────────────┐            │
+│  │ Search query: "vulnerability_assessment Asset"             │            │
+│  │                                                            │            │
+│  │ Found 5 relevant paths:                                    │            │
+│  │ 1. Asset → Comprehensive Risk (score: 0.92) ✓ SELECTED    │            │
+│  │ 2. Asset → Breach Methods (score: 0.85)                   │            │
+│  │ 3. Vulnerability → Exploitability (score: 0.78)           │            │
+│  │ 4. Asset → Software Risk (score: 0.72)                    │            │
+│  │ 5. Vulnerability → Impact (score: 0.68)                   │            │
+│  └────────────────────────────────────────────────────────────┘            │
+│                                                                             │
+│  Step 3: Select Best Calculation Path                                      │
+│  ┌────────────────────────────────────────────────────────────┐            │
+│  │ Selected: Asset → Comprehensive Risk                       │            │
+│  │                                                            │            │
+│  │ Path Details:                                              │            │
+│  │ • Source Entity: Asset                                     │            │
+│  │ • Required Attributes:                                     │            │
+│  │   - attack_vector, attack_complexity                       │            │
+│  │   - privileges_required, user_interaction                  │            │
+│  │   - confidentiality_impact, integrity_impact               │            │
+│  │   - availability_impact, scope                             │            │
+│  │   - dwell_time_days                                        │            │
+│  │ • Functions Called:                                        │            │
+│  │   - calculate_exploitability_score()                       │            │
+│  │   - calculate_impact_score()                               │            │
+│  │   - calculate_time_weighted_stats()                        │            │
+│  │ • Base Table: mv_vulnerability_risk_scores                 │            │
+│  │   (pre-computed exploitability + impact)                   │            │
+│  └────────────────────────────────────────────────────────────┘            │
+│                                                                             │
+│  Step 4: Generate Query Plan                                               │
+│  ┌────────────────────────────────────────────────────────────┐            │
+│  │ Base Table: mv_vulnerability_risk_scores vrs               │            │
+│  │                                                            │            │
+│  │ Joins:                                                     │            │
+│  │   JOIN assets a                                            │            │
+│  │     ON vrs.nuid = a.nuid AND vrs.dev_id = a.dev_id        │            │
+│  │                                                            │            │
+│  │ WHERE Clauses:                                             │            │
+│  │   vrs.severity = 'CRITICAL'                                │            │
+│  │   a.impact_class = 'Mission Critical'                      │            │
+│  │   vrs.attack_vector = 'N'                                  │            │
+│  │   vrs.detected_time >= CURRENT_DATE - INTERVAL '30 days'  │            │
+│  │                                                            │            │
+│  │ ORDER BY: vrs.comprehensive_risk_score DESC                │            │
+│  │ LIMIT: 10                                                  │            │
+│  └────────────────────────────────────────────────────────────┘            │
+│                                                                             │
+│  Step 5: Generate SQL                                                      │
+│  ┌────────────────────────────────────────────────────────────┐            │
+│  │ SELECT                                                     │            │
+│  │     a.final_name,                                          │            │
+│  │     a.ip,                                                  │            │
+│  │     vrs.cve_id,                                            │            │
+│  │     vrs.severity,                                          │            │
+│  │     vrs.comprehensive_risk_score,                          │            │
+│  │     vrs.exploitability_score,                              │            │
+│  │     vrs.impact_score                                       │            │
+│  │ FROM mv_vulnerability_risk_scores vrs                      │            │
+│  │ JOIN assets a                                              │            │
+│  │   ON vrs.nuid = a.nuid AND vrs.dev_id = a.dev_id          │            │
+│  │ WHERE                                                      │            │
+│  │     vrs.severity = 'CRITICAL'                              │            │
+│  │     AND a.impact_class = 'Mission Critical'                │            │
+│  │     AND vrs.attack_vector = 'N'                            │            │
+│  │     AND vrs.detected_time >=                               │            │
+│  │           CURRENT_DATE - INTERVAL '30 days'                │            │
+│  │ ORDER BY vrs.comprehensive_risk_score DESC                 │            │
+│  │ LIMIT 10                                                   │            │
+│  └────────────────────────────────────────────────────────────┘            │
+│                                                                             │
+│  Step 6: Generate Instructions & Explanation                               │
+│  ┌────────────────────────────────────────────────────────────┐            │
+│  │ Chain of Thought:                                          │            │
+│  │ 1. Identified intent: vulnerability_assessment             │            │
+│  │ 2. Primary entity: Asset                                   │            │
+│  │ 3. Extracted 4 filter conditions                           │            │
+│  │ 4. Selected path: Asset → Comprehensive Risk               │            │
+│  │ 5. Functions already computed in                           │            │
+│  │    mv_vulnerability_risk_scores                            │            │
+│  │ 6. Sort by comprehensive_risk_score DESC                   │            │
+│  │ 7. Limit to top 10                                         │            │
+│  │                                                            │            │
+│  │ Estimated Complexity: COMPLEX                              │            │
+│  │ Estimated Execution Time: 5-10 seconds                     │            │
+│  │                                                            │            │
+│  │ Required Materialized Views:                               │            │
+│  │ • mv_vulnerability_risk_scores                             │            │
+│  └────────────────────────────────────────────────────────────┘            │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+            │
+            ↓
+OUTPUT: Query Instruction (JSON)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  {                                                                          │
+│    "query": "Which Mission Critical assets have CRITICAL...",              │
+│    "sql": "SELECT a.final_name, ... FROM ... WHERE ...",                   │
+│    "instructions": "Use mv_vulnerability_risk_scores...",                  │
+│    "step_by_step_guide": [                                                 │
+│      "Step 1: Use mv_vulnerability_risk_scores",                           │
+│      "Step 2: Join with assets table",                                     │
+│      "Step 3: Apply 4 filters",                                            │
+│      "Step 4: Sort by comprehensive_risk_score DESC",                      │
+│      "Step 5: Limit to top 10"                                             │
+│    ],                                                                       │
+│    "chain_of_thought": [...],                                              │
+│    "estimated_complexity": "complex",                                      │
+│    "estimated_execution_time": "5-10 seconds",                             │
+│    "required_functions": [                                                 │
+│      "calculate_exploitability_score",                                     │
+│      "calculate_impact_score"                                              │
+│    ],                                                                       │
+│    "requires_materialized_views": [                                        │
+│      "mv_vulnerability_risk_scores"                                        │
+│    ],                                                                       │
+│    "alternative_paths": [                                                  │
+│      "Asset → Breach Methods",                                             │
+│      "Vulnerability → Exploitability"                                      │
+│    ]                                                                        │
+│  }                                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    KEY SYSTEM COMPONENTS & DATA FLOW                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────┐       ┌──────────────────┐       ┌──────────────────┐
+│  JSON Schemas    │──────>│  kg_builder.py   │──────>│   ChromaDB KG    │
+│                  │       │                  │       │                  │
+│ • Assets         │       │ • Parse schemas  │       │ • 3 entities     │
+│ • Vulnerabilities│       │ • Analyze attrs  │       │ • 10+ paths      │
+│ • Software       │       │ • Discover paths │       │ • 5 functions    │
+│ • Functions      │       │ • Build graph    │       │ • 50+ deps       │
+└──────────────────┘       └──────────────────┘       └──────────────────┘
+                                                                │
+                                                                │
+                                                                ↓
+┌──────────────────┐       ┌──────────────────┐       ┌──────────────────┐
+│ Natural Language │──────>│ kg_query_agent.py│──────>│ SQL + Instruct   │
+│     Query        │       │                  │       │                  │
+│                  │       │ • Parse intent   │       │ • Generated SQL  │
+│ "Show me         │       │ • Search graph   │       │ • Step-by-step   │
+│  critical        │       │ • Plan query     │       │ • Chain thought  │
+│  vulnerabilities"│       │ • Generate SQL   │       │ • Complexity     │
+└──────────────────┘       └──────────────────┘       └──────────────────┘
+
+
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         INTEGRATION WITH SQL FRAMEWORK                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Your Existing SQL Framework:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  SQL Functions (vulnerability_risk_calculations.sql):                      │
+│  ├─ calculate_exploitability_score(av, ac, pr, ui) → DECIMAL              │
+│  ├─ calculate_impact_score(c, i, a, s) → DECIMAL                           │
+│  ├─ calculate_breach_method_likelihood(...) → TABLE                        │
+│  ├─ calculate_time_weighted_stats(value, days, tau) → TABLE                │
+│  └─ parse_cvss_v3_vector(vector) → TABLE                                   │
+│                                                                             │
+│  Materialized Views:                                                       │
+│  ├─ mv_enriched_vulnerability_instances                                    │
+│  ├─ mv_vulnerability_risk_scores                                           │
+│  ├─ mv_asset_breach_likelihood                                             │
+│  ├─ mv_vulnerability_timeseries                                            │
+│  └─ mv_cve_timeseries_aggregates                                           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↑
+                                    │
+                      Knowledge Graph References These
+                                    │
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Function Definitions (function_definitions.json):                         │
+│  {                                                                          │
+│    "calculate_exploitability_score": {                                     │
+│      "required_attributes": {                                              │
+│        "Vulnerability": ["attack_vector", "attack_complexity", ...]        │
+│      }                                                                      │
+│    }                                                                        │
+│  }                                                                          │
+│                                                                             │
+│  Knowledge Graph discovers:                                                │
+│  "Vulnerability has attack_vector → can call calculate_exploitability"    │
+│                                                                             │
+│  Query Agent selects:                                                      │
+│  "Query needs exploitability → use mv_vulnerability_risk_scores"           │
+│  "(function already pre-computed in view)"                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                              DELIVERABLES SUMMARY
+═══════════════════════════════════════════════════════════════════════════════
+
+Core System (76 KB):
+├─ kg_builder.py (42 KB)                    # Build knowledge graph
+└─ kg_query_agent.py (34 KB)                # Query with agent
+
+Documentation (155 KB):
+├─ MASTER_SUMMARY.md (15 KB)                # This summary
+├─ KNOWLEDGE_GRAPH_README.md (20 KB)        # Complete guide
+├─ vulnerability_knowledge_graph_schema.md  # Theoretical schema
+└─ sample_json_configurations.json (24 KB)  # Config templates
+
+SQL Framework (82 KB):
+├─ vulnerability_risk_calculations.sql      # SQL functions
+└─ vulnerability_sql_instructions.json      # Example queries
+
+Report Frameworks (163 KB):
+├─ enhanced_vulnerability_analytics.md      # Report framework
+└─ daily_reports_and_alerts.md              # Operational alerts
+
+TOTAL: 12 files, 476 KB
+
+═══════════════════════════════════════════════════════════════════════════════
+                                  END
+═══════════════════════════════════════════════════════════════════════════════

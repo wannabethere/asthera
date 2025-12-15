@@ -1,0 +1,647 @@
+{
+  "sample_configurations": {
+    "description": "Sample JSON configuration files for Knowledge Graph Builder",
+    "files": [
+      {
+        "filename": "assets_schema.json",
+        "purpose": "Define Asset entity schema",
+        "content": {
+          "entity_name": "Asset",
+          "type": "entity",
+          "description": "Physical or virtual computing resources including servers, workstations, and network devices",
+          "primary_key": ["nuid", "dev_id"],
+          "properties": {
+            "nuid": {
+              "type": "integer",
+              "description": "Network unique identifier"
+            },
+            "dev_id": {
+              "type": "integer",
+              "description": "Device identifier"
+            },
+            "host_name": {
+              "type": "string",
+              "description": "Asset hostname"
+            },
+            "final_name": {
+              "type": "string",
+              "description": "Display name for asset"
+            },
+            "ip": {
+              "type": "string",
+              "format": "ipv4",
+              "description": "IP address"
+            },
+            "mac": {
+              "type": "string",
+              "description": "MAC address"
+            },
+            "device_type": {
+              "type": "string",
+              "enum": ["Servers", "Desktops/Laptops", "Networking Assets", "Printers", "Mobile Devices", "Other"],
+              "description": "Canonical device type"
+            },
+            "platform": {
+              "type": "string",
+              "enum": ["Linux/Unix", "Windows", "macOS", "Network Device", "Other"],
+              "description": "Operating system platform"
+            },
+            "os_name": {
+              "type": "string",
+              "description": "Operating system name"
+            },
+            "os_version": {
+              "type": "string",
+              "description": "Operating system version"
+            },
+            "effective_risk": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Effective risk score (0-100)"
+            },
+            "effective_likelihood": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Effective likelihood (0-1)"
+            },
+            "effective_impact": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Effective impact score (0-100)"
+            },
+            "impact_class": {
+              "type": "string",
+              "enum": ["Mission Critical", "Critical", "Other"],
+              "description": "Asset impact classification"
+            },
+            "propagation_class": {
+              "type": "string",
+              "enum": ["Perimeter", "Core"],
+              "description": "Network propagation class"
+            },
+            "is_bastion_device": {
+              "type": "boolean",
+              "description": "Whether asset is a bastion/jump host"
+            },
+            "device_zone": {
+              "type": "string",
+              "description": "Network zone or segment"
+            },
+            "roles": {
+              "type": "string",
+              "description": "Comma-separated list of roles"
+            },
+            "location_region": {
+              "type": "string",
+              "description": "Geographic region"
+            },
+            "location_country": {
+              "type": "string",
+              "description": "Country location"
+            },
+            "location_city": {
+              "type": "string",
+              "description": "City location"
+            },
+            "unpatched_vulnerability_likelihood": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Likelihood of unpatched vulnerability breach (0-1)"
+            },
+            "weak_credentials_likelihood": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Likelihood of weak credentials breach (0-1)"
+            },
+            "misconfiguration_likelihood": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Likelihood of misconfiguration breach (0-1)"
+            },
+            "zero_day_likelihood": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Likelihood of zero-day breach (0-1)"
+            }
+          }
+        }
+      },
+      {
+        "filename": "vulnerability_instances_schema.json",
+        "purpose": "Define Vulnerability entity schema",
+        "content": {
+          "entity_name": "Vulnerability",
+          "type": "entity",
+          "description": "Security vulnerabilities (CVEs) affecting assets",
+          "primary_key": ["cve_id", "nuid", "dev_id", "instance_id"],
+          "properties": {
+            "cve_id": {
+              "type": "string",
+              "pattern": "^CVE-\\d{4}-\\d{4,}$",
+              "description": "CVE identifier"
+            },
+            "nuid": {
+              "type": "integer",
+              "description": "Asset network unique identifier"
+            },
+            "dev_id": {
+              "type": "integer",
+              "description": "Asset device identifier"
+            },
+            "instance_id": {
+              "type": "string",
+              "description": "Vulnerability instance unique identifier"
+            },
+            "sw_instance_id": {
+              "type": "string",
+              "description": "Software instance key"
+            },
+            "severity": {
+              "type": "string",
+              "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"],
+              "description": "Vulnerability severity level"
+            },
+            "state": {
+              "type": "string",
+              "enum": ["ACTIVE", "REMEDIATED", "ACCEPTED", "EXCEPTION", "FALSE_POSITIVE"],
+              "description": "Vulnerability state"
+            },
+            "cvssv2_basescore": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10,
+              "description": "CVSS v2 base score"
+            },
+            "cvssv3_basescore": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10,
+              "description": "CVSS v3 base score"
+            },
+            "gtm_score": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "GTM (Global Threat Model) score"
+            },
+            "attack_vector": {
+              "type": "string",
+              "enum": ["N", "A", "L", "P"],
+              "description": "CVSS v3 Attack Vector (Network/Adjacent/Local/Physical)"
+            },
+            "attack_complexity": {
+              "type": "string",
+              "enum": ["L", "H"],
+              "description": "CVSS v3 Attack Complexity (Low/High)"
+            },
+            "privileges_required": {
+              "type": "string",
+              "enum": ["N", "L", "H"],
+              "description": "CVSS v3 Privileges Required (None/Low/High)"
+            },
+            "user_interaction": {
+              "type": "string",
+              "enum": ["N", "R"],
+              "description": "CVSS v3 User Interaction (None/Required)"
+            },
+            "scope": {
+              "type": "string",
+              "enum": ["U", "C"],
+              "description": "CVSS v3 Scope (Unchanged/Changed)"
+            },
+            "confidentiality_impact": {
+              "type": "string",
+              "enum": ["N", "L", "H"],
+              "description": "CVSS v3 Confidentiality Impact (None/Low/High)"
+            },
+            "integrity_impact": {
+              "type": "string",
+              "enum": ["N", "L", "H"],
+              "description": "CVSS v3 Integrity Impact (None/Low/High)"
+            },
+            "availability_impact": {
+              "type": "string",
+              "enum": ["N", "L", "H"],
+              "description": "CVSS v3 Availability Impact (None/Low/High)"
+            },
+            "threat_level": {
+              "type": "string",
+              "description": "Threat level classification"
+            },
+            "exposure": {
+              "type": "string",
+              "description": "Exposure classification"
+            },
+            "tags": {
+              "type": "string",
+              "description": "Comma-separated tags (e.g., 'CISA Known Exploit')"
+            },
+            "published_time": {
+              "type": "string",
+              "format": "date-time",
+              "description": "CVE publication timestamp"
+            },
+            "detected_time": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Detection timestamp"
+            },
+            "dwell_time_days": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Days since detection"
+            },
+            "days_since_detection": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Days since detection (alias)"
+            },
+            "has_patch_available": {
+              "type": "boolean",
+              "description": "Whether patch is available"
+            },
+            "fix_versions": {
+              "type": "string",
+              "description": "Comma-separated fix versions"
+            }
+          }
+        }
+      },
+      {
+        "filename": "software_instances_schema.json",
+        "purpose": "Define Software entity schema",
+        "content": {
+          "entity_name": "Software",
+          "type": "entity",
+          "description": "Software packages, applications, and operating systems installed on assets",
+          "primary_key": ["key", "nuid", "dev_id"],
+          "properties": {
+            "key": {
+              "type": "string",
+              "description": "Software instance unique key"
+            },
+            "nuid": {
+              "type": "integer",
+              "description": "Asset network unique identifier"
+            },
+            "dev_id": {
+              "type": "integer",
+              "description": "Asset device identifier"
+            },
+            "vendor": {
+              "type": "string",
+              "description": "Software vendor"
+            },
+            "product": {
+              "type": "string",
+              "description": "Software product name"
+            },
+            "version": {
+              "type": "string",
+              "description": "Software version"
+            },
+            "category": {
+              "type": "string",
+              "enum": ["OPERATING SYSTEM", "APPLICATION", "SECURITY", "BROWSER", "DATABASE", "MIDDLEWARE", "OTHER"],
+              "description": "Software category"
+            },
+            "cpe": {
+              "type": "string",
+              "description": "Common Platform Enumeration identifier"
+            },
+            "install_path": {
+              "type": "string",
+              "description": "Installation path"
+            },
+            "install_time": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Installation timestamp"
+            },
+            "product_state": {
+              "type": "string",
+              "enum": ["EOL", "UNPATCHED", "VULNERABLE", "PATCHED", "CURRENT", "UNKNOWN"],
+              "description": "Product lifecycle state"
+            },
+            "latest_available_patch": {
+              "type": "string",
+              "description": "Latest available patch version"
+            },
+            "latest_installed_patch": {
+              "type": "string",
+              "description": "Latest installed patch version"
+            }
+          }
+        }
+      },
+      {
+        "filename": "function_definitions.json",
+        "purpose": "Define SQL function metadata for calculation planning",
+        "content": {
+          "functions": {
+            "calculate_exploitability_score": {
+              "description": "Calculate exploitability score (0-100) based on CVSS v3 attack metrics",
+              "purpose": "Determine how easily a vulnerability can be exploited",
+              "parameters": [
+                {
+                  "name": "p_attack_vector_weight",
+                  "type": "DECIMAL",
+                  "description": "Attack Vector weight (0-1)"
+                },
+                {
+                  "name": "p_attack_complexity_weight",
+                  "type": "DECIMAL",
+                  "description": "Attack Complexity weight (0-1)"
+                },
+                {
+                  "name": "p_privileges_required_weight",
+                  "type": "DECIMAL",
+                  "description": "Privileges Required weight (0-1)"
+                },
+                {
+                  "name": "p_user_interaction_weight",
+                  "type": "DECIMAL",
+                  "description": "User Interaction weight (0-1)"
+                }
+              ],
+              "return_type": "DECIMAL",
+              "formula": "(AV*0.4 + AC*0.2 + PR*0.3 + UI*0.1) * 100",
+              "use_cases": [
+                "Vulnerability prioritization",
+                "Exploit difficulty assessment",
+                "Attack surface analysis",
+                "Security posture evaluation"
+              ],
+              "example_call": "calculate_exploitability_score(0.85, 0.77, 0.85, 0.85)",
+              "required_attributes": {
+                "Vulnerability": [
+                  "attack_vector",
+                  "attack_complexity",
+                  "privileges_required",
+                  "user_interaction"
+                ]
+              }
+            },
+            "calculate_impact_score": {
+              "description": "Calculate impact score (0-100) based on CVSS v3 impact metrics",
+              "purpose": "Determine potential damage from successful exploitation",
+              "parameters": [
+                {
+                  "name": "p_confidentiality_weight",
+                  "type": "DECIMAL",
+                  "description": "Confidentiality impact weight (0-1)"
+                },
+                {
+                  "name": "p_integrity_weight",
+                  "type": "DECIMAL",
+                  "description": "Integrity impact weight (0-1)"
+                },
+                {
+                  "name": "p_availability_weight",
+                  "type": "DECIMAL",
+                  "description": "Availability impact weight (0-1)"
+                },
+                {
+                  "name": "p_scope_weight",
+                  "type": "DECIMAL",
+                  "description": "Scope weight (0-1)"
+                }
+              ],
+              "return_type": "DECIMAL",
+              "formula": "((C + I + A) / 3) * Scope * 100",
+              "use_cases": [
+                "Impact assessment",
+                "Business risk evaluation",
+                "Damage potential analysis",
+                "CIA triad evaluation"
+              ],
+              "example_call": "calculate_impact_score(0.56, 0.56, 0.56, 1.0)",
+              "required_attributes": {
+                "Vulnerability": [
+                  "confidentiality_impact",
+                  "integrity_impact",
+                  "availability_impact",
+                  "scope"
+                ]
+              }
+            },
+            "calculate_breach_method_likelihood": {
+              "description": "Calculate likelihood scores for each breach method based on vulnerability characteristics",
+              "purpose": "Identify most likely attack vectors and breach methods",
+              "parameters": [
+                {
+                  "name": "p_cve_id",
+                  "type": "TEXT",
+                  "description": "CVE identifier"
+                },
+                {
+                  "name": "p_exploitability_score",
+                  "type": "DECIMAL",
+                  "description": "Pre-calculated exploitability score (0-100)"
+                },
+                {
+                  "name": "p_impact_score",
+                  "type": "DECIMAL",
+                  "description": "Pre-calculated impact score (0-100)"
+                },
+                {
+                  "name": "p_has_known_exploit",
+                  "type": "BOOLEAN",
+                  "description": "Whether known exploit exists (e.g., CISA KEV)"
+                },
+                {
+                  "name": "p_has_patch_available",
+                  "type": "BOOLEAN",
+                  "description": "Whether patch is available"
+                },
+                {
+                  "name": "p_dwell_time_days",
+                  "type": "INTEGER",
+                  "description": "Days since detection"
+                },
+                {
+                  "name": "p_asset_exposure_score",
+                  "type": "DECIMAL",
+                  "description": "Asset exposure score (0-100)"
+                }
+              ],
+              "return_type": "TABLE (breach_method TEXT, likelihood_score DECIMAL, contributing_factors TEXT[])",
+              "use_cases": [
+                "Attack vector identification",
+                "Threat modeling",
+                "Security control prioritization",
+                "Incident response planning"
+              ],
+              "example_call": "calculate_breach_method_likelihood('CVE-2024-12345', 85.5, 92.3, TRUE, TRUE, 45, 78.0)",
+              "required_attributes": {
+                "Vulnerability": [
+                  "cve_id",
+                  "dwell_time_days",
+                  "has_patch_available"
+                ],
+                "Asset": [
+                  "asset_exposure_score"
+                ]
+              }
+            },
+            "calculate_time_weighted_stats": {
+              "description": "Calculate time-weighted statistics with exponential decay for Gamma distribution modeling",
+              "purpose": "Apply temporal weighting to risk metrics for trend analysis",
+              "parameters": [
+                {
+                  "name": "p_value",
+                  "type": "DECIMAL",
+                  "description": "Value to weight (e.g., risk score)"
+                },
+                {
+                  "name": "p_time_delta_days",
+                  "type": "INTEGER",
+                  "description": "Time difference in days"
+                },
+                {
+                  "name": "p_tau_zero",
+                  "type": "DECIMAL",
+                  "description": "Decay constant in days (default 30.0)"
+                }
+              ],
+              "return_type": "TABLE (exp_factor DECIMAL, mu_hat DECIMAL, lambda_hat DECIMAL, n_hat DECIMAL)",
+              "formula": "exp_factor = exp(-time_delta / tau_zero); mu_hat = value * exp_factor; lambda_hat = ln(value) * exp_factor; n_hat = exp_factor",
+              "use_cases": [
+                "Time series analysis",
+                "Trend forecasting",
+                "Historical risk weighting",
+                "Gamma distribution parameter estimation"
+              ],
+              "example_call": "calculate_time_weighted_stats(85.5, 30, 30.0)",
+              "required_attributes": {
+                "Vulnerability": [
+                  "dwell_time_days",
+                  "days_since_detection"
+                ]
+              }
+            },
+            "parse_cvss_v3_vector": {
+              "description": "Parse CVSS v3 vector string into individual component codes",
+              "purpose": "Extract CVSS components from vector string for analysis",
+              "parameters": [
+                {
+                  "name": "vector_string",
+                  "type": "TEXT",
+                  "description": "CVSS v3 vector string (e.g., 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H')"
+                }
+              ],
+              "return_type": "TABLE (attack_vector TEXT, attack_complexity TEXT, privileges_required TEXT, user_interaction TEXT, scope TEXT, confidentiality TEXT, integrity TEXT, availability TEXT)",
+              "use_cases": [
+                "CVSS vector parsing",
+                "Component extraction",
+                "Metric analysis"
+              ],
+              "example_call": "parse_cvss_v3_vector('CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H')",
+              "required_attributes": {
+                "Vulnerability": [
+                  "cvss_vector_string",
+                  "cvssv3_vector_string"
+                ]
+              }
+            }
+          },
+          "materialized_views": {
+            "mv_enriched_vulnerability_instances": {
+              "description": "Vulnerability instances enriched with metadata, CVSS components, and time calculations",
+              "base_table": "vulnerability_instances",
+              "includes_functions": [
+                "parse_cvss_v3_vector"
+              ],
+              "key_columns": [
+                "cve_id",
+                "nuid",
+                "dev_id",
+                "instance_id",
+                "severity",
+                "attack_vector",
+                "attack_complexity",
+                "exploitability_score",
+                "days_since_detection"
+              ]
+            },
+            "mv_vulnerability_risk_scores": {
+              "description": "Comprehensive risk scores combining CVSS, exploitability, impact, and time factors",
+              "base_table": "vulnerability_instances",
+              "includes_functions": [
+                "calculate_exploitability_score",
+                "calculate_impact_score",
+                "calculate_time_weighted_stats"
+              ],
+              "key_columns": [
+                "cve_id",
+                "nuid",
+                "dev_id",
+                "comprehensive_risk_score",
+                "risk_category",
+                "exploitability_score",
+                "impact_score",
+                "mu_hat",
+                "lambda_hat",
+                "n_hat"
+              ]
+            },
+            "mv_asset_breach_likelihood": {
+              "description": "Breach method likelihoods aggregated at asset level",
+              "base_table": "assets",
+              "includes_functions": [
+                "calculate_breach_method_likelihood"
+              ],
+              "key_columns": [
+                "nuid",
+                "dev_id",
+                "breach_method",
+                "final_breach_likelihood_score",
+                "vuln_count"
+              ]
+            },
+            "mv_vulnerability_timeseries": {
+              "description": "Daily time-series snapshots with exponential decay weighting",
+              "base_table": "vulnerability_instances",
+              "includes_functions": [
+                "calculate_time_weighted_stats"
+              ],
+              "key_columns": [
+                "snapshot_date",
+                "cve_id",
+                "instance_count",
+                "weighted_risk_score",
+                "mu_hat_contribution"
+              ]
+            }
+          }
+        }
+      }
+    ]
+  },
+  "usage_instructions": {
+    "step_1": "Save each content block as separate JSON files with the specified filenames",
+    "step_2": "Place JSON files in a 'schemas' directory",
+    "step_3": "Run kg_builder.py to load schemas and build knowledge graph",
+    "step_4": "Run kg_query_agent.py to query the built knowledge graph",
+    "example_directory_structure": {
+      "project_root": {
+        "schemas": {
+          "assets_schema.json": "Entity schema for assets",
+          "vulnerability_instances_schema.json": "Entity schema for vulnerabilities",
+          "software_instances_schema.json": "Entity schema for software",
+          "function_definitions.json": "SQL function metadata"
+        },
+        "kg_builder.py": "Knowledge graph builder script",
+        "kg_query_agent.py": "Query agent script",
+        "chromadb_kg": "ChromaDB storage (auto-created)"
+      }
+    }
+  }
+}

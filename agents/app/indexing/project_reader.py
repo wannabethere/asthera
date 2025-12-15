@@ -27,7 +27,7 @@ logger = logging.getLogger("genieml-agents")
 settings = get_settings()
 
 class ProjectReader:
-    def __init__(self, base_path: str = "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/sql_meta", persistent_client: chromadb.PersistentClient = None, embeddings: OpenAIEmbeddings = None):
+    def __init__(self, base_path: str = "../../data/sql_meta", persistent_client: chromadb.PersistentClient = None, embeddings: OpenAIEmbeddings = None):
         logger.info(f"Initializing IndexingOrchestrator with base path: {base_path}")
         self.base_path = Path(base_path)
         print(f"Initializing IndexingOrchestrator with base path: {base_path}")
@@ -1539,7 +1539,7 @@ async def main():
     persistent_client = get_chromadb_client()
 
     # Set up base path
-    base_path = Path("/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/sql_meta")
+    base_path = Path("../../data/sql_meta")
     
     # Initialize reader
     reader = ProjectReader(base_path, persistent_client)
@@ -1732,7 +1732,7 @@ async def test_delete_project():
     persistent_client = get_chromadb_client()
 
     # Set up base path
-    base_path = Path("/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/data/sql_meta")
+    base_path = Path("../../data/sql_meta")
     
     # Initialize reader
     reader = ProjectReader(base_path, persistent_client)

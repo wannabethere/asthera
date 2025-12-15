@@ -136,8 +136,8 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = "vwm8$S4VVpn%2J_"
     
     # Vector Store Settings
-    VECTOR_STORE_PATH: str = "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/lexy/data/vector_store"
-    CHROMA_STORE_PATH: str = "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/lexy/data/chroma_db"
+    VECTOR_STORE_PATH: str = "../../data/vector_store"
+    CHROMA_STORE_PATH: str = "../../data/chroma_db"
     
     # ChromaDB Settings
     CHROMA_USE_LOCAL: bool = True  # Default to HTTP client

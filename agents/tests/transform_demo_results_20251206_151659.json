@@ -1,0 +1,128 @@
+{
+  "summary": {
+    "total_cases": 3,
+    "successful": 2,
+    "failed": 0,
+    "skipped": 1,
+    "success_rate": 66.66666666666666,
+    "timestamp": "2025-12-06T15:16:59.128209"
+  },
+  "results": [
+    {
+      "event_id": "transform_event_4",
+      "description": "CALCULATED_COLUMN: Raw risk score combining impact and likelihood",
+      "question": "Calculate raw_risk score for each asset by combining raw_impact and raw_likelihood with appropriate weighting",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT a.dev_id, (SUM(a.raw_impact * 0.6) + SUM(a.raw_likelihood * 0.4)) AS raw_risk FROM vulnerability_instances AS a GROUP BY a.dev_id;",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [
+          "raw_impact",
+          "raw_likelihood"
+        ],
+        "target_columns": [
+          "raw_risk"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Calculate raw_risk score by combining raw_impact and raw_likelihood with appropriate weighting.",
+            "sql_expression": "raw_risk = (raw_impact * 0.6) + (raw_likelihood * 0.4)"
+          }
+        ],
+        "sql_functions_needed": [
+          "SUM",
+          "AVG"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [\"raw_impact\", \"raw_likelihood\"],\n    \"target_columns\": [\"raw_risk\"],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Calculate raw_risk score by combining raw_impact and raw_likelihood with appropriate weighting.\",\n            \"sql_expression\": \"raw_risk = (raw_impact * 0.6) + (raw_likelihood * 0.4)\"\n        }\n    ],\n    \"sql_functions_needed\": [\"SUM\", \"AVG\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {},
+        "time_filters": {},
+        "aggregations": {
+          "raw_risk": "SUM(a.raw_impact * 0.6) + SUM(a.raw_likelihood * 0.4)"
+        },
+        "group_by_columns": {
+          "dev_id": "a.dev_id"
+        }
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "transform_event_5",
+      "description": "CALCULATED_COLUMN: Bastion impact score for bastion devices",
+      "question": "Create a calculated column for bastion_impact that calculates impact score specifically for bastion host devices using impact_class and propagation_class",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT LEAST((LAX_FLOAT64(JSON_QUERY(rim_prop.score)) * 1.3) + (LAX_FLOAT64(JSON_QUERY(rim_impact.score)) * 0.2), 100) AS bastion_impact FROM dev_assets AS da LEFT JOIN risk_impact_metadata AS rim_impact ON rim_impact.enum_type = 'impact_class' AND rim_impact.code = da.impact_class LEFT JOIN risk_impact_metadata AS rim_prop ON rim_prop.enum_type = 'propagation_class' AND rim_prop.code = da.propagation_class WHERE da.is_bastion_device = TRUE;",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [
+          "is_bastion_device",
+          "impact_class",
+          "propagation_class"
+        ],
+        "target_columns": [
+          "bastion_impact"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Check if the asset is a bastion device",
+            "sql_expression": "SELECT is_bastion_device FROM dev_assets WHERE is_bastion_device = TRUE"
+          },
+          {
+            "step": 2,
+            "description": "Retrieve the impact class score from risk_impact_metadata based on impact_class",
+            "sql_expression": "LEFT JOIN risk_impact_metadata rim_impact ON rim_impact.enum_type = 'impact_class' AND rim_impact.code = impact_class"
+          },
+          {
+            "step": 3,
+            "description": "Retrieve the propagation class score from risk_impact_metadata based on propagation_class",
+            "sql_expression": "LEFT JOIN risk_impact_metadata rim_prop ON rim_prop.enum_type = 'propagation_class' AND rim_prop.code = propagation_class"
+          },
+          {
+            "step": 4,
+            "description": "Calculate bastion impact using the formula",
+            "sql_expression": "bastion_impact = (propagation_class_score * 1.3) + (impact_class_score * 0.2)"
+          },
+          {
+            "step": 5,
+            "description": "Cap the final score at 100",
+            "sql_expression": "bastion_impact = LEAST(bastion_impact, 100)"
+          }
+        ],
+        "sql_functions_needed": [
+          "LEAST",
+          "LEFT JOIN"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [\"is_bastion_device\", \"impact_class\", \"propagation_class\"],\n    \"target_columns\": [\"bastion_impact\"],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Check if the asset is a bastion device\",\n            \"sql_expression\": \"SELECT is_bastion_device FROM dev_assets WHERE is_bastion_device = TRUE\"\n        },\n        {\n            \"step\": 2,\n            \"description\": \"Retrieve the impact class score from risk_impact_metadata based on impact_class\",\n            \"sql_expression\": \"LEFT JOIN risk_impact_metadata rim_impact ON rim_impact.enum_type = 'impact_class' AND rim_impact.code = impact_class\"\n        },\n        {\n            \"step\": 3,\n            \"description\": \"Retrieve the propagation class score from risk_impact_metadata based on propagation_class\",\n            \"sql_expression\": \"LEFT JOIN risk_impact_metadata rim_prop ON rim_prop.enum_type = 'propagation_class' AND rim_prop.code = propagation_class\"\n        },\n        {\n            \"step\": 4,\n            \"description\": \"Calculate bastion impact using the formula\",\n            \"sql_expression\": \"bastion_impact = (propagation_class_score * 1.3) + (impact_class_score * 0.2)\"\n        },\n        {\n            \"step\": 5,\n            \"description\": \"Cap the final score at 100\",\n            \"sql_expression\": \"bastion_impact = LEAST(bastion_impact, 100)\"\n        }\n    ],\n    \"sql_functions_needed\": [\"LEAST\", \"LEFT JOIN\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {},
+        "time_filters": {},
+        "aggregations": {},
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "test_3",
+      "status": "skipped",
+      "error": "Invalid test case type: <class 'str'>"
+    }
+  ]
+}

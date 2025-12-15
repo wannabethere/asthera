@@ -1529,3 +1529,124 @@ class SQLAnswerPipeline(AgentPipeline):
                 "data": None,
                 "error": str(e)
             }
+
+# Import vulnerability knowledge from separate module
+from app.utils.vulnerability_knowledge import get_vulnerability_knowledge
+
+
+class SQLVulnerabilityTransformPipeline(AgentPipeline):
+    """Pipeline for SQL transform generation with automatic vulnerability knowledge loading based on project_id"""
+    
+    def __init__(
+        self,
+        llm: ChatOpenAI,
+        retrieval_helper: RetrievalHelper,
+        document_store_provider: Optional[DocumentStoreProvider] = None,
+        engine: Optional[Engine] = None,
+        use_enhanced_agent: bool = True
+    ):
+        super().__init__(
+            name="SQL Vulnerability Transform Pipeline",
+            version="1.0",
+            description="Generates SQL queries with dynamic column transformations using vulnerability knowledge for CVE data projects",
+            llm=llm,
+            retrieval_helper=retrieval_helper,
+            document_store_provider=document_store_provider,
+            engine=engine
+        )
+        self.use_enhanced_agent = use_enhanced_agent
+        
+        # Import and initialize transform agent
+        from app.agents.nodes.sql.transform_sql_rag_agent import create_transform_sql_rag_agent
+        
+        self.agent = create_transform_sql_rag_agent(
+            llm=llm,
+            engine=engine,
+            document_store_provider=document_store_provider
+        )
+        
+    async def run(self, **kwargs) -> Dict[str, Any]:
+        """Run the SQL vulnerability transform pipeline
+        
+        Args:
+            **kwargs: Input parameters including:
+                - query: The natural language question
+                - project_id: The project ID (required, "cve_data" triggers vulnerability knowledge)
+                - knowledge: Additional knowledge context (List[str], optional - will be merged with vulnerability knowledge if project_id is "cve_data")
+                - contexts: Schema contexts
+                - language: Language for generation (default: "English")
+                - schema_context: Optional schema context
+                
+        Returns:
+            Dict[str, Any]: Transform results containing:
+                - success: Whether the transform was generated successfully
+                - data: The generated SQL and metadata
+                - error: Any error that occurred
+        """
+        try:
+            query = kwargs.pop("query", "")  # Remove query from kwargs
+            project_id = kwargs.get("project_id")
+            
+            if not project_id:
+                raise ValueError("project_id is required for SQLVulnerabilityTransformPipeline")
+            
+            # Get knowledge from kwargs, defaulting to empty list
+            provided_knowledge = kwargs.pop("knowledge", []) or []
+            
+            # Automatically load vulnerability knowledge if project_id is "cve_data"
+            knowledge = list(provided_knowledge)  # Make a copy
+            if project_id == "cve_data":
+                vulnerability_knowledge = get_vulnerability_knowledge()
+                # Merge provided knowledge with vulnerability knowledge
+                knowledge.extend(vulnerability_knowledge)
+                logger.info(f"Loaded {len(vulnerability_knowledge)} vulnerability knowledge items for project_id='cve_data'")
+            
+            contexts = kwargs.get("contexts", [])
+            language = kwargs.get("language", "English")
+            schema_context = kwargs.pop("schema_context", None)  # Remove schema_context from kwargs
+            
+            # Append project-specific instructions to the query
+            from app.utils.project_instructions import project_instructions_manager
+            enhanced_query = project_instructions_manager.append_instructions_to_query(
+                query, project_id
+            )
+            
+            logger.info(f"Starting SQL vulnerability transform generation for query: {query}")
+            logger.info(f"Enhanced query: {enhanced_query}")
+            logger.info(f"Project ID: {project_id}")
+            logger.info(f"Total knowledge items: {len(knowledge)}")
+            logger.info(f"Number of contexts: {len(contexts)}")
+            
+            # Process transform request using transform agent
+            result = await self.agent.process_transform_request(
+                query=enhanced_query,
+                knowledge=knowledge,
+                contexts=contexts,
+                language=language,
+                project_id=project_id,
+                schema_context=schema_context,
+                **kwargs
+            )
+            
+            logger.info(f"SQL vulnerability transform result: {result}")
+            
+            # Return the result in the expected format
+            return {
+                "success": result.get("success", False),
+                "data": result.get("data", {}),
+                "error": result.get("error"),
+                "metadata": {
+                    "transform_type": result.get("data", {}).get("transform_type"),
+                    "reasoning_plan": result.get("data", {}).get("reasoning_plan", {}),
+                    "project_id": project_id,
+                    "vulnerability_knowledge_loaded": project_id == "cve_data"
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in SQL vulnerability transform pipeline: {e}")
+            return {
+                "success": False,
+                "data": None,
+                "error": str(e)
+            }
