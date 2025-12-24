@@ -1,0 +1,396 @@
+{
+  "catalog": "csod_risk_attrition",
+  "schema": "public",
+  "models": [
+    {
+      "name": "AttritionRisk_Division",
+      "tableReference": {
+        "catalog": "csod_risk_attrition",
+        "schema": "public",
+        "table": "attritionrisk_division"
+      },
+      "primaryKey": "divisionAttritionRiskId",
+      "columns": [
+        {
+          "name": "divisionAttritionRiskId",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Division Attrition Risk ID",
+            "description": "Unique identifier for division-level aggregated attrition risk record.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "DIVATTR_{division}_{date}",
+            "business_rules": "Must be unique, Cannot be null",
+            "business_description": "Unique identifier combining division and assessment date.",
+            "data_quality_checks": "Check for null values, Validate uniqueness",
+            "filtering_suggestions": "Filter by division, Filter by date",
+            "aggregation_suggestions": "COUNT by division"
+          }
+        },
+        {
+          "name": "assessmentDate",
+          "type": "date",
+          "notNull": true,
+          "properties": {
+            "display_name": "Assessment Date",
+            "description": "Date of the division-level attrition risk assessment.",
+            "usage_type": "timestamp",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "YYYY-MM-DD",
+            "business_rules": "Cannot be null, Must be a valid date",
+            "business_description": "Reference date for divisional attrition snapshot.",
+            "data_quality_checks": "Ensure not in future, Validate date format",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "COUNT by date, GROUP BY month"
+          }
+        },
+        {
+          "name": "division",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Division",
+            "description": "Organizational division or business unit.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Sales, Marketing, HR, IT, Finance, Operations",
+            "business_rules": "Cannot be null, Must match User_csod.division values",
+            "business_description": "Business unit for analyzing attrition risk by division.",
+            "data_quality_checks": "Validate against User_csod division list",
+            "filtering_suggestions": "Filter by specific division, Compare divisions",
+            "aggregation_suggestions": "COUNT by division, GROUP BY division"
+          }
+        },
+        {
+          "name": "divisionHeadcount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Division Headcount",
+            "description": "Total number of active employees in the division.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "1 to 10000",
+            "business_rules": "Cannot be null, Must be > 0",
+            "business_description": "Division size for per-capita risk normalization.",
+            "data_quality_checks": "Ensure positive values, Validate against User_csod",
+            "filtering_suggestions": "Filter by division size ranges",
+            "aggregation_suggestions": "SUM, AVERAGE"
+          }
+        },
+        {
+          "name": "avgAttritionRiskScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Average Attrition Risk Score",
+            "description": "Average composite attrition risk score for the division.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Primary KPI for divisional retention health.",
+            "data_quality_checks": "Validate range 0-100, Compare across divisions",
+            "filtering_suggestions": "Filter high-risk divisions (>60)",
+            "aggregation_suggestions": "AVERAGE across divisions, MAX, MIN, RANK"
+          }
+        },
+        {
+          "name": "divisionAttritionRate",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Division Attrition Rate",
+            "description": "Actual attrition rate for the division (trailing 12 months).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 50.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Historical attrition reality check against predictive risk scores.",
+            "data_quality_checks": "Validate range 0-100",
+            "filtering_suggestions": "Filter high-attrition divisions (>20%)",
+            "aggregation_suggestions": "AVERAGE across divisions, MAX, MIN"
+          }
+        },
+        {
+          "name": "criticalFlightRiskCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Critical Flight Risk Count",
+            "description": "Number of employees at critical attrition risk in division.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 1000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= divisionHeadcount",
+            "business_description": "Volume of imminent departures requiring urgent intervention.",
+            "data_quality_checks": "Ensure non-negative, Validate <= divisionHeadcount",
+            "filtering_suggestions": "Filter by non-zero, Compare divisions",
+            "aggregation_suggestions": "SUM, PERCENTAGE of headcount, RANK"
+          }
+        },
+        {
+          "name": "highFlightRiskCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "High Flight Risk Count",
+            "description": "Number of employees at high attrition risk in division.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 3000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= divisionHeadcount",
+            "business_description": "Volume of elevated departure risk.",
+            "data_quality_checks": "Ensure non-negative, Validate <= divisionHeadcount",
+            "filtering_suggestions": "Compare divisions",
+            "aggregation_suggestions": "SUM, PERCENTAGE of headcount"
+          }
+        },
+        {
+          "name": "criticalSkillsAtRisk",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Critical Skills At Risk",
+            "description": "Number of critical-skill employees at high/critical risk in division.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 500",
+            "business_rules": "Cannot be null, Must be >= 0",
+            "business_description": "Hard-to-replace talent at departure risk.",
+            "data_quality_checks": "Ensure non-negative",
+            "filtering_suggestions": "Filter by non-zero, Prioritize high counts",
+            "aggregation_suggestions": "SUM, PERCENTAGE of critical skills population"
+          }
+        },
+        {
+          "name": "managersAtRisk",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Managers At Risk",
+            "description": "Number of people managers at high/critical risk in division.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 200",
+            "business_rules": "Cannot be null, Must be >= 0",
+            "business_description": "Managers at departure risk with potential team impact.",
+            "data_quality_checks": "Ensure non-negative",
+            "filtering_suggestions": "Filter by non-zero, Compare divisions",
+            "aggregation_suggestions": "SUM, PERCENTAGE of manager population"
+          }
+        },
+        {
+          "name": "avgTenureMonths",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Average Tenure (Months)",
+            "description": "Average employee tenure in the division.",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "0.0 to 240.0",
+            "business_rules": "Cannot be null, Must be >= 0",
+            "business_description": "Divisional tenure health indicator.",
+            "data_quality_checks": "Ensure non-negative",
+            "filtering_suggestions": "Compare divisions, Filter low tenure (<18 months)",
+            "aggregation_suggestions": "AVERAGE across divisions, MAX, MIN"
+          }
+        },
+        {
+          "name": "newHireAtRiskCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "New Hire At Risk Count",
+            "description": "Number of new hires (0-6 months) at high/critical risk in division.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 500",
+            "business_rules": "Cannot be null, Must be >= 0",
+            "business_description": "Early-stage attrition indicator suggesting onboarding issues.",
+            "data_quality_checks": "Ensure non-negative",
+            "filtering_suggestions": "Filter by non-zero, Identify problem divisions",
+            "aggregation_suggestions": "SUM, PERCENTAGE of new hires"
+          }
+        },
+        {
+          "name": "totalReplacementCostAtRisk",
+          "type": "double",
+          "notNull": false,
+          "properties": {
+            "display_name": "Total Replacement Cost At Risk (USD)",
+            "description": "Total estimated replacement cost for critical/high risk employees in division.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 50000000.00",
+            "business_rules": "Can be null if not calculated, Must be >= 0",
+            "business_description": "Financial exposure from potential attrition in division.",
+            "data_quality_checks": "Ensure non-negative",
+            "filtering_suggestions": "Filter high-cost divisions, Calculate total exposure",
+            "aggregation_suggestions": "SUM for total, AVERAGE by division"
+          }
+        },
+        {
+          "name": "divisionRank",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Division Rank",
+            "description": "Rank of division by avgAttritionRiskScore (1 = lowest risk/best).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "1 to 50",
+            "business_rules": "Cannot be null, Must be > 0, Lower is better",
+            "business_description": "Competitive ranking for peer comparison.",
+            "data_quality_checks": "Ensure positive values, Validate ranking logic",
+            "filtering_suggestions": "Filter bottom performers, Top performers",
+            "aggregation_suggestions": "TOP_N, BOTTOM_N"
+          }
+        },
+        {
+          "name": "divisionTrend",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Division Trend",
+            "description": "Attrition risk trend direction for the division (7-day comparison).",
+            "usage_type": "attribute",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Improving, Deteriorating, Stable",
+            "business_rules": "Can be null for first assessment, Valid values: 'Improving', 'Deteriorating', 'Stable'",
+            "business_description": "Directional indicator for divisional retention health.",
+            "data_quality_checks": "Validate against allowed values",
+            "filtering_suggestions": "Filter by Deteriorating for priority attention",
+            "aggregation_suggestions": "COUNT by trend"
+          }
+        },
+        {
+          "name": "retentionHealthScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Retention Health Score",
+            "description": "Composite retention health score for the division (0-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100, Higher is better",
+            "business_description": "Division-level composite KPI combining risk, tenure, and engagement.",
+            "data_quality_checks": "Validate range 0-100, Ensure inverse correlation with risk",
+            "filtering_suggestions": "Filter poor health (<60), Filter excellent health (>80)",
+            "aggregation_suggestions": "AVERAGE across divisions, RANK"
+          }
+        },
+        {
+          "name": "avgLearningEngagement",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Average Learning Engagement",
+            "description": "Average learning engagement score for the division.",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Divisional learning culture indicator correlating with retention.",
+            "data_quality_checks": "Validate range 0-100",
+            "filtering_suggestions": "Compare divisions, Filter low engagement (<50)",
+            "aggregation_suggestions": "AVERAGE across divisions, RANK"
+          }
+        },
+        {
+          "name": "interventionPriority",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Intervention Priority",
+            "description": "Priority level for retention intervention resources.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Urgent, High, Medium, Low",
+            "business_rules": "Cannot be null, Valid values: 'Urgent', 'High', 'Medium', 'Low'",
+            "business_description": "Resource allocation priority for retention efforts.",
+            "data_quality_checks": "Validate against allowed values",
+            "filtering_suggestions": "Filter by Urgent and High, Prioritize interventions",
+            "aggregation_suggestions": "COUNT by priority level"
+          }
+        }
+      ],
+      "relationships": [
+        {
+          "name": "source_assessments_relationship",
+          "models": [
+            "AttritionRisk_Division",
+            "AttritionRisk_Silver"
+          ],
+          "joinType": "ONE_TO_MANY",
+          "condition": "AttritionRisk_Division.division = User_csod.division AND User_csod.userId = AttritionRisk_Silver.userId AND AttritionRisk_Division.assessmentDate = DATE(AttritionRisk_Silver.assessmentDate)",
+          "properties": {
+            "displayName": "Division Aggregates to Source Assessments Relationship",
+            "description": "Each division summary aggregates all employee risk assessments for that division via User_csod.division"
+          }
+        },
+        {
+          "name": "user_hierarchy_relationship",
+          "models": [
+            "AttritionRisk_Division",
+            "User_csod"
+          ],
+          "joinType": "MANY_TO_ONE",
+          "condition": "AttritionRisk_Division.division = User_csod.division",
+          "properties": {
+            "displayName": "Division to User Hierarchy Relationship",
+            "description": "Division metrics linked to organizational hierarchy"
+          }
+        }
+      ],
+      "properties": {
+        "description": "Gold layer table containing division-level aggregated attrition risk metrics enabling organizational comparison and targeted retention strategies.",
+        "business_purpose": "Enables divisional retention scorecards, peer benchmarking, resource allocation, and divisional leader accountability for talent retention.",
+        "data_lineage": "Aggregated from AttritionRisk_Silver table with daily refresh, grouped by division.",
+        "data_retention": "Data retained for 3 years for trend analysis.",
+        "update_frequency": "daily",
+        "medallion_layer": "gold",
+        "key_relationships": "Aggregates from AttritionRisk_Silver, joins with User_csod for division hierarchy"
+      }
+    }
+  ]
+}

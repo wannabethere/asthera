@@ -1,0 +1,510 @@
+{
+  "catalog": "csod_risk_attrition",
+  "schema": "public",
+  "models": [
+    {
+      "name": "ComplianceRisk_Monthly",
+      "tableReference": {
+        "catalog": "csod_risk_attrition",
+        "schema": "public",
+        "table": "compliancerisk_monthly"
+      },
+      "primaryKey": "monthlyRiskId",
+      "columns": [
+        {
+          "name": "monthlyRiskId",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Monthly Risk ID",
+            "description": "Unique identifier for monthly aggregated risk record.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "MRISK_YYYYMM",
+            "business_rules": "Must be unique, Cannot be null, Format: MRISK_{year}{month}",
+            "business_description": "Unique identifier combining year and month for monthly risk snapshots.",
+            "data_quality_checks": "Check for null values, Validate uniqueness, Ensure monthly records exist",
+            "filtering_suggestions": "Filter by year, Filter by specific month",
+            "aggregation_suggestions": "COUNT by year"
+          }
+        },
+        {
+          "name": "year",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Year",
+            "description": "Calendar year of the monthly assessment.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "2020 to 2030",
+            "business_rules": "Cannot be null, Must be valid year",
+            "business_description": "Calendar year for annual reporting and year-over-year analysis.",
+            "data_quality_checks": "Validate reasonable range, Ensure consistency with month dates",
+            "filtering_suggestions": "Filter by specific year, Compare years",
+            "aggregation_suggestions": "GROUP BY year"
+          }
+        },
+        {
+          "name": "month",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Month",
+            "description": "Month number (1-12).",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "1 to 12",
+            "business_rules": "Cannot be null, Must be between 1 and 12",
+            "business_description": "Month identifier enabling seasonal analysis and month-over-month comparisons.",
+            "data_quality_checks": "Validate range 1-12, Ensure consistency with monthStartDate",
+            "filtering_suggestions": "Filter by specific months, Filter by quarter",
+            "aggregation_suggestions": "GROUP BY month for seasonal patterns"
+          }
+        },
+        {
+          "name": "monthStartDate",
+          "type": "date",
+          "notNull": true,
+          "properties": {
+            "display_name": "Month Start Date",
+            "description": "First day of the month.",
+            "usage_type": "timestamp",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "YYYY-MM-01",
+            "business_rules": "Cannot be null, Must be first day of month",
+            "business_description": "Month start boundary for consistent reporting periods.",
+            "data_quality_checks": "Validate is first of month, Ensure not in future",
+            "filtering_suggestions": "Filter by date range, Filter by quarter, Filter by year",
+            "aggregation_suggestions": "COUNT by quarter"
+          }
+        },
+        {
+          "name": "monthEndDate",
+          "type": "date",
+          "notNull": true,
+          "properties": {
+            "display_name": "Month End Date",
+            "description": "Last day of the month.",
+            "usage_type": "timestamp",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "YYYY-MM-DD",
+            "business_rules": "Cannot be null, Must be last day of month",
+            "business_description": "Month end boundary completing the monthly reporting period.",
+            "data_quality_checks": "Validate is last of month, Ensure consistency with monthStartDate",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "COUNT by quarter"
+          }
+        },
+        {
+          "name": "quarter",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Quarter",
+            "description": "Fiscal quarter (1-4).",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "1, 2, 3, 4",
+            "business_rules": "Cannot be null, Must be between 1 and 4",
+            "business_description": "Fiscal quarter for quarterly board reporting and strategic planning cycles.",
+            "data_quality_checks": "Validate range 1-4, Ensure derived correctly from month",
+            "filtering_suggestions": "Filter by specific quarter, Compare quarters",
+            "aggregation_suggestions": "GROUP BY quarter, AVERAGE by quarter"
+          }
+        },
+        {
+          "name": "avgMonthlyRiskScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Average Monthly Risk Score",
+            "description": "Average of daily risk scores across the month.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Primary monthly KPI smoothing short-term volatility to show sustained monthly risk levels for strategic assessment.",
+            "data_quality_checks": "Validate range 0-100, Compare with daily and weekly averages for consistency",
+            "filtering_suggestions": "Filter by threshold values, Filter by date range",
+            "aggregation_suggestions": "MOVING_AVERAGE(3 months), MOVING_AVERAGE(12 months), TREND"
+          }
+        },
+        {
+          "name": "maxDailyRiskScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Maximum Daily Risk Score",
+            "description": "Highest daily average risk score during the month.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100, Should be >= avgMonthlyRiskScore",
+            "business_description": "Peak risk exposure during the month, indicating worst-case compliance state reached.",
+            "data_quality_checks": "Validate range 0-100, Ensure >= avgMonthlyRiskScore",
+            "filtering_suggestions": "Filter by high peaks (>90)",
+            "aggregation_suggestions": "AVERAGE of monthly max, TREND"
+          }
+        },
+        {
+          "name": "minDailyRiskScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Minimum Daily Risk Score",
+            "description": "Lowest daily average risk score during the month.",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100, Should be <= avgMonthlyRiskScore",
+            "business_description": "Best compliance performance achieved during the month.",
+            "data_quality_checks": "Validate range 0-100, Ensure <= avgMonthlyRiskScore",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "AVERAGE of monthly min, TREND"
+          }
+        },
+        {
+          "name": "riskScoreVolatility",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Risk Score Volatility",
+            "description": "Standard deviation of daily risk scores within the month.",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 50.00",
+            "business_rules": "Cannot be null, Must be >= 0",
+            "business_description": "Monthly risk stability indicator; high volatility suggests inconsistent compliance execution requiring process improvement.",
+            "data_quality_checks": "Ensure non-negative, Flag unusually high values (>15)",
+            "filtering_suggestions": "Filter by high volatility, Filter by date range",
+            "aggregation_suggestions": "AVERAGE, MAX, TREND"
+          }
+        },
+        {
+          "name": "totalAssignments",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Total Assignments",
+            "description": "Average daily total assignments across the month.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "1 to 1000000",
+            "business_rules": "Cannot be null, Must be > 0",
+            "business_description": "Monthly average of daily assignment volumes, baseline for capacity planning and resource allocation.",
+            "data_quality_checks": "Ensure positive values, Check for unusual fluctuations",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "AVERAGE, TREND, SUM"
+          }
+        },
+        {
+          "name": "avgCriticalCount",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Average Critical Count",
+            "description": "Average daily count of critical risk assignments.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.0 to 10000.0",
+            "business_rules": "Cannot be null, Must be >= 0",
+            "business_description": "Monthly average of sustained critical risk, key metric for board reporting and executive action.",
+            "data_quality_checks": "Ensure non-negative, Monitor for upward trends",
+            "filtering_suggestions": "Filter by date range, Filter by increasing trends",
+            "aggregation_suggestions": "MOVING_AVERAGE(3 months), TREND, PERCENTAGE of total"
+          }
+        },
+        {
+          "name": "avgHighCount",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Average High Count",
+            "description": "Average daily count of high risk assignments.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.0 to 50000.0",
+            "business_rules": "Cannot be null, Must be >= 0",
+            "business_description": "Monthly average of sustained elevated risk requiring ongoing management attention.",
+            "data_quality_checks": "Ensure non-negative",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "MOVING_AVERAGE(3 months), TREND, PERCENTAGE of total"
+          }
+        },
+        {
+          "name": "avgOverdueCount",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Average Overdue Count",
+            "description": "Average daily count of overdue assignments.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.0 to 50000.0",
+            "business_rules": "Cannot be null, Must be >= 0",
+            "business_description": "Monthly average of sustained compliance violations, critical for regulatory reporting and audit preparation.",
+            "data_quality_checks": "Ensure non-negative, Alert on increases",
+            "filtering_suggestions": "Filter by date range, Filter by non-zero",
+            "aggregation_suggestions": "MOVING_AVERAGE(3 months), TREND, PERCENTAGE of total"
+          }
+        },
+        {
+          "name": "totalCompletionsMonth",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Total Completions Month",
+            "description": "Total number of training completions during the month.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 500000",
+            "business_rules": "Cannot be null, Must be >= 0",
+            "business_description": "Monthly completion throughput indicating organizational training capacity and engagement momentum.",
+            "data_quality_checks": "Ensure non-negative, Check for unusual drops",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "SUM, MOVING_AVERAGE(3 months), TREND"
+          }
+        },
+        {
+          "name": "monthlyCompletionRate",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Monthly Completion Rate",
+            "description": "Percentage of assignments completed during the month.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Monthly completion velocity, primary indicator of organizational compliance program effectiveness.",
+            "data_quality_checks": "Validate range 0-100",
+            "filtering_suggestions": "Filter by low performance (<50%), Filter by date range",
+            "aggregation_suggestions": "MOVING_AVERAGE(3 months), MOVING_AVERAGE(12 months), TREND"
+          }
+        },
+        {
+          "name": "avgEscalationRequired",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Average Escalation Required",
+            "description": "Average daily count of assignments requiring manager escalation.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.0 to 50000.0",
+            "business_rules": "Cannot be null, Must be >= 0",
+            "business_description": "Monthly average of sustained management escalations, indicating level of manual intervention required.",
+            "data_quality_checks": "Ensure non-negative",
+            "filtering_suggestions": "Filter by date range, Filter by high volumes",
+            "aggregation_suggestions": "MOVING_AVERAGE(3 months), TREND, PERCENTAGE of total"
+          }
+        },
+        {
+          "name": "monthOverMonthChange",
+          "type": "double",
+          "notNull": false,
+          "properties": {
+            "display_name": "Month-over-Month Change",
+            "description": "Percentage change in average risk score from previous month.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "-100.00 to 100.00",
+            "business_rules": "Can be null for first month, Positive indicates increasing risk",
+            "business_description": "Month-over-month risk momentum, key indicator for quarterly business reviews and strategic planning.",
+            "data_quality_checks": "Validate reasonable range (-50 to 50), Flag extreme changes (>15%)",
+            "filtering_suggestions": "Filter by significant changes (>5%), Filter by increasing trends",
+            "aggregation_suggestions": "AVERAGE, MAX, MIN, VOLATILITY"
+          }
+        },
+        {
+          "name": "riskTrendMonth",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Risk Trend Month",
+            "description": "Overall risk trend for the month.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Increasing, Decreasing, Stable",
+            "business_rules": "Can be null for first month, Valid values: 'Increasing', 'Decreasing', 'Stable'",
+            "business_description": "Categorical trend for executive dashboards and board presentations.",
+            "data_quality_checks": "Validate against allowed values, Ensure consistency with monthOverMonthChange",
+            "filtering_suggestions": "Filter by Increasing, Filter by Decreasing for improvement tracking",
+            "aggregation_suggestions": "COUNT by trend, PERCENTAGE distribution"
+          }
+        },
+        {
+          "name": "complianceHealthScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Compliance Health Score",
+            "description": "Composite health score combining risk, completion rate, and overdue metrics (0-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100, Higher is better",
+            "business_description": "Executive KPI for board reporting, combining multiple dimensions into single health indicator (100 = perfect compliance).",
+            "data_quality_checks": "Validate range 0-100, Ensure inverse correlation with avgMonthlyRiskScore",
+            "filtering_suggestions": "Filter by poor health (<60), Filter by excellent health (>90)",
+            "aggregation_suggestions": "MOVING_AVERAGE(3 months), MOVING_AVERAGE(12 months), TREND"
+          }
+        },
+        {
+          "name": "benchmarkRisk",
+          "type": "double",
+          "notNull": false,
+          "properties": {
+            "display_name": "Benchmark Risk",
+            "description": "Risk score at same month in previous year for year-over-year comparison.",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Can be null if no prior year data, Must be between 0 and 100",
+            "business_description": "Year-over-year benchmark for annual performance assessment and strategic goal setting.",
+            "data_quality_checks": "Validate range 0-100, Ensure from prior year same month",
+            "filtering_suggestions": "Filter by available benchmarks",
+            "aggregation_suggestions": "AVERAGE, VARIANCE from current"
+          }
+        },
+        {
+          "name": "yearOverYearChange",
+          "type": "double",
+          "notNull": false,
+          "properties": {
+            "display_name": "Year-over-Year Change",
+            "description": "Percentage change in risk score compared to same month previous year.",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "-100.00 to 100.00",
+            "business_rules": "Can be null if no prior year data, Negative is improvement",
+            "business_description": "Annual performance comparison for strategic program evaluation and annual reporting.",
+            "data_quality_checks": "Validate reasonable range, Ensure based on same month prior year",
+            "filtering_suggestions": "Filter by improvement (negative values), Filter by degradation (positive values)",
+            "aggregation_suggestions": "AVERAGE, MEDIAN"
+          }
+        },
+        {
+          "name": "topRiskCategory",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Top Risk Category",
+            "description": "Most common risk category for the month.",
+            "usage_type": "attribute",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Critical, High, Moderate, Low",
+            "business_rules": "Can be null, Valid values: 'Critical', 'High', 'Moderate', 'Low'",
+            "business_description": "Dominant risk level for the month, providing quick insight into overall risk profile.",
+            "data_quality_checks": "Validate against allowed values",
+            "filtering_suggestions": "Filter by specific categories",
+            "aggregation_suggestions": "MODE, COUNT by category"
+          }
+        },
+        {
+          "name": "seasonalityFactor",
+          "type": "double",
+          "notNull": false,
+          "properties": {
+            "display_name": "Seasonality Factor",
+            "description": "Seasonal adjustment factor based on historical patterns (0.5-2.0).",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "0.5 to 2.0",
+            "business_rules": "Can be null for insufficient history, Typically between 0.5 and 2.0, 1.0 = average",
+            "business_description": "Seasonal pattern indicator for improved forecasting, accounting for predictable monthly variations (e.g., year-end, summer).",
+            "data_quality_checks": "Validate range 0.5-2.0, Check for reasonableness",
+            "filtering_suggestions": "Filter by high seasonality (>1.5 or <0.5)",
+            "aggregation_suggestions": "AVERAGE by month across years"
+          }
+        }
+      ],
+      "properties": {
+        "description": "Gold layer table containing monthly aggregated compliance risk metrics providing strategic-level visibility for executive decision-making and long-term planning.",
+        "business_purpose": "Enables executive dashboards, board reporting, quarterly business reviews, annual strategic planning, and regulatory compliance reporting.",
+        "data_lineage": "Aggregated from ComplianceRisk_Daily table with monthly refresh, providing long-term trend visibility and strategic insights.",
+        "data_retention": "Data retained for 5 years for regulatory compliance and multi-year trend analysis.",
+        "update_frequency": "monthly",
+        "medallion_layer": "gold",
+        "key_relationships": "Aggregates from ComplianceRisk_Daily and ComplianceRisk_Weekly"
+      },
+      "relationships": [
+        {
+          "name": "daily_source_relationship",
+          "models": [
+            "ComplianceRisk_Monthly",
+            "ComplianceRisk_Daily"
+          ],
+          "joinType": "ONE_TO_MANY",
+          "condition": "ComplianceRisk_Daily.assessmentDate >= ComplianceRisk_Monthly.monthStartDate AND ComplianceRisk_Daily.assessmentDate <= ComplianceRisk_Monthly.monthEndDate",
+          "properties": {
+            "displayName": "Monthly Aggregates to Daily Source Relationship",
+            "description": "Monthly summaries aggregate daily risk metrics for the month"
+          }
+        },
+        {
+          "name": "silver_source_relationship",
+          "models": [
+            "ComplianceRisk_Monthly",
+            "ComplianceRisk_Silver"
+          ],
+          "joinType": "ONE_TO_MANY",
+          "condition": "DATE(ComplianceRisk_Silver.assessmentDate) >= ComplianceRisk_Monthly.monthStartDate AND DATE(ComplianceRisk_Silver.assessmentDate) <= ComplianceRisk_Monthly.monthEndDate",
+          "properties": {
+            "displayName": "Monthly Aggregates to Silver Source Relationship",
+            "description": "Monthly summaries can also aggregate directly from Silver layer"
+          }
+        }
+      ]
+    }
+  ]
+}

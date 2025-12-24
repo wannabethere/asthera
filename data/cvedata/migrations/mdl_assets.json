@@ -1,0 +1,835 @@
+{
+  "catalog": "security_monitoring",
+  "schema": "public",
+  "models": [
+    {
+      "name": "dev_assets",
+      "description": "Comprehensive IT asset inventory with security risk assessments, hardware specifications, and location data",
+      "tableReference": {
+        "table": "dev_assets"
+      },
+      "columns": [
+        {
+          "name": "nuid",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "Network UID",
+            "description": "Network unique identifier for the asset"
+          }
+        },
+        {
+          "name": "dev_id",
+          "type": "INTEGER",
+          "notNull": true,
+          "properties": {
+            "displayName": "Device ID",
+            "description": "Device identifier"
+          }
+        },
+        {
+          "name": "ip",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "IP Address",
+            "description": "Network IP address of the asset"
+          }
+        },
+        {
+          "name": "mac",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "MAC Address",
+            "description": "Media Access Control address"
+          }
+        },
+        {
+          "name": "host_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Host Name",
+            "description": "Network hostname of the asset"
+          }
+        },
+        {
+          "name": "os_arch",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "OS Architecture",
+            "description": "Operating system architecture (x86, x64, ARM, etc.)"
+          }
+        },
+        {
+          "name": "os_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "OS Name",
+            "description": "Operating system name and version"
+          }
+        },
+        {
+          "name": "os_version",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "OS Version",
+            "description": "Operating system version number"
+          }
+        },
+        {
+          "name": "cpu_model_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "CPU Model",
+            "description": "Central processing unit model name"
+          }
+        },
+        {
+          "name": "count_cpu_cores",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "CPU Cores",
+            "description": "Number of CPU cores"
+          }
+        },
+        {
+          "name": "total_physical_mem_mb",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Total Memory (MB)",
+            "description": "Total physical memory in megabytes"
+          }
+        },
+        {
+          "name": "uptime_mins",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Uptime (Minutes)",
+            "description": "System uptime in minutes"
+          }
+        },
+        {
+          "name": "secure_boot_status",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Secure Boot Status",
+            "description": "Status of secure boot configuration on the system"
+          }
+        },
+        {
+          "name": "system_model",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "System Model",
+            "description": "System model information"
+          }
+        },
+        {
+          "name": "power_shell_exec_policy",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "PowerShell Execution Policy",
+            "description": "PowerShell execution policy setting"
+          }
+        },
+        {
+          "name": "smb1",
+          "type": "BOOLEAN",
+          "properties": {
+            "displayName": "SMB Version 1",
+            "description": "SMB version 1 protocol status"
+          }
+        },
+        {
+          "name": "smb2",
+          "type": "BOOLEAN",
+          "properties": {
+            "displayName": "SMB Version 2",
+            "description": "SMB version 2 protocol status"
+          }
+        },
+        {
+          "name": "smb3",
+          "type": "BOOLEAN",
+          "properties": {
+            "displayName": "SMB Version 3",
+            "description": "SMB version 3 protocol status"
+          }
+        },
+        {
+          "name": "domain_joined",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Domain Joined",
+            "description": "Domain membership status"
+          }
+        },
+        {
+          "name": "smbios_version",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "SMBIOS Version",
+            "description": "SMBIOS version information"
+          }
+        },
+        {
+          "name": "bios_version",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "BIOS Version",
+            "description": "BIOS version installed on the system"
+          }
+        },
+        {
+          "name": "bios_vendor",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "BIOS Vendor",
+            "description": "BIOS vendor information"
+          }
+        },
+        {
+          "name": "bios_release_date",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "BIOS Release Date",
+            "description": "Date when the BIOS was released"
+          }
+        },
+        {
+          "name": "serial_number",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Serial Number",
+            "description": "Hardware serial number"
+          }
+        },
+        {
+          "name": "manufacturer",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Manufacturer",
+            "description": "Hardware manufacturer"
+          }
+        },
+        {
+          "name": "board_manufacturer",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Board Manufacturer",
+            "description": "Motherboard manufacturer information"
+          }
+        },
+        {
+          "name": "system_manufacturer",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "System Manufacturer",
+            "description": "System manufacturer information"
+          }
+        },
+        {
+          "name": "is_reboot_pending",
+          "type": "BOOLEAN",
+          "properties": {
+            "displayName": "Reboot Pending",
+            "description": "Indicates if a system reboot is pending"
+          }
+        },
+        {
+          "name": "is_cloud_asset",
+          "type": "BOOLEAN",
+          "properties": {
+            "displayName": "Cloud Asset",
+            "description": "Indicates if this is a cloud-based asset"
+          }
+        },
+        {
+          "name": "raw_impact",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Raw Impact",
+            "description": "Raw impact score if the asset were compromised"
+          }
+        },
+        {
+          "name": "raw_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Raw Likelihood",
+            "description": "Raw likelihood score of the asset being compromised"
+          }
+        },
+        {
+          "name": "raw_risk",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Raw Risk",
+            "description": "Raw risk score calculated for the asset based on various security factors"
+          }
+        },
+        {
+          "name": "bastion_impact",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Bastion Impact",
+            "description": "Impact score specific to bastion host configurations"
+          }
+        },
+        {
+          "name": "propagation_impact",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Propagation Impact",
+            "description": "Impact score based on lateral movement potential"
+          }
+        },
+        {
+          "name": "category_impact",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Category Impact",
+            "description": "Impact score based on asset category classification"
+          }
+        },
+        {
+          "name": "unpatched_vulnerability_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Unpatched Vulnerability Likelihood",
+            "description": "Likelihood score based on unpatched vulnerabilities"
+          }
+        },
+        {
+          "name": "weak_credentials_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Weak Credentials Likelihood",
+            "description": "Likelihood score based on weak or compromised credentials"
+          }
+        },
+        {
+          "name": "zero_day_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Zero Day Likelihood",
+            "description": "Likelihood score based on zero-day vulnerabilities"
+          }
+        },
+        {
+          "name": "weak_encryption_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Weak Encryption Likelihood",
+            "description": "Likelihood score based on weak encryption implementations"
+          }
+        },
+        {
+          "name": "trust_relationship_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Trust Relationship Likelihood",
+            "description": "Likelihood score based on trust relationship vulnerabilities"
+          }
+        },
+        {
+          "name": "misconfiguration_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Misconfiguration Likelihood",
+            "description": "Likelihood score based on security misconfigurations"
+          }
+        },
+        {
+          "name": "compromised_credentials_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Compromised Credentials Likelihood",
+            "description": "Likelihood score based on compromised credentials"
+          }
+        },
+        {
+          "name": "phishing_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Phishing Likelihood",
+            "description": "Likelihood score based on phishing attack vectors"
+          }
+        },
+        {
+          "name": "malicious_insider_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Malicious Insider Likelihood",
+            "description": "Likelihood score based on malicious insider threats"
+          }
+        },
+        {
+          "name": "credential_vulnerability_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Credential Vulnerability Likelihood",
+            "description": "Likelihood score based on credential vulnerabilities"
+          }
+        },
+        {
+          "name": "likelihood_active",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Active Likelihood",
+            "description": "Current active likelihood score considering all factors"
+          }
+        },
+        {
+          "name": "unpatched_vulnerability_likelihood_active",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Unpatched Vulnerability Likelihood (Active)",
+            "description": "Active likelihood score for unpatched vulnerabilities"
+          }
+        },
+        {
+          "name": "weak_credentials_likelihood_active",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Weak Credentials Likelihood (Active)",
+            "description": "Active likelihood score for weak credentials"
+          }
+        },
+        {
+          "name": "zero_day_likelihood_active",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Zero Day Likelihood (Active)",
+            "description": "Active likelihood score for zero-day vulnerabilities"
+          }
+        },
+        {
+          "name": "weak_encryption_likelihood_active",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Weak Encryption Likelihood (Active)",
+            "description": "Active likelihood score for weak encryption"
+          }
+        },
+        {
+          "name": "trust_relationship_likelihood_active",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Trust Relationship Likelihood (Active)",
+            "description": "Active likelihood score for trust relationships"
+          }
+        },
+        {
+          "name": "misconfiguration_likelihood_active",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Misconfiguration Likelihood (Active)",
+            "description": "Active likelihood score for misconfigurations"
+          }
+        },
+        {
+          "name": "compromised_credentials_likelihood_active",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Compromised Credentials Likelihood (Active)",
+            "description": "Active likelihood score for compromised credentials"
+          }
+        },
+        {
+          "name": "phishing_likelihood_active",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Phishing Likelihood (Active)",
+            "description": "Active likelihood score for phishing attacks"
+          }
+        },
+        {
+          "name": "malicious_insider_likelihood_active",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Malicious Insider Likelihood (Active)",
+            "description": "Active likelihood score for malicious insiders"
+          }
+        },
+        {
+          "name": "credential_vulnerability_likelihood_active",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Credential Vulnerability Likelihood (Active)",
+            "description": "Active likelihood score for credential vulnerabilities"
+          }
+        },
+        {
+          "name": "likelihood_inherent",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Inherent Likelihood",
+            "description": "Inherent likelihood score without security controls"
+          }
+        },
+        {
+          "name": "unpatched_vulnerability_likelihood_inherent",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Unpatched Vulnerability Likelihood (Inherent)",
+            "description": "Inherent likelihood score for unpatched vulnerabilities"
+          }
+        },
+        {
+          "name": "weak_credentials_likelihood_inherent",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Weak Credentials Likelihood (Inherent)",
+            "description": "Inherent likelihood score for weak credentials"
+          }
+        },
+        {
+          "name": "zero_day_likelihood_inherent",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Zero Day Likelihood (Inherent)",
+            "description": "Inherent likelihood score for zero-day vulnerabilities"
+          }
+        },
+        {
+          "name": "weak_encryption_likelihood_inherent",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Weak Encryption Likelihood (Inherent)",
+            "description": "Inherent likelihood score for weak encryption"
+          }
+        },
+        {
+          "name": "trust_relationship_likelihood_inherent",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Trust Relationship Likelihood (Inherent)",
+            "description": "Inherent likelihood score for trust relationships"
+          }
+        },
+        {
+          "name": "misconfiguration_likelihood_inherent",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Misconfiguration Likelihood (Inherent)",
+            "description": "Inherent likelihood score for misconfigurations"
+          }
+        },
+        {
+          "name": "compromised_credentials_likelihood_inherent",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Compromised Credentials Likelihood (Inherent)",
+            "description": "Inherent likelihood score for compromised credentials"
+          }
+        },
+        {
+          "name": "phishing_likelihood_inherent",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Phishing Likelihood (Inherent)",
+            "description": "Inherent likelihood score for phishing attacks"
+          }
+        },
+        {
+          "name": "malicious_insider_likelihood_inherent",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Malicious Insider Likelihood (Inherent)",
+            "description": "Inherent likelihood score for malicious insiders"
+          }
+        },
+        {
+          "name": "credential_vulnerability_likelihood_inherent",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Credential Vulnerability Likelihood (Inherent)",
+            "description": "Inherent likelihood score for credential vulnerabilities"
+          }
+        },
+        {
+          "name": "effective_impact",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Effective Impact",
+            "description": "Effective impact score considering business criticality"
+          }
+        },
+        {
+          "name": "effective_likelihood",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Effective Likelihood",
+            "description": "Effective likelihood score after applying security controls"
+          }
+        },
+        {
+          "name": "effective_risk",
+          "type": "FLOAT",
+          "properties": {
+            "displayName": "Effective Risk",
+            "description": "Effective risk score after applying business context and mitigations"
+          }
+        },
+        {
+          "name": "device_type",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Device Type",
+            "description": "Type of device (server, workstation, laptop, etc.)"
+          }
+        },
+        {
+          "name": "device_subtype",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Device Subtype",
+            "description": "Subtype classification of the device"
+          }
+        },
+        {
+          "name": "platform",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Platform",
+            "description": "Operating system platform"
+          }
+        },
+        {
+          "name": "is_manual_canonical_label",
+          "type": "BOOLEAN",
+          "properties": {
+            "displayName": "Manual Canonical Label",
+            "description": "Indicates if the canonical label was manually assigned"
+          }
+        },
+        {
+          "name": "roles",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Roles",
+            "description": "Comma-separated list of roles assigned to the asset"
+          }
+        },
+        {
+          "name": "search_tags",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Search Tags",
+            "description": "Tags used for searching and filtering assets"
+          }
+        },
+        {
+          "name": "site_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Site Name",
+            "description": "Physical site or location name"
+          }
+        },
+        {
+          "name": "final_name",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Final Name",
+            "description": "Final canonical name assigned to the asset"
+          }
+        },
+        {
+          "name": "device_zone",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Device Zone",
+            "description": "Network zone or segment where the device is located"
+          }
+        },
+        {
+          "name": "location_id",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Location ID",
+            "description": "Unique identifier for the physical location"
+          }
+        },
+        {
+          "name": "location_region",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Location Region",
+            "description": "Geographic region of the asset"
+          }
+        },
+        {
+          "name": "location_country",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Location Country",
+            "description": "Country where the asset is located"
+          }
+        },
+        {
+          "name": "location_city",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Location City",
+            "description": "City where the asset is located"
+          }
+        },
+        {
+          "name": "location_state",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Location State",
+            "description": "State or province where the asset is located"
+          }
+        },
+        {
+          "name": "is_bastion_device",
+          "type": "BOOLEAN",
+          "properties": {
+            "displayName": "Bastion Device",
+            "description": "Indicates if this is a bastion host device"
+          }
+        },
+        {
+          "name": "asset_tags",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Asset Tags",
+            "description": "Comma-separated list of asset tags for categorization"
+          }
+        },
+        {
+          "name": "discoverable_tags",
+          "type": "TEXT",
+          "properties": {
+            "displayName": "Discoverable Tags",
+            "description": "Tags that can be discovered automatically"
+          }
+        },
+        {
+          "name": "inserted_at",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Inserted At",
+            "description": "Timestamp when the record was inserted into the database"
+          }
+        },
+        {
+          "name": "os_release_install_date",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "OS Release Install Date",
+            "description": "Date when the operating system was installed"
+          }
+        },
+        {
+          "name": "events_timestamp",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Events Timestamp",
+            "description": "Timestamp of the last security event"
+          }
+        },
+        {
+          "name": "is_retired",
+          "type": "BOOLEAN",
+          "properties": {
+            "displayName": "Retired",
+            "description": "Indicates if the asset has been retired"
+          }
+        },
+        {
+          "name": "raw_created_at",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Raw Created At",
+            "description": "Timestamp when the raw data was first created"
+          }
+        },
+        {
+          "name": "store_created_at",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Store Created At",
+            "description": "Timestamp when the record was created in the store"
+          }
+        },
+        {
+          "name": "store_updated_at",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Store Updated At",
+            "description": "Timestamp when the record was last updated in the store"
+          }
+        },
+        {
+          "name": "process_id",
+          "type": "VARCHAR",
+          "properties": {
+            "displayName": "Process ID",
+            "description": "Unique identifier for the data processing job"
+          }
+        },
+        {
+          "name": "last_processed",
+          "type": "TIMESTAMP",
+          "properties": {
+            "displayName": "Last Processed",
+            "description": "Timestamp when the asset was last processed"
+          }
+        },
+        {
+          "name": "is_stale",
+          "type": "BOOLEAN",
+          "properties": {
+            "displayName": "Stale",
+            "description": "Indicates if the asset data is stale or outdated"
+          }
+        }
+      ],
+      "primaryKey": "nuid",
+      "relationships": [
+        {
+          "name": "asset_agent_relationship",
+          "models": [
+            "dev_assets",
+            "dev_agents"
+          ],
+          "joinType": "ONE_TO_MANY",
+          "condition": "dev_assets.dev_id = dev_agents.dev_id AND dev_assets.nuid = dev_agents.nuid",
+          "properties": {
+            "displayName": "Asset to Agent Relationship",
+            "description": "Relationship between assets and their monitoring agents"
+          }
+        },
+        {
+          "name": "asset_to_software_relationship",
+          "models": [
+            "dev_assets",
+            "dev_software_instances"
+          ],
+          "joinType": "ONE_TO_MANY",
+          "condition": "dev_assets.dev_id = dev_software_instances.dev_id AND dev_assets.nuid = dev_software_instances.nuid",
+          "properties": {
+            "displayName": "Asset to Software Relationship",
+            "description": "Relationship between assets and their installed software instances"
+          }
+        },
+        {
+          "name": "asset_to_vulnerability_relationship",
+          "models": [
+            "dev_assets",
+            "dev_vulnerability_instances"
+          ],
+          "joinType": "ONE_TO_MANY",
+          "condition": "dev_assets.dev_id = dev_vulnerability_instances.dev_id AND dev_assets.nuid = dev_vulnerability_instances.nuid",
+          "properties": {
+            "displayName": "Asset to Vulnerability Relationship",
+            "description": "Relationship between assets and their vulnerability instances"
+          }
+        }
+      ]
+    }
+  ]
+}

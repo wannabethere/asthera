@@ -265,6 +265,9 @@ class AlertResponseCompatibility(BaseModel):
     reasoning: str
     conditions: List[Condition]
     notificationgroup: str
+
+    # New: structured alert payloads that frontends can store/replay as-is (e.g. for /alerts/validate-condition)
+    generated_alert_requests: Optional[List[Dict[str, Any]]] = None
     
     # Optional service-managed fields
     project_id: Optional[str] = None
@@ -1779,11 +1782,43 @@ class AlertServiceCompatibility:
         result = service_response.result
         metadata = service_response.metadata
         
+        # Handle clarification-required responses coming from the alert orchestrator pipeline
+        if isinstance(result, dict) and result.get("status") == "clarification_required":
+            clarification = result.get("clarification") or {}
+            questions = clarification.get("questions") or clarification.get("clarification_questions") or []
+            if isinstance(questions, str):
+                questions = [questions]
+
+            summary = "Clarification required to create this alert."
+            if questions:
+                summary = f"{summary} Questions: " + " | ".join(str(q) for q in questions)
+
+            return AlertResponseCompatibility(
+                type="clarification_required",
+                question=str(questions[0]) if questions else "Clarification required",
+                alertname="Clarification Required",
+                summary=summary,
+                reasoning="The request appears ambiguous; please answer the clarification questions so the alert can be created accurately.",
+                conditions=[],
+                notificationgroup="default",
+                project_id=result.get("project_id") or metadata.get("project_id"),
+                session_id=metadata.get("session_id"),
+                service_created=False,
+                service_metadata={
+                    "status": "clarification_required",
+                    "clarification": clarification,
+                    "query_index": result.get("query_index"),
+                },
+                created_at=datetime.now(),
+            )
+        
         # Handle alert orchestrator pipeline response format
         if "post_process" in result:
             post_process = result["post_process"]
             alert_results = post_process.get("alert_results", [])
             orchestration_metadata = post_process.get("orchestration_metadata", {})
+            combined_feed_configs = post_process.get("combined_feed_configurations", {}) or {}
+            combined_sql_analysis = post_process.get("combined_sql_analysis")
             
             # Extract alert information from the first alert result
             alert_name = "Generated Alert"
@@ -1792,96 +1827,165 @@ class AlertServiceCompatibility:
             conditions = []
             notification_group = "default"
             
+            # If no alerts were generated, return an informative response instead of a dummy default condition.
+            if not alert_results:
+                combined_summary = post_process.get("combined_feed_configurations", {}).get("summary")
+                summary_text = "No alerts generated"
+                if isinstance(combined_summary, str):
+                    summary_text = combined_summary
+                elif isinstance(combined_summary, dict) and combined_summary.get("summary"):
+                    summary_text = str(combined_summary.get("summary"))
+
+                project_id = orchestration_metadata.get("project_id") or metadata.get("project_id")
+                session_id = metadata.get("session_id")
+
+                return AlertResponseCompatibility(
+                    type="no_alerts_generated",
+                    question="No alerts generated from alert service",
+                    alertname="No Alerts Generated",
+                    summary=summary_text,
+                    reasoning="All generated candidates were filtered out (e.g., low confidence) or no valid alert configuration could be produced.",
+                    conditions=[],
+                    notificationgroup="default",
+                    project_id=project_id,
+                    session_id=session_id,
+                    feed_id=result.get("feed_id"),
+                    feed_name=result.get("feed_name"),
+                    global_configuration=result.get("global_configuration", {}),
+                    notification_settings=result.get("notification_settings"),
+                    schedule_settings=result.get("schedule_settings"),
+                    priority=result.get("priority", AlertPriority.MEDIUM),
+                    tags=result.get("tags", []),
+                    # Keep response compact: don't embed raw orchestrator payload.
+                    metadata={
+                        "combined_feed_configurations": {
+                            "summary": combined_feed_configs.get("summary"),
+                            "feeds_count": len(combined_feed_configs.get("feeds", []) or []),
+                        },
+                        "combined_sql_analysis": combined_sql_analysis,
+                        "orchestration_metadata": orchestration_metadata,
+                    },
+                    created_at=datetime.now(),
+                    updated_at=datetime.now(),
+                    service_created=False,
+                    service_metadata={
+                        "pipeline_name": metadata.get("pipeline_name"),
+                        "pipeline_version": metadata.get("pipeline_version"),
+                        "execution_timestamp": metadata.get("execution_timestamp"),
+                        # orchestration details moved to `metadata` to avoid duplication
+                    },
+                )
+
             # First try to get from alert_results
             if alert_results:
-                first_alert = alert_results[0]
-                feed_config = first_alert.get("feed_configuration", {})
-                condition = feed_config.get("condition", {})
-                metric = feed_config.get("metric", {})
-                notification = feed_config.get("notification", {})
-                
-                # Extract alert name and summary
-                alert_name = notification.get("metric_name", "Generated Alert")
-                metric_name = metric.get("measure", "default_metric")
-                condition_value = condition.get("value", 0)
-                summary = f"Alert for {metric_name} with threshold {condition_value}"
-                reasoning = "Alert generated from service"
-                
-                # Extract values directly from the Pydantic model dictionaries
-                # The .dict() method converts enums to their string values
-                
-                # Get schedule from notification schedule_type (already converted to string by .dict())
-                schedule_type = notification.get("schedule_type", "scheduled")
-                
-                # Get the actual frequency from the notification or derive from resolution
-                # The LLM should determine the appropriate frequency based on the alert context
-                custom_schedule = notification.get("custom_schedule")
-                frequency = notification.get("frequency")  # This might be set by the LLM
-                
-                # Use schedule_type directly from LLM response
-                # The LLM now generates the correct schedule format directly
+                # Build compatibility `conditions[]` from *all* generated alert results, so multi-clause requests
+                # (split into multiple alert_results) surface multiple conditions.
+                conditions = []
+                summaries: List[str] = []
+
                 valid_schedules = ["daily", "weekly", "monthly", "quarterly", "yearly", "custom", "never"]
-                schedule = schedule_type if schedule_type in valid_schedules else "daily"
-                
-                # Get timecolumn from metric resolution (already converted to string by .dict())
-                resolution = metric.get("resolution", "Daily")
-                # Map resolution to timecolumn format
                 timecolumn_map = {
                     "Daily": "rolling",
                     "Weekly": "weekly",
                     "Monthly": "monthly",
                     "Quarterly": "quarterly",
-                    "Yearly": "yearly"
+                    "Yearly": "yearly",
                 }
-                timecolumn = timecolumn_map.get(resolution, "rolling")
-                
-                # Convert conditions to Condition format (support multiple conditions)
-                conditions = []
-                
-                # Check if we have multiple conditions or single condition
-                conditions_list = feed_config.get("conditions", [])
-                if not conditions_list and condition:
-                    # Backward compatibility: convert single condition to list
-                    conditions_list = [condition]
-                
-                if conditions_list:
-                    for i, cond in enumerate(conditions_list):
-                        # Get condition type (already converted to string by .dict())
-                        condition_type_value = cond.get("condition_type", "threshold_value")
-                        
-                        # Get the actual operator from the condition
+                operator_map = {
+                    ">": "greaterthan",
+                    ">=": "greaterthan",
+                    "<": "lessthan",
+                    "<=": "lessthan",
+                    "=": "equals",
+                    "!=": "notequals",
+                }
+                operator_alias_map = {
+                    "ThresholdOperator.GREATER_THAN": ">",
+                    "ThresholdOperator.GREATER_EQUAL": ">=",
+                    "ThresholdOperator.LESS_THAN": "<",
+                    "ThresholdOperator.LESS_EQUAL": "<=",
+                    "ThresholdOperator.EQUALS": "=",
+                    "ThresholdOperator.NOT_EQUALS": "!=",
+                }
+
+                for ar_idx, alert_dict in enumerate(alert_results):
+                    feed_config = alert_dict.get("feed_configuration", {}) or {}
+                    metric = feed_config.get("metric", {}) or {}
+                    notification = feed_config.get("notification", {}) or {}
+
+                    metric_name = metric.get("measure", "default_metric")
+                    alert_title = notification.get("metric_name", "Generated Alert")
+
+                    schedule_type = notification.get("schedule_type", "daily")
+                    schedule = schedule_type if schedule_type in valid_schedules else "daily"
+
+                    resolution = metric.get("resolution", "Daily")
+                    timecolumn = timecolumn_map.get(resolution, "rolling")
+
+                    conditions_list = feed_config.get("conditions", [])
+                    if not conditions_list and feed_config.get("condition"):
+                        conditions_list = [feed_config.get("condition")]
+
+                    if not isinstance(conditions_list, list):
+                        conditions_list = []
+
+                    for cond_idx, cond in enumerate(conditions_list):
+                        if not isinstance(cond, dict):
+                            continue
                         operator = cond.get("operator", ">")
-                        
-                        # Get the condition value
+                        if not isinstance(operator, str) and hasattr(operator, "value"):
+                            operator = operator.value
+                        if isinstance(operator, str) and operator in operator_alias_map:
+                            operator = operator_alias_map[operator]
                         cond_value = cond.get("value", 0)
-                        
-                        # Map operator to condition type format
-                        operator_map = {
-                            ">": "greaterthan",
-                            ">=": "greaterthan",  # Greater than or equal maps to greaterthan
-                            "<": "lessthan",
-                            "<=": "lessthan",     # Less than or equal maps to lessthan
-                            "=": "equals",
-                            "!=": "notequals"
-                        }
                         condition_type = operator_map.get(operator, "greaterthan")
                         
-                        # Create condition name with index if multiple conditions
-                        condition_name = alert_name
+                        condition_name = alert_title
+                        if len(alert_results) > 1:
+                            condition_name = f"{alert_title} ({metric_name})"
                         if len(conditions_list) > 1:
-                            condition_name = f"{alert_name} - Condition {i+1}"
+                            condition_name = f"{condition_name} - Condition {cond_idx + 1}"
                         
-                        conditions.append(Condition(
-                            conditionType=condition_type,
-                            metricselected=metric_name,
-                            schedule=schedule,
-                            timecolumn=timecolumn,
-                            value=str(cond_value),
-                            alert_id=f"generated_alert_{i}",
-                            alert_name=condition_name,
-                            priority=AlertPriority.MEDIUM,
-                            created_at=datetime.now()
-                        ))
+                        conditions.append(
+                            Condition(
+                                conditionType=condition_type,
+                                metricselected=metric_name,
+                                schedule=schedule,
+                                timecolumn=timecolumn,
+                                value=str(cond_value) if cond_value is not None else None,
+                                alert_id=f"generated_alert_{ar_idx}_{cond_idx}",
+                                alert_name=condition_name,
+                                priority=AlertPriority.MEDIUM,
+                                created_at=datetime.now(),
+                            )
+                        )
+
+                        summaries.append(f"{metric_name} {operator} {cond_value}")
+
+                if len(alert_results) == 1:
+                    alert_name = alert_results[0].get("feed_configuration", {}).get("notification", {}).get("metric_name", "Generated Alert")
+                else:
+                    alert_name = f"{len(alert_results)} Alerts Generated"
+
+                summary = "Alerts: " + "; ".join(summaries[:6]) if summaries else "Alerts generated from service"
+                reasoning = "Alerts generated from service (one per clause when split)."
+
+                # Build a replayable request list (matches /alerts/validate-condition new format)
+                generated_alert_requests: List[Dict[str, Any]] = []
+                for alert_dict in alert_results:
+                    input_ctx = alert_dict.get("input") or {}
+                    sql = input_ctx.get("sql")
+                    nlq = input_ctx.get("natural_language_query")
+                    proposed_alert = alert_dict.get("feed_configuration")
+                    if sql and proposed_alert:
+                        generated_alert_requests.append(
+                            {
+                                "sql": sql,
+                                "proposed_alert": proposed_alert,
+                                "project_id": orchestration_metadata.get("project_id") or metadata.get("project_id"),
+                                "business_context": nlq,
+                            }
+                        )
             else:
                 # If no alert_results, try to extract from the pipeline result directly
                 # This handles the case where the alert agent returns the configuration directly
@@ -1975,8 +2079,7 @@ class AlertServiceCompatibility:
                 "pipeline_name": metadata.get("pipeline_name"),
                 "pipeline_version": metadata.get("pipeline_version"),
                 "execution_timestamp": metadata.get("execution_timestamp"),
-                "orchestration_metadata": orchestration_metadata,
-                "notification_groups": notification_groups
+                # keep compact; orchestration details are returned in `metadata`
             }
             
         else:
@@ -2045,6 +2148,7 @@ class AlertServiceCompatibility:
             reasoning=reasoning,
             conditions=conditions,
             notificationgroup=notification_group_name,
+            generated_alert_requests=generated_alert_requests if 'generated_alert_requests' in locals() and generated_alert_requests else None,
             # Service-managed fields
             project_id=project_id,
             session_id=session_id,
@@ -2055,12 +2159,20 @@ class AlertServiceCompatibility:
             schedule_settings=result.get("schedule_settings"),
             priority=result.get("priority", AlertPriority.MEDIUM),
             tags=result.get("tags", []),
-            metadata=result,
+            # Keep response compact: only expose high-signal artifacts.
+            metadata={
+                "combined_feed_configurations": {
+                    "summary": combined_feed_configs.get("summary"),
+                    "feeds": combined_feed_configs.get("feeds", []),
+                },
+                "combined_sql_analysis": combined_sql_analysis,
+                "orchestration_metadata": orchestration_metadata,
+            },
             created_at=datetime.now(),
             updated_at=datetime.now(),
             service_created=service_response.success,
             service_metadata=service_metadata,
-            notification_groups=notification_groups
+            notification_groups=notification_groups if notification_groups else None
         )
     
     async def process_alert_create(
@@ -2082,12 +2194,30 @@ class AlertServiceCompatibility:
             alert_request_text = alert_create.input
             notification_groups = self._parse_notification_groups_from_alert_request(alert_request_text)
             
-            # Extract SQL query and natural language query from the input
-            # For now, we'll use the input as both SQL and natural language query
-            # In a real implementation, you might want to parse this more intelligently
-            sql_queries = [alert_create.input]  # Use input as SQL query
-            natural_language_query = alert_create.input  # Use input as natural language query
-            alert_request = alert_create.input  # Use input as alert request
+            # Prefer structured values when provided (e.g., from `/alerts/service/create-single`)
+            ctx = alert_create.additional_context or {}
+            sql_query = (
+                ctx.get("sql")
+                or ctx.get("sql_query")
+                or ctx.get("query_sql")
+            )
+            natural_language_query = (
+                ctx.get("natural_language_query")
+                or ctx.get("nlq")
+                or ctx.get("query")
+            )
+            alert_request = (
+                ctx.get("alert_request")
+                or ctx.get("alert")
+                or ctx.get("alert_text")
+            )
+
+            # Fallback: if not provided, fall back to the raw input blob
+            sql_query = sql_query or alert_create.input
+            natural_language_query = natural_language_query or alert_create.input
+            alert_request = alert_request or alert_create.input
+
+            sql_queries = [sql_query]
             
             # Create an AlertRequest for the alert service
             alert_request_obj = AlertRequest(

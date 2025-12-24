@@ -1,0 +1,163 @@
+{
+  "function_reference": {
+    "calculate_exploitability_score": {
+      "description": "Calculates exploitability score (0-100) based on CVSS v3 components with weighted formula",
+      "parameters": [
+        "p_attack_vector_weight: Attack Vector weight (0-1)",
+        "p_attack_complexity_weight: Attack Complexity weight (0-1)",
+        "p_privileges_required_weight: Privileges Required weight (0-1)",
+        "p_user_interaction_weight: User Interaction weight (0-1)"
+      ],
+      "returns": "DECIMAL exploitability score (0-100)",
+      "usage": "calculate_exploitability_score(vi.attack_vector_weight, vi.attack_complexity_weight, vi.privileges_required_weight, vi.user_interaction_weight)"
+    },
+    "calculate_impact_score": {
+      "description": "Calculates impact score (0-100) based on CVSS v3 impact triad and scope",
+      "parameters": [
+        "p_confidentiality_weight: Confidentiality impact weight (0-1)",
+        "p_integrity_weight: Integrity impact weight (0-1)",
+        "p_availability_weight: Availability impact weight (0-1)",
+        "p_scope_weight: Scope weight (0-1)"
+      ],
+      "returns": "DECIMAL impact score (0-100)",
+      "usage": "calculate_impact_score(vi.confidentiality_impact_weight, vi.integrity_impact_weight, vi.availability_impact_weight, vi.scope_weight)"
+    },
+    "calculate_breach_method_likelihood": {
+      "description": "Calculates likelihood scores for each breach method based on vulnerability characteristics",
+      "parameters": [
+        "p_cve_id: CVE identifier",
+        "p_exploitability_score: Pre-calculated exploitability (0-100)",
+        "p_impact_score: Pre-calculated impact (0-100)",
+        "p_has_known_exploit: BOOLEAN for known exploit existence",
+        "p_has_patch_available: BOOLEAN for patch availability",
+        "p_dwell_time_days: Days since detection",
+        "p_asset_exposure_score: Asset exposure score (0-100)"
+      ],
+      "returns": "TABLE with breach_method, likelihood_score, contributing_factors[]",
+      "usage": "CROSS JOIN LATERAL calculate_breach_method_likelihood(cve_id, exploitability, impact, has_exploit, has_patch, dwell_days, exposure) AS bml"
+    },
+    "calculate_time_weighted_stats": {
+      "description": "Calculates time-weighted statistics with exponential decay for Gamma distribution modeling",
+      "parameters": [
+        "p_value: The value to weight (e.g., risk score)",
+        "p_time_delta_days: Time difference in days",
+        "p_tau_zero: Decay constant in days (default 30.0)"
+      ],
+      "returns": "TABLE with exp_factor, mu_hat, lambda_hat, n_hat",
+      "usage": "(SELECT mu_hat FROM calculate_time_weighted_stats(risk_score, days_ago, 30.0))"
+    },
+    "parse_cvss_v3_vector": {
+      "description": "Parses CVSS v3 vector string into individual component codes",
+      "parameters": [
+        "vector_string: CVSS v3 vector string (e.g., 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H')"
+      ],
+      "returns": "TABLE with attack_vector, attack_complexity, privileges_required, user_interaction, scope, confidentiality, integrity, availability",
+      "usage": "SELECT * FROM parse_cvss_v3_vector('CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H')"
+    },
+    "refresh_vulnerability_analytics_views": {
+      "description": "Refreshes all materialized views in correct dependency order",
+      "parameters": [],
+      "returns": "VOID (raises notice on completion)",
+      "usage": "SELECT refresh_vulnerability_analytics_views();"
+    },
+    "calculate_asset_impact_class_score": {
+      "description": "Calculates impact score (0-100) based on asset impact_class enum from risk_impact_metadata table",
+      "parameters": [
+        "p_impact_class: Impact class code (e.g., 'Mission Critical', 'Critical', 'Other')"
+      ],
+      "returns": "DECIMAL impact score (0-100) from metadata numeric_score",
+      "usage": "calculate_asset_impact_class_score(a.impact_class)"
+    },
+    "calculate_propagation_impact_score": {
+      "description": "Calculates impact score (0-100) based on asset propagation_class enum from risk_impact_metadata table",
+      "parameters": [
+        "p_propagation_class: Propagation class code (e.g., 'Perimeter', 'Core')"
+      ],
+      "returns": "DECIMAL impact score (0-100) from metadata numeric_score",
+      "usage": "calculate_propagation_impact_score(a.propagation_class)"
+    },
+    "calculate_combined_asset_impact_score": {
+      "description": "Calculates combined asset impact score using both impact_class and propagation_class enums with weighted combination",
+      "parameters": [
+        "p_impact_class: Impact class code",
+        "p_propagation_class: Propagation class code",
+        "p_impact_class_weight: Weight for impact class (default 0.7)",
+        "p_propagation_class_weight: Weight for propagation class (default 0.3)"
+      ],
+      "returns": "DECIMAL combined impact score (0-100)",
+      "usage": "calculate_combined_asset_impact_score(a.impact_class, a.propagation_class, 0.7, 0.3)"
+    },
+    "calculate_asset_exposure_score": {
+      "description": "Calculates asset exposure score (0-100) based on propagation_class enum for breach method likelihood calculations",
+      "parameters": [
+        "p_propagation_class: Propagation class code (e.g., 'Perimeter', 'Core')"
+      ],
+      "returns": "DECIMAL exposure score (0-100) from metadata numeric_score",
+      "usage": "calculate_asset_exposure_score(a.propagation_class)"
+    },
+    "enrich_vulnerability_instance_metadata": {
+      "description": "Enriches a vulnerability instance with metadata from enum tables. Only returns metadata for enum values that exist in the metadata tables. Returns NULL for fields where the enum value doesn't exist or wasn't provided.",
+      "parameters": [
+        "p_severity: Vulnerability severity code (e.g., 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW')",
+        "p_state: Vulnerability state code (e.g., 'ACTIVE', 'REMEDIATED', 'MITIGATED')",
+        "p_attack_vector: CVSS attack vector code (e.g., 'N', 'A', 'L', 'P')",
+        "p_attack_complexity: CVSS attack complexity code (e.g., 'L', 'H')",
+        "p_privileges_required: CVSS privileges required code (e.g., 'N', 'L', 'H')",
+        "p_user_interaction: CVSS user interaction code (e.g., 'N', 'R')",
+        "p_scope: CVSS scope code (e.g., 'U', 'C')",
+        "p_confidentiality_impact: CVSS confidentiality impact code (e.g., 'N', 'L', 'H')",
+        "p_integrity_impact: CVSS integrity impact code (e.g., 'N', 'L', 'H')",
+        "p_availability_impact: CVSS availability impact code (e.g., 'N', 'L', 'H')",
+        "p_cvss_version: CVSS version ('v2' or 'v3', default 'v3')"
+      ],
+      "returns": "TABLE with all enriched metadata fields (severity, state, CVSS components). Fields are NULL if enum value doesn't exist or wasn't provided.",
+      "usage": "SELECT * FROM enrich_vulnerability_instance_metadata('CRITICAL', 'ACTIVE', 'N', 'L', 'N', 'N', 'C', 'H', 'H', 'H', 'v3')"
+    },
+    "calculate_base_risk_score": {
+      "description": "Calculates base vulnerability risk score from CVSS, exploitability, impact, severity, and state weights. Formula: (CVSS + Exploitability + Impact) / 3 * Severity Weight * State Weight",
+      "parameters": [
+        "p_cvssv3_basescore: CVSS v3 base score (0-10 scale)",
+        "p_exploitability_score: Pre-calculated exploitability score (0-100)",
+        "p_impact_score: Pre-calculated impact score (0-100)",
+        "p_severity_weight: Severity weight from metadata (default 1.0)",
+        "p_state_risk_score: State risk score from metadata (0-100)"
+      ],
+      "returns": "DECIMAL base risk score (0-100)",
+      "usage": "calculate_base_risk_score(vs.cvssv3_basescore, vs.exploitability_score, vs.impact_score, vs.severity_weight, vs.state_risk_score)"
+    },
+    "calculate_comprehensive_risk_score": {
+      "description": "Calculates comprehensive risk score combining base risk with all multipliers (CISA exploit, time urgency, patch penalty, asset context). Final score is capped at 100.0",
+      "parameters": [
+        "p_base_risk_score: Base risk score from calculate_base_risk_score (0-100)",
+        "p_cisa_multiplier: CISA exploit multiplier (default 1.0, typically 1.5 if CISA exploit exists)",
+        "p_time_urgency_factor: Time-based urgency factor (default 1.0, increases with dwell time)",
+        "p_patch_penalty: Patch availability penalty (default 1.0, typically 1.2 if patch available)",
+        "p_asset_context_multiplier: Asset context multiplier from calculate_asset_context_multiplier (default 0.0)"
+      ],
+      "returns": "DECIMAL comprehensive risk score (0-100, capped at 100.0)",
+      "usage": "calculate_comprehensive_risk_score(vrc.base_risk_score, vrc.cisa_multiplier, vrc.time_urgency_factor, vrc.patch_penalty, vrc.asset_context_multiplier)"
+    },
+    "calculate_risk_category": {
+      "description": "Determines risk category (CRITICAL, HIGH, MEDIUM, LOW) from a risk score based on thresholds: >=90 CRITICAL, >=70 HIGH, >=40 MEDIUM, else LOW",
+      "parameters": [
+        "p_risk_score: Risk score (0-100) to categorize"
+      ],
+      "returns": "VARCHAR risk category ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW')",
+      "usage": "calculate_risk_category(vrs.comprehensive_risk_score)"
+    },
+    "calculate_asset_context_multiplier": {
+      "description": "Calculates asset context multiplier from asset impact components using weighted combination. Uses combined asset impact score from enum metadata if available, otherwise falls back to legacy asset_impact fields",
+      "parameters": [
+        "p_combined_asset_impact_score: Combined asset impact score from calculate_combined_asset_impact_score (0-100)",
+        "p_asset_impact: Legacy asset impact score (0-100, used as fallback)",
+        "p_bastion_impact: Bastion impact score (0-100)",
+        "p_propagation_impact_score: Propagation impact score from calculate_propagation_impact_score (0-100)",
+        "p_propagation_impact: Legacy propagation impact score (0-100, used as fallback)",
+        "p_asset_exposure_score: Asset exposure score from calculate_asset_exposure_score (0-100)"
+      ],
+      "returns": "DECIMAL asset context multiplier (weighted combination of impact components)",
+      "usage": "calculate_asset_context_multiplier(vs.combined_asset_impact_score, vs.asset_impact, vs.bastion_impact, vs.propagation_impact_score, vs.propagation_impact, vs.asset_exposure_score)"
+    }
+  }
+}
+

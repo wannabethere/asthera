@@ -1545,7 +1545,8 @@ async def main():
     reader = ProjectReader(base_path, persistent_client)
     
     # Test projects
-    test_projects = ["csodworkday","cornerstone_learning", "cornerstone_talent", "cornerstone","sumtotal_learn","cve_data"] #, "cornerstone_talent"]
+    #test_projects = ["csodworkday","cornerstone_learning", "cornerstone_talent", "cornerstone","sumtotal_learn","cve_data"] #, "cornerstone_talent"]
+    test_projects = ["csod_risk_attrition"]
 
     #test_projects = ["cve_data"]
     
@@ -1737,7 +1738,7 @@ async def test_delete_project():
     # Initialize reader
     reader = ProjectReader(base_path, persistent_client)
     
-    test_projects = ["csodworkday","cornerstone_learning", "cornerstone_talent", "cornerstone","sumtotal_learn_v3","cve_data"] #, "cornerstone_talent"]
+    test_projects = ["csodworkday","cornerstone_learning", "cornerstone_talent", "cornerstone","sumtotal_learn_v3","cve_data","csod_risk_attrition"] #, "cornerstone_talent"]
     # Test project deletion
     for project in test_projects:
         test_project_id = project  # Use the actual project_id from metadata
@@ -1771,7 +1772,7 @@ async def test_delete_project():
 
 if __name__ == "__main__":
     import asyncio
-    asyncio.run(test_delete_project()) 
+    #asyncio.run(test_delete_project()) 
     asyncio.run(main())    
     
     # Uncomment the line below to test project deletion

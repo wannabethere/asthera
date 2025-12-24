@@ -3,7 +3,7 @@ import logging
 from typing import Dict, List, Optional
 import json
 
-from app.agents.nodes.sql.transform_sql_rag_agent import create_transform_sql_rag_agent
+from app.agents.nodes.transform.transform_sql_rag_agent import create_transform_sql_rag_agent
 from app.core.dependencies import get_llm, get_doc_store_provider
 from app.core.engine_provider import EngineProvider
 from app.agents.retrieval.retrieval_helper import RetrievalHelper
@@ -147,6 +147,8 @@ async def run_transform_demo():
         
         "asset_impact_other_classification: To classify an asset as Other (when not Mission Critical or Critical), this is the default classification for all remaining assets including desktops, laptops, mobile devices, IoT devices, and other endpoints. Assets classified as Other typically have device_type in ('Desktops/Laptops', 'Smartphones/Tablets', 'IoT', 'AV/VoIP') or have no high-criticality roles or services. To calculate the numeric score for Other classification, identify and query the appropriate metadata tables that contain impact class definitions and their associated numeric scores. Use the metadata definitions for the 'Other' category to retrieve the numeric score dynamically using SQL - do not hardcode the score. The LLM should identify the best metadata tables that map impact class categories to their numeric scores.",
         
+        "asset_impact_cloud_classification: To classify an asset's impact based on cloud asset characteristics, first check if is_cloud_asset=TRUE in the assets table. For cloud assets, join assets with asset_classification_metadata table using appropriate relationship keys to get criticality_score and risk_weight for both device_type (where classification_type='device_type' or classification_type='canonical_type') and platform (where classification_type='platform'). Cloud assets have unique risk profiles: (1) Cloud compute instances (device_type='Servers' or 'Compute-Instance') with high-criticality platforms (Windows, Linux/Unix) should be classified as Mission Critical if criticality_score >= 90 from metadata, OR Critical if criticality_score >= 70 AND criticality_score < 90, (2) Cloud storage assets (device_type='Storage Assets') should be classified based on metadata criticality_score - if >= 85 then Mission Critical, if >= 70 then Critical, (3) Cloud networking assets (device_type='Networking Assets' or roles contain VPC, Load-Balancer) should be classified as Critical if criticality_score >= 75 from metadata, (4) Cloud containers (device_type='Container' or roles contain Kubernetes, Docker) should be classified based on metadata criticality_score - if >= 80 then Critical, otherwise Other, (5) For other cloud asset types, use the criticality_score from asset_classification_metadata to determine classification: Mission Critical if criticality_score >= 90, Critical if criticality_score >= 70 AND criticality_score < 90, Other if criticality_score < 70. The platform criticality_score should be combined with device_type criticality_score using weighted average: combined_criticality = (device_type_criticality * 0.6) + (platform_criticality * 0.4). To calculate the numeric score for cloud asset impact classification, identify and query the appropriate metadata tables that contain impact class definitions and their associated numeric scores. Use the metadata definitions for the determined impact class category (Mission Critical, Critical, or Other) to retrieve the numeric score dynamically using SQL - do not hardcode the score. The LLM should identify the best metadata tables that map impact class categories to their numeric scores. Cloud assets often have shared responsibility model implications and may require different risk weighting than on-premises assets.",
+        
         "asset_propagation_perimeter_classification: To classify an asset as Perimeter network class, analyze the asset's network interfaces by joining the assets table with the network interfaces table using the appropriate relationship keys. For each interface, determine if it is perimeter-facing by examining the interface's access type: (1) Check subnet classification - interfaces with public IP subnets (not in private ranges 10.x.x.x, 172.16-31.x.x, 192.168.x.x, 127.x.x.x, or 100.x.x.x) indicate perimeter access, (2) Check IP address ranges - public IP addresses indicate external-facing interfaces, (3) Check site location - interfaces in DMZ, perimeter, or external sites indicate perimeter access, (4) Check subnet classification calculated field if available - 'Public/Other' indicates perimeter access. If any interface on the asset has perimeter access characteristics, classify the asset as Perimeter. To calculate the numeric score for Perimeter classification, identify and query the appropriate metadata tables that contain propagation class definitions and their associated numeric scores. Use the metadata definitions for the 'Perimeter' category to retrieve the numeric score dynamically using SQL - do not hardcode the score. The LLM should identify the best metadata tables that map propagation class categories to their numeric scores. Perimeter assets are at the network edge and have higher exposure to external threats.",
         
         "asset_propagation_core_classification: To classify an asset as Core network class (when not Perimeter), first check all network interfaces for the asset by joining the assets table with the network interfaces table using the appropriate relationship keys. If all interfaces have private IP ranges (10.x.x.x, 172.16-31.x.x, 192.168.x.x), are in internal sites, or have subnet classification indicating private networks, classify as Core. Core assets are internal-only and not exposed to the internet perimeter. To calculate the numeric score for Core classification, identify and query the appropriate metadata tables that contain propagation class definitions and their associated numeric scores. Use the metadata definitions for the 'Core' category to retrieve the numeric score dynamically using SQL - do not hardcode the score. The LLM should identify the best metadata tables that map propagation class categories to their numeric scores. Core classification is the default when asset does not meet Perimeter criteria based on interface analysis.",
@@ -193,6 +195,8 @@ async def run_transform_demo():
         
         "asset_breach_likelihood_combined: To calculate comprehensive asset breach likelihood combining all factors, use weighted formula that includes: (1) Vulnerability-based likelihood (weight 0.3), (2) Unpatched vulnerability likelihood (weight 0.25), (3) CISA exploit likelihood (weight 0.25), (4) Propagation/exposure likelihood (weight 0.15), (5) Dwell time likelihood (weight 0.05). Formula: combined_breach_likelihood = (vuln_likelihood * 0.3) + (unpatched_likelihood * 0.25) + (cisa_likelihood * 0.25) + (propagation_likelihood * 0.15) + (dwell_likelihood * 0.05), capped at 100.0. This provides holistic breach probability assessment.",
         
+        "asset_breach_likelihood_cloud_assets: To calculate breach likelihood for cloud assets, first identify cloud assets by checking is_cloud_asset=TRUE in assets table. For cloud assets, apply cloud-specific breach likelihood factors: (1) Cloud misconfiguration exposure - join with cloud_connector_vuln_metadata or misconfig_instances where cloud_service is not null, multiply base likelihood by 1.2 if misconfigurations present, (2) Public cloud exposure - check if asset has public IP or is in perimeter network, add 15 points to likelihood, (3) Shared responsibility model gaps - cloud assets may have different patching responsibilities, check if vulnerabilities are cloud-provider managed vs customer-managed, apply 0.9 multiplier for provider-managed, 1.1 multiplier for customer-managed, (4) Cloud service criticality - join assets with asset_classification_metadata for device_type and platform, use criticality_score to adjust likelihood: if criticality_score >= 85, multiply by 1.15, if >= 70, multiply by 1.1, otherwise multiply by 1.0, (5) Cloud-native attack vectors - check for cloud-specific risk issues like exposed S3 buckets, unencrypted cloud storage, misconfigured security groups, add 10 points per cloud-specific risk. Formula: cloud_breach_likelihood = (base_likelihood * cloud_misconfig_multiplier * shared_responsibility_multiplier * criticality_multiplier) + public_exposure_penalty + cloud_native_risk_penalty, capped at 100.0. Cloud assets have unique attack surfaces and shared responsibility considerations that affect breach probability.",
+        
         # =============================================================================
         # ASSET BREACH LIKELIHOOD BY BREACH METHOD
         # =============================================================================
@@ -225,6 +229,8 @@ async def run_transform_demo():
         
         "asset_risk_by_location_sensitive_regions: To calculate risk for assets in sensitive geographic regions (data centers, HQ, financial centers), first identify sensitive locations from assets.location_region, location_city, site_name fields. Apply location_sensitivity_multiplier: Financial centers (1.4), Headquarters (1.3), Primary data centers (1.3), Research facilities (1.2), Standard locations (1.0). Also consider regulatory environment: GDPR regions need data protection (multiply by 1.2), High-compliance regions like healthcare/finance (1.3). Formula: location_risk = base_risk * location_sensitivity_multiplier * regulatory_multiplier, capped at 100.0. Geographic and regulatory factors affect risk posture.",
         
+        "asset_risk_cloud_assets: To calculate risk for cloud assets, first identify cloud assets by checking is_cloud_asset=TRUE in assets table. For cloud assets, use the cloud asset impact classification methodology (see asset_impact_cloud_classification) to determine impact_class. Then calculate cloud-specific risk adjustments: (1) Cloud impact multiplier - use the impact_class determined from cloud classification (Mission Critical, Critical, or Other) and retrieve numeric_score from risk_impact_metadata where enum_type='impact_class', (2) Cloud breach likelihood - use asset_breach_likelihood_cloud_assets methodology to get cloud-adjusted likelihood, (3) Cloud shared responsibility risk - cloud assets have shared responsibility model where some security is provider-managed, apply 0.95 multiplier to base risk if provider-managed components are secure, 1.1 multiplier if customer-managed components have gaps, (4) Cloud misconfiguration risk - join with cloud_connector_vuln_metadata or misconfig_instances, add risk points: critical misconfigurations add 20 points, high add 15, medium add 10, (5) Cloud exposure risk - check if asset is publicly accessible or in perimeter, multiply by 1.15 for public cloud assets, (6) Cloud service criticality - join with asset_classification_metadata for device_type and platform, use risk_weight to adjust: cloud_risk = (cloud_impact * 0.6 + cloud_likelihood * 0.4) * shared_responsibility_multiplier * exposure_multiplier * service_risk_weight + misconfig_risk_penalty, capped at 100.0. Cloud assets require consideration of shared responsibility model, cloud-native attack vectors, and different exposure characteristics compared to on-premises assets.",
+        
         # =============================================================================
         # SOFTWARE IMPACT AND RISK CALCULATIONS
         # =============================================================================
@@ -246,11 +252,8 @@ async def run_transform_demo():
         # =============================================================================
         
         "asset_risk_time_weighted_recent_focus: To calculate time-weighted risk emphasizing recent vulnerabilities, use calculate_time_weighted_stats(risk_value, time_delta_days, tau_zero=30.0) function with 30-day decay constant. For each vulnerability, calculate days_ago = CURRENT_DATE - detected_time. Apply exponential decay: weight = exp(-days_ago / 30.0). Recent vulnerabilities (0-7 days) get weight near 1.0. 30-day old vulnerabilities get weight 0.37. 90-day old get weight 0.05. Formula: weighted_risk = SUM(vuln_risk * exp(-days_ago/30)) / SUM(exp(-days_ago/30)). This prioritizes newly discovered vulnerabilities requiring urgent attention.",
-        
         "asset_risk_trend_increasing_vulnerability_count: To detect assets with increasing vulnerability trend, query vulnerability_instances with time-series grouping. Compare vulnerability counts: current_month_count vs previous_month_count vs 3_months_ago_count. Calculate trend: trend_direction = (current - previous) / previous * 100 for percentage change. Flag as Increasing if trend > 20%, Stable if -20% to +20%, Decreasing if < -20%. Formula: trend_risk_adjustment = base_risk * (1 + (trend_percentage / 100)). Assets with increasing vulnerability counts need investigation for root cause.",
-        
         "asset_risk_trend_aging_vulnerabilities: To detect assets with aging unresolved vulnerabilities, query vulnerability_instances where state='ACTIVE' and calculate average_dwell_time = AVG(dwell_time_days) per asset. Assets with high average dwell time indicate poor vulnerability management. Apply aging penalty: avg_dwell < 30 days (no penalty), 30-60 days (multiply by 1.1), 60-90 days (multiply by 1.3), 90+ days (multiply by 1.5). Formula: aging_risk = base_risk * dwell_time_multiplier. Persistent vulnerabilities indicate systemic remediation issues.",
-        
         "asset_risk_forecast_gamma_distribution: To forecast future risk using Gamma distribution from time-weighted statistics, use calculate_time_weighted_stats function to get mu_hat, lambda_hat, n_hat parameters. Calculate Gamma distribution parameters: alpha = (SUM(mu_hat)^2) / SUM(lambda_hat), beta = SUM(mu_hat) / SUM(lambda_hat). Forecast next 30-day risk: forecasted_risk = alpha * beta. This statistical model predicts risk trajectory based on historical patterns, enabling proactive resource allocation.",
         
         # =============================================================================
@@ -258,9 +261,7 @@ async def run_transform_demo():
         # =============================================================================
         
         "cloud_asset_risk_aws_ec2: To calculate risk for AWS EC2 instances, first identify EC2 assets by checking roles_metadata where code='EC2' or checking cloud service indicators. Query cloud_connector_vuln_metadata where cloud_service='EC2'. Calculate EC2-specific risks: (1) Unencrypted EBS volumes (risk_score=85.0), (2) Public snapshots (risk_score=90.0), (3) SSH/RDP open to 0.0.0.0 (risk_score=80.0), (4) Unused security groups (risk_score=40.0). Formula: ec2_risk = (critical_count * 90) + (high_count * 75) + (medium_count * 50) / total_findings, capped at 100. Add this to base asset risk with weight 0.4.",
-        
         "cloud_asset_risk_aws_s3: To calculate risk for AWS S3 buckets, identify S3 assets from roles or cloud service metadata. Query cloud_connector_vuln_metadata where cloud_service='S3'. Calculate S3-specific risks: (1) Public access via ACLs (risk_score=95.0, compliance impact), (2) Public bucket policies (risk_score=95.0), (3) No encryption (risk_score=80.0), (4) No MFA delete (risk_score=75.0), (5) No logging (risk_score=60.0), (6) No versioning (risk_score=65.0). Formula: s3_risk = MAX(public_access_risk * 1.5, encryption_risk, access_control_risk). Public S3 buckets are critical security failures.",
-        
         "cloud_asset_risk_aws_vpc: To calculate risk for AWS VPC configurations, identify VPC assets and query cloud_connector_vuln_metadata where cloud_service='VPC'. Assess VPC security: (1) No flow logging (risk_score=70.0), (2) Default security group allows all traffic (risk_score=75.0), (3) Overly permissive NACLs, (4) No network segmentation. Formula: vpc_risk = (logging_risk * 0.4) + (security_group_risk * 0.4) + (segmentation_risk * 0.2). VPC is network foundation so misconfigurations have broad impact.",
         
         # =============================================================================
@@ -268,11 +269,8 @@ async def run_transform_demo():
         # =============================================================================
         
         "asset_risk_matrix_impact_likelihood: To create risk matrix classification, calculate both impact (Y-axis) and likelihood (X-axis) independently, then plot on 3x3 or 5x5 matrix. Impact levels: Low (0-40), Medium (41-70), High (71-100). Likelihood levels: Low (0-30), Medium (31-60), High (61-100). Matrix cells determine priority: High Impact + High Likelihood = Critical Priority (immediate action). High Impact + Medium Likelihood = High Priority (urgent action). Medium Impact + Medium Likelihood = Medium Priority (planned action). Low scores = Low Priority (monitor). This visual representation helps prioritize remediation efforts.",
-        
         "asset_risk_prioritization_score: To calculate risk prioritization score for remediation ordering, combine multiple factors with priority weights: (1) Risk score (weight 0.30), (2) CISA exploit present (weight 0.20), (3) Mission Critical classification (weight 0.20), (4) Patch available but not installed (weight 0.15), (5) Vulnerability age/dwell time (weight 0.10), (6) Asset exposure (weight 0.05). Formula: priority_score = (risk * 0.30) + (cisa_flag * 20) + (mission_critical_flag * 20) + (unpatched_flag * 15) + (age_score * 0.10) + (exposure * 0.05), capped at 100. Sort assets by priority_score descending for remediation queue.",
-        
         "asset_risk_aggregate_by_business_unit: To calculate aggregate risk by business unit or department, first map assets to business units using assets.location_region, site_name, or custom business_unit field. For each business unit: (1) Calculate average asset risk, (2) Count CRITICAL and HIGH risk assets, (3) Calculate total risk exposure = SUM(asset_risk * asset_impact) across all BU assets, (4) Identify highest risk asset. Formula: bu_risk_score = (avg_risk * 0.3) + (critical_count * 5) + (high_count * 2), capped at 100. This enables risk-based resource allocation across organization.",
-        
         "asset_risk_aggregate_by_asset_owner: To calculate risk by asset owner or responsible team, join assets with asset_owner_metadata or responsibility assignments. For each owner: Calculate total_managed_risk = SUM(asset_risk) across owned assets, average_risk = AVG(asset_risk), worst_asset_risk = MAX(asset_risk), overdue_remediation_count = COUNT(assets with dwell_time > 90 days). Formula: owner_risk_score = (total_managed_risk / asset_count) + (overdue_count * 5), capped at 100. This provides accountability metrics for security ownership.",
         
         # =============================================================================
@@ -280,11 +278,8 @@ async def run_transform_demo():
         # =============================================================================
         
         "asset_risk_compliance_gdpr: To calculate GDPR compliance risk for assets processing personal data, identify assets that handle EU customer data by checking location_region for EU countries or data_classification tags. Assess compliance factors: (1) Unencrypted data at rest (add 30 points), (2) Unencrypted data in transit (add 25 points), (3) Missing access controls (add 20 points), (4) No audit logging (add 15 points), (5) Data retention violations (add 10 points). Formula: gdpr_risk = base_risk + compliance_penalty_sum, capped at 100. GDPR violations carry significant fines up to 4% of global revenue, so compliance risk must be weighted heavily.",
-        
         "asset_risk_compliance_pci_dss: To calculate PCI-DSS compliance risk for assets processing payment card data, identify assets in cardholder data environment by checking roles for payment processing services or data_classification for PCI scope. Assess PCI factors: (1) Missing encryption for card data (add 40 points), (2) Default credentials on payment systems (add 35 points), (3) Missing network segmentation (add 25 points), (4) Inadequate access controls (add 20 points), (5) Missing vulnerability scans (add 15 points). Formula: pci_risk = base_risk + pci_penalty_sum, capped at 100. Non-compliance results in loss of card processing privileges.",
-        
         "asset_risk_compliance_hipaa: To calculate HIPAA compliance risk for healthcare assets handling Protected Health Information (PHI), identify healthcare assets by checking industry classification or data_classification tags for PHI. Assess HIPAA factors: (1) Unencrypted PHI (add 35 points), (2) Missing access audit logs (add 30 points), (3) Inadequate authentication (add 25 points), (4) No data backup/disaster recovery (add 20 points), (5) Missing business associate agreements for vendors (add 15 points). Formula: hipaa_risk = base_risk + hipaa_penalty_sum, capped at 100. HIPAA violations result in fines and legal liability for data breaches.",
-        
         "asset_risk_compliance_sox: To calculate SOX compliance risk for financial reporting systems, identify assets involved in financial data processing, reporting, or controls by checking roles for financial systems (ERP, accounting software) or system_purpose tags. Assess SOX factors: (1) Inadequate change management controls (add 25 points), (2) Missing segregation of duties (add 30 points), (3) Insufficient audit trails (add 20 points), (4) Weak access controls to financial data (add 25 points), (5) No disaster recovery testing (add 15 points). Formula: sox_risk = base_risk + sox_penalty_sum, capped at 100. SOX non-compliance can result in criminal penalties for executives.",
         
         # =============================================================================
@@ -292,11 +287,8 @@ async def run_transform_demo():
         # =============================================================================
         
         "asset_risk_financial_services: To calculate risk for financial services industry assets, apply industry-specific multipliers and considerations. Financial institutions face: (1) Higher attack targeting (multiply base risk by 1.4), (2) Regulatory scrutiny (add compliance_risk * 0.3), (3) Reputational damage from breaches (multiply impact by 1.3), (4) Real-time transaction requirements making patching difficult (add 10 points for production financial systems). Check for financial service indicators: roles include banking systems, trading platforms, customer account databases. Formula: financial_risk = (base_risk * 1.4) + (compliance_risk * 0.3) + (reputational_factor * 10), capped at 100.",
-        
         "asset_risk_healthcare: To calculate risk for healthcare industry assets, apply healthcare-specific factors. Healthcare organizations face: (1) PHI exposure risk (multiply impact by 1.4 for systems with patient data), (2) Ransomware targeting (add 15 points for critical medical systems), (3) Legacy medical device vulnerabilities that cannot be patched (add 25 points for EOL medical devices), (4) Life safety concerns (multiply by 1.5 for life-support or critical care systems). Identify healthcare systems by checking device_type for medical devices or roles for EHR, PACS, medical billing. Formula: healthcare_risk = base_risk * phi_multiplier * critical_care_multiplier + legacy_device_penalty, capped at 100.",
-        
         "asset_risk_manufacturing_ot: To calculate risk for manufacturing and operational technology (OT) assets, apply OT-specific considerations. Manufacturing environments face: (1) Production downtime costs (multiply impact by 1.6 for production control systems), (2) Safety risks from compromised industrial controls (add 30 points for safety systems), (3) Legacy OT systems with no security updates (add 25 points for EOL SCADA/ICS), (4) IT/OT convergence creating new attack paths (add 15 points for systems with both IT and OT connectivity). Identify OT assets using asset_classification_metadata where canonical_type equals OT Assets or roles include industrial control systems. Formula: ot_risk = base_risk * downtime_multiplier + safety_penalty + legacy_penalty, capped at 100.",
-        
         "asset_risk_retail_pos: To calculate risk for retail Point-of-Sale (POS) systems, apply retail-specific factors. Retail POS systems face: (1) Card data theft risk (add 35 points for payment terminals), (2) PCI-DSS compliance requirements (add pci_compliance_risk), (3) Store location vulnerability (multiply by 1.3 for remote store locations with limited IT support), (4) High-value targets during peak shopping seasons (add 10 points during Q4). Identify POS systems by checking roles for payment processing or device descriptions containing POS, terminal, card reader. Formula: pos_risk = base_risk + card_data_penalty + pci_risk + (location_risk * 1.3), capped at 100.",
         
         # =============================================================================
@@ -304,11 +296,8 @@ async def run_transform_demo():
         # =============================================================================
         
         "asset_risk_ransomware_susceptibility: To calculate ransomware susceptibility risk, assess factors that make assets attractive ransomware targets. High susceptibility indicators: (1) Inadequate backup systems (add 25 points if no verified backups), (2) Vulnerable SMBv1 protocol enabled (add 20 points), (3) Weak or default credentials (add 20 points), (4) Missing endpoint protection (add 15 points), (5) High-value data present (add 15 points for databases, file servers), (6) Windows operating systems (add 10 points). Check for backup coverage by joining with backup_metadata, check for SMBv1 using service_detection data, check credential strength from security_strength_metadata. Formula: ransomware_risk = base_risk + susceptibility_factors_sum, capped at 100.",
-        
         "asset_risk_apt_targeting: To calculate Advanced Persistent Threat (APT) targeting risk, identify assets attractive to nation-state actors. APT target indicators: (1) Intellectual property repositories (add 30 points for R&D systems, source code repos), (2) Executive access systems (add 25 points for C-level user devices), (3) Financial systems (add 25 points for accounting, treasury), (4) Strategic communications (add 20 points for email servers, collaboration platforms), (5) Industrial secrets (add 30 points for manufacturing specs, trade secrets). Use roles_metadata to identify high-value systems, check user_classification for executive users. Formula: apt_risk = base_risk + (target_value * 1.5), capped at 100. APT attacks are highly sophisticated and persistent.",
-        
         "asset_risk_supply_chain_attack: To calculate supply chain attack risk, assess assets involved in software development and deployment pipelines. Supply chain risk factors: (1) Source code repositories (add 35 points for Git servers, version control), (2) Build systems (add 30 points for CI/CD pipelines, Jenkins, GitLab runners), (3) Package managers (add 25 points for internal artifact repositories, npm registries), (4) Development workstations (add 20 points for developer machines with elevated access), (5) Vendor integration points (add 20 points for third-party API connections). Identify by checking roles for CODE-REPO or system_purpose tags containing development, build, CI/CD. Formula: supply_chain_risk = base_risk + pipeline_exposure_sum, capped at 100.",
-        
         "asset_risk_data_exfiltration: To calculate data exfiltration risk, identify assets with sensitive data and assess exfiltration vectors. Exfiltration risk factors: (1) Data classification level (add 40 points for highly confidential, 30 for confidential, 15 for internal), (2) Outbound network access (add 20 points for unrestricted internet access), (3) Removable media enabled (add 15 points for USB access enabled), (4) Cloud sync services (add 15 points for Dropbox, OneDrive on asset), (5) Missing DLP controls (add 20 points if no data loss prevention). Check data_classification field on assets, check for internet_facing flag, query installed_software for cloud storage apps. Formula: exfiltration_risk = base_risk + data_value + (access_vectors_sum * 1.2), capped at 100.",
         
         # =============================================================================
@@ -316,9 +305,7 @@ async def run_transform_demo():
         # =============================================================================
         
         "asset_risk_privileged_user_access: To calculate insider threat risk from privileged users, assess the damage potential from compromised privileged accounts. Privileged access risk factors: (1) Domain administrator access (add 40 points for domain admin privileges), (2) Database administrator access (add 35 points for DBA accounts), (3) Root/system access (add 35 points for Linux root or Windows SYSTEM), (4) Multi-system access (add 20 points if user has admin on 5+ systems), (5) No session monitoring (add 15 points if privileged sessions not logged). Query user_accounts joined with roles_metadata where is_admin_role equals TRUE, count systems per admin user. Formula: privileged_risk = base_risk + privilege_level + (access_breadth * 5), capped at 100.",
-        
         "asset_risk_departing_employee: To calculate risk from departing employees with continued access, identify access that should be revoked. Departure risk factors: (1) Termination date passed but access still active (add 50 points for access beyond termination date), (2) Privileged access not revoked (add 40 points for admin access post-departure), (3) VPN access still enabled (add 30 points for remote access), (4) File share access maintained (add 20 points), (5) No exit interview completed (add 10 points). Check hr_system_data for termination_date, compare with last_login_date on assets, check vpn_access_logs. Formula: departure_risk = 100 if (days_since_termination > 0 AND access_active), else 0. Immediate risk requiring urgent attention.",
-        
         "asset_risk_contractor_access: To calculate risk from third-party contractor access, assess external access scope and duration. Contractor risk factors: (1) Expired contract but access remains (add 40 points), (2) Over-provisioned access beyond job requirements (add 30 points), (3) Unmonitored contractor activity (add 25 points if no logging), (4) Contractor VPN or direct network access (add 20 points), (5) Access to sensitive data (add 25 points for confidential data access). Query user_accounts where user_type equals contractor, check contract_end_date from vendor_management_system, compare with account_expiration_date. Formula: contractor_risk = base_risk + access_scope_penalty + (days_overdue * 2), capped at 100.",
         
         # =============================================================================
@@ -326,9 +313,7 @@ async def run_transform_demo():
         # =============================================================================
         
         "asset_risk_network_segmentation_violation: To calculate risk from network segmentation violations where assets communicate across trust boundaries inappropriately, analyze network flow data. Segmentation violation indicators: (1) DMZ to internal zone communication (add 35 points), (2) Guest network to corporate network (add 40 points), (3) OT network to IT network without firewall (add 45 points for safety reasons), (4) Development environment to production (add 30 points), (5) Vendor zone to customer data zone (add 35 points). Query network_flow_logs for source_zone and destination_zone, check against security_policy for allowed flows. Formula: segmentation_risk = base_risk + SUM(violation_penalties), capped at 100. Segmentation violations enable lateral movement.",
-        
         "asset_risk_flat_network_exposure: To calculate risk for assets on flat networks without segmentation, assess the blast radius of a single compromised asset. Flat network risk factors: (1) No VLANs or network segmentation (add 30 points for single broadcast domain), (2) All assets can reach all other assets (add 25 points for unrestricted routing), (3) Servers and workstations on same network (add 20 points), (4) Production and non-production mixed (add 25 points), (5) Critical and non-critical assets unsegmented (add 20 points). Check network_topology_data for VLAN assignments, check firewall_rules for segmentation policies. Formula: flat_network_risk = base_risk + segmentation_absence_penalty + (asset_count_on_network / 10), capped at 100.",
-        
         "asset_risk_internet_exposed: To calculate risk for internet-facing assets with public IP addresses, assess external exposure and attack surface. Internet exposure risk factors: (1) Publicly accessible IP address (base internet_exposure equals 30 points), (2) Open high-risk ports like RDP 3389 or SSH 22 (add 25 points per exposed admin port), (3) Vulnerable web applications (add 20 points for web apps with critical CVEs), (4) No WAF or DDoS protection (add 15 points), (5) Listed in threat intelligence as actively scanned (add 20 points). Query network_interfaces for public_ip equals TRUE, check port_scan_results for open ports, check threat_intel_feeds for asset IP. Formula: internet_risk = base_risk + internet_exposure + (open_ports_penalty * 1.5) + threat_intel_penalty, capped at 100.",
         
         # =============================================================================
@@ -336,9 +321,7 @@ async def run_transform_demo():
         # =============================================================================
         
         "asset_risk_hardware_age: To calculate risk from aging hardware beyond manufacturer support, assess hardware lifecycle stage. Hardware age risk factors: (1) Asset age exceeds 5 years (add 15 points), (2) Asset age exceeds 7 years (add 30 points), (3) Manufacturer end-of-support reached (add 40 points), (4) No available hardware replacement parts (add 25 points), (5) Increased failure rate due to age (add 10 points per year beyond 5 years). Query assets.install_date or first_seen_date, calculate age as CURRENT_DATE minus install_date, check manufacturer_lifecycle_metadata for end_of_support dates. Formula: hardware_age_risk = base_risk + (CASE WHEN age > 7 THEN 30 WHEN age > 5 THEN 15 ELSE 0 END) + (years_beyond_support * 10), capped at 100.",
-        
         "asset_risk_software_lifecycle: To calculate risk from software lifecycle stage, assess whether software is in mainstream support, extended support, or end-of-life. Lifecycle risk factors: (1) End-of-Life software with no security patches (add 50 points), (2) Extended support only (add 25 points, limited patches), (3) Approaching EOL within 6 months (add 15 points), (4) Custom or unsupported software (add 30 points), (5) Multiple EOL software packages on same asset (multiply by package count). Query software_instances joined with software_metadata where enum_type equals product_state and code equals EOL, check vendor_lifecycle_dates. Formula: lifecycle_risk = base_risk + eol_penalty * eol_package_count + extended_support_penalty, capped at 100.",
-        
         "asset_risk_patch_lag: To calculate risk from delayed patching, measure time between patch availability and patch installation. Patch lag risk factors: (1) Critical patches available > 30 days (add 40 points), (2) High severity patches available > 60 days (add 30 points), (3) Medium patches available > 90 days (add 20 points), (4) No patching schedule defined (add 15 points), (5) Repeated pattern of delayed patching (add 20 points for habitual lag). Calculate patch lag as CURRENT_DATE minus patch_available_date for each vulnerability, aggregate per asset. Formula: patch_lag_risk = base_risk + (critical_lag_count * 10) + (high_lag_count * 7) + (medium_lag_count * 4), capped at 100. Patch lag increases exploitation window.",
         
         # =============================================================================
@@ -346,9 +329,7 @@ async def run_transform_demo():
         # =============================================================================
         
         "asset_risk_weak_cryptography: To calculate risk from weak cryptographic implementations, assess cipher strength, key lengths, and protocol versions. Weak crypto indicators: (1) SSL 2.0 or SSL 3.0 enabled (add 45 points for POODLE vulnerability), (2) TLS 1.0 or TLS 1.1 enabled (add 30 points), (3) Weak ciphers like RC4, DES, 3DES (add 35 points), (4) RSA keys under 2048 bits (add 25 points), (5) SHA-1 certificates (add 20 points). Query ssl_tls_version_metadata for protocol versions, check security_strength_metadata where enum_type equals cipher or certificate for strength ratings. Formula: crypto_risk = base_risk + SUM(weak_crypto_penalties), capped at 100. Weak cryptography enables man-in-the-middle attacks.",
-        
         "asset_risk_missing_encryption: To calculate risk from missing encryption for data at rest or in transit, identify unencrypted sensitive data. Missing encryption risk factors: (1) Database encryption disabled for sensitive data (add 40 points), (2) Disk encryption disabled on laptops (add 35 points for mobile devices), (3) Backup encryption disabled (add 30 points), (4) Email encryption not enforced (add 20 points for email servers), (5) File share encryption disabled (add 25 points). Check database_config for encryption_at_rest, check endpoint_protection_config for disk_encryption_status, verify backup_encryption_status. Formula: missing_encryption_risk = base_risk + unencrypted_data_value * data_classification_multiplier, capped at 100.",
-        
         "asset_risk_certificate_expiration: To calculate risk from expiring or expired SSL/TLS certificates, assess certificate validity and renewal status. Certificate risk factors: (1) Certificate already expired (add 50 points, immediate outage risk), (2) Certificate expires within 7 days (add 40 points), (3) Certificate expires within 30 days (add 25 points), (4) Certificate expires within 90 days (add 10 points), (5) Self-signed certificate with no expiration (add 30 points). Query ssl_certificate_data for expiration_date, calculate days_until_expiration as expiration_date minus CURRENT_DATE. Formula: cert_expiration_risk = base_risk + CASE WHEN days_until_expiration < 0 THEN 50 WHEN days_until_expiration < 7 THEN 40 WHEN days_until_expiration < 30 THEN 25 ELSE 10 END, capped at 100.",
         
         # =============================================================================
@@ -372,14 +353,42 @@ async def run_transform_demo():
     test_cases = [
         
         {
-            "question": "Calculate raw_risk score for each asset by combining raw_impact and raw_likelihood with appropriate weighting",
+            "question": "Calculate raw_risk score for each asset by first calculating raw_impact, then calculating raw_likelihood from breach method likelihoods and asset exposure, then combining them with appropriate weighting",
             "project_id": "cve_data",
             "event_id": "transform_event_4",
-            "description": "CALCULATED_COLUMN: Raw risk score combining impact and likelihood",
+            "description": "CALCULATED_COLUMN: Raw risk score combining calculated impact and likelihood",
+            "knowledge": vulnerability_knowledge
+        },
+        {
+            "question": "For each vulnerability based on the severity, vulnerability definition, vulnerability remediation availability and attack vector lets calculate the exploitability score, breach likelihood and risk scores",
+            "project_id": "cve_data",
+            "event_id": "transform_event_5",
+            "description": "CALCULATED_COLUMN: Bastion impact score for bastion devices",
             "knowledge": vulnerability_knowledge
         },
         {
             "question": "Create a calculated column for bastion_impact that calculates impact score specifically for bastion host devices using impact_class and propagation_class",
+            "project_id": "cve_data",
+            "event_id": "transform_event_5",
+            "description": "CALCULATED_COLUMN: Bastion impact score for bastion devices",
+            "knowledge": vulnerability_knowledge
+        },
+        {
+            "question": "Create a open vulnerability age for each vulnerability instance based on the publish_time and current date",
+            "project_id": "cve_data",
+            "event_id": "transform_event_5",
+            "description": "CALCULATED_COLUMN: Bastion impact score for bastion devices",
+            "knowledge": vulnerability_knowledge
+        },
+        {
+            "question": "Add exploitability score for each vulnerability based on the cvss_score, severity category and raw score",
+            "project_id": "cve_data",
+            "event_id": "transform_event_5",
+            "description": "CALCULATED_COLUMN: Bastion impact score for bastion devices",
+            "knowledge": vulnerability_knowledge
+        },
+        {
+            "question": "For each asset I want to track open vulnerabilities and their age in days",
             "project_id": "cve_data",
             "event_id": "transform_event_5",
             "description": "CALCULATED_COLUMN: Bastion impact score for bastion devices",
@@ -436,10 +445,10 @@ async def run_transform_demo():
             "knowledge": vulnerability_knowledge
         },
         {
-            "question": "Calculate weighted average raw_risk score where weight is based on asset criticality score from asset_classification_metadata, grouped by device type",
+            "question": "Calculate weighted average risk score for each asset by first computing raw_risk from impact and likelihood calculations, where weight is based on asset criticality score from asset_classification_metadata, grouped by device type",
             "project_id": "cve_data",
             "event_id": "transform_event_10",
-            "description": "AGGREGATION_TRANSFORMATION: Weighted raw_risk by asset criticality",
+            "description": "AGGREGATION_TRANSFORMATION: Weighted risk by asset criticality after calculating raw_risk",
             "knowledge": vulnerability_knowledge
         },
         {
@@ -450,7 +459,7 @@ async def run_transform_demo():
             "knowledge": vulnerability_knowledge
         },
         {
-            "question": "Show me monthly vulnerability risk metrics with calculated fields for month-over-month raw_risk change and cumulative risk exposure",
+            "question": "Show me monthly vulnerability risk metrics with calculated fields for month-over-month risk score change and cumulative risk exposure, where risk scores are calculated from impact and likelihood",
             "project_id": "cve_data",
             "event_id": "transform_event_12",
             "description": "METRIC: Monthly risk trends with cumulative exposure",
@@ -464,10 +473,10 @@ async def run_transform_demo():
             "knowledge": vulnerability_knowledge
         },
         {
-            "question": "Calculate the percentage of total raw_risk score for each asset classification type relative to all classifications",
+            "question": "Calculate the percentage of total risk score for each asset classification type relative to all classifications, where risk scores are computed from impact and likelihood calculations",
             "project_id": "cve_data",
             "event_id": "transform_event_14",
-            "description": "AGGREGATION_TRANSFORMATION: Raw risk distribution by classification",
+            "description": "AGGREGATION_TRANSFORMATION: Risk distribution by classification after calculating risk scores",
             "knowledge": vulnerability_knowledge
         },
         {
@@ -485,10 +494,10 @@ async def run_transform_demo():
             "knowledge": vulnerability_knowledge
         },
         {
-            "question": "Show me time-weighted raw_risk by propagation class with calculated Gamma distribution parameters for trend forecasting",
+            "question": "Show me time-weighted risk scores by propagation class with calculated Gamma distribution parameters for trend forecasting, where risk scores are computed from impact and likelihood",
             "project_id": "cve_data",
             "event_id": "transform_event_17",
-            "description": "METRIC: Time-weighted raw_risk with Gamma parameters by propagation",
+            "description": "METRIC: Time-weighted risk with Gamma parameters by propagation after calculating risk scores",
             "knowledge": vulnerability_knowledge
         },
         {
@@ -506,10 +515,10 @@ async def run_transform_demo():
             "knowledge": vulnerability_knowledge
         },
         {
-            "question": "Show me average raw_impact, raw_likelihood, and raw_risk by asset classification type (canonical_type, device_type) with calculated risk ratios",
+            "question": "Show me average impact, likelihood, and risk scores by asset classification type (canonical_type, device_type) with calculated risk ratios, where impact is calculated from impact_class and propagation_class, likelihood is calculated from breach methods and exposure, and risk is calculated from impact and likelihood",
             "project_id": "cve_data",
             "event_id": "transform_event_20",
-            "description": "METRIC: Average risk scores by asset classification",
+            "description": "METRIC: Average calculated risk scores by asset classification",
             "knowledge": vulnerability_knowledge
         }"""
     ]

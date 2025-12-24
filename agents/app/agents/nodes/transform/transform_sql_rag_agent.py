@@ -22,6 +22,10 @@ from app.agents.nodes.sql.utils.sql_prompts import (
     metric_instructions
 )
 from app.agents.nodes.sql.utils.enum_metadata_reasoning import EnumMetadataReasoningAgent
+from app.agents.nodes.transform.domain_config import (
+    DomainConfiguration,
+    CYBERSECURITY_DOMAIN_CONFIG
+)
 from langchain_openai import OpenAIEmbeddings
 
 logger = logging.getLogger("lexy-ai-service")
@@ -54,9 +58,21 @@ class TransformSQLRAGAgent(SQLRAGAgent):
         max_iterations: int = 5,
         document_store_provider: DocumentStoreProvider = None,
         retrieval_helper: RetrievalHelper = None,
+        domain_config: Optional[DomainConfiguration] = None,
         **kwargs
     ):
-        """Initialize Transform SQL RAG Agent"""
+        """Initialize Transform SQL RAG Agent
+        
+        Args:
+            llm: Language model instance
+            engine: Engine instance
+            embeddings: Optional embeddings instance
+            max_iterations: Maximum iterations for SQL generation
+            document_store_provider: Optional document store provider
+            retrieval_helper: Optional retrieval helper
+            domain_config: Domain configuration (defaults to cybersecurity if not provided)
+            **kwargs: Additional arguments
+        """
         super().__init__(
             llm=llm,
             engine=engine,
@@ -66,6 +82,9 @@ class TransformSQLRAGAgent(SQLRAGAgent):
             retrieval_helper=retrieval_helper,
             **kwargs
         )
+        
+        # Use default domain config if not provided
+        self.domain_config = domain_config or CYBERSECURITY_DOMAIN_CONFIG
         
         # Transform-specific cache
         self._transform_knowledge_cache = {}
@@ -1428,13 +1447,26 @@ def create_transform_sql_rag_agent(
     llm,
     engine: Engine,
     document_store_provider: DocumentStoreProvider = None,
+    domain_config: Optional[DomainConfiguration] = None,
     **kwargs
 ) -> TransformSQLRAGAgent:
-    """Factory function to create Transform SQL RAG agent"""
+    """Factory function to create Transform SQL RAG agent
+    
+    Args:
+        llm: Language model instance
+        engine: Engine instance
+        document_store_provider: Optional document store provider
+        domain_config: Domain configuration (defaults to cybersecurity if not provided)
+        **kwargs: Additional arguments
+        
+    Returns:
+        TransformSQLRAGAgent instance
+    """
     return TransformSQLRAGAgent(
         llm=llm,
         engine=engine,
         document_store_provider=document_store_provider,
+        domain_config=domain_config,
         **kwargs
     )
 

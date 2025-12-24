@@ -1,0 +1,489 @@
+{
+  "catalog": "csod_risk_attrition",
+  "schema": "public",
+  "models": [
+    {
+      "name": "ComplianceRisk_Activity",
+      "tableReference": {
+        "catalog": "csod_risk_attrition",
+        "schema": "public",
+        "table": "compliancerisk_activity"
+      },
+      "primaryKey": "activityRiskId",
+      "columns": [
+        {
+          "name": "activityRiskId",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Activity Risk ID",
+            "description": "Unique identifier for activity-level aggregated risk record.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "ACTRISK_{loId}_{date}",
+            "business_rules": "Must be unique, Cannot be null",
+            "business_description": "Unique identifier combining learning activity and assessment date for activity-level risk snapshots.",
+            "data_quality_checks": "Check for null values, Validate uniqueness",
+            "filtering_suggestions": "Filter by loId, Filter by date",
+            "aggregation_suggestions": "COUNT by activity"
+          }
+        },
+        {
+          "name": "assessmentDate",
+          "type": "date",
+          "notNull": true,
+          "properties": {
+            "display_name": "Assessment Date",
+            "description": "Date of the activity-level risk assessment.",
+            "usage_type": "timestamp",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "YYYY-MM-DD",
+            "business_rules": "Cannot be null, Must be a valid date, Updated daily",
+            "business_description": "Reference date for activity snapshot, enabling time-series analysis of activity-specific compliance trends.",
+            "data_quality_checks": "Ensure not in future, Validate date format, Check for missing dates",
+            "filtering_suggestions": "Filter by date range, Filter by specific date",
+            "aggregation_suggestions": "COUNT by date, GROUP BY month"
+          }
+        },
+        {
+          "name": "loId",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Learning Object ID",
+            "description": "Reference to the learning activity.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "LO###",
+            "business_rules": "Cannot be null, Must reference valid loID in Activity_csod table",
+            "business_description": "Links risk assessment to specific compliance training activity for content-level analysis.",
+            "data_quality_checks": "Validate foreign key relationship with Activity_csod",
+            "filtering_suggestions": "Filter by specific activity, Filter by activityType",
+            "aggregation_suggestions": "COUNT by loId, GROUP BY activityType"
+          }
+        },
+        {
+          "name": "activityName",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Activity Name",
+            "description": "Name of the compliance training activity.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "business_rules": "Cannot be null, Should match Activity_csod.activityName",
+            "business_description": "Human-readable activity name for reporting and communication.",
+            "data_quality_checks": "Validate against Activity_csod, Check for consistency",
+            "filtering_suggestions": "Filter by specific activities, Search by name pattern",
+            "aggregation_suggestions": "COUNT by name"
+          }
+        },
+        {
+          "name": "activityType",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Activity Type",
+            "description": "Type/category of the compliance activity.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Compliance, Certification, Safety Training, Ethics Training",
+            "business_rules": "Cannot be null, Should match Activity_csod.activityType",
+            "business_description": "Activity categorization for type-level analysis and reporting.",
+            "data_quality_checks": "Validate against Activity_csod",
+            "filtering_suggestions": "Filter by specific types, Group by type",
+            "aggregation_suggestions": "COUNT by activityType, GROUP BY activityType"
+          }
+        },
+        {
+          "name": "totalAssignments",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Total Assignments",
+            "description": "Total number of users assigned to this activity.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "1 to 100000",
+            "business_rules": "Cannot be null, Must be > 0",
+            "business_description": "Activity reach/coverage metric indicating scale of compliance requirement.",
+            "data_quality_checks": "Ensure positive values, Validate against Transcript_csod",
+            "filtering_suggestions": "Filter by high-volume activities (>1000)",
+            "aggregation_suggestions": "SUM, AVERAGE, RANK by volume"
+          }
+        },
+        {
+          "name": "avgRiskScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Average Risk Score",
+            "description": "Average composite risk score for this activity.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Primary KPI for activity-level compliance health, enabling identification of problematic training content or delivery.",
+            "data_quality_checks": "Validate range 0-100, Compare across activities",
+            "filtering_suggestions": "Filter high-risk activities (>75), Compare to org average",
+            "aggregation_suggestions": "AVERAGE across activities, MAX, MIN, RANK"
+          }
+        },
+        {
+          "name": "medianRiskScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Median Risk Score",
+            "description": "Median composite risk score for this activity.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Robust central tendency showing typical activity risk unaffected by outlier users.",
+            "data_quality_checks": "Validate range 0-100, Compare with avgRiskScore",
+            "filtering_suggestions": "Compare to average for skew analysis",
+            "aggregation_suggestions": "AVERAGE across activities"
+          }
+        },
+        {
+          "name": "riskScoreVariance",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Risk Score Variance",
+            "description": "Variance in risk scores across users for this activity.",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 1000.00",
+            "business_rules": "Cannot be null, Must be >= 0",
+            "business_description": "Risk consistency metric; high variance suggests activity affects different populations differently.",
+            "data_quality_checks": "Ensure non-negative, Flag high variance activities",
+            "filtering_suggestions": "Filter high variance (>500) for investigation",
+            "aggregation_suggestions": "AVERAGE, MAX"
+          }
+        },
+        {
+          "name": "criticalCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Critical Risk Count",
+            "description": "Number of users with critical risk for this activity.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 10000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalAssignments",
+            "business_description": "Volume of severe risk cases requiring immediate activity-specific intervention.",
+            "data_quality_checks": "Ensure non-negative, Validate <= totalAssignments",
+            "filtering_suggestions": "Filter by non-zero, Filter high counts",
+            "aggregation_suggestions": "SUM, PERCENTAGE of totalAssignments, RANK"
+          }
+        },
+        {
+          "name": "highCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "High Risk Count",
+            "description": "Number of users with high risk for this activity.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 50000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalAssignments",
+            "business_description": "Volume of elevated risk requiring activity-level remediation strategies.",
+            "data_quality_checks": "Ensure non-negative, Validate <= totalAssignments",
+            "filtering_suggestions": "Filter by activity type",
+            "aggregation_suggestions": "SUM, PERCENTAGE of totalAssignments"
+          }
+        },
+        {
+          "name": "overdueCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Overdue Count",
+            "description": "Number of overdue assignments for this activity.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 10000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalAssignments",
+            "business_description": "Current violations for this specific activity, indicating content or delivery issues.",
+            "data_quality_checks": "Ensure non-negative, Validate <= totalAssignments, Alert on increases",
+            "filtering_suggestions": "Filter by non-zero, Filter high percentages",
+            "aggregation_suggestions": "SUM, PERCENTAGE of totalAssignments, RANK"
+          }
+        },
+        {
+          "name": "completionRate",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Completion Rate",
+            "description": "Percentage of users who completed this activity.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Activity-specific completion performance, key metric for content effectiveness evaluation.",
+            "data_quality_checks": "Validate range 0-100",
+            "filtering_suggestions": "Filter low performers (<70%), Compare to org average",
+            "aggregation_suggestions": "AVERAGE across activities, MAX, MIN, RANK"
+          }
+        },
+        {
+          "name": "avgDaysToComplete",
+          "type": "double",
+          "notNull": false,
+          "properties": {
+            "display_name": "Average Days to Complete",
+            "description": "Average time users take to complete this activity (days).",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "1.0 to 365.0",
+            "business_rules": "Can be null if no completions, Must be positive",
+            "business_description": "Activity-specific velocity metric indicating content difficulty and user engagement.",
+            "data_quality_checks": "Ensure positive values, Flag outliers",
+            "filtering_suggestions": "Filter slow activities (>60 days), Compare activities",
+            "aggregation_suggestions": "AVERAGE across activities, MEDIAN, RANK"
+          }
+        },
+        {
+          "name": "estimatedDuration",
+          "type": "bigint",
+          "notNull": false,
+          "properties": {
+            "display_name": "Estimated Duration",
+            "description": "Estimated duration of the activity (minutes).",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "15 to 480",
+            "business_rules": "Can be null if not specified, Must be positive if provided",
+            "business_description": "Expected time commitment from Activity_csod, used for workload planning.",
+            "data_quality_checks": "Ensure positive values, Validate against Activity_csod",
+            "filtering_suggestions": "Filter by duration ranges",
+            "aggregation_suggestions": "AVERAGE, SUM for total workload"
+          }
+        },
+        {
+          "name": "firstAttemptSuccessRate",
+          "type": "double",
+          "notNull": false,
+          "properties": {
+            "display_name": "First Attempt Success Rate",
+            "description": "Percentage of users who passed on first attempt.",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Can be null if no attempts, Must be between 0 and 100",
+            "business_description": "Content difficulty/clarity indicator; low rates suggest need for content improvement.",
+            "data_quality_checks": "Validate range 0-100",
+            "filtering_suggestions": "Filter problematic activities (<50%)",
+            "aggregation_suggestions": "AVERAGE across activities, MIN, RANK"
+          }
+        },
+        {
+          "name": "avgAttempts",
+          "type": "double",
+          "notNull": false,
+          "properties": {
+            "display_name": "Average Attempts",
+            "description": "Average number of attempts before completion.",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "1.0 to 5.0",
+            "business_rules": "Can be null if no completions, Must be >= 1.0",
+            "business_description": "Difficulty indicator; high attempts suggest content complexity or clarity issues.",
+            "data_quality_checks": "Ensure >= 1.0, Flag high values (>3)",
+            "filtering_suggestions": "Filter difficult activities (>2 attempts)",
+            "aggregation_suggestions": "AVERAGE across activities, MAX"
+          }
+        },
+        {
+          "name": "activityRank",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Activity Rank",
+            "description": "Rank of activity by avgRiskScore (1 = lowest risk/best).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "1 to 1000",
+            "business_rules": "Cannot be null, Must be > 0, Lower is better",
+            "business_description": "Comparative ranking enabling identification of most problematic activities.",
+            "data_quality_checks": "Ensure positive values, Validate ranking logic",
+            "filtering_suggestions": "Filter bottom performers (rank > 90th percentile)",
+            "aggregation_suggestions": "TOP_N, BOTTOM_N"
+          }
+        },
+        {
+          "name": "escalationRequiredCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Escalation Required Count",
+            "description": "Number of assignments requiring escalation for this activity.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 10000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalAssignments",
+            "business_description": "Activity-level intervention workload for targeted support.",
+            "data_quality_checks": "Ensure non-negative, Validate <= totalAssignments",
+            "filtering_suggestions": "Filter high volumes, Compare activities",
+            "aggregation_suggestions": "SUM, PERCENTAGE of totalAssignments"
+          }
+        },
+        {
+          "name": "activityTrend",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Activity Trend",
+            "description": "Risk trend direction for this activity (7-day comparison).",
+            "usage_type": "attribute",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Improving, Deteriorating, Stable",
+            "business_rules": "Can be null for first assessment, Valid values: 'Improving', 'Deteriorating', 'Stable'",
+            "business_description": "Directional indicator for activity performance tracking.",
+            "data_quality_checks": "Validate against allowed values",
+            "filtering_suggestions": "Filter by Deteriorating for content review",
+            "aggregation_suggestions": "COUNT by trend, PERCENTAGE distribution"
+          }
+        },
+        {
+          "name": "provider",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Provider",
+            "description": "Training content provider or vendor.",
+            "usage_type": "attribute",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "business_rules": "Can be null if internal, Should match Activity_csod.provider",
+            "business_description": "Content source for vendor performance evaluation.",
+            "data_quality_checks": "Validate against Activity_csod",
+            "filtering_suggestions": "Filter by specific providers, Group by provider",
+            "aggregation_suggestions": "COUNT by provider, AVERAGE risk by provider"
+          }
+        },
+        {
+          "name": "contentReviewFlag",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Content Review Flag",
+            "description": "Indicates if activity content needs review.",
+            "usage_type": "flag",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Yes, No",
+            "business_rules": "Cannot be null, Valid values: 'Yes', 'No', Yes if avgRiskScore > 75 OR completionRate < 50% OR avgAttempts > 2",
+            "business_description": "Automated flag for content quality assurance and improvement initiatives.",
+            "data_quality_checks": "Validate against allowed values, Ensure logic consistency",
+            "filtering_suggestions": "Filter by Yes for content improvement queue",
+            "aggregation_suggestions": "COUNT by Yes/No, PERCENTAGE requiring review"
+          }
+        },
+        {
+          "name": "interventionStrategy",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Intervention Strategy",
+            "description": "Recommended intervention approach for this activity.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "Content Revision, Extended Deadlines, Additional Support, Instructor-Led Sessions",
+            "business_rules": "Can be null for low-risk activities, Multiple strategies separated by semicolons",
+            "business_description": "System-generated recommendations for activity-level risk mitigation.",
+            "data_quality_checks": "Validate format, Ensure not null for high-risk activities",
+            "filtering_suggestions": "Filter by specific strategies",
+            "aggregation_suggestions": "COUNT by strategy type"
+          }
+        }
+      ],
+      "properties": {
+        "description": "Gold layer table containing activity-level aggregated compliance risk metrics enabling content effectiveness analysis, vendor evaluation, and activity-specific improvement strategies.",
+        "business_purpose": "Enables activity scorecards, content quality assessment, vendor performance evaluation, and identification of problematic training content requiring revision or replacement.",
+        "data_lineage": "Aggregated from ComplianceRisk_Silver table with daily refresh, grouped by learning activity with enrichment from Activity_csod.",
+        "data_retention": "Data retained for 3 years for content lifecycle analysis and vendor performance tracking.",
+        "update_frequency": "daily",
+        "medallion_layer": "gold",
+        "key_relationships": "Aggregates from ComplianceRisk_Silver, joins with Activity_csod for activity attributes"
+      },
+      "relationships": [
+        {
+          "name": "source_assessments_relationship",
+          "models": [
+            "ComplianceRisk_Activity",
+            "ComplianceRisk_Silver"
+          ],
+          "joinType": "ONE_TO_MANY",
+          "condition": "ComplianceRisk_Activity.loId = ComplianceRisk_Silver.loId AND ComplianceRisk_Activity.assessmentDate = DATE(ComplianceRisk_Silver.assessmentDate)",
+          "properties": {
+            "displayName": "Activity Aggregates to Source Assessments Relationship",
+            "description": "Each activity summary aggregates all user risk assessments for that activity"
+          }
+        },
+        {
+          "name": "activity_details_relationship",
+          "models": [
+            "ComplianceRisk_Activity",
+            "Activity_csod"
+          ],
+          "joinType": "MANY_TO_ONE",
+          "condition": "ComplianceRisk_Activity.loId = Activity_csod.loID",
+          "properties": {
+            "displayName": "Activity Aggregates to Activity Details Relationship",
+            "description": "Activity metrics enriched with activity metadata"
+          }
+        }
+      ]
+    }
+  ]
+}

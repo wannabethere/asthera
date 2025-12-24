@@ -1,0 +1,448 @@
+{
+  "catalog": "csod_risk_attrition",
+  "schema": "public",
+  "models": [
+    {
+      "name": "EnterpriseRisk_Combined",
+      "tableReference": {
+        "catalog": "csod_risk_attrition",
+        "schema": "public",
+        "table": "enterpriserisk_combined"
+      },
+      "primaryKey": "enterpriseRiskId",
+      "columns": [
+        {
+          "name": "enterpriseRiskId",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Enterprise Risk ID",
+            "description": "Unique identifier for combined enterprise risk record.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "ENTRISK_{userId}_{date}",
+            "business_rules": "Must be unique, Cannot be null",
+            "business_description": "Unique identifier combining userId and assessment date for holistic risk profile.",
+            "data_quality_checks": "Check for null values, Validate uniqueness",
+            "filtering_suggestions": "Filter by userId, Filter by assessmentDate",
+            "aggregation_suggestions": "COUNT by date"
+          }
+        },
+        {
+          "name": "userId",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "User ID",
+            "description": "Reference to the user from User_csod table.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "USR###",
+            "business_rules": "Must reference valid userId in User_csod table, Cannot be null",
+            "business_description": "Links combined risk assessment to specific employee.",
+            "data_quality_checks": "Validate foreign key relationship with User_csod",
+            "filtering_suggestions": "Filter by specific userId, Filter by division",
+            "aggregation_suggestions": "COUNT by userId, DISTINCT COUNT"
+          }
+        },
+        {
+          "name": "assessmentDate",
+          "type": "timestamp",
+          "notNull": true,
+          "properties": {
+            "display_name": "Assessment Date",
+            "description": "Timestamp when the combined risk assessment was calculated.",
+            "usage_type": "timestamp",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "YYYY-MM-DD HH:MM:SS",
+            "business_rules": "Cannot be null, Must be <= current timestamp",
+            "business_description": "Records when the holistic risk assessment was performed.",
+            "data_quality_checks": "Ensure not in future, Validate timestamp format",
+            "filtering_suggestions": "Filter by date range, Filter by latest assessment",
+            "aggregation_suggestions": "MAX for latest, COUNT by date"
+          }
+        },
+        {
+          "name": "complianceRiskScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Compliance Risk Score",
+            "description": "Employee's overall compliance risk score (0-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Compliance training risk from ComplianceRisk_Silver, average if multiple trainings.",
+            "data_quality_checks": "Validate range 0-100, Correlate with ComplianceRisk_Silver",
+            "filtering_suggestions": "Filter by high compliance risk (>75)",
+            "aggregation_suggestions": "AVERAGE, PERCENTILE(90), MAX"
+          }
+        },
+        {
+          "name": "attritionRiskScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Attrition Risk Score",
+            "description": "Employee's overall attrition risk score (0-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Flight risk from AttritionRisk_Silver.",
+            "data_quality_checks": "Validate range 0-100, Correlate with AttritionRisk_Silver",
+            "filtering_suggestions": "Filter by high attrition risk (>75)",
+            "aggregation_suggestions": "AVERAGE, PERCENTILE(90), MAX"
+          }
+        },
+        {
+          "name": "compositeRiskScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Composite Risk Score",
+            "description": "Combined enterprise risk score integrating compliance and attrition (0-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100, Weighted combination of compliance and attrition risk",
+            "business_description": "Holistic enterprise risk metric combining regulatory exposure with talent loss risk, providing single unified view of employee-level organizational vulnerability.",
+            "data_quality_checks": "Validate range 0-100, Ensure correlation with component scores",
+            "filtering_suggestions": "Filter by high composite risk (>75), Identify double jeopardy employees",
+            "aggregation_suggestions": "AVERAGE, MEDIAN, PERCENTILE(90), MAX"
+          }
+        },
+        {
+          "name": "riskQuadrant",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Risk Quadrant",
+            "description": "2x2 risk matrix classification combining compliance and attrition dimensions.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Critical Both, High Compliance/High Attrition, High Compliance/Low Attrition, Low Compliance/High Attrition, Stable",
+            "business_rules": "Cannot be null, Valid values based on risk score thresholds (>50 = High)",
+            "business_description": "Strategic segmentation for prioritizing interventions: Critical Both requires immediate action, single-dimension high requires focused retention or compliance efforts, Stable requires standard monitoring.",
+            "data_quality_checks": "Validate against allowed values, Ensure consistency with component scores",
+            "filtering_suggestions": "Filter by Critical Both for highest priority, Filter by specific quadrants for targeted strategies",
+            "aggregation_suggestions": "COUNT by quadrant, PERCENTAGE distribution"
+          }
+        },
+        {
+          "name": "riskCategory",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Risk Category",
+            "description": "Overall risk category based on compositeRiskScore.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Critical, High, Moderate, Low",
+            "business_rules": "Cannot be null, Valid values: 'Critical' (75-100), 'High' (50-75), 'Moderate' (25-50), 'Low' (0-25)",
+            "business_description": "Business-friendly categorical classification for enterprise risk level.",
+            "data_quality_checks": "Validate against allowed values, Ensure consistency with compositeRiskScore",
+            "filtering_suggestions": "Filter by Critical and High, Create action queues",
+            "aggregation_suggestions": "COUNT by category, PERCENTAGE distribution"
+          }
+        },
+        {
+          "name": "complianceImpact",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Compliance Impact",
+            "description": "Organizational impact of compliance non-completion (0-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Regulatory and operational impact dimension from compliance risk.",
+            "data_quality_checks": "Validate range 0-100",
+            "filtering_suggestions": "Filter by high impact (>75)",
+            "aggregation_suggestions": "AVERAGE, MAX"
+          }
+        },
+        {
+          "name": "attritionImpact",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Attrition Impact",
+            "description": "Organizational impact if employee departs (0-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Talent loss impact dimension from attrition risk.",
+            "data_quality_checks": "Validate range 0-100",
+            "filtering_suggestions": "Filter by high impact (>75)",
+            "aggregation_suggestions": "AVERAGE, MAX"
+          }
+        },
+        {
+          "name": "overallImpact",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Overall Impact",
+            "description": "Combined organizational impact score (0-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100, Maximum of compliance and attrition impact",
+            "business_description": "Worst-case organizational disruption potential combining both risk dimensions.",
+            "data_quality_checks": "Validate range 0-100, Ensure >= both component impacts",
+            "filtering_suggestions": "Filter by high impact (>75) for succession planning",
+            "aggregation_suggestions": "AVERAGE, PERCENTILE(90), MAX"
+          }
+        },
+        {
+          "name": "urgencyScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Urgency Score",
+            "description": "Time-weighted urgency combining compliance deadlines and attrition likelihood (0-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100, Higher = more urgent",
+            "business_description": "Action prioritization metric considering temporal factors: overdue compliance trainings and high attrition likelihood create maximum urgency.",
+            "data_quality_checks": "Validate range 0-100",
+            "filtering_suggestions": "Filter by high urgency (>75) for immediate action queue",
+            "aggregation_suggestions": "AVERAGE, PERCENTILE(90), MAX"
+          }
+        },
+        {
+          "name": "criticalEmployeeFlag",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Critical Employee Flag",
+            "description": "Indicates if employee is business-critical across both dimensions.",
+            "usage_type": "flag",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Yes, No",
+            "business_rules": "Cannot be null, Valid values: 'Yes', 'No', Yes if overallImpact > 75",
+            "business_description": "High-value talent requiring executive attention for both retention and compliance.",
+            "data_quality_checks": "Validate against allowed values, Ensure consistency with overallImpact",
+            "filtering_suggestions": "Filter by Yes for VIP management",
+            "aggregation_suggestions": "COUNT by Yes/No, PERCENTAGE of workforce"
+          }
+        },
+        {
+          "name": "executiveEscalation",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Executive Escalation",
+            "description": "Flag indicating if executive-level attention is required.",
+            "usage_type": "flag",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Yes, No",
+            "business_rules": "Cannot be null, Valid values: 'Yes', 'No', Yes if compositeRiskScore > 75 AND overallImpact > 75",
+            "business_description": "Automated escalation for C-level awareness: high-impact employees with critical risk across both dimensions.",
+            "data_quality_checks": "Validate against allowed values, Ensure logic consistency",
+            "filtering_suggestions": "Filter by Yes for executive action queue",
+            "aggregation_suggestions": "COUNT by Yes/No, PERCENTAGE requiring executive attention"
+          }
+        },
+        {
+          "name": "interventionStrategy",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Intervention Strategy",
+            "description": "Recommended integrated intervention approach.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "Compliance + Retention Package, Compliance Focus, Retention Focus, Standard Monitoring",
+            "business_rules": "Can be null for low-risk cases, Based on risk quadrant",
+            "business_description": "Strategic recommendation for coordinated HR and compliance intervention, avoiding siloed approaches.",
+            "data_quality_checks": "Validate format, Ensure not null for Critical/High cases",
+            "filtering_suggestions": "Filter by specific strategies for resource planning",
+            "aggregation_suggestions": "COUNT by strategy type"
+          }
+        },
+        {
+          "name": "division",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Division",
+            "description": "Employee's organizational division.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Sales, Marketing, HR, IT, Finance, Operations",
+            "business_rules": "Cannot be null, From User_csod.division",
+            "business_description": "Division context for risk aggregation and accountability.",
+            "data_quality_checks": "Validate against User_csod",
+            "filtering_suggestions": "Filter by specific divisions, Group by division",
+            "aggregation_suggestions": "COUNT by division, GROUP BY division"
+          }
+        },
+        {
+          "name": "position",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Position",
+            "description": "Employee's job title or role.",
+            "usage_type": "attribute",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "business_rules": "Cannot be null, From User_csod.position",
+            "business_description": "Role context for risk assessment and impact evaluation.",
+            "data_quality_checks": "Validate against User_csod",
+            "filtering_suggestions": "Filter by specific positions, Analyze by role",
+            "aggregation_suggestions": "COUNT by position, GROUP BY position"
+          }
+        },
+        {
+          "name": "managerId",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Manager ID",
+            "description": "Employee's direct manager identifier.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "USR###",
+            "business_rules": "Can be null if no manager, From User_csod.managerId",
+            "business_description": "Manager linkage for escalation routing and team-level risk analysis.",
+            "data_quality_checks": "Validate against User_csod",
+            "filtering_suggestions": "Filter by specific managers, Group by manager",
+            "aggregation_suggestions": "COUNT by managerId"
+          }
+        },
+        {
+          "name": "riskTrend",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Risk Trend",
+            "description": "Combined risk trend over last 30 days.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Increasing, Decreasing, Stable",
+            "business_rules": "Can be null for first assessment, Valid values: 'Increasing', 'Decreasing', 'Stable'",
+            "business_description": "Identifies deteriorating vs improving holistic risk profiles.",
+            "data_quality_checks": "Validate against allowed values",
+            "filtering_suggestions": "Filter by Increasing for early warning",
+            "aggregation_suggestions": "COUNT by trend, PERCENTAGE distribution"
+          }
+        }
+      ],
+      "properties": {
+        "description": "Gold layer table combining compliance and attrition risk into unified employee-level risk profiles (snapshot from latest date). Sample data includes 36 employees who appear in BOTH compliance assignments AND attrition assessments, enabling integrated HR strategy.",
+        "business_purpose": "Provides executive-level visibility into combined organizational vulnerabilities, enabling integrated HR strategies that address both compliance gaps and retention risks simultaneously.",
+        "data_lineage": "Generated by INNER JOIN of ComplianceRisk_Silver and AttritionRisk_Silver time series tables (latest date only) on userId. Only includes employees with both compliance training assignments AND attrition risk assessments. Compliance risk averaged if employee has multiple assignments. Sample generated from Dec 16, 2024 snapshot showing 36 employees with dual risk profiles for integrated intervention strategies.",
+        "data_retention": "Data retained for 3 years for longitudinal risk analysis.",
+        "update_frequency": "daily",
+        "medallion_layer": "gold",
+        "key_relationships": "userId -> User_csod.userId, Combines ComplianceRisk_Silver + AttritionRisk_Silver"
+      },
+      "relationships": [
+        {
+          "name": "attrition_risk_relationship",
+          "models": [
+            "EnterpriseRisk_Combined",
+            "AttritionRisk_Silver"
+          ],
+          "joinType": "ONE_TO_ONE",
+          "condition": "EnterpriseRisk_Combined.userId = AttritionRisk_Silver.userId AND DATE(EnterpriseRisk_Combined.assessmentDate) = DATE(AttritionRisk_Silver.assessmentDate)",
+          "properties": {
+            "displayName": "Enterprise Risk to Attrition Risk Relationship",
+            "description": "Each enterprise risk profile includes one employee's attrition risk assessment (latest date)"
+          }
+        },
+        {
+          "name": "compliance_risk_relationship",
+          "models": [
+            "EnterpriseRisk_Combined",
+            "ComplianceRisk_Silver"
+          ],
+          "joinType": "ONE_TO_MANY",
+          "condition": "EnterpriseRisk_Combined.userId = ComplianceRisk_Silver.userId AND DATE(EnterpriseRisk_Combined.assessmentDate) = DATE(ComplianceRisk_Silver.assessmentDate)",
+          "properties": {
+            "displayName": "Enterprise Risk to Compliance Risk Relationship",
+            "description": "Each enterprise risk profile aggregates employee's compliance risk assessments (averaged if multiple activities)"
+          }
+        },
+        {
+          "name": "user_relationship",
+          "models": [
+            "EnterpriseRisk_Combined",
+            "User_csod"
+          ],
+          "joinType": "MANY_TO_ONE",
+          "condition": "EnterpriseRisk_Combined.userId = User_csod.userId",
+          "properties": {
+            "displayName": "Enterprise Risk to User Relationship",
+            "description": "Each enterprise risk profile belongs to one employee"
+          }
+        }
+      ],
+        "integration_metadata": {
+          "source_tables": [
+            "ComplianceRisk_Silver (time series)",
+            "AttritionRisk_Silver (time series)"
+          ],
+          "join_type": "INNER JOIN",
+          "join_key": "userId",
+          "snapshot_date": "2024-12-16 (latest date from both Silver time series)",
+          "integration_logic": [
+            "Join both Silver tables on userId for latest date",
+            "Average compliance risk if user has multiple assignments",
+            "Calculate composite risk: (complianceRisk + attritionRisk) / 2",
+            "Determine risk quadrant from 2x2 matrix",
+            "Select max impact from both dimensions",
+            "Calculate urgency score: (compositeRisk * 0.7 + overallImpact * 0.3)"
+          ],
+          "sample_metrics": "36 employees who have BOTH compliance assignments AND attrition assessments",
+          "coverage_note": "Not all employees have both risk types - only includes users with dual assessment coverage",
+          "source_data_volume": "Joins ~100 compliance assignments with 100 attrition assessments, resulting in 36 matches on Dec 16, 2024"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,502 @@
+{
+  "catalog": "csod_risk_attrition",
+  "schema": "public",
+  "models": [
+    {
+      "name": "ComplianceRisk_Silver",
+      "tableReference": {
+        "catalog": "csod_risk_attrition",
+        "schema": "public",
+        "table": "compliancerisk_silver"
+      },
+      "primaryKey": "riskId",
+      "columns": [
+        {
+          "name": "riskId",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Risk ID",
+            "description": "Unique identifier for each compliance risk assessment record.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "RISK###",
+            "business_rules": "Must be unique, Cannot be null",
+            "business_description": "A unique identifier combining userId, loId, and assessment timestamp to track individual compliance risk assessments over time.",
+            "data_quality_checks": "Check for null values, Validate uniqueness across the table",
+            "filtering_suggestions": "Filter by userId, Filter by loId, Filter by assessmentDate",
+            "aggregation_suggestions": "COUNT, DISTINCT COUNT"
+          }
+        },
+        {
+          "name": "userId",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "User ID",
+            "description": "Reference to the user from User_csod table.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "USR###",
+            "business_rules": "Must reference valid userId in User_csod table, Cannot be null",
+            "business_description": "Links the compliance risk assessment to a specific user in the organization for tracking individual compliance risk profiles.",
+            "data_quality_checks": "Validate foreign key relationship with User_csod, Check for null values",
+            "filtering_suggestions": "Filter by specific userId, Filter by userStatus, Filter by division",
+            "aggregation_suggestions": "COUNT by userId, DISTINCT COUNT"
+          }
+        },
+        {
+          "name": "loId",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Learning Object ID",
+            "description": "Reference to the learning activity from Activity_csod table.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "LO###",
+            "business_rules": "Must reference valid loID in Activity_csod table, Cannot be null",
+            "business_description": "Links the risk assessment to a specific compliance training activity, enabling activity-level risk analytics.",
+            "data_quality_checks": "Validate foreign key relationship with Activity_csod, Ensure only compliance activities are included",
+            "filtering_suggestions": "Filter by activityType, Filter by isCompliance flag, Filter by activityName",
+            "aggregation_suggestions": "COUNT by loId, GROUP BY activityType"
+          }
+        },
+        {
+          "name": "assessmentDate",
+          "type": "timestamp",
+          "notNull": true,
+          "properties": {
+            "display_name": "Assessment Date",
+            "description": "Timestamp when the risk assessment was calculated.",
+            "usage_type": "timestamp",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "YYYY-MM-DD HH:MM:SS",
+            "business_rules": "Cannot be null, Must be <= current timestamp, Should be updated daily",
+            "business_description": "Records when the compliance risk assessment was performed, critical for tracking risk trends over time and ensuring data freshness.",
+            "data_quality_checks": "Ensure not in future, Validate timestamp format, Check for missing daily assessments",
+            "filtering_suggestions": "Filter by date range, Filter by latest assessment, Filter by specific date",
+            "aggregation_suggestions": "MAX for latest assessment, COUNT by date, GROUP BY date for trends"
+          }
+        },
+        {
+          "name": "riskScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Risk Score",
+            "description": "Overall composite risk score combining impact and likelihood (0-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100, Calculated as sqrt(impactScore * likelihoodScore)",
+            "business_description": "A composite metric representing the overall compliance risk, calculated using a geometric mean of impact and likelihood scores to balance both dimensions equally.",
+            "data_quality_checks": "Validate range 0-100, Check calculation accuracy against impactScore and likelihoodScore, Identify outliers",
+            "filtering_suggestions": "Filter by riskCategory, Filter by score ranges (0-25 low, 25-50 moderate, 50-75 high, 75-100 critical)",
+            "aggregation_suggestions": "AVERAGE, MEDIAN, PERCENTILE(90), MAX, MIN, STDDEV"
+          }
+        },
+        {
+          "name": "impactScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Impact Score",
+            "description": "Severity of consequences if compliance training is not completed (0-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100, Higher scores indicate greater organizational impact",
+            "business_description": "Measures the potential organizational impact of non-compliance, considering factors like regulatory requirements, safety implications, financial penalties, and reputational risk.",
+            "data_quality_checks": "Validate range 0-100, Ensure consistency with activityType and isCompliance flag, Check for zero values on compliance activities",
+            "filtering_suggestions": "Filter by high impact (>75), Filter by activityType, Filter by division",
+            "aggregation_suggestions": "AVERAGE by activityType, MAX by division, PERCENTILE(90)"
+          }
+        },
+        {
+          "name": "likelihoodScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Likelihood Score",
+            "description": "Probability that the compliance training will not be completed on time (0-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100, Based on historical completion patterns and current progress",
+            "business_description": "Predicts the probability of non-completion based on user behavior patterns, time remaining until due date, historical performance, and engagement metrics.",
+            "data_quality_checks": "Validate range 0-100, Verify correlation with daysUntilDue, Check logic for already completed trainings",
+            "filtering_suggestions": "Filter by high likelihood (>75), Filter by overdue status, Filter by user engagement patterns",
+            "aggregation_suggestions": "AVERAGE by userId, MEDIAN by division, MAX by activityType"
+          }
+        },
+        {
+          "name": "riskCategory",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Risk Category",
+            "description": "Categorical classification of risk level based on riskScore.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Critical, High, Moderate, Low",
+            "business_rules": "Cannot be null, Valid values: 'Critical' (75-100), 'High' (50-75), 'Moderate' (25-50), 'Low' (0-25)",
+            "business_description": "Provides a business-friendly categorical risk classification for easier interpretation and escalation workflows, aligning with standard risk management frameworks.",
+            "data_quality_checks": "Validate against allowed values, Ensure consistency with riskScore thresholds, Check for null values",
+            "filtering_suggestions": "Filter by specific risk category, Filter by Critical and High for action items",
+            "aggregation_suggestions": "COUNT by riskCategory, PERCENTAGE distribution, GROUP BY riskCategory"
+          }
+        },
+        {
+          "name": "daysUntilDue",
+          "type": "bigint",
+          "notNull": false,
+          "properties": {
+            "display_name": "Days Until Due",
+            "description": "Number of days remaining until the training due date (negative if overdue).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "-365 to 365",
+            "business_rules": "Can be null if no due date, Negative values indicate overdue, Calculated as dueDate - assessmentDate",
+            "business_description": "Critical metric for prioritizing compliance risk mitigation, with negative values indicating immediate compliance failures requiring urgent action.",
+            "data_quality_checks": "Validate calculation against dueDate, Flag extreme values (>365 or <-365), Check for null handling",
+            "filtering_suggestions": "Filter by overdue (daysUntilDue < 0), Filter by approaching due date (0-7 days), Filter by urgency ranges",
+            "aggregation_suggestions": "AVERAGE, MIN for most urgent, COUNT by urgency buckets"
+          }
+        },
+        {
+          "name": "daysSinceAssigned",
+          "type": "bigint",
+          "notNull": false,
+          "properties": {
+            "display_name": "Days Since Assigned",
+            "description": "Number of days elapsed since the training was assigned.",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 1000",
+            "business_rules": "Can be null if not assigned, Must be >= 0, Calculated as assessmentDate - assignedDate",
+            "business_description": "Tracks how long a training has been pending, useful for identifying procrastination patterns and user engagement issues.",
+            "data_quality_checks": "Ensure non-negative values, Validate calculation against assignedDate, Flag unusually high values",
+            "filtering_suggestions": "Filter by long-pending assignments (>90 days), Filter by recently assigned (<7 days)",
+            "aggregation_suggestions": "AVERAGE by userId, MEDIAN by activityType, MAX"
+          }
+        },
+        {
+          "name": "completionPercentage",
+          "type": "double",
+          "notNull": false,
+          "properties": {
+            "display_name": "Completion Percentage",
+            "description": "Progress towards completion expressed as a percentage (0-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Can be null if not started, Must be between 0 and 100, 100 indicates completion",
+            "business_description": "Indicates current progress on the training activity, enabling early identification of users who may not complete on time despite having started.",
+            "data_quality_checks": "Validate range 0-100, Ensure 100 when isCompleted is true, Check for logical consistency",
+            "filtering_suggestions": "Filter by partially complete (0-99), Filter by not started (0), Filter by high-progress low-completion",
+            "aggregation_suggestions": "AVERAGE by userId, MEDIAN by activityType"
+          }
+        },
+        {
+          "name": "userCompletionRate",
+          "type": "double",
+          "notNull": false,
+          "properties": {
+            "display_name": "User Completion Rate",
+            "description": "Historical completion rate for this user across all compliance trainings (0-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Can be null for new users, Must be between 0 and 100, Based on trailing 12 months",
+            "business_description": "Provides user-level historical performance context, enabling personalized risk assessment based on individual track records and behavior patterns.",
+            "data_quality_checks": "Validate range 0-100, Ensure based on sufficient sample size (minimum 3 trainings), Check calculation methodology",
+            "filtering_suggestions": "Filter by low performers (<50%), Filter by high performers (>90%), Filter by new users (null)",
+            "aggregation_suggestions": "AVERAGE across users, PERCENTILE(10) for bottom performers, DISTRIBUTION"
+          }
+        },
+        {
+          "name": "avgDaysToComplete",
+          "type": "double",
+          "notNull": false,
+          "properties": {
+            "display_name": "Average Days to Complete",
+            "description": "User's historical average time to complete compliance trainings (in days).",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "1.0 to 365.0",
+            "business_rules": "Can be null for new users, Must be positive, Based on trailing 12 months",
+            "business_description": "Captures user-specific completion velocity, enabling more accurate likelihood predictions by understanding individual learning pace and engagement patterns.",
+            "data_quality_checks": "Ensure positive values, Validate against historical transcript data, Flag outliers (>180 days)",
+            "filtering_suggestions": "Filter by slow completers (>60 days), Filter by fast completers (<7 days)",
+            "aggregation_suggestions": "AVERAGE across users, MEDIAN, PERCENTILE(90)"
+          }
+        },
+        {
+          "name": "managerEscalation",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Manager Escalation",
+            "description": "Flag indicating if manager notification is required.",
+            "usage_type": "flag",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Yes, No",
+            "business_rules": "Cannot be null, Valid values: 'Yes', 'No', Triggered when riskScore > 75 or daysUntilDue < 7",
+            "business_description": "Automated escalation flag for management intervention, ensuring timely action on high-risk compliance issues before they become violations.",
+            "data_quality_checks": "Validate against allowed values, Ensure logic consistency with riskScore and daysUntilDue",
+            "filtering_suggestions": "Filter by escalation required (Yes), Filter by specific managers",
+            "aggregation_suggestions": "COUNT by Yes/No, PERCENTAGE requiring escalation"
+          }
+        },
+        {
+          "name": "previousAttempts",
+          "type": "bigint",
+          "notNull": false,
+          "properties": {
+            "display_name": "Previous Attempts",
+            "description": "Number of previous incomplete attempts on this training.",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 10",
+            "business_rules": "Can be null if first attempt, Must be >= 0",
+            "business_description": "Tracks repeated failed attempts, indicating potential content difficulty or user comprehension issues requiring intervention or additional support.",
+            "data_quality_checks": "Ensure non-negative values, Validate against Transcript_csod history",
+            "filtering_suggestions": "Filter by multiple attempts (>1), Filter by first-time attempts (0 or null)",
+            "aggregation_suggestions": "AVERAGE, MAX, SUM"
+          }
+        },
+        {
+          "name": "lastLoginDays",
+          "type": "bigint",
+          "notNull": false,
+          "properties": {
+            "display_name": "Days Since Last Login",
+            "description": "Number of days since user last logged into the LMS.",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 365",
+            "business_rules": "Can be null if never logged in, Must be >= 0, Calculated from User_csod.lastLoginDate",
+            "business_description": "Indicates user engagement level with the learning platform, with higher values suggesting disengagement and increased likelihood of non-completion.",
+            "data_quality_checks": "Ensure non-negative values, Flag extreme values (>90 days), Validate calculation",
+            "filtering_suggestions": "Filter by inactive users (>30 days), Filter by recently active (<7 days)",
+            "aggregation_suggestions": "AVERAGE by division, MEDIAN, PERCENTILE(75)"
+          }
+        },
+        {
+          "name": "divisionalComplianceRate",
+          "type": "double",
+          "notNull": false,
+          "properties": {
+            "display_name": "Divisional Compliance Rate",
+            "description": "Current compliance rate for the user's division (0-100).",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Can be null if division not assigned, Must be between 0 and 100, Updated daily",
+            "business_description": "Provides organizational context by showing division-level performance, enabling peer comparison and identification of systemic compliance issues.",
+            "data_quality_checks": "Validate range 0-100, Ensure consistency with divisional aggregates",
+            "filtering_suggestions": "Filter by low-performing divisions (<70%), Filter by division",
+            "aggregation_suggestions": "AVERAGE across divisions, MIN, MAX, STDDEV"
+          }
+        },
+        {
+          "name": "riskTrend",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Risk Trend",
+            "description": "Trend direction of risk over the last 7 days.",
+            "usage_type": "attribute",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Increasing, Decreasing, Stable",
+            "business_rules": "Can be null for first assessment, Valid values: 'Increasing', 'Decreasing', 'Stable'",
+            "business_description": "Identifies whether compliance risk is improving or deteriorating, enabling proactive intervention on worsening situations and recognition of improvement efforts.",
+            "data_quality_checks": "Validate against allowed values, Ensure based on sufficient historical data (7 days)",
+            "filtering_suggestions": "Filter by Increasing trend, Filter by Decreasing trend to identify improvements",
+            "aggregation_suggestions": "COUNT by trend direction, PERCENTAGE distribution"
+          }
+        },
+        {
+          "name": "mitigationActions",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Mitigation Actions",
+            "description": "Recommended actions to reduce compliance risk.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "Manager Notification, Automated Reminder, Training Extension, Direct Contact",
+            "business_rules": "Can be null for low-risk cases, Multiple actions separated by semicolons",
+            "business_description": "System-generated recommendations for risk mitigation, providing actionable guidance for managers and compliance officers on intervention strategies.",
+            "data_quality_checks": "Validate format (semicolon-separated if multiple), Ensure not null for Critical/High risk categories",
+            "filtering_suggestions": "Filter by specific action types, Filter by escalation level",
+            "aggregation_suggestions": "COUNT by action type, DISTRIBUTION"
+          }
+        }
+      ],
+      "relationships": [
+        {
+          "name": "user_relationship",
+          "models": [
+            "ComplianceRisk_Silver",
+            "User_csod"
+          ],
+          "joinType": "MANY_TO_ONE",
+          "condition": "ComplianceRisk_Silver.userId = User_csod.userId",
+          "properties": {
+            "displayName": "Compliance Risk to User Relationship",
+            "description": "Each compliance risk assessment belongs to one employee"
+          }
+        },
+        {
+          "name": "activity_relationship",
+          "models": [
+            "ComplianceRisk_Silver",
+            "Activity_csod"
+          ],
+          "joinType": "MANY_TO_ONE",
+          "condition": "ComplianceRisk_Silver.loId = Activity_csod.loID",
+          "properties": {
+            "displayName": "Compliance Risk to Activity Relationship",
+            "description": "Each compliance risk assessment is for one learning activity"
+          }
+        },
+        {
+          "name": "transcript_relationship",
+          "models": [
+            "ComplianceRisk_Silver",
+            "Transcript_csod"
+          ],
+          "joinType": "MANY_TO_ONE",
+          "condition": "ComplianceRisk_Silver.userId = Transcript_csod.userID AND ComplianceRisk_Silver.loId = Transcript_csod.loID",
+          "properties": {
+            "displayName": "Compliance Risk to Transcript Relationship",
+            "description": "Compliance risk derived from user-activity transcript records"
+          }
+        },
+        {
+          "name": "daily_aggregates_relationship",
+          "models": [
+            "ComplianceRisk_Silver",
+            "ComplianceRisk_Daily"
+          ],
+          "joinType": "MANY_TO_ONE",
+          "condition": "DATE(ComplianceRisk_Silver.assessmentDate) = ComplianceRisk_Daily.assessmentDate",
+          "properties": {
+            "displayName": "Compliance Risk to Daily Aggregates Relationship",
+            "description": "Daily assessments are aggregated into daily organizational summaries"
+          }
+        },
+        {
+          "name": "activity_aggregates_relationship",
+          "models": [
+            "ComplianceRisk_Silver",
+            "ComplianceRisk_Activity"
+          ],
+          "joinType": "MANY_TO_ONE",
+          "condition": "ComplianceRisk_Silver.loId = ComplianceRisk_Activity.loId AND DATE(ComplianceRisk_Silver.assessmentDate) = ComplianceRisk_Activity.assessmentDate",
+          "properties": {
+            "displayName": "Compliance Risk to Activity Aggregates Relationship",
+            "description": "User-activity assessments are aggregated by activity for content effectiveness analysis"
+          }
+        },
+        {
+          "name": "division_aggregates_relationship",
+          "models": [
+            "ComplianceRisk_Silver",
+            "ComplianceRisk_Division"
+          ],
+          "joinType": "MANY_TO_ONE",
+          "condition": "ComplianceRisk_Silver.userId = User_csod.userId AND User_csod.division = ComplianceRisk_Division.division AND DATE(ComplianceRisk_Silver.assessmentDate) = ComplianceRisk_Division.assessmentDate",
+          "properties": {
+            "displayName": "Compliance Risk to Division Aggregates Relationship",
+            "description": "User assessments are aggregated by division via User_csod.division"
+          }
+        },
+        {
+          "name": "monthly_aggregates_relationship",
+          "models": [
+            "ComplianceRisk_Silver",
+            "ComplianceRisk_Monthly"
+          ],
+          "joinType": "MANY_TO_ONE",
+          "condition": "DATE_TRUNC('month', ComplianceRisk_Silver.assessmentDate) = ComplianceRisk_Monthly.monthStartDate",
+          "properties": {
+            "displayName": "Compliance Risk to Monthly Aggregates Relationship",
+            "description": "Daily assessments are rolled up to monthly summaries for strategic reporting"
+          }
+        },
+        {
+          "name": "enterprise_risk_relationship",
+          "models": [
+            "ComplianceRisk_Silver",
+            "EnterpriseRisk_Combined"
+          ],
+          "joinType": "ONE_TO_ONE",
+          "condition": "ComplianceRisk_Silver.userId = EnterpriseRisk_Combined.userId AND DATE(ComplianceRisk_Silver.assessmentDate) = DATE(EnterpriseRisk_Combined.assessmentDate)",
+          "properties": {
+            "displayName": "Compliance Risk to Enterprise Risk Relationship",
+            "description": "Compliance risk is combined with attrition risk for holistic employee risk profiles"
+          }
+        }
+      ],
+      "properties": {
+        "description": "TIME SERIES Silver layer table containing row-level compliance risk assessments tracked daily over time. Each user-activity assignment is assessed daily to monitor completion progression, risk evolution, and intervention triggers. Sample data includes 100 user-activity pairs tracked over 50 days (Oct 28 - Dec 16, 2024) for 5,000 total records.",
+        "business_purpose": "Provides granular time-series compliance risk scoring to enable: (1) completion progression tracking, (2) risk trajectory analysis, (3) early warning detection, (4) intervention effectiveness measurement, (5) predictive analytics on training outcomes, and (6) real-time monitoring of organizational compliance posture.",
+        "data_lineage": "Generated daily from User_csod, Activity_csod, and Transcript_csod tables using risk scoring algorithms (risk = sqrt(impact × likelihood)). Each unique user-activity assignment receives daily assessments tracking completion percentage, days until due, escalation flags, and trend indicators. Time series structure enables temporal analysis with window functions (LAG, LEAD, rolling averages).",
+        "data_retention": "Data retained for 2 years for historical trend analysis, completion pattern mining, and machine learning model training. Daily snapshots enable cohort analysis and longitudinal studies of training effectiveness.",
+        "update_frequency": "daily",
+        "medallion_layer": "silver",
+        "time_series_metadata": {
+          "tracking_entity": "user-activity assignment pair (userId + loId)",
+          "assessment_frequency": "daily",
+          "sample_period": "50 days (2024-10-28 to 2024-12-16)",
+          "sample_entities_tracked": "100 unique user-activity assignments",
+          "total_sample_records": "5,000 (100 assignments × 50 daily assessments)",
+          "observable_patterns": ["Completion percentage increases 1.5-3.5% daily", "Risk scores decrease as completion progresses", "Likelihood increases as deadline approaches", "Escalation flags trigger when risk > 75 or daysUntilDue < 7", "Trends stabilize after 7 days of history"],
+          "temporal_analysis_capabilities": ["Window functions (LAG, LEAD, FIRST_VALUE, LAST_VALUE)", "Rolling averages and moving windows", "Week-over-week and month-over-month comparisons", "Cohort analysis by assignment date", "Progression rate calculations", "Time-to-completion analytics"]
+        },
+        "key_relationships": "userId -> User_csod.userId, loId -> Activity_csod.loId, References Transcript_csod for historical completion patterns"
+      }
+    }
+  ]
+}

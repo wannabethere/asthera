@@ -13,13 +13,26 @@ import aiohttp
 import logging
 from typing import Dict, List, Any, Optional, Tuple, Union, Protocol
 from pydantic import BaseModel, Field
+from pydantic import ValidationError
 from enum import Enum
 from datetime import datetime
 import sqlparse
 from sqlparse.sql import Statement, Token, TokenList
 from sqlparse.tokens import Keyword, Name
 from app.core.dependencies import create_llm_instances_from_settings
-from app.agents.nodes.writers.alert_models import LexyFeedConfiguration, LexyFeedMetric, LexyFeedCondition, LexyFeedNotification, SQLAnalysis, SQLAlertResult, SQLAlertRequest, AlertConditionType, ThresholdOperator, ScheduleType
+from app.agents.nodes.writers.alert_models import (
+    LexyFeedConfiguration,
+    LexyFeedMetric,
+    LexyFeedCondition,
+    LexyFeedNotification,
+    SQLAnalysis,
+    SQLAlertResult,
+    SQLAlertRequest,
+    AlertClarification,
+    AlertConditionType,
+    ThresholdOperator,
+    ScheduleType,
+)
 from app.core.sql_validation import SQLAlertConditionValidator, ValidationResult
 
 
@@ -252,7 +265,7 @@ class SQLToAlertAgent:
             config_dict["notification"]["schedule_type"] = map_enum_value(
                 config_dict["notification"]["schedule_type"], 
                 ScheduleType,
-                "scheduled"  # Default fallback
+                "daily"  # Default fallback (must be a valid ScheduleType)
             )
         
         # Fix metric fields that should be strings
@@ -324,6 +337,99 @@ class SQLToAlertAgent:
         self._ensure_default_values(config_dict)
         
         return config_dict
+
+    def _as_list_of_strings(self, value: Any) -> List[str]:
+        """Coerce a value into a list of strings."""
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [str(v) for v in value if v is not None and str(v).strip()]
+        if isinstance(value, str):
+            v = value.strip()
+            return [v] if v else []
+        return [str(value)]
+
+    def _normalize_critique_result(self, critique: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize critique dict to a stable schema to avoid KeyErrors downstream."""
+        if not isinstance(critique, dict):
+            critique = {"is_valid": False, "confidence_score": 0.0}
+
+        clarification_questions = self._as_list_of_strings(critique.get("clarification_questions"))
+        ambiguous_elements = self._as_list_of_strings(critique.get("ambiguous_elements"))
+        suggested_improvements = self._as_list_of_strings(
+            critique.get("suggested_improvements") or critique.get("suggestions")
+        )
+
+        needs_clarification = bool(
+            critique.get("needs_clarification")
+            or clarification_questions
+            or ambiguous_elements
+        )
+
+        critique_notes = self._as_list_of_strings(critique.get("critique_notes"))
+        if not critique_notes and needs_clarification:
+            critique_notes = ["Clarification required before creating/refining the alert configuration."]
+
+        suggestions = self._as_list_of_strings(critique.get("suggestions"))
+        if not suggestions and suggested_improvements:
+            suggestions = suggested_improvements
+
+        # Confidence score may be missing if the LLM returned a clarification-only schema
+        try:
+            confidence_score = float(critique.get("confidence_score", 0.0) or 0.0)
+        except Exception:
+            confidence_score = 0.0
+
+        is_valid = bool(critique.get("is_valid", False)) and not needs_clarification
+
+        return {
+            "is_valid": is_valid,
+            "confidence_score": confidence_score,
+            "critique_notes": critique_notes,
+            "suggestions": suggestions,
+            "metric_appropriateness": float(critique.get("metric_appropriateness", 0.0) or 0.0),
+            "condition_appropriateness": float(critique.get("condition_appropriateness", 0.0) or 0.0),
+            "notification_appropriateness": float(critique.get("notification_appropriateness", 0.0) or 0.0),
+            "needs_clarification": needs_clarification,
+            "clarification_questions": clarification_questions,
+            "ambiguous_elements": ambiguous_elements,
+            "suggested_improvements": suggested_improvements,
+        }
+
+    def _coerce_numeric_threshold_value(self, value: Any) -> Optional[Union[int, float]]:
+        """Try to coerce an LLM-produced threshold value into a number.
+
+        Returns None if coercion isn't possible (e.g., SQL subquery text).
+        """
+        if value is None:
+            return None
+        # Avoid bool being treated as int
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, (int, float)):
+            return value
+        if isinstance(value, str):
+            s = value.strip()
+            if not s:
+                return None
+            # Handle percent strings like "75%" or "75 %"
+            s = s.replace(",", "")
+            s = re.sub(r"\s+", "", s)
+            if s.endswith("%"):
+                s = s[:-1]
+            # First try direct parse
+            try:
+                if re.fullmatch(r"[-+]?\d+", s):
+                    return int(s)
+                return float(s)
+            except Exception:
+                # Fallback: extract first numeric token
+                m = re.search(r"[-+]?\d+(?:\.\d+)?", s)
+                if not m:
+                    return None
+                token = m.group(0)
+                return float(token) if "." in token else int(token)
+        return None
     
     def _ensure_default_values(self, config_dict: Dict[str, Any]) -> None:
         """Ensure all required fields have appropriate default values"""
@@ -630,7 +736,11 @@ This should generate two conditions: one for completion < 90% and another for ex
         # Check if this is a clarification response
         if config_result.get("needs_clarification", False):
             logger.info("Alert generation requires clarification from user")
-            return None  # Return None to indicate clarification needed
+            return AlertClarification(
+                clarification_questions=self._as_list_of_strings(config_result.get("clarification_questions")),
+                ambiguous_elements=self._as_list_of_strings(config_result.get("ambiguous_elements")),
+                suggested_improvements=self._as_list_of_strings(config_result.get("suggested_improvements")),
+            )
         
         # Fix enum values in the configuration
         config_result = self._fix_enum_values(config_result)
@@ -638,24 +748,77 @@ This should generate two conditions: one for completion < 90% and another for ex
         # Debug logging: Log the result after enum fixing
         logger.info(f"DEBUG: JSON result after enum fixing: {config_result}")
         
-        # Convert to Pydantic models
-        metric = LexyFeedMetric(**config_result["metric"])
+        # Convert to Pydantic models (be defensive: non-numeric thresholds should trigger clarification, not a crash)
+        try:
+            metric = LexyFeedMetric(**config_result["metric"])
+        except ValidationError as e:
+            logger.warning(f"Invalid metric configuration; requesting clarification. Error: {e}")
+            return AlertClarification(
+                clarification_questions=["What metric (measure) should be monitored, and what aggregation should be used?"],
+                ambiguous_elements=["Generated metric configuration could not be validated"],
+                suggested_improvements=["Provide the exact measure/aggregation expected for the alert"],
+            )
         
         # Handle multiple conditions
-        conditions = []
-        if "conditions" in config_result:
-            for cond_data in config_result["conditions"]:
-                conditions.append(LexyFeedCondition(**cond_data))
-        elif "condition" in config_result:
-            conditions.append(LexyFeedCondition(**config_result["condition"]))
+        conditions: List[LexyFeedCondition] = []
+        raw_conditions: List[Dict[str, Any]] = []
+        if "conditions" in config_result and isinstance(config_result["conditions"], list):
+            raw_conditions = list(config_result["conditions"])
+        elif "condition" in config_result and isinstance(config_result["condition"], dict):
+            raw_conditions = [config_result["condition"]]
+
+        for cond_data in raw_conditions:
+            if not isinstance(cond_data, dict):
+                continue
+            cond = dict(cond_data)
+            condition_type = str(cond.get("condition_type") or "")
+            if "value" in cond:
+                coerced = self._coerce_numeric_threshold_value(cond.get("value"))
+                if coerced is None and condition_type != "intelligent_arima":
+                    logger.info(f"Non-numeric threshold detected ({cond.get('value')}); requesting clarification.")
+                    return AlertClarification(
+                        clarification_questions=[
+                            "What numeric threshold value should trigger this alert (e.g., 100, 75, 0.75)?"
+                        ],
+                        ambiguous_elements=[
+                            f"Threshold value was not numeric: {cond.get('value')!r}"
+                        ],
+                        suggested_improvements=[
+                            "Use a numeric threshold (optionally with %), not a SQL expression or description."
+                        ],
+                    )
+                cond["value"] = coerced
+            try:
+                conditions.append(LexyFeedCondition(**cond))
+            except ValidationError as e:
+                logger.info(f"Condition validation failed; requesting clarification. Error: {e}")
+                return AlertClarification(
+                    clarification_questions=[
+                        "What numeric threshold value and operator should be used for the alert conditions?"
+                    ],
+                    ambiguous_elements=[
+                        "Generated condition configuration could not be validated"
+                    ],
+                    suggested_improvements=[
+                        "Provide numeric thresholds (e.g., > 100, > 75%)."
+                    ],
+                )
         
-        notification = LexyFeedNotification(**config_result["notification"])
+        try:
+            notification = LexyFeedNotification(**config_result["notification"])
+        except ValidationError as e:
+            logger.warning(f"Invalid notification configuration; requesting clarification. Error: {e}")
+            return AlertClarification(
+                clarification_questions=["How often should this alert run (daily/weekly/monthly) and who should be notified?"],
+                ambiguous_elements=["Generated notification configuration could not be validated"],
+                suggested_improvements=["Provide schedule type and email recipients."],
+            )
         
         return LexyFeedConfiguration(
             metric=metric,
             conditions=conditions,
             notification=notification,
-            column_selection=config_result["column_selection"]
+            column_selection=config_result["column_selection"],
         )
     
     async def _critique_alert_configuration(self, inputs: Dict) -> Dict[str, Any]:
@@ -665,6 +828,21 @@ This should generate two conditions: one for completion < 90% and another for ex
         sql_analysis = inputs["sql_analysis"]
         feed_config = inputs["feed_configuration"]
         sample_data = request.sample_data
+
+        # If the generation step already determined clarification is needed, do not call the critic LLM.
+        if isinstance(feed_config, AlertClarification):
+            return self._normalize_critique_result(
+                {
+                    "is_valid": False,
+                    "confidence_score": 0.0,
+                    "needs_clarification": True,
+                    "clarification_questions": feed_config.clarification_questions,
+                    "ambiguous_elements": feed_config.ambiguous_elements,
+                    "suggested_improvements": feed_config.suggested_improvements,
+                    "critique_notes": ["Clarification required before evaluating a configuration."],
+                    "suggestions": feed_config.suggested_improvements,
+                }
+            )
         
         # Prepare sample data context for critique
         sample_data_context = ""
@@ -734,7 +912,7 @@ If clarification is needed, set "is_valid": false, "needs_clarification": true, 
         logger = logging.getLogger(__name__)
         logger.info(f"DEBUG: Critique result: {critique_result}")
         
-        return critique_result
+        return self._normalize_critique_result(critique_result)
     
     async def _refine_alert_configuration(self, inputs: Dict) -> SQLAlertResult:
         """Refine the alert configuration based on critique"""
@@ -742,10 +920,31 @@ If clarification is needed, set "is_valid": false, "needs_clarification": true, 
         request = inputs["request"]
         sql_analysis = inputs["sql_analysis"]
         feed_config = inputs["feed_configuration"]
-        critique = inputs["critique"]
+        critique = self._normalize_critique_result(inputs.get("critique", {}))
+
+        # If clarification is needed (from critique or generation), return a clarification payload instead of throwing.
+        if critique.get("needs_clarification", False):
+            clarification = None
+            if isinstance(feed_config, AlertClarification):
+                clarification = feed_config
+            else:
+                clarification = AlertClarification(
+                    clarification_questions=self._as_list_of_strings(critique.get("clarification_questions")),
+                    ambiguous_elements=self._as_list_of_strings(critique.get("ambiguous_elements")),
+                    suggested_improvements=self._as_list_of_strings(critique.get("suggested_improvements") or critique.get("suggestions")),
+                )
+
+            return SQLAlertResult(
+                feed_configuration=None,
+                sql_analysis=sql_analysis,
+                confidence_score=float(critique.get("confidence_score", 0.0) or 0.0),
+                critique_notes=self._as_list_of_strings(critique.get("critique_notes")),
+                suggestions=self._as_list_of_strings(critique.get("suggestions")),
+                clarification=clarification,
+            )
         
         # If configuration is good enough, return as-is
-        if critique["is_valid"] and critique["confidence_score"] > 0.8:
+        if critique.get("is_valid", False) and float(critique.get("confidence_score", 0.0) or 0.0) > 0.8:
             refined_config = feed_config
         else:
             # Refine based on critique feedback
@@ -809,8 +1008,8 @@ Return the same JSON structure as before but with improvements:
             
             refined_result = await chain.ainvoke({
                 "feed_config": feed_config.dict(),
-                "critique_notes": critique["critique_notes"],
-                "suggestions": critique["suggestions"],
+                "critique_notes": self._as_list_of_strings(critique.get("critique_notes")),
+                "suggestions": self._as_list_of_strings(critique.get("suggestions")),
                 "sql_analysis": sql_analysis.dict(),
                 "alert_request": request.alert_request
             })
@@ -824,12 +1023,18 @@ Return the same JSON structure as before but with improvements:
             
             # Convert back to Pydantic models
             metric = LexyFeedMetric(**refined_result["metric"])
-            condition = LexyFeedCondition(**refined_result["condition"])
+            # Support both `conditions` (preferred) and legacy `condition`
+            conditions: List[LexyFeedCondition] = []
+            if "conditions" in refined_result and isinstance(refined_result["conditions"], list):
+                for cond_data in refined_result["conditions"]:
+                    conditions.append(LexyFeedCondition(**cond_data))
+            elif "condition" in refined_result:
+                conditions.append(LexyFeedCondition(**refined_result["condition"]))
             notification = LexyFeedNotification(**refined_result["notification"])
             
             refined_config = LexyFeedConfiguration(
                 metric=metric,
-                condition=condition,
+                conditions=conditions,
                 notification=notification,
                 column_selection=refined_result["column_selection"]
             )
@@ -837,9 +1042,10 @@ Return the same JSON structure as before but with improvements:
         return SQLAlertResult(
             feed_configuration=refined_config,
             sql_analysis=sql_analysis,
-            confidence_score=critique["confidence_score"],
-            critique_notes=critique["critique_notes"],
-            suggestions=critique["suggestions"]
+            confidence_score=float(critique.get("confidence_score", 0.0) or 0.0),
+            critique_notes=self._as_list_of_strings(critique.get("critique_notes")),
+            suggestions=self._as_list_of_strings(critique.get("suggestions")),
+            clarification=None,
         )
     
     async def generate_alert(self, request: SQLAlertRequest) -> SQLAlertResult:

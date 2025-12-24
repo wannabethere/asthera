@@ -1,0 +1,489 @@
+{
+  "catalog": "csod_risk_attrition",
+  "schema": "public",
+  "models": [
+    {
+      "name": "AttritionRisk_Silver",
+      "tableReference": {
+        "catalog": "csod_risk_attrition",
+        "schema": "public",
+        "table": "attritionrisk_silver"
+      },
+      "primaryKey": "attritionRiskId",
+      "columns": [
+        {
+          "name": "attritionRiskId",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Attrition Risk ID",
+            "description": "Unique identifier for each attrition risk assessment record.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "ATTR###",
+            "business_rules": "Must be unique, Cannot be null",
+            "business_description": "A unique identifier combining userId and assessment timestamp to track individual attrition risk assessments over time.",
+            "data_quality_checks": "Check for null values, Validate uniqueness across the table",
+            "filtering_suggestions": "Filter by userId, Filter by assessmentDate",
+            "aggregation_suggestions": "COUNT, DISTINCT COUNT"
+          }
+        },
+        {
+          "name": "userId",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "User ID",
+            "description": "Reference to the user from User_csod table.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "USR###",
+            "business_rules": "Must reference valid userId in User_csod table, Cannot be null",
+            "business_description": "Links the attrition risk assessment to a specific employee for tracking individual flight risk profiles.",
+            "data_quality_checks": "Validate foreign key relationship with User_csod, Check for null values",
+            "filtering_suggestions": "Filter by specific userId, Filter by userStatus, Filter by division",
+            "aggregation_suggestions": "COUNT by userId, DISTINCT COUNT"
+          }
+        },
+        {
+          "name": "assessmentDate",
+          "type": "timestamp",
+          "notNull": true,
+          "properties": {
+            "display_name": "Assessment Date",
+            "description": "Timestamp when the attrition risk assessment was calculated.",
+            "usage_type": "timestamp",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "YYYY-MM-DD HH:MM:SS",
+            "business_rules": "Cannot be null, Must be <= current timestamp, Should be updated daily",
+            "business_description": "Records when the attrition risk assessment was performed, critical for tracking risk evolution and identifying trend inflection points.",
+            "data_quality_checks": "Ensure not in future, Validate timestamp format, Check for missing daily assessments",
+            "filtering_suggestions": "Filter by date range, Filter by latest assessment, Filter by specific date",
+            "aggregation_suggestions": "MAX for latest assessment, COUNT by date, GROUP BY date for trends"
+          }
+        },
+        {
+          "name": "attritionRiskScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Attrition Risk Score",
+            "description": "Overall composite attrition risk score combining impact and likelihood (0-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100, Calculated as sqrt(attritionImpact * attritionLikelihood)",
+            "business_description": "A composite metric representing the overall employee flight risk, balancing organizational impact with probability of departure.",
+            "data_quality_checks": "Validate range 0-100, Check calculation accuracy against impact and likelihood scores, Identify outliers",
+            "filtering_suggestions": "Filter by riskCategory, Filter by score ranges (0-25 low, 25-50 moderate, 50-75 high, 75-100 critical)",
+            "aggregation_suggestions": "AVERAGE, MEDIAN, PERCENTILE(90), MAX, MIN, STDDEV"
+          }
+        },
+        {
+          "name": "attritionImpactScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Attrition Impact Score",
+            "description": "Severity of organizational impact if this employee leaves (0-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100, Higher scores indicate greater organizational impact",
+            "business_description": "Measures potential organizational disruption from employee departure, considering factors like role criticality, specialized skills, institutional knowledge, direct reports, replacement difficulty, and revenue impact.",
+            "data_quality_checks": "Validate range 0-100, Ensure consistency with position level and role criticality",
+            "filtering_suggestions": "Filter by high impact (>75), Filter by position, Filter by division",
+            "aggregation_suggestions": "AVERAGE by position, MAX by division, PERCENTILE(90)"
+          }
+        },
+        {
+          "name": "attritionLikelihoodScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Attrition Likelihood Score",
+            "description": "Probability that this employee will leave the organization (0-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100, Based on behavioral signals and historical patterns",
+            "business_description": "Predicts probability of voluntary departure based on tenure, engagement metrics, performance trends, training completion, career progression, and comparative market factors.",
+            "data_quality_checks": "Validate range 0-100, Verify correlation with engagement signals, Check logic for recently hired employees",
+            "filtering_suggestions": "Filter by high likelihood (>75), Filter by tenure ranges, Filter by engagement patterns",
+            "aggregation_suggestions": "AVERAGE by division, MEDIAN by tenure, MAX by position"
+          }
+        },
+        {
+          "name": "riskCategory",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Risk Category",
+            "description": "Categorical classification of attrition risk level based on attritionRiskScore.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Critical, High, Moderate, Low",
+            "business_rules": "Cannot be null, Valid values: 'Critical' (75-100), 'High' (50-75), 'Moderate' (25-50), 'Low' (0-25)",
+            "business_description": "Provides business-friendly categorical risk classification for talent retention strategies and succession planning workflows.",
+            "data_quality_checks": "Validate against allowed values, Ensure consistency with attritionRiskScore thresholds",
+            "filtering_suggestions": "Filter by specific risk category, Filter by Critical and High for retention actions",
+            "aggregation_suggestions": "COUNT by riskCategory, PERCENTAGE distribution, GROUP BY riskCategory"
+          }
+        },
+        {
+          "name": "tenureMonths",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Tenure (Months)",
+            "description": "Employee tenure in months since start date.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 480",
+            "business_rules": "Cannot be null, Must be >= 0, Calculated from User_csod.startDate",
+            "business_description": "Critical predictor of attrition risk with well-documented vulnerability windows (0-6 months, 12-18 months, 36-48 months).",
+            "data_quality_checks": "Ensure non-negative, Validate calculation against startDate, Flag extreme values (>40 years)",
+            "filtering_suggestions": "Filter by high-risk tenure bands (0-6, 18-24 months), Filter by tenure ranges",
+            "aggregation_suggestions": "AVERAGE by division, MEDIAN, DISTRIBUTION by bands"
+          }
+        },
+        {
+          "name": "tenureRiskBand",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Tenure Risk Band",
+            "description": "Risk classification based on tenure vulnerability periods.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "New Hire Critical (0-6mo), Post-Onboarding Risk (6-18mo), Mid-Career Risk (18-36mo), Stable (36mo+)",
+            "business_rules": "Cannot be null, Derived from tenureMonths",
+            "business_description": "Segments employees by research-backed attrition vulnerability periods requiring different retention strategies.",
+            "data_quality_checks": "Validate against tenureMonths, Ensure consistent categorization",
+            "filtering_suggestions": "Filter by high-risk bands, Filter by specific band for targeted interventions",
+            "aggregation_suggestions": "COUNT by band, PERCENTAGE distribution"
+          }
+        },
+        {
+          "name": "learningEngagementScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Learning Engagement Score",
+            "description": "Employee engagement with learning activities (0-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100, Based on training completion rates and activity",
+            "business_description": "Strong inverse predictor of attrition; disengagement from learning signals departure preparation and declining organizational commitment.",
+            "data_quality_checks": "Validate range 0-100, Correlate with training activity in Transcript_csod",
+            "filtering_suggestions": "Filter by low engagement (<40), Filter by engagement trends",
+            "aggregation_suggestions": "AVERAGE by division, PERCENTILE(25) for bottom performers"
+          }
+        },
+        {
+          "name": "complianceCompletionRate",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Compliance Completion Rate",
+            "description": "Historical compliance training completion rate (0-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100, Trailing 12 months",
+            "business_description": "Low compliance completion often signals disengagement and pre-departure behavior as employees deprioritize organizational obligations.",
+            "data_quality_checks": "Validate range 0-100, Ensure based on sufficient sample size",
+            "filtering_suggestions": "Filter by low performers (<70%), Filter by declining trends",
+            "aggregation_suggestions": "AVERAGE by division, PERCENTILE(10) for bottom decile"
+          }
+        },
+        {
+          "name": "lastLoginDays",
+          "type": "bigint",
+          "notNull": false,
+          "properties": {
+            "display_name": "Days Since Last Login",
+            "description": "Number of days since user last logged into the LMS.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 365",
+            "business_rules": "Can be null if never logged in, Must be >= 0",
+            "business_description": "Platform disengagement indicator; extended absence suggests declining organizational connection and potential departure planning.",
+            "data_quality_checks": "Ensure non-negative, Flag extreme values (>90 days)",
+            "filtering_suggestions": "Filter by inactive users (>30 days), Filter by recently active",
+            "aggregation_suggestions": "AVERAGE by division, MEDIAN, PERCENTILE(75)"
+          }
+        },
+        {
+          "name": "overdueCourseCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Overdue Course Count",
+            "description": "Number of overdue training assignments for this user.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 50",
+            "business_rules": "Cannot be null, Must be >= 0",
+            "business_description": "Accumulation of overdue trainings signals disengagement and declining commitment to organizational requirements, strong attrition predictor.",
+            "data_quality_checks": "Ensure non-negative, Correlate with Transcript_csod overdue count",
+            "filtering_suggestions": "Filter by multiple overdue (>3), Filter by none overdue for low-risk comparison",
+            "aggregation_suggestions": "AVERAGE by division, SUM, PERCENTILE(90)"
+          }
+        },
+        {
+          "name": "managerChangeCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Manager Change Count",
+            "description": "Number of manager changes in the last 12 months.",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 10",
+            "business_rules": "Cannot be null, Must be >= 0, Trailing 12 months",
+            "business_description": "Frequent manager changes correlate with higher attrition due to relationship disruption and lack of career continuity.",
+            "data_quality_checks": "Ensure non-negative, Validate against historical manager data",
+            "filtering_suggestions": "Filter by multiple changes (>1), Filter by stable management (0)",
+            "aggregation_suggestions": "AVERAGE by division, SUM"
+          }
+        },
+        {
+          "name": "trainingInvestment",
+          "type": "double",
+          "notNull": false,
+          "properties": {
+            "display_name": "Training Investment (USD)",
+            "description": "Total investment in employee training over last 12 months.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 50000.00",
+            "business_rules": "Can be null if not tracked, Must be >= 0",
+            "business_description": "Training investment indicates organizational commitment to employee; high investment loss amplifies attrition impact.",
+            "data_quality_checks": "Ensure non-negative, Flag outliers",
+            "filtering_suggestions": "Filter by high investment (>$10K), Calculate ROI on retention",
+            "aggregation_suggestions": "SUM, AVERAGE by position, TOTAL at risk"
+          }
+        },
+        {
+          "name": "positionLevel",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Position Level",
+            "description": "Employee position level in organizational hierarchy.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Executive, Senior Management, Middle Management, Individual Contributor, Entry Level",
+            "business_rules": "Cannot be null, Derived from User_csod.position",
+            "business_description": "Position level affects both impact (higher levels = greater impact) and likelihood (mid-level management often highest flight risk).",
+            "data_quality_checks": "Validate against known position levels, Ensure consistency with position",
+            "filtering_suggestions": "Filter by specific levels, Focus on high-impact levels",
+            "aggregation_suggestions": "COUNT by level, AVERAGE risk by level"
+          }
+        },
+        {
+          "name": "directReportCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Direct Report Count",
+            "description": "Number of direct reports managed by this employee.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 50",
+            "business_rules": "Cannot be null, Must be >= 0",
+            "business_description": "Managers with direct reports have higher impact due to team disruption and secondary attrition risk from management changes.",
+            "data_quality_checks": "Ensure non-negative, Validate against User_csod hierarchy",
+            "filtering_suggestions": "Filter by managers (>0), Filter by large teams (>10)",
+            "aggregation_suggestions": "SUM for total impact, AVERAGE by division"
+          }
+        },
+        {
+          "name": "retentionPriority",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Retention Priority",
+            "description": "Retention action priority based on risk and impact.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Urgent, High, Medium, Low",
+            "business_rules": "Cannot be null, Valid values: 'Urgent', 'High', 'Medium', 'Low'",
+            "business_description": "Action prioritization combining risk level with organizational impact for efficient resource allocation in retention efforts.",
+            "data_quality_checks": "Validate against allowed values, Ensure consistency with risk category",
+            "filtering_suggestions": "Filter by Urgent and High for immediate action, Create retention action queues",
+            "aggregation_suggestions": "COUNT by priority level, PERCENTAGE distribution"
+          }
+        },
+        {
+          "name": "hrEscalation",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "HR Escalation",
+            "description": "Flag indicating if HR/manager notification is required.",
+            "usage_type": "flag",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Yes, No",
+            "business_rules": "Cannot be null, Valid values: 'Yes', 'No', Triggered when attritionRiskScore > 75",
+            "business_description": "Automated escalation flag for HR and management intervention when attrition risk reaches critical threshold requiring immediate retention action.",
+            "data_quality_checks": "Validate against allowed values, Ensure logic consistency with attritionRiskScore",
+            "filtering_suggestions": "Filter by escalation required (Yes), Create HR action queue",
+            "aggregation_suggestions": "COUNT by Yes/No, PERCENTAGE requiring escalation"
+          }
+        },
+        {
+          "name": "riskTrend",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Risk Trend",
+            "description": "Trend direction of attrition risk over the last 30 days.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Increasing, Decreasing, Stable",
+            "business_rules": "Can be null for first assessment, Valid values: 'Increasing', 'Decreasing', 'Stable'",
+            "business_description": "Identifies whether attrition risk is deteriorating or improving, enabling proactive intervention on worsening situations.",
+            "data_quality_checks": "Validate against allowed values, Ensure based on sufficient historical data",
+            "filtering_suggestions": "Filter by Increasing trend for early warning, Filter by Decreasing to identify successful interventions",
+            "aggregation_suggestions": "COUNT by trend direction, PERCENTAGE distribution"
+          }
+        },
+        {
+          "name": "retentionActions",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Retention Actions",
+            "description": "Recommended retention strategies for this employee.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "Career Development Discussion, Compensation Review, Project Reassignment, Manager Check-in, Training Opportunities",
+            "business_rules": "Can be null for low-risk cases, Multiple actions separated by semicolons",
+            "business_description": "System-generated personalized retention recommendations based on risk factors, providing actionable guidance for managers and HR.",
+            "data_quality_checks": "Validate format (semicolon-separated), Ensure not null for Critical/High risk categories",
+            "filtering_suggestions": "Filter by specific action types, Group by action for resource planning",
+            "aggregation_suggestions": "COUNT by action type, DISTRIBUTION"
+          }
+        }
+      ],
+      "relationships": [
+        {
+          "name": "user_relationship",
+          "models": [
+            "AttritionRisk_Silver",
+            "User_csod"
+          ],
+          "joinType": "MANY_TO_ONE",
+          "condition": "AttritionRisk_Silver.userId = User_csod.userId",
+          "properties": {
+            "displayName": "Attrition Risk to User Relationship",
+            "description": "Each attrition risk assessment belongs to one employee"
+          }
+        },
+        {
+          "name": "daily_aggregates_relationship",
+          "models": [
+            "AttritionRisk_Silver",
+            "AttritionRisk_Daily"
+          ],
+          "joinType": "MANY_TO_ONE",
+          "condition": "DATE(AttritionRisk_Silver.assessmentDate) = AttritionRisk_Daily.assessmentDate",
+          "properties": {
+            "displayName": "Attrition Risk to Daily Aggregates Relationship",
+            "description": "Daily assessments are aggregated into daily organizational summaries"
+          }
+        },
+        {
+          "name": "division_aggregates_relationship",
+          "models": [
+            "AttritionRisk_Silver",
+            "AttritionRisk_Division"
+          ],
+          "joinType": "MANY_TO_ONE",
+          "condition": "AttritionRisk_Silver.userId = User_csod.userId AND User_csod.division = AttritionRisk_Division.division AND DATE(AttritionRisk_Silver.assessmentDate) = AttritionRisk_Division.assessmentDate",
+          "properties": {
+            "displayName": "Attrition Risk to Division Aggregates Relationship",
+            "description": "Employee assessments are aggregated by division via User_csod.division"
+          }
+        },
+        {
+          "name": "enterprise_risk_relationship",
+          "models": [
+            "AttritionRisk_Silver",
+            "EnterpriseRisk_Combined"
+          ],
+          "joinType": "ONE_TO_ONE",
+          "condition": "AttritionRisk_Silver.userId = EnterpriseRisk_Combined.userId AND DATE(AttritionRisk_Silver.assessmentDate) = DATE(EnterpriseRisk_Combined.assessmentDate)",
+          "properties": {
+            "displayName": "Attrition Risk to Enterprise Risk Relationship",
+            "description": "Attrition risk is combined with compliance risk for holistic employee risk profiles"
+          }
+        }
+      ],
+      "properties": {
+        "description": "TIME SERIES Silver layer table containing row-level attrition risk assessments tracked daily over time. Each employee is assessed daily to monitor engagement trends, behavioral changes, and flight risk evolution. Sample data includes 100 employees tracked over 50 days (Oct 28 - Dec 16, 2024) for 5,000 total records, with diverse engagement trajectories (improving, declining, stable).",
+        "business_purpose": "Provides granular time-series employee flight risk scoring to enable: (1) engagement trajectory tracking, (2) early warning detection of disengagement, (3) intervention effectiveness measurement, (4) cohort analysis by tenure bands, (5) predictive analytics on voluntary turnover, and (6) proactive talent retention management.",
+        "data_lineage": "Generated daily from User_csod and Transcript_csod tables using attrition risk algorithms (risk = sqrt(impact × likelihood)). Each employee receives daily assessments tracking learning engagement, compliance completion, login activity, and behavioral patterns. Each employee has a personalized 'engagement_trend' factor (-1 to +1 daily drift) creating realistic upward, downward, or stable trajectories over time.",
+        "data_retention": "Data retained for 3 years for historical trend analysis, engagement pattern mining, and predictive model training. Daily snapshots enable cohort analysis by tenure bands and longitudinal studies of retention effectiveness.",
+        "update_frequency": "daily",
+        "medallion_layer": "silver",
+        "time_series_metadata": {
+          "tracking_entity": "individual employee (userId)",
+          "assessment_frequency": "daily",
+          "sample_period": "50 days (2024-10-28 to 2024-12-16)",
+          "sample_entities_tracked": "100 unique employees",
+          "total_sample_records": "5,000 (100 employees × 50 daily assessments)",
+          "engagement_patterns": ["Declining (engagement_trend < -0.3): employees becoming disengaged", "Improving (engagement_trend > 0.3): employees becoming more engaged", "Stable (engagement_trend ≈ 0): consistent engagement levels"],
+          "observable_patterns": ["Learning engagement drifts ±2 points daily based on trend", "Compliance completion rates evolve over time", "Tenure increments monthly (visible at 30-day boundaries)", "Manager changes are rare events (~2% chance per day)", "Risk trends stabilize after 7 days of history", "Last login days increments daily unless activity occurs"],
+          "temporal_analysis_capabilities": ["Engagement trajectory analysis", "Risk volatility calculations (STDDEV)", "Week-over-week engagement comparisons", "Cohort analysis by tenure bands", "Early warning signal detection", "Time-to-escalation analytics", "Behavioral pattern recognition"]
+        },
+        "key_relationships": "userId -> User_csod.userId, References Transcript_csod for engagement and completion patterns"
+      }
+    }
+  ]
+}

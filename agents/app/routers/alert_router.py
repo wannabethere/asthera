@@ -5,11 +5,12 @@ This router provides endpoints for both the native alert service functionality
 and the compatibility layer for main.py integration.
 """
 
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Union
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 import traceback
 import uuid
+import re
 from datetime import datetime
 
 from app.services.writers.alert_service import (
@@ -31,6 +32,76 @@ from app.core.pandas_engine import PandasEngine
 
 # Create router
 router = APIRouter(prefix="/alerts", tags=["alerts"])
+
+def _wrap_compat_result(result: AlertResponseCompatibility, endpoint: str, extra_metadata: Optional[Dict[str, Any]] = None) -> "AlertCompatibilityResponse":
+    """Standardize success/error handling for compatibility endpoints."""
+    result_type = getattr(result, "type", None)
+    is_terminal_failure = result_type in {"error", "no_alerts_generated"}
+    metadata: Dict[str, Any] = {
+        "endpoint": endpoint,
+        "processed_at": datetime.now().isoformat(),
+        "service_created": getattr(result, "service_created", None),
+        "project_id": getattr(result, "project_id", None),
+        "session_id": getattr(result, "session_id", None),
+    }
+    if extra_metadata:
+        metadata.update(extra_metadata)
+
+    return AlertCompatibilityResponse(
+        success=not is_terminal_failure,
+        data=result,
+        error=(getattr(result, "summary", None) if is_terminal_failure else None),
+        metadata=metadata,
+    )
+
+def _extract_structured_context_from_combined_input(text: str) -> Optional[Dict[str, Any]]:
+    """Best-effort parser for the combined input format used by create-single endpoints.
+
+    Expected format:
+      Alert Request: ...
+
+      Natural Language Query: ...
+
+      SQL Query: ...
+    """
+    if not text or not isinstance(text, str):
+        return None
+
+    pattern = (
+        r"Alert Request:\s*(?P<alert_request>.*?)(?:\n\s*\n+)"
+        r"Natural Language Query:\s*(?P<natural_language_query>.*?)(?:\n\s*\n+)"
+        r"SQL Query:\s*(?P<sql>.*)\s*$"
+    )
+    m = re.search(pattern, text, flags=re.IGNORECASE | re.DOTALL)
+    if not m:
+        return None
+
+    return {
+        "sql": (m.group("sql") or "").strip(),
+        "natural_language_query": (m.group("natural_language_query") or "").strip(),
+        "alert_request": (m.group("alert_request") or "").strip(),
+    }
+
+def _normalize_alert_create(alert: AlertCreate, project_id: Optional[str]) -> AlertCreate:
+    """Make an AlertCreate behave like create-single: ensure project_id + additional_context when possible."""
+    # Copy defensively (pydantic v2)
+    normalized = alert.model_copy(deep=True) if hasattr(alert, "model_copy") else alert
+
+    if project_id and not getattr(normalized, "project_id", None):
+        normalized.project_id = project_id
+
+    # If additional_context already has structured keys, keep it.
+    ctx = (getattr(normalized, "additional_context", None) or {})
+    has_structured = any(k in ctx for k in ("sql", "sql_query", "natural_language_query", "alert_request"))
+    if not has_structured:
+        extracted = _extract_structured_context_from_combined_input(getattr(normalized, "input", ""))
+        if extracted:
+            # Preserve any existing context fields
+            merged = dict(ctx)
+            merged.update(extracted)
+            normalized.additional_context = merged
+
+    return normalized
 
 
 # =============================================================================
@@ -139,23 +210,17 @@ async def create_single_alert(
             project_id=request.project_id,
             data_description=request.data_description,
             session_id=request.session_id,
-            configuration=request.configuration
+            configuration=request.configuration,
+            additional_context={
+                "sql": request.sql_query_pair.sql,
+                "natural_language_query": request.sql_query_pair.natural_language_query,
+                "alert_request": request.sql_query_pair.alert_request,
+                "sample_data": request.sql_query_pair.sample_data,
+            },
         )
         
         result = await compatibility_service.process_alert_create(alert_create)
-        
-        return AlertCompatibilityResponse(
-            success=True,
-            data=result,
-            metadata={
-                "endpoint": "create_single_alert",
-                "processed_at": datetime.now().isoformat(),
-                "service_created": result.service_created,
-                "project_id": result.project_id,
-                "session_id": result.session_id,
-                "sql_query_pair_processed": True
-            }
-        )
+        return _wrap_compat_result(result, endpoint="create_single_alert", extra_metadata={"sql_query_pair_processed": True})
         
     except Exception as e:
         traceback.print_exc()
@@ -185,22 +250,20 @@ async def create_single_alert_direct(
             project_id=project_id,
             data_description=data_description,
             session_id=session_id,
-            configuration=configuration
+            configuration=configuration,
+            additional_context={
+                "sql": request.sql_query,
+                "natural_language_query": request.natural_language_query,
+                "alert_request": request.alert_request,
+            },
         )
         
         result = await compatibility_service.process_alert_create(alert_create)
         
-        return AlertCompatibilityResponse(
-            success=True,
-            data=result,
-            metadata={
-                "endpoint": "create_single_alert_direct",
-                "processed_at": datetime.now().isoformat(),
-                "service_created": result.service_created,
-                "project_id": result.project_id,
-                "session_id": result.session_id,
-                "alert_combination_processed": True
-            }
+        return _wrap_compat_result(
+            result,
+            endpoint="create_single_alert_direct",
+            extra_metadata={"alert_combination_processed": True},
         )
         
     except Exception as e:
@@ -228,7 +291,7 @@ async def create_multiple_alerts(
         compatibility_service = get_alert_compatibility_service()
         results = []
         
-        for alert in request.alerts:
+        for idx, alert in enumerate(request.alerts):
             # Use provided project_id or fall back to individual alert's project_id
             project_id = request.project_id or alert.project_id
             if not project_id:
@@ -237,19 +300,15 @@ async def create_multiple_alerts(
                     detail=f"Alert at index {request.alerts.index(alert)} is missing project_id"
                 )
             
-            result = await compatibility_service.process_alert_create(alert, project_id)
-            
-            results.append(AlertCompatibilityResponse(
-                success=True,
-                data=result,
-                metadata={
-                    "endpoint": "create_multiple_alerts",
-                    "processed_at": datetime.now().isoformat(),
-                    "service_created": result.service_created,
-                    "project_id": result.project_id,
-                    "session_id": result.session_id
-                }
-            ))
+            normalized_alert = _normalize_alert_create(alert, project_id=project_id)
+            result = await compatibility_service.process_alert_create(normalized_alert, project_id)
+            results.append(
+                _wrap_compat_result(
+                    result,
+                    endpoint="create_multiple_alerts",
+                    extra_metadata={"alert_index": idx},
+                )
+            )
         
         return results
         
@@ -280,26 +339,25 @@ async def create_feed(
         results = []
         
         # Process each alert in the feed
-        for alert in request.alerts:
+        for idx, alert in enumerate(request.alerts):
             # Set the project_id from the feed request if not set in the alert
             if not alert.project_id:
                 alert.project_id = request.project_id
             
-            result = await compatibility_service.process_alert_create(alert, request.project_id)
+            normalized_alert = _normalize_alert_create(alert, project_id=request.project_id)
+            result = await compatibility_service.process_alert_create(normalized_alert, request.project_id)
             
-            results.append(AlertCompatibilityResponse(
-                success=True,
-                data=result,
-                metadata={
-                    "endpoint": "create_feed",
-                    "processed_at": datetime.now().isoformat(),
-                    "service_created": result.service_created,
-                    "project_id": result.project_id,
-                    "session_id": result.session_id,
+            results.append(
+                _wrap_compat_result(
+                    result,
+                    endpoint="create_feed",
+                    extra_metadata={
                     "feed_id": request.feed_id,
-                    "feed_name": request.feed_name
-                }
-            ))
+                        "feed_name": request.feed_name,
+                        "alert_index": idx,
+                    },
+                )
+            )
         
         return results
         
@@ -332,19 +390,10 @@ async def process_alert_request(
             request.project_id = project_id
         
         compatibility_service = get_alert_compatibility_service()
-        result = await compatibility_service.process_alert_create(request)
+        normalized_request = _normalize_alert_create(request, project_id=request.project_id)
+        result = await compatibility_service.process_alert_create(normalized_request)
         
-        return AlertCompatibilityResponse(
-            success=True,
-            data=result,
-            metadata={
-                "endpoint": "process_alert_request",
-                "processed_at": datetime.now().isoformat(),
-                "service_created": result.service_created,
-                "project_id": result.project_id,
-                "session_id": result.session_id
-            }
-        )
+        return _wrap_compat_result(result, endpoint="process_alert_request")
         
     except HTTPException:
         raise
@@ -672,6 +721,36 @@ class ConditionValidationRequest(BaseModel):
     overall_condition_logic: str = Field(default="any_met", description="Logic for determining overall condition status")
     project_id: str = Field(..., description="Project identifier for data source access")
 
+class ProposedAlertConditionValidationRequest(BaseModel):
+    """Validate a condition by providing a proposed alert configuration (feed configuration)."""
+    sql: str = Field(..., description="SQL query to execute for validation")
+    proposed_alert: Dict[str, Any] = Field(..., description="Proposed alert/feed configuration to validate")
+    project_id: str = Field(..., description="Project identifier for data source access")
+    business_context: Optional[str] = Field(default=None, description="Optional business context for validation/explanation")
+    condition_index: int = Field(default=0, description="Which condition in proposed_alert.conditions to validate")
+    metric_column: Optional[str] = Field(default=None, description="Override for which result column to validate")
+    use_cache: bool = Field(default=True, description="Whether to use caching for SQL execution")
+    overall_condition_logic: str = Field(default="any_met", description="Logic for determining overall condition status")
+
+
+def _map_threshold_type_from_feed(threshold_type: Optional[str]) -> str:
+    """Map feed-style threshold_type values to validator ThresholdType values."""
+    if not threshold_type:
+        return ThresholdType.DEFAULT.value
+    t = str(threshold_type).lower()
+    if "percent" in t:
+        return ThresholdType.PERCENTAGE.value
+    if "ratio" in t:
+        return ThresholdType.RATIO.value
+    if "percentile" in t:
+        return ThresholdType.PERCENTILE.value
+    if "multiplier" in t:
+        return ThresholdType.MULTIPLIER.value
+    if "absolute" in t:
+        return ThresholdType.ABSOLUTE.value
+    # Common feed values like "based_on_value" / "based_on_change" map best to direct comparison
+    return ThresholdType.DEFAULT.value
+
 
 class ConditionValidationResponse(BaseModel):
     """Response model for condition validation"""
@@ -694,7 +773,7 @@ class ConditionValidationResponse(BaseModel):
 
 
 @router.post("/validate-condition", response_model=ConditionValidationResponse)
-async def validate_alert_condition(request: ConditionValidationRequest):
+async def validate_alert_condition(request: Union[ConditionValidationRequest, ProposedAlertConditionValidationRequest]):
     """
     Validate an alert condition by executing SQL and checking threshold conditions
     
@@ -704,18 +783,56 @@ async def validate_alert_condition(request: ConditionValidationRequest):
         # Get the alert service
         alert_service = get_alert_service()
         
-        # Delegate to the service layer
-        result = await alert_service.validate_alert_condition(
-            sql_query=request.sql_query,
-            condition_type=request.condition_type.value, # Convert Enum to string
-            operator=request.operator.value, # Convert Enum to string
-            threshold_value=request.threshold_value,
-            threshold_type=request.threshold_type.value, # Convert Enum to string
-            metric_column=request.metric_column,
-            use_cache=request.use_cache,
-            overall_condition_logic=request.overall_condition_logic,
-            project_id=request.project_id
-        )
+        # Backward compatible: support the original request shape
+        if isinstance(request, ConditionValidationRequest):
+            result = await alert_service.validate_alert_condition(
+                sql_query=request.sql_query,
+                condition_type=request.condition_type.value,  # Enum -> string
+                operator=request.operator.value,  # Enum -> string
+                threshold_value=request.threshold_value,
+                threshold_type=request.threshold_type.value,  # Enum -> string
+                metric_column=request.metric_column,
+                use_cache=request.use_cache,
+                overall_condition_logic=request.overall_condition_logic,
+                project_id=request.project_id,
+            )
+        else:
+            # New format: { sql, proposed_alert, project_id, ... }
+            proposed = request.proposed_alert or {}
+            metric = proposed.get("metric") or {}
+            conditions = proposed.get("conditions") or []
+            if not isinstance(conditions, list) or not conditions:
+                raise HTTPException(status_code=400, detail="proposed_alert.conditions must be a non-empty list")
+
+            idx = request.condition_index or 0
+            if idx < 0 or idx >= len(conditions):
+                raise HTTPException(status_code=400, detail=f"condition_index {idx} out of range for proposed_alert.conditions")
+
+            cond = conditions[idx] or {}
+            if not isinstance(cond, dict):
+                raise HTTPException(status_code=400, detail="Each entry in proposed_alert.conditions must be an object")
+
+            condition_type = str(cond.get("condition_type") or AlertConditionType.THRESHOLD_VALUE.value)
+            operator = str(cond.get("operator") or ThresholdOperator.GREATER_THAN.value)
+            threshold_value = cond.get("value")
+            if threshold_value is None:
+                raise HTTPException(status_code=400, detail="proposed_alert.conditions[condition_index].value is required")
+
+            # Determine which result column to validate
+            metric_column = request.metric_column or metric.get("measure") or None
+            threshold_type = _map_threshold_type_from_feed(cond.get("threshold_type"))
+
+            result = await alert_service.validate_alert_condition(
+                sql_query=request.sql,
+                condition_type=condition_type,
+                operator=operator,
+                threshold_value=float(threshold_value),
+                threshold_type=threshold_type,
+                metric_column=metric_column,
+                use_cache=request.use_cache,
+                overall_condition_logic=request.overall_condition_logic,
+                project_id=request.project_id,
+            )
         
         return ConditionValidationResponse(**result)
         

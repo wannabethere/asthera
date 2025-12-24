@@ -140,7 +140,7 @@ class Settings(BaseSettings):
     CHROMA_STORE_PATH: str = "../../data/chroma_db"
     
     # ChromaDB Settings
-    CHROMA_USE_LOCAL: bool = True  # Default to HTTP client
+    CHROMA_USE_LOCAL: bool = False  # Default to HTTP client
     CHROMA_HOST: str = "100.26.125.159"#"ec2-107-21-151-224.compute-1.amazonaws.com"#"ec2-44-202-8-38.compute-1.amazonaws.com"  # Default EC2 host
     CHROMA_PORT: int = 8888  # Default EC2 port
     CHROMA_COLLECTION_NAME: str = "default"

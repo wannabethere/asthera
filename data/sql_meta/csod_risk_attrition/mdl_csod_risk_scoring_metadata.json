@@ -1,0 +1,1233 @@
+{
+  "catalog": "csod_risk_attrition",
+  "schema": "public",
+  "models": [
+    {
+      "name": "csod_risk_model_metadata",
+      "tableReference": {
+        "catalog": "csod_risk_attrition",
+        "schema": "public",
+        "table": "csod_risk_model_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "notNull": true,
+          "properties": {
+            "display_name": "ID",
+            "description": "Primary key identifier for risk model metadata records.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "business_rules": "Must be unique, Auto-incremented, Cannot be null",
+            "business_description": "Unique identifier for each risk model definition record in the metadata system.",
+            "data_quality_checks": "Check for null values, Validate uniqueness",
+            "filtering_suggestions": "Filter by model_code",
+            "aggregation_suggestions": "COUNT"
+          }
+        },
+        {
+          "name": "model_code",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Model Code",
+            "description": "Risk model identifier (compliance, attrition).",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "compliance, attrition",
+            "business_rules": "Must be unique, Cannot be null, Must be one of: 'compliance', 'attrition'",
+            "business_description": "Stable identifier for the risk scoring model. Used to filter factors, bands, and rules for a specific model.",
+            "data_quality_checks": "Validate against allowed values (compliance, attrition), Check for null values",
+            "filtering_suggestions": "Filter by model_code to get model-specific metadata",
+            "aggregation_suggestions": "COUNT by model_code, GROUP BY model_code"
+          }
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Description",
+            "description": "Human-readable description of the risk model.",
+            "usage_type": "attribute",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "business_rules": "Can be null, Should provide clear explanation of the model purpose",
+            "business_description": "Textual description explaining what the risk model calculates and its business purpose.",
+            "data_quality_checks": "Ensure description is meaningful and not empty when populated",
+            "filtering_suggestions": "Filter by model_code"
+          }
+        },
+        {
+          "name": "risk_formula",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Risk Formula",
+            "description": "Formula used to compute risk from impact and likelihood scores.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "sqrt(impact_score * likelihood_score)",
+            "business_rules": "Cannot be null, Default is 'sqrt(impact_score * likelihood_score)'",
+            "business_description": "Mathematical formula defining how impact and likelihood scores are combined to produce the final risk score.",
+            "data_quality_checks": "Validate formula syntax, Ensure formula references valid score dimensions",
+            "filtering_suggestions": "Filter by model_code"
+          }
+        },
+        {
+          "name": "score_min",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Score Min",
+            "description": "Minimum score value in the model scale.",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "0.0",
+            "business_rules": "Cannot be null, Typically 0.0",
+            "business_description": "Lower bound of the risk score scale for this model.",
+            "data_quality_checks": "Validate that score_min < score_max, Typically should be 0.0",
+            "filtering_suggestions": "Filter by model_code"
+          }
+        },
+        {
+          "name": "score_max",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Score Max",
+            "description": "Maximum score value in the model scale.",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "100.0",
+            "business_rules": "Cannot be null, Typically 100.0",
+            "business_description": "Upper bound of the risk score scale for this model.",
+            "data_quality_checks": "Validate that score_max > score_min, Typically should be 100.0",
+            "filtering_suggestions": "Filter by model_code"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "notNull": false,
+          "properties": {
+            "display_name": "Created At",
+            "description": "Timestamp when the metadata record was created.",
+            "usage_type": "timestamp",
+            "business_importance": "low",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "YYYY-MM-DD HH:MM:SS",
+            "business_rules": "Can be null, Auto-populated on insert",
+            "business_description": "Audit timestamp tracking when the model metadata was first created.",
+            "data_quality_checks": "Validate timestamp format, Check for future dates",
+            "filtering_suggestions": "Filter by date range, Filter by model_code"
+          }
+        }
+      ],
+      "properties": {
+        "description": "Defines CSOD risk models used for ComplianceRisk and AttritionRisk scoring. Registry of risk scoring models (compliance, attrition) with their formulas and score ranges.",
+        "business_purpose": "Central registry of risk scoring models. Use model_code to filter factors, bands, and rules for a specific model. Default formula is sqrt(impact_score * likelihood_score).",
+        "data_lineage": "Manually maintained metadata table seeded by create_csod_risk_scoring_metadata_tables.sql migration script.",
+        "update_frequency": "as needed (metadata changes)"
+      }
+    },
+    {
+      "name": "csod_risk_score_band_metadata",
+      "tableReference": {
+        "catalog": "csod_risk_attrition",
+        "schema": "public",
+        "table": "csod_risk_score_band_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "notNull": true,
+          "properties": {
+            "display_name": "ID",
+            "description": "Primary key identifier for risk score band metadata records.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "business_rules": "Must be unique, Auto-incremented, Cannot be null",
+            "business_description": "Unique identifier for each risk score band definition.",
+            "data_quality_checks": "Check for null values, Validate uniqueness",
+            "filtering_suggestions": "Filter by model_code, Filter by band_code",
+            "aggregation_suggestions": "COUNT"
+          }
+        },
+        {
+          "name": "model_code",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Model Code",
+            "description": "Risk model identifier (compliance, attrition).",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "compliance, attrition",
+            "business_rules": "Cannot be null, Must reference valid model_code from csod_risk_model_metadata",
+            "business_description": "Links the score band to a specific risk model.",
+            "data_quality_checks": "Validate foreign key relationship with csod_risk_model_metadata, Check for null values",
+            "filtering_suggestions": "Filter by model_code to get model-specific bands",
+            "aggregation_suggestions": "COUNT by model_code, GROUP BY model_code"
+          }
+        },
+        {
+          "name": "band_code",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Band Code",
+            "description": "Risk category label (Low, Moderate, High, Critical).",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Low, Moderate, High, Critical",
+            "business_rules": "Cannot be null, Must be one of: 'Low', 'Moderate', 'High', 'Critical'",
+            "business_description": "Categorical risk level used for business-friendly reporting and escalation workflows.",
+            "data_quality_checks": "Validate against allowed values, Check for null values",
+            "filtering_suggestions": "Filter by band_code, Filter by model_code",
+            "aggregation_suggestions": "COUNT by band_code, GROUP BY band_code"
+          }
+        },
+        {
+          "name": "min_score",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Min Score",
+            "description": "Inclusive lower bound for the risk score band.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "0.0, 25.0, 50.0, 75.0",
+            "business_rules": "Cannot be null, Must be >= 0, Must be < max_score",
+            "business_description": "Lower threshold (inclusive) for assigning risk scores to this category band.",
+            "data_quality_checks": "Validate range 0-100, Ensure min_score < max_score, Check for gaps/overlaps between bands",
+            "filtering_suggestions": "Filter by model_code, Filter by band_code",
+            "aggregation_suggestions": "MIN, MAX"
+          }
+        },
+        {
+          "name": "max_score",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Max Score",
+            "description": "Upper bound (exclusive) for the risk score band.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "25.0, 50.0, 75.0, 100.0",
+            "business_rules": "Cannot be null, Must be <= 100, Must be > min_score",
+            "business_description": "Upper threshold (typically exclusive) for assigning risk scores to this category band.",
+            "data_quality_checks": "Validate range 0-100, Ensure max_score > min_score, Check for gaps/overlaps between bands",
+            "filtering_suggestions": "Filter by model_code, Filter by band_code",
+            "aggregation_suggestions": "MIN, MAX"
+          }
+        },
+        {
+          "name": "priority_order",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Priority Order",
+            "description": "Severity ordering where 1 = highest severity (Critical).",
+            "usage_type": "attribute",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "1, 2, 3, 4",
+            "business_rules": "Cannot be null, Lower number = higher severity",
+            "business_description": "Numeric ordering for severity levels, used for sorting and prioritization in reports.",
+            "data_quality_checks": "Validate uniqueness within model_code, Ensure 1 = Critical, 4 = Low",
+            "filtering_suggestions": "Filter by model_code, Filter by priority_order",
+            "aggregation_suggestions": "MIN, MAX, ORDER BY priority_order"
+          }
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Description",
+            "description": "Human-readable description of the risk band.",
+            "usage_type": "attribute",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "business_rules": "Can be null, Should explain the band's meaning",
+            "business_description": "Textual description explaining what risk scores fall into this band and their business implications.",
+            "data_quality_checks": "Ensure description is meaningful when populated",
+            "filtering_suggestions": "Filter by model_code, Filter by band_code"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "notNull": false,
+          "properties": {
+            "display_name": "Created At",
+            "description": "Timestamp when the metadata record was created.",
+            "usage_type": "timestamp",
+            "business_importance": "low",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "YYYY-MM-DD HH:MM:SS",
+            "business_rules": "Can be null, Auto-populated on insert",
+            "business_description": "Audit timestamp tracking when the band metadata was first created.",
+            "data_quality_checks": "Validate timestamp format, Check for future dates",
+            "filtering_suggestions": "Filter by date range, Filter by model_code"
+          }
+        }
+      ],
+      "properties": {
+        "description": "Defines riskCategory thresholds (Low/Moderate/High/Critical) per model. Maps numeric risk scores to categorical risk bands for business-friendly reporting.",
+        "business_purpose": "Enables categorization of numeric risk scores into business-friendly categories. Thresholds: Critical (75-100), High (50-75), Moderate (25-50), Low (0-25). Used by reporting dashboards and escalation workflows.",
+        "data_lineage": "Manually maintained metadata table seeded by create_csod_risk_scoring_metadata_tables.sql migration script.",
+        "update_frequency": "as needed (metadata changes)"
+      }
+    },
+    {
+      "name": "csod_risk_factor_metadata",
+      "tableReference": {
+        "catalog": "csod_risk_attrition",
+        "schema": "public",
+        "table": "csod_risk_factor_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "notNull": true,
+          "properties": {
+            "display_name": "ID",
+            "description": "Primary key identifier for risk factor metadata records.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "business_rules": "Must be unique, Auto-incremented, Cannot be null",
+            "business_description": "Unique identifier for each scoring factor definition.",
+            "data_quality_checks": "Check for null values, Validate uniqueness",
+            "filtering_suggestions": "Filter by model_code, Filter by dimension, Filter by factor_code",
+            "aggregation_suggestions": "COUNT"
+          }
+        },
+        {
+          "name": "model_code",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Model Code",
+            "description": "Risk model identifier (compliance, attrition).",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "compliance, attrition",
+            "business_rules": "Cannot be null, Must reference valid model_code from csod_risk_model_metadata",
+            "business_description": "Links the factor to a specific risk model.",
+            "data_quality_checks": "Validate foreign key relationship with csod_risk_model_metadata, Check for null values",
+            "filtering_suggestions": "Filter by model_code to get model-specific factors",
+            "aggregation_suggestions": "COUNT by model_code, GROUP BY model_code"
+          }
+        },
+        {
+          "name": "dimension",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Dimension",
+            "description": "Scoring dimension (impact, likelihood).",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "impact, likelihood",
+            "business_rules": "Cannot be null, Must be one of: 'impact', 'likelihood'",
+            "business_description": "Indicates whether this factor contributes to impact (severity) or likelihood (probability) of the risk event.",
+            "data_quality_checks": "Validate against allowed values (impact, likelihood), Check for null values",
+            "filtering_suggestions": "Filter by dimension, Filter by model_code and dimension",
+            "aggregation_suggestions": "COUNT by dimension, GROUP BY dimension"
+          }
+        },
+        {
+          "name": "factor_code",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Factor Code",
+            "description": "Stable factor identifier used by the scoring pipeline.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "days_until_due, completion_percentage, last_login_days, position_level",
+            "business_rules": "Cannot be null, Must be unique within (model_code, dimension)",
+            "business_description": "Stable identifier used by transform functions to reference this factor. Used to join with lookup_metadata or bucket_metadata tables.",
+            "data_quality_checks": "Validate uniqueness within (model_code, dimension), Check for null values",
+            "filtering_suggestions": "Filter by factor_code, Filter by model_code and dimension",
+            "aggregation_suggestions": "COUNT by factor_code, GROUP BY factor_code"
+          }
+        },
+        {
+          "name": "factor_name",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Factor Name",
+            "description": "Human-readable name for the factor.",
+            "usage_type": "attribute",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "business_rules": "Cannot be null, Should be descriptive",
+            "business_description": "Display name used in reports and dashboards to identify this scoring factor.",
+            "data_quality_checks": "Ensure name is meaningful and not empty",
+            "filtering_suggestions": "Filter by model_code, Filter by dimension"
+          }
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Description",
+            "description": "What the factor represents and why it matters for risk scoring.",
+            "usage_type": "attribute",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "business_rules": "Can be null, Should explain the factor's role in risk calculation",
+            "business_description": "Detailed explanation of what this factor measures and how it contributes to risk assessment.",
+            "data_quality_checks": "Ensure description is meaningful when populated",
+            "filtering_suggestions": "Filter by model_code, Filter by dimension"
+          }
+        },
+        {
+          "name": "source_tables",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Source Tables",
+            "description": "Documentation-only: tables providing this factor's input data.",
+            "usage_type": "attribute",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "ComplianceRisk_Silver, AttritionRisk_Silver, User_csod, Transcript_csod, Activity_csod",
+            "business_rules": "Can be null, Comma-separated list of table names",
+            "business_description": "Reference documentation indicating which source tables contain the raw data needed to calculate this factor's score.",
+            "data_quality_checks": "Validate table names exist in schema, Check format (comma-separated)",
+            "filtering_suggestions": "Filter by model_code, Filter by dimension"
+          }
+        },
+        {
+          "name": "source_columns",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Source Columns",
+            "description": "Documentation-only: columns providing this factor's input data.",
+            "usage_type": "attribute",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "daysUntilDue, completionPercentage, lastLoginDays, trainingStatus",
+            "business_rules": "Can be null, Comma-separated list of column names",
+            "business_description": "Reference documentation indicating which source columns contain the raw data needed to calculate this factor's score.",
+            "data_quality_checks": "Validate column names exist in referenced tables, Check format (comma-separated)",
+            "filtering_suggestions": "Filter by model_code, Filter by dimension"
+          }
+        },
+        {
+          "name": "scoring_type",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Scoring Type",
+            "description": "How to score this factor (lookup, bucket, linear, rule).",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "lookup, bucket, linear, rule",
+            "business_rules": "Cannot be null, Must be one of: 'lookup', 'bucket', 'linear', 'rule'",
+            "business_description": "Determines which metadata table to use: 'lookup' -> csod_risk_factor_lookup_metadata, 'bucket' -> csod_risk_factor_bucket_metadata.",
+            "data_quality_checks": "Validate against allowed values, Check for null values",
+            "filtering_suggestions": "Filter by scoring_type, Filter by model_code",
+            "aggregation_suggestions": "COUNT by scoring_type, GROUP BY scoring_type"
+          }
+        },
+        {
+          "name": "default_score",
+          "type": "double",
+          "notNull": false,
+          "properties": {
+            "display_name": "Default Score",
+            "description": "Fallback score used when the input is null or unmapped.",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "0.0 to 100.0",
+            "business_rules": "Can be null, Should be between 0 and 100 if provided",
+            "business_description": "Default numeric score assigned when source data is missing or doesn't match any lookup/bucket mapping.",
+            "data_quality_checks": "Validate range 0-100 if not null",
+            "filtering_suggestions": "Filter by model_code, Filter by dimension"
+          }
+        },
+        {
+          "name": "weight",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Weight",
+            "description": "Relative weight of this factor within the model+dimension combination.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.01 to 1.0",
+            "business_rules": "Cannot be null, Must be > 0, Weights within (model_code, dimension) should sum to approximately 1.0",
+            "business_description": "Relative importance of this factor when calculating the weighted average for impact or likelihood scores. Higher weight = greater influence on final score.",
+            "data_quality_checks": "Validate weight > 0, Check that weights within (model_code, dimension) sum to ~1.0",
+            "filtering_suggestions": "Filter by model_code, Filter by dimension, Filter by weight ranges",
+            "aggregation_suggestions": "SUM by (model_code, dimension), AVG, MAX, MIN"
+          }
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "notNull": false,
+          "properties": {
+            "display_name": "Is Active",
+            "description": "Whether the factor is currently active in scoring calculations.",
+            "usage_type": "flag",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "true, false",
+            "business_rules": "Can be null, Default is TRUE, Only active factors should be used in calculations",
+            "business_description": "Flag indicating whether this factor should be included in risk score calculations. Inactive factors are excluded but retained for historical reference.",
+            "data_quality_checks": "Check for null values, Ensure only active factors are used in production",
+            "filtering_suggestions": "Filter by is_active=TRUE for production use, Filter by model_code and is_active",
+            "aggregation_suggestions": "COUNT by is_active, COUNT where is_active=TRUE"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "notNull": false,
+          "properties": {
+            "display_name": "Created At",
+            "description": "Timestamp when the metadata record was created.",
+            "usage_type": "timestamp",
+            "business_importance": "low",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "YYYY-MM-DD HH:MM:SS",
+            "business_rules": "Can be null, Auto-populated on insert",
+            "business_description": "Audit timestamp tracking when the factor metadata was first created.",
+            "data_quality_checks": "Validate timestamp format, Check for future dates",
+            "filtering_suggestions": "Filter by date range, Filter by model_code"
+          }
+        }
+      ],
+      "properties": {
+        "description": "Declares the set of factors (and weights) that contribute to impact and likelihood for each CSOD risk model. Compliance likelihood factors include: days_until_due, completion_percentage, course_completion_status (lookup from Transcript_csod.trainingStatus), days_since_last_activity_start (bucket from attemptStartDate), user_completion_rate, last_login_days, previous_attempts, days_since_assigned, division_completion_rate (from ComplianceRisk_Division.completionRate), division_overdue_rate (derived from ComplianceRisk_Division), division_avg_days_to_complete. Attrition likelihood factors include: tenure_risk_band, learning_engagement, compliance_completion_rate, course_completion_rate (derived from Transcript_csod), completion_percentage, days_since_last_activity_start, last_login_days, overdue_course_count, manager_change_count, division_completion_rate, division_overdue_rate. Use scoring_type='lookup' for categorical factors, 'bucket' for numeric ranges.",
+        "business_purpose": "Central registry of all scoring factors with their weights, source columns, and scoring methods. Transform functions should query this table to discover available factors for a model+dimension, then join with lookup_metadata or bucket_metadata based on scoring_type.",
+        "data_lineage": "Manually maintained metadata table seeded by create_csod_risk_scoring_metadata_tables.sql migration script.",
+        "update_frequency": "as needed (metadata changes)"
+      }
+    },
+    {
+      "name": "csod_risk_factor_lookup_metadata",
+      "tableReference": {
+        "catalog": "csod_risk_attrition",
+        "schema": "public",
+        "table": "csod_risk_factor_lookup_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "notNull": true,
+          "properties": {
+            "display_name": "ID",
+            "description": "Primary key identifier for lookup metadata records.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "business_rules": "Must be unique, Auto-incremented, Cannot be null",
+            "business_description": "Unique identifier for each categorical-to-score mapping.",
+            "data_quality_checks": "Check for null values, Validate uniqueness",
+            "filtering_suggestions": "Filter by model_code, Filter by factor_code",
+            "aggregation_suggestions": "COUNT"
+          }
+        },
+        {
+          "name": "model_code",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Model Code",
+            "description": "Risk model identifier (compliance, attrition).",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "compliance, attrition",
+            "business_rules": "Cannot be null, Must reference valid model_code from csod_risk_model_metadata",
+            "business_description": "Links the lookup mapping to a specific risk model.",
+            "data_quality_checks": "Validate foreign key relationship with csod_risk_model_metadata, Check for null values",
+            "filtering_suggestions": "Filter by model_code to get model-specific lookups",
+            "aggregation_suggestions": "COUNT by model_code, GROUP BY model_code"
+          }
+        },
+        {
+          "name": "dimension",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Dimension",
+            "description": "Scoring dimension (impact, likelihood).",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "impact, likelihood",
+            "business_rules": "Cannot be null, Must be one of: 'impact', 'likelihood'",
+            "business_description": "Indicates whether this lookup applies to impact or likelihood scoring.",
+            "data_quality_checks": "Validate against allowed values (impact, likelihood), Check for null values",
+            "filtering_suggestions": "Filter by dimension, Filter by model_code and dimension",
+            "aggregation_suggestions": "COUNT by dimension, GROUP BY dimension"
+          }
+        },
+        {
+          "name": "factor_code",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Factor Code",
+            "description": "Factor identifier matching csod_risk_factor_metadata.factor_code.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "course_completion_status, position_level, tenure_risk_band",
+            "business_rules": "Cannot be null, Must reference valid factor_code from csod_risk_factor_metadata where scoring_type='lookup'",
+            "business_description": "Links this lookup mapping to a specific scoring factor.",
+            "data_quality_checks": "Validate foreign key relationship with csod_risk_factor_metadata, Check for null values",
+            "filtering_suggestions": "Filter by factor_code, Filter by model_code and dimension",
+            "aggregation_suggestions": "COUNT by factor_code, GROUP BY factor_code"
+          }
+        },
+        {
+          "name": "input_value",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Input Value",
+            "description": "Raw categorical value from source data (e.g., 'Executive', 'Compliance', 'Completed').",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "Completed, In Progress, Assigned, Overdue, Executive, Senior Management",
+            "business_rules": "Cannot be null, Must be unique within (model_code, dimension, factor_code)",
+            "business_description": "Exact categorical value from source data that maps to the numeric score. Case-sensitive matching is typically used.",
+            "data_quality_checks": "Validate uniqueness within (model_code, dimension, factor_code), Check for null values, Validate against source data values",
+            "filtering_suggestions": "Filter by input_value, Filter by factor_code",
+            "aggregation_suggestions": "COUNT by input_value, GROUP BY input_value"
+          }
+        },
+        {
+          "name": "score",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Score",
+            "description": "Mapped numeric score (0-100) for this input value.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.0 to 100.0",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Numeric score assigned when source data matches this input_value. Used in weighted factor calculations.",
+            "data_quality_checks": "Validate range 0-100, Check for null values",
+            "filtering_suggestions": "Filter by score ranges, Filter by factor_code",
+            "aggregation_suggestions": "AVG, MIN, MAX, PERCENTILE"
+          }
+        },
+        {
+          "name": "priority_order",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Priority Order",
+            "description": "Ordering for tie-breaks or preferred match when multiple mappings could apply.",
+            "usage_type": "attribute",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "1, 2, 3, 4",
+            "business_rules": "Cannot be null, Lower number = higher priority",
+            "business_description": "Numeric ordering used when multiple lookup entries could match. Lower priority_order values are preferred.",
+            "data_quality_checks": "Validate uniqueness within (model_code, dimension, factor_code) if used for tie-breaking",
+            "filtering_suggestions": "Filter by factor_code, Filter by priority_order",
+            "aggregation_suggestions": "MIN, MAX, ORDER BY priority_order"
+          }
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Description",
+            "description": "Meaning of the categorical-to-score mapping.",
+            "usage_type": "attribute",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "business_rules": "Can be null, Should explain why this input_value maps to this score",
+            "business_description": "Textual explanation of what this categorical value represents and why it maps to the given score.",
+            "data_quality_checks": "Ensure description is meaningful when populated",
+            "filtering_suggestions": "Filter by factor_code"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "notNull": false,
+          "properties": {
+            "display_name": "Created At",
+            "description": "Timestamp when the metadata record was created.",
+            "usage_type": "timestamp",
+            "business_importance": "low",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "YYYY-MM-DD HH:MM:SS",
+            "business_rules": "Can be null, Auto-populated on insert",
+            "business_description": "Audit timestamp tracking when the lookup mapping was first created.",
+            "data_quality_checks": "Validate timestamp format, Check for future dates",
+            "filtering_suggestions": "Filter by date range, Filter by model_code"
+          }
+        }
+      ],
+      "properties": {
+        "description": "Maps categorical inputs to numeric scores for CSOD risk scoring factors. Key lookup factors: compliance likelihood 'course_completion_status' maps Transcript_csod.trainingStatus values ('Completed', 'In Progress', 'Assigned', 'Overdue') to scores. Compliance/attrition impact 'position_level' maps position levels ('Executive', 'Senior Management', 'Middle Management', 'Individual Contributor', 'Entry Level') to scores. Attrition likelihood 'tenure_risk_band' maps tenure bands to scores. Join on (model_code, dimension, factor_code, input_value) to get score.",
+        "business_purpose": "Lookup table for categorical-to-score mappings. Use when factor_metadata.scoring_type='lookup'. Transform functions should join source data categorical values to this table to retrieve numeric scores.",
+        "data_lineage": "Manually maintained metadata table seeded by create_csod_risk_scoring_metadata_tables.sql migration script.",
+        "update_frequency": "as needed (metadata changes)"
+      }
+    },
+    {
+      "name": "csod_risk_factor_bucket_metadata",
+      "tableReference": {
+        "catalog": "csod_risk_attrition",
+        "schema": "public",
+        "table": "csod_risk_factor_bucket_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "notNull": true,
+          "properties": {
+            "display_name": "ID",
+            "description": "Primary key identifier for bucket metadata records.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "business_rules": "Must be unique, Auto-incremented, Cannot be null",
+            "business_description": "Unique identifier for each numeric range-to-score mapping.",
+            "data_quality_checks": "Check for null values, Validate uniqueness",
+            "filtering_suggestions": "Filter by model_code, Filter by factor_code",
+            "aggregation_suggestions": "COUNT"
+          }
+        },
+        {
+          "name": "model_code",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Model Code",
+            "description": "Risk model identifier (compliance, attrition).",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "compliance, attrition",
+            "business_rules": "Cannot be null, Must reference valid model_code from csod_risk_model_metadata",
+            "business_description": "Links the bucket mapping to a specific risk model.",
+            "data_quality_checks": "Validate foreign key relationship with csod_risk_model_metadata, Check for null values",
+            "filtering_suggestions": "Filter by model_code to get model-specific buckets",
+            "aggregation_suggestions": "COUNT by model_code, GROUP BY model_code"
+          }
+        },
+        {
+          "name": "dimension",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Dimension",
+            "description": "Scoring dimension (impact, likelihood).",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "impact, likelihood",
+            "business_rules": "Cannot be null, Must be one of: 'impact', 'likelihood'",
+            "business_description": "Indicates whether this bucket applies to impact or likelihood scoring.",
+            "data_quality_checks": "Validate against allowed values (impact, likelihood), Check for null values",
+            "filtering_suggestions": "Filter by dimension, Filter by model_code and dimension",
+            "aggregation_suggestions": "COUNT by dimension, GROUP BY dimension"
+          }
+        },
+        {
+          "name": "factor_code",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Factor Code",
+            "description": "Factor identifier matching csod_risk_factor_metadata.factor_code.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "days_until_due, completion_percentage, last_login_days, division_completion_rate",
+            "business_rules": "Cannot be null, Must reference valid factor_code from csod_risk_factor_metadata where scoring_type='bucket'",
+            "business_description": "Links this bucket mapping to a specific scoring factor.",
+            "data_quality_checks": "Validate foreign key relationship with csod_risk_factor_metadata, Check for null values",
+            "filtering_suggestions": "Filter by factor_code, Filter by model_code and dimension",
+            "aggregation_suggestions": "COUNT by factor_code, GROUP BY factor_code"
+          }
+        },
+        {
+          "name": "bucket_code",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Bucket Code",
+            "description": "Bucket label identifier (e.g., DUE_0_7, ENG_0_20, OVERDUE_90_PLUS).",
+            "usage_type": "attribute",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "DUE_0_7, OVERDUE_90_PLUS, LOGIN_0_3, DCR_0_60",
+            "business_rules": "Cannot be null, Must be unique within (model_code, dimension, factor_code)",
+            "business_description": "Human-readable identifier for this numeric range bucket, used for reporting and debugging.",
+            "data_quality_checks": "Validate uniqueness within (model_code, dimension, factor_code), Check for null values",
+            "filtering_suggestions": "Filter by bucket_code, Filter by factor_code",
+            "aggregation_suggestions": "COUNT by bucket_code, GROUP BY bucket_code"
+          }
+        },
+        {
+          "name": "min_value",
+          "type": "double",
+          "notNull": false,
+          "properties": {
+            "display_name": "Min Value",
+            "description": "Lower bound for the numeric bucket range.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "0.0, -90.0, 7.0, 30.0, 60.0",
+            "business_rules": "Can be null (for unbounded lower range), Must be < max_value if both are set",
+            "business_description": "Lower threshold for matching numeric input values to this bucket. Use min_inclusive flag to determine if boundary is inclusive.",
+            "data_quality_checks": "Validate min_value < max_value if both are set, Check for gaps/overlaps between buckets",
+            "filtering_suggestions": "Filter by factor_code, Filter by bucket_code",
+            "aggregation_suggestions": "MIN, MAX"
+          }
+        },
+        {
+          "name": "max_value",
+          "type": "double",
+          "notNull": false,
+          "properties": {
+            "display_name": "Max Value",
+            "description": "Upper bound for the numeric bucket range.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "7.0, 30.0, 60.0, 90.0, 10000.0",
+            "business_rules": "Can be null (for unbounded upper range), Must be > min_value if both are set",
+            "business_description": "Upper threshold for matching numeric input values to this bucket. Use max_inclusive flag to determine if boundary is inclusive.",
+            "data_quality_checks": "Validate max_value > min_value if both are set, Check for gaps/overlaps between buckets",
+            "filtering_suggestions": "Filter by factor_code, Filter by bucket_code",
+            "aggregation_suggestions": "MIN, MAX"
+          }
+        },
+        {
+          "name": "min_inclusive",
+          "type": "boolean",
+          "notNull": false,
+          "properties": {
+            "display_name": "Min Inclusive",
+            "description": "Whether min_value boundary is inclusive in range matching.",
+            "usage_type": "flag",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "true, false",
+            "business_rules": "Can be null, Default is TRUE, TRUE means value >= min_value, FALSE means value > min_value",
+            "business_description": "Flag determining if input values equal to min_value are included in this bucket.",
+            "data_quality_checks": "Check for null values, Ensure consistent boundary logic across buckets",
+            "filtering_suggestions": "Filter by factor_code"
+          }
+        },
+        {
+          "name": "max_inclusive",
+          "type": "boolean",
+          "notNull": false,
+          "properties": {
+            "display_name": "Max Inclusive",
+            "description": "Whether max_value boundary is inclusive in range matching.",
+            "usage_type": "flag",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "true, false",
+            "business_rules": "Can be null, Default is FALSE, TRUE means value <= max_value, FALSE means value < max_value",
+            "business_description": "Flag determining if input values equal to max_value are included in this bucket.",
+            "data_quality_checks": "Check for null values, Ensure consistent boundary logic across buckets",
+            "filtering_suggestions": "Filter by factor_code"
+          }
+        },
+        {
+          "name": "score",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Score",
+            "description": "Numeric score (0-100) assigned to values within this bucket range.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.0 to 100.0",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Numeric score assigned when source data falls within this bucket's range. Used in weighted factor calculations.",
+            "data_quality_checks": "Validate range 0-100, Check for null values",
+            "filtering_suggestions": "Filter by score ranges, Filter by factor_code",
+            "aggregation_suggestions": "AVG, MIN, MAX, PERCENTILE"
+          }
+        },
+        {
+          "name": "priority_order",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Priority Order",
+            "description": "Bucket evaluation precedence when multiple buckets could match.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "1, 2, 3, 4, 5, 6, 7",
+            "business_rules": "Cannot be null, Lower number = higher priority, Used to resolve overlapping bucket ranges",
+            "business_description": "Numeric ordering used when multiple buckets could match an input value. Lower priority_order values are evaluated first and preferred.",
+            "data_quality_checks": "Validate uniqueness within (model_code, dimension, factor_code) if used for tie-breaking",
+            "filtering_suggestions": "Filter by factor_code, Filter by priority_order",
+            "aggregation_suggestions": "MIN, MAX, ORDER BY priority_order"
+          }
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Description",
+            "description": "Human-readable description of the bucket range and its meaning.",
+            "usage_type": "attribute",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "business_rules": "Can be null, Should explain the range and its risk implications",
+            "business_description": "Textual explanation of what numeric values fall into this bucket and why they map to the given score.",
+            "data_quality_checks": "Ensure description is meaningful when populated",
+            "filtering_suggestions": "Filter by factor_code"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "notNull": false,
+          "properties": {
+            "display_name": "Created At",
+            "description": "Timestamp when the metadata record was created.",
+            "usage_type": "timestamp",
+            "business_importance": "low",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "YYYY-MM-DD HH:MM:SS",
+            "business_rules": "Can be null, Auto-populated on insert",
+            "business_description": "Audit timestamp tracking when the bucket mapping was first created.",
+            "data_quality_checks": "Validate timestamp format, Check for future dates",
+            "filtering_suggestions": "Filter by date range, Filter by model_code"
+          }
+        }
+      ],
+      "properties": {
+        "description": "Defines numeric buckets (ranges) mapped to scores for CSOD risk scoring factors. Key bucket factors: compliance likelihood 'days_until_due' (overdue buckets: OVERDUE_90_PLUS, OVERDUE_60_90, OVERDUE_30_60, OVERDUE_7_30, OVERDUE_0_7; not overdue: DUE_0_7, DUE_7_14, DUE_14_30, DUE_30_PLUS), 'days_since_last_activity_start' (LAS_0_1, LAS_1_7, LAS_7_30, LAS_30_60, LAS_60_90, LAS_90_PLUS), 'days_since_assigned' (ASSIGNED_0_7, ASSIGNED_7_30, ASSIGNED_30_60, ASSIGNED_60_90, ASSIGNED_90_PLUS), 'division_completion_rate' (DCR_0_60, DCR_60_80, DCR_80_90, DCR_90_97, DCR_97_100), 'division_overdue_rate' (DOR_0_1, DOR_1_5, DOR_5_10, DOR_10_20, DOR_20_PLUS), 'division_avg_days_to_complete' (DDC_0_7, DDC_7_14, DDC_14_30, DDC_30_60, DDC_60_PLUS), 'completion_percentage', 'last_login_days' (with 30/60/90+ granularity). Attrition likelihood includes 'course_completion_rate', 'completion_percentage', 'days_since_last_activity_start', 'division_completion_rate', 'division_overdue_rate'. Use min_inclusive/max_inclusive flags for range matching. Join on (model_code, dimension, factor_code) and match input value within bucket range.",
+        "business_purpose": "Bucket table for numeric-to-score mappings. Use when factor_metadata.scoring_type='bucket'. Transform functions should match numeric input values to buckets using min_value/max_value with min_inclusive/max_inclusive flags. Buckets are evaluated in priority_order (1 = highest priority).",
+        "data_lineage": "Manually maintained metadata table seeded by create_csod_risk_scoring_metadata_tables.sql migration script.",
+        "update_frequency": "as needed (metadata changes)"
+      }
+    },
+    {
+      "name": "csod_risk_rule_metadata",
+      "tableReference": {
+        "catalog": "csod_risk_attrition",
+        "schema": "public",
+        "table": "csod_risk_rule_metadata"
+      },
+      "primaryKey": "id",
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "notNull": true,
+          "properties": {
+            "display_name": "ID",
+            "description": "Primary key identifier for rule metadata records.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "business_rules": "Must be unique, Auto-incremented, Cannot be null",
+            "business_description": "Unique identifier for each escalation rule definition.",
+            "data_quality_checks": "Check for null values, Validate uniqueness",
+            "filtering_suggestions": "Filter by model_code, Filter by rule_code",
+            "aggregation_suggestions": "COUNT"
+          }
+        },
+        {
+          "name": "model_code",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Model Code",
+            "description": "Risk model identifier (compliance, attrition).",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "compliance, attrition",
+            "business_rules": "Cannot be null, Must reference valid model_code from csod_risk_model_metadata",
+            "business_description": "Links the rule to a specific risk model.",
+            "data_quality_checks": "Validate foreign key relationship with csod_risk_model_metadata, Check for null values",
+            "filtering_suggestions": "Filter by model_code to get model-specific rules",
+            "aggregation_suggestions": "COUNT by model_code, GROUP BY model_code"
+          }
+        },
+        {
+          "name": "rule_code",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Rule Code",
+            "description": "Stable rule identifier used by the scoring pipeline.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "MANAGER_ESCALATE_RISK_GTE_75, MANAGER_ESCALATE_DUE_LT_7, HR_ESCALATE_RISK_GTE_75",
+            "business_rules": "Cannot be null, Must be unique within model_code",
+            "business_description": "Stable identifier used by transform functions to reference this escalation rule.",
+            "data_quality_checks": "Validate uniqueness within model_code, Check for null values",
+            "filtering_suggestions": "Filter by rule_code, Filter by model_code",
+            "aggregation_suggestions": "COUNT by rule_code, GROUP BY rule_code"
+          }
+        },
+        {
+          "name": "rule_type",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Rule Type",
+            "description": "Rule category (e.g., escalation).",
+            "usage_type": "attribute",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "escalation",
+            "business_rules": "Cannot be null, Currently only 'escalation' is supported",
+            "business_description": "Categorizes the type of rule. Currently supports escalation rules that trigger alerts or notifications.",
+            "data_quality_checks": "Validate against allowed values, Check for null values",
+            "filtering_suggestions": "Filter by rule_type, Filter by model_code",
+            "aggregation_suggestions": "COUNT by rule_type, GROUP BY rule_type"
+          }
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Description",
+            "description": "Human-readable description of what the rule does.",
+            "usage_type": "attribute",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "business_rules": "Can be null, Should explain the rule's purpose and trigger conditions",
+            "business_description": "Textual explanation of the rule's business logic and when it triggers.",
+            "data_quality_checks": "Ensure description is meaningful when populated",
+            "filtering_suggestions": "Filter by model_code, Filter by rule_code"
+          }
+        },
+        {
+          "name": "condition_type",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Condition Type",
+            "description": "Type of condition evaluated by the rule (risk_gte, days_until_due_lt, ...).",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "risk_gte, days_until_due_lt",
+            "business_rules": "Cannot be null, Must be a valid condition type supported by the scoring pipeline",
+            "business_description": "Identifies the type of condition this rule evaluates. Examples: 'risk_gte' (risk score >= threshold), 'days_until_due_lt' (days until due < threshold).",
+            "data_quality_checks": "Validate against allowed condition types, Check for null values",
+            "filtering_suggestions": "Filter by condition_type, Filter by model_code",
+            "aggregation_suggestions": "COUNT by condition_type, GROUP BY condition_type"
+          }
+        },
+        {
+          "name": "condition_value",
+          "type": "double",
+          "notNull": false,
+          "properties": {
+            "display_name": "Condition Value",
+            "description": "Threshold value used by the condition to trigger the rule.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "75.0, 7.0",
+            "business_rules": "Can be null, Must be appropriate for the condition_type (e.g., 0-100 for risk_gte, days for days_until_due_lt)",
+            "business_description": "Numeric threshold that, when met or exceeded, triggers the rule. Interpretation depends on condition_type.",
+            "data_quality_checks": "Validate range appropriate for condition_type, Check for null values when condition requires a threshold",
+            "filtering_suggestions": "Filter by condition_value ranges, Filter by condition_type",
+            "aggregation_suggestions": "MIN, MAX, AVG"
+          }
+        },
+        {
+          "name": "output_flag_value",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Output Flag Value",
+            "description": "Flag value to emit when condition matches (e.g., 'Yes').",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Yes, No",
+            "business_rules": "Can be null, Typically 'Yes' for escalation rules",
+            "business_description": "Value to set in output flags (e.g., managerEscalation, hrEscalation) when this rule's condition is met.",
+            "data_quality_checks": "Validate against expected flag values, Check consistency with rule_type",
+            "filtering_suggestions": "Filter by output_flag_value, Filter by rule_code",
+            "aggregation_suggestions": "COUNT by output_flag_value, GROUP BY output_flag_value"
+          }
+        },
+        {
+          "name": "priority_order",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Priority Order",
+            "description": "Evaluation priority where 1 = highest priority.",
+            "usage_type": "attribute",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "1, 2",
+            "business_rules": "Cannot be null, Lower number = higher priority",
+            "business_description": "Numeric ordering for rule evaluation. Rules with lower priority_order are evaluated first.",
+            "data_quality_checks": "Validate uniqueness within model_code if used for ordering",
+            "filtering_suggestions": "Filter by priority_order, Filter by model_code",
+            "aggregation_suggestions": "MIN, MAX, ORDER BY priority_order"
+          }
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "notNull": false,
+          "properties": {
+            "display_name": "Is Active",
+            "description": "Whether the rule is currently active in rule evaluation.",
+            "usage_type": "flag",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "true, false",
+            "business_rules": "Can be null, Default is TRUE, Only active rules should be evaluated",
+            "business_description": "Flag indicating whether this rule should be evaluated in production. Inactive rules are excluded but retained for historical reference.",
+            "data_quality_checks": "Check for null values, Ensure only active rules are used in production",
+            "filtering_suggestions": "Filter by is_active=TRUE for production use, Filter by model_code and is_active",
+            "aggregation_suggestions": "COUNT by is_active, COUNT where is_active=TRUE"
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "notNull": false,
+          "properties": {
+            "display_name": "Created At",
+            "description": "Timestamp when the metadata record was created.",
+            "usage_type": "timestamp",
+            "business_importance": "low",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "YYYY-MM-DD HH:MM:SS",
+            "business_rules": "Can be null, Auto-populated on insert",
+            "business_description": "Audit timestamp tracking when the rule metadata was first created.",
+            "data_quality_checks": "Validate timestamp format, Check for future dates",
+            "filtering_suggestions": "Filter by date range, Filter by model_code"
+          }
+        }
+      ],
+      "properties": {
+        "description": "Defines escalation triggers used by CSOD compliance and attrition risk workflows. Rule metadata for automated escalation flags.",
+        "business_purpose": "Enables automated escalation workflows based on risk thresholds. Compliance rules: MANAGER_ESCALATE_RISK_GTE_75 (riskScore >= 75), MANAGER_ESCALATE_DUE_LT_7 (daysUntilDue < 7). Attrition rules: HR_ESCALATE_RISK_GTE_75 (attritionRiskScore >= 75). Transform functions should evaluate conditions and set output flags accordingly.",
+        "data_lineage": "Manually maintained metadata table seeded by create_csod_risk_scoring_metadata_tables.sql migration script.",
+        "update_frequency": "as needed (metadata changes)"
+      }
+    }
+  ]
+}

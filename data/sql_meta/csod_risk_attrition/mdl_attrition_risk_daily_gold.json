@@ -1,0 +1,364 @@
+{
+  "catalog": "csod_risk_attrition",
+  "schema": "public",
+  "models": [
+    {
+      "name": "AttritionRisk_Daily",
+      "tableReference": {
+        "catalog": "csod_risk_attrition",
+        "schema": "public",
+        "table": "attritionrisk_daily"
+      },
+      "primaryKey": "dailyAttritionRiskId",
+      "columns": [
+        {
+          "name": "dailyAttritionRiskId",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Daily Attrition Risk ID",
+            "description": "Unique identifier for daily aggregated attrition risk record.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "DATTR_YYYYMMDD",
+            "business_rules": "Must be unique, Cannot be null",
+            "business_description": "Unique identifier for each daily attrition risk snapshot.",
+            "data_quality_checks": "Check for null values, Validate uniqueness, Ensure daily records exist",
+            "filtering_suggestions": "Filter by date range, Filter by specific date",
+            "aggregation_suggestions": "COUNT by date"
+          }
+        },
+        {
+          "name": "assessmentDate",
+          "type": "date",
+          "notNull": true,
+          "properties": {
+            "display_name": "Assessment Date",
+            "description": "Date of the aggregated attrition risk assessment.",
+            "usage_type": "timestamp",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "YYYY-MM-DD",
+            "business_rules": "Cannot be null, Must be a valid date",
+            "business_description": "Reference date for daily snapshot of organizational attrition risk.",
+            "data_quality_checks": "Ensure not in future, Validate date format, Check for missing dates",
+            "filtering_suggestions": "Filter by date range, Filter by specific date",
+            "aggregation_suggestions": "COUNT by date, GROUP BY month"
+          }
+        },
+        {
+          "name": "totalEmployees",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Total Employees",
+            "description": "Total number of active employees assessed for attrition risk.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "1 to 100000",
+            "business_rules": "Cannot be null, Must be > 0",
+            "business_description": "Total headcount under attrition monitoring for calculating organizational flight risk exposure.",
+            "data_quality_checks": "Ensure positive values, Compare with User_csod active count",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "AVERAGE, MAX, MIN, TREND"
+          }
+        },
+        {
+          "name": "avgAttritionRiskScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Average Attrition Risk Score",
+            "description": "Average composite attrition risk score across all employees.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Primary KPI for organizational talent retention health, indicating overall flight risk across enterprise.",
+            "data_quality_checks": "Validate range 0-100, Monitor for significant changes",
+            "filtering_suggestions": "Filter by date range, Compare to previous periods",
+            "aggregation_suggestions": "MOVING_AVERAGE(7), MOVING_AVERAGE(30), TREND"
+          }
+        },
+        {
+          "name": "medianAttritionRiskScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Median Attrition Risk Score",
+            "description": "Median composite attrition risk score, less sensitive to outliers.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Robust central tendency showing typical employee flight risk unaffected by extreme cases.",
+            "data_quality_checks": "Validate range 0-100, Compare with average for skew detection",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "MOVING_MEDIAN(7), MOVING_MEDIAN(30)"
+          }
+        },
+        {
+          "name": "criticalFlightRiskCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Critical Flight Risk Count",
+            "description": "Number of employees with critical attrition risk (75-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 5000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalEmployees",
+            "business_description": "Volume of employees at imminent risk of departure requiring immediate retention intervention.",
+            "data_quality_checks": "Ensure non-negative, Validate <= totalEmployees, Monitor for spikes",
+            "filtering_suggestions": "Filter by date range, Filter by non-zero",
+            "aggregation_suggestions": "SUM, AVERAGE, TREND, PERCENTAGE of total"
+          }
+        },
+        {
+          "name": "highFlightRiskCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "High Flight Risk Count",
+            "description": "Number of employees with high attrition risk (50-75).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 20000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalEmployees",
+            "business_description": "Volume of employees at elevated departure risk requiring proactive retention strategies.",
+            "data_quality_checks": "Ensure non-negative, Validate <= totalEmployees",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "SUM, AVERAGE, PERCENTAGE of total"
+          }
+        },
+        {
+          "name": "moderateFlightRiskCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Moderate Flight Risk Count",
+            "description": "Number of employees with moderate attrition risk (25-50).",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 40000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalEmployees",
+            "business_description": "Volume of employees at medium flight risk requiring standard monitoring.",
+            "data_quality_checks": "Ensure non-negative, Validate <= totalEmployees",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "SUM, AVERAGE, PERCENTAGE of total"
+          }
+        },
+        {
+          "name": "lowFlightRiskCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Low Flight Risk Count",
+            "description": "Number of employees with low attrition risk (0-25).",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 60000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalEmployees",
+            "business_description": "Volume of stable employees with low departure risk.",
+            "data_quality_checks": "Ensure non-negative, Validate <= totalEmployees",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "SUM, AVERAGE, PERCENTAGE of total"
+          }
+        },
+        {
+          "name": "avgAttritionImpact",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Average Attrition Impact",
+            "description": "Average organizational impact if employees depart.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Indicates average potential disruption from departures, guiding retention investment priorities.",
+            "data_quality_checks": "Validate range 0-100",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "MOVING_AVERAGE(7), MOVING_AVERAGE(30)"
+          }
+        },
+        {
+          "name": "avgAttritionLikelihood",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Average Attrition Likelihood",
+            "description": "Average probability of employee departures.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Indicates overall organizational retention health and culture effectiveness.",
+            "data_quality_checks": "Validate range 0-100, Monitor for trends",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "MOVING_AVERAGE(7), MOVING_AVERAGE(30), TREND"
+          }
+        },
+        {
+          "name": "hrEscalationCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "HR Escalation Count",
+            "description": "Number of employees requiring HR retention intervention.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 5000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalEmployees",
+            "business_description": "Action queue size for HR team, indicating volume requiring immediate retention focus.",
+            "data_quality_checks": "Ensure non-negative, Validate <= totalEmployees",
+            "filtering_suggestions": "Filter by date range, Filter by non-zero",
+            "aggregation_suggestions": "SUM, AVERAGE, TREND, PERCENTAGE of total"
+          }
+        },
+        {
+          "name": "managersAtRisk",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Managers At Risk",
+            "description": "Number of people managers at high/critical flight risk.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 1000",
+            "business_rules": "Cannot be null, Must be >= 0",
+            "business_description": "Volume of managers at departure risk with potential secondary attrition impact on their teams.",
+            "data_quality_checks": "Ensure non-negative",
+            "filtering_suggestions": "Filter by date range, Monitor for spikes",
+            "aggregation_suggestions": "SUM, TREND, PERCENTAGE of manager population"
+          }
+        },
+        {
+          "name": "avgTenureMonths",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Average Tenure (Months)",
+            "description": "Average employee tenure across organization.",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "0.0 to 240.0",
+            "business_rules": "Cannot be null, Must be >= 0",
+            "business_description": "Organizational tenure health indicator; declining tenure suggests systemic retention issues.",
+            "data_quality_checks": "Ensure non-negative",
+            "filtering_suggestions": "Filter by date range, Monitor for declining trends",
+            "aggregation_suggestions": "MOVING_AVERAGE(30), TREND"
+          }
+        },
+        {
+          "name": "newHireAtRiskCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "New Hire At Risk Count",
+            "description": "Number of employees in 0-6 month tenure band at high/critical risk.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 2000",
+            "business_rules": "Cannot be null, Must be >= 0",
+            "business_description": "Early-stage attrition indicator suggesting onboarding or culture fit issues requiring immediate attention.",
+            "data_quality_checks": "Ensure non-negative",
+            "filtering_suggestions": "Filter by date range, Monitor for patterns",
+            "aggregation_suggestions": "SUM, PERCENTAGE of new hires, TREND"
+          }
+        },
+        {
+          "name": "riskTrendDirection",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Risk Trend Direction",
+            "description": "Overall attrition risk trend compared to previous day.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Increasing, Decreasing, Stable",
+            "business_rules": "Can be null for first record, Valid values: 'Increasing', 'Decreasing', 'Stable'",
+            "business_description": "Day-over-day risk direction, early warning of deteriorating retention environment.",
+            "data_quality_checks": "Validate against allowed values",
+            "filtering_suggestions": "Filter by Increasing for alerts",
+            "aggregation_suggestions": "COUNT by direction, PERCENTAGE distribution"
+          }
+        },
+        {
+          "name": "riskTrendPercentChange",
+          "type": "double",
+          "notNull": false,
+          "properties": {
+            "display_name": "Risk Trend % Change",
+            "description": "Percentage change in average attrition risk from previous day.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "-100.00 to 100.00",
+            "business_rules": "Can be null for first record, Positive indicates increasing risk",
+            "business_description": "Quantifies magnitude of risk changes for threshold-based alerting.",
+            "data_quality_checks": "Validate reasonable range, Flag extreme changes",
+            "filtering_suggestions": "Filter by significant changes (>5%)",
+            "aggregation_suggestions": "AVERAGE, MAX, MIN, VOLATILITY"
+          }
+        }
+      ],
+      "relationships": [
+        {
+          "name": "source_assessments_relationship",
+          "models": [
+            "AttritionRisk_Daily",
+            "AttritionRisk_Silver"
+          ],
+          "joinType": "ONE_TO_MANY",
+          "condition": "AttritionRisk_Daily.assessmentDate = DATE(AttritionRisk_Silver.assessmentDate)",
+          "properties": {
+            "displayName": "Daily Aggregates to Source Assessments Relationship",
+            "description": "Each daily summary aggregates all employee risk assessments for that date"
+          }
+        }
+      ],
+      "properties": {
+        "description": "Gold layer table containing daily aggregated attrition risk metrics providing enterprise-wide visibility into talent retention health.",
+        "business_purpose": "Enables executive dashboards, daily talent retention scorecards, trend analysis, and real-time monitoring of organizational flight risk exposure.",
+        "data_lineage": "Aggregated from AttritionRisk_Silver table with daily refresh.",
+        "data_retention": "Data retained for 3 years for long-term trend analysis.",
+        "update_frequency": "daily",
+        "medallion_layer": "gold",
+        "key_relationships": "Aggregates from AttritionRisk_Silver"
+      }
+    }
+  ]
+}

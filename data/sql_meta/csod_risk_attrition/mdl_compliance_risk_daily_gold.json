@@ -1,0 +1,480 @@
+{
+  "catalog": "csod_risk_attrition",
+  "schema": "public",
+  "models": [
+    {
+      "name": "ComplianceRisk_Daily",
+      "tableReference": {
+        "catalog": "csod_risk_attrition",
+        "schema": "public",
+        "table": "compliancerisk_daily"
+      },
+      "primaryKey": "dailyRiskId",
+      "columns": [
+        {
+          "name": "dailyRiskId",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Daily Risk ID",
+            "description": "Unique identifier for daily aggregated risk record.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "DRISK_YYYYMMDD",
+            "business_rules": "Must be unique, Cannot be null, Format: DRISK_{date}",
+            "business_description": "Unique identifier for each daily risk snapshot, enabling time-series analysis of organizational compliance risk trends.",
+            "data_quality_checks": "Check for null values, Validate uniqueness, Ensure daily records exist",
+            "filtering_suggestions": "Filter by date range, Filter by specific date",
+            "aggregation_suggestions": "COUNT by date"
+          }
+        },
+        {
+          "name": "assessmentDate",
+          "type": "date",
+          "notNull": true,
+          "properties": {
+            "display_name": "Assessment Date",
+            "description": "Date of the aggregated risk assessment.",
+            "usage_type": "timestamp",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "YYYY-MM-DD",
+            "business_rules": "Cannot be null, Must be a valid date, Should be updated daily",
+            "business_description": "Reference date for the daily snapshot, critical for trend analysis and historical comparison of compliance risk metrics.",
+            "data_quality_checks": "Ensure not in future, Validate date format, Check for missing dates in sequence",
+            "filtering_suggestions": "Filter by date range, Filter by specific month/year, Filter by day of week",
+            "aggregation_suggestions": "COUNT by date, GROUP BY month, GROUP BY quarter"
+          }
+        },
+        {
+          "name": "totalUsers",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Total Users",
+            "description": "Total number of active users with compliance training assignments.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "1 to 100000",
+            "business_rules": "Cannot be null, Must be > 0",
+            "business_description": "Denominator for compliance rate calculations, representing the total population under compliance monitoring.",
+            "data_quality_checks": "Ensure positive values, Compare with User_csod active count, Check for unusual fluctuations",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "AVERAGE, MAX, MIN, TREND"
+          }
+        },
+        {
+          "name": "totalAssignments",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Total Assignments",
+            "description": "Total number of compliance training assignments.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "1 to 1000000",
+            "business_rules": "Cannot be null, Must be > 0",
+            "business_description": "Total volume of compliance obligations, indicating organizational training burden and compliance complexity.",
+            "data_quality_checks": "Ensure positive values, Validate against source tables, Check for unusual spikes",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "AVERAGE daily, SUM, TREND"
+          }
+        },
+        {
+          "name": "avgRiskScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Average Risk Score",
+            "description": "Average composite risk score across all user-training combinations.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Primary KPI for organizational compliance health, indicating overall risk exposure across the enterprise.",
+            "data_quality_checks": "Validate range 0-100, Check for logical consistency with risk distribution, Monitor for significant changes",
+            "filtering_suggestions": "Filter by date range, Compare to previous periods",
+            "aggregation_suggestions": "MOVING_AVERAGE(7), MOVING_AVERAGE(30), PERCENTILE(50)"
+          }
+        },
+        {
+          "name": "medianRiskScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Median Risk Score",
+            "description": "Median composite risk score, less sensitive to outliers than average.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Robust central tendency measure for risk distribution, providing a more stable view of typical risk levels unaffected by extreme cases.",
+            "data_quality_checks": "Validate range 0-100, Compare with avgRiskScore for skew detection",
+            "filtering_suggestions": "Filter by date range, Compare to average for distribution insight",
+            "aggregation_suggestions": "MOVING_MEDIAN(7), MOVING_MEDIAN(30)"
+          }
+        },
+        {
+          "name": "maxRiskScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Maximum Risk Score",
+            "description": "Highest risk score recorded for the day.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100, Should be >= avgRiskScore",
+            "business_description": "Identifies the most critical compliance risk requiring immediate attention, serving as an early warning indicator.",
+            "data_quality_checks": "Validate range 0-100, Ensure >= avgRiskScore, Flag if consistently 100",
+            "filtering_suggestions": "Filter by date range, Filter by threshold (>90)",
+            "aggregation_suggestions": "AVERAGE of daily max, TREND"
+          }
+        },
+        {
+          "name": "criticalCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Critical Risk Count",
+            "description": "Number of assignments with Critical risk category (75-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 10000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalAssignments",
+            "business_description": "Volume of most severe compliance risks requiring immediate executive attention and intervention.",
+            "data_quality_checks": "Ensure non-negative, Validate <= totalAssignments, Monitor for spikes",
+            "filtering_suggestions": "Filter by date range, Filter by non-zero values",
+            "aggregation_suggestions": "SUM, AVERAGE, TREND, PERCENTAGE of total"
+          }
+        },
+        {
+          "name": "highCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "High Risk Count",
+            "description": "Number of assignments with High risk category (50-75).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 50000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalAssignments",
+            "business_description": "Volume of elevated compliance risks requiring proactive management and monitoring.",
+            "data_quality_checks": "Ensure non-negative, Validate <= totalAssignments, Check distribution",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "SUM, AVERAGE, PERCENTAGE of total"
+          }
+        },
+        {
+          "name": "moderateCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Moderate Risk Count",
+            "description": "Number of assignments with Moderate risk category (25-50).",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 100000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalAssignments",
+            "business_description": "Volume of medium-priority compliance risks requiring standard monitoring and periodic follow-up.",
+            "data_quality_checks": "Ensure non-negative, Validate <= totalAssignments",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "SUM, AVERAGE, PERCENTAGE of total"
+          }
+        },
+        {
+          "name": "lowCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Low Risk Count",
+            "description": "Number of assignments with Low risk category (0-25).",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 500000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalAssignments",
+            "business_description": "Volume of low-priority compliance activities with minimal risk of non-completion.",
+            "data_quality_checks": "Ensure non-negative, Validate <= totalAssignments",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "SUM, AVERAGE, PERCENTAGE of total"
+          }
+        },
+        {
+          "name": "avgImpactScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Average Impact Score",
+            "description": "Average severity of consequences across all assignments.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Indicates the average potential organizational impact if compliance obligations are not met, guiding resource prioritization.",
+            "data_quality_checks": "Validate range 0-100, Check consistency with risk distribution",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "MOVING_AVERAGE(7), MOVING_AVERAGE(30)"
+          }
+        },
+        {
+          "name": "avgLikelihoodScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Average Likelihood Score",
+            "description": "Average probability of non-completion across all assignments.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Indicates overall probability of compliance failures, reflecting organizational engagement and training culture effectiveness.",
+            "data_quality_checks": "Validate range 0-100, Monitor for trends",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "MOVING_AVERAGE(7), MOVING_AVERAGE(30), TREND"
+          }
+        },
+        {
+          "name": "overdueCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Overdue Count",
+            "description": "Number of assignments currently overdue.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 50000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalAssignments",
+            "business_description": "Critical metric indicating current compliance violations requiring immediate remediation and reporting to stakeholders.",
+            "data_quality_checks": "Ensure non-negative, Validate <= totalAssignments, Alert on increases",
+            "filtering_suggestions": "Filter by date range, Filter by non-zero",
+            "aggregation_suggestions": "SUM, AVERAGE, TREND, PERCENTAGE of total"
+          }
+        },
+        {
+          "name": "dueSoon7Days",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Due Soon (7 Days)",
+            "description": "Number of assignments due within the next 7 days.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 50000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalAssignments",
+            "business_description": "Near-term compliance deadline pressure indicator, enabling proactive intervention before items become overdue.",
+            "data_quality_checks": "Ensure non-negative, Validate <= totalAssignments",
+            "filtering_suggestions": "Filter by date range, Filter by high values",
+            "aggregation_suggestions": "SUM, AVERAGE, TREND"
+          }
+        },
+        {
+          "name": "dueSoon14Days",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Due Soon (14 Days)",
+            "description": "Number of assignments due within the next 14 days.",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 100000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalAssignments, Should be >= dueSoon7Days",
+            "business_description": "Medium-term workload indicator for planning manager interventions and training session scheduling.",
+            "data_quality_checks": "Ensure non-negative, Validate >= dueSoon7Days, Validate <= totalAssignments",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "SUM, AVERAGE, TREND"
+          }
+        },
+        {
+          "name": "dueSoon30Days",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Due Soon (30 Days)",
+            "description": "Number of assignments due within the next 30 days.",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 200000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalAssignments, Should be >= dueSoon14Days",
+            "business_description": "Monthly pipeline visibility for resource planning and capacity management of compliance training programs.",
+            "data_quality_checks": "Ensure non-negative, Validate >= dueSoon14Days, Validate <= totalAssignments",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "SUM, AVERAGE, TREND"
+          }
+        },
+        {
+          "name": "escalationRequiredCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Escalation Required Count",
+            "description": "Number of assignments requiring manager escalation.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 50000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalAssignments",
+            "business_description": "Action queue size for management intervention, indicating volume of high-risk situations requiring immediate attention.",
+            "data_quality_checks": "Ensure non-negative, Validate <= totalAssignments, Alert on spikes",
+            "filtering_suggestions": "Filter by date range, Filter by non-zero",
+            "aggregation_suggestions": "SUM, AVERAGE, TREND, PERCENTAGE of total"
+          }
+        },
+        {
+          "name": "completionRate",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Completion Rate",
+            "description": "Percentage of completed compliance assignments (0-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Primary compliance performance KPI, indicating overall organizational effectiveness in meeting training obligations.",
+            "data_quality_checks": "Validate range 0-100, Check for data quality issues if extreme values",
+            "filtering_suggestions": "Filter by date range, Compare to target (e.g., 90%)",
+            "aggregation_suggestions": "MOVING_AVERAGE(7), MOVING_AVERAGE(30), TREND"
+          }
+        },
+        {
+          "name": "avgDaysToComplete",
+          "type": "double",
+          "notNull": false,
+          "properties": {
+            "display_name": "Average Days to Complete",
+            "description": "Average time taken to complete assignments (in days).",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "1.0 to 365.0",
+            "business_rules": "Can be null if no completions, Must be positive",
+            "business_description": "Efficiency metric indicating organizational compliance velocity and training program effectiveness.",
+            "data_quality_checks": "Ensure positive values, Flag outliers (>180 days)",
+            "filtering_suggestions": "Filter by date range",
+            "aggregation_suggestions": "MOVING_AVERAGE(7), MOVING_AVERAGE(30), MEDIAN"
+          }
+        },
+        {
+          "name": "riskTrendDirection",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Risk Trend Direction",
+            "description": "Overall risk trend compared to previous day.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Increasing, Decreasing, Stable",
+            "business_rules": "Can be null for first record, Valid values: 'Increasing', 'Decreasing', 'Stable'",
+            "business_description": "Day-over-day risk direction indicator, providing early warning of deteriorating compliance health or validation of improvement initiatives.",
+            "data_quality_checks": "Validate against allowed values, Ensure based on previous day comparison",
+            "filtering_suggestions": "Filter by Increasing, Filter by date range",
+            "aggregation_suggestions": "COUNT by direction, PERCENTAGE distribution"
+          }
+        },
+        {
+          "name": "riskTrendPercentChange",
+          "type": "double",
+          "notNull": false,
+          "properties": {
+            "display_name": "Risk Trend % Change",
+            "description": "Percentage change in average risk score from previous day.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "-100.00 to 100.00",
+            "business_rules": "Can be null for first record, Positive indicates increasing risk",
+            "business_description": "Quantifies the magnitude of risk changes, enabling threshold-based alerting and trend analysis for compliance oversight.",
+            "data_quality_checks": "Validate reasonable range (-50 to 50), Flag extreme changes",
+            "filtering_suggestions": "Filter by significant changes (>5%), Filter by date range",
+            "aggregation_suggestions": "AVERAGE, MAX, MIN, VOLATILITY"
+          }
+        }
+      ],
+      "properties": {
+        "description": "TIME SERIES Gold layer table containing daily aggregated compliance risk metrics providing enterprise-wide visibility into organizational compliance health and trends. Sample data includes 50 daily records (Oct 28 - Dec 16, 2024) aggregated from 100 user-activity assignments per day.",
+        "business_purpose": "Enables executive dashboards, daily compliance scorecards, trend analysis, and real-time monitoring of compliance risk exposure. Provides day-over-day comparisons, moving averages, and early warning trend detection across the enterprise.",
+        "data_lineage": "Aggregated from ComplianceRisk_Silver time series table with daily refresh. Each record aggregates approximately 100 user-activity assessments using: AVG/MEDIAN/MAX for risk scores, COUNT by risk category, SUM for overdue/escalation counts, and calculated completion rates. Includes day-over-day trend calculations (Increasing/Decreasing/Stable) and percentage changes for momentum tracking.",
+        "data_retention": "Data retained for 3 years for long-term trend analysis and regulatory reporting.",
+        "update_frequency": "daily",
+        "medallion_layer": "gold",
+        "aggregation_metadata": {
+          "source_table": "ComplianceRisk_Silver",
+          "aggregation_key": "assessmentDate",
+          "aggregation_methods": ["AVG for risk scores", "MEDIAN for central tendency", "MAX for peak risk", "COUNT by risk category", "SUM for overdue/escalation counts", "Calculated completion rate (completed/total)"],
+          "sample_metrics_per_record": "Aggregates ~100 user-activity assessments per day",
+          "sample_date_range": "50 daily records from 2024-10-28 to 2024-12-16",
+          "temporal_analysis": ["Day-over-day trend direction", "Percentage change calculations", "7-day and 30-day moving averages possible", "Week-over-week comparisons", "Seasonality detection"]
+        },
+        "key_relationships": "Aggregates from ComplianceRisk_Silver (time series), rolled up to Weekly and Monthly gold tables for longer-term trends"
+      },
+      "relationships": [
+        {
+          "name": "source_assessments_relationship",
+          "models": [
+            "ComplianceRisk_Daily",
+            "ComplianceRisk_Silver"
+          ],
+          "joinType": "ONE_TO_MANY",
+          "condition": "ComplianceRisk_Daily.assessmentDate = DATE(ComplianceRisk_Silver.assessmentDate)",
+          "properties": {
+            "displayName": "Daily Aggregates to Source Assessments Relationship",
+            "description": "Each daily summary aggregates all user-activity risk assessments for that date"
+          }
+        },
+        {
+          "name": "monthly_rollup_relationship",
+          "models": [
+            "ComplianceRisk_Daily",
+            "ComplianceRisk_Monthly"
+          ],
+          "joinType": "MANY_TO_ONE",
+          "condition": "DATE_TRUNC('month', ComplianceRisk_Daily.assessmentDate) = ComplianceRisk_Monthly.monthStartDate",
+          "properties": {
+            "displayName": "Daily Aggregates to Monthly Rollup Relationship",
+            "description": "Daily summaries are rolled up into monthly strategic reports"
+          }
+        }
+      ]
+    }
+  ]
+}

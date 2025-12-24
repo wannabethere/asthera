@@ -1,0 +1,103 @@
+{
+  "project_id": "csod_risk_attrition",
+  "description": "Cornerstone OnDemand learning management system with training records, compliance tracking, attrition risk analytics, and integrated enterprise risk management",
+  "title": "Cornerstone Learning & Risk Management System",
+  "tables": [
+    {
+      "name": "Activity_csod",
+      "display_name": "Learning Activities",
+      "description": "Learning activities and courses catalog with compliance, certification, and training details",
+      "mdl_file": "mdl_training_activity.json",
+      "ddl_file": "ddl_training_activity.json",
+      "layer": "bronze"
+    },
+    {
+      "name": "Transcript_csod", 
+      "display_name": "Learning Transcripts",
+      "description": "Employee learning records including completion status, scores, and training progress",
+      "mdl_file": "mdl_transcript_csod.json",
+      "ddl_file": "ddl_transcript_csod.json",
+      "layer": "bronze"
+    },
+    {
+      "name": "User_csod",
+      "display_name": "Learning Users",
+      "description": "User profiles and organizational structure for learning management",
+      "mdl_file": "mdl_user_csod.json", 
+      "ddl_file": "ddl_user_csod.json",
+      "layer": "bronze"
+    },
+    {
+      "name": "AttritionRisk_Silver",
+      "display_name": "Attrition Risk Assessments",
+      "description": "Daily time-series employee attrition risk assessments tracking flight risk, engagement trends, and retention priorities",
+      "mdl_file": "mdl_attrition_risk_silver.json",
+      "layer": "silver"
+    },
+    {
+      "name": "AttritionRisk_Daily",
+      "display_name": "Daily Attrition Risk Summary",
+      "description": "Daily aggregated organizational attrition risk metrics for executive dashboards and trend analysis",
+      "mdl_file": "mdl_attrition_risk_daily_gold.json",
+      "layer": "gold"
+    },
+    {
+      "name": "ComplianceRisk_Silver",
+      "display_name": "Compliance Risk Assessments",
+      "description": "Daily time-series compliance training risk assessments tracking completion likelihood and intervention triggers",
+      "mdl_file": "mdl_compliance_risk_silver.json",
+      "layer": "silver"
+    },
+    {
+      "name": "ComplianceRisk_Daily",
+      "display_name": "Daily Compliance Risk Summary",
+      "description": "Daily aggregated organizational compliance risk metrics with overdue tracking and completion rates",
+      "mdl_file": "mdl_compliance_risk_daily_gold.json",
+      "layer": "gold"
+    },
+    {
+      "name": "ComplianceRisk_Activity",
+      "display_name": "Activity-Level Compliance Risk",
+      "description": "Activity-level compliance risk aggregations for content effectiveness and vendor evaluation",
+      "mdl_file": "mdl_compliance_risk_activity_gold.json",
+      "layer": "gold"
+    },
+    {
+      "name": "ComplianceRisk_Division",
+      "display_name": "Division-Level Compliance Risk",
+      "description": "Division-level compliance risk metrics for organizational benchmarking and accountability",
+      "mdl_file": "mdl_compliance_risk_division_gold.json",
+      "layer": "gold"
+    },
+    {
+      "name": "ComplianceRisk_Monthly",
+      "display_name": "Monthly Compliance Risk Summary",
+      "description": "Monthly aggregated compliance risk for executive reporting and strategic planning",
+      "mdl_file": "mdl_compliance_risk_monthly_gold.json",
+      "layer": "gold"
+    },
+    {
+      "name": "EnterpriseRisk_Combined",
+      "display_name": "Combined Enterprise Risk",
+      "description": "Integrated employee-level risk profiles combining compliance and attrition risk for holistic HR strategy",
+      "mdl_file": "mdl_enterprise_risk_combined.json",
+      "layer": "gold"
+    }
+  ],
+  "knowledge_base": [
+    {
+      "name": "cornerstone_learning_knowledge_base",
+      "display_name": "Cornerstone Learning Knowledge Base",
+      "description": "Knowledge base for Cornerstone Learning Management System with training analytics and compliance insights",
+      "file_path": "instructions.json"
+    }
+  ],
+  "examples": [
+    {
+      "name": "cornerstone_learning_examples",
+      "display_name": "Cornerstone Learning Examples",
+      "description": "Example SQL queries and analytics for Cornerstone Learning data",
+      "file_path": "sql_pairs.json"
+    }
+  ]
+}

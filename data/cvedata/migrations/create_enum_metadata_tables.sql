@@ -1163,8 +1163,6 @@ INSERT INTO vuln_info_metadata (vuln_code, source_type, vuln_description, vulner
     
     -- Sensor vulnerabilities
     ('TELNET_23', 'sensor', 'Insecure service detected: TELNET on port 23', 'Services', 'Insecure Services',
-
-    ('TELNET_23', 'sensor', 'Insecure service detected: TELNET on port 23', 'Services', 'Insecure Services',
      'TELNET is a protocol that permits remote access from one computer system to another on the same network.',
      'TELNET uses unencrypted authentication, and transmits usernames, passwords and data over the network in cleartext.',
      'System credentials and sensitive data can be read by an adversary with access to the network traffic, resulting in not only data theft but also longer-term persistent system access to enable future attacks.',

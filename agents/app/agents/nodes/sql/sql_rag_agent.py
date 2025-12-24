@@ -2434,7 +2434,7 @@ Your response must be ONLY a valid JSON object with this exact structure:
     async def _handle_sql_transform(self, query: str, **kwargs) -> Dict[str, Any]:
         """Handle SQL transform generation using TransformSQLRAGAgent"""
         try:
-            from app.agents.nodes.sql.transform_sql_rag_agent import create_transform_sql_rag_agent
+            from app.agents.nodes.transform.transform_sql_rag_agent import create_transform_sql_rag_agent
             
             # Create transform agent instance
             transform_agent = create_transform_sql_rag_agent(

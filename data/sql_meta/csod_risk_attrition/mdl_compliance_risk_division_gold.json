@@ -1,0 +1,509 @@
+{
+  "catalog": "csod_risk_attrition",
+  "schema": "public",
+  "models": [
+    {
+      "name": "ComplianceRisk_Division",
+      "tableReference": {
+        "catalog": "csod_risk_attrition",
+        "schema": "public",
+        "table": "compliancerisk_division"
+      },
+      "primaryKey": "divisionRiskId",
+      "columns": [
+        {
+          "name": "divisionRiskId",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Division Risk ID",
+            "description": "Unique identifier for division-level aggregated risk record.",
+            "usage_type": "identifier",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "DIVRISK_{division}_{date}",
+            "business_rules": "Must be unique, Cannot be null",
+            "business_description": "Unique identifier combining division and assessment date for divisional risk snapshots.",
+            "data_quality_checks": "Check for null values, Validate uniqueness",
+            "filtering_suggestions": "Filter by division, Filter by date",
+            "aggregation_suggestions": "COUNT by division"
+          }
+        },
+        {
+          "name": "assessmentDate",
+          "type": "date",
+          "notNull": true,
+          "properties": {
+            "display_name": "Assessment Date",
+            "description": "Date of the division-level risk assessment.",
+            "usage_type": "timestamp",
+            "business_importance": "high",
+            "typical_cardinality": "high",
+            "privacy_classification": "internal",
+            "common_patterns": "YYYY-MM-DD",
+            "business_rules": "Cannot be null, Must be a valid date, Updated daily",
+            "business_description": "Reference date for divisional snapshot, enabling time-series analysis of division-level compliance.",
+            "data_quality_checks": "Ensure not in future, Validate date format, Check for missing dates",
+            "filtering_suggestions": "Filter by date range, Filter by specific date",
+            "aggregation_suggestions": "COUNT by date, GROUP BY month"
+          }
+        },
+        {
+          "name": "division",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Division",
+            "description": "Organizational division or business unit.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Sales, Marketing, HR, IT, Finance, Operations",
+            "business_rules": "Cannot be null, Must match User_csod.division values",
+            "business_description": "Organizational unit for analyzing compliance risk by business division, enabling targeted interventions and accountability.",
+            "data_quality_checks": "Validate against User_csod division list, Check for consistency",
+            "filtering_suggestions": "Filter by specific division, Compare divisions",
+            "aggregation_suggestions": "COUNT by division, GROUP BY division"
+          }
+        },
+        {
+          "name": "divisionHeadcount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Division Headcount",
+            "description": "Total number of active employees in the division.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "1 to 10000",
+            "business_rules": "Cannot be null, Must be > 0",
+            "business_description": "Division size for per-capita risk normalization and capacity planning.",
+            "data_quality_checks": "Ensure positive values, Validate against User_csod counts",
+            "filtering_suggestions": "Filter by division size ranges",
+            "aggregation_suggestions": "SUM, AVERAGE"
+          }
+        },
+        {
+          "name": "totalAssignments",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Total Assignments",
+            "description": "Total compliance training assignments in the division.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "1 to 100000",
+            "business_rules": "Cannot be null, Must be > 0",
+            "business_description": "Division-level compliance workload volume for resource allocation and capacity assessment.",
+            "data_quality_checks": "Ensure positive values, Validate reasonableness vs headcount",
+            "filtering_suggestions": "Filter by high volume divisions",
+            "aggregation_suggestions": "SUM, AVERAGE per employee"
+          }
+        },
+        {
+          "name": "avgRiskScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Average Risk Score",
+            "description": "Average composite risk score for the division.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Primary KPI for divisional compliance health, enabling comparison across business units and identification of high-risk divisions.",
+            "data_quality_checks": "Validate range 0-100, Compare across divisions for outliers",
+            "filtering_suggestions": "Filter by high-risk divisions (>75), Compare to organizational average",
+            "aggregation_suggestions": "AVERAGE across divisions, MAX, MIN, RANK"
+          }
+        },
+        {
+          "name": "medianRiskScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Median Risk Score",
+            "description": "Median composite risk score, less sensitive to outliers.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Robust central tendency measure showing typical division risk unaffected by extreme individual cases.",
+            "data_quality_checks": "Validate range 0-100, Compare with avgRiskScore",
+            "filtering_suggestions": "Compare to average for distribution insight",
+            "aggregation_suggestions": "AVERAGE across divisions, COMPARE with avg"
+          }
+        },
+        {
+          "name": "riskScorePercentile",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Risk Score Percentile",
+            "description": "Division's risk score percentile rank among all divisions (0-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100, Higher percentile = higher risk",
+            "business_description": "Relative risk ranking enabling quick identification of divisions performing above/below peer groups.",
+            "data_quality_checks": "Validate range 0-100, Ensure distribution across divisions",
+            "filtering_suggestions": "Filter top/bottom quartiles, Filter by high risk (>75th percentile)",
+            "aggregation_suggestions": "MEDIAN, QUARTILES"
+          }
+        },
+        {
+          "name": "criticalCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Critical Risk Count",
+            "description": "Number of critical risk assignments in the division.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 10000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalAssignments",
+            "business_description": "Volume of most severe compliance risks in division requiring immediate executive attention.",
+            "data_quality_checks": "Ensure non-negative, Validate <= totalAssignments",
+            "filtering_suggestions": "Filter by non-zero, Filter by high volumes",
+            "aggregation_suggestions": "SUM, PERCENTAGE of totalAssignments, RANK by division"
+          }
+        },
+        {
+          "name": "highCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "High Risk Count",
+            "description": "Number of high risk assignments in the division.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 50000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalAssignments",
+            "business_description": "Volume of elevated risks in division requiring proactive management.",
+            "data_quality_checks": "Ensure non-negative, Validate <= totalAssignments",
+            "filtering_suggestions": "Filter by division",
+            "aggregation_suggestions": "SUM, PERCENTAGE of totalAssignments"
+          }
+        },
+        {
+          "name": "moderateCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Moderate Risk Count",
+            "description": "Number of moderate risk assignments in the division.",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 50000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalAssignments",
+            "business_description": "Volume of medium-priority risks in division for standard monitoring.",
+            "data_quality_checks": "Ensure non-negative, Validate <= totalAssignments",
+            "filtering_suggestions": "Filter by division",
+            "aggregation_suggestions": "SUM, PERCENTAGE of totalAssignments"
+          }
+        },
+        {
+          "name": "lowCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Low Risk Count",
+            "description": "Number of low risk assignments in the division.",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 100000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalAssignments",
+            "business_description": "Volume of low-priority risks in division with minimal intervention needed.",
+            "data_quality_checks": "Ensure non-negative, Validate <= totalAssignments",
+            "filtering_suggestions": "Filter by division",
+            "aggregation_suggestions": "SUM, PERCENTAGE of totalAssignments"
+          }
+        },
+        {
+          "name": "overdueCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Overdue Count",
+            "description": "Number of overdue assignments in the division.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 10000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalAssignments",
+            "business_description": "Current compliance violations in division, critical metric for divisional leadership accountability.",
+            "data_quality_checks": "Ensure non-negative, Validate <= totalAssignments, Alert on increases",
+            "filtering_suggestions": "Filter by non-zero, Filter by high counts, Compare divisions",
+            "aggregation_suggestions": "SUM, PERCENTAGE of totalAssignments, RANK by division"
+          }
+        },
+        {
+          "name": "completionRate",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Completion Rate",
+            "description": "Percentage of completed compliance assignments in the division.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100",
+            "business_description": "Division-level completion performance, key metric for divisional leader performance evaluation.",
+            "data_quality_checks": "Validate range 0-100",
+            "filtering_suggestions": "Filter by low performers (<70%), Compare to org average",
+            "aggregation_suggestions": "AVERAGE across divisions, MAX, MIN, RANK"
+          }
+        },
+        {
+          "name": "avgDaysToComplete",
+          "type": "double",
+          "notNull": false,
+          "properties": {
+            "display_name": "Average Days to Complete",
+            "description": "Average time to complete training in the division (days).",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "1.0 to 365.0",
+            "business_rules": "Can be null if no completions, Must be positive",
+            "business_description": "Division-level efficiency metric indicating compliance velocity and culture effectiveness.",
+            "data_quality_checks": "Ensure positive values, Flag outliers",
+            "filtering_suggestions": "Filter by slow divisions (>60 days), Compare divisions",
+            "aggregation_suggestions": "AVERAGE across divisions, MEDIAN, MAX, RANK"
+          }
+        },
+        {
+          "name": "divisionRank",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Division Rank",
+            "description": "Rank of division by avgRiskScore (1 = lowest risk/best).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "1 to 50",
+            "business_rules": "Cannot be null, Must be > 0, Lower is better",
+            "business_description": "Competitive ranking enabling healthy peer comparison and identification of best practices from top performers.",
+            "data_quality_checks": "Ensure positive values, Validate ranking logic",
+            "filtering_suggestions": "Filter top performers (rank <= 3), Filter bottom performers",
+            "aggregation_suggestions": "TOP_N, BOTTOM_N"
+          }
+        },
+        {
+          "name": "escalationRequiredCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Escalation Required Count",
+            "description": "Number of assignments requiring manager escalation in division.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0 to 10000",
+            "business_rules": "Cannot be null, Must be >= 0, Must be <= totalAssignments",
+            "business_description": "Division-level intervention workload for management resource planning.",
+            "data_quality_checks": "Ensure non-negative, Validate <= totalAssignments",
+            "filtering_suggestions": "Filter by high volumes, Compare divisions",
+            "aggregation_suggestions": "SUM, PERCENTAGE of totalAssignments, RANK"
+          }
+        },
+        {
+          "name": "riskPerEmployee",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Risk Per Employee",
+            "description": "Average risk score normalized by headcount.",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Calculated as avgRiskScore * (totalAssignments / divisionHeadcount)",
+            "business_description": "Size-normalized risk metric enabling fair comparison across divisions of different sizes.",
+            "data_quality_checks": "Validate calculation, Compare across divisions",
+            "filtering_suggestions": "Filter high per-capita risk, Compare divisions",
+            "aggregation_suggestions": "AVERAGE, RANK"
+          }
+        },
+        {
+          "name": "complianceHealthScore",
+          "type": "double",
+          "notNull": true,
+          "properties": {
+            "display_name": "Compliance Health Score",
+            "description": "Composite health score for the division (0-100).",
+            "usage_type": "measure",
+            "business_importance": "high",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "common_patterns": "0.00 to 100.00",
+            "business_rules": "Cannot be null, Must be between 0 and 100, Higher is better",
+            "business_description": "Division-level composite KPI combining risk, completion, and timeliness into single health indicator.",
+            "data_quality_checks": "Validate range 0-100, Ensure inverse correlation with avgRiskScore",
+            "filtering_suggestions": "Filter by poor health (<60), Filter by excellent health (>90), Compare divisions",
+            "aggregation_suggestions": "AVERAGE across divisions, RANK, MAX, MIN"
+          }
+        },
+        {
+          "name": "divisionTrend",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Division Trend",
+            "description": "Risk trend direction for the division (7-day comparison).",
+            "usage_type": "attribute",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Improving, Deteriorating, Stable",
+            "business_rules": "Can be null for first assessment, Valid values: 'Improving', 'Deteriorating', 'Stable'",
+            "business_description": "Directional indicator for divisional performance tracking and intervention prioritization.",
+            "data_quality_checks": "Validate against allowed values",
+            "filtering_suggestions": "Filter by Deteriorating for priority attention",
+            "aggregation_suggestions": "COUNT by trend, PERCENTAGE distribution"
+          }
+        },
+        {
+          "name": "managerCount",
+          "type": "bigint",
+          "notNull": true,
+          "properties": {
+            "display_name": "Manager Count",
+            "description": "Number of unique managers in the division.",
+            "usage_type": "measure",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "1 to 500",
+            "business_rules": "Cannot be null, Must be > 0",
+            "business_description": "Management capacity indicator for workload distribution and escalation planning.",
+            "data_quality_checks": "Ensure positive values, Validate against User_csod",
+            "filtering_suggestions": "Filter by division",
+            "aggregation_suggestions": "SUM, AVERAGE span of control"
+          }
+        },
+        {
+          "name": "topRiskManager",
+          "type": "string",
+          "notNull": false,
+          "properties": {
+            "display_name": "Top Risk Manager",
+            "description": "Manager with highest average team risk score in division.",
+            "usage_type": "attribute",
+            "business_importance": "moderate",
+            "typical_cardinality": "medium",
+            "privacy_classification": "internal",
+            "business_rules": "Can be null if unable to determine",
+            "business_description": "Identifies managers requiring additional support or intervention due to high team risk.",
+            "data_quality_checks": "Validate against User_csod manager names",
+            "filtering_suggestions": "Filter by specific managers",
+            "aggregation_suggestions": "COUNT occurrences"
+          }
+        },
+        {
+          "name": "bestPracticeFlag",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Best Practice Flag",
+            "description": "Indicates if division is a best practice performer.",
+            "usage_type": "flag",
+            "business_importance": "moderate",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Yes, No",
+            "business_rules": "Cannot be null, Valid values: 'Yes', 'No', Based on top quartile performance",
+            "business_description": "Identifies high-performing divisions for knowledge sharing and best practice replication.",
+            "data_quality_checks": "Validate against allowed values, Ensure consistent with rankings",
+            "filtering_suggestions": "Filter by Yes for benchmarking",
+            "aggregation_suggestions": "COUNT by Yes/No"
+          }
+        },
+        {
+          "name": "interventionPriority",
+          "type": "string",
+          "notNull": true,
+          "properties": {
+            "display_name": "Intervention Priority",
+            "description": "Priority level for compliance intervention resources.",
+            "usage_type": "attribute",
+            "business_importance": "high",
+            "typical_cardinality": "low",
+            "privacy_classification": "internal",
+            "common_patterns": "Urgent, High, Medium, Low",
+            "business_rules": "Cannot be null, Valid values: 'Urgent', 'High', 'Medium', 'Low'",
+            "business_description": "Resource allocation priority based on risk level, trend, and organizational impact.",
+            "data_quality_checks": "Validate against allowed values",
+            "filtering_suggestions": "Filter by Urgent and High, Prioritize interventions",
+            "aggregation_suggestions": "COUNT by priority level"
+          }
+        }
+      ],
+      "properties": {
+        "description": "Gold layer table containing division-level aggregated compliance risk metrics enabling organizational comparison, accountability, and targeted intervention strategies.",
+        "business_purpose": "Enables divisional scorecards, peer benchmarking, resource allocation optimization, and divisional leader performance evaluation for compliance effectiveness.",
+        "data_lineage": "Aggregated from ComplianceRisk_Silver table with daily refresh, grouped by division from User_csod organizational hierarchy.",
+        "data_retention": "Data retained for 3 years for trend analysis and performance comparisons.",
+        "update_frequency": "daily",
+        "medallion_layer": "gold",
+        "key_relationships": "Aggregates from ComplianceRisk_Silver, joins with User_csod for division hierarchy"
+      },
+      "relationships": [
+        {
+          "name": "source_assessments_relationship",
+          "models": [
+            "ComplianceRisk_Division",
+            "ComplianceRisk_Silver"
+          ],
+          "joinType": "ONE_TO_MANY",
+          "condition": "ComplianceRisk_Division.division = User_csod.division AND User_csod.userId = ComplianceRisk_Silver.userId AND ComplianceRisk_Division.assessmentDate = DATE(ComplianceRisk_Silver.assessmentDate)",
+          "properties": {
+            "displayName": "Division Aggregates to Source Assessments Relationship",
+            "description": "Each division summary aggregates all user-activity risk assessments for that division via User_csod.division"
+          }
+        },
+        {
+          "name": "user_hierarchy_relationship",
+          "models": [
+            "ComplianceRisk_Division",
+            "User_csod"
+          ],
+          "joinType": "MANY_TO_ONE",
+          "condition": "ComplianceRisk_Division.division = User_csod.division",
+          "properties": {
+            "displayName": "Division to User Hierarchy Relationship",
+            "description": "Division metrics linked to organizational hierarchy"
+          }
+        }
+      ]
+    }
+  ]
+}

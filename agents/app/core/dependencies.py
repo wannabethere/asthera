@@ -4,6 +4,7 @@ from app.storage.sessionmanager import get_session_manager
 from app.settings import get_settings
 from app.storage.documents import DocumentChromaStore, CHROMA_STORE_PATH
 from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic
 import chromadb
 from app.core.provider import DocumentStoreProvider
 import logging
@@ -38,6 +39,37 @@ def get_llm(temperature: float = 0.0, model: str = "gpt-4o-mini"):
         frequency_penalty=0.0,
         presence_penalty=0.0,
         openai_api_key=settings.OPENAI_API_KEY
+    )
+
+def get_anthropic_llm(temperature: float = 0.0, model: str = "claude-sonnet-4-20250514"):
+    """Get Anthropic LLM with specified temperature and model.
+    
+    Args:
+        temperature: Temperature for the model (default: 0.0)
+        model: Model name (default: claude-sonnet-4-20250514)
+        
+    Returns:
+        ChatAnthropic instance configured with settings
+    """
+    settings = get_settings()
+    # Check for ANTHROPIC_API_KEY in settings or environment
+    anthropic_api_key = getattr(settings, 'ANTHROPIC_API_KEY', None)
+    if not anthropic_api_key:
+        import os
+        anthropic_api_key = os.getenv('ANTHROPIC_API_KEY')
+    
+    if not anthropic_api_key:
+        logger.warning("ANTHROPIC_API_KEY not found in settings or environment. ChatAnthropic will try to use default.")
+        # ChatAnthropic can work without explicit API key if set in environment
+        return ChatAnthropic(
+            model=model,
+            temperature=temperature
+        )
+    
+    return ChatAnthropic(
+        model=model,
+        temperature=temperature,
+        anthropic_api_key=anthropic_api_key
     )
 
 def get_chromadb_client():

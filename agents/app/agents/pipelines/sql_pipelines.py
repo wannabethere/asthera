@@ -431,7 +431,7 @@ class SQLTransformPipeline(AgentPipeline):
         self.use_enhanced_agent = use_enhanced_agent
         
         # Import and initialize transform agent
-        from app.agents.nodes.sql.transform_sql_rag_agent import create_transform_sql_rag_agent
+        from app.agents.nodes.transform.transform_sql_rag_agent import create_transform_sql_rag_agent
         
         self.agent = create_transform_sql_rag_agent(
             llm=llm,
@@ -1557,7 +1557,7 @@ class SQLVulnerabilityTransformPipeline(AgentPipeline):
         self.use_enhanced_agent = use_enhanced_agent
         
         # Import and initialize transform agent
-        from app.agents.nodes.sql.transform_sql_rag_agent import create_transform_sql_rag_agent
+        from app.agents.nodes.transform.transform_sql_rag_agent import create_transform_sql_rag_agent
         
         self.agent = create_transform_sql_rag_agent(
             llm=llm,

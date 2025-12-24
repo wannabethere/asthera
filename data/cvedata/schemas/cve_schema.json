@@ -1,0 +1,317 @@
+{
+    "$schema": "https://repo-srv01.corp.balbix.com/de_f1/delta-raw2store/-/blob/main/delta_raw2store/cve_schema/model.py",
+    "type": "object",
+    "properties": {
+        "affected": {
+            "type": "str"
+        },
+        "alias": {
+            "type": "str"
+        },
+        "attackPatterns": {
+            "type": "str"
+        },
+        "attackTechniques": {
+            "type": "str"
+        },
+        "baseRiskScore": {
+            "type": "float"
+        },
+        "categories": {
+            "type": "str"
+        },
+        "cisaAddedDate": {
+            "type": "time"
+        },
+        "cisaDueDate": {
+            "type": "time"
+        },
+        "cisaExploited": {
+            "type": "bool"
+        },
+        "cisaRequiredAction": {
+            "type": "str"
+        },
+        "cisaVulnerabilityName": {
+            "type": "str"
+        },
+        "cpeRecords": {
+            "type": "str"
+        },
+        "comments": {
+            "type": "str"
+        },
+        "commercialExploit": {
+            "type": "bool"
+        },
+        "connectorCategories": {
+            "type": "str"
+        },
+        "connectorNames": {
+            "type": "str"
+        },
+        "createdBy": {
+            "type": "str"
+        },
+        "cvssV2AccessComplexity": {
+            "type": "str"
+        },
+        "cvssV2AccessVector": {
+            "type": "str"
+        },
+        "cvssV2Authentication": {
+            "type": "str"
+        },
+        "cvssV2AvailabilityImpact": {
+            "type": "str"
+        },
+        "cvssV2BaseScore": {
+            "type": "float"
+        },
+        "cvssV2BaseVectorSource": {
+            "type": "str"
+        },
+        "cvssV2ConfidentialityImpact": {
+            "type": "str"
+        },
+        "cvssV2Exploitability": {
+            "type": "str"
+        },
+        "cvssV2IntegrityImpact": {
+            "type": "str"
+        },
+        "cvssV2RemediationLevel": {
+            "type": "str"
+        },
+        "cvssV2ReportConfidence": {
+            "type": "str"
+        },
+        "cvssV2Severity": {
+            "type": "str"
+        },
+        "cvssV2TemporalScore": {
+            "type": "float"
+        },
+        "cvssV2TemporalVectorSource": {
+            "type": "str"
+        },
+        "cvssV2Vector": {
+            "type": "str"
+        },
+        "cvssV3AttackComplexity": {
+            "type": "str"
+        },
+        "cvssV3AttackVector": {
+            "type": "str"
+        },
+        "cvssV3AvailabilityImpact": {
+            "type": "str"
+        },
+        "cvssV3BaseScore": {
+            "type": "float"
+        },
+        "cvssV3BaseVectorSource": {
+            "type": "str"
+        },
+        "cvssV3ConfidentialityImpact": {
+            "type": "str"
+        },
+        "cvssV3ExploitCodeMaturity": {
+            "type": "str"
+        },
+        "cvssV3IntegrityImpact": {
+            "type": "str"
+        },
+        "cvssV3PrivilegesRequired": {
+            "type": "str"
+        },
+        "cvssV3RemediationLevel": {
+            "type": "str"
+        },
+        "cvssV3ReportConfidence": {
+            "type": "str"
+        },
+        "cvssV3Severity": {
+            "type": "str"
+        },
+        "cvssV3TemporalScore": {
+            "type": "float"
+        },
+        "cvssV3TemporalVectorSource": {
+            "type": "str"
+        },
+        "cvssV3UserInteraction": {
+            "type": "str"
+        },
+        "cvssV3Vector": {
+            "type": "str"
+        },
+        "dataIntegrationTitles": {
+            "type": "str"
+        },
+        "dataModelName": {
+            "type": "str"
+        },
+        "dateCreated": {
+            "type": "time"
+        },
+        "daysToFirstDetection": {
+            "type": "int"
+        },
+        "description": {
+            "type": "str"
+        },
+        "displayName": {
+            "type": "str"
+        },
+        "epssLastModified": {
+            "type": "time"
+        },
+        "epssPercentile": {
+            "type": "float"
+        },
+        "epssScore": {
+            "type": "float"
+        },
+        "exploitMaturity": {
+            "type": "str"
+        },
+        "exploits": {
+            "type": "str"
+        },
+        "firstDetected": {
+            "type": "time"
+        },
+        "firstReportedThreatActor": {
+            "type": "time"
+        },
+        "flowState": {
+            "type": "str"
+        },
+        "githubTrending": {
+            "type": "bool"
+        },
+        "knownActiveRansomewareCampaign": {
+            "type": "str"
+        },
+        "lastReportedThreatActor": {
+            "type": "time"
+        },
+        "lastUpdated": {
+            "type": "time"
+        },
+        "lifecycleInactiveDate": {
+            "type": "time"
+        },
+        "lifecyclePurgeDate": {
+            "type": "time"
+        },
+        "lifecycleStatus": {
+            "type": "str"
+        },
+        "malware": {
+            "type": "str"
+        },
+        "name": {
+            "type": "str"
+        },
+        "numberOutOfCompliance": {
+            "type": "int"
+        },
+        "openFindingCount": {
+            "type": "int"
+        },
+        "publicExploit": {
+            "type": "bool"
+        },
+        "publishedDate": {
+            "type": "time"
+        },
+        "recommendation": {
+            "type": "str"
+        },
+        "references": {
+            "type": "str"
+        },
+        "reportedExploited": {
+            "type": "bool"
+        },
+        "riskFactorOffset": {
+            "type": "float"
+        },
+        "riskFactors": {
+            "type": "str"
+        },
+        "riskRating": {
+            "type": "str"
+        },
+        "riskScore": {
+            "type": "float"
+        },
+        "riskScoringModel": {
+            "type": "str"
+        },
+        "severity": {
+            "type": "str"
+        },
+        "severityScore": {
+            "type": "float"
+        },
+        "source": {
+            "type": "str"
+        },
+        "sourceCreatedDate": {
+            "type": "time"
+        },
+        "sourceLastModified": {
+            "type": "time"
+        },
+        "sourceStatus": {
+            "type": "str"
+        },
+        "sourceUids": {
+            "type": "str"
+        },
+        "sources": {
+            "type": "str"
+        },
+        "sourcesIcons": {
+            "type": "str"
+        },
+        "status": {
+            "type": "str"
+        },
+        "statusConfigurationModel": {
+            "type": "str"
+        },
+        "summary": {
+            "type": "str"
+        },
+        "tags": {
+            "type": "str"
+        },
+        "uid": {
+            "type": "str"
+        },
+        "updatedBy": {
+            "type": "str"
+        },
+        "usedByBotnets": {
+            "type": "bool"
+        },
+        "usedByRansomware": {
+            "type": "bool"
+        },
+        "usedByThreatActors": {
+            "type": "bool"
+        },
+        "weaknesses": {
+            "type": "str"
+        },
+        "weaponizedExploit": {
+            "type": "bool"
+        }
+    },
+    "required": ["uid", "displayName"]
+}
+

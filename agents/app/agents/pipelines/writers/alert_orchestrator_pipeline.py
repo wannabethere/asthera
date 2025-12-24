@@ -2,20 +2,91 @@ import asyncio
 import logging
 from typing import Dict, Any, Optional, List, Callable
 from datetime import datetime
+import re
+import copy
 
 from app.agents.pipelines.base import AgentPipeline
 from app.agents.retrieval.retrieval_helper import RetrievalHelper
 from app.core.engine import Engine
 from app.core.dependencies import get_llm
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from app.agents.nodes.writers.alerts_agent import (
     SQLToAlertAgent, 
     SQLAlertRequest, 
     SQLAlertResult,
+    MarkdownJsonOutputParser,
 )
 from app.agents.pipelines.sql_execution import SQLExecutionPipeline
 from app.core.dependencies import create_llm_instances_from_settings
 
 logger = logging.getLogger("lexy-ai-service")
+
+# ---------------------------------------------------------------------------
+# Static seed data for orchestrator-level LLM validation.
+# These are intentionally small and generic; later you can replace them with
+# project-specific examples and session history (passed via pipeline config).
+# ---------------------------------------------------------------------------
+
+DEFAULT_LLM_VALIDATION_EXAMPLES: List[Dict[str, Any]] = [
+    {
+        "name": "count_threshold_ok",
+        "input": {
+            "alert_request": "Alert me when employee_count > 100",
+            "sql_analysis": {"metrics": ["employee_count"], "columns": ["employee_count"]},
+            "feed_configuration": {
+                "metric": {"measure": "employee_count", "aggregation": "COUNT"},
+                "conditions": [{"condition_type": "threshold_value", "operator": ">", "value": 100}],
+                "notification": {"schedule_type": "daily"},
+            },
+        },
+        "expected": {
+            "keep": True,
+            "score": 0.85,
+            "reasons": ["Metric grounded in SQL analysis; numeric threshold; valid operator/schedule."],
+        },
+    },
+    {
+        "name": "percent_threshold_ok",
+        "input": {
+            "alert_request": "Alert me when average risk score > 75%",
+            "sql_analysis": {"metrics": ["avg_risk_score"], "columns": ["avg_risk_score"]},
+            "feed_configuration": {
+                "metric": {"measure": "avg_risk_score", "aggregation": "AVG"},
+                "conditions": [{"condition_type": "threshold_value", "operator": ">", "value": 75}],
+                "notification": {"schedule_type": "daily"},
+            },
+        },
+        "expected": {
+            "keep": True,
+            "score": 0.75,
+            "reasons": ["Percent-style threshold mapped to numeric value; metric present in analysis."],
+        },
+    },
+    {
+        "name": "non_numeric_threshold_reject",
+        "input": {
+            "alert_request": "Alert me when avg time spent > (SELECT AVG(timeSpent) FROM Transcript_csod)",
+            "sql_analysis": {"metrics": ["avg_time_spent"], "columns": ["timeSpent"]},
+            "feed_configuration": {
+                "metric": {"measure": "avg_time_spent", "aggregation": "AVG"},
+                "conditions": [{"condition_type": "threshold_value", "operator": ">", "value": "(SELECT AVG(timeSpent) FROM Transcript_csod)"}],
+                "notification": {"schedule_type": "daily"},
+            },
+        },
+        "expected": {
+            "keep": False,
+            "score": 0.2,
+            "reasons": ["Threshold is not numeric (SQL expression)"],
+        },
+    },
+]
+
+DEFAULT_LLM_VALIDATION_HISTORY: List[Dict[str, Any]] = [
+    {
+        "role": "system",
+        "content": "Seed history placeholder. Replace with real per-session history later.",
+    }
+]
 
 
 class AlertOrchestratorPipeline(AgentPipeline):
@@ -51,7 +122,17 @@ class AlertOrchestratorPipeline(AgentPipeline):
             "enable_metrics": True,
             "default_confidence_threshold": 0.8,
             "enable_sample_data_fetch": True,
-            "sample_data_limit": 10
+            "sample_data_limit": 10,
+            # Use LLM to split multi-condition alert requests into sub-requests
+            "enable_llm_alert_request_split": True,
+            "max_alert_request_splits": 5,
+            # Optional orchestrator-level LLM validation (in addition to the agent's internal critique/confidence)
+            "enable_llm_validation": False,
+            "llm_validation_only_when_below_threshold": True,
+            "llm_validation_keep_threshold": 0.6,
+            # Hooks for evaluation later
+            "llm_validation_examples": copy.deepcopy(DEFAULT_LLM_VALIDATION_EXAMPLES),
+            "llm_validation_history": copy.deepcopy(DEFAULT_LLM_VALIDATION_HISTORY),
         }
         
         self._metrics = {}
@@ -172,7 +253,11 @@ class AlertOrchestratorPipeline(AgentPipeline):
         
         try:
             alert_results = []
+            alert_result_group_keys: List[str] = []
+            alert_result_requests: List[str] = []
+            alert_result_input_by_id: Dict[int, Dict[str, Any]] = {}
             combined_sql_analysis = None
+            any_split = False
             
             # Step 1: Process each SQL query for alert generation
             for i, sql_query in enumerate(sql_queries):
@@ -211,72 +296,103 @@ class AlertOrchestratorPipeline(AgentPipeline):
                         }
                     )
                 
-                # Create alert request for this SQL query
-                alert_request_obj = SQLAlertRequest(
-                    sql=sql_query,
-                    query=natural_language_query,
-                    project_id=project_id,
-                    data_description=data_description,
-                    configuration=additional_context,
+                # Split the alert request into multiple sub-requests when the user specifies multiple conditions
+                # (e.g., "X > 100 OR Y > 75%"). This allows generating separate alert configurations per metric.
+                sub_requests = await self._split_alert_request(
                     alert_request=alert_request,
-                    session_id=f"{session_id}_{i}" if session_id else None,
-                    sample_data=sample_data
+                    sql_query=sql_query,
+                    natural_language_query=natural_language_query,
                 )
-                
-                # Generate alert configuration
+                if len(sub_requests) > 1:
+                    any_split = True
+                if len(sub_requests) > 1:
+                    self._send_status_update(
+                        status_callback,
+                        "alert_request_split",
+                        {"project_id": project_id, "query_index": i, "sub_requests": sub_requests},
+                    )
+
+                # Generate alert configuration(s)
                 if self._configuration["enable_alert_generation"]:
-                    alert_result = await self._alert_agent.generate_alert(alert_request_obj)
-                    
-                    # Check if clarification is needed
-                    if alert_result.clarification and alert_result.clarification.needs_clarification:
+                    for j, sub_alert_request in enumerate(sub_requests):
+                        alert_request_obj = SQLAlertRequest(
+                            sql=sql_query,
+                            query=natural_language_query,
+                            project_id=project_id,
+                            data_description=data_description,
+                            configuration=additional_context,
+                            alert_request=sub_alert_request,
+                            session_id=f"{session_id}_{i}_{j}" if session_id else None,
+                            sample_data=sample_data,
+                        )
+
+                        alert_result = await self._alert_agent.generate_alert(alert_request_obj)
+
+                        # Check if clarification is needed
+                        if alert_result.clarification and alert_result.clarification.needs_clarification:
+                            self._send_status_update(
+                                status_callback,
+                                "clarification_required",
+                                {
+                                    "project_id": project_id,
+                                    "query_index": i,
+                                    "sub_request_index": j,
+                                    "clarification_questions": alert_result.clarification.clarification_questions,
+                                    "ambiguous_elements": alert_result.clarification.ambiguous_elements,
+                                    "suggested_improvements": alert_result.clarification.suggested_improvements,
+                                },
+                            )
+                            # Return clarification response immediately
+                            return {
+                                "status": "clarification_required",
+                                "project_id": project_id,
+                                "query_index": i,
+                                "sub_request_index": j,
+                                "clarification": {
+                                    "questions": alert_result.clarification.clarification_questions,
+                                    "ambiguous_elements": alert_result.clarification.ambiguous_elements,
+                                    "suggested_improvements": alert_result.clarification.suggested_improvements,
+                                },
+                                "alert_results": [],
+                                "sql_analysis": None,
+                                "execution_time": (datetime.now() - start_time).total_seconds(),
+                            }
+
+                        alert_results.append(alert_result)
+                        alert_result_group_keys.append(f"{i}:{j}")
+                        alert_result_requests.append(sub_alert_request)
+                        alert_result_input_by_id[id(alert_result)] = {
+                            "sql": sql_query,
+                            "natural_language_query": natural_language_query,
+                            "alert_request": sub_alert_request,
+                            "project_id": project_id,
+                            "query_index": i,
+                            "sub_request_index": j,
+                            "data_description": data_description,
+                        }
+
+                        # Combine SQL analysis from multiple generated alerts
+                        if combined_sql_analysis is None:
+                            combined_sql_analysis = alert_result.sql_analysis
+                        else:
+                            combined_sql_analysis = self._merge_sql_analyses(
+                                combined_sql_analysis,
+                                alert_result.sql_analysis,
+                            )
+
                         self._send_status_update(
                             status_callback,
-                            "clarification_required",
+                            "sql_analysis_completed",
                             {
                                 "project_id": project_id,
                                 "query_index": i,
-                                "clarification_questions": alert_result.clarification.clarification_questions,
-                                "ambiguous_elements": alert_result.clarification.ambiguous_elements,
-                                "suggested_improvements": alert_result.clarification.suggested_improvements
-                            }
-                        )
-                        # Return clarification response immediately
-                        return {
-                            "status": "clarification_required",
-                            "project_id": project_id,
-                            "query_index": i,
-                            "clarification": {
-                                "questions": alert_result.clarification.clarification_questions,
-                                "ambiguous_elements": alert_result.clarification.ambiguous_elements,
-                                "suggested_improvements": alert_result.clarification.suggested_improvements
+                                "sub_request_index": j,
+                                "confidence_score": alert_result.confidence_score,
+                                "alert_type": alert_result.feed_configuration.conditions[0].condition_type.value
+                                if alert_result.feed_configuration and alert_result.feed_configuration.conditions
+                                else "unknown",
                             },
-                            "alert_results": [],
-                            "sql_analysis": None,
-                            "execution_time": (datetime.now() - start_time).total_seconds()
-                        }
-                    
-                    alert_results.append(alert_result)
-                    
-                    # Combine SQL analysis from multiple queries
-                    if combined_sql_analysis is None:
-                        combined_sql_analysis = alert_result.sql_analysis
-                    else:
-                        # Merge analysis from multiple queries
-                        combined_sql_analysis = self._merge_sql_analyses(
-                            combined_sql_analysis, 
-                            alert_result.sql_analysis
                         )
-                    
-                    self._send_status_update(
-                        status_callback,
-                        "sql_analysis_completed",
-                        {
-                            "project_id": project_id,
-                            "query_index": i,
-                            "confidence_score": alert_result.confidence_score,
-                            "alert_type": alert_result.feed_configuration.conditions[0].condition_type.value if alert_result.feed_configuration and alert_result.feed_configuration.conditions else "unknown"
-                        }
-                    )
                 else:
                     # Skip alert generation if disabled
                     self._send_status_update(
@@ -300,7 +416,23 @@ class AlertOrchestratorPipeline(AgentPipeline):
                 validated_results = await self._validate_alert_results(
                     alert_results, 
                     project_id, 
-                    status_callback
+                    status_callback,
+                    group_keys=alert_result_group_keys if any_split else None,
+                    alert_requests=alert_result_requests if any_split else None,
+                    natural_language_query=natural_language_query,
+                )
+                # If everything was filtered out by confidence, keep the best candidate instead of returning zero alerts.
+                if not validated_results and alert_results:
+                    best = max(alert_results, key=lambda r: r.confidence_score)
+                    validated_results = [best]
+                    self._send_status_update(
+                        status_callback,
+                        "alert_validation_all_filtered_using_best",
+                        {
+                            "project_id": project_id,
+                            "best_confidence_score": best.confidence_score,
+                            "threshold": self._configuration.get("default_confidence_threshold", 0.8),
+                        },
                 )
                 
                 self._send_status_update(
@@ -350,7 +482,10 @@ class AlertOrchestratorPipeline(AgentPipeline):
             final_response = {
                 "post_process": {
                     "success": True,
-                    "alert_results": [self._alert_result_to_dict(result) for result in validated_results],
+                    "alert_results": [
+                        self._alert_result_to_dict(result, alert_result_input_by_id.get(id(result)))
+                        for result in validated_results
+                    ],
                     "combined_feed_configurations": combined_feed_configs,
                     "combined_sql_analysis": combined_sql_analysis.dict() if combined_sql_analysis else None,
                     "orchestration_metadata": {
@@ -397,6 +532,148 @@ class AlertOrchestratorPipeline(AgentPipeline):
             
             raise
 
+    def _split_alert_request_regex(self, alert_request: str) -> List[str]:
+        """Split a single alert_request into multiple sub-requests when it contains OR clauses.
+
+        This is intentionally simple: it preserves the user's wording but isolates each clause
+        so the agent can pick the correct metric + threshold without mixing multiple metrics
+        into one feed configuration.
+        """
+        if not alert_request or not isinstance(alert_request, str):
+            return [alert_request]
+
+        # Normalize spacing but keep original content
+        text = alert_request.strip()
+        if not text:
+            return [alert_request]
+
+        # Detect a common "instruction prefix" like "Alert me when" so we can
+        # ensure each split clause remains a complete, standalone instruction.
+        prefix_including_when: Optional[str] = None
+        m = re.match(r"^(.*?\bwhen\b)\s+", text, flags=re.IGNORECASE)
+        if m:
+            prefix_including_when = m.group(1).strip()
+
+        # Split on standalone "or" (case-insensitive). We do not split on "and" because
+        # AND is often intended as multiple conditions on the same metric.
+        parts = re.split(r"\s+\bor\b\s+", text, flags=re.IGNORECASE)
+        cleaned_parts: List[str] = []
+        for p in parts:
+            if not p:
+                continue
+            s = p.strip().strip(" .;")
+            if not s:
+                continue
+
+            # Remove leading "either" (common pattern: "either X or Y")
+            s = re.sub(r"^\s*either\s+", "", s, flags=re.IGNORECASE).strip()
+
+            # Trim surrounding parentheses, e.g. "(A > 1)" -> "A > 1"
+            while s.startswith("(") and s.endswith(")") and len(s) > 2:
+                s = s[1:-1].strip()
+
+            # If the first clause includes the full instruction but subsequent clauses don't,
+            # make them complete by reusing the prefix (e.g. "Alert me when").
+            if prefix_including_when:
+                s_lower = s.lower()
+                if not s_lower.startswith(prefix_including_when.lower()):
+                    if s_lower.startswith("when "):
+                        # "when X" -> "<prefix before when> when X" is tricky; simplest and safe:
+                        # if prefix is "Alert me when", replace by "Alert me " + "when X"
+                        # by removing trailing "when" from the prefix.
+                        prefix_before_when = re.sub(r"\bwhen\b\s*$", "", prefix_including_when, flags=re.IGNORECASE).strip()
+                        if prefix_before_when:
+                            s = f"{prefix_before_when} {s}"
+                    else:
+                        s = f"{prefix_including_when} {s}"
+
+            cleaned_parts.append(s.strip(" .;"))
+
+        # De-duplicate while preserving order
+        deduped: List[str] = []
+        seen = set()
+        for s in cleaned_parts:
+            key = s.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(s)
+
+        return deduped if deduped else [alert_request]
+
+    async def _split_alert_request(self, alert_request: str, sql_query: str, natural_language_query: str) -> List[str]:
+        """LLM-based splitter for alert_request with regex fallback."""
+        if not alert_request or not isinstance(alert_request, str):
+            return [alert_request]
+
+        text = alert_request.strip()
+        if not text:
+            return [alert_request]
+
+        if not self._configuration.get("enable_llm_alert_request_split", True):
+            return self._split_alert_request_regex(alert_request)
+
+        # If there's no OR, avoid an LLM call and keep the request intact.
+        if re.search(r"\bor\b", text, flags=re.IGNORECASE) is None:
+            return [text]
+
+        max_splits = int(self._configuration.get("max_alert_request_splits", 5) or 5)
+        if max_splits < 1:
+            max_splits = 1
+
+        try:
+            system_msg = SystemMessage(
+                content=(
+                    "You split alert requests into separate sub-requests.\n"
+                    "Return ONLY valid JSON with schema: {\"sub_requests\": [\"...\", \"...\"]}.\n"
+                    "Rules:\n"
+                    "- Split ONLY on OR semantics.\n"
+                    "- Do NOT split on AND.\n"
+                    "- Each sub_request must be a complete instruction, ideally starting with 'Alert me when ...'.\n"
+                    "- Preserve thresholds exactly (numbers/percents); do not invent values.\n"
+                    "- If the request does not contain multiple OR clauses, return a single-item list with the original request.\n"
+                    f"- Return at most {max_splits} sub_requests.\n"
+                )
+            )
+            user_msg = HumanMessage(
+                content=(
+                    f"SQL context (do not copy into output):\n{sql_query}\n\n"
+                    f"Natural language query context:\n{natural_language_query}\n\n"
+                    f"Alert request:\n{text}\n\n"
+                    "Return JSON now."
+                )
+            )
+
+            msg = await self._llm.ainvoke([system_msg, user_msg])
+            content = msg.content if isinstance(msg, AIMessage) else getattr(msg, "content", str(msg))
+
+            parsed = MarkdownJsonOutputParser().parse(content)
+            sub_requests = parsed.get("sub_requests")
+            if isinstance(sub_requests, str):
+                sub_requests = [sub_requests]
+            if not isinstance(sub_requests, list):
+                raise ValueError("LLM did not return `sub_requests` list")
+
+            cleaned: List[str] = []
+            for s in sub_requests:
+                if s is None:
+                    continue
+                st = str(s).strip()
+                if st:
+                    cleaned.append(st)
+
+            if not cleaned:
+                raise ValueError("LLM returned empty sub_requests")
+
+            cleaned = cleaned[:max_splits]
+            if len(cleaned) == 1:
+                return [text]
+            return cleaned
+
+        except Exception as e:
+            logger.warning(f"LLM split failed; falling back to regex split. Error: {e}")
+            return self._split_alert_request_regex(alert_request)
+
     def _merge_sql_analyses(self, analysis1, analysis2):
         """Merge two SQL analysis objects"""
         from app.agents.nodes.writers.alerts_agent import SQLAnalysis
@@ -414,18 +691,116 @@ class AlertOrchestratorPipeline(AgentPipeline):
         self, 
         alert_results: List[SQLAlertResult], 
         project_id: str,
-        status_callback: Optional[Callable]
+        status_callback: Optional[Callable],
+        group_keys: Optional[List[str]] = None,
+        alert_requests: Optional[List[str]] = None,
+        natural_language_query: Optional[str] = None,
     ) -> List[SQLAlertResult]:
         """Validate alert results based on confidence threshold and other criteria"""
         
-        confidence_threshold = self._configuration.get("default_confidence_threshold", 0.8)
-        validated_results = []
+        confidence_threshold = self._configuration.get("default_confidence_threshold", 0.6)
+        validated_results: List[SQLAlertResult] = []
+        enable_llm_validation = bool(self._configuration.get("enable_llm_validation", False))
+        only_when_below = bool(self._configuration.get("llm_validation_only_when_below_threshold", True))
+        keep_threshold = float(self._configuration.get("llm_validation_keep_threshold", 0.6) or 0.6)
+
+        async def llm_keep(i: int, r: SQLAlertResult) -> bool:
+            if not enable_llm_validation:
+                return False
+            if only_when_below and r.confidence_score >= confidence_threshold:
+                return False
+
+            req = None
+            if alert_requests and i < len(alert_requests):
+                req = alert_requests[i]
+
+            verdict = await self._llm_validate_alert_result(
+                result=r,
+                alert_request=req,
+                natural_language_query=natural_language_query,
+            )
+
+            score = float(verdict.get("score", 0.0) or 0.0)
+            keep = bool(verdict.get("keep", False)) or score >= keep_threshold
+            self._send_status_update(
+                status_callback,
+                "llm_validation_result",
+                {
+                    "project_id": project_id,
+                    "alert_index": i,
+                    "keep": keep,
+                    "score": score,
+                    "reasons": verdict.get("reasons", []),
+                },
+            )
+            return keep
+
+        # If we have group_keys (used for multi-clause split requests), ensure we keep at least one result per group.
+        if group_keys and len(group_keys) == len(alert_results):
+            groups: Dict[str, List[tuple[int, SQLAlertResult]]] = {}
+            for idx, (k, r) in enumerate(zip(group_keys, alert_results)):
+                groups.setdefault(k, []).append((idx, r))
+
+            kept_indices: set[int] = set()
+            for k, items in groups.items():
+                above = [(idx, r) for idx, r in items if r.confidence_score >= confidence_threshold]
+                if above:
+                    for idx, _r in above:
+                        kept_indices.add(idx)
+                else:
+                    # Try LLM validation first; if any pass, keep the best passing.
+                    passing: List[tuple[int, SQLAlertResult]] = []
+                    if enable_llm_validation:
+                        for idx, r in items:
+                            if await llm_keep(idx, r):
+                                passing.append((idx, r))
+
+                    if passing:
+                        idx_best, best = max(passing, key=lambda t: t[1].confidence_score)
+                        kept_indices.add(idx_best)
+                    else:
+                        idx_best, best = max(items, key=lambda t: t[1].confidence_score)
+                        kept_indices.add(idx_best)
+                    self._send_status_update(
+                        status_callback,
+                        "alert_group_kept_best_low_confidence",
+                        {
+                            "project_id": project_id,
+                            "group_key": k,
+                            "best_confidence_score": best.confidence_score,
+                            "threshold": confidence_threshold,
+                        },
+                    )
+
+            for idx in sorted(kept_indices):
+                validated_results.append(alert_results[idx])
+
+            # Emit low-confidence status updates for any kept result under threshold (visibility, not filtering)
+            for idx in sorted(kept_indices):
+                r = alert_results[idx]
+                if r.confidence_score < confidence_threshold:
+                    self._send_status_update(
+                        status_callback,
+                        "alert_kept_low_confidence_due_to_group",
+                        {
+                            "project_id": project_id,
+                            "alert_index": idx,
+                            "confidence_score": r.confidence_score,
+                            "threshold": confidence_threshold,
+                        },
+                    )
+
+            return validated_results
         
         for i, result in enumerate(alert_results):
             # Check confidence threshold
             if result.confidence_score >= confidence_threshold:
                 validated_results.append(result)
             else:
+                # Orchestrator-level LLM validation can keep low-confidence results
+                if await llm_keep(i, result):
+                    validated_results.append(result)
+                    continue
                 self._send_status_update(
                     status_callback,
                     "alert_filtered_low_confidence",
@@ -438,6 +813,75 @@ class AlertOrchestratorPipeline(AgentPipeline):
                 )
         
         return validated_results
+
+    async def _llm_validate_alert_result(
+        self,
+        result: SQLAlertResult,
+        alert_request: Optional[str],
+        natural_language_query: Optional[str],
+    ) -> Dict[str, Any]:
+        """Orchestrator-level LLM validation hook.
+
+        Intentionally extensible: you can feed examples/history later via config.
+        """
+        if not result.feed_configuration or not result.sql_analysis:
+            return {"keep": False, "score": 0.0, "reasons": ["Missing feed_configuration or sql_analysis"]}
+
+        examples = self._configuration.get("llm_validation_examples") or []
+        history = self._configuration.get("llm_validation_history") or []
+
+        system_msg = SystemMessage(
+            content=(
+                "You validate generated alert configurations.\n"
+                "Return ONLY valid JSON with schema:\n"
+                "{\n"
+                '  \"keep\": true|false,\n'
+                '  \"score\": 0.0-1.0,\n'
+                '  \"reasons\": [\"...\"],\n'
+                '  \"suggested_changes\": [\"...\"]\n'
+                "}\n"
+                "Be strict about:\n"
+                "- Threshold conditions must have numeric values\n"
+                "- Metric/measure should be grounded in SQL analysis metrics/columns\n"
+                "- Schedule type should be one of daily/weekly/monthly/quarterly/yearly/custom/never\n"
+            )
+        )
+
+        payload = {
+            "natural_language_query": natural_language_query,
+            "alert_request": alert_request,
+            "sql_analysis": result.sql_analysis.dict(),
+            "feed_configuration": result.feed_configuration.dict(),
+            "critic_confidence_score": result.confidence_score,
+            "critic_notes": result.critique_notes,
+            "critic_suggestions": result.suggestions,
+            "examples": examples,
+            "history": history,
+        }
+
+        user_msg = HumanMessage(content=f"Validate:\n{payload}\n\nReturn JSON now.")
+        msg = await self._llm.ainvoke([system_msg, user_msg])
+        content = msg.content if isinstance(msg, AIMessage) else getattr(msg, "content", str(msg))
+        parsed = MarkdownJsonOutputParser().parse(content)
+
+        keep = bool(parsed.get("keep", False))
+        try:
+            score = float(parsed.get("score", 0.0) or 0.0)
+        except Exception:
+            score = 0.0
+        reasons = parsed.get("reasons", [])
+        if isinstance(reasons, str):
+            reasons = [reasons]
+        suggested_changes = parsed.get("suggested_changes", [])
+        if isinstance(suggested_changes, str):
+            suggested_changes = [suggested_changes]
+
+        return {
+            "keep": keep,
+            "score": max(0.0, min(1.0, score)),
+            "reasons": reasons if isinstance(reasons, list) else [],
+            "suggested_changes": suggested_changes if isinstance(suggested_changes, list) else [],
+        }
 
     def _generate_combined_feed_configurations(
         self, 
@@ -476,15 +920,18 @@ class AlertOrchestratorPipeline(AgentPipeline):
         
         return combined_configs
 
-    def _alert_result_to_dict(self, result: SQLAlertResult) -> Dict[str, Any]:
+    def _alert_result_to_dict(self, result: SQLAlertResult, input_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Convert SQLAlertResult to dictionary format"""
-        return {
-            "feed_configuration": result.feed_configuration.dict(),
-            "sql_analysis": result.sql_analysis.dict(),
+        out: Dict[str, Any] = {
+            "feed_configuration": result.feed_configuration.dict() if result.feed_configuration else None,
+            "sql_analysis": result.sql_analysis.dict() if result.sql_analysis else None,
             "confidence_score": result.confidence_score,
             "critique_notes": result.critique_notes,
-            "suggestions": result.suggestions
+            "suggestions": result.suggestions,
         }
+        if input_context:
+            out["input"] = input_context
+        return out
 
     def _send_status_update(
         self,

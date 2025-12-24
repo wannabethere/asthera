@@ -17,6 +17,7 @@ from app.agents.retrieval.retrieval import TableRetrieval
 from app.agents.retrieval.preprocess_sql_data import PreprocessSqlData
 from app.agents.nodes.sql.utils.sql_prompts import AskHistory
 from app.agents.retrieval.sql_functions import SqlFunctions
+from app.agents.retrieval.dummy_knowledge_handler import DummyKnowledgeHandler
 from app.core.dependencies import get_doc_store_provider
 from app.utils.cache import InMemoryCache
 
@@ -121,6 +122,9 @@ class RetrievalHelper:
                 self.sql_functions_retriever = None
 
         self.cache = InMemoryCache()
+        
+        # Initialize dummy knowledge handler
+        self.knowledge_handler = DummyKnowledgeHandler()
 
     async def get_database_schemas(
         self, 
@@ -919,6 +923,75 @@ class RetrievalHelper:
                 "project_id": project_id or "all",
                 "similarity_threshold": similarity_threshold,
                 "max_results": max_results
+            }
+            await self.cache.set(cache_key, result, ttl=300)
+            return result
+
+    async def get_knowledge_documents(
+        self,
+        query: str,
+        project_id: Optional[str] = None,
+        top_k: int = 5,
+        framework: Optional[str] = None,
+        category: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Retrieve knowledge documents for feature engineering context.
+        
+        Args:
+            query: Search query to match against knowledge documents
+            project_id: Optional project ID (kept for API consistency)
+            top_k: Number of documents to return
+            framework: Optional framework filter (e.g., "SOC2", "PCI-DSS", "HIPAA")
+            category: Optional category filter (e.g., "compliance", "exploitability", "sla_compliance")
+            
+        Returns:
+            Dictionary containing knowledge documents and metadata
+        """
+        cache_key = hashlib.sha256(json.dumps({
+            'method': 'get_knowledge_documents',
+            'query': query,
+            'project_id': project_id,
+            'top_k': top_k,
+            'framework': framework,
+            'category': category
+        }, sort_keys=True, default=str).encode()).hexdigest()
+        
+        cached = await self.cache.get(cache_key)
+        if cached is not None:
+            return cached
+        
+        try:
+            # Use dummy knowledge handler to retrieve documents
+            documents = self.knowledge_handler.get_knowledge_documents(
+                query=query,
+                project_id=project_id,
+                top_k=top_k,
+                framework=framework,
+                category=category
+            )
+            
+            result = {
+                "documents": documents,
+                "total_documents": len(documents),
+                "query": query,
+                "project_id": project_id,
+                "framework": framework,
+                "category": category
+            }
+            
+            if documents:
+                await self.cache.set(cache_key, result, ttl=300)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error retrieving knowledge documents: {str(e)}")
+            result = {
+                "error": str(e),
+                "documents": [],
+                "total_documents": 0,
+                "query": query,
+                "project_id": project_id
             }
             await self.cache.set(cache_key, result, ttl=300)
             return result
