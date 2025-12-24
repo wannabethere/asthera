@@ -3971,47 +3971,54 @@ def create_feature_engineering_workflow(
     
     # Add edges
     workflow.set_entry_point("query_understanding")
+    
+    # Define all possible destinations for routing (including STEP 3 nodes for resume scenarios)
+    # This allows initial nodes to route to any destination when resuming
+    all_destinations = {
+        "control_identification": "control_identification",
+        "knowledge_retrieval": "knowledge_retrieval",
+        "schema_analysis": "schema_analysis",
+        "question_generation": "question_generation",
+        "feature_recommendation": "feature_recommendation",
+        "feature_calculation_planning": "feature_calculation_planning",
+        "create_reasoning_plan": "create_reasoning_plan",
+        "feature_dependency": "feature_dependency",
+        "relevancy_scoring": "relevancy_scoring",
+        "review_step": "review_step",
+        "impact_feature_generation": "impact_feature_generation",
+        "likelihood_feature_generation": "likelihood_feature_generation",
+        "risk_feature_generation": "risk_feature_generation",
+        END: END
+    }
+    
+    # Add write_output_file only if file_writer is enabled
+    if file_writer:
+        all_destinations["write_output_file"] = "write_output_file"
+    
     workflow.add_conditional_edges(
         "query_understanding",
         route_agent,
-        {
-            "control_identification": "control_identification",
-            "knowledge_retrieval": "knowledge_retrieval",
-            END: END
-        }
+        all_destinations
     )
     workflow.add_conditional_edges(
         "control_identification",
         route_agent,
-        {
-            "schema_analysis": "schema_analysis",
-            "knowledge_retrieval": "knowledge_retrieval",
-            END: END
-        }
+        all_destinations
     )
     workflow.add_conditional_edges(
         "knowledge_retrieval",
         route_agent,
-        {
-            "schema_analysis": "schema_analysis",
-            END: END
-        }
+        all_destinations
     )
     workflow.add_conditional_edges(
         "schema_analysis",
         route_agent,
-        {
-            "question_generation": "question_generation",
-            END: END
-        }
+        all_destinations
     )
     workflow.add_conditional_edges(
         "question_generation",
         route_agent,
-        {
-            "feature_recommendation": "feature_recommendation",
-            END: END
-        }
+        all_destinations
     )
     workflow.add_conditional_edges(
         "feature_recommendation",
@@ -4040,27 +4047,17 @@ def create_feature_engineering_workflow(
     workflow.add_conditional_edges(
         "impact_feature_generation",
         route_agent,
-        {
-            "likelihood_feature_generation": "likelihood_feature_generation",
-            END: END  # Stop after impact features (separate call)
-        }
+        all_destinations
     )
     workflow.add_conditional_edges(
         "likelihood_feature_generation",
         route_agent,
-        {
-            "risk_feature_generation": "risk_feature_generation",
-            END: END  # Stop after likelihood features (separate call)
-        }
+        all_destinations
     )
     workflow.add_conditional_edges(
         "risk_feature_generation",
         route_agent,
-        {
-            "create_reasoning_plan": "create_reasoning_plan",
-            "feature_dependency": "feature_dependency",
-            END: END  # Stop after risk features (separate call)
-        }
+        all_destinations
     )
     workflow.add_conditional_edges(
         "create_reasoning_plan",
