@@ -63,6 +63,7 @@ class WorkflowReportComponent(BaseModel):
     trigger_count: Optional[int] = None
     configuration: Optional[Dict[str, Any]] = Field(default_factory=dict)
     is_configured: Optional[bool] = False
+    project_id: Optional[str] = None  # Optional project_id for per-component project support
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
 
@@ -242,6 +243,14 @@ async def generate_report_from_workflow(
         queries_dict = [query.dict() for query in request.report_queries]
         context_dict = request.report_context.dict() if request.report_context else {}
         
+        # If workflow_data contains thread_components, ensure each has project_id
+        if request.workflow_data and isinstance(request.workflow_data, dict):
+            thread_components = request.workflow_data.get("thread_components", [])
+            if thread_components:
+                for comp in thread_components:
+                    if isinstance(comp, dict) and comp.get("project_id") is None:
+                        comp["project_id"] = request.project_id
+        
         # Generate report from workflow
         result = await service.generate_report_from_workflow(
             workflow_data=request.workflow_data,
@@ -286,12 +295,26 @@ async def render_report_from_workflow(
         service = get_report_service()
         
         # Convert request to workflow data format
+        # For each thread component, use its project_id if available, otherwise use global project_id
+        thread_components_dict = []
+        for comp in request.thread_components:
+            comp_dict = comp.dict()
+            # Use component's project_id if available, otherwise check metadata, then fall back to global project_id
+            if comp_dict.get("project_id") is None:
+                # Check metadata field for project_id (backward compatibility)
+                metadata = comp_dict.get("thread_metadata") or comp_dict.get("metadata") or {}
+                if isinstance(metadata, dict) and metadata.get("project_id"):
+                    comp_dict["project_id"] = metadata.get("project_id")
+                else:
+                    comp_dict["project_id"] = request.project_id
+            thread_components_dict.append(comp_dict)
+        
         workflow_data = {
             "workflow_id": str(request.workflow_id),
             "state": request.state,
             "current_step": request.current_step,
             "workflow_metadata": request.workflow_metadata.dict() if request.workflow_metadata else {},
-            "thread_components": [comp.dict() for comp in request.thread_components],
+            "thread_components": thread_components_dict,
             "error_message": request.error_message,
             "created_at": request.created_at,
             "updated_at": request.updated_at,

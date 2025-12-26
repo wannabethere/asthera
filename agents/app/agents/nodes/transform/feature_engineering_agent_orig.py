@@ -66,30 +66,6 @@ from app.agents.nodes.transform.domain_config import (
     CYBERSECURITY_DOMAIN_CONFIG
 )
 
-# Import shared types, models, and utilities
-from app.agents.nodes.transform.feature_engineering_types import (
-    FeatureEngineeringState,
-    TimeConstraints,
-    AnalyticalIntent,
-    SchemaMapping,
-    FeatureRecommendation,
-    ReasoningPlan,
-    ClarifyingQuestion,
-    FeatureDependency,
-    FeatureDependencyGraph,
-    RelevanceScore,
-    RelevancyScoringResult,
-    QueryBreakdown,
-    QueryBreakdownStep,
-    track_llm_call
-)
-
-# Import deep research capabilities
-from app.agents.nodes.transform.deep_research import DeepResearchReviewAgent
-
-# Import risk feature engineering agent
-from app.agents.nodes.transform.risk_feature_engineering_agent import RiskFeatureEngineeringAgent
-
 # Import control universe model for SOC2 control identification
 try:
     from control_universe_model import (
@@ -109,253 +85,304 @@ if not CONTROL_UNIVERSE_AVAILABLE:
 
 
 # ============================================================================
-# AGENT DEFINITIONS
+# METRICS TRACKING UTILITIES
 # ============================================================================
 
-class QueryBreakdownAgent:
+def estimate_tokens(text: str) -> int:
+    """Estimate token count for text (rough approximation: ~4 chars per token)"""
+    if not text:
+        return 0
+    return len(text) // 4
+
+
+def extract_token_usage(response: Any) -> Dict[str, int]:
+    """Extract token usage from LLM response"""
+    usage = {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+    }
+    
+    # Try to get from response_metadata (OpenAI models)
+    if hasattr(response, 'response_metadata'):
+        metadata = response.response_metadata
+        if metadata:
+            usage_info = metadata.get('token_usage', {})
+            usage["prompt_tokens"] = usage_info.get('prompt_tokens', 0)
+            usage["completion_tokens"] = usage_info.get('completion_tokens', 0)
+            usage["total_tokens"] = usage_info.get('total_tokens', 0)
+    
+    # If no metadata, try to estimate from content
+    if usage["total_tokens"] == 0 and hasattr(response, 'content'):
+        usage["completion_tokens"] = estimate_tokens(response.content)
+        usage["total_tokens"] = usage["completion_tokens"]
+    
+    return usage
+
+
+async def track_llm_call(
+    agent_name: str,
+    llm: BaseChatModel,
+    messages: List[BaseMessage],
+    state: Dict[str, Any],
+    step_name: Optional[str] = None
+) -> Any:
     """
-    First step agent that breaks down the user query into multiple analytical steps.
+    Track LLM call with timing and token usage.
     
-    This agent uses the domain configuration to understand the domain context and
-    breaks down complex compliance report requests into manageable steps that can
-    track risk, impact, likelihood trends, and general metrics.
+    Args:
+        agent_name: Name of the agent making the call
+        llm: LLM instance
+        messages: Messages to send to LLM
+        state: Current state (will be updated with metrics)
+        step_name: Optional step name (defaults to agent_name)
+    
+    Returns:
+        LLM response
     """
+    step_name = step_name or agent_name
+    start_time = time.perf_counter()
     
-    def __init__(self, llm: BaseChatModel, domain_config: DomainConfiguration):
-        # Use with_structured_output if available
-        if hasattr(llm, 'with_structured_output'):
-            self.llm = llm.with_structured_output(QueryBreakdown)
-        else:
-            self.llm = llm
-            logger.warning("LLM does not support with_structured_output, using regular LLM")
-        self.domain_config = domain_config
+    # Estimate prompt tokens
+    prompt_text = "\n".join([msg.content if hasattr(msg, 'content') else str(msg) for msg in messages])
+    estimated_prompt_tokens = estimate_tokens(prompt_text)
     
-    def _get_domain_config_from_state(self, state: FeatureEngineeringState) -> DomainConfiguration:
-        """Get domain config from state or use instance config"""
-        domain_config_dict = state.get("domain_config")
-        if domain_config_dict:
-            return DomainConfiguration(**domain_config_dict)
-        return self.domain_config
-    
-    async def __call__(self, state: FeatureEngineeringState) -> FeatureEngineeringState:
-        """
-        Break down user query into multiple analytical steps using domain context.
+    try:
+        # Make LLM call
+        response = await llm.ainvoke(messages)
         
-        The breakdown identifies:
-        - Steps for risk trend tracking
-        - Steps for impact trend tracking
-        - Steps for likelihood trend tracking
-        - Steps for general metrics
-        - Compliance framework requirements
-        - Entity types and focus areas
-        """
-        # Check if we're resuming to a later step
-        next_agent = state.get("next_agent", "")
-        if next_agent and next_agent not in ["breakdown_analysis", "query_understanding", "end", ""]:
-            logger.info(f"Skipping QueryBreakdownAgent - resuming to {next_agent}")
-            return state
+        # Calculate response time
+        response_time = time.perf_counter() - start_time
         
-        # Get domain config from state or use instance config
-        domain_config = self._get_domain_config_from_state(state)
+        # Extract token usage
+        token_usage = extract_token_usage(response)
         
-        user_query = state.get("user_query", "")
-        if not user_query:
-            logger.warning("No user query provided, skipping query breakdown")
-            state["next_agent"] = "query_understanding"
-            return state
+        # If we estimated prompt tokens but got actual ones, use actual
+        if token_usage["prompt_tokens"] == 0:
+            token_usage["prompt_tokens"] = estimated_prompt_tokens
         
-        # Check if breakdown already exists
-        if state.get("query_breakdown"):
-            logger.info("Query breakdown already exists, skipping")
-            state["next_agent"] = "query_understanding"
-            return state
+        # Update total tokens if we only have completion tokens
+        if token_usage["total_tokens"] == 0:
+            token_usage["total_tokens"] = token_usage["prompt_tokens"] + token_usage["completion_tokens"]
         
-        logger.info(f"Breaking down query for domain: {domain_config.domain_name}")
+        # Store metrics in state
+        if "metrics" not in state or state["metrics"] is None:
+            state["metrics"] = {
+                "steps": [],
+                "total_prompt_tokens": 0,
+                "total_completion_tokens": 0,
+                "total_tokens": 0,
+                "total_response_time": 0.0,
+                "step_count": 0
+            }
         
-        # Build prompt with domain context
-        domain_context = self._format_domain_context(domain_config)
+        step_metrics = {
+            "step_name": step_name,
+            "agent_name": agent_name,
+            "response_time_seconds": round(response_time, 3),
+            "prompt_tokens": token_usage["prompt_tokens"],
+            "completion_tokens": token_usage["completion_tokens"],
+            "total_tokens": token_usage["total_tokens"],
+            "timestamp": datetime.now().isoformat()
+        }
         
-        prompt = f"""You are an expert compliance analyst specializing in {domain_config.domain_name} domain.
-
-Your task is to:
-1. Identify the overall analytical intent and goals
-2. Identify applicable compliance frameworks
-3. Break down the user's compliance report request into multiple analytical steps
-
-DOMAIN CONTEXT:
-{domain_context}
-
-USER QUERY:
-{user_query}
-
-FIRST, identify:
-1. **Overall Goal**: What is the overarching analytical goal of this query? (e.g., "Track vulnerability risk trends for SOC2 compliance", "Monitor training completion for GDPR compliance")
-2. **Analytical Intent**: What does the user want to achieve or understand? (e.g., "Understand risk posture", "Monitor compliance status", "Track remediation effectiveness")
-3. **Applicable Compliance Frameworks**: Which compliance frameworks are relevant? (e.g., {', '.join(domain_config.compliance_frameworks[:5]) if domain_config.compliance_frameworks else 'SOC2, GDPR, HIPAA, PCI-DSS'})
-4. **Primary Goals**: List 2-5 primary goals that need to be accomplished (e.g., ["Track risk trends", "Monitor SLA compliance", "Assess impact of vulnerabilities"])
-
-THEN, break down this query into multiple analytical steps. Each step should:
-1. Focus on a specific aspect of the compliance report (risk trends, impact trends, likelihood trends, general metrics, compliance tracking)
-2. Identify the relevant compliance frameworks for that step
-3. Specify entity types involved (e.g., {', '.join(domain_config.entity_types[:5]) if domain_config.entity_types else 'Asset, Vulnerability, Employee'})
-4. Identify required metric types (count, rate, trend, risk_score, etc.)
-5. Determine if time series/trending analysis is needed
-
-STEP TYPES:
-- 'risk_trend': Steps that track risk scores over time or across dimensions
-- 'impact_trend': Steps that track impact/consequence trends
-- 'likelihood_trend': Steps that track likelihood/probability trends
-- 'general_metrics': Steps for standard operational metrics (counts, rates, percentages)
-- 'compliance_tracking': Steps focused on compliance framework requirements
-- 'other': Other analytical steps
-
-For each step, provide:
-- Step number and name
-- Clear description of what this step accomplishes
-- Step type (from the list above)
-- Focus areas (specific entities, severity levels, etc.)
-- Required metrics (count, rate, trend, risk_score, etc.)
-- Relevant compliance frameworks
-- Entity types involved
-
-Break down the query into 3-8 steps that together cover all aspects of the user's request.
-"""
+        state["metrics"]["steps"].append(step_metrics)
+        state["metrics"]["total_prompt_tokens"] += token_usage["prompt_tokens"]
+        state["metrics"]["total_completion_tokens"] += token_usage["completion_tokens"]
+        state["metrics"]["total_tokens"] += token_usage["total_tokens"]
+        state["metrics"]["total_response_time"] += response_time
+        state["metrics"]["step_count"] += 1
         
-        messages = [
-            SystemMessage(content="You are an expert compliance analyst who breaks down complex compliance report requests into actionable analytical steps."),
-            HumanMessage(content=prompt)
-        ]
-        
-        try:
-            # Track LLM call
-            response = await track_llm_call(
-                agent_name="query_breakdown",
-                llm=self.llm,
-                messages=messages,
-                state=state,
-                step_name="query_breakdown"
-            )
-            
-            # Parse response
-            if hasattr(self.llm, 'with_structured_output'):
-                # Structured output already parsed
-                breakdown = response
-            else:
-                # Parse JSON from response
-                content = response.content if hasattr(response, 'content') else str(response)
-                breakdown = self._parse_breakdown(content, user_query, domain_config.domain_name)
-            
-            # Store breakdown in state
-            state["query_breakdown"] = breakdown.model_dump() if hasattr(breakdown, 'model_dump') else breakdown.dict() if hasattr(breakdown, 'dict') else breakdown
-            
-            logger.info(f"Query broken down into {len(breakdown.breakdown_steps)} steps")
-            
-            # Route to next agent
-            state["next_agent"] = "query_understanding"
-            
-            return state
-            
-        except Exception as e:
-            logger.error(f"Error in QueryBreakdownAgent: {e}")
-            import traceback
-            traceback.print_exc()
-            # Continue without breakdown
-            state["next_agent"] = "query_understanding"
-            return state
-    
-    def _format_domain_context(self, domain_config: DomainConfiguration) -> str:
-        """Format domain configuration as context for the LLM"""
-        context_parts = [
-            f"Domain: {domain_config.domain_name}",
-            f"Description: {domain_config.domain_description}",
-        ]
-        
-        if domain_config.entity_types:
-            context_parts.append(f"Entity Types: {', '.join(domain_config.entity_types)}")
-        
-        if domain_config.severity_levels:
-            context_parts.append(f"Severity Levels: {', '.join(domain_config.severity_levels)}")
-        
-        if domain_config.compliance_frameworks:
-            context_parts.append(f"Compliance Frameworks: {', '.join(domain_config.compliance_frameworks)}")
-        
-        if domain_config.aggregation_levels:
-            context_parts.append(f"Aggregation Levels: {', '.join(domain_config.aggregation_levels)}")
-        
-        if domain_config.default_context:
-            context_parts.append(f"Default Context: {json.dumps(domain_config.default_context, indent=2)}")
-        
-        return "\n".join(context_parts)
-    
-    def _parse_breakdown(self, content: str, user_query: str, domain: str) -> QueryBreakdown:
-        """Parse breakdown from LLM response text"""
-        try:
-            # Try to extract JSON
-            json_match = re.search(r'\{[\s\S]*\}', content)
-            if json_match:
-                data = json.loads(json_match.group(0))
-                
-                # Extract intent, goals, and compliance frameworks
-                overall_goal = data.get('overall_goal', '')
-                analytical_intent = data.get('analytical_intent', '')
-                applicable_compliance_frameworks = data.get('applicable_compliance_frameworks', [])
-                primary_goals = data.get('primary_goals', [])
-                
-                # If not in top level, try to extract from breakdown_steps
-                if not overall_goal and not analytical_intent:
-                    # Try to infer from first step or content
-                    steps = data.get('breakdown_steps', [])
-                    if steps:
-                        first_step = steps[0] if isinstance(steps[0], dict) else steps[0].dict() if hasattr(steps[0], 'dict') else {}
-                        overall_goal = first_step.get('description', user_query[:200])
-                        analytical_intent = f"Analyze {first_step.get('step_name', 'compliance metrics')}"
-                
-                # Extract compliance frameworks from steps if not at top level
-                if not applicable_compliance_frameworks:
-                    steps = data.get('breakdown_steps', [])
-                    frameworks_set = set()
-                    for step in steps:
-                        step_dict = step if isinstance(step, dict) else step.dict() if hasattr(step, 'dict') else {}
-                        frameworks_set.update(step_dict.get('compliance_frameworks', []))
-                    applicable_compliance_frameworks = list(frameworks_set)
-                
-                # Create QueryBreakdown with all fields
-                return QueryBreakdown(
-                    original_query=user_query,
-                    domain=domain,
-                    overall_goal=overall_goal or user_query[:200],
-                    analytical_intent=analytical_intent or f"Analyze compliance metrics for {domain}",
-                    applicable_compliance_frameworks=applicable_compliance_frameworks,
-                    primary_goals=primary_goals or [overall_goal] if overall_goal else [],
-                    breakdown_steps=data.get('breakdown_steps', []),
-                    time_series_requirements=data.get('time_series_requirements', False)
-                )
-        except Exception as e:
-            logger.warning(f"Error parsing breakdown: {e}")
-        
-        # Fallback: create a simple breakdown
-        return QueryBreakdown(
-            original_query=user_query,
-            domain=domain,
-            overall_goal=user_query[:200],
-            analytical_intent=f"Analyze compliance metrics for {domain}",
-            applicable_compliance_frameworks=[],
-            primary_goals=[user_query[:100]],
-            breakdown_steps=[
-                QueryBreakdownStep(
-                    step_number=1,
-                    step_name="General Analysis",
-                    description=user_query[:200],
-                    step_type="general_metrics",
-                    focus_areas=[],
-                    required_metrics=["count", "rate"],
-                    compliance_frameworks=[],
-                    entity_types=[]
-                )
-            ],
-            time_series_requirements=False
+        logger.info(
+            f"[{step_name}] Response time: {response_time:.3f}s | "
+            f"Tokens: {token_usage['total_tokens']} (prompt: {token_usage['prompt_tokens']}, "
+            f"completion: {token_usage['completion_tokens']})"
         )
+        
+        return response
+        
+    except Exception as e:
+        # Track error metrics
+        response_time = time.perf_counter() - start_time
+        
+        if "metrics" not in state or state["metrics"] is None:
+            state["metrics"] = {
+                "steps": [],
+                "total_prompt_tokens": 0,
+                "total_completion_tokens": 0,
+                "total_tokens": 0,
+                "total_response_time": 0.0,
+                "step_count": 0,
+                "errors": []
+            }
+        
+        error_metrics = {
+            "step_name": step_name,
+            "agent_name": agent_name,
+            "response_time_seconds": round(response_time, 3),
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        state["metrics"]["steps"].append(error_metrics)
+        if "errors" not in state["metrics"]:
+            state["metrics"]["errors"] = []
+        state["metrics"]["errors"].append({
+            "step": step_name,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        })
+        
+        logger.error(f"[{step_name}] Error after {response_time:.3f}s: {e}")
+        raise
 
+
+# ============================================================================
+# STATE DEFINITION
+# ============================================================================
+
+class FeatureEngineeringState(TypedDict, total=False):
+    """State for the feature engineering workflow"""
+    messages: Annotated[Sequence[BaseMessage], operator.add]
+    user_query: str
+    analytical_intent: Dict[str, Any]
+    relevant_schemas: List[str]
+    available_features: List[Dict[str, Any]]
+    clarifying_questions: List[str]
+    reasoning_plan: Dict[str, Any]
+    recommended_features: List[Dict[str, Any]]
+    feature_dependencies: Dict[str, Any]  # Feature dependency chains and calculation order
+    relevance_scores: Dict[str, Any]  # Relevance scores for features and overall output
+    feature_calculation_plan: Dict[str, Any]  # Plan for calculating features based on knowledge, not schema lookup
+    impact_features: List[Dict[str, Any]]  # Impact features as natural language questions
+    likelihood_features: List[Dict[str, Any]]  # Likelihood features as natural language questions
+    risk_features: List[Dict[str, Any]]  # Risk features as natural language questions
+    next_agent: str
+    project_id: str
+    histories: Optional[List[Any]]
+    schema_registry: Dict[str, Any]
+    knowledge_documents: List[Dict[str, Any]]
+    domain_config: Dict[str, Any]
+    validation_expectations: Optional[List[Dict[str, Any]]]  # External expectations/examples for validation
+    refining_instructions: Optional[str]  # Instructions for knowledge refining agent
+    refining_examples: Optional[List[Dict[str, Any]]]  # Examples for knowledge refining agent
+    feature_generation_instructions: Optional[str]  # Instructions for feature generation agent
+    feature_generation_examples: Optional[List[Dict[str, Any]]]  # Examples for feature generation agent
+    identified_controls: Optional[List[Dict[str, Any]]]  # Compliance controls identified from data model
+    control_universe: Optional[Dict[str, Any]]  # Control universe structure
+    deep_research_review: Optional[Dict[str, Any]]  # Deep research review results
+    metrics: Optional[Dict[str, Any]]  # Token usage and response time metrics for each step
+
+
+# ============================================================================
+# PYDANTIC MODELS FOR STRUCTURED OUTPUTS
+# ============================================================================
+
+class TimeConstraints(BaseModel):
+    """Time constraint requirements"""
+    sla_days: Optional[int] = Field(default=None, description="SLA in days")
+    time_window: Optional[str] = Field(default=None, description="Time window (e.g., '30 days', '1 year')")
+    deadline: Optional[str] = Field(default=None, description="Specific deadline if mentioned")
+    urgency: Optional[str] = Field(default=None, description="Urgency level (e.g., 'immediate', 'high', 'medium')")
+
+
+class AnalyticalIntent(BaseModel):
+    """Structured representation of user's analytical intent"""
+    primary_goal: str = Field(description="Main analytical objective")
+    compliance_framework: str = Field(default="", description="Compliance framework if mentioned (domain-specific)")
+    severity_levels: List[str] = Field(default_factory=list, description="Severity/priority levels of interest (domain-specific)")
+    time_constraints: Optional[TimeConstraints] = Field(default=None, description="Time constraint requirements (domain-specific)")
+    metrics_required: List[str] = Field(default_factory=list, description="Specific metrics needed")
+    aggregation_level: str = Field(default="", description="Aggregation level (domain-specific entity types)")
+    time_series_requirements: bool = Field(default=False, description="Whether time-series features needed")
+
+
+class SchemaMapping(BaseModel):
+    """Mapping between user requirements and available schemas"""
+    schema_name: str
+    relevance_score: float
+    required_fields: List[str]
+    reasoning: str
+
+
+class FeatureRecommendation(BaseModel):
+    """Recommended feature with metadata"""
+    feature_name: str
+    feature_type: str  # metric, count, ratio, time_series, derived
+    calculation_logic: str
+    natural_language_question: str = Field(description="A natural language question that represents what this feature calculates. For complex risk calculations, this should be a clear question that another agent can interpret and execute.")
+    required_schemas: List[str]
+    required_fields: List[str]
+    aggregation_method: str
+    filters_applied: List[str]
+    business_context: str
+    soc2_compliance_reasoning: str = Field(default="", description="Explanation of how this feature supports SOC2 compliance requirements")
+    transformation_layer: str = Field(default="gold", description="Data mart transformation layer: 'bronze' (raw), 'silver' (cleaned/normalized), 'gold' (business aggregations/metrics)")
+    time_series_type: Optional[str] = Field(default=None, description="Time series classification: 'snapshot' (point-in-time), 'cumulative' (running total), 'rolling_window' (moving average), 'period_over_period' (YoY, MoM), 'trend' (slope/rate), None (not time-series)")
+
+
+class ReasoningPlan(BaseModel):
+    """Step-by-step analytical reasoning plan"""
+    plan_id: str
+    objective: str
+    steps: List[Dict[str, Any]]
+    data_flow: List[str]
+    feature_dependencies: Dict[str, List[str]]
+    quality_checks: List[str]
+
+
+class ClarifyingQuestion(BaseModel):
+    """Questions to refine feature requirements"""
+    question: str
+    question_type: str  # sla, scope, metric, filter, aggregation
+    context: str
+    default_assumption: str
+
+
+class FeatureDependency(BaseModel):
+    """Feature dependency information"""
+    feature_name: str
+    depends_on: List[str]  # List of feature names this feature depends on
+    calculation_order: int  # Order in which this feature should be calculated
+    natural_language_chain: List[str]  # Chain of natural language questions/operations
+    data_dependencies: List[str]  # Required schemas/tables
+    is_base_feature: bool  # True if this is a base feature (no dependencies)
+
+
+class FeatureDependencyGraph(BaseModel):
+    """Complete dependency graph for all features"""
+    features: List[FeatureDependency]
+    calculation_sequence: List[List[str]]  # Groups of features that can be calculated in parallel
+    dependency_chains: List[List[str]]  # Sequential chains of feature calculations
+    total_steps: int  # Total number of calculation steps required
+
+
+class RelevanceScore(BaseModel):
+    """Relevance score for a feature or output"""
+    feature_name: Optional[str] = None  # None for overall score
+    score: float  # 0.0 to 1.0
+    confidence: float  # Confidence in the score (0.0 to 1.0)
+    dimensions: Dict[str, float]  # Scores for different dimensions (relevance, completeness, etc.)
+    matches_goal: bool  # Whether this matches the user's goal
+    matches_examples: bool  # Whether this matches provided examples
+    feedback: str  # Feedback on quality and improvements
+    improvement_suggestions: List[str]
+
+
+class RelevancyScoringResult(BaseModel):
+    """Overall relevancy scoring result"""
+    overall_score: float
+    overall_confidence: float
+    feature_scores: List[RelevanceScore]
+    goal_alignment: float  # How well features align with user goal
+    example_alignment: float  # How well features match provided examples
+    quality_metrics: Dict[str, float]
+    recommendations: List[str]
+
+
+# ============================================================================
+# AGENT DEFINITIONS
+# ============================================================================
 
 class QueryUnderstandingAgent:
     """
@@ -382,50 +409,6 @@ class QueryUnderstandingAgent:
         if domain_config_dict:
             return DomainConfiguration(**domain_config_dict)
         return self.domain_config
-    
-    def _format_breakdown_context(self, query_breakdown: Dict[str, Any]) -> str:
-        """Format query breakdown as context for query understanding"""
-        if not query_breakdown:
-            return ""
-        
-        context_parts = [
-            "=== QUERY BREAKDOWN CONTEXT ===",
-            f"Original Query: {query_breakdown.get('original_query', 'N/A')}",
-            f"Domain: {query_breakdown.get('domain', 'N/A')}",
-            f"Overall Goal: {query_breakdown.get('overall_goal', 'N/A')}",
-            f"Analytical Intent: {query_breakdown.get('analytical_intent', 'N/A')}",
-            f"Applicable Compliance Frameworks: {', '.join(query_breakdown.get('applicable_compliance_frameworks', [])) or 'N/A'}",
-            f"Primary Goals: {', '.join(query_breakdown.get('primary_goals', [])) or 'N/A'}",
-            f"Time Series Requirements: {query_breakdown.get('time_series_requirements', False)}"
-        ]
-        
-        # Add breakdown steps
-        breakdown_steps = query_breakdown.get("breakdown_steps", [])
-        if breakdown_steps:
-            context_parts.append(f"\nAnalytical Steps ({len(breakdown_steps)} total):")
-            for i, step in enumerate(breakdown_steps, 1):
-                step_name = step.get("step_name", "") if isinstance(step, dict) else getattr(step, "step_name", "")
-                step_type = step.get("step_type", "") if isinstance(step, dict) else getattr(step, "step_type", "")
-                description = step.get("description", "") if isinstance(step, dict) else getattr(step, "description", "")
-                focus_areas = step.get("focus_areas", []) if isinstance(step, dict) else getattr(step, "focus_areas", [])
-                required_metrics = step.get("required_metrics", []) if isinstance(step, dict) else getattr(step, "required_metrics", [])
-                compliance_frameworks = step.get("compliance_frameworks", []) if isinstance(step, dict) else getattr(step, "compliance_frameworks", [])
-                entity_types = step.get("entity_types", []) if isinstance(step, dict) else getattr(step, "entity_types", [])
-                
-                context_parts.append(f"\n  Step {i}: {step_name} ({step_type})")
-                context_parts.append(f"    Description: {description[:200]}")
-                if focus_areas:
-                    context_parts.append(f"    Focus Areas: {', '.join(focus_areas[:5])}")
-                if required_metrics:
-                    context_parts.append(f"    Required Metrics: {', '.join(required_metrics[:5])}")
-                if compliance_frameworks:
-                    context_parts.append(f"    Compliance Frameworks: {', '.join(compliance_frameworks[:5])}")
-                if entity_types:
-                    context_parts.append(f"    Entity Types: {', '.join(entity_types[:5])}")
-        
-        context_parts.append("\nUse this breakdown to better understand the analytical intent and identify relevant compliance frameworks and controls.")
-        
-        return "\n".join(context_parts)
         
     async def __call__(self, state: FeatureEngineeringState) -> FeatureEngineeringState:
         """
@@ -541,16 +524,9 @@ GOAL TRACKING: Focus on identifying compliance controls that enable:
 
 Be thorough and prioritize compliance frameworks that are most relevant to the user's goal."""
 
-        # Build user message with breakdown context if available
-        query_breakdown = state.get("query_breakdown")
-        breakdown_context_text = ""
-        if query_breakdown:
-            breakdown_context = self._format_breakdown_context(query_breakdown)
-            breakdown_context_text = f"\n\n{breakdown_context}\n"
-
         messages = [
             SystemMessage(content=system_prompt),
-            HumanMessage(content=f"""{breakdown_context_text}USER QUERY: {user_query}
+            HumanMessage(content=f"""USER QUERY: {user_query}
 {knowledge_context}{history_context}{examples_context}
 
 Identify the most important compliance frameworks and controls for this risk estimation, monitoring, and reporting goal.""")
@@ -1468,36 +1444,28 @@ Focus on generating features that support:
         
         system_prompt = f"""{base_prompt}
 
-You are a feature engineering expert generating STANDARD METRICS, KPIs, and COUNTS for daily compliance monitoring and analysis.
+You are a deep research agent generating detailed natural language questions for compliance control monitoring in a MEDALLION ARCHITECTURE (Bronze/Silver/Gold).
 
-GOAL: Generate standard operational metrics, KPIs, and counts that can be calculated daily from raw data. These are foundational metrics that support daily dashboards and operational monitoring.
-
-IMPORTANT: These features are for DAILY ANALYSIS - we expect data to arrive daily. Focus on metrics that can be recalculated each day from the latest data.
+GOAL: Generate detailed, step-by-step natural language questions for compliance features that can be executed by a transformation agent.
 
 MEDALLION ARCHITECTURE CLASSIFICATION:
 - SILVER: Transformations from raw data (bronze). Includes: data cleaning, normalization, deduplication, type conversions, basic calculations from raw fields. Example: "Create a calculated column for vulnerability_age based on publish_time and current_date"
-- GOLD: Requires aggregations or multi-table joins. Includes: counts, averages, sums, aggregations across tables, grouped metrics. Example: "Count vulnerabilities by severity level grouped by asset"
+- GOLD: Requires other transformations or aggregations. Includes: complex calculations, multi-step transformations, aggregations across tables, derived metrics, risk scores. Example: "Calculate raw_risk score for each asset by first calculating raw_impact, then calculating raw_likelihood from breach method likelihoods and asset exposure, then combining them with appropriate weighting"
 
-FEATURE TYPES TO GENERATE:
-1. COUNTS: Simple counts of entities, events, or states (e.g., "Count of critical vulnerabilities", "Count of assets by type")
-2. METRICS: Aggregated metrics (e.g., "Average remediation time", "Total patch lag days")
-3. KPIs: Key performance indicators (e.g., "SLA compliance rate", "Patch deployment rate")
-4. RATIOS: Percentage or ratio calculations (e.g., "Percentage of vulnerabilities patched", "Ratio of critical to total vulnerabilities")
-
-NATURAL LANGUAGE QUESTION FORMAT:
-Generate clear, executable natural language questions like:
-- "Count the number of vulnerabilities where severity is Critical and state is ACTIVE, grouped by asset"
-- "Calculate the average number of days between detected_time and remediation_time for vulnerabilities where state is REMEDIATED"
-- "Count the number of assets by device_type and platform, filtering for assets where is_cloud_asset is TRUE"
+NATURAL LANGUAGE QUESTION FORMAT (CRITICAL):
+Generate detailed, step-by-step natural language questions like these examples:
+- "Calculate raw_risk score for each asset by first calculating raw_impact, then calculating raw_likelihood from breach method likelihoods and asset exposure, then combining them with appropriate weighting"
+- "For each vulnerability based on the severity, vulnerability definition, vulnerability remediation availability and attack vector lets calculate the exploitability score, breach likelihood and risk scores"
+- "Create a calculated column for bastion_impact that calculates impact score specifically for bastion host devices using impact_class and propagation_class"
 
 Each question should:
-1. Specify what to calculate (count, average, sum, etc.)
-2. Specify the entity/level (per asset, per vulnerability, overall, etc.)
-3. Include filters (severity, state, time windows, etc.)
-4. Reference specific fields from available schemas
+1. Be detailed and step-by-step (not just "calculate X")
+2. Specify the entity/level (for each asset, for each vulnerability, etc.)
+3. Include the calculation steps (first calculate X, then calculate Y, then combine)
+4. Reference specific fields/data sources
 5. Be executable by a transformation agent
 
-Given the analytical intent, available schemas, and {'identified compliance controls' if has_controls else 'domain patterns'}, generate STANDARD METRICS, KPIs, and COUNTS.
+Given the analytical intent, available schemas, relevant knowledge documents, and {'identified compliance controls' if has_controls else 'domain patterns'}, generate features.
 {instructions_text}
 {examples_text}
 
@@ -1519,36 +1487,34 @@ RELEVANT KNOWLEDGE:
 {control_instruction}
 
 For each feature, provide:
-1. Feature name (descriptive, following naming conventions - use underscores, no spaces, e.g., critical_vulnerability_count, avg_remediation_time_days)
-2. Feature type (count, metric, kpi, ratio, time_series, impact, likelihood, risk)
-3. Natural language question (REQUIRED - Clear, executable instruction specifying what to calculate, filters, and grouping. Must be a complete question.)
-4. Feature group (Group name for related features that should be calculated together, e.g., 'vulnerability_counts', 'sla_metrics', 'risk_scores', 'remediation_metrics')
+1. Feature name (descriptive, following naming conventions - use underscores, no spaces, e.g., critical_vulnerability_sla_breached_count)
+2. Feature type (metric, count, ratio, time_series, derived, calculated_column)
+3. Natural language question (DETAILED, step-by-step instructions like the examples above. This is the most important field - it should be a complete, executable instruction)
+4. Calculation logic (SQL-like pseudocode or detailed steps)
 5. Required schemas and fields
-6. Aggregation method (count, sum, avg, max, min, percentile, ratio, etc.)
+6. Aggregation method (if applicable: sum, avg, count, max, percentile, etc.)
 7. Filters to apply ({', '.join(domain_config.severity_levels) if domain_config.severity_levels else 'severity/priority levels'}, state, time windows)
-8. Business context (why this metric matters for daily monitoring)
-9. Compliance reasoning (explain how this metric supports compliance monitoring{' and include the specific control ID if applicable' if has_controls else ''})
+8. Business context (why this feature matters for compliance monitoring)
+9. Compliance reasoning (explain how this feature supports compliance monitoring{' and include the specific control ID if applicable' if has_controls else ''})
 10. Transformation layer (MUST be 'silver' or 'gold'):
-    - SILVER: Basic transformations from raw data. Simple calculations, cleaning, normalization.
-    - GOLD: Aggregations, multi-table joins, grouped calculations.
-11. Time series type (if applicable: 'snapshot' for point-in-time, 'cumulative' for running totals, 'rolling_window' for moving averages, 'period_over_period' for comparisons, 'trend' for trends, or None)
+    - SILVER: Transformation from raw data. Basic calculations, cleaning, normalization. Can be calculated directly from bronze/raw tables.
+    - GOLD: Requires other transformations or aggregations. Complex multi-step calculations, aggregations, derived metrics. Depends on other silver/gold transformations.
+11. Time series type (if applicable: 'snapshot', 'cumulative', 'rolling_window', 'period_over_period', 'trend', or None)
 
-IMPORTANT: DO NOT include calculation logic - that will be determined by other agents. Focus on the natural language question, grouping, and metadata.
+CRITICAL: The natural language question must be detailed and step-by-step, like:
+- "Calculate raw_risk score for each asset by first calculating raw_impact using asset criticality and data classification, then calculating raw_likelihood from breach method likelihoods and asset exposure metrics, then combining them with appropriate weighting factors"
+- NOT just: "Calculate raw_risk"
 
 OUTPUT FORMAT:
-Provide features in a numbered list format, grouped by feature_group:
-1. **Feature Name**: [feature_name] - **Feature Type**: [count/metric/kpi/ratio] - **Natural Language Question**: [clear, complete question] - **Feature Group**: [group_name] - **Required Schemas**: [schemas] - **Aggregation Method**: [method] - **Filters Applied**: [filters] - **Business Context**: [context] - **Compliance Reasoning**: [reasoning] - **Transformation Layer**: [silver/gold] - **Time Series Type**: [type or None]
+Provide features in a numbered list format:
+1. **Feature Name**: [feature_name] - **Feature Type**: [type] - **Natural Language Question**: [detailed question] - **Calculation Logic**: [logic] - **Required Schemas**: [schemas] - **Aggregation Method**: [method] - **Filters Applied**: [filters] - **Business Context**: [context] - **SOC2 Compliance Reasoning**: [reasoning] - **Transformation Layer**: [silver/gold] - **Time Series Type**: [type or None]
 
-Focus on generating:
-- Standard operational metrics for daily monitoring
-- Counts of entities, events, and states
-- KPIs for compliance tracking
-- Aggregated metrics (averages, sums, totals)
-- Metrics that can be recalculated daily from fresh data
+Focus on:
+- Compliance control monitoring metrics
+- Risk estimation, monitoring, and reporting
+- Key measures identified for each control
 - {domain_config.time_constraint_terms[0].title() if domain_config.time_constraint_terms else 'Time'} compliance metrics
-- Domain-specific operational indicators for {domain_config.domain_name}
-
-DO NOT generate risk, impact, or likelihood features here - those will be generated in a separate risk feature engineering step.
+- Domain-specific indicators relevant to {domain_config.domain_name}
 
 {('Follow the provided instructions and use the examples as guidance for feature generation.' if (instructions or examples) else '')}"""
 
@@ -1592,18 +1558,14 @@ DO NOT generate risk, impact, or likelihood features here - those will be genera
             # Replace with new features (initial generation)
             state["recommended_features"] = recommended_features
         state["messages"].append(AIMessage(
-            content=f"Recommended {len(recommended_features)} standard metrics/KPIs for daily analysis",
+            content=f"Recommended {len(recommended_features)} features",
             name="FeatureRecommendationAgent"
         ))
         
-        # Route based on whether risk features are needed
-        # Can route to: risk_feature_engineering (to build risk features) or feature_combination (to skip risk and combine)
-        # Default to risk_feature_engineering, but can be overridden in state
-        next_step = state.get("next_agent_after_features", "risk_feature_engineering")
-        if next_step not in ["risk_feature_engineering", "feature_combination", "feature_dependency"]:
-            next_step = "risk_feature_engineering"  # Default
-        
-        state["next_agent"] = next_step
+        # Continue to feature dependency analysis
+        # Note: Impact, Likelihood, and Risk features are generated in STEP 3 (Deep Research & Risk Modeling)
+        # See: risk_model_agents.py for the deep research workflow
+        state["next_agent"] = "feature_dependency"
         
         return state
     
@@ -1720,14 +1682,14 @@ DO NOT generate risk, impact, or likelihood features here - those will be genera
             feature = {
                 "feature_name": feature_name,
                 "feature_type": "metric" if "avg" in feature_name else "count",
-                "natural_language_question": f"Calculate {feature_name.replace('_', ' ')}",
+                "natural_language_question": f"Calculate {feature_name.replace('_', ' ')} using {pattern.logic}",
+                "calculation_logic": pattern.logic,
                 "required_schemas": pattern.schemas if pattern.schemas else schemas[:2],
                 "required_fields": [],
                 "aggregation_method": "avg" if "avg" in feature_name else "count",
                 "filters_applied": [],
                 "business_context": pattern.description or f"Feature for {domain_config.domain_name} compliance monitoring",
-                "compliance_reasoning": f"Supports {domain_config.domain_name} compliance monitoring and risk assessment",
-                "feature_group": "general_metrics",
+                "soc2_compliance_reasoning": f"Supports {domain_config.domain_name} compliance monitoring and risk assessment",
                 "transformation_layer": "gold",
                 "time_series_type": None
             }
@@ -1742,13 +1704,13 @@ DO NOT generate risk, impact, or likelihood features here - those will be genera
                         "feature_name": "critical_vulnerability_sla_breached_count",
                         "feature_type": "count",
                         "natural_language_question": "Count vulnerabilities where severity is Critical and (current_date - detected_time) exceeds the SLA threshold of 7 days",
+                        "calculation_logic": "COUNT(*) WHERE severity = 'Critical' AND (current_date - detected_time) > 7",
                         "required_schemas": ["vulnerability_instances", "cve"],
                         "required_fields": ["severity", "detected_time"],
                         "aggregation_method": "count",
                         "filters_applied": ["severity = Critical"],
                         "business_context": "Track critical vulnerabilities that have breached SLA requirements",
-                        "compliance_reasoning": "Supports SOC2 CC7.1 and CC7.4 controls for vulnerability monitoring and remediation",
-                        "feature_group": "sla_metrics",
+                        "soc2_compliance_reasoning": "Supports SOC2 CC7.1 and CC7.4 controls for vulnerability monitoring and remediation",
                         "transformation_layer": "gold",
                         "time_series_type": "snapshot"
                     },
@@ -1756,13 +1718,13 @@ DO NOT generate risk, impact, or likelihood features here - those will be genera
                         "feature_name": "high_exploitability_vulnerability_count",
                         "feature_type": "count",
                         "natural_language_question": "Count vulnerabilities where epssScore is greater than 0.5 or cisaExploited is true",
+                        "calculation_logic": "COUNT(*) WHERE epssScore > 0.5 OR cisaExploited = true",
                         "required_schemas": ["vulnerability_instances", "cve"],
                         "required_fields": ["epssScore", "cisaExploited"],
-                        "feature_group": "vulnerability_metrics",
                         "aggregation_method": "count",
                         "filters_applied": [],
                         "business_context": "Identify vulnerabilities with high exploitability risk",
-                        "compliance_reasoning": "Supports SOC2 CC7.1 control for identifying exploitable vulnerabilities",
+                        "soc2_compliance_reasoning": "Supports SOC2 CC7.1 control for identifying exploitable vulnerabilities",
                         "transformation_layer": "gold",
                         "time_series_type": "snapshot"
                     },
@@ -1770,13 +1732,13 @@ DO NOT generate risk, impact, or likelihood features here - those will be genera
                         "feature_name": "avg_patch_lag_days",
                         "feature_type": "metric",
                         "natural_language_question": "Calculate the average number of days between when a patch is available and when it is installed",
+                        "calculation_logic": "AVG(latest_available_patch_release_time - latest_installed_patch_release_time)",
                         "required_schemas": ["software_instances"],
                         "required_fields": ["latest_available_patch_release_time", "latest_installed_patch_release_time"],
                         "aggregation_method": "avg",
                         "filters_applied": [],
                         "business_context": "Measure patch deployment efficiency and compliance",
-                        "compliance_reasoning": "Supports PCI-DSS REQ-6 control for timely patch deployment",
-                        "feature_group": "remediation_metrics",
+                        "soc2_compliance_reasoning": "Supports PCI-DSS REQ-6 control for timely patch deployment",
                         "transformation_layer": "gold",
                         "time_series_type": "snapshot"
                     },
@@ -1784,13 +1746,13 @@ DO NOT generate risk, impact, or likelihood features here - those will be genera
                         "feature_name": "avg_remediation_time_by_severity",
                         "feature_type": "metric",
                         "natural_language_question": "Calculate the average time from detection to remediation for vulnerabilities, grouped by severity level",
+                        "calculation_logic": "AVG(remediation_time - detected_time) WHERE state = 'remediated' GROUP BY severity",
                         "required_schemas": ["vulnerability_instances"],
                         "required_fields": ["remediation_time", "detected_time", "severity", "state"],
                         "aggregation_method": "avg",
                         "filters_applied": ["state = remediated"],
                         "business_context": "Track remediation efficiency by severity to improve SLA compliance",
-                        "compliance_reasoning": "Supports SOC2 CC7.4 control for incident response and remediation tracking",
-                        "feature_group": "remediation_metrics",
+                        "soc2_compliance_reasoning": "Supports SOC2 CC7.4 control for incident response and remediation tracking",
                         "transformation_layer": "gold",
                         "time_series_type": "snapshot"
                     },
@@ -1798,13 +1760,13 @@ DO NOT generate risk, impact, or likelihood features here - those will be genera
                         "feature_name": "avg_risk_score_by_asset",
                         "feature_type": "metric",
                         "natural_language_question": "Calculate the average risk score for each asset based on associated vulnerabilities and their severity",
+                        "calculation_logic": "AVG(effective_risk) GROUP BY asset_id",
                         "required_schemas": ["features", "asset"],
                         "required_fields": ["effective_risk", "asset_id"],
                         "aggregation_method": "avg",
                         "filters_applied": [],
                         "business_context": "Assess overall risk posture at the asset level",
-                        "compliance_reasoning": "Supports SOC2 CC6.1 and CC7.1 controls for risk assessment and monitoring",
-                        "feature_group": "risk_scores",
+                        "soc2_compliance_reasoning": "Supports SOC2 CC6.1 and CC7.1 controls for risk assessment and monitoring",
                         "transformation_layer": "gold",
                         "time_series_type": "snapshot"
                     }
@@ -1869,10 +1831,15 @@ DO NOT generate risk, impact, or likelihood features here - those will be genera
             if type_val:
                 feature["feature_type"] = type_val
             
-            # Extract feature group
-            group_val = extract_field(r'(?:\*\*)?(?:Feature\s+Group|Feature Group|Group)', part_clean)
-            if group_val:
-                feature["feature_group"] = group_val.strip()
+            # Extract calculation logic (may contain backticks and dashes)
+            calc_match = re.search(r'(?:\*\*)?(?:Calculation\s+Logic|Calculation Logic|Logic)[:\*]?\s*(?:\*\*)?\s*`([^`]+)`', part_clean, re.IGNORECASE | re.DOTALL)
+            if calc_match:
+                feature["calculation_logic"] = calc_match.group(1).strip()
+            else:
+                # Try without backticks - capture until next " - **"
+                calc_val = extract_field(r'(?:\*\*)?(?:Calculation\s+Logic|Calculation Logic|Logic)', part_clean)
+                if calc_val:
+                    feature["calculation_logic"] = calc_val
             
             # Extract natural language question
             question_val = extract_field(r'(?:\*\*)?(?:Natural\s+Language\s+Question|Natural Language Question|Question|NLQ)', part_clean)
@@ -1913,13 +1880,13 @@ DO NOT generate risk, impact, or likelihood features here - those will be genera
             if context_val:
                 feature["business_context"] = context_val
             
-            # Extract compliance reasoning (SOC2 or general)
-            compliance_val = extract_field(r'(?:\*\*)?(?:Compliance\s+Reasoning|Compliance Reasoning|SOC2\s+Compliance\s+Reasoning|SOC2 Compliance Reasoning|SOC2)', part_clean)
-            if compliance_val:
-                feature["compliance_reasoning"] = compliance_val
+            # Extract SOC2 compliance reasoning
+            soc2_val = extract_field(r'(?:\*\*)?(?:SOC2\s+Compliance\s+Reasoning|SOC2 Compliance Reasoning|SOC2|Compliance Reasoning)', part_clean)
+            if soc2_val:
+                feature["soc2_compliance_reasoning"] = soc2_val
             elif "business_context" in feature:
-                # Fallback to business context if compliance reasoning not found
-                feature["compliance_reasoning"] = feature.get("business_context", "")
+                # Fallback to business context if SOC2 reasoning not found
+                feature["soc2_compliance_reasoning"] = feature.get("business_context", "")
             
             # Extract transformation layer
             layer_val = extract_field(r'(?:\*\*)?(?:Transformation\s+Layer|Transformation Layer|Layer)', part_clean)
@@ -1966,10 +1933,12 @@ DO NOT generate risk, impact, or likelihood features here - those will be genera
             # If we found at least a feature name, add it
             if "feature_name" in feature and feature["feature_name"]:
                 # Set defaults for missing fields
-                feature.setdefault("feature_type", "metric")
-                # Generate natural language question if not found (REQUIRED)
-                if "natural_language_question" not in feature or not feature.get("natural_language_question") or feature.get("natural_language_question") == "N/A":
+                feature.setdefault("feature_type", "Unknown")
+                feature.setdefault("calculation_logic", "N/A")
+                # Generate natural language question if not found
+                if "natural_language_question" not in feature or not feature.get("natural_language_question"):
                     feature_name = feature.get("feature_name", "")
+                    calc_logic = feature.get("calculation_logic", "")
                     if feature_name:
                         # Clean up feature name before using it
                         clean_name = re.sub(r'^\s*\*+\s*:?\s*', '', feature_name).strip()
@@ -1977,35 +1946,14 @@ DO NOT generate risk, impact, or likelihood features here - those will be genera
                         # Generate a question from the feature name
                         feature["natural_language_question"] = f"What is the {clean_name.lower().replace('_', ' ')}?"
                     else:
-                        feature["natural_language_question"] = "What should this feature calculate?"
-                
-                # Infer feature group from feature name if not provided
-                if "feature_group" not in feature or not feature.get("feature_group"):
-                    feature_name_lower = feature.get("feature_name", "").lower()
-                    if "vulnerability" in feature_name_lower or "vuln" in feature_name_lower:
-                        feature["feature_group"] = "vulnerability_metrics"
-                    elif "sla" in feature_name_lower or "breach" in feature_name_lower:
-                        feature["feature_group"] = "sla_metrics"
-                    elif "remediation" in feature_name_lower or "patch" in feature_name_lower:
-                        feature["feature_group"] = "remediation_metrics"
-                    elif "risk" in feature_name_lower:
-                        feature["feature_group"] = "risk_scores"
-                    elif "impact" in feature_name_lower:
-                        feature["feature_group"] = "impact_scores"
-                    elif "likelihood" in feature_name_lower:
-                        feature["feature_group"] = "likelihood_scores"
-                    elif "count" in feature_name_lower:
-                        feature["feature_group"] = "count_metrics"
-                    else:
-                        feature["feature_group"] = "general_metrics"
-                
+                        feature["natural_language_question"] = "N/A"
                 feature.setdefault("required_schemas", [])
                 feature.setdefault("required_fields", [])
-                feature.setdefault("aggregation_method", "count")
+                feature.setdefault("aggregation_method", "N/A")
                 feature.setdefault("filters_applied", [])
                 feature.setdefault("business_context", "N/A")
-                if "compliance_reasoning" not in feature or not feature["compliance_reasoning"]:
-                    feature["compliance_reasoning"] = feature.get("business_context", "")
+                if "soc2_compliance_reasoning" not in feature or not feature["soc2_compliance_reasoning"]:
+                    feature["soc2_compliance_reasoning"] = feature.get("business_context", "N/A")
                 
                 # Set defaults for transformation layer and time series type
                 if "transformation_layer" not in feature:
@@ -2035,12 +1983,7 @@ DO NOT generate risk, impact, or likelihood features here - those will be genera
                     else:
                         feature["time_series_type"] = None  # Not a time series feature
                 
-                # Validate feature before adding - filter out invalid features
-                feature_name = feature.get("feature_name", "").strip()
-                if feature_name and self._is_valid_feature_name(feature_name):
-                    features.append(feature)
-                else:
-                    logger.warning(f"Skipping invalid feature with name: '{feature_name}'")
+                features.append(feature)
         
         # Fallback: if no structured parsing worked, try simple extraction
         if not features:
@@ -2085,129 +2028,7 @@ DO NOT generate risk, impact, or likelihood features here - those will be genera
                 feature["natural_language_question"] = re.sub(r'^\s*\*+\s*:?\s*', '', feature["natural_language_question"]).strip()
                 feature["natural_language_question"] = re.sub(r'[:*]+\s*$', '', feature["natural_language_question"]).strip()
         
-        # Final validation: filter out any remaining invalid features
-        validated_features = []
-        for feature in features:
-            feature_name = feature.get("feature_name", "").strip()
-            if feature_name and self._is_valid_feature_name(feature_name):
-                validated_features.append(feature)
-            else:
-                logger.warning(f"Filtering out invalid feature: '{feature_name}'")
-        
-        return validated_features
-    
-    def _is_valid_feature_name(self, name: str) -> bool:
-        """Validate that a feature name is properly formatted"""
-        if not name or len(name) < 3:
-            return False
-        
-        name_lower = name.lower().strip()
-        
-        # Invalid keywords that shouldn't be feature names
-        invalid_keywords = ["transformation", "layer", "type", "method", "context", "reasoning",
-                           "schemas", "filters", "applied", "required", "fields", "series", "time",
-                           "none", "n/a", "unknown", "feature", "name", "group"]
-        
-        if name_lower in invalid_keywords:
-            return False
-        
-        # Should not start with asterisks or colons (malformed parsing)
-        if re.match(r'^\s*[\*:]+', name):
-            return False
-        
-        # Should be snake_case, alphanumeric, or contain underscores
-        if not (re.match(r'^[a-z][a-z0-9_]*$', name_lower) or name_lower.replace('_', '').isalnum()):
-            return False
-        
-        # Should not be a single common word (unless it's a valid metric word)
-        if len(name.split('_')) == 1 and len(name) < 8:
-            # Single words less than 8 chars are likely invalid (unless they're domain-specific)
-            # Allow common metric words
-            valid_single_words = ["count", "sum", "avg", "min", "max", "rate", "score"]
-            if name_lower not in valid_single_words:
-                return False
-        
-        return True
-
-
-# ============================================================================
-# RISK FEATURE ENGINEERING AGENT
-# ============================================================================
-# RiskFeatureEngineeringAgent has been moved to risk_feature_engineering_agent.py
-# Import it at the top of this file
-
-
-# ============================================================================
-# FEATURE COMBINATION AGENT
-# ============================================================================
-
-class FeatureCombinationAgent:
-    """Agent that combines standard metrics features with risk features into a unified feature set"""
-    
-    def __init__(self, llm: BaseChatModel, domain_config: DomainConfiguration):
-        self.llm = llm
-        self.domain_config = domain_config
-    
-    def _get_domain_config_from_state(self, state: FeatureEngineeringState) -> DomainConfiguration:
-        """Get domain config from state or use instance config"""
-        domain_config_dict = state.get("domain_config")
-        if domain_config_dict:
-            return DomainConfiguration(**domain_config_dict)
-        return self.domain_config
-    
-    async def __call__(self, state: FeatureEngineeringState) -> FeatureEngineeringState:
-        """Combine standard features with risk features into unified feature set"""
-        
-        domain_config = self._get_domain_config_from_state(state)
-        
-        # Get standard features (from FeatureRecommendationAgent)
-        standard_features = state.get("recommended_features", [])
-        
-        # Get risk features (from RiskFeatureEngineeringAgent)
-        impact_features = state.get("impact_features", [])
-        likelihood_features = state.get("likelihood_features", [])
-        risk_features = state.get("risk_features", [])
-        
-        # Combine all features
-        all_features = standard_features + impact_features + likelihood_features + risk_features
-        
-        # Add metadata to distinguish feature types (only if not already set)
-        for feature in standard_features:
-            if "feature_category" not in feature:
-                feature["feature_category"] = "standard_metric"
-        
-        for feature in impact_features:
-            if "feature_category" not in feature:
-                feature["feature_category"] = "risk_impact"
-        
-        for feature in likelihood_features:
-            if "feature_category" not in feature:
-                feature["feature_category"] = "risk_likelihood"
-        
-        for feature in risk_features:
-            if "feature_category" not in feature:
-                feature["feature_category"] = "risk_score"
-        
-        # Update state with combined features
-        state["recommended_features"] = all_features
-        
-        # Create summary
-        summary = {
-            "total_features": len(all_features),
-            "standard_metrics": len(standard_features),
-            "impact_features": len(impact_features),
-            "likelihood_features": len(likelihood_features),
-            "risk_features": len(risk_features)
-        }
-        
-        state["messages"].append(AIMessage(
-            content=f"Combined {len(standard_features)} standard metrics with {len(impact_features)} impact, {len(likelihood_features)} likelihood, and {len(risk_features)} risk features (total: {len(all_features)} features)",
-            name="FeatureCombinationAgent"
-        ))
-        
-        state["next_agent"] = "feature_dependency"
-        
-        return state
+        return features
 
 
 # ============================================================================
@@ -3524,6 +3345,7 @@ class FeatureDependencyAgent:
         if not features:
             logger.warning("No features to analyze for dependencies")
             state["feature_dependencies"] = {
+                "features": [],
                 "calculation_sequence": [],
                 "dependency_chains": [],
                 "total_steps": 0
@@ -3660,32 +3482,13 @@ Return your analysis as JSON matching this structure:
             # Validate and structure the dependency data
             dependency_graph = self._validate_dependency_graph(dependency_data, features)
             
-            # Add dependency information directly to recommended_features instead of duplicating
-            # Create a map of feature_name -> dependency info
-            dependency_map = {feat.get('feature_name'): feat for feat in dependency_graph.get('features', [])}
-            
-            # Update recommended_features with dependency information
-            updated_features = []
-            for feature in features:
-                feature_name = feature.get('feature_name', '')
-                dep_info = dependency_map.get(feature_name, {})
-                
-                # Add dependency fields directly to the feature
-                feature['depends_on'] = dep_info.get('depends_on', [])
-                feature['calculation_order'] = dep_info.get('calculation_order', None)
-                feature['is_base_feature'] = dep_info.get('is_base_feature', len(dep_info.get('depends_on', [])) == 0)
-                
-                updated_features.append(feature)
-            
-            state["recommended_features"] = updated_features
-            
-            # Store only the calculation sequence and dependency chains (not full feature objects)
-            state["feature_dependencies"] = {
-                "calculation_sequence": dependency_graph.get('calculation_sequence', []),
-                "dependency_chains": dependency_graph.get('dependency_chains', []),
-                "total_steps": dependency_graph.get('total_steps', 0)
-            }
-            
+            # Convert to dict using model_dump for Pydantic V2 compatibility
+            if hasattr(dependency_graph, 'model_dump'):
+                state["feature_dependencies"] = dependency_graph.model_dump()
+            elif hasattr(dependency_graph, 'dict'):
+                state["feature_dependencies"] = dependency_graph.dict()
+            else:
+                state["feature_dependencies"] = dependency_graph
             state["messages"].append(AIMessage(
                 content=f"Identified dependencies for {len(features)} features with {dependency_graph.get('total_steps', 0)} calculation steps",
                 name="FeatureDependencyAgent"
@@ -3710,6 +3513,8 @@ Return your analysis as JSON matching this structure:
                 "feature_name": feature_name,
                 "depends_on": [],
                 "calculation_order": i + 1,
+                "natural_language_chain": [f"Calculate {feature_name}"],
+                "data_dependencies": f.get('required_schemas', []),
                 "is_base_feature": True
             })
         
@@ -3896,39 +3701,7 @@ Return your evaluation as JSON matching this structure:
             # Validate scoring data
             scoring_result = self._validate_scoring_result(scoring_data, features)
             
-            # Add recommendation scores directly to recommended_features instead of separate structure
-            # Create a map of feature_name -> score info
-            feature_scores_map = {score.get('feature_name'): score for score in scoring_result.get('feature_scores', [])}
-            
-            # Update recommended_features with score information
-            updated_features = []
-            for feature in features:
-                feature_name = feature.get('feature_name', '')
-                score_info = feature_scores_map.get(feature_name, {})
-                
-                # Add score fields directly to the feature
-                feature['recommendation_score'] = score_info.get('score', None)
-                feature['recommendation_confidence'] = score_info.get('confidence', None)
-                feature['score_dimensions'] = score_info.get('dimensions', None)
-                feature['matches_goal'] = score_info.get('matches_goal', None)
-                feature['matches_examples'] = score_info.get('matches_examples', None)
-                feature['score_feedback'] = score_info.get('feedback', None)
-                feature['improvement_suggestions'] = score_info.get('improvement_suggestions', [])
-                
-                updated_features.append(feature)
-            
-            state["recommended_features"] = updated_features
-            
-            # Store only overall scores and quality metrics (not per-feature scores)
-            state["relevance_scores"] = {
-                "overall_score": scoring_result.get('overall_score', 0.0),
-                "overall_confidence": scoring_result.get('overall_confidence', 0.0),
-                "goal_alignment": scoring_result.get('goal_alignment', 0.0),
-                "example_alignment": scoring_result.get('example_alignment', 0.0),
-                "quality_metrics": scoring_result.get('quality_metrics', {}),
-                "recommendations": scoring_result.get('recommendations', [])
-            }
-            
+            state["relevance_scores"] = scoring_result
             state["messages"].append(AIMessage(
                 content=f"Calculated relevance scores: Overall={scoring_result.get('overall_score', 0.0):.2f}, "
                        f"Goal Alignment={scoring_result.get('goal_alignment', 0.0):.2f}",
@@ -3939,29 +3712,7 @@ Return your evaluation as JSON matching this structure:
         except Exception as e:
             logger.error(f"Error in RelevancyScoringAgent: {e}")
             # Fallback to basic structure
-            fallback_scores = self._create_fallback_scores(features)
-            
-            # Add fallback scores to features
-            updated_features = []
-            for feature in features:
-                feature['recommendation_score'] = None
-                feature['recommendation_confidence'] = None
-                feature['score_dimensions'] = None
-                feature['matches_goal'] = None
-                feature['matches_examples'] = None
-                feature['score_feedback'] = None
-                feature['improvement_suggestions'] = []
-                updated_features.append(feature)
-            
-            state["recommended_features"] = updated_features
-            state["relevance_scores"] = {
-                "overall_score": fallback_scores.get('overall_score', 0.0),
-                "overall_confidence": fallback_scores.get('overall_confidence', 0.0),
-                "goal_alignment": fallback_scores.get('goal_alignment', 0.0),
-                "example_alignment": fallback_scores.get('example_alignment', 0.0),
-                "quality_metrics": fallback_scores.get('quality_metrics', {}),
-                "recommendations": fallback_scores.get('recommendations', [])
-            }
+            state["relevance_scores"] = self._create_fallback_scores(features)
             state["next_agent"] = "review_step"
         
         return state
@@ -4043,11 +3794,222 @@ Return your evaluation as JSON matching this structure:
 # DEEP RESEARCH REVIEW AGENT
 # ============================================================================
 
-# ============================================================================
-# DEEP RESEARCH REVIEW AGENT
-# ============================================================================
-# DeepResearchReviewAgent has been moved to deep_research.py
-# Import it at the top of this file
+class DeepResearchReviewAgent:
+    """Deep Research Agent: Reviews recommendations and relevancy scores to ensure quality and completeness"""
+    
+    def __init__(self, llm: BaseChatModel, domain_config: DomainConfiguration):
+        self.llm = llm
+        self.domain_config = domain_config
+    
+    def _get_domain_config_from_state(self, state: FeatureEngineeringState) -> DomainConfiguration:
+        """Get domain config from state or use instance config"""
+        domain_config_dict = state.get("domain_config")
+        if domain_config_dict:
+            return DomainConfiguration(**domain_config_dict)
+        return self.domain_config
+    
+    async def __call__(self, state: FeatureEngineeringState) -> FeatureEngineeringState:
+        """
+        Deep Research Review: Review all recommendations, relevancy scores, and ensure:
+        1. All identified controls have corresponding features
+        2. Natural language questions are detailed and executable
+        3. Medallion architecture classification is correct
+        4. Features align with user goals and examples
+        5. Overall quality and completeness
+        """
+        
+        domain_config = self._get_domain_config_from_state(state)
+        user_query = state.get("user_query", "")
+        analytical_intent = state.get("analytical_intent", {})
+        features = state.get("recommended_features", [])
+        identified_controls = state.get("identified_controls", [])
+        relevance_scores = state.get("relevance_scores", {})
+        feature_dependencies = state.get("feature_dependencies", {})
+        validation_expectations = state.get("validation_expectations", [])
+        
+        system_prompt = f"""You are a deep research review expert for compliance risk estimation, monitoring, and reporting.
+
+Your task is to review the entire feature engineering output and provide:
+1. Quality assessment of recommendations
+2. Coverage analysis (do all controls have features?)
+3. Natural language question quality (are they detailed and executable?)
+4. Medallion architecture validation (silver vs gold classification)
+5. Alignment with user goals
+6. Improvement recommendations
+
+REVIEW CRITERIA:
+1. Control Coverage: Every identified control should have at least 1 feature
+2. Natural Language Questions: Must be detailed, step-by-step, executable (like demo examples)
+3. Medallion Architecture: 
+   - SILVER: Basic transformations from raw data
+   - GOLD: Complex calculations requiring other transformations/aggregations
+4. Goal Alignment: Features should directly support risk estimation, monitoring, and reporting
+5. Quality: Based on relevancy scores, identify low-quality features that need improvement
+
+Provide a comprehensive review with:
+- Overall assessment
+- Coverage gaps (missing controls)
+- Quality issues (low scores, unclear questions)
+- Architecture misclassifications
+- Specific improvement recommendations"""
+
+        features_text = "\n".join([
+            f"{i+1}. {f.get('feature_name', 'Unknown')}\n"
+            f"   Control: {f.get('compliance_reasoning', 'N/A')[:100]}\n"
+            f"   NLQ: {f.get('natural_language_question', 'N/A')[:150]}\n"
+            f"   Layer: {f.get('transformation_layer', 'N/A')}\n"
+            f"   Score: {relevance_scores.get('feature_scores', [{}])[i].get('score', 'N/A') if i < len(relevance_scores.get('feature_scores', [])) else 'N/A'}"
+            for i, f in enumerate(features)
+        ])
+        
+        controls_text = "\n".join([
+            f"{i+1}. {c.get('control_id', 'UNKNOWN')}: {c.get('control_name', 'N/A')}\n"
+            f"   Key Measures: {', '.join(c.get('key_measures', [])[:3])}"
+            for i, c in enumerate(identified_controls)
+        ])
+        
+        expectations_text = ""
+        if validation_expectations:
+            expectations_text = "\n\nVALIDATION EXPECTATIONS:\n"
+            for i, exp in enumerate(validation_expectations, 1):
+                expectations_text += f"{i}. {exp}\n"
+        
+        prompt = f"""
+USER QUERY: {user_query}
+
+ANALYTICAL INTENT:
+{analytical_intent}
+
+IDENTIFIED CONTROLS ({len(identified_controls)}):
+{controls_text}
+
+RECOMMENDED FEATURES ({len(features)}):
+{features_text}
+
+RELEVANCE SCORES:
+Overall Score: {relevance_scores.get('overall_score', 'N/A')}
+Goal Alignment: {relevance_scores.get('goal_alignment', 'N/A')}
+{expectations_text}
+
+FEATURE DEPENDENCIES:
+Total Steps: {feature_dependencies.get('total_steps', 'N/A')}
+Calculation Sequence: {len(feature_dependencies.get('calculation_sequence', []))} groups
+
+REVIEW QUESTIONS:
+1. Do all identified controls have corresponding features?
+2. Are natural language questions detailed and executable (like demo examples)?
+3. Are medallion architecture classifications correct (silver vs gold)?
+4. Are there any low-quality features (score < 0.7) that need improvement?
+5. Are there any missing features for key compliance controls?
+6. Do features align with user goals for risk estimation, monitoring, and reporting?
+
+Provide a comprehensive review with specific recommendations."""
+
+        try:
+            response = await track_llm_call(
+                agent_name="DeepResearchReviewAgent",
+                llm=self.llm,
+                messages=[
+                    SystemMessage(content=system_prompt),
+                    HumanMessage(content=prompt)
+                ],
+                state=state,
+                step_name="deep_research_review"
+            )
+            
+            review_content = response.content if hasattr(response, 'content') else str(response)
+            
+            # Parse review and extract recommendations
+            review_summary = self._parse_review(review_content, features, identified_controls, relevance_scores)
+            
+            state["deep_research_review"] = {
+                "review_content": review_content,
+                "review_summary": review_summary,
+                "coverage_gaps": review_summary.get("coverage_gaps", []),
+                "quality_issues": review_summary.get("quality_issues", []),
+                "improvement_recommendations": review_summary.get("improvement_recommendations", [])
+            }
+            
+            state["messages"].append(AIMessage(
+                content=f"Deep research review completed: {review_summary.get('overall_assessment', 'Review completed')}",
+                name="DeepResearchReviewAgent"
+            ))
+            state["next_agent"] = "end"
+            
+        except Exception as e:
+            logger.error(f"Error in DeepResearchReviewAgent: {e}")
+            state["deep_research_review"] = {
+                "review_content": f"Review error: {str(e)}",
+                "review_summary": {
+                    "overall_assessment": "Review completed with errors",
+                    "coverage_gaps": [],
+                    "quality_issues": [],
+                    "improvement_recommendations": []
+                }
+            }
+            # Route to file writing (workflow will handle routing based on whether file_writer is enabled)
+            state["next_agent"] = "write_output_file"
+        
+        return state
+    
+    def _parse_review(self, content: str, features: List[Dict[str, Any]], controls: List[Dict[str, Any]], scores: Dict[str, Any]) -> Dict[str, Any]:
+        """Parse review content and extract structured information"""
+        review_summary = {
+            "overall_assessment": "",
+            "coverage_gaps": [],
+            "quality_issues": [],
+            "improvement_recommendations": []
+        }
+        
+        # Extract overall assessment
+        assessment_match = re.search(r'(?:Overall|Assessment|Summary)[:\s]+([^\n]+(?:\n[^\n]+)*)', content, re.IGNORECASE)
+        if assessment_match:
+            review_summary["overall_assessment"] = assessment_match.group(1).strip()[:500]
+        else:
+            review_summary["overall_assessment"] = content[:500]
+        
+        # Extract coverage gaps
+        coverage_match = re.search(r'(?:Coverage|Gaps|Missing)[:\s]+([^\n]+(?:\n[^\n]+)*)', content, re.IGNORECASE)
+        if coverage_match:
+            gaps_text = coverage_match.group(1)
+            gaps = re.findall(r'[-•*]\s*([^\n]+)', gaps_text)
+            review_summary["coverage_gaps"] = [g.strip() for g in gaps[:10]]
+        
+        # Extract quality issues
+        quality_match = re.search(r'(?:Quality|Issues|Problems)[:\s]+([^\n]+(?:\n[^\n]+)*)', content, re.IGNORECASE)
+        if quality_match:
+            issues_text = quality_match.group(1)
+            issues = re.findall(r'[-•*]\s*([^\n]+)', issues_text)
+            review_summary["quality_issues"] = [i.strip() for i in issues[:10]]
+        
+        # Extract recommendations
+        rec_match = re.search(r'(?:Recommendations|Improvements|Suggestions)[:\s]+([^\n]+(?:\n[^\n]+)*)', content, re.IGNORECASE)
+        if rec_match:
+            rec_text = rec_match.group(1)
+            recs = re.findall(r'[-•*]\s*([^\n]+)', rec_text)
+            review_summary["improvement_recommendations"] = [r.strip() for r in recs[:10]]
+        
+        # Check control coverage
+        control_ids = {c.get("control_id", "") for c in controls}
+        feature_controls = set()
+        for f in features:
+            compliance_reasoning = f.get("compliance_reasoning", "") or f.get("soc2_compliance_reasoning", "")
+            # Extract control IDs from compliance reasoning
+            for cid in control_ids:
+                if cid in compliance_reasoning:
+                    feature_controls.add(cid)
+        
+        missing_controls = control_ids - feature_controls
+        if missing_controls:
+            review_summary["coverage_gaps"].append(f"Missing features for controls: {', '.join(missing_controls)}")
+        
+        # Check for low-quality features
+        feature_scores = scores.get("feature_scores", [])
+        low_quality = [fs for fs in feature_scores if fs.get("score", 1.0) < 0.7]
+        if low_quality:
+            review_summary["quality_issues"].append(f"{len(low_quality)} features have scores below 0.7")
+        
+        return review_summary
 
 
 # ============================================================================
@@ -4152,16 +4114,12 @@ def create_feature_engineering_workflow(
     
     # Initialize agents with domain configuration
     # Deep Research Workflow agents (compliance-first approach)
-    # First step: Query breakdown
-    breakdown_agent = QueryBreakdownAgent(llm, domain_config)
     query_agent = QueryUnderstandingAgent(llm, domain_config, retrieval_helper)
     control_agent = ControlIdentificationAgent(llm, domain_config, retrieval_helper)
     knowledge_agent = KnowledgeRefiningAgent(llm, retrieval_helper, domain_config)
     schema_agent = SchemaAnalysisAgent(llm, retrieval_helper, domain_config)
     question_agent = QuestionGenerationAgent(llm, domain_config)
     feature_agent = FeatureRecommendationAgent(llm, domain_config)
-    risk_feature_agent = RiskFeatureEngineeringAgent(llm, domain_config, retrieval_helper)
-    combination_agent = FeatureCombinationAgent(llm, domain_config)
     calculation_plan_agent = FeatureCalculationPlanAgent(llm, domain_config)
     plan_agent = ReasoningPlanAgent(llm, domain_config)
     dependency_agent = FeatureDependencyAgent(llm, domain_config)
@@ -4183,16 +4141,12 @@ def create_feature_engineering_workflow(
     
     # Add nodes - LangGraph supports async functions directly
     # Deep Research Workflow nodes (compliance-first approach)
-    # First step: Query breakdown (node name must differ from state key)
-    workflow.add_node("breakdown_analysis", breakdown_agent)
     workflow.add_node("query_understanding", query_agent)
     workflow.add_node("control_identification", control_agent)
     workflow.add_node("knowledge_retrieval", knowledge_agent)
     workflow.add_node("schema_analysis", schema_agent)
     workflow.add_node("question_generation", question_agent)
     workflow.add_node("feature_recommendation", feature_agent)
-    workflow.add_node("risk_feature_engineering", risk_feature_agent)
-    workflow.add_node("feature_combination", combination_agent)
     workflow.add_node("feature_calculation_planning", calculation_plan_agent)
     workflow.add_node("create_reasoning_plan", plan_agent)
     workflow.add_node("feature_dependency", dependency_agent)
@@ -4216,11 +4170,11 @@ def create_feature_engineering_workflow(
             return END
         # Validate that the next_agent is a valid node
         valid_nodes = {
-            "breakdown_analysis", "query_understanding", "control_identification", "knowledge_retrieval", "schema_analysis",
-            "question_generation", "feature_recommendation", "risk_feature_engineering",
-            "feature_combination", "feature_calculation_planning", "create_reasoning_plan", 
-            "feature_dependency", "relevancy_scoring", "review_step", "write_output_file", 
-            "impact_feature_generation", "likelihood_feature_generation", "risk_feature_generation", "end"
+            "query_understanding", "control_identification", "knowledge_retrieval", "schema_analysis",
+            "question_generation", "feature_recommendation", "feature_calculation_planning",
+            "create_reasoning_plan", "feature_dependency", "relevancy_scoring",
+            "review_step", "write_output_file", "impact_feature_generation",
+            "likelihood_feature_generation", "risk_feature_generation", "end"
         }
         if next_agent not in valid_nodes:
             logger.warning(f"Invalid next_agent '{next_agent}', defaulting to 'end'")
@@ -4228,20 +4182,16 @@ def create_feature_engineering_workflow(
         return next_agent
     
     # Add edges
-    workflow.set_entry_point("breakdown_analysis")
+    workflow.set_entry_point("query_understanding")
     
     # Define all possible destinations for routing (including STEP 3 nodes for resume scenarios)
     # This allows initial nodes to route to any destination when resuming
     all_destinations = {
-        "breakdown_analysis": "breakdown_analysis",
-        "query_understanding": "query_understanding",
         "control_identification": "control_identification",
         "knowledge_retrieval": "knowledge_retrieval",
         "schema_analysis": "schema_analysis",
         "question_generation": "question_generation",
         "feature_recommendation": "feature_recommendation",
-        "risk_feature_engineering": "risk_feature_engineering",
-        "feature_combination": "feature_combination",
         "feature_calculation_planning": "feature_calculation_planning",
         "create_reasoning_plan": "create_reasoning_plan",
         "feature_dependency": "feature_dependency",
@@ -4257,15 +4207,6 @@ def create_feature_engineering_workflow(
     if file_writer:
         all_destinations["write_output_file"] = "write_output_file"
     
-    # Add conditional edge for breakdown_analysis
-    workflow.add_conditional_edges(
-        "breakdown_analysis",
-        route_agent,
-        {
-            "query_understanding": "query_understanding",
-            END: END
-        }
-    )
     workflow.add_conditional_edges(
         "query_understanding",
         route_agent,
@@ -4295,8 +4236,6 @@ def create_feature_engineering_workflow(
         "feature_recommendation",
         route_agent,
         {
-            "risk_feature_engineering": "risk_feature_engineering",
-            "feature_combination": "feature_combination",
             "feature_calculation_planning": "feature_calculation_planning",
             "create_reasoning_plan": "create_reasoning_plan",
             "feature_dependency": "feature_dependency",
@@ -4312,29 +4251,6 @@ def create_feature_engineering_workflow(
             "create_reasoning_plan": "create_reasoning_plan",
             "feature_dependency": "feature_dependency",
             # Note: Impact/Likelihood/Risk features are generated in STEP 3 (Deep Research)
-            END: END
-        }
-    )
-    # Add conditional edge for risk_feature_engineering
-    workflow.add_conditional_edges(
-        "risk_feature_engineering",
-        route_agent,
-        {
-            "feature_combination": "feature_combination",
-            "feature_dependency": "feature_dependency",
-            "feature_calculation_planning": "feature_calculation_planning",
-            "create_reasoning_plan": "create_reasoning_plan",
-            END: END
-        }
-    )
-    # Add conditional edge for feature_combination
-    workflow.add_conditional_edges(
-        "feature_combination",
-        route_agent,
-        {
-            "feature_calculation_planning": "feature_calculation_planning",
-            "create_reasoning_plan": "create_reasoning_plan",
-            "feature_dependency": "feature_dependency",
             END: END
         }
     )
@@ -4576,7 +4492,7 @@ class FeatureEngineeringPipeline(AgentPipeline):
                 "impact_features": [],
                 "likelihood_features": [],
                 "risk_features": [],
-                "next_agent": "breakdown_analysis",
+                "next_agent": "query_understanding",
                 "project_id": project_id,
                 "histories": histories or [],
                 "schema_registry": {},
@@ -4713,60 +4629,22 @@ async def write_results_to_file_async(
                         f.write(f"**Key Measures:** {', '.join(key_measures[:5])}\n")
                     f.write("\n")
             
-            # Write recommended features grouped by feature_group
+            # Write recommended features
             recommended_features = result.get("recommended_features", [])
             if recommended_features:
-                # Group features by feature_group
-                grouped_features = {}
-                ungrouped_features = []
-                for feature in recommended_features:
-                    feature_group = feature.get('feature_group', 'ungrouped')
-                    if feature_group and feature_group != 'ungrouped':
-                        if feature_group not in grouped_features:
-                            grouped_features[feature_group] = []
-                        grouped_features[feature_group].append(feature)
-                    else:
-                        ungrouped_features.append(feature)
-                
                 f.write(f"## Recommended Features ({len(recommended_features)} total)\n\n")
-                
-                # Write grouped features
-                for group_name, group_features in sorted(grouped_features.items()):
-                    f.write(f"### Feature Group: {group_name.replace('_', ' ').title()} ({len(group_features)} features)\n\n")
-                    for i, feature in enumerate(group_features, 1):
-                        f.write(f"#### {i}. {feature.get('feature_name', 'Unknown')}\n")
-                        f.write(f"**Natural Language Question:** {feature.get('natural_language_question', 'N/A')}\n")
-                        f.write(f"**Type:** {feature.get('feature_type', 'Unknown')}\n")
-                        f.write(f"**Aggregation Method:** {feature.get('aggregation_method', 'N/A')}\n")
-                        if feature.get('filters_applied'):
-                            f.write(f"**Filters Applied:** {', '.join(feature.get('filters_applied', []))}\n")
-                        f.write(f"**Business Context:** {feature.get('business_context', 'N/A')}\n")
-                        compliance_reasoning = feature.get('compliance_reasoning') or feature.get('soc2_compliance_reasoning', 'N/A')
-                        f.write(f"**Compliance Reasoning:** {compliance_reasoning}\n")
-                        f.write(f"**Transformation Layer:** {feature.get('transformation_layer', 'gold')}\n")
-                        f.write(f"**Time Series Type:** {feature.get('time_series_type', 'None')}\n")
-                        if feature.get('required_schemas'):
-                            f.write(f"**Required Schemas:** {', '.join(feature.get('required_schemas', []))}\n")
-                        f.write("\n")
-                
-                # Write ungrouped features if any
-                if ungrouped_features:
-                    f.write(f"### Ungrouped Features ({len(ungrouped_features)} features)\n\n")
-                    for i, feature in enumerate(ungrouped_features, 1):
-                        f.write(f"#### {i}. {feature.get('feature_name', 'Unknown')}\n")
-                        f.write(f"**Natural Language Question:** {feature.get('natural_language_question', 'N/A')}\n")
-                        f.write(f"**Type:** {feature.get('feature_type', 'Unknown')}\n")
-                        f.write(f"**Aggregation Method:** {feature.get('aggregation_method', 'N/A')}\n")
-                        if feature.get('filters_applied'):
-                            f.write(f"**Filters Applied:** {', '.join(feature.get('filters_applied', []))}\n")
-                        f.write(f"**Business Context:** {feature.get('business_context', 'N/A')}\n")
-                        compliance_reasoning = feature.get('compliance_reasoning') or feature.get('soc2_compliance_reasoning', 'N/A')
-                        f.write(f"**Compliance Reasoning:** {compliance_reasoning}\n")
-                        f.write(f"**Transformation Layer:** {feature.get('transformation_layer', 'gold')}\n")
-                        f.write(f"**Time Series Type:** {feature.get('time_series_type', 'None')}\n")
-                        if feature.get('required_schemas'):
-                            f.write(f"**Required Schemas:** {', '.join(feature.get('required_schemas', []))}\n")
-                        f.write("\n")
+                for i, feature in enumerate(recommended_features, 1):
+                    f.write(f"### {i}. {feature.get('feature_name', 'Unknown')}\n")
+                    f.write(f"**Natural Language Question:** {feature.get('natural_language_question', 'N/A')}\n")
+                    f.write(f"**Type:** {feature.get('feature_type', 'Unknown')}\n")
+                    f.write(f"**Transformation Layer:** {feature.get('transformation_layer', 'gold')}\n")
+                    f.write(f"**Calculation Logic:** {feature.get('calculation_logic', 'N/A')}\n")
+                    f.write(f"**Business Context:** {feature.get('business_context', 'N/A')}\n")
+                    compliance_reasoning = feature.get('compliance_reasoning') or feature.get('soc2_compliance_reasoning', 'N/A')
+                    f.write(f"**Compliance Reasoning:** {compliance_reasoning}\n")
+                    f.write(f"**Time Series Type:** {feature.get('time_series_type', 'None')}\n")
+                    f.write(f"**Required Schemas:** {', '.join(feature.get('required_schemas', []))}\n")
+                    f.write("\n")
             
             # Write deep research review
             deep_research_review = result.get("deep_research_review", {})
@@ -5016,7 +4894,7 @@ async def run_feature_engineering_pipeline(
             "recommended_features": [],
             "feature_dependencies": {},
             "relevance_scores": {},
-            "next_agent": "breakdown_analysis",
+            "next_agent": "query_understanding",
             "project_id": project_id,
             "histories": histories or [],
             "schema_registry": {},
@@ -5294,226 +5172,6 @@ async def generate_risk_features(
     
     return {
         "risk_features": result.get("risk_features", []),
-        "_full_state": dict(result)
-    }
-
-
-# ============================================================================
-# STANDALONE AGENT EXECUTION FUNCTIONS
-# ============================================================================
-
-async def generate_standard_features(
-    user_query: str,
-    project_id: str,
-    retrieval_helper: Optional[RetrievalHelper] = None,
-    domain_config: Optional[DomainConfiguration] = None,
-    initial_state: Optional[FeatureEngineeringState] = None,
-    **kwargs
-) -> Dict[str, Any]:
-    """
-    Generate standard metrics, KPIs, and counts features independently.
-    
-    This function runs only the FeatureRecommendationAgent to generate
-    standard operational metrics for daily analysis.
-    
-    Args:
-        user_query: User's query/question
-        project_id: Project identifier
-        retrieval_helper: Optional retrieval helper for knowledge/schema retrieval
-        domain_config: Domain configuration (defaults to cybersecurity if not provided)
-        initial_state: Optional initial state (if resuming from previous step)
-        **kwargs: Additional state fields
-    
-    Returns:
-        Dictionary containing recommended_features (standard metrics) and updated state
-    """
-    if domain_config is None:
-        domain_config = CYBERSECURITY_DOMAIN_CONFIG
-    
-    llm = get_llm(temperature=0, model="gpt-4o-mini")
-    
-    # Create minimal workflow or run agent directly
-    if initial_state is None:
-        initial_state: FeatureEngineeringState = {
-            "messages": [],
-            "user_query": user_query,
-            "analytical_intent": {},
-            "relevant_schemas": [],
-            "available_features": [],
-            "clarifying_questions": [],
-            "reasoning_plan": {},
-            "recommended_features": [],
-            "feature_dependencies": {},
-            "relevance_scores": {},
-            "next_agent": "feature_recommendation",
-            "project_id": project_id,
-            "histories": [],
-            "schema_registry": {},
-            "knowledge_documents": [],
-            "domain_config": domain_config.model_dump() if hasattr(domain_config, 'model_dump') else domain_config.dict(),
-            "identified_controls": None,
-            "control_universe": None,
-            **kwargs
-        }
-    else:
-        initial_state = initial_state.copy()
-        initial_state["next_agent"] = "feature_recommendation"
-        initial_state["next_agent_after_features"] = "feature_combination"  # Skip risk, go to combination
-    
-    # Run through workflow up to feature recommendation
-    workflow = create_feature_engineering_workflow(llm, retrieval_helper, domain_config)
-    result = await workflow.ainvoke(initial_state)
-    
-    return {
-        "recommended_features": result.get("recommended_features", []),
-        "analytical_intent": result.get("analytical_intent", {}),
-        "relevant_schemas": result.get("relevant_schemas", []),
-        "knowledge_documents": result.get("knowledge_documents", []),
-        "_full_state": dict(result)
-    }
-
-
-async def generate_risk_features_from_standard(
-    standard_features: List[Dict[str, Any]],
-    user_query: str,
-    project_id: str,
-    retrieval_helper: Optional[RetrievalHelper] = None,
-    domain_config: Optional[DomainConfiguration] = None,
-    knowledge_documents: Optional[List[Dict[str, Any]]] = None,
-    schema_registry: Optional[Dict[str, Any]] = None,
-    relevant_schemas: Optional[List[str]] = None,
-    **kwargs
-) -> Dict[str, Any]:
-    """
-    Generate risk, impact, and likelihood features from standard metrics independently.
-    
-    This function runs only the RiskFeatureEngineeringAgent to generate
-    risk features using the standard metrics as building blocks.
-    
-    Args:
-        standard_features: List of standard metrics/KPIs from FeatureRecommendationAgent
-        user_query: Original user query
-        project_id: Project identifier
-        retrieval_helper: Optional retrieval helper for risk knowledge retrieval
-        domain_config: Domain configuration (defaults to cybersecurity if not provided)
-        knowledge_documents: Optional knowledge documents (will retrieve if not provided)
-        schema_registry: Optional schema registry
-        relevant_schemas: Optional list of relevant schema names
-        **kwargs: Additional state fields
-    
-    Returns:
-        Dictionary containing impact_features, likelihood_features, risk_features and updated state
-    """
-    if domain_config is None:
-        domain_config = CYBERSECURITY_DOMAIN_CONFIG
-    
-    llm = get_llm(temperature=0, model="gpt-4o-mini")
-    
-    # Create initial state with standard features
-    initial_state: FeatureEngineeringState = {
-        "messages": [],
-        "user_query": user_query,
-        "analytical_intent": {},
-        "relevant_schemas": relevant_schemas or [],
-        "available_features": [],
-        "clarifying_questions": [],
-        "reasoning_plan": {},
-        "recommended_features": standard_features,  # Standard features as input
-        "feature_dependencies": {},
-        "relevance_scores": {},
-        "next_agent": "risk_feature_engineering",
-        "project_id": project_id,
-        "histories": [],
-        "schema_registry": schema_registry or {},
-        "knowledge_documents": knowledge_documents or [],
-        "domain_config": domain_config.model_dump() if hasattr(domain_config, 'model_dump') else domain_config.dict(),
-        "identified_controls": None,
-        "control_universe": None,
-        "impact_features": [],
-        "likelihood_features": [],
-        "risk_features": [],
-        **kwargs
-    }
-    
-    # Run through workflow starting at risk feature engineering
-    workflow = create_feature_engineering_workflow(llm, retrieval_helper, domain_config)
-    result = await workflow.ainvoke(initial_state)
-    
-    return {
-        "impact_features": result.get("impact_features", []),
-        "likelihood_features": result.get("likelihood_features", []),
-        "risk_features": result.get("risk_features", []),
-        "recommended_features": result.get("recommended_features", []),  # Standard features preserved
-        "_full_state": dict(result)
-    }
-
-
-async def combine_features(
-    standard_features: List[Dict[str, Any]],
-    impact_features: Optional[List[Dict[str, Any]]] = None,
-    likelihood_features: Optional[List[Dict[str, Any]]] = None,
-    risk_features: Optional[List[Dict[str, Any]]] = None,
-    domain_config: Optional[DomainConfiguration] = None
-) -> Dict[str, Any]:
-    """
-    Combine standard features with risk features into a unified feature set.
-    
-    This function runs the FeatureCombinationAgent to merge all features
-    and add metadata distinguishing feature categories.
-    
-    Args:
-        standard_features: List of standard metrics/KPIs
-        impact_features: Optional list of impact features
-        likelihood_features: Optional list of likelihood features
-        risk_features: Optional list of risk features
-        domain_config: Domain configuration (defaults to cybersecurity if not provided)
-    
-    Returns:
-        Dictionary containing combined recommended_features with feature_category metadata
-    """
-    if domain_config is None:
-        domain_config = CYBERSECURITY_DOMAIN_CONFIG
-    
-    llm = get_llm(temperature=0, model="gpt-4o-mini")
-    combination_agent = FeatureCombinationAgent(llm, domain_config)
-    
-    # Create minimal state
-    state: FeatureEngineeringState = {
-        "messages": [],
-        "user_query": "",
-        "analytical_intent": {},
-        "relevant_schemas": [],
-        "available_features": [],
-        "clarifying_questions": [],
-        "reasoning_plan": {},
-        "recommended_features": standard_features,
-        "feature_dependencies": {},
-        "relevance_scores": {},
-        "next_agent": "feature_combination",
-        "project_id": "",
-        "histories": [],
-        "schema_registry": {},
-        "knowledge_documents": [],
-        "domain_config": domain_config.model_dump() if hasattr(domain_config, 'model_dump') else domain_config.dict(),
-        "identified_controls": None,
-        "control_universe": None,
-        "impact_features": impact_features or [],
-        "likelihood_features": likelihood_features or [],
-        "risk_features": risk_features or []
-    }
-    
-    # Run combination agent
-    result = await combination_agent(state)
-    
-    return {
-        "recommended_features": result.get("recommended_features", []),
-        "summary": {
-            "total_features": len(result.get("recommended_features", [])),
-            "standard_metrics": len(standard_features),
-            "impact_features": len(impact_features or []),
-            "likelihood_features": len(likelihood_features or []),
-            "risk_features": len(risk_features or [])
-        },
         "_full_state": dict(result)
     }
 

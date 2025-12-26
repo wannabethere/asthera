@@ -1,0 +1,7 @@
+                # Validate feature before adding - filter out invalid features
+                feature_name = feature.get("feature_name", "").strip()
+                if feature_name and self._is_valid_feature_name(feature_name):
+                    features.append(feature)
+                else:
+                    logger.warning(f"Skipping invalid feature with name: '{feature_name}'")
+

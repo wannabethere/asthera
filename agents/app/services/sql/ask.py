@@ -199,35 +199,53 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         """Optimized pipeline steps with unified data retrieval and shared context."""
         logger.info(f"Starting optimized ask pipeline steps for {query_id}")
         
-        # Step 3: Retrieve relevant data (currently stub)
-        retrieval_result = {}
-        retrieval_result["success"] = True
-        retrieval_result["data"] = {
-            "table_names": [],
-            "table_ddls": [],
-            "has_calculated_field": False,
-            "has_metric": False
-        }
+        # Step 3: Retrieve relevant data
         if stream_update:
             await stream_update(query_id, "retrieving_data", {"query": user_query})
+        logger.info(f"Retrieving relevant data for {query_id}")
+        retrieval_result = await self._retrieve_relevant_data(
+            query_id, user_query, histories, request
+        )
+        
+        if not retrieval_result.get("success"):
+            logger.error(f"Data retrieval failed for {query_id}")
+            return {
+                "status": "failed",
+                "success": False,
+                "metadata": retrieval_result.get("results", {}).get("metadata", {})
+            }
+        
+        retrieval_data = retrieval_result["data"]
+        logger.info(f"Data retrieval completed for {query_id}, found {len(retrieval_data.get('table_names', []))} tables")
 
-        # Step 4: Generate SQL
+        # Step 4: Generate SQL reasoning (if enabled)
+        reasoning_result = None
+        if self._allow_sql_generation_reasoning:
+            if stream_update:
+                await stream_update(query_id, "planning", {"query": user_query})
+            logger.info(f"Generating SQL reasoning for {query_id}")
+            reasoning_result = await self._generate_sql_reasoning(
+                query_id, user_query, histories, request, retrieval_data
+            )
+            logger.info(f"SQL reasoning completed for {query_id}, has_reasoning: {bool(reasoning_result)}")
+
+        # Step 5: Generate SQL
         if stream_update:
             await stream_update(query_id, "generating_sql", {"query": user_query})
         logger.info(f"Generating SQL for {query_id}")
         sql_result = await self._generate_sql(
-            query_id, user_query, histories, request, retrieval_result["data"]
+            query_id, user_query, histories, request, retrieval_data, reasoning_result
         )
-        reasoning_result = None
         
         logger.info(f"SQL generation completed for {query_id}, success: {sql_result.get('success')}")
         print("sql_result in ask service", sql_result)
-        # Step 5: Generate SQL data
+        # Step 6: Generate SQL data
         if stream_update:
             await stream_update(query_id, "generating_sql_data", {"query": user_query})
         logger.info(f"Generating SQL data for {query_id}")
+        config_dict = request.configurations.dict() if request.configurations else {}
         sql_data_result = await self._generate_sql_data(
-            query_id, sql_result, retrieval_result["data"]
+            query_id, sql_result, request.project_id, config_dict
         )
 
         # Step 6: Generate SQL answer
@@ -244,7 +262,7 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             await stream_update(query_id, "processing_results", {"query": user_query})
         logger.info(f"Processing final results for {query_id}")
         final_result = await self._process_final_results(
-            query_id, sql_result, reasoning_result, retrieval_result["data"]
+            query_id, sql_result, reasoning_result, retrieval_data
         )
         logger.info(f"Final results processed for {query_id}, status: {final_result.get('status')}")
         #print("final_result in ask service", answer_result)
@@ -570,7 +588,18 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
 
             print("sql_generation_reasoning in ask generate sql reasoning", sql_generation_reasoning)
             # Extract the content from the reasoning result
-            reasoning_content = sql_generation_reasoning.get("data", {}).get("reasoning", "")
+            # Handle different possible formats from the pipeline
+            reasoning_content = ""
+            if isinstance(sql_generation_reasoning, dict):
+                # Try different possible formats
+                if "data" in sql_generation_reasoning and isinstance(sql_generation_reasoning["data"], dict):
+                    reasoning_content = sql_generation_reasoning["data"].get("reasoning", "")
+                elif "reasoning" in sql_generation_reasoning:
+                    reasoning_content = sql_generation_reasoning.get("reasoning", "")
+                elif "replies" in sql_generation_reasoning and isinstance(sql_generation_reasoning["replies"], list):
+                    reasoning_content = sql_generation_reasoning["replies"][0] if sql_generation_reasoning["replies"] else ""
+            elif isinstance(sql_generation_reasoning, str):
+                reasoning_content = sql_generation_reasoning
 
             self._update_cache_status(
                 query_id,
@@ -583,6 +612,21 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                     is_followup=True if histories else False,
                 )
             )
+
+            # Return normalized format for consistency
+            # Keep the original format but ensure it has the reasoning accessible
+            if isinstance(sql_generation_reasoning, dict):
+                # Ensure the dict has reasoning in a standard location
+                if "reasoning" not in sql_generation_reasoning:
+                    sql_generation_reasoning["reasoning"] = reasoning_content
+                if "data" not in sql_generation_reasoning:
+                    sql_generation_reasoning["data"] = {"reasoning": reasoning_content}
+            else:
+                # Convert string to dict format
+                sql_generation_reasoning = {
+                    "reasoning": reasoning_content,
+                    "data": {"reasoning": reasoning_content}
+                }
 
             return sql_generation_reasoning
 
@@ -736,11 +780,29 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         # Convert configuration to dict
         config_dict = request.configurations.dict() if request.configurations else {}
 
+        # Extract reasoning string from reasoning_result dict
+        # The reasoning_result can be in different formats:
+        # 1. {"data": {"reasoning": "..."}} - from pipeline wrapper
+        # 2. {"reasoning": "..."} - from direct tool call
+        # 3. {"replies": ["..."]} - from some pipeline interfaces
+        sql_generation_reasoning_str = ""
+        if reasoning_result:
+            if isinstance(reasoning_result, dict):
+                # Try different possible formats
+                if "data" in reasoning_result and isinstance(reasoning_result["data"], dict):
+                    sql_generation_reasoning_str = reasoning_result["data"].get("reasoning", "")
+                elif "reasoning" in reasoning_result:
+                    sql_generation_reasoning_str = reasoning_result.get("reasoning", "")
+                elif "replies" in reasoning_result and isinstance(reasoning_result["replies"], list):
+                    sql_generation_reasoning_str = reasoning_result["replies"][0] if reasoning_result["replies"] else ""
+            elif isinstance(reasoning_result, str):
+                sql_generation_reasoning_str = reasoning_result
+
         if histories:
             text_to_sql_generation_results = await self._pipeline_container.get_pipeline("followup_sql_generation").run(
                 query=user_query,
                 contexts=retrieval_data["table_ddls"],
-                sql_generation_reasoning=reasoning_result,
+                sql_generation_reasoning=sql_generation_reasoning_str,
                 histories=histories,
                 project_id=request.project_id,
                 configuration=config_dict,
@@ -752,7 +814,7 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             text_to_sql_generation_results = await self._pipeline_container.get_pipeline("sql_generation").run(
                 query=user_query,
                 contexts=retrieval_data["table_ddls"],
-                sql_generation_reasoning=reasoning_result,
+                sql_generation_reasoning=sql_generation_reasoning_str,
                 project_id=request.project_id,
                 configuration=config_dict,
                 has_calculated_field=retrieval_data["has_calculated_field"],
@@ -775,7 +837,7 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                             "type": "llm",
                             "metadata": {
                                 "operation_type": "generation",
-                                "reasoning": reasoning_result.get("reasoning", "") if reasoning_result else "",
+                                "reasoning": sql_generation_reasoning_str,
                                 "processing_time_seconds": text_to_sql_generation_results.get("processing_time_seconds", 0.0),
                                 "timestamp": text_to_sql_generation_results.get("timestamp", ""),
                                 "parsed_entities": parsed_entities

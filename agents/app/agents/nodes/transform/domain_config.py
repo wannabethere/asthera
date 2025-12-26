@@ -5,10 +5,18 @@ This module provides domain-specific configurations that allow the feature engin
 agents to work across different domains (cybersecurity, HR compliance, learning, risk, etc.)
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Callable
 from pydantic import BaseModel, Field
 from dataclasses import dataclass
 from enum import Enum
+
+# Import risk knowledge provider for cybersecurity domain
+try:
+    from app.utils.vulnerability_knowledge import get_vulnerability_knowledge
+    VULNERABILITY_KNOWLEDGE_AVAILABLE = True
+except ImportError:
+    VULNERABILITY_KNOWLEDGE_AVAILABLE = False
+    get_vulnerability_knowledge = None
 
 
 class DomainFeaturePattern(BaseModel):
@@ -149,6 +157,23 @@ class DomainConfiguration(BaseModel):
         default_factory=list,
         description="Common aggregation levels (e.g., 'Asset', 'Repository', 'Department', 'Team')"
     )
+    
+    # Risk knowledge provider (callable that returns List[str] of risk calculation knowledge)
+    risk_knowledge_provider: Optional[Callable[[], List[str]]] = Field(
+        default=None,
+        description="""Optional callable that returns domain-specific risk calculation knowledge (List[str]). 
+        Used for deep research in risk feature engineering. This knowledge is SEPARATE from general feature 
+        engineering knowledge and provides detailed methodologies for calculating risk, impact, and likelihood 
+        features specific to the domain. 
+        
+        Example: For cybersecurity domain, this would return vulnerability/asset risk calculation knowledge.
+        For HR compliance domain, this could return training completion risk, certification expiry risk, etc.
+        
+        The callable should return a List[str] where each string is a knowledge item describing a risk 
+        calculation methodology (e.g., "asset_impact_mission_critical_classification: To classify an asset...").
+        
+        If None, no domain-specific risk knowledge is loaded and risk features will rely on general knowledge only."""
+    )
 
 
 # Predefined domain configurations
@@ -221,7 +246,8 @@ CYBERSECURITY_DOMAIN_CONFIG = DomainConfiguration(
         "time_measured_from": "detected_time",
         "exploitability_uses_reachability": True,
         "features_are_time_series": True
-    }
+    },
+    risk_knowledge_provider=get_vulnerability_knowledge if VULNERABILITY_KNOWLEDGE_AVAILABLE else None
 )
 
 
@@ -365,9 +391,26 @@ def create_custom_domain_config(
     feature_patterns: Optional[Dict[str, DomainFeaturePattern]] = None,
     category_mappings: Optional[List[DomainCategoryMapping]] = None,
     aggregation_levels: Optional[List[str]] = None,
-    default_context: Optional[Dict[str, Any]] = None
+    default_context: Optional[Dict[str, Any]] = None,
+    risk_knowledge_provider: Optional[Callable[[], List[str]]] = None
 ) -> DomainConfiguration:
-    """Create a custom domain configuration"""
+    """Create a custom domain configuration
+    
+    Args:
+        domain_name: Name of the domain
+        domain_description: Description of the domain
+        entity_types: Types of entities in this domain
+        severity_levels: Severity/priority levels
+        compliance_frameworks: Supported compliance frameworks
+        feature_patterns: Feature pattern templates
+        category_mappings: Mappings from query keywords to knowledge categories
+        aggregation_levels: Common aggregation levels
+        default_context: Default context values
+        risk_knowledge_provider: Optional callable that returns domain-specific risk calculation knowledge (List[str])
+    
+    Returns:
+        DomainConfiguration instance
+    """
     return DomainConfiguration(
         domain_name=domain_name,
         domain_description=domain_description,
@@ -377,7 +420,8 @@ def create_custom_domain_config(
         feature_patterns=feature_patterns or {},
         category_mappings=category_mappings or [],
         aggregation_levels=aggregation_levels or [],
-        default_context=default_context or {}
+        default_context=default_context or {},
+        risk_knowledge_provider=risk_knowledge_provider
     )
 
 

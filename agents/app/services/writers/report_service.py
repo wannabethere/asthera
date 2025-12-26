@@ -1231,11 +1231,14 @@ class ReportService(BaseService):
                     continue
                 
                 try:
+                    # Use per-query project_id if available, otherwise fall back to global project_id
+                    query_project_id = query_data.get("project_id") or project_id
+                    
                     # Refresh the SQL query with existing reasoning
                     refresh_result = await self._agent_pipelines["sql_refresh"].run(
                         sql_query=sql,
                         original_question=original_question,
-                        project_id=project_id,
+                        project_id=query_project_id,
                         existing_reasoning=existing_reasoning,
                         status_callback=self._create_nested_status_callback(
                             status_callback, f"sql_refresh_query_{i}"
@@ -1909,6 +1912,14 @@ class ReportService(BaseService):
                     visualization = post_process.get("visualization", {})
                     chart_schema = visualization.get("chart_schema", {})
                     
+                    # Extract project_id from component, checking multiple possible locations
+                    component_project_id = component.get("project_id")
+                    if not component_project_id:
+                        # Check metadata field for backward compatibility
+                        metadata = component.get("thread_metadata") or component.get("metadata") or {}
+                        if isinstance(metadata, dict):
+                            component_project_id = metadata.get("project_id")
+                    
                     query_data = {
                         "chart_schema": chart_schema,
                         "sql": component.get("sql_query", ""),  # May be empty for data summarization
@@ -1928,13 +1939,23 @@ class ReportService(BaseService):
                         "reasoning": component.get("reasoning"),
                         "data_count": component.get("data_count"),
                         "validation_results": component.get("validation_results", {}),
-                        "final_result": final_result  # Include the full result for report generation
+                        "final_result": final_result,  # Include the full result for report generation
+                        "project_id": component_project_id  # Include per-component project_id if available
                     }
                     queries.append(query_data)
                     
                 # Handle traditional SQL query components
                 elif component.get("sql_query") and component_type in ["chart", "table", "metric", "sql_summary", "question"]:
                     logger.info(f"Processing component {i} as valid query component")
+                    
+                    # Extract project_id from component, checking multiple possible locations
+                    component_project_id = component.get("project_id")
+                    if not component_project_id:
+                        # Check metadata field for backward compatibility
+                        metadata = component.get("thread_metadata") or component.get("metadata") or {}
+                        if isinstance(metadata, dict):
+                            component_project_id = metadata.get("project_id")
+                    
                     query_data = {
                         "chart_schema": component.get("chart_schema", {}),
                         "sql": component.get("sql_query", ""),
@@ -1953,7 +1974,8 @@ class ReportService(BaseService):
                         "thread_metadata": component.get("thread_metadata", {}),
                         "reasoning": component.get("reasoning"),
                         "data_count": component.get("data_count"),
-                        "validation_results": component.get("validation_results", {})
+                        "validation_results": component.get("validation_results", {}),
+                        "project_id": component_project_id  # Include per-component project_id if available
                     }
                     queries.append(query_data)
                 else:
