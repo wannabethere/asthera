@@ -9,13 +9,23 @@ import asyncio
 import logging
 import json
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from datetime import datetime
 
 from app.agents.nodes.transform.feature_engineering_agent import run_feature_engineering_pipeline
 from app.agents.nodes.transform.domain_config import get_domain_config, CYBERSECURITY_DOMAIN_CONFIG, HR_COMPLIANCE_DOMAIN_CONFIG
 from app.agents.retrieval.retrieval_helper import RetrievalHelper
 from app.core.dependencies import get_llm
+
+# Import transform demo function (handle both relative and absolute imports)
+try:
+    from demo_transform_sql_rag_agent import run_transform_demo_from_features
+except ImportError:
+    try:
+        from .demo_transform_sql_rag_agent import run_transform_demo_from_features
+    except ImportError:
+        # If import fails, transform demo will be skipped
+        run_transform_demo_from_features = None
 
 # Configure logging
 logging.getLogger("app.storage.documents").setLevel(logging.WARNING)
@@ -53,19 +63,32 @@ class FeatureEngineeringAgentDemo:
         user_query: str,
         project_id: str,
         domain_config_name: str = "cybersecurity",
+        histories: Optional[List[str]] = None,
+        validation_expectations: Optional[List[Dict[str, Any]]] = None,
         **kwargs
     ) -> Dict:
         """
         Process a feature engineering query and return the generated features.
         
+        This method matches the router's response format:
+        - success: bool
+        - recommended_features: List[Dict[str, Any]]
+        - analytical_intent: Optional[Dict[str, Any]]
+        - relevant_schemas: Optional[List[str]]
+        - clarifying_questions: Optional[List[str]]
+        - reasoning_plan: Optional[Dict[str, Any]]
+        - error: Optional[str]
+        
         Args:
             user_query: The user's query/question
             project_id: The project ID
             domain_config_name: Domain name (default: "cybersecurity")
+            histories: Optional list of previous queries for context
+            validation_expectations: Optional list of validation examples
             **kwargs: Additional arguments
             
         Returns:
-            Dict containing the feature engineering results
+            Dict matching FeatureRecommendationResponse format
         """
         try:
             logger.info(f"Processing feature engineering query: {user_query[:100]}...")
@@ -74,26 +97,37 @@ class FeatureEngineeringAgentDemo:
             # Get domain config
             domain_config = get_domain_config(domain_config_name)
             
-            # Process feature engineering request
+            # Process feature engineering request (same as router)
             result = await run_feature_engineering_pipeline(
                 user_query=user_query,
                 project_id=project_id,
                 retrieval_helper=self.retrieval_helper,
                 domain_config=domain_config,
+                histories=histories,
+                validation_expectations=validation_expectations,
                 **kwargs
             )
             
-            logger.info(f"Feature engineering result: {len(result.get('recommended_features', []))} standard features")
-            logger.info(f"Risk features: {len(result.get('risk_features', []))}")
-            logger.info(f"Impact features: {len(result.get('impact_features', []))}")
-            logger.info(f"Likelihood features: {len(result.get('likelihood_features', []))}")
+            # Extract features count for logging
+            recommended_features = result.get("recommended_features", [])
+            risk_features = result.get("risk_features", [])
+            impact_features = result.get("impact_features", [])
+            likelihood_features = result.get("likelihood_features", [])
             
+            logger.info(f"Feature engineering result: {len(recommended_features)} standard features")
+            logger.info(f"Risk features: {len(risk_features)}")
+            logger.info(f"Impact features: {len(impact_features)}")
+            logger.info(f"Likelihood features: {len(likelihood_features)}")
+            
+            # Return in router format (FeatureRecommendationResponse)
             return {
-                "status": "success",
-                "result": result,
-                "query": user_query,
-                "domain": domain_config_name,
-                "project_id": project_id
+                "success": True,
+                "recommended_features": recommended_features,
+                "analytical_intent": result.get("analytical_intent"),
+                "relevant_schemas": result.get("relevant_schemas", []),
+                "clarifying_questions": result.get("clarifying_questions", []),
+                "reasoning_plan": result.get("reasoning_plan"),
+                "error": None
             }
             
         except Exception as e:
@@ -101,11 +135,13 @@ class FeatureEngineeringAgentDemo:
             import traceback
             traceback.print_exc()
             return {
-                "status": "error",
-                "error": str(e),
-                "query": user_query,
-                "domain": domain_config_name,
-                "project_id": project_id
+                "success": False,
+                "recommended_features": [],
+                "analytical_intent": None,
+                "relevant_schemas": [],
+                "clarifying_questions": [],
+                "reasoning_plan": None,
+                "error": str(e)
             }
 
 
@@ -143,9 +179,18 @@ def save_results_to_file(
     result: Dict,
     output_dir: Path,
     query_name: str,
-    domain_name: str
+    domain_name: str,
+    user_query: str
 ) -> Path:
-    """Save feature engineering results to markdown and JSON files"""
+    """Save feature engineering results to markdown and JSON files
+    
+    Args:
+        result: Response dict in router format (FeatureRecommendationResponse)
+        output_dir: Directory to save output files
+        query_name: Name for the query/test case
+        domain_name: Domain name
+        user_query: Original user query
+    """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     # Create markdown file
@@ -155,62 +200,71 @@ def save_results_to_file(
         f.write("# Feature Engineering Pipeline Output\n\n")
         f.write(f"**Generated at:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         f.write(f"**Domain:** {domain_name}\n")
-        f.write(f"**Query:** {result.get('query', 'N/A')}\n\n")
+        f.write(f"**Query:** {user_query}\n")
+        f.write(f"**Success:** {result.get('success', False)}\n\n")
         
-        # Write recommended features (standard features)
-        all_features = result.get('result', {}).get('recommended_features', [])
-        f.write(f"## Recommended Features ({len(all_features)} total)\n\n")
-        for i, feature in enumerate(all_features, 1):
+        if result.get('error'):
+            f.write(f"**Error:** {result.get('error')}\n\n")
+            return md_file
+        
+        # Write recommended features (matches router format)
+        recommended_features = result.get('recommended_features', [])
+        f.write(f"## Recommended Features ({len(recommended_features)} total)\n\n")
+        for i, feature in enumerate(recommended_features, 1):
             f.write(format_feature_output(feature, i))
         
-        # Write impact features
-        impact_features = result.get('result', {}).get('impact_features', [])
-        if impact_features:
-            f.write(f"\n## Impact Features ({len(impact_features)} total)\n\n")
-            for i, feature in enumerate(impact_features, 1):
-                f.write(format_feature_output(feature, i))
+        # Write analytical intent
+        analytical_intent = result.get('analytical_intent')
+        if analytical_intent:
+            f.write(f"\n## Analytical Intent\n\n")
+            f.write(f"```json\n{json.dumps(analytical_intent, indent=2)}\n```\n\n")
         
-        # Write likelihood features
-        likelihood_features = result.get('result', {}).get('likelihood_features', [])
-        if likelihood_features:
-            f.write(f"\n## Likelihood Features ({len(likelihood_features)} total)\n\n")
-            for i, feature in enumerate(likelihood_features, 1):
-                f.write(format_feature_output(feature, i))
+        # Write relevant schemas
+        relevant_schemas = result.get('relevant_schemas', [])
+        if relevant_schemas:
+            f.write(f"\n## Relevant Schemas\n\n")
+            for schema in relevant_schemas:
+                f.write(f"- {schema}\n")
+            f.write("\n")
         
-        # Write risk features
-        risk_features = result.get('result', {}).get('risk_features', [])
-        if risk_features:
-            f.write(f"\n## Risk Features ({len(risk_features)} total)\n\n")
-            for i, feature in enumerate(risk_features, 1):
-                f.write(format_feature_output(feature, i))
-        
-        # Write feature dependencies
-        dependencies = result.get('result', {}).get('feature_dependencies', {})
-        if dependencies:
-            f.write(f"\n## Feature Dependencies\n\n")
-            f.write(f"```json\n{json.dumps(dependencies, indent=2)}\n```\n\n")
+        # Write clarifying questions
+        clarifying_questions = result.get('clarifying_questions', [])
+        if clarifying_questions:
+            f.write(f"\n## Clarifying Questions\n\n")
+            for i, question in enumerate(clarifying_questions, 1):
+                f.write(f"{i}. {question}\n")
+            f.write("\n")
         
         # Write reasoning plan
-        reasoning_plan = result.get('result', {}).get('reasoning_plan', {})
+        reasoning_plan = result.get('reasoning_plan')
         if reasoning_plan:
             f.write(f"\n## Reasoning Plan\n\n")
             f.write(f"```json\n{json.dumps(reasoning_plan, indent=2)}\n```\n\n")
-        
-        # Write relevancy scores
-        relevance_scores = result.get('result', {}).get('relevance_scores', {})
-        if relevance_scores:
-            f.write(f"\n## Relevance Scores\n\n")
-            f.write(f"```json\n{json.dumps(relevance_scores, indent=2)}\n```\n\n")
     
-    # Create JSON file
+    # Create JSON file (save in router format)
     json_file = output_dir / f"feature_engineering_{domain_name}_{query_name}_{timestamp}.json"
+    save_data = {
+        "success": result.get('success', False),
+        "recommended_features": result.get('recommended_features', []),
+        "analytical_intent": result.get('analytical_intent'),
+        "relevant_schemas": result.get('relevant_schemas', []),
+        "clarifying_questions": result.get('clarifying_questions', []),
+        "reasoning_plan": result.get('reasoning_plan'),
+        "error": result.get('error'),
+        "metadata": {
+            "query": user_query,
+            "domain": domain_name,
+            "timestamp": datetime.now().isoformat()
+        }
+    }
+    
     with open(json_file, 'w', encoding='utf-8') as f:
-        json.dump(result, f, indent=2, default=str)
+        json.dump(save_data, f, indent=2, default=str)
     
     logger.info(f"Results saved to: {md_file}")
     logger.info(f"JSON results saved to: {json_file}")
     
-    return md_file
+    return json_file  # Return JSON file path for transform demo
 
 
 async def run_feature_engineering_demo():
@@ -244,7 +298,7 @@ async def run_feature_engineering_demo():
             for GDPR compliance across cornerstone and talent. I need to know completion rates, certification expiry,
             and compliance gaps by department. Critical deadline = 7 days, High = 30 days.
             """,
-            "project_id": "hr_data",
+            "project_id": "csod_risk_attrition",
             "domain": "hr_compliance"
         }
     ]
@@ -272,30 +326,51 @@ async def run_feature_engineering_demo():
                 domain_config_name=test_case['domain']
             )
             
-            if result.get('status') == 'success':
+            if result.get('success'):
                 successful += 1
-                print(f"✅ Success: Generated {len(result.get('result', {}).get('recommended_features', []))} standard features")
+                recommended_count = len(result.get('recommended_features', []))
+                print(f"✅ Success: Generated {recommended_count} recommended features")
                 
                 # Save results to file
-                save_results_to_file(
+                json_file = save_results_to_file(
                     result=result,
                     output_dir=output_dir,
                     query_name=test_case['name'],
-                    domain_name=test_case['domain']
+                    domain_name=test_case['domain'],
+                    user_query=test_case['query']
                 )
+                
+                # For cybersecurity domain, automatically run transform demo
+                if test_case['domain'] == 'cybersecurity' and json_file and run_transform_demo_from_features:
+                    print(f"\n{'='*80}")
+                    print("🔄 Automatically running Transform SQL RAG Agent for cybersecurity features...")
+                    print(f"{'='*80}\n")
+                    try:
+                        await run_transform_demo_from_features(str(json_file))
+                        print(f"\n✅ Transform demo completed for {test_case['name']}")
+                    except Exception as e:
+                        logger.error(f"Error running transform demo: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        print(f"\n❌ Transform demo failed for {test_case['name']}: {e}")
+                elif test_case['domain'] == 'cybersecurity' and not run_transform_demo_from_features:
+                    logger.warning("Transform demo function not available. Skipping transform demo.")
             else:
                 failed += 1
-                print(f"❌ Failed: {result.get('error', 'Unknown error')}")
+                error_msg = result.get('error', 'Unknown error')
+                print(f"❌ Failed: {error_msg}")
             
+            # Track results (matches router format)
             all_results.append({
                 "test_case": test_case['name'],
                 "domain": test_case['domain'],
-                "status": result.get('status'),
-                "standard_features_count": len(result.get('result', {}).get('recommended_features', [])) if result.get('status') == 'success' else 0,
-                "risk_features_count": len(result.get('result', {}).get('risk_features', [])) if result.get('status') == 'success' else 0,
-                "impact_features_count": len(result.get('result', {}).get('impact_features', [])) if result.get('status') == 'success' else 0,
-                "likelihood_features_count": len(result.get('result', {}).get('likelihood_features', [])) if result.get('status') == 'success' else 0,
-                "error": result.get('error') if result.get('status') == 'error' else None
+                "success": result.get('success', False),
+                "recommended_features_count": len(result.get('recommended_features', [])) if result.get('success') else 0,
+                "analytical_intent": result.get('analytical_intent') is not None,
+                "relevant_schemas_count": len(result.get('relevant_schemas', [])),
+                "clarifying_questions_count": len(result.get('clarifying_questions', [])),
+                "reasoning_plan": result.get('reasoning_plan') is not None,
+                "error": result.get('error') if not result.get('success') else None
             })
             
         except Exception as e:
@@ -306,7 +381,12 @@ async def run_feature_engineering_demo():
             all_results.append({
                 "test_case": test_case['name'],
                 "domain": test_case['domain'],
-                "status": "error",
+                "success": False,
+                "recommended_features_count": 0,
+                "analytical_intent": False,
+                "relevant_schemas_count": 0,
+                "clarifying_questions_count": 0,
+                "reasoning_plan": False,
                 "error": str(e)
             })
     

@@ -1,0 +1,1400 @@
+{
+  "summary": {
+    "total_cases": 27,
+    "successful": 27,
+    "failed": 0,
+    "skipped": 0,
+    "success_rate": 100.0,
+    "timestamp": "2025-12-27T17:29:29.934653"
+  },
+  "results": [
+    {
+      "event_id": "feature_critical_vulnerability_count",
+      "description": "FEATURE: critical_vulnerability_count - *: count",
+      "question": "Create a calculated column or metric for critical_vulnerability_count. Count the number of vulnerabilities where severity is Critical and state is ACTIVE. Apply filters: severity = 'Critical', state = 'ACTIVE'. Use schemas: dev_assets.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT COUNT(*) AS critical_vulnerability_count FROM dev_assets.vulnerabilities WHERE severity = 'Critical' AND state = 'ACTIVE';",
+      "reasoning_plan": {
+        "transform_type": "AGGREGATION_TRANSFORMATION",
+        "source_columns": [
+          "severity",
+          "state"
+        ],
+        "target_columns": [
+          "critical_vulnerability_count"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Count the number of vulnerabilities with severity 'Critical' and state 'ACTIVE'",
+            "sql_expression": "SELECT COUNT(*) AS critical_vulnerability_count FROM vulnerabilities WHERE severity = 'Critical' AND state = 'ACTIVE'"
+          }
+        ],
+        "sql_functions_needed": [
+          "COUNT"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"AGGREGATION_TRANSFORMATION\",\n    \"source_columns\": [\"severity\", \"state\"],\n    \"target_columns\": [\"critical_vulnerability_count\"],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Count the number of vulnerabilities with severity 'Critical' and state 'ACTIVE'\",\n            \"sql_expression\": \"SELECT COUNT(*) AS critical_vulnerability_count FROM vulnerabilities WHERE severity = 'Critical' AND state = 'ACTIVE'\"\n        }\n    ],\n    \"sql_functions_needed\": [\"COUNT\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "AGGREGATION_TRANSFORMATION",
+      "parsed_entities": {
+        "column_filters": {
+          "severity": "Critical",
+          "state": "ACTIVE"
+        },
+        "time_filters": {},
+        "aggregations": {
+          "critical_vulnerability_count": "COUNT(*)"
+        },
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_high_vulnerability_count",
+      "description": "FEATURE: high_vulnerability_count - *: count",
+      "question": "Create a calculated column or metric for high_vulnerability_count. Count the number of vulnerabilities where severity is High and state is ACTIVE. Apply filters: severity = 'High', state = 'ACTIVE'. Use schemas: dev_assets.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT COUNT(*) AS high_vulnerability_count FROM dev_assets.vulnerabilities WHERE severity = 'High' AND state = 'ACTIVE';",
+      "reasoning_plan": {
+        "transform_type": "AGGREGATION_TRANSFORMATION",
+        "source_columns": [
+          "severity",
+          "state"
+        ],
+        "target_columns": [
+          "high_vulnerability_count"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Count the number of vulnerabilities with severity 'High' and state 'ACTIVE'",
+            "sql_expression": "SELECT COUNT(*) AS high_vulnerability_count FROM vulnerabilities WHERE severity = 'High' AND state = 'ACTIVE'"
+          }
+        ],
+        "sql_functions_needed": [
+          "COUNT"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"AGGREGATION_TRANSFORMATION\",\n    \"source_columns\": [\"severity\", \"state\"],\n    \"target_columns\": [\"high_vulnerability_count\"],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Count the number of vulnerabilities with severity 'High' and state 'ACTIVE'\",\n            \"sql_expression\": \"SELECT COUNT(*) AS high_vulnerability_count FROM vulnerabilities WHERE severity = 'High' AND state = 'ACTIVE'\"\n        }\n    ],\n    \"sql_functions_needed\": [\"COUNT\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "AGGREGATION_TRANSFORMATION",
+      "parsed_entities": {
+        "column_filters": {
+          "severity": "High",
+          "state": "ACTIVE"
+        },
+        "time_filters": {},
+        "aggregations": {
+          "high_vulnerability_count": "COUNT(*)"
+        },
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_critical_sla_breached_count",
+      "description": "FEATURE: critical_sla_breached_count - *: count",
+      "question": "Create a calculated column or metric for critical_sla_breached_count. Count the number of critical vulnerabilities where (current_date - detected_time) > 7 days. Apply filters: severity = 'Critical', state != 'remediated'. Use schemas: dev_assets.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT COUNT(*) AS critical_sla_breached_count FROM dev_assets WHERE (CURRENT_DATE - events_timestamp) > INTERVAL '7 days' AND is_retired = false;",
+      "reasoning_plan": {
+        "transform_type": "AGGREGATION_TRANSFORMATION",
+        "source_columns": [
+          "events_timestamp",
+          "is_retired"
+        ],
+        "target_columns": [
+          "critical_sla_breached_count"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Count the number of critical vulnerabilities that have not been remediated and were detected more than 7 days ago.",
+            "sql_expression": "SELECT COUNT(*) AS critical_sla_breached_count FROM dev_assets WHERE (CURRENT_DATE - events_timestamp) > INTERVAL '7 days' AND severity = 'Critical' AND state != 'remediated';"
+          }
+        ],
+        "sql_functions_needed": [
+          "COUNT",
+          "CURRENT_DATE",
+          "INTERVAL"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"AGGREGATION_TRANSFORMATION\",\n    \"source_columns\": [\"events_timestamp\", \"is_retired\"],\n    \"target_columns\": [\"critical_sla_breached_count\"],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Count the number of critical vulnerabilities that have not been remediated and were detected more than 7 days ago.\",\n            \"sql_expression\": \"SELECT COUNT(*) AS critical_sla_breached_count FROM dev_assets WHERE (CURRENT_DATE - events_timestamp) > INTERVAL '7 days' AND severity = 'Critical' AND state != 'remediated';\"\n        }\n    ],\n    \"sql_functions_needed\": [\"COUNT\", \"CURRENT_DATE\", \"INTERVAL\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "AGGREGATION_TRANSFORMATION",
+      "parsed_entities": {
+        "column_filters": {
+          "severity": "Critical",
+          "state": "not remediated"
+        },
+        "time_filters": {
+          "events_timestamp": "CURRENT_DATE - INTERVAL '7 days'"
+        },
+        "aggregations": {
+          "count": "critical_sla_breached_count"
+        },
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_high_sla_breached_count",
+      "description": "FEATURE: high_sla_breached_count - *: count",
+      "question": "Create a calculated column or metric for high_sla_breached_count. Count the number of high vulnerabilities where (current_date - detected_time) > 30 days. Apply filters: severity = 'High', state != 'remediated'. Use schemas: dev_assets.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT COUNT(*) AS high_sla_breached_count FROM dev_assets WHERE severity = 'High' AND state != 'remediated' AND (CURRENT_DATE - detected_time) > INTERVAL '30 days';",
+      "reasoning_plan": {
+        "transform_type": "AGGREGATION_TRANSFORMATION",
+        "source_columns": [
+          "severity",
+          "state",
+          "detected_time"
+        ],
+        "target_columns": [
+          "high_sla_breached_count"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Count the number of high vulnerabilities that have been detected for more than 30 days and are not remediated.",
+            "sql_expression": "SELECT COUNT(*) AS high_sla_breached_count FROM dev_assets WHERE severity = 'High' AND state != 'remediated' AND (CURRENT_DATE - detected_time) > INTERVAL '30 days'"
+          }
+        ],
+        "sql_functions_needed": [
+          "COUNT",
+          "CURRENT_DATE",
+          "INTERVAL"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"AGGREGATION_TRANSFORMATION\",\n    \"source_columns\": [\"severity\", \"state\", \"detected_time\"],\n    \"target_columns\": [\"high_sla_breached_count\"],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Count the number of high vulnerabilities that have been detected for more than 30 days and are not remediated.\",\n            \"sql_expression\": \"SELECT COUNT(*) AS high_sla_breached_count FROM dev_assets WHERE severity = 'High' AND state != 'remediated' AND (CURRENT_DATE - detected_time) > INTERVAL '30 days'\"\n        }\n    ],\n    \"sql_functions_needed\": [\"COUNT\", \"CURRENT_DATE\", \"INTERVAL\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "AGGREGATION_TRANSFORMATION",
+      "parsed_entities": {
+        "column_filters": {
+          "severity": "High",
+          "state": "remediated"
+        },
+        "time_filters": {
+          "detected_time": "CURRENT_DATE - INTERVAL '30 days'"
+        },
+        "aggregations": {
+          "high_sla_breached_count": "COUNT(*)"
+        },
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_critical_risk_vulnerability_count",
+      "description": "FEATURE: critical_risk_vulnerability_count - *: count",
+      "question": "Create a calculated column or metric for critical_risk_vulnerability_count. Count the number of vulnerabilities classified as Critical risk. Apply filters: risk_level = 'Critical'. Use schemas: dev_assets.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT COUNT(*) AS critical_risk_vulnerability_count FROM dev_assets WHERE risk_level = 'Critical';",
+      "reasoning_plan": {
+        "transform_type": "AGGREGATION_TRANSFORMATION",
+        "source_columns": [
+          "risk_level"
+        ],
+        "target_columns": [
+          "critical_risk_vulnerability_count"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Count the number of vulnerabilities classified as Critical risk",
+            "sql_expression": "SELECT COUNT(*) AS critical_risk_vulnerability_count FROM dev_assets WHERE risk_level = 'Critical'"
+          }
+        ],
+        "sql_functions_needed": [
+          "COUNT"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"AGGREGATION_TRANSFORMATION\",\n    \"source_columns\": [\"risk_level\"],\n    \"target_columns\": [\"critical_risk_vulnerability_count\"],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Count the number of vulnerabilities classified as Critical risk\",\n            \"sql_expression\": \"SELECT COUNT(*) AS critical_risk_vulnerability_count FROM dev_assets WHERE risk_level = 'Critical'\"\n        }\n    ],\n    \"sql_functions_needed\": [\"COUNT\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "AGGREGATION_TRANSFORMATION",
+      "parsed_entities": {
+        "column_filters": {
+          "risk_level": "Critical"
+        },
+        "time_filters": {},
+        "aggregations": {
+          "critical_risk_vulnerability_count": "COUNT(*)"
+        },
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_avg_remediation_time_days",
+      "description": "FEATURE: avg_remediation_time_days - *: metric",
+      "question": "Create a calculated column or metric for avg_remediation_time_days. Calculate the average number of days between detected_time and remediation_time for vulnerabilities where state is REMEDIATED. Use avg aggregation method. Apply filters: state = 'REMEDIATED'. Use schemas: dev_assets.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT AVG(EXTRACT(EPOCH FROM (dev_assets.remediation_time - dev_assets.detected_time)) / 86400) AS avg_remediation_time_days FROM dev_assets WHERE lower(dev_assets.state) = lower('REMEDIATED');",
+      "reasoning_plan": {
+        "transform_type": "AGGREGATION_TRANSFORMATION",
+        "source_columns": [
+          "detected_time",
+          "remediation_time",
+          "state"
+        ],
+        "target_columns": [
+          "avg_remediation_time_days"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Calculate the difference in days between remediation_time and detected_time for each vulnerability where the state is REMEDIATED.",
+            "sql_expression": "DATEDIFF(remediation_time, detected_time)"
+          },
+          {
+            "step": 2,
+            "description": "Aggregate the results by calculating the average of the differences obtained in step 1.",
+            "sql_expression": "AVG(DATEDIFF(remediation_time, detected_time))"
+          }
+        ],
+        "sql_functions_needed": [
+          "AVG",
+          "DATEDIFF"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"AGGREGATION_TRANSFORMATION\",\n    \"source_columns\": [\"detected_time\", \"remediation_time\", \"state\"],\n    \"target_columns\": [\"avg_remediation_time_days\"],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Calculate the difference in days between remediation_time and detected_time for each vulnerability where the state is REMEDIATED.\",\n            \"sql_expression\": \"DATEDIFF(remediation_time, detected_time)\"\n        },\n        {\n            \"step\": 2,\n            \"description\": \"Aggregate the results by calculating the average of the differences obtained in step 1.\",\n            \"sql_expression\": \"AVG(DATEDIFF(remediation_time, detected_time))\"\n        }\n    ],\n    \"sql_functions_needed\": [\"AVG\", \"DATEDIFF\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "AGGREGATION_TRANSFORMATION",
+      "parsed_entities": {
+        "column_filters": {
+          "state": "REMEDIATED"
+        },
+        "time_filters": {},
+        "aggregations": {
+          "avg_remediation_time_days": "AVG(EXTRACT(EPOCH FROM (dev_assets.remediation_time - dev_assets.detected_time)) / 86400)"
+        },
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_critical_vulnerability_impact_score",
+      "description": "FEATURE: critical_vulnerability_impact_score - impact",
+      "question": "Create a calculated column or metric for critical_vulnerability_impact_score. What is the impact score of critical vulnerabilities based on their classification and propagation?. Calculation logic: Use the formula: `impact_score = calculate_asset_impact_class_score('Critical') *.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "WITH impact_classification AS ( SELECT dev_assets.dev_id, CASE WHEN dev_assets.impact_class = 'Mission Critical' THEN 'Mission Critical' WHEN dev_assets.impact_class = 'Critical' THEN 'Critical' ELSE 'Other' END AS impact_class FROM dev_assets), impact_scores AS ( SELECT ic.dev_id, acm.numeric_score AS impact_class_score FROM impact_classification ic JOIN asset_classification_metadata acm ON acm.enum_type='impact_class' AND acm.code=ic.impact_class), propagation_scores AS ( SELECT dev_assets.dev_id, pcm.propagation_class_score FROM dev_assets JOIN propagation_class_metadata pcm ON pcm.code=dev_assets.propagation_class) SELECT is.dev_id, (is.impact_class_score * 0.7) + (ps.propagation_class_score * 0.3) AS critical_vulnerability_impact_score FROM impact_scores is JOIN propagation_scores ps ON is.dev_id = ps.dev_id;",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [
+          "impact_class",
+          "propagation_class"
+        ],
+        "target_columns": [
+          "critical_vulnerability_impact_score"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Classify asset impact class based on roles and device type to determine impact_class.",
+            "sql_expression": "CASE WHEN dev_assets.impact_class = 'Mission Critical' THEN 'Mission Critical' WHEN dev_assets.impact_class = 'Critical' THEN 'Critical' ELSE 'Other' END AS impact_class"
+          },
+          {
+            "step": 2,
+            "description": "Retrieve numeric score for the classified impact class from asset_classification_metadata.",
+            "sql_expression": "SELECT numeric_score FROM asset_classification_metadata WHERE enum_type='impact_class' AND code=impact_class"
+          },
+          {
+            "step": 3,
+            "description": "Retrieve propagation class score from the appropriate metadata table.",
+            "sql_expression": "SELECT propagation_class_score FROM propagation_class_metadata WHERE code=propagation_class"
+          },
+          {
+            "step": 4,
+            "description": "Calculate critical vulnerability impact score using the formula.",
+            "sql_expression": "SELECT (impact_class_score * 0.7) + (propagation_class_score * 0.3) AS critical_vulnerability_impact_score"
+          }
+        ],
+        "sql_functions_needed": [
+          "SELECT",
+          "CASE",
+          "JOIN"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [\n        \"impact_class\",\n        \"propagation_class\"\n    ],\n    \"target_columns\": [\n        \"critical_vulnerability_impact_score\"\n    ],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Classify asset impact class based on roles and device type to determine impact_class.\",\n            \"sql_expression\": \"CASE WHEN dev_assets.impact_class = 'Mission Critical' THEN 'Mission Critical' WHEN dev_assets.impact_class = 'Critical' THEN 'Critical' ELSE 'Other' END AS impact_class\"\n        },\n        {\n            \"step\": 2,\n            \"description\": \"Retrieve numeric score for the classified impact class from asset_classification_metadata.\",\n            \"sql_expression\": \"SELECT numeric_score FROM asset_classification_metadata WHERE enum_type='impact_class' AND code=impact_class\"\n        },\n        {\n            \"step\": 3,\n            \"description\": \"Retrieve propagation class score from the appropriate metadata table.\",\n            \"sql_expression\": \"SELECT propagation_class_score FROM propagation_class_metadata WHERE code=propagation_class\"\n        },\n        {\n            \"step\": 4,\n            \"description\": \"Calculate critical vulnerability impact score using the formula.\",\n            \"sql_expression\": \"SELECT (impact_class_score * 0.7) + (propagation_class_score * 0.3) AS critical_vulnerability_impact_score\"\n        }\n    ],\n    \"sql_functions_needed\": [\n        \"SELECT\",\n        \"CASE\",\n        \"JOIN\"\n    ],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {},
+        "time_filters": {},
+        "aggregations": {},
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_high_vulnerability_impact_score",
+      "description": "FEATURE: high_vulnerability_impact_score - impact",
+      "question": "Create a calculated column or metric for high_vulnerability_impact_score. What is the impact score of high vulnerabilities based on their classification and propagation?. Calculation logic: Use the formula: `impact_score = calculate_asset_impact_class_score('High') *.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "WITH impact_class AS ( SELECT a.dev_id, ( SELECT numeric_score FROM risk_impact_metadata WHERE enum_type='impact_class' AND code=(CASE WHEN lower(a.impact_class) = 'mission critical' THEN 'Mission Critical' WHEN lower(a.impact_class) = 'critical' THEN 'Critical' ELSE 'Other' END)) AS impact_class_score FROM assets AS a), propagation_class AS ( SELECT a.dev_id, ( SELECT numeric_score FROM risk_impact_metadata WHERE enum_type='propagation_class' AND code=(CASE WHEN lower(a.propagation_class) = 'perimeter' THEN 'Perimeter' ELSE 'Core' END)) AS propagation_class_score FROM assets AS a) SELECT ic.dev_id, (ic.impact_class_score * 0.7) + (pc.propagation_class_score * 0.3) AS high_vulnerability_impact_score FROM impact_class AS ic JOIN propagation_class AS pc ON ic.dev_id = pc.dev_id;",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [
+          "impact_class_score",
+          "propagation_class_score"
+        ],
+        "target_columns": [
+          "high_vulnerability_impact_score"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Classify asset impact class based on roles and other conditions to determine impact_class_score.",
+            "sql_expression": "SELECT numeric_score FROM risk_impact_metadata WHERE enum_type='impact_class' AND code=calculated_impact_class"
+          },
+          {
+            "step": 2,
+            "description": "Classify propagation class based on asset characteristics to determine propagation_class_score.",
+            "sql_expression": "SELECT numeric_score FROM risk_impact_metadata WHERE enum_type='propagation_class' AND code=calculated_propagation_class"
+          },
+          {
+            "step": 3,
+            "description": "Calculate the high vulnerability impact score using the formula.",
+            "sql_expression": "high_vulnerability_impact_score = (impact_class_score * 0.7) + (propagation_class_score * 0.3)"
+          }
+        ],
+        "sql_functions_needed": [
+          "SELECT",
+          "CASE",
+          "JOIN"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [\n        \"impact_class_score\",\n        \"propagation_class_score\"\n    ],\n    \"target_columns\": [\n        \"high_vulnerability_impact_score\"\n    ],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Classify asset impact class based on roles and other conditions to determine impact_class_score.\",\n            \"sql_expression\": \"SELECT numeric_score FROM risk_impact_metadata WHERE enum_type='impact_class' AND code=calculated_impact_class\"\n        },\n        {\n            \"step\": 2,\n            \"description\": \"Classify propagation class based on asset characteristics to determine propagation_class_score.\",\n            \"sql_expression\": \"SELECT numeric_score FROM risk_impact_metadata WHERE enum_type='propagation_class' AND code=calculated_propagation_class\"\n        },\n        {\n            \"step\": 3,\n            \"description\": \"Calculate the high vulnerability impact score using the formula.\",\n            \"sql_expression\": \"high_vulnerability_impact_score = (impact_class_score * 0.7) + (propagation_class_score * 0.3)\"\n        }\n    ],\n    \"sql_functions_needed\": [\n        \"SELECT\",\n        \"CASE\",\n        \"JOIN\"\n    ],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {},
+        "time_filters": {},
+        "aggregations": {},
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_sla_breach_impact_score",
+      "description": "FEATURE: sla_breach_impact_score - impact",
+      "question": "Create a calculated column or metric for sla_breach_impact_score. How does the breach of SLAs for critical and high vulnerabilities affect overall impact?. Calculation logic: Calculate the impact score by considering the number of SLA breaches: `impact_score = (critical_sla_breached_count * 10) + (high_sla_breached_count * 5)` to quantify the impact of SLA breaches.. Use schemas: dev_assets.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "WITH critical_breach AS ( SELECT COUNT(*) AS critical_sla_breached_count FROM dev_assets WHERE <condition_for_critical_breach>), high_breach AS ( SELECT COUNT(*) AS high_sla_breached_count FROM dev_assets WHERE <condition_for_high_breach>) SELECT (cb.critical_sla_breached_count * 10) + (hb.high_sla_breached_count * 5) AS sla_breach_impact_score FROM critical_breach cb, high_breach hb;",
+      "reasoning_plan": {
+        "transform_type": "AGGREGATION_TRANSFORMATION",
+        "source_columns": [
+          "dev_assets.nuid",
+          "dev_assets.dev_id"
+        ],
+        "target_columns": [
+          "sla_breach_impact_score"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Count the number of SLA breaches for critical vulnerabilities",
+            "sql_expression": "SELECT COUNT(*) AS critical_sla_breached_count FROM dev_assets WHERE <condition_for_critical_breach>"
+          },
+          {
+            "step": 2,
+            "description": "Count the number of SLA breaches for high vulnerabilities",
+            "sql_expression": "SELECT COUNT(*) AS high_sla_breached_count FROM dev_assets WHERE <condition_for_high_breach>"
+          },
+          {
+            "step": 3,
+            "description": "Calculate the impact score based on the counts from steps 1 and 2",
+            "sql_expression": "SELECT (critical_sla_breached_count * 10) + (high_sla_breached_count * 5) AS sla_breach_impact_score"
+          }
+        ],
+        "sql_functions_needed": [
+          "COUNT",
+          "SELECT"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"AGGREGATION_TRANSFORMATION\",\n    \"source_columns\": [\"dev_assets.nuid\", \"dev_assets.dev_id\"],\n    \"target_columns\": [\"sla_breach_impact_score\"],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Count the number of SLA breaches for critical vulnerabilities\",\n            \"sql_expression\": \"SELECT COUNT(*) AS critical_sla_breached_count FROM dev_assets WHERE <condition_for_critical_breach>\"\n        },\n        {\n            \"step\": 2,\n            \"description\": \"Count the number of SLA breaches for high vulnerabilities\",\n            \"sql_expression\": \"SELECT COUNT(*) AS high_sla_breached_count FROM dev_assets WHERE <condition_for_high_breach>\"\n        },\n        {\n            \"step\": 3,\n            \"description\": \"Calculate the impact score based on the counts from steps 1 and 2\",\n            \"sql_expression\": \"SELECT (critical_sla_breached_count * 10) + (high_sla_breached_count * 5) AS sla_breach_impact_score\"\n        }\n    ],\n    \"sql_functions_needed\": [\"COUNT\", \"SELECT\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "AGGREGATION_TRANSFORMATION",
+      "parsed_entities": {
+        "column_filters": {},
+        "time_filters": {},
+        "aggregations": {
+          "sla_breach_impact_score": "SUM"
+        },
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_critical_vulnerability_breach_likelihood",
+      "description": "FEATURE: critical_vulnerability_breach_likelihood - impact",
+      "question": "Create a calculated column or metric for critical_vulnerability_breach_likelihood. What is the likelihood of a breach occurring due to critical vulnerabilities?. Calculation logic: Use the formula: `likelihood = (critical_vulnerability_count *.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT (COUNT(*) * some_factor) AS critical_vulnerability_breach_likelihood FROM vulnerabilities WHERE asset_id = dev_assets.dev_id AND severity = 'Critical';",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [
+          "dev_id"
+        ],
+        "target_columns": [
+          "critical_vulnerability_breach_likelihood"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Count the number of critical vulnerabilities for each asset.",
+            "sql_expression": "SELECT COUNT(*) AS critical_vulnerability_count FROM vulnerabilities WHERE asset_id = dev_assets.dev_id AND severity = 'Critical'"
+          },
+          {
+            "step": 2,
+            "description": "Calculate the likelihood of a breach occurring due to critical vulnerabilities using the formula.",
+            "sql_expression": "SELECT (critical_vulnerability_count * some_factor) AS critical_vulnerability_breach_likelihood FROM (SELECT COUNT(*) AS critical_vulnerability_count FROM vulnerabilities WHERE asset_id = dev_assets.dev_id AND severity = 'Critical') AS vulnerability_count"
+          }
+        ],
+        "sql_functions_needed": [
+          "COUNT",
+          "SELECT"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [\"dev_id\"],\n    \"target_columns\": [\"critical_vulnerability_breach_likelihood\"],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Count the number of critical vulnerabilities for each asset.\",\n            \"sql_expression\": \"SELECT COUNT(*) AS critical_vulnerability_count FROM vulnerabilities WHERE asset_id = dev_assets.dev_id AND severity = 'Critical'\"\n        },\n        {\n            \"step\": 2,\n            \"description\": \"Calculate the likelihood of a breach occurring due to critical vulnerabilities using the formula.\",\n            \"sql_expression\": \"SELECT (critical_vulnerability_count * some_factor) AS critical_vulnerability_breach_likelihood FROM (SELECT COUNT(*) AS critical_vulnerability_count FROM vulnerabilities WHERE asset_id = dev_assets.dev_id AND severity = 'Critical') AS vulnerability_count\"\n        }\n    ],\n    \"sql_functions_needed\": [\"COUNT\", \"SELECT\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {},
+        "time_filters": {},
+        "aggregations": {
+          "critical_vulnerability_breach_likelihood": "COUNT(*)"
+        },
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_high_vulnerability_breach_likelihood",
+      "description": "FEATURE: high_vulnerability_breach_likelihood - impact",
+      "question": "Create a calculated column or metric for high_vulnerability_breach_likelihood. What is the likelihood of a breach occurring due to high vulnerabilities?. Calculation logic: Calculate the likelihood using: `likelihood = (high_vulnerability_count *.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT nuid, (high_vulnerability_count * some_factor) AS high_vulnerability_breach_likelihood FROM ( SELECT nuid, COUNT(*) AS high_vulnerability_count FROM vulnerabilities WHERE severity = 'high' GROUP BY nuid) AS vulnerability_counts;",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [
+          "nuid"
+        ],
+        "target_columns": [
+          "high_vulnerability_breach_likelihood"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Count the number of high vulnerabilities for each asset",
+            "sql_expression": "SELECT nuid, COUNT(*) AS high_vulnerability_count FROM vulnerabilities WHERE severity = 'high' GROUP BY nuid"
+          },
+          {
+            "step": 2,
+            "description": "Calculate the likelihood of a breach occurring due to high vulnerabilities",
+            "sql_expression": "SELECT nuid, (high_vulnerability_count * some_factor) AS high_vulnerability_breach_likelihood FROM (SELECT nuid, COUNT(*) AS high_vulnerability_count FROM vulnerabilities WHERE severity = 'high' GROUP BY nuid) AS vulnerability_counts"
+          }
+        ],
+        "sql_functions_needed": [
+          "COUNT",
+          "JOIN"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [\"nuid\"],\n    \"target_columns\": [\"high_vulnerability_breach_likelihood\"],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Count the number of high vulnerabilities for each asset\",\n            \"sql_expression\": \"SELECT nuid, COUNT(*) AS high_vulnerability_count FROM vulnerabilities WHERE severity = 'high' GROUP BY nuid\"\n        },\n        {\n            \"step\": 2,\n            \"description\": \"Calculate the likelihood of a breach occurring due to high vulnerabilities\",\n            \"sql_expression\": \"SELECT nuid, (high_vulnerability_count * some_factor) AS high_vulnerability_breach_likelihood FROM (SELECT nuid, COUNT(*) AS high_vulnerability_count FROM vulnerabilities WHERE severity = 'high' GROUP BY nuid) AS vulnerability_counts\"\n        }\n    ],\n    \"sql_functions_needed\": [\"COUNT\", \"JOIN\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {},
+        "time_filters": {},
+        "aggregations": {
+          "high_vulnerability_count": "COUNT(*)"
+        },
+        "group_by_columns": {
+          "nuid": "nuid"
+        }
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_unpatched_vulnerability_likelihood",
+      "description": "FEATURE: unpatched_vulnerability_likelihood - impact",
+      "question": "Create a calculated column or metric for unpatched_vulnerability_likelihood. What is the likelihood of a breach due to unpatched vulnerabilities?. Calculation logic: Use the formula: `likelihood = (critical_unpatched * 15 + high_unpatched * 10 + medium_unpatched * 5)` to quantify the likelihood based on unpatched vulnerabilities.. Use schemas: dev_assets.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT SUM(critical_unpatched * 15 + high_unpatched * 10 + medium_unpatched * 5) AS unpatched_vulnerability_likelihood FROM dev_assets;",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [
+          "critical_unpatched",
+          "high_unpatched",
+          "medium_unpatched"
+        ],
+        "target_columns": [
+          "unpatched_vulnerability_likelihood"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Calculate the likelihood of a breach due to unpatched vulnerabilities using the provided formula.",
+            "sql_expression": "SELECT (critical_unpatched * 15 + high_unpatched * 10 + medium_unpatched * 5) AS unpatched_vulnerability_likelihood FROM dev_assets"
+          }
+        ],
+        "sql_functions_needed": [
+          "SUM"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [\"critical_unpatched\", \"high_unpatched\", \"medium_unpatched\"],\n    \"target_columns\": [\"unpatched_vulnerability_likelihood\"],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Calculate the likelihood of a breach due to unpatched vulnerabilities using the provided formula.\",\n            \"sql_expression\": \"SELECT (critical_unpatched * 15 + high_unpatched * 10 + medium_unpatched * 5) AS unpatched_vulnerability_likelihood FROM dev_assets\"\n        }\n    ],\n    \"sql_functions_needed\": [\"SUM\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {},
+        "time_filters": {},
+        "aggregations": {
+          "unpatched_vulnerability_likelihood": "SUM"
+        },
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_critical_vulnerability_risk_score",
+      "description": "FEATURE: critical_vulnerability_risk_score - impact",
+      "question": "Create a calculated column or metric for critical_vulnerability_risk_score. What is the overall risk score for critical vulnerabilities based on their impact and likelihood?. Calculation logic: Calculate the risk score using: `risk_score = (critical_vulnerability_impact_score *.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT SUM(critical_vulnerability_impact_score * likelihood_score) AS critical_vulnerability_risk_score FROM vulnerability_instances WHERE is_critical = true;",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [
+          "critical_vulnerability_impact_score",
+          "likelihood_score"
+        ],
+        "target_columns": [
+          "critical_vulnerability_risk_score"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Calculate the critical vulnerability risk score using the impact score and likelihood score.",
+            "sql_expression": "critical_vulnerability_risk_score = (critical_vulnerability_impact_score * likelihood_score)"
+          }
+        ],
+        "sql_functions_needed": [
+          "SUM",
+          "AVG"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [\n        \"critical_vulnerability_impact_score\",\n        \"likelihood_score\"\n    ],\n    \"target_columns\": [\n        \"critical_vulnerability_risk_score\"\n    ],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Calculate the critical vulnerability risk score using the impact score and likelihood score.\",\n            \"sql_expression\": \"critical_vulnerability_risk_score = (critical_vulnerability_impact_score * likelihood_score)\"\n        }\n    ],\n    \"sql_functions_needed\": [\"SUM\", \"AVG\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {
+          "is_critical": true
+        },
+        "time_filters": {},
+        "aggregations": {
+          "SUM": [
+            "critical_vulnerability_impact_score * likelihood_score"
+          ]
+        },
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_Transformation",
+      "description": "FEATURE: Transformation - impact",
+      "question": "Create a calculated column or metric for Transformation. Calculate Transformation. Calculation logic: N/A.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "WITH classified_assets AS ( SELECT dev_id, ip, mac, os_name, device_type, CASE WHEN (impact_class = 'Mission Critical' OR roles_metadata.is_admin_role = TRUE OR roles_metadata.criticality_score >= 90 OR (roles_metadata.role_category = 'cmdb' AND roles_metadata.code IN ('BCA', 'CRITICAL', 'VITAL')) OR is_bastion_device = TRUE) THEN 'Mission Critical' WHEN (impact_class = 'Critical' OR (roles_metadata.criticality_score >= 70 AND roles_metadata.criticality_score < 90) OR (asset_classification_metadata.classification_type = 'canonical_type' AND asset_classification_metadata.code = 'Servers') OR (os_name IN ('Windows', 'Linux/Unix') AND device_type = 'Servers')) THEN 'Critical' ELSE 'Other' END AS impact_class FROM dev_assets LEFT JOIN roles_metadata ON dev_assets.dev_id = roles_metadata.dev_id LEFT JOIN asset_classification_metadata ON dev_assets.dev_id = asset_classification_metadata.dev_id), impact_scores AS ( SELECT impact_class, LAX_INT64(JSON_QUERY(impact_classification_metadata, '$.numeric_score')) AS impact_class_score FROM classified_assets) SELECT impact_class, SUM(impact_class_score * 0.7) + SUM(propagation_class_score * 0.3) AS combined_score FROM impact_scores GROUP BY impact_class;",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [
+          "dev_id",
+          "ip",
+          "mac",
+          "os_name",
+          "device_type"
+        ],
+        "target_columns": [
+          "impact_class",
+          "propagation_class",
+          "combined_score"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Classify asset as Mission Critical based on roles and conditions",
+            "sql_expression": "CASE WHEN (dev_assets.impact_class = 'Mission Critical' OR roles_metadata.is_admin_role = TRUE OR roles_metadata.criticality_score >= 90 OR roles_metadata.role_category = 'cmdb' AND roles_metadata.code IN ('BCA', 'CRITICAL', 'VITAL') OR dev_assets.is_bastion_device = TRUE) THEN 'Mission Critical' ELSE NULL END"
+          },
+          {
+            "step": 2,
+            "description": "Classify asset as Critical if not Mission Critical",
+            "sql_expression": "CASE WHEN (dev_assets.impact_class = 'Critical' OR roles_metadata.criticality_score >= 70 AND roles_metadata.criticality_score < 90 OR asset_classification_metadata.classification_type = 'canonical_type' AND asset_classification_metadata.code = 'Servers' OR (dev_assets.os_name IN ('Windows', 'Linux/Unix') AND dev_assets.device_type = 'Servers')) THEN 'Critical' ELSE NULL END"
+          },
+          {
+            "step": 3,
+            "description": "Retrieve numeric scores for Mission Critical and Critical classifications",
+            "sql_expression": "SELECT numeric_score FROM asset_classification_metadata WHERE enum_type = 'impact_class' AND code = classified_impact_class"
+          },
+          {
+            "step": 4,
+            "description": "Calculate combined asset impact score using weights",
+            "sql_expression": "combined_score = (impact_class_score * 0.7) + (propagation_class_score * 0.3)"
+          }
+        ],
+        "sql_functions_needed": [
+          "CASE",
+          "SELECT"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [\"dev_id\", \"ip\", \"mac\", \"os_name\", \"device_type\"],\n    \"target_columns\": [\"impact_class\", \"propagation_class\", \"combined_score\"],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Classify asset as Mission Critical based on roles and conditions\",\n            \"sql_expression\": \"CASE WHEN (dev_assets.impact_class = 'Mission Critical' OR roles_metadata.is_admin_role = TRUE OR roles_metadata.criticality_score >= 90 OR roles_metadata.role_category = 'cmdb' AND roles_metadata.code IN ('BCA', 'CRITICAL', 'VITAL') OR dev_assets.is_bastion_device = TRUE) THEN 'Mission Critical' ELSE NULL END\"\n        },\n        {\n            \"step\": 2,\n            \"description\": \"Classify asset as Critical if not Mission Critical\",\n            \"sql_expression\": \"CASE WHEN (dev_assets.impact_class = 'Critical' OR roles_metadata.criticality_score >= 70 AND roles_metadata.criticality_score < 90 OR asset_classification_metadata.classification_type = 'canonical_type' AND asset_classification_metadata.code = 'Servers' OR (dev_assets.os_name IN ('Windows', 'Linux/Unix') AND dev_assets.device_type = 'Servers')) THEN 'Critical' ELSE NULL END\"\n        },\n        {\n            \"step\": 3,\n            \"description\": \"Retrieve numeric scores for Mission Critical and Critical classifications\",\n            \"sql_expression\": \"SELECT numeric_score FROM asset_classification_metadata WHERE enum_type = 'impact_class' AND code = classified_impact_class\"\n        },\n        {\n            \"step\": 4,\n            \"description\": \"Calculate combined asset impact score using weights\",\n            \"sql_expression\": \"combined_score = (impact_class_score * 0.7) + (propagation_class_score * 0.3)\"\n        }\n    ],\n    \"sql_functions_needed\": [\"CASE\", \"SELECT\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {},
+        "time_filters": {},
+        "aggregations": {
+          "combined_score": "SUM(impact_class_score * 0.7) + SUM(propagation_class_score * 0.3)"
+        },
+        "group_by_columns": {
+          "impact_class": "impact_class"
+        }
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_high_vulnerability_risk_score",
+      "description": "FEATURE: high_vulnerability_risk_score - impact",
+      "question": "Create a calculated column or metric for high_vulnerability_risk_score. What is the overall risk score for high vulnerabilities based on their impact and likelihood?. Calculation logic: Use the formula: `risk_score = (high_vulnerability_impact_score *.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT (high_vulnerability_impact_score * likelihood_score) AS high_vulnerability_risk_score FROM vulnerability_instances;",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [
+          "high_vulnerability_impact_score",
+          "likelihood_score"
+        ],
+        "target_columns": [
+          "high_vulnerability_risk_score"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Calculate the high vulnerability risk score using the formula",
+            "sql_expression": "high_vulnerability_risk_score = (high_vulnerability_impact_score * likelihood_score)"
+          }
+        ],
+        "sql_functions_needed": [
+          "*"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [\n        \"high_vulnerability_impact_score\",\n        \"likelihood_score\"\n    ],\n    \"target_columns\": [\n        \"high_vulnerability_risk_score\"\n    ],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Calculate the high vulnerability risk score using the formula\",\n            \"sql_expression\": \"high_vulnerability_risk_score = (high_vulnerability_impact_score * likelihood_score)\"\n        }\n    ],\n    \"sql_functions_needed\": [\"*\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {},
+        "time_filters": {},
+        "aggregations": {},
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_overall_vulnerability_risk_score",
+      "description": "FEATURE: overall_vulnerability_risk_score - impact",
+      "question": "Create a calculated column or metric for overall_vulnerability_risk_score. What is the overall risk score for all vulnerabilities considering both critical and high vulnerabilities?. Calculation logic: Calculate the overall risk score using: `risk_score = (critical_vulnerability_risk_score + high_vulnerability_risk_score) / 2` to provide a comprehensive risk assessment.. Use schemas: dev_assets.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT (vr.critical_vulnerability_risk_score + vr.high_vulnerability_risk_score) / 2 AS overall_vulnerability_risk_score FROM dev_assets AS da JOIN vulnerability_risk_scoring AS vr ON da.id = vr.asset_id;",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [
+          "critical_vulnerability_risk_score",
+          "high_vulnerability_risk_score"
+        ],
+        "target_columns": [
+          "overall_vulnerability_risk_score"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Retrieve critical vulnerability risk score from the vulnerability_risk_scoring table",
+            "sql_expression": "SELECT critical_vulnerability_risk_score FROM vulnerability_risk_scoring WHERE asset_id = dev_assets.id"
+          },
+          {
+            "step": 2,
+            "description": "Retrieve high vulnerability risk score from the vulnerability_risk_scoring table",
+            "sql_expression": "SELECT high_vulnerability_risk_score FROM vulnerability_risk_scoring WHERE asset_id = dev_assets.id"
+          },
+          {
+            "step": 3,
+            "description": "Calculate overall vulnerability risk score using the formula",
+            "sql_expression": "SELECT (critical_vulnerability_risk_score + high_vulnerability_risk_score) / 2 AS overall_vulnerability_risk_score"
+          }
+        ],
+        "sql_functions_needed": [
+          "SELECT",
+          "AVG"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [\n        \"critical_vulnerability_risk_score\",\n        \"high_vulnerability_risk_score\"\n    ],\n    \"target_columns\": [\n        \"overall_vulnerability_risk_score\"\n    ],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Retrieve critical vulnerability risk score from the vulnerability_risk_scoring table\",\n            \"sql_expression\": \"SELECT critical_vulnerability_risk_score FROM vulnerability_risk_scoring WHERE asset_id = dev_assets.id\"\n        },\n        {\n            \"step\": 2,\n            \"description\": \"Retrieve high vulnerability risk score from the vulnerability_risk_scoring table\",\n            \"sql_expression\": \"SELECT high_vulnerability_risk_score FROM vulnerability_risk_scoring WHERE asset_id = dev_assets.id\"\n        },\n        {\n            \"step\": 3,\n            \"description\": \"Calculate overall vulnerability risk score using the formula\",\n            \"sql_expression\": \"SELECT (critical_vulnerability_risk_score + high_vulnerability_risk_score) / 2 AS overall_vulnerability_risk_score\"\n        }\n    ],\n    \"sql_functions_needed\": [\"SELECT\", \"AVG\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {},
+        "time_filters": {},
+        "aggregations": {},
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_critical_vulnerability_breach_likelihood",
+      "description": "FEATURE: critical_vulnerability_breach_likelihood - likelihood",
+      "question": "Create a calculated column or metric for critical_vulnerability_breach_likelihood. What is the likelihood of a breach occurring due to critical vulnerabilities?. Calculation logic: Use the formula: `likelihood = (critical_vulnerability_count *.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT dev_id, (COUNT(*) * some_factor) AS critical_vulnerability_breach_likelihood FROM vulnerabilities WHERE asset_id = dev_assets.dev_id AND severity = 'Critical' GROUP BY dev_id;",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [
+          "dev_id"
+        ],
+        "target_columns": [
+          "critical_vulnerability_breach_likelihood"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Count the number of critical vulnerabilities associated with each asset.",
+            "sql_expression": "SELECT COUNT(*) AS critical_vulnerability_count FROM vulnerabilities WHERE asset_id = dev_assets.dev_id AND severity = 'Critical'"
+          },
+          {
+            "step": 2,
+            "description": "Calculate the likelihood of a breach occurring due to critical vulnerabilities using the formula provided.",
+            "sql_expression": "critical_vulnerability_breach_likelihood = (critical_vulnerability_count * some_factor)"
+          }
+        ],
+        "sql_functions_needed": [
+          "COUNT"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [\"dev_id\"],\n    \"target_columns\": [\"critical_vulnerability_breach_likelihood\"],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Count the number of critical vulnerabilities associated with each asset.\",\n            \"sql_expression\": \"SELECT COUNT(*) AS critical_vulnerability_count FROM vulnerabilities WHERE asset_id = dev_assets.dev_id AND severity = 'Critical'\"\n        },\n        {\n            \"step\": 2,\n            \"description\": \"Calculate the likelihood of a breach occurring due to critical vulnerabilities using the formula provided.\",\n            \"sql_expression\": \"critical_vulnerability_breach_likelihood = (critical_vulnerability_count * some_factor)\"\n        }\n    ],\n    \"sql_functions_needed\": [\"COUNT\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {},
+        "time_filters": {},
+        "aggregations": {
+          "critical_vulnerability_breach_likelihood": "COUNT(*) * some_factor"
+        },
+        "group_by_columns": {
+          "dev_id": "dev_id"
+        }
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_high_vulnerability_breach_likelihood",
+      "description": "FEATURE: high_vulnerability_breach_likelihood - likelihood",
+      "question": "Create a calculated column or metric for high_vulnerability_breach_likelihood. What is the likelihood of a breach occurring due to high vulnerabilities?. Calculation logic: Calculate the likelihood using: `likelihood = (high_vulnerability_count *.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT nuid, (high_vulnerability_count * some_factor) AS high_vulnerability_breach_likelihood FROM ( SELECT nuid, COUNT(*) AS high_vulnerability_count FROM vulnerabilities WHERE severity = 'high' GROUP BY nuid) AS high_vulns;",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [
+          "nuid"
+        ],
+        "target_columns": [
+          "high_vulnerability_breach_likelihood"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Count the number of high vulnerabilities for each asset",
+            "sql_expression": "SELECT nuid, COUNT(*) AS high_vulnerability_count FROM vulnerabilities WHERE severity = 'high' GROUP BY nuid"
+          },
+          {
+            "step": 2,
+            "description": "Calculate the likelihood of a breach based on high vulnerability count",
+            "sql_expression": "SELECT nuid, (high_vulnerability_count * some_factor) AS high_vulnerability_breach_likelihood FROM (SELECT nuid, COUNT(*) AS high_vulnerability_count FROM vulnerabilities WHERE severity = 'high' GROUP BY nuid) AS high_vulns"
+          }
+        ],
+        "sql_functions_needed": [
+          "COUNT",
+          "SELECT"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [\"nuid\"],\n    \"target_columns\": [\"high_vulnerability_breach_likelihood\"],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Count the number of high vulnerabilities for each asset\",\n            \"sql_expression\": \"SELECT nuid, COUNT(*) AS high_vulnerability_count FROM vulnerabilities WHERE severity = 'high' GROUP BY nuid\"\n        },\n        {\n            \"step\": 2,\n            \"description\": \"Calculate the likelihood of a breach based on high vulnerability count\",\n            \"sql_expression\": \"SELECT nuid, (high_vulnerability_count * some_factor) AS high_vulnerability_breach_likelihood FROM (SELECT nuid, COUNT(*) AS high_vulnerability_count FROM vulnerabilities WHERE severity = 'high' GROUP BY nuid) AS high_vulns\"\n        }\n    ],\n    \"sql_functions_needed\": [\"COUNT\", \"SELECT\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {},
+        "time_filters": {},
+        "aggregations": {
+          "high_vulnerability_count": "COUNT(*)"
+        },
+        "group_by_columns": {
+          "nuid": "nuid"
+        }
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_unpatched_vulnerability_likelihood",
+      "description": "FEATURE: unpatched_vulnerability_likelihood - likelihood",
+      "question": "Create a calculated column or metric for unpatched_vulnerability_likelihood. What is the likelihood of a breach due to unpatched vulnerabilities?. Calculation logic: Use the formula: `likelihood = (critical_unpatched * 15 + high_unpatched * 10 + medium_unpatched * 5)` to quantify the likelihood based on unpatched vulnerabilities.. Use schemas: dev_assets.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT SUM(critical_unpatched * 15 + high_unpatched * 10 + medium_unpatched * 5) AS unpatched_vulnerability_likelihood FROM dev_assets;",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [
+          "critical_unpatched",
+          "high_unpatched",
+          "medium_unpatched"
+        ],
+        "target_columns": [
+          "unpatched_vulnerability_likelihood"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Calculate the likelihood of a breach due to unpatched vulnerabilities using the provided formula.",
+            "sql_expression": "SELECT (critical_unpatched * 15 + high_unpatched * 10 + medium_unpatched * 5) AS unpatched_vulnerability_likelihood FROM dev_assets"
+          }
+        ],
+        "sql_functions_needed": [
+          "SUM"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [\"critical_unpatched\", \"high_unpatched\", \"medium_unpatched\"],\n    \"target_columns\": [\"unpatched_vulnerability_likelihood\"],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Calculate the likelihood of a breach due to unpatched vulnerabilities using the provided formula.\",\n            \"sql_expression\": \"SELECT (critical_unpatched * 15 + high_unpatched * 10 + medium_unpatched * 5) AS unpatched_vulnerability_likelihood FROM dev_assets\"\n        }\n    ],\n    \"sql_functions_needed\": [\"SUM\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {},
+        "time_filters": {},
+        "aggregations": {
+          "unpatched_vulnerability_likelihood": "SUM"
+        },
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_critical_vulnerability_risk_score",
+      "description": "FEATURE: critical_vulnerability_risk_score - likelihood",
+      "question": "Create a calculated column or metric for critical_vulnerability_risk_score. What is the overall risk score for critical vulnerabilities based on their impact and likelihood?. Calculation logic: Calculate the risk score using: `risk_score = (critical_vulnerability_impact_score *.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT SUM(critical_vulnerability_impact_score * likelihood_score) AS critical_vulnerability_risk_score FROM vulnerability_instances WHERE is_critical = true;",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [
+          "critical_vulnerability_impact_score",
+          "likelihood_score"
+        ],
+        "target_columns": [
+          "critical_vulnerability_risk_score"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Calculate the risk score using the impact score and likelihood score.",
+            "sql_expression": "critical_vulnerability_risk_score = (critical_vulnerability_impact_score * likelihood_score)"
+          }
+        ],
+        "sql_functions_needed": [
+          "SUM",
+          "AVG"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [\n        \"critical_vulnerability_impact_score\",\n        \"likelihood_score\"\n    ],\n    \"target_columns\": [\n        \"critical_vulnerability_risk_score\"\n    ],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Calculate the risk score using the impact score and likelihood score.\",\n            \"sql_expression\": \"critical_vulnerability_risk_score = (critical_vulnerability_impact_score * likelihood_score)\"\n        }\n    ],\n    \"sql_functions_needed\": [\"SUM\", \"AVG\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {
+          "is_critical": true
+        },
+        "time_filters": {},
+        "aggregations": {
+          "SUM": "critical_vulnerability_impact_score * likelihood_score"
+        },
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_Transformation",
+      "description": "FEATURE: Transformation - likelihood",
+      "question": "Create a calculated column or metric for Transformation. Calculate Transformation. Calculation logic: N/A.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT dev_id, ip, mac, host_name, device_type, location_country, CASE WHEN (dev_assets.impact_class = 'Mission Critical') OR (dev_assets.is_bastion_device = TRUE) OR (roles_metadata.criticality_score >= 90 AND roles_metadata.code IN ('DNS', 'DHCP', 'LDAP', 'Kerb', 'MSSQL', 'SAP-HANA', 'HYPERVISOR', 'Database-Instance', 'Kubernetes', 'BCA')) THEN 'Mission Critical' ELSE 'Other' END AS impact_class, CASE WHEN (dev_assets.impact_class = 'Critical') OR (roles_metadata.criticality_score >= 70 AND roles_metadata.criticality_score < 90 AND roles_metadata.code IN ('RDP', 'SSH', 'VPN', 'WEB-SRVR', 'MySQL', 'Postgres', 'EXCH', 'ADC', 'Hyper-V', 'Xen', 'SCCM', 'CODE-REPO', 'Compute-Instance', 'EC2', 'VPC')) THEN 'Critical' ELSE 'Other' END AS propagation_class, (impact_class_score * 0.7) + (propagation_class_score * 0.3) AS combined_score FROM dev_assets;",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [
+          "dev_id",
+          "ip",
+          "mac",
+          "host_name",
+          "device_type",
+          "location_country"
+        ],
+        "target_columns": [
+          "impact_class",
+          "propagation_class",
+          "combined_score"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Classify asset impact class based on conditions provided in the enum metadata reasoning plan.",
+            "sql_expression": "CASE WHEN (dev_assets.impact_class = 'Mission Critical') OR (dev_assets.is_bastion_device = TRUE) OR (roles_metadata.criticality_score >= 90 AND roles_metadata.code IN ('DNS', 'DHCP', 'LDAP', 'Kerb', 'MSSQL', 'SAP-HANA', 'HYPERVISOR', 'Database-Instance', 'Kubernetes', 'BCA')) THEN 'Mission Critical' ELSE 'Other' END"
+          },
+          {
+            "step": 2,
+            "description": "Classify asset as Critical if not Mission Critical based on conditions.",
+            "sql_expression": "CASE WHEN (dev_assets.impact_class = 'Critical') OR (roles_metadata.criticality_score >= 70 AND roles_metadata.criticality_score < 90 AND roles_metadata.code IN ('RDP', 'SSH', 'VPN', 'WEB-SRVR', 'MySQL', 'Postgres', 'EXCH', 'ADC', 'Hyper-V', 'Xen', 'SCCM', 'CODE-REPO', 'Compute-Instance', 'EC2', 'VPC')) THEN 'Critical' ELSE 'Other' END"
+          },
+          {
+            "step": 3,
+            "description": "Calculate the final combined asset impact score using the classified impact class and propagation class.",
+            "sql_expression": "combined_score = (impact_class_score * 0.7) + (propagation_class_score * 0.3)"
+          }
+        ],
+        "sql_functions_needed": [
+          "CASE",
+          "SUM",
+          "JOIN"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [\"dev_id\", \"ip\", \"mac\", \"host_name\", \"device_type\", \"location_country\"],\n    \"target_columns\": [\"impact_class\", \"propagation_class\", \"combined_score\"],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Classify asset impact class based on conditions provided in the enum metadata reasoning plan.\",\n            \"sql_expression\": \"CASE WHEN (dev_assets.impact_class = 'Mission Critical') OR (dev_assets.is_bastion_device = TRUE) OR (roles_metadata.criticality_score >= 90 AND roles_metadata.code IN ('DNS', 'DHCP', 'LDAP', 'Kerb', 'MSSQL', 'SAP-HANA', 'HYPERVISOR', 'Database-Instance', 'Kubernetes', 'BCA')) THEN 'Mission Critical' ELSE 'Other' END\"\n        },\n        {\n            \"step\": 2,\n            \"description\": \"Classify asset as Critical if not Mission Critical based on conditions.\",\n            \"sql_expression\": \"CASE WHEN (dev_assets.impact_class = 'Critical') OR (roles_metadata.criticality_score >= 70 AND roles_metadata.criticality_score < 90 AND roles_metadata.code IN ('RDP', 'SSH', 'VPN', 'WEB-SRVR', 'MySQL', 'Postgres', 'EXCH', 'ADC', 'Hyper-V', 'Xen', 'SCCM', 'CODE-REPO', 'Compute-Instance', 'EC2', 'VPC')) THEN 'Critical' ELSE 'Other' END\"\n        },\n        {\n            \"step\": 3,\n            \"description\": \"Calculate the final combined asset impact score using the classified impact class and propagation class.\",\n            \"sql_expression\": \"combined_score = (impact_class_score * 0.7) + (propagation_class_score * 0.3)\"\n        }\n    ],\n    \"sql_functions_needed\": [\"CASE\", \"SUM\", \"JOIN\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {},
+        "time_filters": {},
+        "aggregations": {},
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_high_vulnerability_risk_score",
+      "description": "FEATURE: high_vulnerability_risk_score - likelihood",
+      "question": "Create a calculated column or metric for high_vulnerability_risk_score. What is the overall risk score for high vulnerabilities based on their impact and likelihood?. Calculation logic: Use the formula: `risk_score = (high_vulnerability_impact_score *.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "WITH impact_score AS ( SELECT numeric_score AS high_vulnerability_impact_score FROM risk_impact_metadata WHERE enum_type='impact_class' AND code='High Vulnerability'), propagation_score AS ( SELECT numeric_score AS propagation_class_score FROM risk_impact_metadata WHERE enum_type='propagation_class' AND code='Perimeter') SELECT (high_vulnerability_impact_score * 0.7) + (propagation_class_score * 0.3) AS high_vulnerability_risk_score FROM impact_score, propagation_score;",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [
+          "high_vulnerability_impact_score",
+          "propagation_class_score"
+        ],
+        "target_columns": [
+          "high_vulnerability_risk_score"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Retrieve the numeric score for high vulnerability impact class from the risk_impact_metadata table.",
+            "sql_expression": "SELECT numeric_score FROM risk_impact_metadata WHERE enum_type='impact_class' AND code='High Vulnerability'"
+          },
+          {
+            "step": 2,
+            "description": "Retrieve the numeric score for propagation class from the risk_impact_metadata table.",
+            "sql_expression": "SELECT numeric_score FROM risk_impact_metadata WHERE enum_type='propagation_class' AND code='Perimeter'"
+          },
+          {
+            "step": 3,
+            "description": "Calculate the high vulnerability risk score using the formula.",
+            "sql_expression": "high_vulnerability_risk_score = (high_vulnerability_impact_score * 0.7) + (propagation_class_score * 0.3)"
+          }
+        ],
+        "sql_functions_needed": [
+          "SELECT",
+          "CASE"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [\n        \"high_vulnerability_impact_score\",\n        \"propagation_class_score\"\n    ],\n    \"target_columns\": [\n        \"high_vulnerability_risk_score\"\n    ],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Retrieve the numeric score for high vulnerability impact class from the risk_impact_metadata table.\",\n            \"sql_expression\": \"SELECT numeric_score FROM risk_impact_metadata WHERE enum_type='impact_class' AND code='High Vulnerability'\"\n        },\n        {\n            \"step\": 2,\n            \"description\": \"Retrieve the numeric score for propagation class from the risk_impact_metadata table.\",\n            \"sql_expression\": \"SELECT numeric_score FROM risk_impact_metadata WHERE enum_type='propagation_class' AND code='Perimeter'\"\n        },\n        {\n            \"step\": 3,\n            \"description\": \"Calculate the high vulnerability risk score using the formula.\",\n            \"sql_expression\": \"high_vulnerability_risk_score = (high_vulnerability_impact_score * 0.7) + (propagation_class_score * 0.3)\"\n        }\n    ],\n    \"sql_functions_needed\": [\"SELECT\", \"CASE\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {},
+        "time_filters": {},
+        "aggregations": {},
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_overall_vulnerability_risk_score",
+      "description": "FEATURE: overall_vulnerability_risk_score - likelihood",
+      "question": "Create a calculated column or metric for overall_vulnerability_risk_score. What is the overall risk score for all vulnerabilities considering both critical and high vulnerabilities?. Calculation logic: Calculate the overall risk score using: `risk_score = (critical_vulnerability_risk_score + high_vulnerability_risk_score) / 2` to provide a comprehensive risk assessment.. Use schemas: dev_assets.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT (vrs.critical_vulnerability_risk_score + vrs.high_vulnerability_risk_score) / 2 AS overall_vulnerability_risk_score FROM dev_assets AS da JOIN vulnerability_risk_scoring AS vrs ON da.id = vrs.asset_id;",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [
+          "critical_vulnerability_risk_score",
+          "high_vulnerability_risk_score"
+        ],
+        "target_columns": [
+          "overall_vulnerability_risk_score"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Retrieve critical vulnerability risk score from the vulnerability_risk_scoring table",
+            "sql_expression": "SELECT critical_vulnerability_risk_score FROM vulnerability_risk_scoring WHERE asset_id = dev_assets.id"
+          },
+          {
+            "step": 2,
+            "description": "Retrieve high vulnerability risk score from the vulnerability_risk_scoring table",
+            "sql_expression": "SELECT high_vulnerability_risk_score FROM vulnerability_risk_scoring WHERE asset_id = dev_assets.id"
+          },
+          {
+            "step": 3,
+            "description": "Calculate overall vulnerability risk score using the formula",
+            "sql_expression": "SELECT (critical_vulnerability_risk_score + high_vulnerability_risk_score) / 2 AS overall_vulnerability_risk_score"
+          }
+        ],
+        "final_calculation": "overall_vulnerability_risk_score = (critical_vulnerability_risk_score + high_vulnerability_risk_score) / 2",
+        "sql_functions_needed": [
+          "SELECT",
+          "JOIN"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [\n        \"critical_vulnerability_risk_score\",\n        \"high_vulnerability_risk_score\"\n    ],\n    \"target_columns\": [\n        \"overall_vulnerability_risk_score\"\n    ],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Retrieve critical vulnerability risk score from the vulnerability_risk_scoring table\",\n            \"sql_expression\": \"SELECT critical_vulnerability_risk_score FROM vulnerability_risk_scoring WHERE asset_id = dev_assets.id\"\n        },\n        {\n            \"step\": 2,\n            \"description\": \"Retrieve high vulnerability risk score from the vulnerability_risk_scoring table\",\n            \"sql_expression\": \"SELECT high_vulnerability_risk_score FROM vulnerability_risk_scoring WHERE asset_id = dev_assets.id\"\n        },\n        {\n            \"step\": 3,\n            \"description\": \"Calculate overall vulnerability risk score using the formula\",\n            \"sql_expression\": \"SELECT (critical_vulnerability_risk_score + high_vulnerability_risk_score) / 2 AS overall_vulnerability_risk_score\"\n        }\n    ],\n    \"final_calculation\": \"overall_vulnerability_risk_score = (critical_vulnerability_risk_score + high_vulnerability_risk_score) / 2\",\n    \"sql_functions_needed\": [\"SELECT\", \"JOIN\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {},
+        "time_filters": {},
+        "aggregations": {},
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_critical_vulnerability_risk_score",
+      "description": "FEATURE: critical_vulnerability_risk_score - risk",
+      "question": "Create a calculated column or metric for critical_vulnerability_risk_score. What is the overall risk score for critical vulnerabilities based on their impact and likelihood?. Calculation logic: Calculate the risk score using: `risk_score = (critical_vulnerability_impact_score *.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT SUM(critical_vulnerability_impact_score * likelihood_score) AS critical_vulnerability_risk_score FROM vulnerability_instances WHERE is_critical = true;",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [
+          "critical_vulnerability_impact_score",
+          "likelihood_score"
+        ],
+        "target_columns": [
+          "critical_vulnerability_risk_score"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Calculate the critical vulnerability risk score using the impact score and likelihood score.",
+            "sql_expression": "critical_vulnerability_risk_score = (critical_vulnerability_impact_score * likelihood_score)"
+          }
+        ],
+        "sql_functions_needed": [
+          "SUM",
+          "AVG"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [\n        \"critical_vulnerability_impact_score\",\n        \"likelihood_score\"\n    ],\n    \"target_columns\": [\n        \"critical_vulnerability_risk_score\"\n    ],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Calculate the critical vulnerability risk score using the impact score and likelihood score.\",\n            \"sql_expression\": \"critical_vulnerability_risk_score = (critical_vulnerability_impact_score * likelihood_score)\"\n        }\n    ],\n    \"sql_functions_needed\": [\"SUM\", \"AVG\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {
+          "is_critical": true
+        },
+        "time_filters": {},
+        "aggregations": {
+          "SUM": [
+            "critical_vulnerability_impact_score * likelihood_score"
+          ]
+        },
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_Transformation",
+      "description": "FEATURE: Transformation - risk",
+      "question": "Create a calculated column or metric for Transformation. Calculate Transformation. Calculation logic: N/A.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT CASE WHEN impact_class = 'Mission Critical' OR (EXISTS ( SELECT 1 FROM UNNEST(STRING_TO_ARRAY(roles, ',')) AS role WHERE role = 'NW-ADMIN' OR role = 'WIN-ADMIN') OR (EXISTS ( SELECT 1 FROM UNNEST(STRING_TO_ARRAY(roles, ',')) AS role WHERE criticality_score >= 90 AND role IN ('DNS', 'DHCP', 'LDAP', 'Kerb', 'MSSQL', 'SAP-HANA', 'HYPERVISOR', 'Database-Instance', 'Kubernetes', 'BCA')) OR (EXISTS ( SELECT 1 FROM UNNEST(STRING_TO_ARRAY(roles, ',')) AS role WHERE role_category = 'cmdb' AND role IN ('BCA', 'CRITICAL', 'VITAL')) OR is_bastion_device = TRUE)) THEN 'Mission Critical' ELSE NULL END AS impact_class, CASE WHEN impact_class = 'Critical' OR (EXISTS ( SELECT 1 FROM UNNEST(STRING_TO_ARRAY(roles, ',')) AS role WHERE criticality_score >= 70 AND criticality_score < 90 AND role IN ('RDP', 'SSH', 'VPN', 'WEB-SRVR', 'MySQL', 'Postgres', 'EXCH', 'ADC', 'Hyper-V', 'Xen', 'SCCM', 'CODE-REPO', 'Compute-Instance', 'EC2', 'VPC')) OR (EXISTS ( SELECT 1 FROM asset_classification WHERE classification_type = 'canonical_type' AND code = 'Servers')) OR (platform IN ('Windows', 'Linux/Unix') AND device_type = 'Servers') THEN 'Critical' ELSE 'Other' END AS propagation_class, calculate_combined_asset_impact_score(CASE WHEN impact_class = 'Mission Critical' OR (EXISTS ( SELECT 1 FROM UNNEST(STRING_TO_ARRAY(roles, ',')) AS role WHERE role = 'NW-ADMIN' OR role = 'WIN-ADMIN') OR (EXISTS ( SELECT 1 FROM UNNEST(STRING_TO_ARRAY(roles, ',')) AS role WHERE criticality_score >= 90 AND role IN ('DNS', 'DHCP', 'LDAP', 'Kerb', 'MSSQL', 'SAP-HANA', 'HYPERVISOR', 'Database-Instance', 'Kubernetes', 'BCA')) OR (EXISTS ( SELECT 1 FROM UNNEST(STRING_TO_ARRAY(roles, ',')) AS role WHERE role_category = 'cmdb' AND role IN ('BCA', 'CRITICAL', 'VITAL')) OR is_bastion_device = TRUE)) THEN 'Mission Critical' ELSE NULL END, CASE WHEN impact_class = 'Critical' OR (EXISTS ( SELECT 1 FROM UNNEST(STRING_TO_ARRAY(roles, ',')) AS role WHERE criticality_score >= 70 AND criticality_score < 90 AND role IN ('RDP', 'SSH', 'VPN', 'WEB-SRVR', 'MySQL', 'Postgres', 'EXCH', 'ADC', 'Hyper-V', 'Xen', 'SCCM', 'CODE-REPO', 'Compute-Instance', 'EC2', 'VPC')) OR (EXISTS ( SELECT 1 FROM asset_classification WHERE classification_type = 'canonical_type' AND code = 'Servers')) OR (platform IN ('Windows', 'Linux/Unix') AND device_type = 'Servers') THEN 'Critical' ELSE 'Other' END, 0.7, 0.3) AS combined_impact_score FROM dev_assets;",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [],
+        "target_columns": [
+          "impact_class",
+          "propagation_class",
+          "combined_impact_score"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Classify the asset as Mission Critical based on defined conditions.",
+            "sql_expression": "CASE WHEN impact_class = 'Mission Critical' OR (EXISTS (SELECT 1 FROM roles WHERE is_admin_role = TRUE AND role IN ('NW-ADMIN', 'WIN-ADMIN')) OR (EXISTS (SELECT 1 FROM roles WHERE criticality_score >= 90 AND role IN ('DNS', 'DHCP', 'LDAP', 'Kerb', 'MSSQL', 'SAP-HANA', 'HYPERVISOR', 'Database-Instance', 'Kubernetes', 'BCA')) OR (EXISTS (SELECT 1 FROM roles WHERE role_category = 'cmdb' AND role IN ('BCA', 'CRITICAL', 'VITAL')) OR is_bastion_device = TRUE)) THEN 'Mission Critical' ELSE NULL END"
+          },
+          {
+            "step": 2,
+            "description": "Classify the asset as Critical if not Mission Critical based on defined conditions.",
+            "sql_expression": "CASE WHEN impact_class = 'Critical' OR (EXISTS (SELECT 1 FROM roles WHERE criticality_score >= 70 AND criticality_score < 90 AND role IN ('RDP', 'SSH', 'VPN', 'WEB-SRVR', 'MySQL', 'Postgres', 'EXCH', 'ADC', 'Hyper-V', 'Xen', 'SCCM', 'CODE-REPO', 'Compute-Instance', 'EC2', 'VPC')) OR (EXISTS (SELECT 1 FROM asset_classification WHERE classification_type = 'canonical_type' AND code = 'Servers')) OR (platform IN ('Windows', 'Linux/Unix') AND device_type = 'Servers') THEN 'Critical' ELSE 'Other' END"
+          },
+          {
+            "step": 3,
+            "description": "Calculate the combined asset impact score using the classification results.",
+            "sql_expression": "calculate_combined_asset_impact_score(impact_class, propagation_class, 0.7, 0.3)"
+          }
+        ],
+        "sql_functions_needed": [
+          "CASE",
+          "EXISTS",
+          "calculate_combined_asset_impact_score"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [],\n    \"target_columns\": [\"impact_class\", \"propagation_class\", \"combined_impact_score\"],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Classify the asset as Mission Critical based on defined conditions.\",\n            \"sql_expression\": \"CASE WHEN impact_class = 'Mission Critical' OR (EXISTS (SELECT 1 FROM roles WHERE is_admin_role = TRUE AND role IN ('NW-ADMIN', 'WIN-ADMIN')) OR (EXISTS (SELECT 1 FROM roles WHERE criticality_score >= 90 AND role IN ('DNS', 'DHCP', 'LDAP', 'Kerb', 'MSSQL', 'SAP-HANA', 'HYPERVISOR', 'Database-Instance', 'Kubernetes', 'BCA')) OR (EXISTS (SELECT 1 FROM roles WHERE role_category = 'cmdb' AND role IN ('BCA', 'CRITICAL', 'VITAL')) OR is_bastion_device = TRUE)) THEN 'Mission Critical' ELSE NULL END\"\n        },\n        {\n            \"step\": 2,\n            \"description\": \"Classify the asset as Critical if not Mission Critical based on defined conditions.\",\n            \"sql_expression\": \"CASE WHEN impact_class = 'Critical' OR (EXISTS (SELECT 1 FROM roles WHERE criticality_score >= 70 AND criticality_score < 90 AND role IN ('RDP', 'SSH', 'VPN', 'WEB-SRVR', 'MySQL', 'Postgres', 'EXCH', 'ADC', 'Hyper-V', 'Xen', 'SCCM', 'CODE-REPO', 'Compute-Instance', 'EC2', 'VPC')) OR (EXISTS (SELECT 1 FROM asset_classification WHERE classification_type = 'canonical_type' AND code = 'Servers')) OR (platform IN ('Windows', 'Linux/Unix') AND device_type = 'Servers') THEN 'Critical' ELSE 'Other' END\"\n        },\n        {\n            \"step\": 3,\n            \"description\": \"Calculate the combined asset impact score using the classification results.\",\n            \"sql_expression\": \"calculate_combined_asset_impact_score(impact_class, propagation_class, 0.7, 0.3)\"\n        }\n    ],\n    \"sql_functions_needed\": [\"CASE\", \"EXISTS\", \"calculate_combined_asset_impact_score\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {},
+        "time_filters": {},
+        "aggregations": {},
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_high_vulnerability_risk_score",
+      "description": "FEATURE: high_vulnerability_risk_score - risk",
+      "question": "Create a calculated column or metric for high_vulnerability_risk_score. What is the overall risk score for high vulnerabilities based on their impact and likelihood?. Calculation logic: Use the formula: `risk_score = (high_vulnerability_impact_score *.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "WITH impact_score AS ( SELECT numeric_score FROM risk_impact_metadata WHERE enum_type='impact_class' AND code='High Vulnerability'), propagation_score AS ( SELECT numeric_score FROM risk_impact_metadata WHERE enum_type='propagation_class' AND code='Perimeter') SELECT (impact_score.numeric_score * 0.7) + (propagation_score.numeric_score * 0.3) AS high_vulnerability_risk_score FROM impact_score, propagation_score;",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [
+          "high_vulnerability_impact_score",
+          "propagation_score"
+        ],
+        "target_columns": [
+          "high_vulnerability_risk_score"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Retrieve the high vulnerability impact score from the risk_impact_metadata table based on the classification of the asset.",
+            "sql_expression": "SELECT numeric_score FROM risk_impact_metadata WHERE enum_type='impact_class' AND code='High Vulnerability'"
+          },
+          {
+            "step": 2,
+            "description": "Retrieve the propagation score from the risk_impact_metadata table based on the classification of the asset.",
+            "sql_expression": "SELECT numeric_score FROM risk_impact_metadata WHERE enum_type='propagation_class' AND code='Perimeter'"
+          },
+          {
+            "step": 3,
+            "description": "Calculate the high vulnerability risk score using the formula: risk_score = (high_vulnerability_impact_score * 0.7) + (propagation_score * 0.3)",
+            "sql_expression": "high_vulnerability_risk_score = (high_vulnerability_impact_score * 0.7) + (propagation_score * 0.3)"
+          }
+        ],
+        "sql_functions_needed": [
+          "SELECT",
+          "CASE",
+          "JOIN"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [\n        \"high_vulnerability_impact_score\",\n        \"propagation_score\"\n    ],\n    \"target_columns\": [\n        \"high_vulnerability_risk_score\"\n    ],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Retrieve the high vulnerability impact score from the risk_impact_metadata table based on the classification of the asset.\",\n            \"sql_expression\": \"SELECT numeric_score FROM risk_impact_metadata WHERE enum_type='impact_class' AND code='High Vulnerability'\"\n        },\n        {\n            \"step\": 2,\n            \"description\": \"Retrieve the propagation score from the risk_impact_metadata table based on the classification of the asset.\",\n            \"sql_expression\": \"SELECT numeric_score FROM risk_impact_metadata WHERE enum_type='propagation_class' AND code='Perimeter'\"\n        },\n        {\n            \"step\": 3,\n            \"description\": \"Calculate the high vulnerability risk score using the formula: risk_score = (high_vulnerability_impact_score * 0.7) + (propagation_score * 0.3)\",\n            \"sql_expression\": \"high_vulnerability_risk_score = (high_vulnerability_impact_score * 0.7) + (propagation_score * 0.3)\"\n        }\n    ],\n    \"sql_functions_needed\": [\n        \"SELECT\",\n        \"CASE\",\n        \"JOIN\"\n    ],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {},
+        "time_filters": {},
+        "aggregations": {},
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "feature_overall_vulnerability_risk_score",
+      "description": "FEATURE: overall_vulnerability_risk_score - risk",
+      "question": "Create a calculated column or metric for overall_vulnerability_risk_score. What is the overall risk score for all vulnerabilities considering both critical and high vulnerabilities?. Calculation logic: Calculate the overall risk score using: `risk_score = (critical_vulnerability_risk_score + high_vulnerability_risk_score) / 2` to provide a comprehensive risk assessment.. Use schemas: dev_assets.",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT (vrs.critical_vulnerability_risk_score + vrs.high_vulnerability_risk_score) / 2 AS overall_vulnerability_risk_score FROM vulnerability_risk_scoring AS vrs JOIN dev_assets AS da ON vrs.asset_id = da.nuid;",
+      "reasoning_plan": {
+        "transform_type": "AGGREGATION_TRANSFORMATION",
+        "source_columns": [
+          "critical_vulnerability_risk_score",
+          "high_vulnerability_risk_score"
+        ],
+        "target_columns": [
+          "overall_vulnerability_risk_score"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Retrieve critical vulnerability risk score from the vulnerability_risk_scoring table",
+            "sql_expression": "SELECT critical_vulnerability_risk_score FROM vulnerability_risk_scoring WHERE asset_id = dev_assets.nuid"
+          },
+          {
+            "step": 2,
+            "description": "Retrieve high vulnerability risk score from the vulnerability_risk_scoring table",
+            "sql_expression": "SELECT high_vulnerability_risk_score FROM vulnerability_risk_scoring WHERE asset_id = dev_assets.nuid"
+          },
+          {
+            "step": 3,
+            "description": "Calculate overall vulnerability risk score using the formula",
+            "sql_expression": "SELECT (critical_vulnerability_risk_score + high_vulnerability_risk_score) / 2 AS overall_vulnerability_risk_score"
+          }
+        ],
+        "sql_functions_needed": [
+          "SELECT",
+          "AVG"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"AGGREGATION_TRANSFORMATION\",\n    \"source_columns\": [\n        \"critical_vulnerability_risk_score\",\n        \"high_vulnerability_risk_score\"\n    ],\n    \"target_columns\": [\n        \"overall_vulnerability_risk_score\"\n    ],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Retrieve critical vulnerability risk score from the vulnerability_risk_scoring table\",\n            \"sql_expression\": \"SELECT critical_vulnerability_risk_score FROM vulnerability_risk_scoring WHERE asset_id = dev_assets.nuid\"\n        },\n        {\n            \"step\": 2,\n            \"description\": \"Retrieve high vulnerability risk score from the vulnerability_risk_scoring table\",\n            \"sql_expression\": \"SELECT high_vulnerability_risk_score FROM vulnerability_risk_scoring WHERE asset_id = dev_assets.nuid\"\n        },\n        {\n            \"step\": 3,\n            \"description\": \"Calculate overall vulnerability risk score using the formula\",\n            \"sql_expression\": \"SELECT (critical_vulnerability_risk_score + high_vulnerability_risk_score) / 2 AS overall_vulnerability_risk_score\"\n        }\n    ],\n    \"sql_functions_needed\": [\"SELECT\", \"AVG\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "AGGREGATION_TRANSFORMATION",
+      "parsed_entities": {
+        "column_filters": {},
+        "time_filters": {},
+        "aggregations": {},
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    }
+  ]
+}

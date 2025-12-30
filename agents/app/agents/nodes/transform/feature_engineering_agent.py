@@ -4961,7 +4961,9 @@ async def run_feature_engineering_pipeline(
     retrieval_helper: Optional[RetrievalHelper] = None,
     histories: Optional[List[Any]] = None,
     domain_config: Optional[DomainConfiguration] = None,
-    initial_state: Optional[FeatureEngineeringState] = None
+    initial_state: Optional[FeatureEngineeringState] = None,
+    validation_expectations: Optional[List[Dict[str, Any]]] = None,
+    **kwargs
 ) -> Dict[str, Any]:
     """
     Execute the feature engineering pipeline (async version)
@@ -4974,6 +4976,8 @@ async def run_feature_engineering_pipeline(
         domain_config: Domain configuration (defaults to cybersecurity if not provided)
         initial_state: Optional initial state to resume from. If provided, user_query and project_id can be None.
                       If None, a fresh state will be created from user_query and project_id.
+        validation_expectations: Optional list of validation examples/expectations
+        **kwargs: Additional state fields
         
     Returns:
         Dictionary containing:
@@ -5022,14 +5026,15 @@ async def run_feature_engineering_pipeline(
             "schema_registry": {},
             "knowledge_documents": [],
             "domain_config": domain_config.model_dump() if hasattr(domain_config, 'model_dump') else domain_config.dict(),
-            "validation_expectations": [],
+            "validation_expectations": validation_expectations or [],
             "refining_instructions": None,
             "refining_examples": [],
             "feature_generation_instructions": None,
             "feature_generation_examples": [],
             "identified_controls": None,
             "control_universe": None,
-            "metrics": None  # Initialize metrics tracking
+            "metrics": None,  # Initialize metrics tracking
+            **kwargs  # Include any additional kwargs
         }
     
     result = await workflow.ainvoke(initial_state)

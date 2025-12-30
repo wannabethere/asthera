@@ -105,6 +105,114 @@ class TransformSQLRAGAgentDemo:
             }
 
 
+def load_features_from_json(json_path: str) -> List[Dict]:
+    """Load features from feature engineering JSON output"""
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        features = data.get('recommended_features', [])
+        logger.info(f"Loaded {len(features)} features from {json_path}")
+        return features
+    except Exception as e:
+        logger.error(f"Error loading features from {json_path}: {e}")
+        return []
+
+
+def feature_to_transform_question(feature: Dict) -> str:
+    """Convert a feature definition to a transform SQL question"""
+    feature_name = feature.get('feature_name', 'unknown_feature')
+    natural_language_question = feature.get('natural_language_question', '')
+    calculation_logic = feature.get('calculation_logic', '')
+    feature_type = feature.get('feature_type', '')
+    aggregation_method = feature.get('aggregation_method', '')
+    filters_applied = feature.get('filters_applied', [])
+    required_schemas = feature.get('required_schemas', [])
+    
+    # Clean up natural language question (remove quotes and "*:" prefixes)
+    question = natural_language_question.strip('"').strip()
+    if question.startswith('*: '):
+        question = question[3:]
+    
+    # Build transform question
+    transform_question = f"Create a calculated column or metric for {feature_name}. "
+    
+    if question:
+        transform_question += f"{question}. "
+    
+    if calculation_logic:
+        # Clean calculation logic
+        calc_logic = calculation_logic.strip()
+        if calc_logic.startswith('*: '):
+            calc_logic = calc_logic[3:]
+        transform_question += f"Calculation logic: {calc_logic}. "
+    
+    if aggregation_method and aggregation_method != '*: count':
+        agg = aggregation_method.strip()
+        if agg.startswith('*: '):
+            agg = agg[3:]
+        transform_question += f"Use {agg} aggregation method. "
+    
+    if filters_applied:
+        filters_str = ', '.join([f.strip().replace('Applied**: ', '') for f in filters_applied if f])
+        if filters_str:
+            transform_question += f"Apply filters: {filters_str}. "
+    
+    if required_schemas:
+        schemas = [s.strip().replace('*: ', '') for s in required_schemas if s]
+        if schemas:
+            schemas_str = ', '.join(schemas)
+            transform_question += f"Use schemas: {schemas_str}. "
+    
+    return transform_question.strip()
+
+
+async def run_transform_demo_from_features(json_path: Optional[str] = None):
+    """Run transform demo using features from feature engineering JSON"""
+    
+    # Initialize demo
+    demo = TransformSQLRAGAgentDemo()
+    
+    # Load vulnerability knowledge (same as original function)
+    vulnerability_knowledge = [
+        # Asset impact classification and calculation knowledge
+        "asset_impact_mission_critical_classification: To classify an asset as Mission Critical, check if any of these conditions are true: (1) The asset has impact_class explicitly set to 'Mission Critical' in the assets table, OR (2) The asset has admin roles - join assets.roles with the roles metadata table using appropriate relationship keys where is_admin_role=TRUE, check for roles like NW-ADMIN or WIN-ADMIN, OR (3) The asset has high-criticality services - join assets.roles with the roles metadata table where criticality_score >= 90, check for roles like DNS, DHCP, LDAP, Kerb, MSSQL, SAP-HANA, HYPERVISOR, Database-Instance, Kubernetes, BCA, OR (4) The asset has CMDB classification - check if roles contain BCA, CRITICAL, or VITAL from the roles metadata table where role_category='cmdb', OR (5) The asset is a bastion device - check if is_bastion_device=TRUE in assets table. If any condition is true, classify as Mission Critical. To calculate the numeric score for Mission Critical classification, identify and query the appropriate metadata tables that contain impact class definitions and their associated numeric scores. Use the metadata definitions for the 'Mission Critical' category to retrieve the numeric score dynamically using SQL - do not hardcode the score. The LLM should identify the best metadata tables that map impact class categories to their numeric scores.",
+        "asset_impact_critical_classification: To classify an asset as Critical (when not Mission Critical), check if any of these conditions are true: (1) The asset has impact_class explicitly set to 'Critical' in assets table, OR (2) The asset has moderate-criticality services - join assets.roles with the roles metadata table where criticality_score >= 70 AND criticality_score < 90, check for roles like RDP, SSH, VPN, WEB-SRVR, MySQL, Postgres, EXCH, ADC, Hyper-V, Xen, SCCM, CODE-REPO, Compute-Instance, EC2, VPC, OR (3) The asset is a server - join assets with the asset classification metadata table using appropriate relationship keys where classification_type='canonical_type' and code='Servers', OR (4) The asset runs critical operating systems - check if platform in ('Windows', 'Linux/Unix') AND device_type='Servers'. If any condition is true, classify as Critical. To calculate the numeric score for Critical classification, identify and query the appropriate metadata tables that contain impact class definitions and their associated numeric scores. Use the metadata definitions for the 'Critical' category to retrieve the numeric score dynamically using SQL - do not hardcode the score. The LLM should identify the best metadata tables that map impact class categories to their numeric scores.",
+        "asset_combined_impact_calculation: To calculate the final combined asset impact score, first classify the asset to determine its impact_class (Mission Critical, Critical, or Other) and propagation_class (Perimeter or Core). Then use calculate_combined_asset_impact_score(impact_class, propagation_class, 0.7, 0.3) function with weights 0.7 for impact_class and 0.3 for propagation_class. This gives formula: (impact_class_score * 0.7) + (propagation_class_score * 0.3).",
+        "vulnerability_risk_scoring: Comprehensive risk score combines CVSS base score, exploitability score, impact score, time urgency factors, CISA exploit multipliers, and asset context. Use calculate_base_risk_score(cvssv3_basescore, exploitability_score, impact_score, severity_weight, state_risk_score) function. Use calculate_comprehensive_risk_score(base_risk_score, cisa_multiplier, time_urgency_factor, patch_penalty, asset_context_multiplier) for final score.",
+    ]
+    
+    # Load features from JSON if path provided
+    if json_path:
+        features = load_features_from_json(json_path)
+        if not features:
+            logger.error(f"No features loaded from {json_path}")
+            return
+        
+        # Convert features to test cases
+        test_cases = []
+        for i, feature in enumerate(features):
+            feature_name = feature.get('feature_name', f'feature_{i+1}')
+            transform_question = feature_to_transform_question(feature)
+            
+            test_cases.append({
+                "question": transform_question,
+                "project_id": "cve_data",
+                "event_id": f"feature_{feature_name}",
+                "description": f"FEATURE: {feature_name} - {feature.get('feature_type', 'unknown')}",
+                "knowledge": vulnerability_knowledge,
+                "feature_data": feature  # Store original feature data
+            })
+        
+        logger.info(f"Generated {len(test_cases)} test cases from features")
+    else:
+        # Fall back to original test cases
+        test_cases = []
+    
+    # Process test cases (same as original function)
+    await process_test_cases(demo, test_cases)
+
+
 async def run_transform_demo():
     """Run a demo of the Transform SQL RAG Agent with multiple test cases"""
     
@@ -523,6 +631,12 @@ async def run_transform_demo():
         }"""
     ]
     
+    await process_test_cases(demo, test_cases)
+
+
+async def process_test_cases(demo: TransformSQLRAGAgentDemo, test_cases: List[Dict]):
+    """Process a list of test cases with the transform SQL RAG agent"""
+    
     # Collect all results
     all_results = []
     
@@ -701,8 +815,13 @@ async def run_transform_demo():
     # Export results to JSON file
     import os
     from datetime import datetime
+    from pathlib import Path
     
-    results_file = f"transform_demo_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    # Create output directory (same as feature engineering demo)
+    output_dir = Path(__file__).parent / "output"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    results_file = output_dir / f"transform_demo_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     results_export = {
         "summary": {
             "total_cases": total_cases,
@@ -728,19 +847,39 @@ async def run_transform_demo():
 
 
 if __name__ == "__main__":
+    import sys
+    from pathlib import Path
+    
     # Configure logging level
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     
+    # Check if JSON file path provided as argument
+    json_path = None
+    if len(sys.argv) > 1:
+        json_path = sys.argv[1]
+        # If relative path, make it relative to script directory
+        if not Path(json_path).is_absolute():
+            json_path = str(Path(__file__).parent / json_path)
+    
     # Run the demo
     print("="*80)
     print("Transform SQL RAG Agent Demo")
     print("="*80)
-    print("This demo tests the TransformSQLRAGAgent with various transform questions.")
+    if json_path:
+        print(f"Loading features from: {json_path}")
+        print("This demo tests the TransformSQLRAGAgent with features from feature engineering.")
+    else:
+        print("This demo tests the TransformSQLRAGAgent with various transform questions.")
+        print("To use features from JSON, provide path as argument:")
+        print("  python demo_transform_sql_rag_agent.py output/feature_engineering_*.json")
     print("It uses the local Chroma store from dependencies.py")
     print("="*80)
     
-    asyncio.run(run_transform_demo())
+    if json_path:
+        asyncio.run(run_transform_demo_from_features(json_path))
+    else:
+        asyncio.run(run_transform_demo())
 

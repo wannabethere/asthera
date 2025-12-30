@@ -1,353 +1,288 @@
-# Unified ChromaDB Storage System (Indexing2)
+# Feature Conversation Service
 
-## 🎯 Overview
+## Overview
 
-The Unified ChromaDB Storage System eliminates duplication between `TABLE` and `TABLE_SCHEMA` document types while providing enhanced search capabilities with TF-IDF generation and quick reference lookups.
+The Feature Conversation Service provides a streaming conversation interface for feature recommendation. It allows users to:
 
-## 🏗️ Architecture
+1. **Continuously ask for feature recommendations** - Keep the conversation going with multiple queries
+2. **Select features from recommendations** - Choose which features to add to the registry
+3. **Save selected features to a file** - Persist selected features as JSON
+4. **Maintain conversation context** - Context is preserved across multiple turns
 
-### Core Components
+## Architecture
 
-1. **UnifiedStorage** - Main storage mechanism with TABLE_SCHEMA as primary document
-2. **TFIDFGenerator** - TF-IDF vector generation for quick reference lookups
-3. **DocumentBuilder** - Enhanced document creation with business context
-4. **StorageManager** - High-level orchestration of all components
-5. **DDLChunker** - Creates separate TABLE_DOCUMENTs for natural language search
-6. **NaturalLanguageSearch** - Natural language search capabilities
-7. **QueryBuilder** - Field type-aware query building with dimension vs fact classification
-8. **LLMFieldClassifier** - LLM-powered field type classification and intelligent suggestions
-9. **LLMQueryOptimizer** - LLM-powered query optimization and performance analysis
+The service wraps the `TransformationPipeline` and provides:
 
-### Document Structure
+- **Streaming updates** - Real-time feedback as features are generated
+- **Conversation management** - Maintains context across multiple queries
+- **Feature registry** - Tracks all recommended and selected features
+- **File persistence** - Saves selected features to JSON files
 
-```
-TABLE_SCHEMA (Primary Document)
-├── Technical Structure
-│   ├── Primary Key
-│   ├── Columns (with business context)
-│   ├── Relationships
-│   └── Constraints
-├── Business Context
-│   ├── Display Name
-│   ├── Description
-│   ├── Business Purpose
-│   └── Business Rules
-├── Enhanced Metadata
-│   ├── Properties
-│   ├── Tags
-│   └── Classification
-└── TF-IDF Vectors
-    └── Quick reference vectors
-
-Individual Documents (Linked by TABLE)
-├── TABLE_COLUMNS
-├── RELATIONSHIPS
-├── VIEWS
-└── METRICS
-
-TABLE_DOCUMENTs (Separate for Natural Language Search)
-├── Rich Business Descriptions
-├── Enhanced Column Context
-├── Searchable Text Content
-├── Business Keywords
-└── Technical Keywords
-
-TABLE_COLUMN Documents (Using helper.py functionality)
-├── Column Definitions with Comments
-├── Properties Integration
-├── Field Type Classification
-├── Business Context
-└── Technical Context
-```
-
-## 🚀 Key Features
-
-### ✅ Eliminates Duplication
-- Single TABLE_SCHEMA document per table
-- No more overlapping TABLE content types
-- Clear separation of technical vs. business information
-
-### ✅ Enhanced Search Capabilities
-- TF-IDF vectors for semantic search
-- Quick reference lookups by table name
-- Document type filtering
-- Similarity scoring
-- **Natural language search** for tables and business context
-- **Domain-based search** for business domains
-- **Usage type search** for specific use cases
-- **Field type classification** (dimension vs fact) for better query building
-- **Query optimization** with performance suggestions
-- **LLM-powered intelligence** for advanced field classification and query optimization
-- **Context-aware recommendations** based on business requirements
-- **Performance and indexing optimization** (SQL generation handled by existing SQL pairs and instructions)
-- **TABLE_COLUMN documents** with helper.py integration for column definitions and comments
-
-### ✅ Business Context Integration
-- Rich business descriptions
-- Usage guidelines and examples
-- Privacy classifications
-- Business rules and validation
-
-### ✅ Backward Compatibility
-- Maintains existing retrieval patterns
-- Compatible with current helper utilities
-- Gradual migration path
-
-## 📋 Usage
+## Usage
 
 ### Basic Usage
 
 ```python
-from agents.app.indexing2 import StorageManager
-from langchain_openai import OpenAIEmbeddings
-import chromadb
+from app.services.transform import FeatureConversationService, FeatureConversationRequest
 
-# Initialize components
-embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-persistent_client = chromadb.PersistentClient(path="./chroma_db")
-doc_store = chromadb.DocumentChromaStore(
-    persistent_client=persistent_client,
-    collection_name="unified_storage"
+# Initialize service
+service = FeatureConversationService()
+
+# Request feature recommendations
+request = FeatureConversationRequest(
+    user_query="I need SOC2 vulnerability features",
+    project_id="cve_data",
+    domain="cybersecurity",
+    action="recommend"
 )
 
-# Create storage manager
-storage_manager = StorageManager(
-    document_store=doc_store,
-    embedder=embeddings,
-    enable_tfidf=True
-)
+response = await service.process_request(request)
 
-# Process MDL
-result = await storage_manager.process_mdl(mdl_str, project_id="my_project")
+if response.status == "finished":
+    for feature in response.recommended_features:
+        print(f"{feature['feature_name']}: {feature['natural_language_question']}")
 ```
 
-### Advanced Search
+### Streaming Usage
 
 ```python
-# Search by table name
-user_refs = await storage_manager.search_by_table_name("users", "my_project")
-
-# Search by document type
-schema_refs = await storage_manager.search_by_document_type("TABLE_SCHEMA", "my_project")
-
-# Find similar documents
-similar_docs = await storage_manager.find_similar_documents(
-    "user account management",
-    top_k=5,
-    threshold=0.1
-)
-
-# Natural language search for tables
-user_tables = await storage_manager.search_tables_by_natural_language(
-    "user account management authentication",
-    project_id="my_project",
-    top_k=5
-)
-
-# Search by business domain
-customer_tables = await storage_manager.search_tables_by_domain(
-    "customer",
-    project_id="my_project",
-    top_k=3
-)
-
-# Search by usage type
-analytics_tables = await storage_manager.search_tables_by_usage_type(
-    "analytics",
-    project_id="my_project",
-    top_k=3
-)
-
-# Build optimized queries using field type classification
-analytical_query = await storage_manager.build_query_for_table(
-    table_name="sales",
-    project_id="my_project",
-    query_type="analytical",
-    filters={"region": "North America"},
-    aggregations=["SUM", "COUNT"],
-    group_by=["product_category"],
-    limit=10
-)
-
-# Get query suggestions based on field types
-query_suggestions = await storage_manager.get_query_suggestions(
-    table_name="users",
-    project_id="my_project",
-    field_type="fact"
-)
-
-# LLM-powered field classification
-classification_result = await storage_manager.classify_columns_with_llm(
-    table_name="sales",
-    project_id="my_project",
-    llm_client=your_llm_client  # Optional LLM client
-)
-
-# LLM-powered query optimization
-optimization_result = await storage_manager.optimize_query_with_llm(
-    query="SELECT * FROM sales WHERE region = 'North America'",
-    table_name="sales",
-    project_id="my_project",
-    optimization_level="advanced",
-    llm_client=your_llm_client  # Optional LLM client
-)
-
-# LLM-powered performance analysis
-performance_analysis = await storage_manager.analyze_query_performance_with_llm(
-    query="SELECT COUNT(*) FROM sales GROUP BY product_category",
-    table_name="sales",
-    project_id="my_project",
-    performance_metrics={"execution_time": 2.5, "rows_processed": 5000},
-    llm_client=your_llm_client  # Optional LLM client
-)
-
-# LLM-powered indexing strategy
-indexing_strategy = await storage_manager.suggest_indexing_strategy_with_llm(
-    table_name="sales",
-    project_id="my_project",
-    query_patterns=[
-        "SELECT * FROM sales WHERE region = ?",
-        "SELECT COUNT(*) FROM sales GROUP BY product_category",
-        "SELECT * FROM sales WHERE order_date >= ?"
-    ],
-    performance_requirements={"max_query_time": 1.0, "concurrent_users": 50},
-    llm_client=your_llm_client  # Optional LLM client
-)
-
-# Create TABLE_COLUMN documents with helper.py functionality
-table_column_docs = await storage_manager._ddl_chunker.create_table_column_documents(
-    mdl=mdl_data,
-    project_id="my_project"
-)
-# Returns: List of TABLE_COLUMN documents with column definitions and comments
+# Stream recommendations as they're generated
+async for update in service.process_request_with_streaming(request):
+    if update.get("status") == "recommending":
+        print(f"Found {update.get('total_found')} features so far...")
+        for feature in update.get("recommended_features", []):
+            print(f"  - {feature['feature_name']}")
+    elif update.get("status") == "finished":
+        print(f"Complete! Generated {len(update.get('recommended_features', []))} features")
+        break
 ```
 
-### TF-IDF Capabilities
+### Feature Selection
 
 ```python
-# Get TF-IDF statistics
-tfidf_stats = await storage_manager.get_tfidf_stats()
+# Select features from recommendations
+select_request = FeatureConversationRequest(
+    query_id=response.query_id,
+    project_id="cve_data",
+    domain="cybersecurity",
+    action="select",
+    selected_feature_ids=[f["feature_id"] for f in response.recommended_features[:3]]
+)
 
-# Get quick lookup statistics
-lookup_stats = await storage_manager.get_quick_lookup_stats()
+select_response = await service.process_request(select_request)
+print(f"Selected {select_response.total_selected} features")
 ```
 
-## 🔄 Migration from Current System
+### Save Features
 
-### Before (Duplicated)
 ```python
-# Old system created duplicate documents
-TABLE_SCHEMA documents containing TABLE content
-TABLE_DESCRIPTION documents containing TABLE content (DUPLICATE!)
+# Save selected features to file
+save_request = FeatureConversationRequest(
+    query_id=response.query_id,
+    project_id="cve_data",
+    domain="cybersecurity",
+    action="save",
+    save_path="/path/to/save/features.json"  # Optional, will generate default if not provided
+)
+
+save_response = await service.process_request(save_request)
+print(f"Saved to: {save_response.message}")
 ```
 
-### After (Unified)
+### Continuous Conversation
+
 ```python
-# New system eliminates duplication
-TABLE_SCHEMA documents with complete table information
-Individual documents for specific types (TABLE_COLUMNS, RELATIONSHIPS, etc.)
+# First query
+request1 = FeatureConversationRequest(
+    user_query="I need SOC2 vulnerability features",
+    project_id="cve_data",
+    domain="cybersecurity",
+    action="recommend"
+)
+response1 = await service.process_request(request1)
+
+# Select some features
+select_request = FeatureConversationRequest(
+    query_id=response1.query_id,
+    project_id="cve_data",
+    domain="cybersecurity",
+    action="select",
+    selected_feature_ids=[f["feature_id"] for f in response1.recommended_features[:2]]
+)
+await service.process_request(select_request)
+
+# Ask for more features (context is maintained)
+request2 = FeatureConversationRequest(
+    user_query="Now I need risk scoring features",
+    project_id="cve_data",  # Same project_id maintains context
+    domain="cybersecurity",
+    action="recommend"
+)
+response2 = await service.process_request(request2)
+
+# Select more features
+select_request2 = FeatureConversationRequest(
+    query_id=response2.query_id,
+    project_id="cve_data",
+    domain="cybersecurity",
+    action="select",
+    selected_feature_ids=[f["feature_id"] for f in response2.recommended_features[:2]]
+)
+await service.process_request(select_request2)
+
+# Save all selected features
+save_request = FeatureConversationRequest(
+    query_id=response2.query_id,
+    project_id="cve_data",
+    domain="cybersecurity",
+    action="save"
+)
+save_response = await service.process_request(save_request)
 ```
 
-### Migration Steps
+## API Endpoints
 
-1. **Update Document Creation**
-   ```python
-   # OLD
-   metadata = {"type": "TABLE_SCHEMA", "name": "users"}
-   content = {"type": "TABLE", "name": "users"}
-   
-   # NEW
-   metadata = {"type": "TABLE_SCHEMA", "name": "users"}
-   content = {"type": "TABLE_SCHEMA", "table_name": "users", "columns": [...], "business_context": [...]}
-   ```
+### POST `/feature-conversation/recommend`
 
-2. **Update Retrieval Queries**
-   ```python
-   # OLD
-   where = {"type": "TABLE_SCHEMA", "name": {"$in": table_names}}
-   
-   # NEW (same query, enhanced content)
-   where = {"type": "TABLE_SCHEMA", "name": {"$in": table_names}}
-   ```
+Generate feature recommendations.
 
-3. **Leverage New Features**
-   ```python
-   # Use TF-IDF search
-   similar_docs = await storage_manager.find_similar_documents(query_text)
-   
-   # Use quick reference lookup
-   table_refs = await storage_manager.search_by_table_name("users")
-   ```
-
-## 📊 Benefits
-
-### Performance
-- **Faster Retrieval** - TF-IDF vectors enable quick lookups
-- **Reduced Storage** - Eliminates duplicate documents
-- **Efficient Search** - Semantic search capabilities
-
-### Maintainability
-- **Clear Structure** - Single source of truth per table
-- **Enhanced Metadata** - Rich business context
-- **Type Safety** - Standardized document structures
-
-### Functionality
-- **Advanced Search** - Similarity scoring and semantic search
-- **Business Context** - Rich descriptions and usage guidelines
-- **Quick Lookups** - Fast reference by table name or document type
-
-## 🧪 Testing
-
-Run the example to test the system:
-
-```python
-from agents.app.indexing2.example_usage import ExampleUsage
-
-example = ExampleUsage()
-await example.run_example()
-```
-
-## 🔧 Configuration
-
-### TF-IDF Configuration
-```python
-tfidf_config = {
-    "max_features": 5000,
-    "ngram_range": (1, 2),
-    "min_df": 1,
-    "max_df": 0.95,
-    "stop_words": "english"
+**Request:**
+```json
+{
+  "user_query": "I need SOC2 vulnerability features",
+  "project_id": "cve_data",
+  "domain": "cybersecurity",
+  "action": "recommend"
 }
 ```
 
-### Storage Configuration
-```python
-storage_config = {
-    "column_batch_size": 200,
-    "enable_tfidf": True,
-    "tfidf_config": tfidf_config
+**Response:**
+```json
+{
+  "query_id": "uuid",
+  "status": "finished",
+  "recommended_features": [...],
+  "conversation_context": {...},
+  "message": "Generated 10 feature recommendations"
 }
 ```
 
-## 📈 Future Enhancements
+### POST `/feature-conversation/recommend/stream`
 
-- **Vector Search Integration** - Combine TF-IDF with embedding vectors
-- **Real-time Updates** - Incremental TF-IDF updates
-- **Advanced Analytics** - Document similarity analytics
-- **Caching Layer** - Redis integration for fast lookups
+Stream feature recommendations (SSE).
 
-## 🤝 Contributing
+### POST `/feature-conversation/select`
 
-When adding new features:
+Select features from recommendations.
 
-1. Maintain backward compatibility
-2. Add comprehensive tests
-3. Update documentation
-4. Follow the established patterns
+**Request:**
+```json
+{
+  "query_id": "uuid",
+  "project_id": "cve_data",
+  "domain": "cybersecurity",
+  "action": "select",
+  "selected_feature_ids": ["feature_1", "feature_2"]
+}
+```
 
-## 📝 Notes
+### POST `/feature-conversation/save`
 
-- This system is designed to replace the current indexing system gradually
-- All existing functionality is preserved while eliminating duplication
-- TF-IDF generation is optional but recommended for enhanced search
-- The system is fully compatible with existing helper utilities
+Save selected features to file.
+
+**Request:**
+```json
+{
+  "query_id": "uuid",
+  "project_id": "cve_data",
+  "domain": "cybersecurity",
+  "action": "save",
+  "save_path": "/optional/path/to/save.json"
+}
+```
+
+### GET `/feature-conversation/state/{project_id}`
+
+Get current conversation state.
+
+### DELETE `/feature-conversation/state/{project_id}`
+
+Clear conversation context.
+
+### WebSocket `/feature-conversation/ws/{query_id}`
+
+Real-time WebSocket endpoint for streaming updates.
+
+## File Format
+
+Saved feature files are JSON with the following structure:
+
+```json
+{
+  "project_id": "cve_data",
+  "domain": "cybersecurity",
+  "saved_at": "2024-01-15T10:30:00",
+  "total_features": 5,
+  "features": [
+    {
+      "feature_id": "...",
+      "feature_name": "...",
+      "natural_language_question": "...",
+      "transformation_layer": "gold",
+      "silver_pipeline": {...},
+      "gold_pipeline": {...},
+      ...
+    }
+  ],
+  "conversation_summary": {
+    "total_queries": 3,
+    "compliance_framework": "SOC2",
+    "severity_levels": ["Critical", "High"],
+    "sla_requirements": {"Critical": 7, "High": 30}
+  }
+}
+```
+
+## Conversation Context
+
+The service maintains conversation context per `project_id` and `domain` combination:
+
+- **Previous queries** - History of all queries in the conversation
+- **Feature registry** - All recommended features (selected and unselected)
+- **Selected features** - Set of feature IDs that have been selected
+- **Compliance context** - Extracted compliance framework, severity levels, SLA requirements
+
+Context persists until:
+- Explicitly cleared via `clear_conversation()`
+- TTL expires (default: 1 hour)
+- Service is restarted
+
+## Integration with Chat UX
+
+This service is designed to work with the chat-based UX:
+
+1. **User asks question** → `POST /recommend` or `POST /recommend/stream`
+2. **User selects features** → `POST /select`
+3. **User asks more questions** → `POST /recommend` (context maintained)
+4. **User saves** → `POST /save`
+
+The streaming endpoint provides real-time updates that can be displayed in the chat interface as features are generated.
+
+## Error Handling
+
+All endpoints return appropriate HTTP status codes:
+
+- `200 OK` - Success
+- `400 Bad Request` - Invalid request (e.g., missing required fields)
+- `404 Not Found` - Conversation not found
+- `500 Internal Server Error` - Processing error
+
+Error responses include an `error` field with details:
+
+```json
+{
+  "status": "error",
+  "error": "No active conversation found. Please recommend features first."
+}
+```
+
