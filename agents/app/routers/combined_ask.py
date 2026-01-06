@@ -1,55 +1,18 @@
 from fastapi import APIRouter, Request, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
-from typing import Dict, Any, AsyncGenerator
-import re
+from typing import Dict, Any
 import logging
 import asyncio
 import json
 
 from app.services.sql.ask import AskService
-from app.services.sql.question_recommendation import QuestionRecommendation
 from app.services.sql.models import AskRequest
 from app.routers.models.combined_models import CombinedAskResponse
-from app.agents.nodes.sql.utils.sql_prompts import Configuration as SQLConfiguration
 from app.utils.streaming import streaming_manager
 
 logger = logging.getLogger("lexy-ai-service")
 
 router = APIRouter(prefix="/api/v1/combined", tags=["combined"])
-
-def parse_recommendation_content(content: str) -> Dict[str, Any]:
-    """Parse the recommendation content into structured format."""
-    questions = {}
-    categories = []
-    current_category = None
-    reasoning = ""
-    
-    # Split content into lines and process
-    lines = content.split('\n')
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-            
-        # Check for category headers
-        if line.startswith('### Category'):
-            current_category = line.replace('### Category', '').strip(': ')
-            categories.append(current_category)
-            questions[current_category] = []
-        # Check for numbered questions
-        elif line[0].isdigit() and '. ' in line:
-            if current_category:
-                question = line.split('. ', 1)[1]
-                questions[current_category].append(question)
-        # Add any non-category, non-question lines to reasoning
-        elif not line.startswith('###') and not line[0].isdigit():
-            reasoning += line + "\n"
-    
-    return {
-        "questions": questions,
-        "categories": categories,
-        "reasoning": reasoning.strip()  # Return as string instead of list
-    }
 
 def extract_sql_result(ask_result: Dict[str, Any]) -> Dict[str, Any]:
     """Extract SQL result and metadata from ask result."""
@@ -62,6 +25,20 @@ def extract_sql_result(ask_result: Dict[str, Any]) -> Dict[str, Any]:
         # Convert to dict to safely access all fields
         ask_result_dict = ask_result.dict() if hasattr(ask_result, 'dict') else ask_result.__dict__
         
+        # Extract metadata
+        metadata = ask_result_dict.get("metadata", {})
+        
+        # For GENERAL type responses, extract answer from metadata['data']
+        answer = ask_result_dict.get("answer", "")
+        if not answer and ask_result.type == "GENERAL" and metadata:
+            # For GENERAL type, the data is stored in metadata['data']
+            data = metadata.get("data", "")
+            if isinstance(data, str):
+                answer = data
+            elif isinstance(data, dict):
+                # If data is a dict, try to extract text content
+                answer = data.get("content", data.get("text", str(data)))
+        
         return {
             "status": ask_result.status,
             "type": ask_result.type or "TEXT_TO_SQL",  # Ensure type is never None
@@ -72,10 +49,10 @@ def extract_sql_result(ask_result: Dict[str, Any]) -> Dict[str, Any]:
             "is_followup": getattr(ask_result, 'is_followup', False),
             "quality_scoring": ask_result.quality_scoring,
             "invalid_sql": getattr(ask_result, 'invalid_sql', None),
-            "metadata": ask_result_dict.get("metadata", {}),
+            "metadata": metadata,
             "processing_time_seconds": ask_result_dict.get("processing_time_seconds", 0.0),
             "timestamp": ask_result_dict.get("timestamp", ""),
-            "answer": ask_result_dict.get("answer", ""),
+            "answer": answer,
             "explanation": ask_result_dict.get("explanation", "")
         }
     
@@ -207,7 +184,8 @@ def extract_sql_result(ask_result: Dict[str, Any]) -> Dict[str, Any]:
 @router.post("/combined", response_model=CombinedAskResponse)
 async def process_combined_request(request: AskRequest, fastapi_request: Request):
     """
-    Combined endpoint that processes both ask request and question recommendations in a single call.
+    Combined endpoint that processes ask request.
+    Returns response with empty question recommendations to maintain API compatibility.
     """
     try:
         # Debug logging for project_id
@@ -218,22 +196,7 @@ async def process_combined_request(request: AskRequest, fastapi_request: Request
         # Get services from the service container
         sql_container = fastapi_request.app.state.sql_service_container
         ask_service = sql_container.get_service("ask_service")
-        question_recommendation_service = sql_container.get_service("question_recommendation")
         
-        # Create recommendation request upfront
-        recommendation_request = QuestionRecommendation.Request(
-            event_id=request.query_id,
-            user_question=request.query,
-            mdl="",
-            project_id=request.project_id,
-            configuration=request.configurations,
-            previous_questions=request.previous_questions,
-            max_questions=10,
-            max_categories=3,
-            regenerate=True
-        )
-        
-        # Process ask request and recommendations in parallel
         # Create AskRequest with debugging
         ask_request = AskRequest(
             query_id=request.query_id,
@@ -248,25 +211,19 @@ async def process_combined_request(request: AskRequest, fastapi_request: Request
         logger.info(f"DEBUG: AskRequest project_id type: {type(ask_request.project_id)}")
         logger.info(f"DEBUG: AskRequest project_id value: {repr(ask_request.project_id)}")
         
-        ask_result, recommendation_result = await asyncio.gather(
-            ask_service.process_request(ask_request),
-            question_recommendation_service.recommend(recommendation_request)
-        )
+        # Process ask request only (question recommendations removed)
+        ask_result = await ask_service.process_request(ask_request)
         
         # Extract SQL result and metadata in one go
         logger.info(f"DEBUG: ask_result before extraction: {ask_result}")
         logger.info(f"DEBUG: ask_result type: {type(ask_result)}")
-        logger.info(f"DEBUG: ask_result keys: {list(ask_result.keys()) if isinstance(ask_result, dict) else 'Not a dict'}")
+        logger.info(f"DEBUG: ask_result keys: {list(ask_result.keys()) if isinstance(ask_result, dict) else (list(ask_result.dict().keys()) if hasattr(ask_result, 'dict') else 'Not a dict or Pydantic model')}")
         if hasattr(ask_result, 'metadata'):
             logger.info(f"DEBUG: ask_result.metadata: {ask_result.metadata}")
         else:
             logger.info("DEBUG: ask_result has no metadata attribute")
         sql_result = extract_sql_result(ask_result)
         logger.info(f"DEBUG: Extracted sql_result: {sql_result}")
-        
-        # Parse recommendation content
-        parsed_recommendations = recommendation_result.response
-        logger.info(f"DEBUG: Parsed recommendations: {parsed_recommendations}")
         
         # Combine results
         try:
@@ -280,13 +237,6 @@ async def process_combined_request(request: AskRequest, fastapi_request: Request
             # SQL generation reasoning should only be in sql_generation_reasoning field
             if "reasoning" in metadata:
                 del metadata["reasoning"]
-            
-            # Get question recommendation reasoning (separate from SQL reasoning)
-            sql_reasoning = sql_result.get("sql_generation_reasoning")
-            question_recommendation_reasoning = parsed_recommendations.get("reasoning", "")
-            # If question recommendation reasoning accidentally contains SQL reasoning, use empty string
-            if question_recommendation_reasoning == sql_reasoning:
-                question_recommendation_reasoning = ""
             
             # The SQL execution data should be available in the ask_result
             if hasattr(ask_result, 'metadata') and ask_result.metadata:
@@ -325,9 +275,9 @@ async def process_combined_request(request: AskRequest, fastapi_request: Request
                 is_followup=sql_result["is_followup"],
                 quality_scoring=sql_result["quality_scoring"],
                 invalid_sql=sql_result["invalid_sql"],
-                questions=parsed_recommendations["questions"],
-                categories=parsed_recommendations["categories"],
-                reasoning=question_recommendation_reasoning,
+                questions={},  # Empty recommendations
+                categories=[],  # Empty categories
+                reasoning=None,  # Empty reasoning
                 metadata=metadata,
                 processing_time_seconds=sql_result.get("processing_time_seconds", 0.0),
                 timestamp=sql_result.get("timestamp", ""),
@@ -358,38 +308,16 @@ async def process_combined_request(request: AskRequest, fastapi_request: Request
 @router.post("/combined/stream")
 async def process_combined_request_stream(request: AskRequest, fastapi_request: Request):
     """
-    Streaming endpoint that processes both ask request and question recommendations,
+    Streaming endpoint that processes ask request,
     providing real-time updates on the processing status.
     """
     sql_container = fastapi_request.app.state.sql_service_container
     ask_service = sql_container.get_service("ask_service")
-    question_recommendation_service = sql_container.get_service("question_recommendation")
-
-    # Start recommendation in parallel
-    recommendation_task = asyncio.create_task(
-        question_recommendation_service.recommend(QuestionRecommendation.Request(
-            event_id=request.query_id,
-            user_question=request.query,
-            mdl="",
-            project_id=request.project_id,
-            configuration=request.configurations,
-            previous_questions=request.previous_questions,
-            max_questions=10,
-            max_categories=3,
-            regenerate=True
-        ))
-    )
-    recommendation_result = None
 
     async def event_stream():
-        nonlocal recommendation_result
         ask_done = False
         # Stream ask pipeline updates
         async for ask_update in ask_service.process_request_with_streaming(request):
-            # Wait for recommendation if not done and ready
-            if recommendation_result is None and recommendation_task.done():
-                recommendation_result = await recommendation_task
-
             sql_result = extract_sql_result(ask_update)
             # Ensure type is always a valid string, defaulting to "TEXT_TO_SQL" if None
             sql_type = sql_result.get("type") or "TEXT_TO_SQL"
@@ -404,33 +332,15 @@ async def process_combined_request_stream(request: AskRequest, fastapi_request: 
                 "is_followup": sql_result["is_followup"],
                 "quality_scoring": sql_result["quality_scoring"],
                 "invalid_sql": sql_result["invalid_sql"],
-                "questions": {},
-                "categories": [],
-                "reasoning": ""
+                "questions": {},  # Empty recommendations
+                "categories": [],  # Empty categories
+                "reasoning": None  # Empty reasoning
             }
-            if recommendation_result is not None:
-                parsed = recommendation_result.response
-                combined_response.update({
-                    "questions": parsed["questions"],
-                    "categories": parsed["categories"],
-                    "reasoning": parsed["reasoning"]
-                })
             print(f"[DEBUG] [router] Forwarding: {combined_response}")
             yield f"data: {json.dumps(combined_response)}\n\n"
             if sql_result["status"] in ["finished", "error"]:
                 ask_done = True
                 break
-        # If ask finished but recommendation not yet, wait and send final combined
-        if recommendation_result is None:
-            recommendation_result = await recommendation_task
-            parsed = recommendation_result.response
-            combined_response.update({
-                "questions": parsed["questions"],
-                "categories": parsed["categories"],
-                "reasoning": parsed["reasoning"]
-            })
-            print(f"[DEBUG] [router] Forwarding: {combined_response}")
-            yield f"data: {json.dumps(combined_response)}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream", headers={
         "Cache-Control": "no-cache",
@@ -441,7 +351,7 @@ async def process_combined_request_stream(request: AskRequest, fastapi_request: 
 @router.websocket("/ws/combined")
 async def websocket_combined_endpoint(websocket: WebSocket, query_id: str, fastapi_request: Request):
     """
-    WebSocket endpoint that processes both ask request and question recommendations,
+    WebSocket endpoint that processes ask request,
     providing real-time updates on the processing status.
     """
     try:
@@ -450,7 +360,6 @@ async def websocket_combined_endpoint(websocket: WebSocket, query_id: str, fasta
         # Get services from the service container
         sql_container = fastapi_request.app.state.sql_service_container
         ask_service = sql_container.get_service("ask_service")
-        question_recommendation_service = sql_container.get_service("question_recommendation")
 
         try:
             # Wait for the initial request
@@ -458,23 +367,7 @@ async def websocket_combined_endpoint(websocket: WebSocket, query_id: str, fasta
             request = AskRequest(**request_data)
             request.query_id = query_id  # Ensure consistency between URL param and AskRequest
 
-            # Create recommendation request
-            recommendation_request = QuestionRecommendation.Request(
-                event_id=request.query_id,
-                user_question=request.query,
-                mdl="",
-                project_id=request.project_id,
-                configuration=request.configurations,
-                previous_questions=request.previous_questions,
-                max_questions=10,
-                max_categories=3,
-                regenerate=True
-            )
-
             ask_done = False
-            recommendation_done = False
-            recommendation_result = None
-            parsed_recommendations = None
 
             # Start ask_service streaming in background
             async def process_ask_stream():
@@ -482,9 +375,6 @@ async def websocket_combined_endpoint(websocket: WebSocket, query_id: str, fasta
                     await streaming_manager.put(query_id, update)
 
             ask_stream_task = asyncio.create_task(process_ask_stream())
-            recommendation_task = asyncio.create_task(
-                question_recommendation_service.recommend(recommendation_request)
-            )
 
             try:
                 # Stream ask results from the manager
@@ -508,35 +398,17 @@ async def websocket_combined_endpoint(websocket: WebSocket, query_id: str, fasta
                         "is_followup": sql_result["is_followup"],
                         "quality_scoring": sql_result["quality_scoring"],
                         "invalid_sql": sql_result["invalid_sql"],
-                        "questions": {},
-                        "categories": [],
-                        "reasoning": ""
+                        "questions": {},  # Empty recommendations
+                        "categories": [],  # Empty categories
+                        "reasoning": None  # Empty reasoning
                     }
                     if sql_result["status"] in ["finished", "error"]:
                         ask_done = True
-                        if not recommendation_done:
-                            recommendation_result = await recommendation_task
-                            parsed_recommendations = recommendation_result.response
-                            combined_response.update({
-                                "questions": parsed_recommendations["questions"],
-                                "categories": parsed_recommendations["categories"],
-                                "reasoning": parsed_recommendations["reasoning"]
-                            })
-                            recommendation_done = True
-                    if not recommendation_done and recommendation_task.done():
-                        recommendation_result = await recommendation_task
-                        parsed_recommendations = recommendation_result.response
-                        combined_response.update({
-                            "questions": parsed_recommendations["questions"],
-                            "categories": parsed_recommendations["categories"],
-                            "reasoning": parsed_recommendations["reasoning"]
-                        })
-                        recommendation_done = True
 
                     print(f"[DEBUG] [router] Forwarding: {combined_response}")
                     await websocket.send_json(combined_response)
 
-                    if ask_done and recommendation_done:
+                    if ask_done:
                         await streaming_manager.close(query_id)
                         break
             except Exception as e:
@@ -550,7 +422,7 @@ async def websocket_combined_endpoint(websocket: WebSocket, query_id: str, fasta
                 await websocket.send_json(error_response)
                 await streaming_manager.close(query_id)
             finally:
-                await asyncio.gather(ask_stream_task, recommendation_task, return_exceptions=True)
+                await asyncio.gather(ask_stream_task, return_exceptions=True)
         except WebSocketDisconnect:
             await streaming_manager.close(query_id)
         except Exception as e:

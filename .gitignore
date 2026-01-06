@@ -32,6 +32,7 @@ node_modules
 dist
 dist-ssr
 *.local
+*/tests/output/*
 
 # Editor directories and files
 .vscode/*

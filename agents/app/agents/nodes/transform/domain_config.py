@@ -1584,3 +1584,173 @@ def get_controls_for_framework(framework: str) -> List[ComplianceControl]:
         all_controls.extend(framework_controls)
     return all_controls
 
+
+# ============================================================================
+# CONTROL PRIORITIZATION CONFIGURATIONS
+# ============================================================================
+# These are dummy/static control configurations used for priority calculations
+# They provide baseline data when external data sources are not available
+
+@dataclass
+class ControlPrioritizationConfig:
+    """Configuration for control prioritization with default values"""
+    control_id: str
+    default_likelihood: str = "3"  # 1-5 scale
+    default_impact: str = "3"  # 1-5 scale
+    default_relevance_score: float = 0.5  # 0.0-1.0
+    default_quality_score: float = 0.5  # 0.0-1.0
+    default_coverage_score: float = 0.5  # 0.0-1.0
+    default_has_coverage_gaps: bool = False
+    priority_notes: str = ""
+
+
+# Default prioritization configurations for common controls
+# These are used when external data is not available
+DEFAULT_CONTROL_PRIORITIZATION_CONFIGS: Dict[str, ControlPrioritizationConfig] = {
+    # SOC2 Controls
+    "CC6.1": ControlPrioritizationConfig(
+        control_id="CC6.1",
+        default_likelihood="3",
+        default_impact="4",
+        default_relevance_score=0.85,
+        default_quality_score=0.80,
+        default_coverage_score=0.75,
+        priority_notes="Critical access control - high impact if compromised"
+    ),
+    "CC6.2": ControlPrioritizationConfig(
+        control_id="CC6.2",
+        default_likelihood="2",
+        default_impact="4",
+        default_relevance_score=0.80,
+        default_quality_score=0.75,
+        default_coverage_score=0.70,
+        priority_notes="User registration and authorization - important for access management"
+    ),
+    "CC6.3": ControlPrioritizationConfig(
+        control_id="CC6.3",
+        default_likelihood="3",
+        default_impact="4",
+        default_relevance_score=0.85,
+        default_quality_score=0.80,
+        default_coverage_score=0.75,
+        priority_notes="Access modification controls - critical for security"
+    ),
+    "CC7.1": ControlPrioritizationConfig(
+        control_id="CC7.1",
+        default_likelihood="4",
+        default_impact="5",
+        default_relevance_score=0.90,
+        default_quality_score=0.85,
+        default_coverage_score=0.80,
+        priority_notes="Vulnerability detection and monitoring - high priority for security"
+    ),
+    "CC7.4": ControlPrioritizationConfig(
+        control_id="CC7.4",
+        default_likelihood="3",
+        default_impact="5",
+        default_relevance_score=0.90,
+        default_quality_score=0.85,
+        default_coverage_score=0.80,
+        priority_notes="Incident response - critical for security operations"
+    ),
+    
+    # HR Compliance Controls
+    "HR-TRAIN-001": ControlPrioritizationConfig(
+        control_id="HR-TRAIN-001",
+        default_likelihood="4",
+        default_impact="3",
+        default_relevance_score=0.85,
+        default_quality_score=0.80,
+        default_coverage_score=0.75,
+        priority_notes="Mandatory training completion - important for compliance"
+    ),
+    "HR-TRAIN-002": ControlPrioritizationConfig(
+        control_id="HR-TRAIN-002",
+        default_likelihood="4",
+        default_impact="3",
+        default_relevance_score=0.85,
+        default_quality_score=0.80,
+        default_coverage_score=0.75,
+        priority_notes="Training deadline compliance - tracks on-time completion"
+    ),
+    "HR-CERT-001": ControlPrioritizationConfig(
+        control_id="HR-CERT-001",
+        default_likelihood="3",
+        default_impact="3",
+        default_relevance_score=0.75,
+        default_quality_score=0.70,
+        default_coverage_score=0.70,
+        priority_notes="Certification expiry management - medium priority"
+    ),
+    "HR-GAP-001": ControlPrioritizationConfig(
+        control_id="HR-GAP-001",
+        default_likelihood="4",
+        default_impact="4",
+        default_relevance_score=0.90,
+        default_quality_score=0.85,
+        default_coverage_score=0.80,
+        priority_notes="Compliance gap identification - high priority for risk management"
+    ),
+    
+    # PCI-DSS Controls
+    "PCI-REQ-6": ControlPrioritizationConfig(
+        control_id="PCI-REQ-6",
+        default_likelihood="4",
+        default_impact="5",
+        default_relevance_score=0.90,
+        default_quality_score=0.85,
+        default_coverage_score=0.80,
+        priority_notes="Patch management - critical for PCI compliance"
+    ),
+    "PCI-REQ-11": ControlPrioritizationConfig(
+        control_id="PCI-REQ-11",
+        default_likelihood="3",
+        default_impact="4",
+        default_relevance_score=0.80,
+        default_quality_score=0.75,
+        default_coverage_score=0.70,
+        priority_notes="Security testing - important for compliance validation"
+    ),
+    
+    # HIPAA Controls
+    "HIPAA-164.308": ControlPrioritizationConfig(
+        control_id="HIPAA-164.308",
+        default_likelihood="3",
+        default_impact="5",
+        default_relevance_score=0.90,
+        default_quality_score=0.85,
+        default_coverage_score=0.80,
+        priority_notes="Security management process - critical for HIPAA compliance"
+    ),
+    "HIPAA-164.312": ControlPrioritizationConfig(
+        control_id="HIPAA-164.312",
+        default_likelihood="3",
+        default_impact="5",
+        default_relevance_score=0.90,
+        default_quality_score=0.85,
+        default_coverage_score=0.80,
+        priority_notes="Access control - critical for ePHI protection"
+    ),
+}
+
+
+def get_control_prioritization_config(control_id: str) -> Optional[ControlPrioritizationConfig]:
+    """Get default prioritization configuration for a control
+    
+    Args:
+        control_id: Control ID to get configuration for
+    
+    Returns:
+        ControlPrioritizationConfig if found, None otherwise
+    """
+    return DEFAULT_CONTROL_PRIORITIZATION_CONFIGS.get(control_id)
+
+
+def get_all_prioritization_configs() -> Dict[str, ControlPrioritizationConfig]:
+    """Get all default prioritization configurations
+    
+    Returns:
+        Dict mapping control_id to ControlPrioritizationConfig
+    """
+    return DEFAULT_CONTROL_PRIORITIZATION_CONFIGS.copy()
+

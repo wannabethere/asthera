@@ -88,12 +88,12 @@ Good luck!
 """
 
 table_columns_selection_user_prompt_template = """
-### Database Schema in chroma stored documents json format  ###
+### Database Schema (Markdown Format) ###
 
 {db_schemas}
 
 ### RELATIONSHIP INFORMATION ###
-Each table may include a "relationships" field that contains information about how this table relates to other tables. 
+Each table may include relationship information showing how it relates to other tables. 
 The relationships include:
 - name: The name of the relationship
 - models: The tables involved in the relationship
@@ -525,8 +525,8 @@ class TableRetrieval:
             logger.info(f"Schema check tokens: {schema_check.get('tokens', 0)}")
             
             if query:
-                # Build prompt with schemas
-                prompt = self._build_prompt(query, schema_docs, histories)
+                # Build prompt with processed db_schemas (which have columns) instead of raw schema_docs
+                prompt = self._build_prompt(query, db_schemas, histories)
                 print(f"=== BUILT PROMPT FOR COLUMN SELECTION ===")
                 print(f"Prompt length: {len(prompt)}")
                 print(f"Prompt preview: {prompt[:500]}...")
@@ -636,7 +636,7 @@ class TableRetrieval:
                 if where:
                     results = self.table_store.semantic_search(
                         query=query,
-                        k=30,
+                        k=10,
                         where=where,
                         #query_embedding=embedding_result
                     )
@@ -693,7 +693,7 @@ class TableRetrieval:
                 if where:
                     results = self.table_store.semantic_search(
                         query=query,
-                        k=30,
+                        k=10,
                         where=where,
                         #query_embedding=embedding_result
                     )
@@ -770,7 +770,7 @@ class TableRetrieval:
             if query:
                 table_results = self.table_store.semantic_search(
                     query=query,
-                    k=30,
+                    k=10,
                     where=where,
                 )
             else:
@@ -792,7 +792,7 @@ class TableRetrieval:
             if query:
                 schema_results = self.schema_store.semantic_search(
                     query=query,
-                    k=30,
+                    k=10,
                     where=schema_where,
                 )
             else:
@@ -2604,6 +2604,114 @@ class TableRetrieval:
                 "has_metric": False
             }
 
+    def _format_schemas_as_markdown(self, schemas: List[Dict]) -> str:
+        """Format schemas as markdown to reduce token usage."""
+        markdown_parts = []
+        
+        for schema in schemas:
+            # Get table name from various possible locations
+            table_name = (
+                schema.get('table_name') or 
+                schema.get('name') or 
+                schema.get('metadata', {}).get('name', '') or
+                'Unknown'
+            )
+            
+            # Get table DDL from various possible locations
+            table_ddl = schema.get('table_ddl', '')
+            
+            # If no table_ddl, try to extract from content and build DDL
+            if not table_ddl and 'content' in schema:
+                try:
+                    import ast
+                    content = schema['content']
+                    # Handle string content that might be a dict representation
+                    if isinstance(content, str):
+                        content_dict = ast.literal_eval(content)
+                    else:
+                        content_dict = content
+                    
+                    if isinstance(content_dict, dict):
+                        # Try different possible keys for DDL
+                        table_ddl = (
+                            content_dict.get('ddl') or
+                            content_dict.get('table_ddl') or
+                            ''
+                        )
+                        
+                        # If still no DDL, try to build it from columns
+                        if not table_ddl and content_dict.get('type') == 'TABLE_COLUMNS':
+                            columns = content_dict.get('columns', [])
+                            if columns and isinstance(columns, list):
+                                # Build a simple DDL from columns
+                                col_defs = []
+                                for col in columns:
+                                    if isinstance(col, dict):
+                                        col_name = col.get('name', '')
+                                        col_type = col.get('data_type', col.get('type', 'VARCHAR'))
+                                        if col_name:
+                                            col_defs.append(f"  {col_name} {col_type}")
+                                
+                                if col_defs:
+                                    table_ddl = f"CREATE TABLE {table_name} (\n" + ",\n".join(col_defs) + "\n);"
+                except Exception as e:
+                    logger.debug(f"Could not extract DDL from content: {str(e)}")
+                    pass
+            
+            # Format table section
+            markdown_parts.append(f"## Table: {table_name}\n")
+            
+            # If no table_ddl, try to build it from columns in schema
+            if not table_ddl:
+                columns = schema.get('columns', [])
+                if columns and isinstance(columns, list):
+                    # Build DDL from columns
+                    col_defs = []
+                    for col in columns:
+                        if isinstance(col, dict):
+                            col_name = col.get('name', '')
+                            col_type = col.get('data_type', col.get('type', 'VARCHAR'))
+                            comment = col.get('comment', '')
+                            if col_name:
+                                col_def = f"  {col_name} {col_type}"
+                                if comment:
+                                    # Add comment inline (truncate if too long)
+                                    comment_short = comment[:100] + "..." if len(comment) > 100 else comment
+                                    col_def += f" -- {comment_short.replace(chr(10), ' ').replace(chr(13), ' ')}"
+                                col_defs.append(col_def)
+                    
+                    if col_defs:
+                        table_ddl = f"CREATE TABLE {table_name} (\n" + ",\n".join(col_defs) + "\n);"
+            
+            if table_ddl:
+                markdown_parts.append("```sql")
+                markdown_parts.append(table_ddl)
+                markdown_parts.append("```\n")
+            else:
+                markdown_parts.append("*DDL not available*\n")
+            
+            # Add relationships if available
+            relationships = schema.get('relationships', [])
+            if relationships:
+                markdown_parts.append("### Relationships:")
+                for rel in relationships:
+                    if isinstance(rel, dict):
+                        rel_name = rel.get('name', '')
+                        rel_models = rel.get('models', [])
+                        rel_join_type = rel.get('joinType', '')
+                        rel_condition = rel.get('condition', '')
+                        
+                        if rel_models:
+                            models_str = ', '.join(rel_models) if isinstance(rel_models, list) else str(rel_models)
+                            markdown_parts.append(f"- **{rel_name}** ({rel_join_type}): {models_str}")
+                            if rel_condition:
+                                markdown_parts.append(f"  - Condition: {rel_condition}")
+                markdown_parts.append("")
+            
+            markdown_parts.append("")  # Add spacing between tables
+        
+        return "\n".join(markdown_parts)
+    
     def _build_prompt(
         self,
         query: str,
@@ -2641,17 +2749,15 @@ class TableRetrieval:
                     
                     enhanced_schemas.append(enhanced_schema)
                 
-                # Join DDLs with newlines to create a single string
-                #print("enhanced_schemas", enhanced_schemas)
-                import json
-                schemas_str = json.dumps(enhanced_schemas)
+                # Format schemas as markdown instead of JSON to reduce token usage
+                schemas_str = self._format_schemas_as_markdown(enhanced_schemas)
                 
                 # Create the prompt using the template
                 prompt = self._prompt.format(
                     question=query,
                     db_schemas=schemas_str
                 )
-                logger.info(f"Built prompt with {len(enhanced_schemas)} schemas including relationships")
+                logger.info(f"Built prompt with {len(enhanced_schemas)} schemas in markdown format (reduced size)")
                 return prompt
                 
             except Exception as e:

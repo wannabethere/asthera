@@ -1545,8 +1545,8 @@ async def main():
     reader = ProjectReader(base_path, persistent_client)
     
     # Test projects
-    #test_projects = ["csodworkday","cornerstone_learning", "cornerstone_talent", "cornerstone","sumtotal_learn","cve_data"] #, "cornerstone_talent"]
-    test_projects = ["csod_risk_attrition"]
+    test_projects = ["csod_risk_attrition","csodworkday","cornerstone_learning", "cornerstone_talent", "cornerstone","sumtotal_learn","cve_data"] #, "cornerstone_talent"]
+    #test_projects = ["csod_risk_attrition"]
 
     #test_projects = ["cve_data"]
     

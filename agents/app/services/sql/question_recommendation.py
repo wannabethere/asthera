@@ -181,8 +181,7 @@ class QuestionRecommendation:
 
     def _extract_recommendations(self, result: dict) -> dict:
         """Extract and format recommendations from the result"""
-        post_process = result["post_process"]
-        content = post_process.get("content", "")
+        post_process = result.get("post_process", {})
         
         # Initialize result dictionary
         result_dict = {
@@ -190,6 +189,20 @@ class QuestionRecommendation:
             "categories": [],
             "reasoning": ""
         }
+        
+        # Check if post_process already contains parsed recommendations (new format)
+        if "questions" in post_process and isinstance(post_process["questions"], dict):
+            # Already parsed format - use directly
+            result_dict["questions"] = post_process.get("questions", {})
+            result_dict["categories"] = post_process.get("categories", [])
+            result_dict["reasoning"] = post_process.get("reasoning", "")
+            return result_dict
+        
+        # Otherwise, try to parse from content string (old format)
+        content = post_process.get("content", "")
+        if not content:
+            logger.warning("No content found in post_process, returning empty recommendations")
+            return result_dict
         
         try:
             # Try to parse as JSON first (expected format)
@@ -222,37 +235,45 @@ class QuestionRecommendation:
             # Parse the JSON
             parsed_data = json.loads(json_content)
             
-            if "questions" in parsed_data and isinstance(parsed_data["questions"], list):
-                # Process questions from JSON format
-                for question_item in parsed_data["questions"]:
-                    if isinstance(question_item, dict) and "question" in question_item and "category" in question_item:
-                        category = question_item["category"]
-                        question_text = question_item["question"]
-                        
-                        if category not in result_dict["questions"]:
-                            result_dict["questions"][category] = []
-                            result_dict["categories"].append(category)
-                        
-                        result_dict["questions"][category].append({"question": question_text})
-                
-                # Extract reasoning from any text outside the JSON
-                reasoning_text = content
-                if "```json" in content:
-                    # Remove the JSON code block from reasoning
-                    json_block_start = content.find("```json")
-                    json_block_end = content.find("```", json_block_start + 7) + 3
-                    if json_block_end > 2:
-                        reasoning_text = content[:json_block_start] + content[json_block_end:]
-                elif "```" in content:
-                    json_block_start = content.find("```")
-                    json_block_end = content.find("```", json_block_start + 3) + 3
-                    if json_block_end > 2:
-                        reasoning_text = content[:json_block_start] + content[json_block_end:]
-                elif json_start != -1 and json_end > json_start:
-                    reasoning_text = content[:json_start] + content[json_end:]
-                
-                result_dict["reasoning"] = reasoning_text.strip()
-                
+            if "questions" in parsed_data:
+                if isinstance(parsed_data["questions"], dict):
+                    # New format: questions is already a dict with categories
+                    result_dict["questions"] = parsed_data.get("questions", {})
+                    result_dict["categories"] = parsed_data.get("categories", [])
+                    result_dict["reasoning"] = parsed_data.get("reasoning", "")
+                elif isinstance(parsed_data["questions"], list):
+                    # Old format: questions is a list with category field
+                    for question_item in parsed_data["questions"]:
+                        if isinstance(question_item, dict) and "question" in question_item and "category" in question_item:
+                            category = question_item["category"]
+                            question_text = question_item["question"]
+                            
+                            if category not in result_dict["questions"]:
+                                result_dict["questions"][category] = []
+                                result_dict["categories"].append(category)
+                            
+                            result_dict["questions"][category].append({"question": question_text})
+                    
+                    # Extract reasoning from any text outside the JSON
+                    reasoning_text = content
+                    if "```json" in content:
+                        # Remove the JSON code block from reasoning
+                        json_block_start = content.find("```json")
+                        json_block_end = content.find("```", json_block_start + 7) + 3
+                        if json_block_end > 2:
+                            reasoning_text = content[:json_block_start] + content[json_block_end:]
+                    elif "```" in content:
+                        json_block_start = content.find("```")
+                        json_block_end = content.find("```", json_block_start + 3) + 3
+                        if json_block_end > 2:
+                            reasoning_text = content[:json_block_start] + content[json_block_end:]
+                    elif json_start != -1 and json_end > json_start:
+                        reasoning_text = content[:json_start] + content[json_end:]
+                    
+                    result_dict["reasoning"] = reasoning_text.strip()
+                else:
+                    # Fallback to markdown parsing if format is unexpected
+                    self._parse_markdown_format(content, result_dict)
             else:
                 # Fallback to markdown parsing if JSON parsing fails
                 self._parse_markdown_format(content, result_dict)

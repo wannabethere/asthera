@@ -2481,6 +2481,99 @@ class ImpactFeatureGenerationAgent:
             return DomainConfiguration(**domain_config_dict)
         return self.domain_config
     
+    def _get_impact_sql_function_context(self) -> str:
+        """Get SQL function documentation for impact calculations"""
+        return """
+GENERIC IMPACT CALCULATION SQL FUNCTIONS:
+
+The impact features you generate will be converted to SQL using generic impact calculation functions. 
+These functions accept parameters in JSON format and calculate impact scores using configurable methods.
+
+CONTROL PRIORITIZATION CONFIGS:
+When controls are identified, you can use DEFAULT_CONTROL_PRIORITIZATION_CONFIGS from domain_config.py which provide:
+- default_impact: str (1-5 scale) - Convert to 0-100 scale: (value * 20) - 20, e.g., "4" -> 60, "5" -> 80
+- default_relevance_score: float (0.0-1.0) - Can be used directly or scaled to 0-100
+- default_quality_score: float (0.0-1.0) - Can be used directly or scaled to 0-100
+- default_coverage_score: float (0.0-1.0) - Can be used directly or scaled to 0-100
+- priority_notes: str - Contextual information about the control
+
+These defaults should be used when actual impact data is not available. Map control_id to get_control_prioritization_config(control_id).
+
+MAIN FUNCTION: calculate_impact_from_json(p_config JSONB)
+- Accepts a JSON configuration with parameters array and aggregation settings
+- Returns: overall_impact, direct_impact, indirect_impact, cascading_impact, aggregation_method, impact_by_category, parameter_scores, calculation_summary
+
+PARAMETER STRUCTURE (each parameter in the 'parameters' array):
+{
+    "param_name": "string",              // Name of the parameter (e.g., 'asset_criticality', 'financial_impact')
+    "param_value": decimal,               // Current value of the parameter (0-100 or raw value)
+    "param_weight": decimal,              // Weight in final calculation (0-1, typically 0.1-0.5)
+    "max_value": decimal,                // Maximum expected value for normalization (default 100.0)
+    "impact_category": "string",          // 'direct', 'indirect', 'cascading', 'reputational', 'financial', 'operational', 'compliance'
+    "amplification_factor": decimal,      // Multiplier for cascading impacts (default 1.0, use 1.2-2.0 for critical factors)
+    "decay_function": "string",          // 'none', 'linear', 'exponential', 'logarithmic', 'step', 'compound', 'inverse_exponential', 'sigmoid', 'square'
+    "decay_rate": decimal,               // Decay rate parameter (tau for exponential, etc., default 1.0)
+    "time_delta": decimal,                // Time elapsed for decay calculation (days, hours, etc., default 0)
+    "inverse": boolean,                   // If true, higher value = lower impact (default false)
+    "threshold_critical": decimal,       // Critical threshold (default 90.0)
+    "threshold_high": decimal,            // High threshold (default 70.0)
+    "threshold_medium": decimal           // Medium threshold (default 50.0)
+}
+
+AGGREGATION METHODS:
+- 'weighted_sum': Weighted average (default, most common)
+- 'max': Maximum impact (worst case scenario)
+- 'least': Minimum impact (best case scenario)
+- 'geometric_mean': Product root (for multiplicative effects)
+- 'cascading': Includes cascade multiplier for compound effects
+- 'quadratic_mean': Root mean square
+
+CONFIGURATION STRUCTURE:
+{
+    "aggregation_method": "weighted_sum",  // Aggregation method (see above)
+    "scale_to": 100.0,                    // Scale final result to this value (default 100.0)
+    "enable_cascade": false,               // Enable cascading impact calculation (default false)
+    "cascade_depth": 3,                   // Depth of cascade (1=primary only, 2=secondary, 3=tertiary)
+    "parameters": [                        // Array of parameter objects (see structure above)
+        {
+            "param_name": "regulatory_severity",
+            "param_value": 85.0,
+            "param_weight": 0.40,
+            "max_value": 100.0,
+            "impact_category": "direct",
+            "amplification_factor": 1.0,
+            "decay_function": "none"
+        },
+        ...
+    ]
+}
+
+IMPORTANT FOR NATURAL LANGUAGE QUESTIONS:
+When generating impact features, include in the natural_language_question and description:
+1. Parameter names and their source data fields (or control prioritization config defaults)
+2. Parameter weights (how important each factor is)
+3. Aggregation method (how parameters combine)
+4. Impact categories (direct, indirect, cascading, etc.)
+5. Max values for normalization (what's the scale)
+6. Decay functions if time-based (e.g., "exponential decay over 30 days")
+7. Amplification factors for critical factors
+8. Whether any parameters are inverse (higher value = lower impact)
+9. When controls are identified, mention using control prioritization configs (default_impact, default_relevance_score, etc.)
+
+Example natural language question with SQL context:
+"What is the overall impact score combining regulatory severity (weight 0.4, max 100, direct category), 
+financial impact (weight 0.3, max 100000, financial category, amplification 1.5), and operational 
+disruption (weight 0.3, max 100, operational category) using weighted_sum aggregation, scaled to 100?"
+
+Example with control prioritization:
+"What is the overall impact score for identified controls using control prioritization config defaults 
+(default_impact converted from 1-5 scale to 0-100, weight 0.5, direct category) combined with 
+regulatory severity (weight 0.3, max 100, direct category) and financial impact (weight 0.2, max 100000, 
+financial category) using weighted_sum aggregation, scaled to 100?"
+
+This provides enough context for another agent to construct the SQL function call.
+"""
+    
     async def __call__(self, state: FeatureEngineeringState) -> FeatureEngineeringState:
         """Generate impact features as natural language questions using universal impact dimensions"""
         
@@ -2498,6 +2591,8 @@ class ImpactFeatureGenerationAgent:
         system_prompt = f"""You are a data scientist specializing in impact assessment and consequence modeling for compliance.
 
 Your task is to generate impact features that measure "If this control fails, what is the consequence?" using UNIVERSAL IMPACT DIMENSIONS that work across ALL compliance types (SOC2, HIPAA, HR, Finance, etc.).
+
+{self._get_impact_sql_function_context()}
 
 UNIVERSAL IMPACT DIMENSIONS (use these as the foundation):
 1. REGULATORY SEVERITY - Regulatory penalty tiers, enforcement levels
@@ -2521,38 +2616,72 @@ For each universal dimension, create impact features that:
 - Can be adapted with domain-specific adjustments
 - Quantify consequences in measurable ways
 - Map to specific controls when controls are identified
+- Include sufficient detail in natural language questions for SQL generation
 
 For each impact feature, provide:
 1. Feature name following universal conventions (e.g., "regulatory_severity_impact", "financial_impact", "operational_disruption_impact")
-2. Natural language question that can be interpreted by another agent
+2. Natural language question that includes SQL-relevant context:
+   - Parameter names and source data fields (or control prioritization config defaults when controls are identified)
+   - Parameter weights (0-1, typically 0.1-0.5)
+   - Aggregation method (weighted_sum, max, least, geometric_mean, cascading, quadratic_mean)
+   - Impact categories (direct, indirect, cascading, reputational, financial, operational, compliance)
+   - Max values for normalization
+   - Decay functions if time-based
+   - Amplification factors for critical factors
+   - Whether any parameters are inverse
+   - When controls are identified: mention using DEFAULT_CONTROL_PRIORITIZATION_CONFIGS.default_impact (1-5 scale, convert to 0-100) and default_relevance_score
 3. Impact dimension it measures (regulatory_severity, financial, operational, etc.)
-4. Calculation method (how to quantify this impact)
-5. Data sources (where measurement data comes from)
+4. Calculation method (how to quantify this impact, including SQL function parameters)
+5. Data sources (where measurement data comes from, or control prioritization configs when controls are identified)
 6. Unit of measure (score, dollars, hours, etc.)
 7. Ranges (low/medium/high impact values)
 8. Cross-domain applicability (how it works for different frameworks)
 9. Domain-specific adjustments (if needed for {domain_config.domain_name})
-10. Control mapping (which identified controls this supports, if controls are identified)
+10. Control mapping (which identified controls this supports, if controls are identified - use get_control_prioritization_config(control_id) to get defaults)
+11. SQL function parameters (detailed breakdown of param_name, param_value source, param_weight, max_value, impact_category, etc.)
+12. Control prioritization usage (how to use DEFAULT_CONTROL_PRIORITIZATION_CONFIGS when controls are identified)
 
 Generate impact features as JSON array with this structure:
 [
     {{
         "feature_name": "raw_impact",
-        "natural_language_question": "What is the overall raw impact score for {domain_config.entity_types[0] if domain_config.entity_types else 'entities'}?",
-        "description": "Overall raw impact score without considering controls",
+        "natural_language_question": "What is the overall raw impact score for {domain_config.entity_types[0] if domain_config.entity_types else 'entities'} combining regulatory severity (weight 0.4, max 100, direct category), financial impact (weight 0.3, max 100000, financial category, amplification 1.2), and operational disruption (weight 0.3, max 100, operational category) using weighted_sum aggregation, scaled to 100?",
+        "description": "Overall raw impact score without considering controls. Combines regulatory severity, financial impact, and operational disruption using weighted sum aggregation.",
         "impact_type": "overall",
         "feature_type": "float",
-        "calculation_logic": "Weighted combination of all impact factors",
+        "calculation_logic": "Weighted combination of all impact factors using calculate_impact_from_json with weighted_sum aggregation",
+        "sql_function": "calculate_impact_from_json",
+        "sql_parameters": {{
+            "aggregation_method": "weighted_sum",
+            "scale_to": 100.0,
+            "enable_cascade": false,
+            "parameters": [
+                {{"param_name": "regulatory_severity", "param_value": "regulatory_severity_score", "param_weight": 0.4, "max_value": 100.0, "impact_category": "direct", "amplification_factor": 1.0, "decay_function": "none"}},
+                {{"param_name": "financial_impact", "param_value": "financial_impact_amount", "param_weight": 0.3, "max_value": 100000.0, "impact_category": "financial", "amplification_factor": 1.2, "decay_function": "none"}},
+                {{"param_name": "operational_disruption", "param_value": "operational_disruption_score", "param_weight": 0.3, "max_value": 100.0, "impact_category": "operational", "amplification_factor": 1.0, "decay_function": "none"}}
+            ]
+        }},
+        "control_prioritization_usage": "When controls are identified, can use DEFAULT_CONTROL_PRIORITIZATION_CONFIGS.default_impact (1-5 scale, convert to 0-100) and default_relevance_score (0-1 scale) as additional parameters",
         "related_features": [],
         "knowledge_based_reasoning": "Based on domain knowledge about impact assessment"
     }},
     {{
         "feature_name": "effective_impact",
-        "natural_language_question": "What is the effective impact score after considering controls and mitigations?",
-        "description": "Effective impact after controls are applied",
+        "natural_language_question": "What is the effective impact score after considering controls and mitigations, combining raw impact (weight 0.7, max 100, direct category) and control effectiveness (weight 0.3, max 100, indirect category, inverse true) using weighted_sum aggregation?",
+        "description": "Effective impact after controls are applied. Combines raw impact with control effectiveness adjustment.",
         "impact_type": "effective",
         "feature_type": "float",
-        "calculation_logic": "Raw impact adjusted for effectiveness of controls",
+        "calculation_logic": "Raw impact adjusted for effectiveness of controls using calculate_impact_from_json",
+        "sql_function": "calculate_impact_from_json",
+        "sql_parameters": {{
+            "aggregation_method": "weighted_sum",
+            "scale_to": 100.0,
+            "enable_cascade": false,
+            "parameters": [
+                {{"param_name": "raw_impact", "param_value": "raw_impact_score", "param_weight": 0.7, "max_value": 100.0, "impact_category": "direct", "decay_function": "none"}},
+                {{"param_name": "control_effectiveness", "param_value": "control_effectiveness_score", "param_weight": 0.3, "max_value": 100.0, "impact_category": "indirect", "inverse": true, "decay_function": "none"}}
+            ]
+        }},
         "related_features": ["raw_impact"],
         "knowledge_based_reasoning": "Based on domain knowledge about control effectiveness"
     }}
@@ -2602,7 +2731,16 @@ Generate impact features that are:
 3. Context-aware: Consider the existing features and analytical intent
 4. Well-named: Use descriptive names following domain conventions (e.g., "{{impact_type}}_impact", "{{entity_type}}_impact")
 
-Each feature must include: feature_name, natural_language_question, description, impact_type, feature_type (float), calculation_logic, related_features, and knowledge_based_reasoning.
+Each feature must include: feature_name, natural_language_question, description, impact_type, feature_type (float), calculation_logic, sql_function, sql_parameters, related_features, and knowledge_based_reasoning.
+
+CRITICAL: The natural_language_question must include enough detail for SQL generation:
+- Explicitly mention parameter names, weights, max values, impact categories
+- Specify aggregation method (weighted_sum, max, least, geometric_mean, cascading, quadratic_mean)
+- Include decay functions if time-based
+- Mention amplification factors for critical factors
+- Note if any parameters are inverse
+
+The sql_parameters field should provide a complete JSON structure that can be used directly with calculate_impact_from_json function, with parameter values referencing source data fields.
 
 Focus on impact dimensions that are relevant to {domain_config.domain_name} based on the knowledge documents.
 """
@@ -2752,6 +2890,104 @@ class LikelihoodFeatureGenerationAgent:
             return DomainConfiguration(**domain_config_dict)
         return self.domain_config
     
+    def _get_likelihood_sql_function_context(self) -> str:
+        """Get SQL function documentation for likelihood calculations"""
+        return """
+GENERIC LIKELIHOOD CALCULATION SQL FUNCTIONS:
+
+The likelihood features you generate will be converted to SQL using generic likelihood calculation functions.
+These functions accept parameters in JSON format and calculate likelihood scores using configurable methods.
+
+CONTROL PRIORITIZATION CONFIGS:
+When controls are identified, you can use DEFAULT_CONTROL_PRIORITIZATION_CONFIGS from domain_config.py which provide:
+- default_likelihood: str (1-5 scale) - Convert to 0-100 scale: (value * 20) - 20, e.g., "3" -> 40, "4" -> 60, "5" -> 80
+- default_relevance_score: float (0.0-1.0) - Can be used directly or scaled to 0-100
+- default_quality_score: float (0.0-1.0) - Can be used directly or scaled to 0-100
+- default_coverage_score: float (0.0-1.0) - Can be used directly or scaled to 0-100
+- default_has_coverage_gaps: bool - Can be converted to score (true -> higher likelihood)
+- priority_notes: str - Contextual information about the control
+
+These defaults should be used when actual likelihood data is not available. Map control_id to get_control_prioritization_config(control_id).
+
+MAIN FUNCTION: calculate_likelihood_from_json(p_config JSONB)
+- Accepts a JSON configuration with parameters array and aggregation settings
+- Returns: overall_likelihood, aggregation_method, parameter_scores, calculation_summary
+
+PARAMETER STRUCTURE (each parameter in the 'parameters' array):
+{
+    "param_name": "string",              // Name of the parameter (e.g., 'critical_vuln_count', 'patch_compliance_rate')
+    "param_value": decimal,               // Current value of the parameter (0-100 or raw value)
+    "param_weight": decimal,              // Weight in final calculation (0-1, typically 0.1-0.5)
+    "max_value": decimal,                // Maximum expected value for normalization (default 100.0)
+    "decay_function": "string",          // 'none', 'linear', 'exponential', 'logarithmic', 'step', 'inverse_exponential', 'sigmoid'
+    "decay_rate": decimal,               // Decay rate parameter (tau for exponential, etc., default 1.0)
+    "time_delta": decimal,                // Time elapsed for decay calculation (days, hours, etc., default 0)
+    "inverse": boolean,                   // If true, higher value = lower likelihood (e.g., patch_compliance where high = good)
+    "threshold_low": decimal,            // Lower threshold for step function (default 0)
+    "threshold_high": decimal            // Upper threshold for step function (default 100.0)
+}
+
+AGGREGATION METHODS:
+- 'weighted_sum': Weighted average (default, most common)
+- 'least': Minimum likelihood (conservative, worst case)
+- 'max': Maximum likelihood (optimistic, best case)
+- 'geometric_mean': Product root (for multiplicative effects)
+- 'harmonic_mean': Harmonic average (for rates)
+- 'quadratic_mean': Root mean square
+
+CONFIGURATION STRUCTURE:
+{
+    "aggregation_method": "weighted_sum",  // Aggregation method (see above)
+    "scale_to": 100.0,                    // Scale final result to this value (default 100.0)
+    "normalization_method": "none",        // 'none', 'min_max', 'z_score', 'sigmoid' (default 'none')
+    "parameters": [                        // Array of parameter objects (see structure above)
+        {
+            "param_name": "critical_vulns",
+            "param_value": 5.0,
+            "param_weight": 0.40,
+            "max_value": 20.0,
+            "decay_function": "exponential",
+            "decay_rate": 30.0,
+            "time_delta": 45,
+            "inverse": false
+        },
+        {
+            "param_name": "patch_compliance",
+            "param_value": 75.0,
+            "param_weight": 0.30,
+            "max_value": 100.0,
+            "decay_function": "none",
+            "inverse": true
+        },
+        ...
+    ]
+}
+
+IMPORTANT FOR NATURAL LANGUAGE QUESTIONS:
+When generating likelihood features, include in the natural_language_question and description:
+1. Parameter names and their source data fields (or control prioritization config defaults)
+2. Parameter weights (how important each factor is)
+3. Aggregation method (how parameters combine)
+4. Max values for normalization (what's the scale)
+5. Decay functions if time-based (e.g., "exponential decay over 30 days with decay_rate 30.0")
+6. Whether any parameters are inverse (higher value = lower likelihood, e.g., compliance rates)
+7. Time delta if decay is applied (how much time has elapsed)
+8. When controls are identified, mention using control prioritization configs (default_likelihood, default_coverage_score, etc.)
+
+Example natural language question with SQL context:
+"What is the overall likelihood score combining critical vulnerabilities (weight 0.4, max 20, exponential decay over 30 days), 
+patch compliance rate (weight 0.3, max 100, inverse true), and dwell time (weight 0.3, max 90, linear decay) 
+using weighted_sum aggregation, scaled to 100?"
+
+Example with control prioritization:
+"What is the overall likelihood score for identified controls using control prioritization config defaults 
+(default_likelihood converted from 1-5 scale to 0-100, weight 0.4) combined with historical failure rate 
+(weight 0.3, max 100) and coverage gaps (default_has_coverage_gaps converted to score, weight 0.3, max 100) 
+using weighted_sum aggregation, scaled to 100?"
+
+This provides enough context for another agent to construct the SQL function call.
+"""
+    
     async def __call__(self, state: FeatureEngineeringState) -> FeatureEngineeringState:
         """Generate likelihood features as natural language questions using universal likelihood drivers"""
         
@@ -2770,6 +3006,8 @@ class LikelihoodFeatureGenerationAgent:
         system_prompt = f"""You are a data scientist specializing in predictive modeling for compliance risk.
 
 Your task is to generate likelihood features that answer "How likely is this control to fail?" using UNIVERSAL LIKELIHOOD DRIVERS that work across ALL compliance types (SOC2, HIPAA, HR, Finance, etc.).
+
+{self._get_likelihood_sql_function_context()}
 
 UNIVERSAL LIKELIHOOD DRIVERS (use these as the foundation):
 1. HISTORICAL FAILURE RATE - Past failures, audit findings, control testing results
@@ -2794,19 +3032,29 @@ For each universal driver, create likelihood features that:
 - Can be adapted with domain-specific adjustments
 - Predict control failure probability
 - Map to specific controls when controls are identified
+- Include sufficient detail in natural language questions for SQL generation
 
 For each likelihood feature, provide:
 1. Feature name following universal conventions (e.g., "historical_failure_rate", "control_drift_frequency", "evidence_quality_score")
-2. Natural language question that can be interpreted by another agent
+2. Natural language question that includes SQL-relevant context:
+   - Parameter names and source data fields (or control prioritization config defaults when controls are identified)
+   - Parameter weights (0-1, typically 0.1-0.5)
+   - Aggregation method (weighted_sum, least, max, geometric_mean, harmonic_mean, quadratic_mean)
+   - Max values for normalization
+   - Decay functions if time-based (with decay_rate and time_delta)
+   - Whether any parameters are inverse (higher value = lower likelihood)
+   - When controls are identified: mention using DEFAULT_CONTROL_PRIORITIZATION_CONFIGS.default_likelihood (1-5 scale, convert to 0-100), default_coverage_score, and default_has_coverage_gaps
 3. Likelihood driver it measures (historical_failure, drift, evidence_quality, etc.)
-4. Calculation method (how to calculate this likelihood input)
-5. Data sources (where measurement data comes from)
+4. Calculation method (how to calculate this likelihood input, including SQL function parameters)
+5. Data sources (where measurement data comes from, or control prioritization configs when controls are identified)
 6. Unit of measure (rate, score, count, percentage, etc.)
 7. Ranges (low/medium/high likelihood values)
 8. Cross-domain applicability (how it works for different frameworks)
 9. Domain-specific adjustments (if needed for {domain_config.domain_name})
-10. Control mapping (which identified controls this predicts, if controls are identified)
+10. Control mapping (which identified controls this predicts, if controls are identified - use get_control_prioritization_config(control_id) to get defaults)
 11. Predictive power explanation (why this driver predicts failure)
+12. SQL function parameters (detailed breakdown of param_name, param_value source, param_weight, max_value, decay_function, inverse, etc.)
+13. Control prioritization usage (how to use DEFAULT_CONTROL_PRIORITIZATION_CONFIGS when controls are identified)
 
 For likelihood features, consider generating:
 - Base likelihood features (e.g., "{{likelihood_type}}_likelihood")
@@ -2818,31 +3066,63 @@ Generate likelihood features as JSON array with this structure:
 [
     {{
         "feature_name": "raw_likelihood",
-        "natural_language_question": "What is the overall raw likelihood score for {domain_config.entity_types[0] if domain_config.entity_types else 'entities'}?",
-        "description": "Overall raw likelihood score without considering controls",
+        "natural_language_question": "What is the overall raw likelihood score for {domain_config.entity_types[0] if domain_config.entity_types else 'entities'} combining critical vulnerabilities (weight 0.4, max 20, exponential decay over 30 days), patch compliance rate (weight 0.3, max 100, inverse true), and dwell time (weight 0.3, max 90, linear decay) using weighted_sum aggregation, scaled to 100?",
+        "description": "Overall raw likelihood score without considering controls. Combines critical vulnerabilities with exponential decay, patch compliance (inverse), and dwell time with linear decay.",
         "likelihood_type": "overall",
         "feature_type": "float",
-        "calculation_logic": "Weighted combination of all likelihood factors",
+        "calculation_logic": "Weighted combination of all likelihood factors using calculate_likelihood_from_json with weighted_sum aggregation",
+        "sql_function": "calculate_likelihood_from_json",
+        "sql_parameters": {{
+            "aggregation_method": "weighted_sum",
+            "scale_to": 100.0,
+            "normalization_method": "none",
+            "parameters": [
+                {{"param_name": "critical_vulns", "param_value": "critical_vuln_count", "param_weight": 0.4, "max_value": 20.0, "decay_function": "exponential", "decay_rate": 30.0, "time_delta": 45, "inverse": false}},
+                {{"param_name": "patch_compliance", "param_value": "patch_compliance_rate", "param_weight": 0.3, "max_value": 100.0, "decay_function": "none", "inverse": true}},
+                {{"param_name": "dwell_time", "param_value": "dwell_time_days", "param_weight": 0.3, "max_value": 90.0, "decay_function": "linear", "decay_rate": 90.0, "time_delta": 60, "inverse": false}}
+            ]
+        }},
+        "control_prioritization_usage": "When controls are identified, can use DEFAULT_CONTROL_PRIORITIZATION_CONFIGS.default_likelihood (1-5 scale, convert to 0-100), default_coverage_score (0-1 scale), and default_has_coverage_gaps (bool, convert to score) as additional parameters",
         "related_features": [],
         "knowledge_based_reasoning": "Based on domain knowledge about likelihood assessment"
     }},
     {{
         "feature_name": "likelihood_active",
-        "natural_language_question": "What is the active likelihood (with controls) for {domain_config.entity_types[0] if domain_config.entity_types else 'entities'}?",
-        "description": "Active likelihood considering current controls",
+        "natural_language_question": "What is the active likelihood (with controls) for {domain_config.entity_types[0] if domain_config.entity_types else 'entities'} combining raw likelihood (weight 0.7, max 100) and control effectiveness (weight 0.3, max 100, inverse true) using weighted_sum aggregation?",
+        "description": "Active likelihood considering current controls. Combines raw likelihood with control effectiveness adjustment.",
         "likelihood_type": "overall",
         "feature_type": "float",
-        "calculation_logic": "Raw likelihood adjusted for active controls",
+        "calculation_logic": "Raw likelihood adjusted for active controls using calculate_likelihood_from_json",
+        "sql_function": "calculate_likelihood_from_json",
+        "sql_parameters": {{
+            "aggregation_method": "weighted_sum",
+            "scale_to": 100.0,
+            "normalization_method": "none",
+            "parameters": [
+                {{"param_name": "raw_likelihood", "param_value": "raw_likelihood_score", "param_weight": 0.7, "max_value": 100.0, "decay_function": "none", "inverse": false}},
+                {{"param_name": "control_effectiveness", "param_value": "control_effectiveness_score", "param_weight": 0.3, "max_value": 100.0, "decay_function": "none", "inverse": true}}
+            ]
+        }},
         "related_features": ["raw_likelihood"],
         "knowledge_based_reasoning": "Active likelihood with controls applied"
     }},
     {{
         "feature_name": "likelihood_inherent",
-        "natural_language_question": "What is the inherent likelihood (without controls) for {domain_config.entity_types[0] if domain_config.entity_types else 'entities'}?",
-        "description": "Inherent likelihood without controls",
+        "natural_language_question": "What is the inherent likelihood (without controls) for {domain_config.entity_types[0] if domain_config.entity_types else 'entities'} using historical failure rate (weight 0.5, max 100) and process volatility (weight 0.5, max 100) with weighted_sum aggregation?",
+        "description": "Inherent likelihood without controls. Base likelihood baseline.",
         "likelihood_type": "overall",
         "feature_type": "float",
-        "calculation_logic": "Base likelihood without considering controls",
+        "calculation_logic": "Base likelihood without considering controls using calculate_likelihood_from_json",
+        "sql_function": "calculate_likelihood_from_json",
+        "sql_parameters": {{
+            "aggregation_method": "weighted_sum",
+            "scale_to": 100.0,
+            "normalization_method": "none",
+            "parameters": [
+                {{"param_name": "historical_failure_rate", "param_value": "historical_failure_rate", "param_weight": 0.5, "max_value": 100.0, "decay_function": "none", "inverse": false}},
+                {{"param_name": "process_volatility", "param_value": "process_volatility_score", "param_weight": 0.5, "max_value": 100.0, "decay_function": "none", "inverse": false}}
+            ]
+        }},
         "related_features": ["raw_likelihood"],
         "knowledge_based_reasoning": "Inherent likelihood baseline"
     }}
@@ -2901,11 +3181,20 @@ Generate likelihood features that are:
 3. Context-aware: Consider the existing features, impact features, and analytical intent
 4. Well-named: Use descriptive names following domain conventions (e.g., "{{likelihood_type}}_likelihood", with _active and _inherent variants)
 
-Each feature must include: feature_name, natural_language_question, description, likelihood_type, feature_type (float), calculation_logic, related_features, and knowledge_based_reasoning.
+Each feature must include: feature_name, natural_language_question, description, likelihood_type, feature_type (float), calculation_logic, sql_function, sql_parameters, related_features, and knowledge_based_reasoning.
+
+CRITICAL: The natural_language_question must include enough detail for SQL generation:
+- Explicitly mention parameter names, weights, max values
+- Specify aggregation method (weighted_sum, least, max, geometric_mean, harmonic_mean, quadratic_mean)
+- Include decay functions if time-based (with decay_rate and time_delta)
+- Note if any parameters are inverse (higher value = lower likelihood)
+- Mention normalization method if not 'none'
+
+The sql_parameters field should provide a complete JSON structure that can be used directly with calculate_likelihood_from_json function, with parameter values referencing source data fields.
 
 Focus on universal likelihood drivers that work across all compliance domains. For each driver, explain:
 - How it predicts control failure
-- Calculation method
+- Calculation method (including SQL function parameters)
 - Data sources
 - Cross-domain applicability (SOC2, HIPAA, HR, Finance examples)
 - Control mapping (if controls are identified)
@@ -3045,6 +3334,70 @@ class RiskFeatureGenerationAgent:
             return DomainConfiguration(**domain_config_dict)
         return self.domain_config
     
+    def _get_risk_sql_function_context(self) -> str:
+        """Get SQL function documentation for risk calculations"""
+        return """
+GENERIC RISK CALCULATION SQL FUNCTIONS:
+
+NOTE: A generic risk calculation SQL function (calculate_risk_from_json) will be created to combine impact and likelihood scores.
+For now, risk features should reference both impact and likelihood features and specify how they combine.
+
+CONTROL PRIORITIZATION CONFIGS:
+When controls are identified, you can use DEFAULT_CONTROL_PRIORITIZATION_CONFIGS from domain_config.py which provide:
+- default_impact: str (1-5 scale) - Convert to 0-100 scale: (value * 20) - 20
+- default_likelihood: str (1-5 scale) - Convert to 0-100 scale: (value * 20) - 20
+- default_relevance_score, default_quality_score, default_coverage_score: floats (0.0-1.0)
+- These can be used to calculate base risk when actual data is not available
+
+RISK CALCULATION APPROACH:
+Risk is typically calculated as: Risk = f(Impact, Likelihood)
+Common formulas:
+- Risk = sqrt(Impact × Likelihood)  // Non-linear, geometric mean
+- Risk = (Impact × 0.6) + (Likelihood × 0.4)  // Weighted combination
+- Risk = Impact × Likelihood  // Simple multiplication
+- Risk = max(Impact, Likelihood)  // Worst case
+- Risk = (Impact + Likelihood) / 2  // Average
+
+When using control prioritization configs:
+- Base Risk = f(default_impact_converted, default_likelihood_converted)
+- Can also incorporate relevance_score, quality_score, coverage_score as contextual factors
+
+CONTEXTUAL FACTORS (that modify base risk):
+1. TEMPORAL FACTORS: Time since last review, seasonal patterns
+2. ORGANIZATIONAL FACTORS: Control owner capability, team size/resources
+3. DATA SENSITIVITY FACTORS: Data classification level, crown jewel relevance
+4. POPULATION FACTORS: Population affected, population criticality
+
+RISK FEATURE STRUCTURE:
+Risk features should reference:
+- Related impact features (by feature_name)
+- Related likelihood features (by feature_name)
+- Risk formula (how impact and likelihood combine)
+- Contextual multipliers (if applicable)
+- Aggregation method if combining multiple risk factors
+
+IMPORTANT FOR NATURAL LANGUAGE QUESTIONS:
+When generating risk features, include in the natural_language_question and description:
+1. Which impact and likelihood features are being combined
+2. Risk formula (sqrt(impact × likelihood), weighted combination, etc.)
+3. Contextual factors if applicable (temporal, organizational, sensitivity, population)
+4. Context multipliers and how they modify base risk
+5. Final risk score range (typically 0-100)
+
+Example natural language question with SQL context:
+"What is the overall risk score combining raw_impact and raw_likelihood using sqrt(impact × likelihood) formula, 
+with temporal multiplier (time_since_review factor 1.2), organizational multiplier (control_owner_capability factor 0.9), 
+and sensitivity multiplier (data_classification_level factor 1.3), scaled to 100?"
+
+Example with control prioritization:
+"What is the overall risk score for identified controls using control prioritization config defaults 
+(default_impact and default_likelihood converted from 1-5 scale to 0-100) combined with sqrt(impact × likelihood) formula, 
+with relevance score multiplier (default_relevance_score factor), quality score multiplier (default_quality_score factor), 
+and coverage gaps multiplier (default_has_coverage_gaps converted to factor), scaled to 100?"
+
+This provides enough context for another agent to construct the SQL calculation once the generic risk function is available.
+"""
+    
     async def __call__(self, state: FeatureEngineeringState) -> FeatureEngineeringState:
         """Generate risk features incorporating contextual factors and universal risk framework"""
         
@@ -3064,6 +3417,8 @@ class RiskFeatureGenerationAgent:
         system_prompt = f"""You are a data scientist specializing in risk assessment and contextual modeling for compliance.
 
 Your task is to generate risk features that combine Impact × Likelihood with CONTEXTUAL FACTORS that modify risk assessment. Use a UNIVERSAL RISK FRAMEWORK that works across ALL compliance types (SOC2, HIPAA, HR, Finance, etc.).
+
+{self._get_risk_sql_function_context()}
 
 UNIVERSAL RISK CALCULATION:
 Base Risk = Likelihood × Impact
@@ -3102,38 +3457,72 @@ For risk features, use this framework:
 
 For each risk feature, provide:
 1. Feature name following universal conventions (e.g., "base_risk", "adjusted_risk", "contextual_risk")
-2. Natural language question that can be interpreted by another agent
-3. Risk calculation formula (how Impact and Likelihood combine)
-4. Contextual adjustments (which contextual factors apply and how)
-5. Control mapping (which identified controls this risk applies to, if controls are identified)
+2. Natural language question that includes SQL-relevant context:
+   - Which impact and likelihood features are being combined (by feature_name, or control prioritization config defaults when controls are identified)
+   - Risk formula (sqrt(impact × likelihood), weighted combination, etc.)
+   - Contextual factors if applicable (temporal, organizational, sensitivity, population)
+   - Context multipliers and how they modify base risk
+   - Final risk score range (typically 0-100)
+   - When controls are identified: mention using DEFAULT_CONTROL_PRIORITIZATION_CONFIGS.default_impact and default_likelihood (both 1-5 scale, convert to 0-100) and default_relevance_score, default_quality_score, default_coverage_score as contextual multipliers
+3. Risk calculation formula (how Impact and Likelihood combine, with explicit formula)
+4. Contextual adjustments (which contextual factors apply and how, with multiplier values)
+5. Control mapping (which identified controls this risk applies to, if controls are identified - use get_control_prioritization_config(control_id) to get defaults)
 6. Cross-domain applicability (how it works for different frameworks)
 7. Risk classification (how to interpret the risk score - low/medium/high)
+8. SQL calculation context (references to impact_features and likelihood_features, risk formula, contextual multipliers)
+9. Control prioritization usage (how to use DEFAULT_CONTROL_PRIORITIZATION_CONFIGS when controls are identified to calculate base risk and contextual multipliers)
 
 Generate risk features as JSON array with this structure:
 [
     {{
         "feature_name": "raw_risk",
-        "natural_language_question": "What is the raw risk score combining raw impact and raw likelihood for {domain_config.entity_types[0] if domain_config.entity_types else 'entities'}?",
-        "description": "Overall raw risk score combining raw impact and raw likelihood",
+        "natural_language_question": "What is the raw risk score combining raw_impact and raw_likelihood for {domain_config.entity_types[0] if domain_config.entity_types else 'entities'} using sqrt(impact × likelihood) formula, scaled to 100?",
+        "description": "Overall raw risk score combining raw impact and raw likelihood using geometric mean (square root) formula",
         "risk_type": "overall",
         "feature_type": "float",
         "risk_formula": "sqrt(raw_impact * raw_likelihood)",
-        "calculation_logic": "Square root of (raw_impact multiplied by raw_likelihood)",
+        "calculation_logic": "Square root of (raw_impact multiplied by raw_likelihood) using sqrt(impact × likelihood) formula",
+        "sql_calculation": "sqrt(raw_impact * raw_likelihood) where raw_impact and raw_likelihood are feature names from impact_features and likelihood_features",
         "related_impact_features": ["raw_impact"],
         "related_likelihood_features": ["raw_likelihood"],
+        "contextual_factors": [],
+        "control_prioritization_usage": "When controls are identified, can use DEFAULT_CONTROL_PRIORITIZATION_CONFIGS.default_impact and default_likelihood (both 1-5 scale, convert to 0-100) to calculate base risk, and default_relevance_score, default_quality_score, default_coverage_score as contextual multipliers",
         "knowledge_based_reasoning": "Based on risk calculation best practices from knowledge documents"
     }},
     {{
         "feature_name": "effective_risk",
-        "natural_language_question": "What is the effective risk score combining effective impact and effective likelihood for {domain_config.entity_types[0] if domain_config.entity_types else 'entities'}?",
-        "description": "Effective risk score after controls, combining effective impact and effective likelihood",
+        "natural_language_question": "What is the effective risk score combining effective_impact and effective_likelihood for {domain_config.entity_types[0] if domain_config.entity_types else 'entities'} using sqrt(impact × likelihood) formula, with temporal multiplier (time_since_review factor 1.2), scaled to 100?",
+        "description": "Effective risk score after controls, combining effective impact and effective likelihood with temporal context multiplier",
         "risk_type": "effective",
         "feature_type": "float",
-        "risk_formula": "sqrt(effective_impact * effective_likelihood)",
-        "calculation_logic": "Square root of (effective_impact multiplied by effective_likelihood)",
+        "risk_formula": "sqrt(effective_impact * effective_likelihood) * temporal_multiplier",
+        "calculation_logic": "Square root of (effective_impact multiplied by effective_likelihood) multiplied by temporal context factor",
+        "sql_calculation": "sqrt(effective_impact * effective_likelihood) * (1.0 + (time_since_review_days / 365.0) * 0.2) where effective_impact and effective_likelihood are feature names",
         "related_impact_features": ["effective_impact"],
         "related_likelihood_features": ["effective_likelihood"],
-        "knowledge_based_reasoning": "Effective risk considering controls and mitigations"
+        "contextual_factors": [
+            {{"factor_name": "temporal", "factor_source": "time_since_review_days", "multiplier_formula": "1.0 + (time_since_review_days / 365.0) * 0.2", "description": "Temporal multiplier increases risk by 20% per year since last review"}}
+        ],
+        "knowledge_based_reasoning": "Effective risk considering controls and mitigations with temporal context"
+    }},
+    {{
+        "feature_name": "contextual_risk",
+        "natural_language_question": "What is the contextual risk score combining raw_impact and raw_likelihood using sqrt(impact × likelihood) formula, with temporal multiplier (time_since_review factor 1.2), organizational multiplier (control_owner_capability factor 0.9), sensitivity multiplier (data_classification_level factor 1.3), and population multiplier (affected_population_count factor 1.1), scaled to 100?",
+        "description": "Context-adjusted risk score with all contextual factors applied",
+        "risk_type": "contextual",
+        "feature_type": "float",
+        "risk_formula": "sqrt(raw_impact * raw_likelihood) * temporal_mult * org_mult * sensitivity_mult * population_mult",
+        "calculation_logic": "Base risk multiplied by all contextual multipliers",
+        "sql_calculation": "sqrt(raw_impact * raw_likelihood) * temporal_mult * org_mult * sensitivity_mult * population_mult",
+        "related_impact_features": ["raw_impact"],
+        "related_likelihood_features": ["raw_likelihood"],
+        "contextual_factors": [
+            {{"factor_name": "temporal", "factor_source": "time_since_review_days", "multiplier_formula": "1.0 + (time_since_review_days / 365.0) * 0.2"}},
+            {{"factor_name": "organizational", "factor_source": "control_owner_capability_score", "multiplier_formula": "1.0 - (control_owner_capability_score / 100.0) * 0.1"}},
+            {{"factor_name": "sensitivity", "factor_source": "data_classification_level", "multiplier_formula": "1.0 + (data_classification_level / 5.0) * 0.3"}},
+            {{"factor_name": "population", "factor_source": "affected_population_count", "multiplier_formula": "1.0 + LEAST(affected_population_count / 1000.0, 0.1)"}}
+        ],
+        "knowledge_based_reasoning": "Contextual risk with all modifying factors"
     }}
 ]
 
@@ -3200,7 +3589,16 @@ Generate risk features that are:
 4. Well-named: Use descriptive names following domain conventions (e.g., "raw_risk", "effective_risk", "{{risk_type}}_risk")
 5. Properly combined: Combine appropriate impact and likelihood features based on domain knowledge
 
-Each feature must include: feature_name, natural_language_question, description, risk_type, feature_type (float), risk_formula, calculation_logic, related_impact_features, related_likelihood_features, and knowledge_based_reasoning.
+Each feature must include: feature_name, natural_language_question, description, risk_type, feature_type (float), risk_formula, calculation_logic, sql_calculation, related_impact_features, related_likelihood_features, contextual_factors, and knowledge_based_reasoning.
+
+CRITICAL: The natural_language_question must include enough detail for SQL generation:
+- Explicitly mention which impact and likelihood features are being combined (by feature_name)
+- Specify risk formula (sqrt(impact × likelihood), weighted combination, etc.)
+- Include contextual factors if applicable (temporal, organizational, sensitivity, population)
+- Mention context multipliers and their formulas
+- Note final risk score range (typically 0-100)
+
+The sql_calculation field should provide SQL expression that references impact_features and likelihood_features by name, includes the risk formula, and applies contextual multipliers.
 
 Focus on universal risk calculations that:
 - Combine Impact × Likelihood appropriately
@@ -3210,7 +3608,7 @@ Focus on universal risk calculations that:
 - Use contextual adjustments: Adjusted Risk = Base Risk × Context Multipliers
 
 For each risk feature, explain:
-- How Impact and Likelihood combine (formula)
+- How Impact and Likelihood combine (formula with explicit SQL expression)
 - Which contextual factors apply
 - How context modifies the base risk
 - Control mapping (if controls are identified)
